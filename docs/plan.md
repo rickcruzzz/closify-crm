@@ -77,11 +77,11 @@ ainda sem integração real (estado local/mock).
 
 **Entregas:**
 
-- [ ] Tela de login (e-mail/senha + Google)
-- [ ] Tela de cadastro
+- [x] Tela de login (e-mail/senha + Google)
+- [x] Tela de cadastro
 - [ ] Tela de recuperação de senha
 - [ ] Tela de magic link
-- [ ] Fluxo de onboarding (criar workspace, cadastrar primeiro lead)
+- [x] Fluxo de onboarding (criar workspace — cadastro de primeiro lead ainda pendente)
 
 **Commit final:** `feat(ui): telas de autenticação e onboarding`
 
