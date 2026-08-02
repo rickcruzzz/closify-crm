@@ -11,12 +11,9 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
+import { formatBRL } from '@/lib/deals/metrics'
 
 const TODAY = new Date('2026-08-02')
-
-function formatBRL(value: number) {
-  return value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
-}
 
 function dueDateInfo(dueDate: string) {
   const due = new Date(dueDate)

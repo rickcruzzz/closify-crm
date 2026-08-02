@@ -13,15 +13,7 @@ import {
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import type { FunnelStageCount } from '@/lib/deals/metrics'
-
-const barColors = [
-  'var(--chart-1)',
-  'var(--chart-2)',
-  'var(--chart-3)',
-  'var(--chart-4)',
-  'var(--chart-5)',
-  'var(--chart-5)',
-]
+import { stageAccent } from '@/lib/deals/stage-colors'
 
 function FunnelTooltip({
   active,
@@ -70,8 +62,8 @@ export function FunnelChart({ data }: { data: FunnelStageCount[] }) {
               />
               <Tooltip content={<FunnelTooltip />} cursor={{ fill: 'var(--muted)' }} />
               <Bar dataKey="count" radius={[0, 4, 4, 0]} maxBarSize={28}>
-                {data.map((entry, index) => (
-                  <Cell key={entry.stage} fill={barColors[index]} />
+                {data.map((entry) => (
+                  <Cell key={entry.stage} fill={stageAccent[entry.stage].bar} />
                 ))}
               </Bar>
             </BarChart>
