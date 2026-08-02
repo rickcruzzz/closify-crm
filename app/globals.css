@@ -41,6 +41,7 @@
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
   --font-sans: var(--font-sans);
+  --font-mono: var(--font-geist-mono);
 }
 
 :root {
