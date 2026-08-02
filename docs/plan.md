@@ -57,12 +57,12 @@ converter visitantes.
 
 **Entregas:**
 
-- [ ] Hero com o posicionamento "Simples como planilha, premium como software líder"
-- [ ] Seção de funcionalidades principais
-- [ ] Seção de planos (Free vs Pro)
-- [ ] Seção de CTA / cadastro
-- [ ] Footer
-- [ ] Responsividade mobile
+- [x] Hero com o posicionamento "Simples como planilha, premium como software líder"
+- [x] Seção de funcionalidades principais
+- [x] Seção de planos (Free vs Pro)
+- [x] Seção de CTA / cadastro
+- [x] Footer
+- [x] Responsividade mobile
 
 **Commit final:** `feat(ui): landing page pública`
 
