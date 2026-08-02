@@ -1,32 +1,26 @@
 import { PageHeader } from '@/components/layout/page-header'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Skeleton } from '@/components/ui/skeleton'
-
-const cards = [
-  'Total de Leads',
-  'Negócios Abertos',
-  'Valor do Pipeline',
-  'Taxa de Conversão',
-]
+import { MetricCards } from '@/components/dashboard/metric-cards'
+import { FunnelChart } from '@/components/dashboard/funnel-chart'
+import { UpcomingDealsTable } from '@/components/dashboard/upcoming-deals-table'
+import { mockDeals } from '@/lib/deals/mock-data'
+import { computeFunnel, computeMetrics, upcomingDeals } from '@/lib/deals/metrics'
+import { mockLeads } from '@/lib/leads/mock-data'
 
 export default function DashboardPage() {
+  const metrics = computeMetrics(mockDeals, mockLeads)
+  const funnelData = computeFunnel(mockDeals)
+  const deals = upcomingDeals(mockDeals)
+  const leadsById = new Map(mockLeads.map((lead) => [lead.id, lead]))
+
   return (
-    <div>
+    <div className="flex flex-col gap-6">
       <PageHeader title="Dashboard" description="Métricas do seu funil de vendas." />
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        {cards.map((card) => (
-          <Card key={card}>
-            <CardHeader>
-              <CardTitle className="text-muted-foreground text-sm font-medium">
-                {card}
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <Skeleton className="h-7 w-20" />
-            </CardContent>
-          </Card>
-        ))}
-      </div>
+
+      <MetricCards metrics={metrics} />
+
+      <FunnelChart data={funnelData} />
+
+      <UpcomingDealsTable deals={deals} leadsById={leadsById} />
     </div>
   )
 }
