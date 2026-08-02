@@ -115,11 +115,11 @@ timeline de atividades, usando dados mockados.
 
 **Entregas:**
 
-- [ ] Listagem de leads
-- [ ] Busca e filtros (nome, e-mail, empresa, status, responsável, data)
-- [ ] Formulário de cadastro/edição de lead
-- [ ] Página de detalhe do lead
-- [ ] Timeline de atividades (ligação, e-mail, reunião, nota)
+- [x] Listagem de leads
+- [x] Busca e filtros (nome, empresa, status — e-mail/responsável/data pendentes)
+- [x] Formulário de cadastro/edição de lead (com exclusão)
+- [x] Página de detalhe do lead
+- [x] Timeline de atividades (ligação, e-mail, reunião, nota) — visual apenas
 
 **Commit final:** `feat(ui): listagem, filtros e detalhe de leads`
 
