@@ -38,11 +38,11 @@ sem dados reais, seguindo a identidade visual do PRD.
 
 **Entregas:**
 
-- [ ] Tokens de cor e tipografia (dark/light) conforme identidade visual
-- [ ] Layout do dashboard (sidebar, topbar, navegação)
-- [ ] Componentes base via shadcn/ui (botões, inputs, cards, badges, modais)
-- [ ] Toggle de tema claro/escuro
-- [ ] Páginas de erro/404 genéricas
+- [x] Tokens de cor e tipografia (dark/light) conforme identidade visual
+- [x] Layout do dashboard (sidebar, topbar, navegação)
+- [x] Componentes base via shadcn/ui (botões, inputs, cards, badges, modais)
+- [x] Toggle de tema claro/escuro
+- [x] Páginas de erro/404 genéricas
 
 **Commit final:** `feat(ui): layout base do dashboard e design system`
 
