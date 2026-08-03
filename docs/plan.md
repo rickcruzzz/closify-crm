@@ -170,10 +170,10 @@ as políticas de RLS que vão sustentar todo o backend.
 **Entregas:**
 
 - [x] Criar projeto Supabase e variáveis de ambiente
-- [ ] Migrations: workspaces, memberships (papéis), leads, deals, activities
-- [ ] Políticas RLS por `workspace_id`
+- [x] Migrations: workspaces, workspace_members (papéis), leads, deals, activities, subscriptions
+- [x] Políticas RLS por `workspace_id`
 - [x] Clients Supabase (browser/server) em `lib/supabase`
-- [ ] Seed de dados de teste
+- [x] Seed de dados de teste
 
 **Commit final:** `feat(backend): schema, migrations e RLS do Supabase`
 
