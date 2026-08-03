@@ -151,72 +151,73 @@ alter table public.subscriptions enable row level security;
 
 -- workspaces: só enxerga/edita workspace onde é membro
 create policy "workspaces_select" on public.workspaces
-  for select using (public.is_workspace_member(id));
+  for select using ((select public.is_workspace_member(id)));
 
 create policy "workspaces_update" on public.workspaces
-  for update using (public.is_workspace_admin(id));
+  for update using ((select public.is_workspace_admin(id)))
+  with check ((select public.is_workspace_admin(id)));
 
 create policy "workspaces_insert" on public.workspaces
   for insert with check (true);
 
 -- workspace_members: só enxerga membros do próprio workspace; só admin gerencia
 create policy "workspace_members_select" on public.workspace_members
-  for select using (public.is_workspace_member(workspace_id));
+  for select using ((select public.is_workspace_member(workspace_id)));
 
 create policy "workspace_members_insert" on public.workspace_members
-  for insert with check (public.is_workspace_admin(workspace_id));
+  for insert with check ((select public.is_workspace_admin(workspace_id)));
 
 create policy "workspace_members_update" on public.workspace_members
-  for update using (public.is_workspace_admin(workspace_id));
+  for update using ((select public.is_workspace_admin(workspace_id)))
+  with check ((select public.is_workspace_admin(workspace_id)));
 
 create policy "workspace_members_delete" on public.workspace_members
-  for delete using (public.is_workspace_admin(workspace_id));
+  for delete using ((select public.is_workspace_admin(workspace_id)));
 
 -- leads
 create policy "leads_select" on public.leads
-  for select using (public.is_workspace_member(workspace_id));
+  for select using ((select public.is_workspace_member(workspace_id)));
 
 create policy "leads_insert" on public.leads
-  for insert with check (public.is_workspace_member(workspace_id));
+  for insert with check ((select public.is_workspace_member(workspace_id)));
 
 create policy "leads_update" on public.leads
-  for update using (public.is_workspace_member(workspace_id));
+  for update using ((select public.is_workspace_member(workspace_id)))
+  with check ((select public.is_workspace_member(workspace_id)));
 
 create policy "leads_delete" on public.leads
-  for delete using (public.is_workspace_member(workspace_id));
+  for delete using ((select public.is_workspace_member(workspace_id)));
 
 -- deals
 create policy "deals_select" on public.deals
-  for select using (public.is_workspace_member(workspace_id));
+  for select using ((select public.is_workspace_member(workspace_id)));
 
 create policy "deals_insert" on public.deals
-  for insert with check (public.is_workspace_member(workspace_id));
+  for insert with check ((select public.is_workspace_member(workspace_id)));
 
 create policy "deals_update" on public.deals
-  for update using (public.is_workspace_member(workspace_id));
+  for update using ((select public.is_workspace_member(workspace_id)))
+  with check ((select public.is_workspace_member(workspace_id)));
 
 create policy "deals_delete" on public.deals
-  for delete using (public.is_workspace_member(workspace_id));
+  for delete using ((select public.is_workspace_member(workspace_id)));
 
 -- activities
 create policy "activities_select" on public.activities
-  for select using (public.is_workspace_member(workspace_id));
+  for select using ((select public.is_workspace_member(workspace_id)));
 
 create policy "activities_insert" on public.activities
-  for insert with check (public.is_workspace_member(workspace_id));
+  for insert with check ((select public.is_workspace_member(workspace_id)));
 
 create policy "activities_update" on public.activities
-  for update using (public.is_workspace_member(workspace_id));
+  for update using ((select public.is_workspace_member(workspace_id)))
+  with check ((select public.is_workspace_member(workspace_id)));
 
 create policy "activities_delete" on public.activities
-  for delete using (public.is_workspace_member(workspace_id));
+  for delete using ((select public.is_workspace_member(workspace_id)));
 
--- subscriptions: só admin do workspace vê/gerencia billing
+-- subscriptions: só select client-facing (admin vê o próprio plano).
+-- insert/update são feitos só via service_role key (webhook do Asaas),
+-- que ignora RLS — não expor policy de escrita pro client aqui.
 create policy "subscriptions_select" on public.subscriptions
-  for select using (public.is_workspace_member(workspace_id));
-
-create policy "subscriptions_update" on public.subscriptions
-  for update using (public.is_workspace_admin(workspace_id));
-
-create policy "subscriptions_insert" on public.subscriptions
-  for insert with check (public.is_workspace_admin(workspace_id));
+  for select using ((select public.is_workspace_member(workspace_id)));
