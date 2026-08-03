@@ -1,5 +1,7 @@
 import Link from 'next/link'
 
+import { Logo } from '@/components/branding/logo'
+
 const footerLinks = [
   { label: 'Funcionalidades', href: '#funcionalidades' },
   { label: 'Planos', href: '#planos' },
@@ -11,7 +13,7 @@ export function PublicFooter() {
   return (
     <footer className="border-border/50 border-t px-4 py-10 md:px-6">
       <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-6 sm:flex-row">
-        <span className="text-lg font-semibold tracking-tight">Closify</span>
+        <Logo />
         <nav className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2">
           {footerLinks.map((link) => (
             <Link
