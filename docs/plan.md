@@ -96,11 +96,11 @@ dados mockados.
 
 **Entregas:**
 
-- [ ] Colunas das etapas (Novo Lead, Contato Realizado, Proposta Enviada, Negociação, Fechado Ganho, Fechado Perdido)
-- [ ] Cards de negócio (valor, lead, responsável, prazo)
-- [ ] Drag-and-drop entre colunas com `@dnd-kit` (estado local)
-- [ ] Painel/modal de detalhe do negócio
-- [ ] Estados vazios e skeletons de loading
+- [x] Colunas das etapas (Novo Lead, Contato Realizado, Proposta Enviada, Negociação, Fechado Ganho, Fechado Perdido)
+- [x] Cards de negócio (valor, lead, responsável, prazo)
+- [x] Drag-and-drop entre colunas com `@dnd-kit` (estado local)
+- [x] Painel/modal de detalhe do negócio
+- [x] Estados vazios e skeletons de loading
 
 **Commit final:** `feat(ui): pipeline kanban com drag-and-drop`
 
@@ -134,8 +134,8 @@ Recharts e dados mockados.
 
 **Entregas:**
 
-- [ ] Cards: Total de Leads, Negócios Abertos, Valor do Pipeline, Taxa de Conversão
-- [ ] Gráfico de funil (Recharts)
+- [x] Cards: Total de Leads, Negócios Abertos, Valor do Pipeline, Taxa de Conversão
+- [x] Gráfico de funil (Recharts)
 - [ ] Filtro de período
 
 **Commit final:** `feat(ui): dashboard de métricas e gráfico de funil`
@@ -169,10 +169,10 @@ as políticas de RLS que vão sustentar todo o backend.
 
 **Entregas:**
 
-- [ ] Criar projeto Supabase e variáveis de ambiente
+- [x] Criar projeto Supabase e variáveis de ambiente
 - [ ] Migrations: workspaces, memberships (papéis), leads, deals, activities
 - [ ] Políticas RLS por `workspace_id`
-- [ ] Clients Supabase (browser/server) em `lib/supabase`
+- [x] Clients Supabase (browser/server) em `lib/supabase`
 - [ ] Seed de dados de teste
 
 **Commit final:** `feat(backend): schema, migrations e RLS do Supabase`
