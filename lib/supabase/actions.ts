@@ -19,6 +19,7 @@ export async function signIn(values: unknown) {
   const { error } = await supabase.auth.signInWithPassword(parsed.data)
 
   if (error) {
+    console.error('signInWithPassword falhou', error)
     return { error: 'E-mail ou senha incorretos.' }
   }
 
@@ -42,6 +43,7 @@ export async function signUp(values: unknown) {
   })
 
   if (error) {
+    console.error('signUp falhou', error)
     return { error: error.message === 'User already registered' ? 'Este e-mail já está cadastrado.' : 'Não foi possível criar a conta.' }
   }
 
@@ -91,28 +93,17 @@ export async function createWorkspace(values: unknown) {
     redirect('/login')
   }
 
-  // Sem .select() no insert: a policy de select em workspaces exige ser
-  // membro, e o usuário só vira membro no segundo insert abaixo — pedir o
-  // RETURNING aqui faria o Postgres avaliar a policy de select antes de o
-  // usuário ser membro, e o insert inteiro falharia com erro de RLS.
-  const workspaceId = crypto.randomUUID()
-
-  const { error: workspaceError } = await supabase
-    .from('workspaces')
-    .insert({ id: workspaceId, name: parsed.data.workspaceName, created_by: user.id })
-
-  if (workspaceError) {
-    return { error: 'Não foi possível criar o workspace.' }
-  }
-
-  const { error: memberError } = await supabase.from('workspace_members').insert({
-    workspace_id: workspaceId,
-    user_id: user.id,
-    role: 'admin',
+  // create_workspace_with_admin roda os dois inserts (workspace + membro
+  // admin) numa única transação — sem isso, uma falha no segundo insert
+  // deixava um workspace órfão sem membro, e o retry do usuário acumulava
+  // workspaces órfãos a cada tentativa.
+  const { error: rpcError } = await supabase.rpc('create_workspace_with_admin', {
+    workspace_name: parsed.data.workspaceName,
   })
 
-  if (memberError) {
-    return { error: 'Não foi possível vincular você ao workspace.' }
+  if (rpcError) {
+    console.error('create_workspace_with_admin falhou', rpcError)
+    return { error: 'Não foi possível criar o workspace.' }
   }
 
   redirect('/dashboard')
