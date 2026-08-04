@@ -12,7 +12,7 @@ import {
 } from 'recharts'
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import type { FunnelStageCount } from '@/lib/deals/metrics'
+import type { FunnelStageCount } from '@/lib/dashboard/queries'
 import { stageAccent } from '@/lib/deals/stage-colors'
 
 function FunnelTooltip({

@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache'
 
 import { createClient } from '@/lib/supabase/server'
 import { leadSchema } from '@/lib/validations/lead'
+import { activitySchema } from '@/lib/validations/activity'
 
 async function getActiveWorkspaceId(supabase: Awaited<ReturnType<typeof createClient>>) {
   const {
@@ -112,6 +113,56 @@ export async function updateLead(leadId: string, values: unknown) {
   }
 
   revalidatePath('/leads')
+  revalidatePath(`/leads/${leadId}`)
+  return { success: true }
+}
+
+export async function createActivity(leadId: string, values: unknown) {
+  const parsed = activitySchema.safeParse(values)
+  if (!parsed.success) {
+    return { error: 'Dados inválidos.' }
+  }
+
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) {
+    return { error: 'Sessão expirada.' }
+  }
+
+  const workspaceId = await getActiveWorkspaceId(supabase)
+  if (!workspaceId) {
+    return { error: 'Workspace não encontrado.' }
+  }
+
+  // Confere que o lead pertence ao workspace ativo antes de gravar —
+  // a RLS de activities.insert também confere isso, mas falhar aqui com
+  // mensagem clara é melhor do que deixar a RLS rejeitar silenciosamente.
+  const { data: lead } = await supabase
+    .from('leads')
+    .select('id')
+    .eq('id', leadId)
+    .eq('workspace_id', workspaceId)
+    .maybeSingle()
+
+  if (!lead) {
+    return { error: 'Lead não encontrado.' }
+  }
+
+  const { error } = await supabase.from('activities').insert({
+    workspace_id: workspaceId,
+    lead_id: leadId,
+    author_id: user.id,
+    type: parsed.data.type,
+    description: parsed.data.description,
+  })
+
+  if (error) {
+    console.error('createActivity falhou', error)
+    return { error: 'Não foi possível registrar a atividade.' }
+  }
+
   revalidatePath(`/leads/${leadId}`)
   return { success: true }
 }

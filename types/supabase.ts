@@ -229,6 +229,19 @@ export type Database = {
         Args: { target_workspace_id: string; target_user_ids: string[] }
         Returns: { user_id: string; name: string }[]
       }
+      get_open_pipeline_value: {
+        Args: { target_workspace_id: string }
+        Returns: number
+      }
+      get_dashboard_counts: {
+        Args: { target_workspace_id: string }
+        Returns: {
+          total_leads: number
+          open_deals: number
+          closed_deals: number
+          won_deals: number
+        }[]
+      }
     }
     Enums: Record<string, never>
     CompositeTypes: Record<string, never>
