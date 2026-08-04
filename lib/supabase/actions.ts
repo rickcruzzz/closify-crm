@@ -43,8 +43,26 @@ export async function signUp(values: unknown) {
   })
 
   if (error) {
-    console.error('signUp falhou', error)
-    return { error: error.message === 'User already registered' ? 'Este e-mail já está cadastrado.' : 'Não foi possível criar a conta.' }
+    console.error('signUp falhou', { code: error.code, status: error.status, message: error.message })
+
+    if (error.code === 'email_exists' || error.code === 'user_already_exists') {
+      return { error: 'Este e-mail já está cadastrado.' }
+    }
+    if (error.code === 'over_email_send_rate_limit') {
+      return { error: 'Muitas tentativas de cadastro. Aguarde alguns minutos e tente novamente.' }
+    }
+    if (error.code === 'weak_password') {
+      return { error: 'Senha muito fraca. Use uma senha mais forte.' }
+    }
+    return { error: 'Não foi possível criar a conta.' }
+  }
+
+  // Com "Confirm email" ativo, e-mail já cadastrado e confirmado não retorna
+  // erro (proteção anti-enumeration do Supabase) — vem como sucesso com
+  // identities: [] vazio. Sem checar isso, o usuário caía em /verifique-email
+  // achando que a conta foi criada, mas nenhum e-mail novo era enviado.
+  if (data.user && data.user.identities?.length === 0) {
+    return { error: 'Este e-mail já está cadastrado.' }
   }
 
   // Com confirmação de e-mail ativa, signUp não retorna sessão — o usuário só
