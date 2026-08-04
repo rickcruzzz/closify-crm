@@ -188,14 +188,14 @@ Supabase Auth e Resend.
 
 **Entregas:**
 
-- [ ] Login e cadastro com Supabase Auth
-- [ ] Google OAuth
+- [x] Login e cadastro com Supabase Auth
+- [x] Google OAuth
 - [ ] Magic link
 - [ ] Recuperação de senha com e-mail via Resend
-- [ ] Middleware de proteção de rotas autenticadas
-- [ ] Onboarding criando o workspace de fato no banco
+- [x] Middleware de proteção de rotas autenticadas
+- [x] Onboarding criando o workspace de fato no banco (workspace + membro admin, com policy de bootstrap corrigida — ver migrations 0004/0005)
 
-**Commit final:** `feat(backend): autenticação real com Supabase Auth e Resend`
+**Commit final:** `feat(backend): autenticação real com Supabase Auth` ([PR #11](https://github.com/rickcruzzz/closify-crm/pull/11))
 
 ---
 
