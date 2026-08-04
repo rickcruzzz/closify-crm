@@ -10,7 +10,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
-import type { Lead } from '@/lib/leads/types'
+import type { LeadRow } from '@/lib/leads/queries'
 
 export function DeleteLeadDialog({
   open,
@@ -20,7 +20,7 @@ export function DeleteLeadDialog({
 }: {
   open: boolean
   onOpenChange: (open: boolean) => void
-  lead?: Lead
+  lead?: LeadRow
   onConfirm: (id: string) => void
 }) {
   return (

@@ -23,20 +23,22 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { leadStatusLabels, type Lead, type LeadStatus } from '@/lib/leads/types'
+import { leadStatusLabels, type LeadStatus } from '@/lib/leads/types'
+import type { LeadRow } from '@/lib/leads/queries'
+import type { WorkspaceMember } from '@/lib/leads/queries'
 import { leadSchema, type LeadFormInput, type LeadFormValues } from '@/lib/validations/lead'
-
-const owners = ['Rick Cruz', 'Ana Paula']
 
 export function LeadFormDialog({
   open,
   onOpenChange,
   lead,
+  members,
   onSave,
 }: {
   open: boolean
   onOpenChange: (open: boolean) => void
-  lead?: Lead
+  lead?: LeadRow
+  members: WorkspaceMember[]
   onSave: (values: LeadFormValues, id?: string) => void
 }) {
   const [isSubmitting, setIsSubmitting] = React.useState(false)
@@ -56,7 +58,7 @@ export function LeadFormDialog({
       phone: '',
       company: '',
       status: 'novo',
-      owner: owners[0],
+      ownerId: members[0]?.id ?? '',
       value: 0,
     },
   })
@@ -68,10 +70,10 @@ export function LeadFormDialog({
           ? {
               name: lead.name,
               email: lead.email,
-              phone: lead.phone,
-              company: lead.company,
+              phone: lead.phone ?? '',
+              company: lead.company ?? '',
               status: lead.status,
-              owner: lead.owner,
+              ownerId: lead.owner_id ?? members[0]?.id ?? '',
               value: lead.value,
             }
           : {
@@ -80,12 +82,12 @@ export function LeadFormDialog({
               phone: '',
               company: '',
               status: 'novo',
-              owner: owners[0],
+              ownerId: members[0]?.id ?? '',
               value: 0,
             },
       )
     }
-  }, [open, lead, reset])
+  }, [open, lead, members, reset])
 
   function onSubmit(values: LeadFormValues) {
     setIsSubmitting(true)
@@ -195,9 +197,9 @@ export function LeadFormDialog({
             </div>
 
             <div className="flex flex-col gap-1.5">
-              <Label htmlFor="owner">Responsável</Label>
+              <Label htmlFor="ownerId">Responsável</Label>
               <Controller
-                name="owner"
+                name="ownerId"
                 control={control}
                 render={({ field }) => (
                   <Select
@@ -205,20 +207,24 @@ export function LeadFormDialog({
                     onValueChange={field.onChange}
                     disabled={isSubmitting}
                   >
-                    <SelectTrigger id="owner" className="w-full">
-                      <SelectValue placeholder="Selecione" />
+                    <SelectTrigger id="ownerId" className="w-full">
+                      <SelectValue placeholder="Selecione">
+                        {(value) => members.find((m) => m.id === value)?.name ?? 'Selecione'}
+                      </SelectValue>
                     </SelectTrigger>
                     <SelectContent>
-                      {owners.map((owner) => (
-                        <SelectItem key={owner} value={owner}>
-                          {owner}
+                      {members.map((member) => (
+                        <SelectItem key={member.id} value={member.id}>
+                          {member.name}
                         </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
                 )}
               />
-              {errors.owner && <p className="text-destructive text-xs">{errors.owner.message}</p>}
+              {errors.ownerId && (
+                <p className="text-destructive text-xs">{errors.ownerId.message}</p>
+              )}
             </div>
           </div>
 
