@@ -217,6 +217,14 @@ export type Database = {
         Args: { target_workspace_id: string }
         Returns: boolean
       }
+      is_workspace_creator: {
+        Args: { target_workspace_id: string }
+        Returns: boolean
+      }
+      create_workspace_with_admin: {
+        Args: { workspace_name: string }
+        Returns: string
+      }
     }
     Enums: Record<string, never>
     CompositeTypes: Record<string, never>
