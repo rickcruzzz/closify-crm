@@ -39,7 +39,7 @@ export function LeadFormDialog({
   onOpenChange: (open: boolean) => void
   lead?: LeadRow
   members: WorkspaceMember[]
-  onSave: (values: LeadFormValues, id?: string) => void
+  onSave: (values: LeadFormValues, id?: string) => void | Promise<void>
 }) {
   const [isSubmitting, setIsSubmitting] = React.useState(false)
   const isEditing = !!lead
@@ -89,13 +89,14 @@ export function LeadFormDialog({
     }
   }, [open, lead, members, reset])
 
-  function onSubmit(values: LeadFormValues) {
+  async function onSubmit(values: LeadFormValues) {
     setIsSubmitting(true)
-    setTimeout(() => {
-      onSave(values, lead?.id)
-      setIsSubmitting(false)
+    try {
+      await onSave(values, lead?.id)
       onOpenChange(false)
-    }, 500)
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   return (

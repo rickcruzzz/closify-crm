@@ -29,40 +29,24 @@ const CLOSED_STAGES: DealStage[] = ['fechado_ganho', 'fechado_perdido']
 // Dashboard agrega no servidor via count/sum em vez de buscar todas as
 // linhas e somar em memória — com um workspace grande (milhares de deals),
 // trazer tudo pra somar em JS desperdiça banda e memória para um número que
-// o Postgres já calcula de forma mais barata.
+// o Postgres já calcula de forma mais barata. Os 4 counts (leads, deals
+// abertos/fechados/ganhos) saem numa única RPC em vez de 4 queries
+// count:exact separadas, para reduzir round-trips de rede.
 export async function getDashboardMetrics(workspaceId: string): Promise<DashboardMetrics> {
   const supabase = await createClient()
 
-  const [totalLeadsResult, openDealsCountResult, pipelineValueResult, closedDealsResult, wonDealsResult] =
-    await Promise.all([
-      supabase
-        .from('leads')
-        .select('*', { count: 'exact', head: true })
-        .eq('workspace_id', workspaceId),
-      supabase
-        .from('deals')
-        .select('*', { count: 'exact', head: true })
-        .eq('workspace_id', workspaceId)
-        .not('stage', 'in', `(${CLOSED_STAGES.join(',')})`),
-      supabase.rpc('get_open_pipeline_value', { target_workspace_id: workspaceId }),
-      supabase
-        .from('deals')
-        .select('*', { count: 'exact', head: true })
-        .eq('workspace_id', workspaceId)
-        .in('stage', CLOSED_STAGES),
-      supabase
-        .from('deals')
-        .select('*', { count: 'exact', head: true })
-        .eq('workspace_id', workspaceId)
-        .eq('stage', 'fechado_ganho'),
-    ])
+  const [countsResult, pipelineValueResult] = await Promise.all([
+    supabase.rpc('get_dashboard_counts', { target_workspace_id: workspaceId }).single(),
+    supabase.rpc('get_open_pipeline_value', { target_workspace_id: workspaceId }),
+  ])
 
-  const closedCount = closedDealsResult.count ?? 0
-  const wonCount = wonDealsResult.count ?? 0
+  const counts = countsResult.data
+  const closedCount = counts?.closed_deals ?? 0
+  const wonCount = counts?.won_deals ?? 0
 
   return {
-    totalLeads: totalLeadsResult.count ?? 0,
-    openDeals: openDealsCountResult.count ?? 0,
+    totalLeads: counts?.total_leads ?? 0,
+    openDeals: counts?.open_deals ?? 0,
     pipelineValue: pipelineValueResult.data ?? 0,
     conversionRate: closedCount > 0 ? (wonCount / closedCount) * 100 : 0,
   }

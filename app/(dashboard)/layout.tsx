@@ -3,18 +3,12 @@ import { redirect } from 'next/navigation'
 import { Sidebar } from '@/components/layout/sidebar'
 import { Topbar } from '@/components/layout/topbar'
 import { createClient } from '@/lib/supabase/server'
+import { getCurrentUserAndWorkspace } from '@/lib/supabase/workspace'
 import type { WorkspacePlan } from '@/types/supabase'
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
+  const { user } = await getCurrentUserAndWorkspace()
   const supabase = await createClient()
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-
-  if (!user) {
-    redirect('/login')
-  }
 
   const { data: memberships } = await supabase
     .from('workspace_members')
