@@ -2,7 +2,6 @@
 
 import * as React from 'react'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useForm } from 'react-hook-form'
 import { Loader2 } from 'lucide-react'
@@ -20,10 +19,12 @@ import { Label } from '@/components/ui/label'
 import { Separator } from '@/components/ui/separator'
 import { GoogleIcon } from '@/components/auth/google-icon'
 import { loginSchema, type LoginValues } from '@/lib/validations/auth'
+import { signIn, signInWithGoogle } from '@/lib/supabase/actions'
 
 export default function LoginPage() {
-  const router = useRouter()
   const [isSubmitting, setIsSubmitting] = React.useState(false)
+  const [isGoogleLoading, setIsGoogleLoading] = React.useState(false)
+  const [formError, setFormError] = React.useState<string | null>(null)
 
   const {
     register,
@@ -34,11 +35,24 @@ export default function LoginPage() {
     defaultValues: { email: '', password: '' },
   })
 
-  function onSubmit() {
+  async function onSubmit(values: LoginValues) {
+    setFormError(null)
     setIsSubmitting(true)
-    setTimeout(() => {
-      router.push('/dashboard')
-    }, 800)
+    const result = await signIn(values)
+    if (result?.error) {
+      setFormError(result.error)
+      setIsSubmitting(false)
+    }
+  }
+
+  async function onGoogleClick() {
+    setFormError(null)
+    setIsGoogleLoading(true)
+    const result = await signInWithGoogle()
+    if (result?.error) {
+      setFormError(result.error)
+      setIsGoogleLoading(false)
+    }
   }
 
   return (
@@ -48,8 +62,18 @@ export default function LoginPage() {
         <CardDescription>Acesse o painel do seu workspace.</CardDescription>
       </CardHeader>
       <CardContent className="flex flex-col gap-4">
-        <Button variant="outline" className="w-full" type="button" disabled={isSubmitting}>
-          <GoogleIcon className="size-4" />
+        <Button
+          variant="outline"
+          className="w-full"
+          type="button"
+          disabled={isSubmitting || isGoogleLoading}
+          onClick={onGoogleClick}
+        >
+          {isGoogleLoading ? (
+            <Loader2 className="size-4 animate-spin" />
+          ) : (
+            <GoogleIcon className="size-4" />
+          )}
           Continuar com Google
         </Button>
 
@@ -58,6 +82,12 @@ export default function LoginPage() {
           <span className="text-muted-foreground text-xs">ou</span>
           <Separator className="flex-1" />
         </div>
+
+        {formError && (
+          <p className="bg-destructive/10 text-destructive rounded-md px-3 py-2 text-sm">
+            {formError}
+          </p>
+        )}
 
         <form onSubmit={handleSubmit(onSubmit)} noValidate className="flex flex-col gap-4">
           <div className="flex flex-col gap-1.5">

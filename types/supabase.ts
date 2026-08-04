@@ -20,20 +20,24 @@ export type Database = {
           id: string
           name: string
           plan: WorkspacePlan
+          created_by: string | null
           created_at: string
         }
         Insert: {
           id?: string
           name: string
           plan?: WorkspacePlan
+          created_by?: string | null
           created_at?: string
         }
         Update: {
           id?: string
           name?: string
           plan?: WorkspacePlan
+          created_by?: string | null
           created_at?: string
         }
+        Relationships: []
       }
       workspace_members: {
         Row: {
@@ -54,6 +58,14 @@ export type Database = {
           role?: WorkspaceRole
           created_at?: string
         }
+        Relationships: [
+          {
+            foreignKeyName: 'workspace_members_workspace_id_fkey'
+            columns: ['workspace_id']
+            referencedRelation: 'workspaces'
+            referencedColumns: ['id']
+          },
+        ]
       }
       leads: {
         Row: {
@@ -92,6 +104,7 @@ export type Database = {
           value?: number
           created_at?: string
         }
+        Relationships: []
       }
       deals: {
         Row: {
@@ -127,6 +140,7 @@ export type Database = {
           due_date?: string | null
           created_at?: string
         }
+        Relationships: []
       }
       activities: {
         Row: {
@@ -156,6 +170,7 @@ export type Database = {
           description?: string
           created_at?: string
         }
+        Relationships: []
       }
       subscriptions: {
         Row: {
@@ -185,8 +200,10 @@ export type Database = {
           current_period_end?: string | null
           created_at?: string
         }
+        Relationships: []
       }
     }
+    Views: Record<string, never>
     Functions: {
       is_workspace_member: {
         Args: { target_workspace_id: string }
@@ -196,6 +213,12 @@ export type Database = {
         Args: { target_workspace_id: string }
         Returns: boolean
       }
+      workspace_has_no_members: {
+        Args: { target_workspace_id: string }
+        Returns: boolean
+      }
     }
+    Enums: Record<string, never>
+    CompositeTypes: Record<string, never>
   }
 }
