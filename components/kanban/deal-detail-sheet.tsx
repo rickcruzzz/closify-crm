@@ -1,5 +1,5 @@
-import { dealStageLabels, dealStages, type Deal, type DealStage } from '@/lib/deals/types'
-import type { Lead } from '@/lib/leads/types'
+import { dealStageLabels, dealStages, type DealStage } from '@/lib/deals/types'
+import type { DealRow, DealLeadRow } from '@/lib/deals/queries'
 import {
   Sheet,
   SheetClose,
@@ -24,7 +24,8 @@ function formatBRL(value: number) {
   return value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
 }
 
-function formatDate(date: string) {
+function formatDate(date: string | null) {
+  if (!date) return '—'
   return new Date(date).toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' })
 }
 
@@ -44,8 +45,8 @@ export function DealDetailSheet({
   onOpenChange,
   onStageChange,
 }: {
-  deal: Deal | undefined
-  lead: Lead | undefined
+  deal: DealRow | undefined
+  lead: DealLeadRow | undefined
   open: boolean
   onOpenChange: (open: boolean) => void
   onStageChange: (dealId: string, stage: DealStage) => void
@@ -102,20 +103,20 @@ export function DealDetailSheet({
                 <span className="text-muted-foreground text-xs">Responsável</span>
                 <div className="mt-1 flex items-center gap-2">
                   <Avatar size="sm">
-                    <AvatarFallback>{initials(deal.owner)}</AvatarFallback>
+                    <AvatarFallback>{initials(deal.owner_name ?? '?')}</AvatarFallback>
                   </Avatar>
-                  <span className="text-sm">{deal.owner}</span>
+                  <span className="text-sm">{deal.owner_name ?? '—'}</span>
                 </div>
               </div>
 
               <div className="flex justify-between">
                 <div>
                   <span className="text-muted-foreground text-xs">Prazo</span>
-                  <p className="text-sm">{formatDate(deal.dueDate)}</p>
+                  <p className="text-sm">{formatDate(deal.due_date)}</p>
                 </div>
                 <div>
                   <span className="text-muted-foreground text-xs">Criado em</span>
-                  <p className="text-sm">{formatDate(deal.createdAt)}</p>
+                  <p className="text-sm">{formatDate(deal.created_at)}</p>
                 </div>
               </div>
             </div>

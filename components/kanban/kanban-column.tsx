@@ -2,8 +2,8 @@ import { useDroppable } from '@dnd-kit/core'
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable'
 
 import { cn } from '@/lib/utils'
-import { dealStageLabels, type Deal, type DealStage } from '@/lib/deals/types'
-import type { Lead } from '@/lib/leads/types'
+import { dealStageLabels, type DealStage } from '@/lib/deals/types'
+import type { DealRow, DealLeadRow } from '@/lib/deals/queries'
 import { Badge } from '@/components/ui/badge'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { DealCard } from '@/components/kanban/deal-card'
@@ -20,8 +20,8 @@ export function KanbanColumn({
   onOpenDeal,
 }: {
   stage: DealStage
-  deals: Deal[]
-  leadsById: Map<string, Lead>
+  deals: DealRow[]
+  leadsById: Map<string, DealLeadRow>
   onOpenDeal: (dealId: string) => void
 }) {
   const { setNodeRef, isOver } = useDroppable({ id: stage, data: { stage } })
@@ -56,7 +56,7 @@ export function KanbanColumn({
                 <DealCard
                   key={deal.id}
                   deal={deal}
-                  lead={leadsById.get(deal.leadId)}
+                  lead={deal.lead_id ? leadsById.get(deal.lead_id) : undefined}
                   onOpen={onOpenDeal}
                 />
               ))
