@@ -1,26 +1,21 @@
-import {
-  Briefcase,
-  DollarSign,
-  Target,
-  TrendingUp,
-  Users,
-  type LucideIcon,
-} from 'lucide-react'
+import { Briefcase, DollarSign, Target, Users, type LucideIcon } from 'lucide-react'
 
 import { cn } from '@/lib/utils'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { formatCompactBRL, type DashboardMetrics } from '@/lib/deals/metrics'
-
-type Trend = { value: string; label: string }
+import { formatCompactBRL } from '@/lib/deals/metrics'
+import type { DashboardMetrics } from '@/lib/dashboard/queries'
 
 type MetricCardConfig = {
   label: string
   icon: LucideIcon
   accent: { text: string; bg: string }
   format: (metrics: DashboardMetrics) => string
-  trend: Trend
 }
 
+// Sem histórico de métricas por período no schema ainda, não há como
+// calcular variação real (ex: "+18% vs mês anterior") — mostrar um número
+// inventado ao lado de dados reais seria mais enganoso do que não mostrar
+// nada. Fica pendente até existir uma tabela de snapshots mensais.
 const cards: MetricCardConfig[] = [
   {
     label: 'Total de Leads',
@@ -30,7 +25,6 @@ const cards: MetricCardConfig[] = [
       bg: 'bg-blue-500/10 dark:bg-blue-400/10',
     },
     format: (metrics) => metrics.totalLeads.toString(),
-    trend: { value: '+18%', label: 'vs mês anterior' },
   },
   {
     label: 'Negócios Abertos',
@@ -40,7 +34,6 @@ const cards: MetricCardConfig[] = [
       bg: 'bg-violet-500/10 dark:bg-violet-400/10',
     },
     format: (metrics) => metrics.openDeals.toString(),
-    trend: { value: '+12%', label: 'vs mês anterior' },
   },
   {
     label: 'Valor do Pipeline',
@@ -50,7 +43,6 @@ const cards: MetricCardConfig[] = [
       bg: 'bg-emerald-500/10 dark:bg-emerald-400/10',
     },
     format: (metrics) => formatCompactBRL(metrics.pipelineValue),
-    trend: { value: '+23%', label: 'vs mês anterior' },
   },
   {
     label: 'Taxa de Conversão',
@@ -60,7 +52,6 @@ const cards: MetricCardConfig[] = [
       bg: 'bg-amber-500/10 dark:bg-amber-400/10',
     },
     format: (metrics) => `${metrics.conversionRate.toFixed(0)}%`,
-    trend: { value: '+4pp', label: 'vs mês anterior' },
   },
 ]
 
@@ -82,12 +73,8 @@ export function MetricCards({ metrics }: { metrics: DashboardMetrics }) {
               <card.icon className={cn('size-4.5', card.accent.text)} />
             </div>
           </CardHeader>
-          <CardContent className="flex flex-col gap-1.5">
+          <CardContent>
             <span className="text-2xl font-semibold">{card.format(metrics)}</span>
-            <span className="inline-flex items-center gap-1 text-xs font-medium text-emerald-500 dark:text-emerald-400">
-              <TrendingUp className="size-3.5" />
-              {card.trend.value} {card.trend.label}
-            </span>
           </CardContent>
         </Card>
       ))}

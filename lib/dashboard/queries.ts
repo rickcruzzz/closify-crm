@@ -1,0 +1,144 @@
+import { createClient } from '@/lib/supabase/server'
+import { dealStageLabels, dealStages, type DealStage } from '@/lib/deals/types'
+
+export type DashboardMetrics = {
+  totalLeads: number
+  openDeals: number
+  pipelineValue: number
+  conversionRate: number
+}
+
+export type FunnelStageCount = {
+  stage: DealStage
+  label: string
+  count: number
+}
+
+export type UpcomingDeal = {
+  id: string
+  title: string
+  stage: DealStage
+  value: number
+  due_date: string | null
+  lead_company: string | null
+  owner_name: string | null
+}
+
+const CLOSED_STAGES: DealStage[] = ['fechado_ganho', 'fechado_perdido']
+
+// Dashboard agrega no servidor via count/sum em vez de buscar todas as
+// linhas e somar em memória — com um workspace grande (milhares de deals),
+// trazer tudo pra somar em JS desperdiça banda e memória para um número que
+// o Postgres já calcula de forma mais barata.
+export async function getDashboardMetrics(workspaceId: string): Promise<DashboardMetrics> {
+  const supabase = await createClient()
+
+  const [totalLeadsResult, openDealsResult, closedDealsResult, wonDealsResult] =
+    await Promise.all([
+      supabase
+        .from('leads')
+        .select('*', { count: 'exact', head: true })
+        .eq('workspace_id', workspaceId),
+      supabase
+        .from('deals')
+        .select('value')
+        .eq('workspace_id', workspaceId)
+        .not('stage', 'in', `(${CLOSED_STAGES.join(',')})`),
+      supabase
+        .from('deals')
+        .select('*', { count: 'exact', head: true })
+        .eq('workspace_id', workspaceId)
+        .in('stage', CLOSED_STAGES),
+      supabase
+        .from('deals')
+        .select('*', { count: 'exact', head: true })
+        .eq('workspace_id', workspaceId)
+        .eq('stage', 'fechado_ganho'),
+    ])
+
+  const openDeals = openDealsResult.data ?? []
+  const pipelineValue = openDeals.reduce((sum, deal) => sum + deal.value, 0)
+  const closedCount = closedDealsResult.count ?? 0
+  const wonCount = wonDealsResult.count ?? 0
+
+  return {
+    totalLeads: totalLeadsResult.count ?? 0,
+    openDeals: openDeals.length,
+    pipelineValue,
+    conversionRate: closedCount > 0 ? (wonCount / closedCount) * 100 : 0,
+  }
+}
+
+export async function getFunnelCounts(workspaceId: string): Promise<FunnelStageCount[]> {
+  const supabase = await createClient()
+
+  const { data } = await supabase
+    .from('deals')
+    .select('stage')
+    .eq('workspace_id', workspaceId)
+
+  const counts = new Map<DealStage, number>()
+  for (const row of data ?? []) {
+    counts.set(row.stage, (counts.get(row.stage) ?? 0) + 1)
+  }
+
+  return dealStages.map((stage) => ({
+    stage,
+    label: dealStageLabels[stage],
+    count: counts.get(stage) ?? 0,
+  }))
+}
+
+export async function getUpcomingDeals(workspaceId: string, limit = 5): Promise<UpcomingDeal[]> {
+  const supabase = await createClient()
+
+  const { data } = await supabase
+    .from('deals')
+    .select('id, title, stage, value, due_date, owner_id, lead_id')
+    .eq('workspace_id', workspaceId)
+    .not('stage', 'in', `(${CLOSED_STAGES.join(',')})`)
+    .not('due_date', 'is', null)
+    .order('due_date', { ascending: true })
+    .limit(limit)
+
+  if (!data || data.length === 0) return []
+
+  const leadIds = Array.from(new Set(data.map((d) => d.lead_id).filter((id): id is string => !!id)))
+  const ownerIds = Array.from(new Set(data.map((d) => d.owner_id).filter((id): id is string => !!id)))
+
+  const [leadsResult, ownerNames] = await Promise.all([
+    leadIds.length > 0
+      ? supabase.from('leads').select('id, company').in('id', leadIds)
+      : Promise.resolve({ data: [] }),
+    ownerIds.length > 0 ? getMemberNames(workspaceId, ownerIds) : Promise.resolve(new Map()),
+  ])
+
+  const companyById = new Map((leadsResult.data ?? []).map((l) => [l.id, l.company]))
+
+  return data.map((deal) => ({
+    id: deal.id,
+    title: deal.title,
+    stage: deal.stage,
+    value: deal.value,
+    due_date: deal.due_date,
+    lead_company: deal.lead_id ? companyById.get(deal.lead_id) ?? null : null,
+    owner_name: deal.owner_id ? ownerNames.get(deal.owner_id) ?? null : null,
+  }))
+}
+
+async function getMemberNames(
+  workspaceId: string,
+  userIds: string[],
+): Promise<Map<string, string>> {
+  const supabase = await createClient()
+  const { data } = await supabase.rpc('get_workspace_member_names', {
+    target_workspace_id: workspaceId,
+    target_user_ids: userIds,
+  })
+
+  const map = new Map<string, string>()
+  for (const row of data ?? []) {
+    map.set(row.user_id, row.name)
+  }
+  return map
+}

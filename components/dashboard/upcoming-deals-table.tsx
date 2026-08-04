@@ -1,6 +1,6 @@
 import { cn } from '@/lib/utils'
-import { dealStageLabels, type Deal } from '@/lib/deals/types'
-import type { Lead } from '@/lib/leads/types'
+import { dealStageLabels } from '@/lib/deals/types'
+import type { UpcomingDeal } from '@/lib/dashboard/queries'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import {
   Table,
@@ -13,11 +13,11 @@ import {
 import { Badge } from '@/components/ui/badge'
 import { formatBRL } from '@/lib/deals/metrics'
 
-const TODAY = new Date('2026-08-02')
-
 function dueDateInfo(dueDate: string) {
   const due = new Date(dueDate)
-  const diffDays = Math.round((due.getTime() - TODAY.getTime()) / 86_400_000)
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  const diffDays = Math.round((due.getTime() - today.getTime()) / 86_400_000)
 
   if (diffDays < 0) {
     const label = diffDays === -1 ? 'atrasado há 1 dia' : `atrasado há ${-diffDays} dias`
@@ -32,13 +32,7 @@ function dueDateInfo(dueDate: string) {
   return { label: `vence em ${diffDays} dias`, className: 'text-muted-foreground' }
 }
 
-export function UpcomingDealsTable({
-  deals,
-  leadsById,
-}: {
-  deals: Deal[]
-  leadsById: Map<string, Lead>
-}) {
+export function UpcomingDealsTable({ deals }: { deals: UpcomingDeal[] }) {
   return (
     <Card>
       <CardHeader>
@@ -60,16 +54,15 @@ export function UpcomingDealsTable({
             </TableHeader>
             <TableBody>
               {deals.map((deal) => {
-                const lead = leadsById.get(deal.leadId)
-                const due = dueDateInfo(deal.dueDate)
+                const due = deal.due_date ? dueDateInfo(deal.due_date) : null
                 return (
                   <TableRow key={deal.id}>
                     <TableCell>
                       <div className="flex flex-col">
                         <span className="font-medium">{deal.title}</span>
-                        {lead && (
+                        {deal.lead_company && (
                           <span className="text-muted-foreground text-xs">
-                            {lead.company}
+                            {deal.lead_company}
                           </span>
                         )}
                       </div>
@@ -78,9 +71,9 @@ export function UpcomingDealsTable({
                       <Badge variant="secondary">{dealStageLabels[deal.stage]}</Badge>
                     </TableCell>
                     <TableCell>{formatBRL(deal.value)}</TableCell>
-                    <TableCell>{deal.owner}</TableCell>
-                    <TableCell className={cn('font-medium', due.className)}>
-                      {due.label}
+                    <TableCell>{deal.owner_name ?? '—'}</TableCell>
+                    <TableCell className={cn('font-medium', due?.className)}>
+                      {due?.label ?? '—'}
                     </TableCell>
                   </TableRow>
                 )
