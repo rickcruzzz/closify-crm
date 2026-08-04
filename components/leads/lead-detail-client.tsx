@@ -13,10 +13,12 @@ import { LeadStatusBadge } from '@/components/leads/lead-status-badge'
 import { LeadFormDialog } from '@/components/leads/lead-form-dialog'
 import { DeleteLeadDialog } from '@/components/leads/delete-lead-dialog'
 import { ActivityTimeline } from '@/components/leads/activity-timeline'
-import { deleteLead, updateLead } from '@/lib/leads/actions'
+import { ActivityFormDialog } from '@/components/leads/activity-form-dialog'
+import { createActivity, deleteLead, updateLead } from '@/lib/leads/actions'
 import type { LeadRow, WorkspaceMember } from '@/lib/leads/queries'
 import type { ActivityType } from '@/lib/leads/types'
 import type { LeadFormValues } from '@/lib/validations/lead'
+import type { ActivityFormValues } from '@/lib/validations/activity'
 
 const currencyFormatter = new Intl.NumberFormat('pt-BR', {
   style: 'currency',
@@ -45,6 +47,7 @@ export function LeadDetailClient({
   const router = useRouter()
   const [formOpen, setFormOpen] = React.useState(false)
   const [deleteOpen, setDeleteOpen] = React.useState(false)
+  const [activityFormOpen, setActivityFormOpen] = React.useState(false)
 
   async function handleSave(values: LeadFormValues) {
     const result = await updateLead(lead.id, values)
@@ -65,6 +68,16 @@ export function LeadDetailClient({
     }
     toast.success('Lead excluído.')
     router.push('/leads')
+  }
+
+  async function handleCreateActivity(values: ActivityFormValues) {
+    const result = await createActivity(lead.id, values)
+    if (result?.error) {
+      toast.error(result.error)
+      return
+    }
+    toast.success('Atividade registrada.')
+    router.refresh()
   }
 
   return (
@@ -133,8 +146,11 @@ export function LeadDetailClient({
         </Card>
 
         <Card className="lg:col-span-2">
-          <CardHeader>
+          <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle>Timeline de atividades</CardTitle>
+            <Button variant="outline" size="sm" onClick={() => setActivityFormOpen(true)}>
+              Registrar atividade
+            </Button>
           </CardHeader>
           <CardContent>
             <ActivityTimeline activities={activities} />
@@ -155,6 +171,12 @@ export function LeadDetailClient({
         onOpenChange={setDeleteOpen}
         lead={lead}
         onConfirm={handleDelete}
+      />
+
+      <ActivityFormDialog
+        open={activityFormOpen}
+        onOpenChange={setActivityFormOpen}
+        onCreate={handleCreateActivity}
       />
     </div>
   )
