@@ -11,26 +11,26 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { mockCurrentUser } from '@/lib/mock-data'
+import { signOut } from '@/lib/supabase/actions'
 
-export function UserMenu() {
+export type CurrentUser = {
+  name: string
+  email: string
+  initials: string
+}
+
+export function UserMenu({ currentUser }: { currentUser: CurrentUser }) {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger className="rounded-full outline-none">
         <Avatar className="size-8">
-          <AvatarFallback className="text-xs font-medium">
-            {mockCurrentUser.initials}
-          </AvatarFallback>
+          <AvatarFallback className="text-xs font-medium">{currentUser.initials}</AvatarFallback>
         </Avatar>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-56">
         <DropdownMenuLabel className="flex flex-col gap-0.5 px-1.5 py-1.5">
-          <span className="text-foreground text-sm font-medium">
-            {mockCurrentUser.name}
-          </span>
-          <span className="text-muted-foreground text-xs font-normal">
-            {mockCurrentUser.email}
-          </span>
+          <span className="text-foreground text-sm font-medium">{currentUser.name}</span>
+          <span className="text-muted-foreground text-xs font-normal">{currentUser.email}</span>
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
         <DropdownMenuItem className="gap-2">
@@ -42,7 +42,13 @@ export function UserMenu() {
           Configurações
         </DropdownMenuItem>
         <DropdownMenuSeparator />
-        <DropdownMenuItem variant="destructive" className="gap-2">
+        <DropdownMenuItem
+          variant="destructive"
+          className="gap-2"
+          onSelect={() => {
+            void signOut()
+          }}
+        >
           <LogOut className="size-4" />
           Sair
         </DropdownMenuItem>

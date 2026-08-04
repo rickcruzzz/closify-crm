@@ -1,7 +1,6 @@
 'use client'
 
 import * as React from 'react'
-import { useRouter } from 'next/navigation'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useForm } from 'react-hook-form'
 import { Building2, Loader2 } from 'lucide-react'
@@ -17,10 +16,11 @@ import {
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { onboardingSchema, type OnboardingValues } from '@/lib/validations/auth'
+import { createWorkspace } from '@/lib/supabase/actions'
 
 export default function OnboardingPage() {
-  const router = useRouter()
   const [isSubmitting, setIsSubmitting] = React.useState(false)
+  const [formError, setFormError] = React.useState<string | null>(null)
 
   const {
     register,
@@ -31,11 +31,14 @@ export default function OnboardingPage() {
     defaultValues: { workspaceName: '' },
   })
 
-  function onSubmit() {
+  async function onSubmit(values: OnboardingValues) {
+    setFormError(null)
     setIsSubmitting(true)
-    setTimeout(() => {
-      router.push('/dashboard')
-    }, 800)
+    const result = await createWorkspace(values)
+    if (result?.error) {
+      setFormError(result.error)
+      setIsSubmitting(false)
+    }
   }
 
   return (
@@ -50,6 +53,11 @@ export default function OnboardingPage() {
         </CardDescription>
       </CardHeader>
       <CardContent>
+        {formError && (
+          <p className="bg-destructive/10 text-destructive mb-4 rounded-md px-3 py-2 text-sm">
+            {formError}
+          </p>
+        )}
         <form onSubmit={handleSubmit(onSubmit)} noValidate className="flex flex-col gap-4">
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="workspaceName">Nome da empresa</Label>

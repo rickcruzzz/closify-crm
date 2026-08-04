@@ -2,7 +2,6 @@
 
 import * as React from 'react'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { Controller, useForm } from 'react-hook-form'
 import { Loader2 } from 'lucide-react'
@@ -21,10 +20,12 @@ import { Label } from '@/components/ui/label'
 import { Separator } from '@/components/ui/separator'
 import { GoogleIcon } from '@/components/auth/google-icon'
 import { signUpSchema, type SignUpValues } from '@/lib/validations/auth'
+import { signUp, signInWithGoogle } from '@/lib/supabase/actions'
 
 export default function SignUpPage() {
-  const router = useRouter()
   const [isSubmitting, setIsSubmitting] = React.useState(false)
+  const [isGoogleLoading, setIsGoogleLoading] = React.useState(false)
+  const [formError, setFormError] = React.useState<string | null>(null)
 
   const {
     register,
@@ -36,11 +37,24 @@ export default function SignUpPage() {
     defaultValues: { name: '', email: '', password: '', terms: undefined },
   })
 
-  function onSubmit() {
+  async function onSubmit(values: SignUpValues) {
+    setFormError(null)
     setIsSubmitting(true)
-    setTimeout(() => {
-      router.push('/onboarding')
-    }, 800)
+    const result = await signUp(values)
+    if (result?.error) {
+      setFormError(result.error)
+      setIsSubmitting(false)
+    }
+  }
+
+  async function onGoogleClick() {
+    setFormError(null)
+    setIsGoogleLoading(true)
+    const result = await signInWithGoogle()
+    if (result?.error) {
+      setFormError(result.error)
+      setIsGoogleLoading(false)
+    }
   }
 
   return (
@@ -50,8 +64,18 @@ export default function SignUpPage() {
         <CardDescription>Comece a organizar seu funil de vendas hoje.</CardDescription>
       </CardHeader>
       <CardContent className="flex flex-col gap-4">
-        <Button variant="outline" className="w-full" type="button" disabled={isSubmitting}>
-          <GoogleIcon className="size-4" />
+        <Button
+          variant="outline"
+          className="w-full"
+          type="button"
+          disabled={isSubmitting || isGoogleLoading}
+          onClick={onGoogleClick}
+        >
+          {isGoogleLoading ? (
+            <Loader2 className="size-4 animate-spin" />
+          ) : (
+            <GoogleIcon className="size-4" />
+          )}
           Continuar com Google
         </Button>
 
@@ -60,6 +84,12 @@ export default function SignUpPage() {
           <span className="text-muted-foreground text-xs">ou</span>
           <Separator className="flex-1" />
         </div>
+
+        {formError && (
+          <p className="bg-destructive/10 text-destructive rounded-md px-3 py-2 text-sm">
+            {formError}
+          </p>
+        )}
 
         <form onSubmit={handleSubmit(onSubmit)} noValidate className="flex flex-col gap-4">
           <div className="flex flex-col gap-1.5">
