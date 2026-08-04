@@ -9,7 +9,7 @@ export const leadSchema = z.object({
     ['novo', 'contato_realizado', 'proposta_enviada', 'negociacao', 'fechado_ganho', 'fechado_perdido'],
     { error: 'Selecione um status.' },
   ),
-  owner: z.string().min(1, 'Selecione um responsável.'),
+  ownerId: z.uuid('Selecione um responsável.'),
   value: z.coerce.number().min(0, 'O valor não pode ser negativo.'),
 })
 

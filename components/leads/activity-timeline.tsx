@@ -1,7 +1,15 @@
 import { FileText, Mail, Phone, Users } from 'lucide-react'
 
 import { cn } from '@/lib/utils'
-import type { Activity, ActivityType } from '@/lib/leads/types'
+import type { ActivityType } from '@/lib/leads/types'
+
+type ActivityRow = {
+  id: string
+  type: ActivityType
+  description: string
+  created_at: string
+  author_name: string | null
+}
 
 const activityConfig: Record<ActivityType, { label: string; icon: typeof Phone; className: string }> = {
   ligacao: { label: 'Ligação', icon: Phone, className: 'bg-blue-500/10 text-blue-500' },
@@ -15,7 +23,7 @@ const dateTimeFormatter = new Intl.DateTimeFormat('pt-BR', {
   timeStyle: 'short',
 })
 
-export function ActivityTimeline({ activities }: { activities: Activity[] }) {
+export function ActivityTimeline({ activities }: { activities: ActivityRow[] }) {
   if (activities.length === 0) {
     return (
       <p className="text-muted-foreground py-6 text-center text-sm">
@@ -46,11 +54,13 @@ export function ActivityTimeline({ activities }: { activities: Activity[] }) {
               <div className="flex items-center justify-between gap-2">
                 <span className="text-sm font-medium">{config.label}</span>
                 <span className="text-muted-foreground text-xs whitespace-nowrap">
-                  {dateTimeFormatter.format(new Date(activity.createdAt))}
+                  {dateTimeFormatter.format(new Date(activity.created_at))}
                 </span>
               </div>
               <p className="text-muted-foreground text-sm">{activity.description}</p>
-              <span className="text-muted-foreground text-xs">por {activity.author}</span>
+              <span className="text-muted-foreground text-xs">
+                por {activity.author_name ?? 'Desconhecido'}
+              </span>
             </div>
           </li>
         )
