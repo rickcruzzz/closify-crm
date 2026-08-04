@@ -3,8 +3,8 @@ import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 
 import { cn } from '@/lib/utils'
-import type { Deal, DealStage } from '@/lib/deals/types'
-import type { Lead } from '@/lib/leads/types'
+import type { DealStage } from '@/lib/deals/types'
+import type { DealRow, DealLeadRow } from '@/lib/deals/queries'
 import { Card, CardContent } from '@/components/ui/card'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 
@@ -17,15 +17,15 @@ const stageAccent: Record<DealStage, string> = {
   fechado_perdido: 'border-l-red-500 dark:border-l-red-400',
 }
 
-const TODAY = new Date('2026-08-02')
-
 function formatBRL(value: number) {
   return value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
 }
 
 function dueDateInfo(dueDate: string) {
   const due = new Date(dueDate)
-  const diffDays = Math.round((due.getTime() - TODAY.getTime()) / 86_400_000)
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  const diffDays = Math.round((due.getTime() - today.getTime()) / 86_400_000)
 
   if (diffDays < 0) {
     const label = diffDays === -1 ? 'atrasado há 1 dia' : `atrasado há ${-diffDays} dias`
@@ -56,8 +56,8 @@ export function DealCard({
   lead,
   onOpen,
 }: {
-  deal: Deal
-  lead: Lead | undefined
+  deal: DealRow
+  lead: DealLeadRow | undefined
   onOpen: (dealId: string) => void
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
@@ -66,7 +66,7 @@ export function DealCard({
       data: { stage: deal.stage },
     })
 
-  const due = dueDateInfo(deal.dueDate)
+  const due = deal.due_date ? dueDateInfo(deal.due_date) : null
 
   return (
     <div
@@ -96,11 +96,13 @@ export function DealCard({
           </div>
           <div className="mt-1 flex items-center justify-between">
             <Avatar size="sm">
-              <AvatarFallback>{initials(deal.owner)}</AvatarFallback>
+              <AvatarFallback>{initials(deal.owner_name ?? '?')}</AvatarFallback>
             </Avatar>
-            <span className={cn('text-xs font-medium whitespace-nowrap', due.className)}>
-              {due.label}
-            </span>
+            {due && (
+              <span className={cn('text-xs font-medium whitespace-nowrap', due.className)}>
+                {due.label}
+              </span>
+            )}
           </div>
         </CardContent>
       </Card>

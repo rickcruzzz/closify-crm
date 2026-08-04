@@ -12,43 +12,43 @@ import {
   type DragOverEvent,
   type DragStartEvent,
 } from '@dnd-kit/core'
-import { arrayMove, sortableKeyboardCoordinates } from '@dnd-kit/sortable'
 import { Plus } from 'lucide-react'
 import { toast } from 'sonner'
 
-import { dealStageLabels, dealStages, type Deal, type DealStage } from '@/lib/deals/types'
-import { mockDeals } from '@/lib/deals/mock-data'
-import { mockLeads } from '@/lib/leads/mock-data'
+import { dealStageLabels, dealStages, type DealStage } from '@/lib/deals/types'
+import { createDeal, updateDealStage } from '@/lib/deals/actions'
+import type { DealLeadRow, DealRow } from '@/lib/deals/queries'
+import type { WorkspaceMember } from '@/lib/leads/queries'
 import type { DealFormValues } from '@/lib/validations/deal'
 import { Button } from '@/components/ui/button'
 import { KanbanColumn } from '@/components/kanban/kanban-column'
-import { KanbanSkeleton } from '@/components/kanban/kanban-skeleton'
 import { DealCardOverlay } from '@/components/kanban/deal-card-overlay'
 import { DealDetailSheet } from '@/components/kanban/deal-detail-sheet'
 import { DealFormDialog } from '@/components/kanban/deal-form-dialog'
 
-let nextDealId = mockDeals.length + 1
-
-export function KanbanBoard() {
-  const [isLoading, setIsLoading] = React.useState(true)
-  const [deals, setDeals] = React.useState(mockDeals)
+export function KanbanBoard({
+  initialDeals,
+  leads,
+  members,
+}: {
+  initialDeals: DealRow[]
+  leads: DealLeadRow[]
+  members: WorkspaceMember[]
+}) {
+  const [deals, setDeals] = React.useState(initialDeals)
   const [activeId, setActiveId] = React.useState<string | null>(null)
   const [selectedDealId, setSelectedDealId] = React.useState<string | null>(null)
   const [isFormOpen, setIsFormOpen] = React.useState(false)
 
-  const leadsById = React.useMemo(
-    () => new Map(mockLeads.map((lead) => [lead.id, lead])),
-    [],
-  )
-
   React.useEffect(() => {
-    const timeout = setTimeout(() => setIsLoading(false), 500)
-    return () => clearTimeout(timeout)
-  }, [])
+    setDeals(initialDeals)
+  }, [initialDeals])
+
+  const leadsById = React.useMemo(() => new Map(leads.map((lead) => [lead.id, lead])), [leads])
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
-    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+    useSensor(KeyboardSensor),
   )
 
   const dragStartStage = React.useRef<DealStage | null>(null)
@@ -77,55 +77,62 @@ export function KanbanBoard() {
     )
   }
 
-  function handleDragEnd(event: DragEndEvent) {
+  async function handleDragEnd(event: DragEndEvent) {
     const { active, over } = event
     setActiveId(null)
     if (!over) return
 
-    const activeIndex = deals.findIndex((deal) => deal.id === active.id)
-    const overIndex = deals.findIndex((deal) => deal.id === over.id)
-
-    if (activeIndex === -1) return
-
-    if (overIndex !== -1 && active.id !== over.id) {
-      setDeals((prev) => arrayMove(prev, activeIndex, overIndex))
-    }
-
+    const dealId = String(active.id)
     const finalStage = stageOf(String(over.id))
-    if (finalStage && finalStage !== dragStartStage.current) {
-      toast.success(`Negócio movido para ${dealStageLabels[finalStage]}`)
-    }
+    const startStage = dragStartStage.current
     dragStartStage.current = null
+
+    if (!finalStage || finalStage === startStage) return
+
+    // Update otimista já aplicado no dragOver — se a Server Action falhar,
+    // desfaz para o estado anterior em vez de deixar a UI mentir sobre o
+    // que está persistido no banco.
+    const result = await updateDealStage(dealId, finalStage)
+    if (result?.error) {
+      toast.error(result.error)
+      setDeals((prev) =>
+        prev.map((deal) => (deal.id === dealId ? { ...deal, stage: startStage! } : deal)),
+      )
+      return
+    }
+
+    toast.success(`Negócio movido para ${dealStageLabels[finalStage]}`)
   }
 
-  function handleStageChange(dealId: string, stage: DealStage) {
-    setDeals((prev) =>
-      prev.map((deal) => (deal.id === dealId ? { ...deal, stage } : deal)),
-    )
+  async function handleStageChange(dealId: string, stage: DealStage) {
+    const previousStage = deals.find((deal) => deal.id === dealId)?.stage
+    setDeals((prev) => prev.map((deal) => (deal.id === dealId ? { ...deal, stage } : deal)))
+
+    const result = await updateDealStage(dealId, stage)
+    if (result?.error) {
+      toast.error(result.error)
+      if (previousStage) {
+        setDeals((prev) =>
+          prev.map((deal) => (deal.id === dealId ? { ...deal, stage: previousStage } : deal)),
+        )
+      }
+      return
+    }
+
     toast.success(`Negócio movido para ${dealStageLabels[stage]}`)
   }
 
-  function handleCreateDeal(values: DealFormValues) {
-    const newDeal: Deal = {
-      id: `deal-${nextDealId++}`,
-      title: values.title,
-      leadId: values.leadId,
-      value: values.value,
-      stage: values.stage,
-      owner: values.owner,
-      dueDate: values.dueDate,
-      createdAt: new Date().toISOString().slice(0, 10),
+  async function handleCreateDeal(values: DealFormValues) {
+    const result = await createDeal(values)
+    if (result?.error) {
+      toast.error(result.error)
+      return
     }
-    setDeals((prev) => [...prev, newDeal])
     toast.success('Negócio criado com sucesso.')
   }
 
   const selectedDeal = deals.find((deal) => deal.id === selectedDealId)
   const activeDeal = deals.find((deal) => deal.id === activeId)
-
-  if (isLoading) {
-    return <KanbanSkeleton />
-  }
 
   return (
     <>
@@ -156,14 +163,17 @@ export function KanbanBoard() {
 
         <DragOverlay>
           {activeDeal ? (
-            <DealCardOverlay deal={activeDeal} lead={leadsById.get(activeDeal.leadId)} />
+            <DealCardOverlay
+              deal={activeDeal}
+              lead={activeDeal.lead_id ? leadsById.get(activeDeal.lead_id) : undefined}
+            />
           ) : null}
         </DragOverlay>
       </DndContext>
 
       <DealDetailSheet
         deal={selectedDeal}
-        lead={selectedDeal ? leadsById.get(selectedDeal.leadId) : undefined}
+        lead={selectedDeal?.lead_id ? leadsById.get(selectedDeal.lead_id) : undefined}
         open={!!selectedDealId}
         onOpenChange={(open) => !open && setSelectedDealId(null)}
         onStageChange={handleStageChange}
@@ -173,6 +183,8 @@ export function KanbanBoard() {
         open={isFormOpen}
         onOpenChange={setIsFormOpen}
         onCreate={handleCreateDeal}
+        leads={leads}
+        members={members}
       />
     </>
   )

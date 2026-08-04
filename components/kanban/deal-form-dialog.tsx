@@ -24,27 +24,28 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { dealStageLabels, dealStages, type DealStage } from '@/lib/deals/types'
-import { mockLeads } from '@/lib/leads/mock-data'
-import type { Lead } from '@/lib/leads/types'
+import type { DealLeadRow } from '@/lib/deals/queries'
+import type { WorkspaceMember } from '@/lib/leads/queries'
 import {
   dealSchema,
   type DealFormInput,
   type DealFormValues,
 } from '@/lib/validations/deal'
 
-const owners = ['Rick Cruz', 'Ana Paula']
-
-const leadsById = new Map(mockLeads.map((lead) => [lead.id, lead] as [string, Lead]))
-
 export function DealFormDialog({
   open,
   onOpenChange,
   onCreate,
+  leads,
+  members,
 }: {
   open: boolean
   onOpenChange: (open: boolean) => void
   onCreate: (values: DealFormValues) => void
+  leads: DealLeadRow[]
+  members: WorkspaceMember[]
 }) {
+  const leadsById = React.useMemo(() => new Map(leads.map((lead) => [lead.id, lead])), [leads])
   const [isSubmitting, setIsSubmitting] = React.useState(false)
 
   const {
@@ -60,7 +61,7 @@ export function DealFormDialog({
       leadId: '',
       value: 0,
       stage: 'novo',
-      owner: owners[0],
+      ownerId: members[0]?.id ?? '',
       dueDate: '',
     },
   })
@@ -72,11 +73,11 @@ export function DealFormDialog({
         leadId: '',
         value: 0,
         stage: 'novo',
-        owner: owners[0],
+        ownerId: members[0]?.id ?? '',
         dueDate: '',
       })
     }
-  }, [open, reset])
+  }, [open, members, reset])
 
   function onSubmit(values: DealFormValues) {
     setIsSubmitting(true)
@@ -134,7 +135,7 @@ export function DealFormDialog({
                     </SelectValue>
                   </SelectTrigger>
                   <SelectContent>
-                    {mockLeads.map((lead) => (
+                    {leads.map((lead) => (
                       <SelectItem key={lead.id} value={lead.id}>
                         {lead.name} — {lead.company}
                       </SelectItem>
@@ -181,9 +182,9 @@ export function DealFormDialog({
             </div>
 
             <div className="flex flex-col gap-1.5">
-              <Label htmlFor="owner">Responsável</Label>
+              <Label htmlFor="ownerId">Responsável</Label>
               <Controller
-                name="owner"
+                name="ownerId"
                 control={control}
                 render={({ field }) => (
                   <Select
@@ -191,21 +192,23 @@ export function DealFormDialog({
                     onValueChange={field.onChange}
                     disabled={isSubmitting}
                   >
-                    <SelectTrigger id="owner" className="w-full">
-                      <SelectValue placeholder="Selecione" />
+                    <SelectTrigger id="ownerId" className="w-full">
+                      <SelectValue placeholder="Selecione">
+                        {(value) => members.find((m) => m.id === value)?.name ?? 'Selecione'}
+                      </SelectValue>
                     </SelectTrigger>
                     <SelectContent>
-                      {owners.map((owner) => (
-                        <SelectItem key={owner} value={owner}>
-                          {owner}
+                      {members.map((member) => (
+                        <SelectItem key={member.id} value={member.id}>
+                          {member.name}
                         </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
                 )}
               />
-              {errors.owner && (
-                <p className="text-destructive text-xs">{errors.owner.message}</p>
+              {errors.ownerId && (
+                <p className="text-destructive text-xs">{errors.ownerId.message}</p>
               )}
             </div>
           </div>

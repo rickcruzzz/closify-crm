@@ -1,6 +1,6 @@
 import { cn } from '@/lib/utils'
-import type { Deal, DealStage } from '@/lib/deals/types'
-import type { Lead } from '@/lib/leads/types'
+import type { DealStage } from '@/lib/deals/types'
+import type { DealRow, DealLeadRow } from '@/lib/deals/queries'
 import { Card, CardContent } from '@/components/ui/card'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 
@@ -26,7 +26,7 @@ function initials(name: string) {
     .join('')
 }
 
-export function DealCardOverlay({ deal, lead }: { deal: Deal; lead: Lead | undefined }) {
+export function DealCardOverlay({ deal, lead }: { deal: DealRow; lead: DealLeadRow | undefined }) {
   return (
     <Card
       size="sm"
@@ -45,7 +45,7 @@ export function DealCardOverlay({ deal, lead }: { deal: Deal; lead: Lead | undef
         </div>
         <div className="mt-1 flex items-center justify-between">
           <Avatar size="sm">
-            <AvatarFallback>{initials(deal.owner)}</AvatarFallback>
+            <AvatarFallback>{initials(deal.owner_name ?? '?')}</AvatarFallback>
           </Avatar>
         </div>
       </CardContent>
