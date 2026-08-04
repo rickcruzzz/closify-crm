@@ -1,11 +1,13 @@
 'use client'
 
+import { useTransition } from 'react'
 import { LogOut, Settings, User } from 'lucide-react'
 
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import {
   DropdownMenu,
   DropdownMenuContent,
+  DropdownMenuGroup,
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
@@ -20,6 +22,8 @@ export type CurrentUser = {
 }
 
 export function UserMenu({ currentUser }: { currentUser: CurrentUser }) {
+  const [, startTransition] = useTransition()
+
   return (
     <DropdownMenu>
       <DropdownMenuTrigger className="rounded-full outline-none">
@@ -28,10 +32,12 @@ export function UserMenu({ currentUser }: { currentUser: CurrentUser }) {
         </Avatar>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-56">
-        <DropdownMenuLabel className="flex flex-col gap-0.5 px-1.5 py-1.5">
-          <span className="text-foreground text-sm font-medium">{currentUser.name}</span>
-          <span className="text-muted-foreground text-xs font-normal">{currentUser.email}</span>
-        </DropdownMenuLabel>
+        <DropdownMenuGroup>
+          <DropdownMenuLabel className="flex flex-col gap-0.5 px-1.5 py-1.5">
+            <span className="text-foreground text-sm font-medium">{currentUser.name}</span>
+            <span className="text-muted-foreground text-xs font-normal">{currentUser.email}</span>
+          </DropdownMenuLabel>
+        </DropdownMenuGroup>
         <DropdownMenuSeparator />
         <DropdownMenuItem className="gap-2">
           <User className="size-4" />
@@ -45,8 +51,10 @@ export function UserMenu({ currentUser }: { currentUser: CurrentUser }) {
         <DropdownMenuItem
           variant="destructive"
           className="gap-2"
-          onSelect={() => {
-            void signOut()
+          onClick={() => {
+            startTransition(async () => {
+              await signOut()
+            })
           }}
         >
           <LogOut className="size-4" />

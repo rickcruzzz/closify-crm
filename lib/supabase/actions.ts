@@ -85,18 +85,22 @@ export async function createWorkspace(values: unknown) {
     redirect('/login')
   }
 
-  const { data: workspace, error: workspaceError } = await supabase
-    .from('workspaces')
-    .insert({ name: parsed.data.workspaceName, created_by: user.id })
-    .select('id')
-    .single()
+  // Sem .select() no insert: a policy de select em workspaces exige ser
+  // membro, e o usuário só vira membro no segundo insert abaixo — pedir o
+  // RETURNING aqui faria o Postgres avaliar a policy de select antes de o
+  // usuário ser membro, e o insert inteiro falharia com erro de RLS.
+  const workspaceId = crypto.randomUUID()
 
-  if (workspaceError || !workspace) {
+  const { error: workspaceError } = await supabase
+    .from('workspaces')
+    .insert({ id: workspaceId, name: parsed.data.workspaceName, created_by: user.id })
+
+  if (workspaceError) {
     return { error: 'Não foi possível criar o workspace.' }
   }
 
   const { error: memberError } = await supabase.from('workspace_members').insert({
-    workspace_id: workspace.id,
+    workspace_id: workspaceId,
     user_id: user.id,
     role: 'admin',
   })

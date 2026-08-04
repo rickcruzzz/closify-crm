@@ -25,6 +25,10 @@ export default async function DashboardLayout({ children }: { children: React.Re
     .map((m) => m.workspaces)
     .filter((w): w is { id: string; name: string; plan: WorkspacePlan } => w !== null)
 
+  if (workspaces.length === 0) {
+    redirect('/onboarding')
+  }
+
   const currentUser = {
     name: (user.user_metadata?.name as string | undefined) ?? user.email ?? 'Usuário',
     email: user.email ?? '',
