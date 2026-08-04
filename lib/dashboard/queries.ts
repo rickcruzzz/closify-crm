@@ -33,7 +33,7 @@ const CLOSED_STAGES: DealStage[] = ['fechado_ganho', 'fechado_perdido']
 export async function getDashboardMetrics(workspaceId: string): Promise<DashboardMetrics> {
   const supabase = await createClient()
 
-  const [totalLeadsResult, openDealsResult, closedDealsResult, wonDealsResult] =
+  const [totalLeadsResult, openDealsCountResult, pipelineValueResult, closedDealsResult, wonDealsResult] =
     await Promise.all([
       supabase
         .from('leads')
@@ -41,9 +41,10 @@ export async function getDashboardMetrics(workspaceId: string): Promise<Dashboar
         .eq('workspace_id', workspaceId),
       supabase
         .from('deals')
-        .select('value')
+        .select('*', { count: 'exact', head: true })
         .eq('workspace_id', workspaceId)
         .not('stage', 'in', `(${CLOSED_STAGES.join(',')})`),
+      supabase.rpc('get_open_pipeline_value', { target_workspace_id: workspaceId }),
       supabase
         .from('deals')
         .select('*', { count: 'exact', head: true })
@@ -56,15 +57,13 @@ export async function getDashboardMetrics(workspaceId: string): Promise<Dashboar
         .eq('stage', 'fechado_ganho'),
     ])
 
-  const openDeals = openDealsResult.data ?? []
-  const pipelineValue = openDeals.reduce((sum, deal) => sum + deal.value, 0)
   const closedCount = closedDealsResult.count ?? 0
   const wonCount = wonDealsResult.count ?? 0
 
   return {
     totalLeads: totalLeadsResult.count ?? 0,
-    openDeals: openDeals.length,
-    pipelineValue,
+    openDeals: openDealsCountResult.count ?? 0,
+    pipelineValue: pipelineValueResult.data ?? 0,
     conversionRate: closedCount > 0 ? (wonCount / closedCount) * 100 : 0,
   }
 }
