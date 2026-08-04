@@ -32,7 +32,7 @@ export async function signUp(values: unknown) {
   }
 
   const supabase = await createClient()
-  const { error } = await supabase.auth.signUp({
+  const { data, error } = await supabase.auth.signUp({
     email: parsed.data.email,
     password: parsed.data.password,
     options: {
@@ -43,6 +43,12 @@ export async function signUp(values: unknown) {
 
   if (error) {
     return { error: error.message === 'User already registered' ? 'Este e-mail já está cadastrado.' : 'Não foi possível criar a conta.' }
+  }
+
+  // Com confirmação de e-mail ativa, signUp não retorna sessão — o usuário só
+  // ganha sessão real depois de clicar o link, que cai em /auth/callback.
+  if (!data.session) {
+    redirect('/verifique-email')
   }
 
   redirect('/onboarding')
