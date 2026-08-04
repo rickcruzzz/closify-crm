@@ -41,7 +41,7 @@ export function DealFormDialog({
 }: {
   open: boolean
   onOpenChange: (open: boolean) => void
-  onCreate: (values: DealFormValues) => void
+  onCreate: (values: DealFormValues) => void | Promise<void>
   leads: DealLeadRow[]
   members: WorkspaceMember[]
 }) {
@@ -79,13 +79,14 @@ export function DealFormDialog({
     }
   }, [open, members, reset])
 
-  function onSubmit(values: DealFormValues) {
+  async function onSubmit(values: DealFormValues) {
     setIsSubmitting(true)
-    setTimeout(() => {
-      onCreate(values)
-      setIsSubmitting(false)
+    try {
+      await onCreate(values)
       onOpenChange(false)
-    }, 500)
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   return (
