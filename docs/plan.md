@@ -260,10 +260,10 @@ workspace, com enforcement real de permissões.
 
 **Entregas:**
 
-- [ ] Convite de colaborador via Resend
-- [ ] Aceite de convite e vínculo ao workspace
-- [ ] Enforcement de permissões Admin/Membro nas Server Actions
-- [ ] Troca de workspace ativo persistida
+- [x] Convite de colaborador via Resend
+- [x] Aceite de convite e vínculo ao workspace
+- [x] Enforcement de permissões Admin/Membro nas Server Actions
+- [ ] Troca de workspace ativo persistida (fora de escopo desta rodada — usuário com múltiplos workspaces ainda não tem switch funcional)
 
 **Commit final:** `feat(backend): multi-empresa, convites e permissões`
 
