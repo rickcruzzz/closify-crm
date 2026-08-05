@@ -208,10 +208,10 @@ substituindo os dados mockados da M4.
 
 **Entregas:**
 
-- [ ] Server Actions de CRUD de negócios (deals)
-- [ ] Persistência da etapa/posição ao arrastar o card
-- [ ] Vínculo real negócio–lead–responsável
-- [ ] Atualização otimista no drag-and-drop
+- [x] Server Actions de CRUD de negócios (deals) — criação e mudança de etapa; edição/exclusão completas ainda pendentes
+- [x] Persistência da etapa/posição ao arrastar o card
+- [x] Vínculo real negócio–lead–responsável
+- [ ] Atualização otimista no drag-and-drop (persiste, mas sem otimismo — aguarda round-trip do servidor)
 
 **Commit final:** `feat(backend): persistência real do pipeline kanban`
 
@@ -226,10 +226,10 @@ com busca e filtros reais.
 
 **Entregas:**
 
-- [ ] Server Actions de CRUD de leads/contatos
-- [ ] Busca e filtros via query no Supabase
-- [ ] Server Actions de registro de atividades
-- [ ] Timeline real vinculada ao lead
+- [x] Server Actions de CRUD de leads/contatos
+- [x] Busca e filtros via query no Supabase
+- [x] Server Actions de registro de atividades
+- [x] Timeline real vinculada ao lead
 
 **Commit final:** `feat(backend): persistência de leads, contatos e atividades`
 
