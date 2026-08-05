@@ -1,20 +1,29 @@
 import { PageHeader } from '@/components/layout/page-header'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Skeleton } from '@/components/ui/skeleton'
+import { WorkspaceNameCard } from '@/components/settings/workspace-name-card'
+import { MembersCard } from '@/components/settings/members-card'
+import { getCurrentUserAndWorkspace } from '@/lib/supabase/workspace'
+import { getWorkspaceSettingsData } from '@/lib/workspace/queries'
 
-export default function SettingsPage() {
+export default async function SettingsPage() {
+  const { user, workspaceId } = await getCurrentUserAndWorkspace()
+  const { workspace, members, invites } = await getWorkspaceSettingsData(workspaceId)
+
+  const currentMember = members.find((m) => m.user_id === user.id)
+  const isAdmin = currentMember?.role === 'admin'
+
   return (
-    <div>
+    <div className="flex flex-col gap-6">
       <PageHeader title="Configurações" description="Workspace, colaboradores e plano." />
-      <Card>
-        <CardHeader>
-          <CardTitle>Workspace</CardTitle>
-        </CardHeader>
-        <CardContent className="flex flex-col gap-2">
-          <Skeleton className="h-9 w-full max-w-sm" />
-          <Skeleton className="h-9 w-full max-w-sm" />
-        </CardContent>
-      </Card>
+
+      <WorkspaceNameCard initialName={workspace?.name ?? ''} isAdmin={isAdmin} />
+
+      <MembersCard
+        currentUserId={user.id}
+        isAdmin={isAdmin}
+        members={members}
+        invites={invites}
+        plan={workspace?.plan ?? 'free'}
+      />
     </div>
   )
 }

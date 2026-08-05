@@ -11,6 +11,7 @@ export type DealStage =
   | 'fechado_perdido'
 export type ActivityType = 'ligacao' | 'email' | 'reuniao' | 'nota'
 export type SubscriptionStatus = 'trialing' | 'active' | 'past_due' | 'canceled'
+export type WorkspaceInviteStatus = 'pending' | 'accepted' | 'expired'
 
 export type Database = {
   public: {
@@ -202,6 +203,49 @@ export type Database = {
         }
         Relationships: []
       }
+      workspace_invites: {
+        Row: {
+          id: string
+          workspace_id: string
+          email: string
+          role: WorkspaceRole
+          token: string
+          status: WorkspaceInviteStatus
+          invited_by: string | null
+          created_at: string
+          expires_at: string
+        }
+        Insert: {
+          id?: string
+          workspace_id: string
+          email: string
+          role?: WorkspaceRole
+          token?: string
+          status?: WorkspaceInviteStatus
+          invited_by?: string | null
+          created_at?: string
+          expires_at?: string
+        }
+        Update: {
+          id?: string
+          workspace_id?: string
+          email?: string
+          role?: WorkspaceRole
+          token?: string
+          status?: WorkspaceInviteStatus
+          invited_by?: string | null
+          created_at?: string
+          expires_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: 'workspace_invites_workspace_id_fkey'
+            columns: ['workspace_id']
+            referencedRelation: 'workspaces'
+            referencedColumns: ['id']
+          },
+        ]
+      }
     }
     Views: Record<string, never>
     Functions: {
@@ -240,6 +284,20 @@ export type Database = {
           open_deals: number
           closed_deals: number
           won_deals: number
+        }[]
+      }
+      accept_workspace_invite: {
+        Args: { invite_token: string }
+        Returns: void
+      }
+      get_invite_by_token: {
+        Args: { invite_token: string }
+        Returns: {
+          email: string
+          role: WorkspaceRole
+          status: WorkspaceInviteStatus
+          expires_at: string
+          workspace_name: string
         }[]
       }
     }
