@@ -23,3 +23,15 @@ export const onboardingSchema = z.object({
 })
 
 export type OnboardingValues = z.infer<typeof onboardingSchema>
+
+export const forgotPasswordSchema = z.object({
+  email: z.string().min(1, 'Informe seu e-mail.').pipe(z.email('E-mail inválido.')),
+})
+
+export type ForgotPasswordValues = z.infer<typeof forgotPasswordSchema>
+
+export const resetPasswordSchema = z.object({
+  password: z.string().min(8, 'A senha precisa ter no mínimo 8 caracteres.'),
+})
+
+export type ResetPasswordValues = z.infer<typeof resetPasswordSchema>

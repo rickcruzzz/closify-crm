@@ -3,7 +3,13 @@
 import { redirect } from 'next/navigation'
 
 import { createClient } from '@/lib/supabase/server'
-import { loginSchema, signUpSchema, onboardingSchema } from '@/lib/validations/auth'
+import {
+  loginSchema,
+  signUpSchema,
+  onboardingSchema,
+  forgotPasswordSchema,
+  resetPasswordSchema,
+} from '@/lib/validations/auth'
 
 function appUrl() {
   return process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'
@@ -88,6 +94,51 @@ export async function signInWithGoogle() {
   }
 
   redirect(data.url)
+}
+
+export async function requestPasswordReset(values: unknown) {
+  const parsed = forgotPasswordSchema.safeParse(values)
+  if (!parsed.success) {
+    return { error: 'Dados inválidos.' }
+  }
+
+  const supabase = await createClient()
+  const { error } = await supabase.auth.resetPasswordForEmail(parsed.data.email, {
+    redirectTo: `${appUrl()}/auth/callback?next=/redefinir-senha`,
+  })
+
+  // Mesma lógica de anti-enumeration do signUp: não revela se o e-mail
+  // existe ou não. resetPasswordForEmail do Supabase já não retorna erro
+  // pra e-mail inexistente, mas mantemos a checagem por segurança caso
+  // o comportamento mude entre versões do SDK.
+  if (error) {
+    console.error('resetPasswordForEmail falhou', { code: error.code, status: error.status })
+  }
+
+  return { success: true }
+}
+
+export async function updatePassword(values: unknown) {
+  const parsed = resetPasswordSchema.safeParse(values)
+  if (!parsed.success) {
+    return { error: 'Dados inválidos.' }
+  }
+
+  const supabase = await createClient()
+  const { error } = await supabase.auth.updateUser({ password: parsed.data.password })
+
+  if (error) {
+    console.error('updateUser (reset de senha) falhou', { code: error.code, status: error.status })
+    if (error.code === 'same_password') {
+      return { error: 'A nova senha precisa ser diferente da atual.' }
+    }
+    if (error.code === 'weak_password') {
+      return { error: 'Senha muito fraca. Use uma senha mais forte.' }
+    }
+    return { error: 'Não foi possível redefinir a senha. O link pode ter expirado — solicite um novo.' }
+  }
+
+  redirect('/dashboard')
 }
 
 export async function signOut() {
