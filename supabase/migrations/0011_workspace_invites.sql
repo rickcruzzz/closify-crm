@@ -44,13 +44,38 @@ create policy "workspace_invites_insert_admin" on public.workspace_invites
 create policy "workspace_invites_delete_admin" on public.workspace_invites
   for delete using ((select public.is_workspace_admin(workspace_id)));
 
--- Quem está aceitando o convite ainda não é membro do workspace (nem
--- necessariamente logado) — não dá pra usar is_workspace_member aqui.
--- Selecionar por token exige já saber o token (veio do e-mail), então expor
--- select público é seguro: o token de 128 bits funciona como a própria
--- credencial de posse, igual qualquer link de convite/reset de senha.
-create policy "workspace_invites_select_by_token" on public.workspace_invites
-  for select using (true);
+-- Sem policy de select público aqui — "using (true)" deixaria qualquer
+-- usuário autenticado listar/enumerar a tabela inteira de convites (e-mails
+-- de outros workspaces), já que RLS não sabe qual token o client já filtrou
+-- no .eq(), só decide se a QUERY em geral pode ver a LINHA. A leitura por
+-- token vira RPC security definer abaixo, que recebe o token como argumento
+-- e só retorna a linha exata — sem exposição de tabela.
+
+-- ============================================================================
+-- RPC: buscar convite por token (só os campos que a tela de aceite precisa)
+-- ============================================================================
+
+create or replace function public.get_invite_by_token(invite_token uuid)
+returns table (
+  email text,
+  role public.workspace_role,
+  status public.workspace_invite_status,
+  expires_at timestamptz,
+  workspace_name text
+)
+language sql
+security definer
+set search_path = public
+stable
+as $$
+  select wi.email, wi.role, wi.status, wi.expires_at, w.name
+  from public.workspace_invites wi
+  join public.workspaces w on w.id = wi.workspace_id
+  where wi.token = invite_token;
+$$;
+
+revoke all on function public.get_invite_by_token(uuid) from public;
+grant execute on function public.get_invite_by_token(uuid) to anon, authenticated;
 
 -- ============================================================================
 -- RPC: aceitar convite (transação atômica — insere membro + marca convite)

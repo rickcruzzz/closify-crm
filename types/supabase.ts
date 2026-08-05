@@ -290,6 +290,16 @@ export type Database = {
         Args: { invite_token: string }
         Returns: void
       }
+      get_invite_by_token: {
+        Args: { invite_token: string }
+        Returns: {
+          email: string
+          role: WorkspaceRole
+          status: WorkspaceInviteStatus
+          expires_at: string
+          workspace_name: string
+        }[]
+      }
     }
     Enums: Record<string, never>
     CompositeTypes: Record<string, never>

@@ -9,11 +9,8 @@ export default async function ConvitePage({ params }: { params: Promise<{ token:
   const { token } = await params
   const supabase = await createClient()
 
-  const { data: invite } = await supabase
-    .from('workspace_invites')
-    .select('id, email, role, status, expires_at, workspace_id, workspaces(name)')
-    .eq('token', token)
-    .maybeSingle()
+  const { data: inviteRows } = await supabase.rpc('get_invite_by_token', { invite_token: token })
+  const invite = inviteRows?.[0]
 
   const {
     data: { user },
@@ -49,7 +46,7 @@ export default async function ConvitePage({ params }: { params: Promise<{ token:
         ) : (
           <AcceptInviteCard
             token={token}
-            workspaceName={(invite.workspaces as unknown as { name: string } | null)?.name ?? ''}
+            workspaceName={invite.workspace_name}
             inviteEmail={invite.email}
             isAuthenticated={!!user}
             userEmail={user?.email}
