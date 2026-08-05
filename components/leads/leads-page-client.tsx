@@ -208,7 +208,7 @@ export function LeadsPageClient({
                 <TableCell>
                   <LeadStatusBadge status={lead.status} />
                 </TableCell>
-                <TableCell>{lead.owner_name ?? '—'}</TableCell>
+                <TableCell>{lead.owner_name ?? 'Sem responsável'}</TableCell>
                 <TableCell>{currencyFormatter.format(lead.value)}</TableCell>
                 <TableCell className="text-muted-foreground">
                   {dateFormatter.format(new Date(lead.created_at))}

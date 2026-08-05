@@ -71,9 +71,9 @@ export function UpcomingDealsTable({ deals }: { deals: UpcomingDeal[] }) {
                       <Badge variant="secondary">{dealStageLabels[deal.stage]}</Badge>
                     </TableCell>
                     <TableCell>{formatBRL(deal.value)}</TableCell>
-                    <TableCell>{deal.owner_name ?? '—'}</TableCell>
+                    <TableCell>{deal.owner_name ?? 'Sem responsável'}</TableCell>
                     <TableCell className={cn('font-medium', due?.className)}>
-                      {due?.label ?? '—'}
+                      {due?.label ?? 'Sem prazo'}
                     </TableCell>
                   </TableRow>
                 )

@@ -25,7 +25,7 @@ function formatBRL(value: number) {
 }
 
 function formatDate(date: string | null) {
-  if (!date) return '—'
+  if (!date) return 'Sem data'
   return new Date(date).toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' })
 }
 
@@ -105,7 +105,7 @@ export function DealDetailSheet({
                   <Avatar size="sm">
                     <AvatarFallback>{initials(deal.owner_name ?? '?')}</AvatarFallback>
                   </Avatar>
-                  <span className="text-sm">{deal.owner_name ?? '—'}</span>
+                  <span className="text-sm">{deal.owner_name ?? 'Sem responsável'}</span>
                 </div>
               </div>
 

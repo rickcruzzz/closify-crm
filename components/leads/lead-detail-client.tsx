@@ -130,7 +130,7 @@ export function LeadDetailClient({
 
             <div className="flex items-start gap-2 text-sm">
               <User className="text-muted-foreground mt-0.5 size-4 shrink-0" />
-              <span>{lead.owner_name ?? '—'}</span>
+              <span>{lead.owner_name ?? 'Sem responsável'}</span>
             </div>
 
             <div className="flex items-start gap-2 text-sm">
