@@ -1,6 +1,8 @@
 'use client'
 
 import * as React from 'react'
+import { zodResolver } from '@hookform/resolvers/zod'
+import { useForm } from 'react-hook-form'
 import { toast } from 'sonner'
 import { Loader2 } from 'lucide-react'
 
@@ -13,7 +15,18 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 import { createCheckout } from '@/lib/asaas/actions'
+import { checkoutSchema, type CheckoutValues } from '@/lib/validations/billing'
 
 export function PlanCard({
   plan,
@@ -22,11 +35,21 @@ export function PlanCard({
   plan: 'free' | 'pro'
   isAdmin: boolean
 }) {
+  const [dialogOpen, setDialogOpen] = React.useState(false)
   const [isSubmitting, setIsSubmitting] = React.useState(false)
 
-  async function handleSubscribe() {
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+  } = useForm<CheckoutValues>({
+    resolver: zodResolver(checkoutSchema),
+    defaultValues: { cpfCnpj: '' },
+  })
+
+  async function onSubmit(values: CheckoutValues) {
     setIsSubmitting(true)
-    const result = await createCheckout()
+    const result = await createCheckout(values)
     if (result?.error) {
       toast.error(result.error)
       setIsSubmitting(false)
@@ -52,12 +75,44 @@ export function PlanCard({
       </CardHeader>
       {plan === 'free' && isAdmin && (
         <CardContent>
-          <Button onClick={handleSubscribe} disabled={isSubmitting}>
-            {isSubmitting && <Loader2 className="size-4 animate-spin" />}
-            Assinar Pro (R$49/mês)
-          </Button>
+          <Button onClick={() => setDialogOpen(true)}>Assinar Pro (R$49/mês)</Button>
         </CardContent>
       )}
+
+      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Assinar plano Pro</DialogTitle>
+            <DialogDescription>
+              A Asaas exige CPF ou CNPJ pra gerar a cobrança recorrente. Você escolhe Pix,
+              boleto ou cartão na próxima tela.
+            </DialogDescription>
+          </DialogHeader>
+
+          <form onSubmit={handleSubmit(onSubmit)} noValidate className="flex flex-col gap-4">
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="cpfCnpj">CPF ou CNPJ</Label>
+              <Input
+                id="cpfCnpj"
+                placeholder="Só números"
+                aria-invalid={!!errors.cpfCnpj}
+                disabled={isSubmitting}
+                {...register('cpfCnpj')}
+              />
+              {errors.cpfCnpj && (
+                <p className="text-destructive text-xs">{errors.cpfCnpj.message}</p>
+              )}
+            </div>
+
+            <DialogFooter>
+              <Button type="submit" disabled={isSubmitting}>
+                {isSubmitting && <Loader2 className="size-4 animate-spin" />}
+                Continuar para pagamento
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </Card>
   )
 }

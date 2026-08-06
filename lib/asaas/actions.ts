@@ -6,6 +6,7 @@ import { asaasFetch } from '@/lib/asaas/client'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getCurrentUserAndWorkspace } from '@/lib/supabase/workspace'
+import { checkoutSchema } from '@/lib/validations/billing'
 
 // Preço do plano Pro definido no PRD (docs/prd.md) — R$49/mês, colaboradores
 // e leads ilimitados.
@@ -16,7 +17,12 @@ type AsaasSubscription = { id: string }
 type AsaasPayment = { id: string; invoiceUrl: string }
 type AsaasPaymentList = { data: AsaasPayment[] }
 
-export async function createCheckout() {
+export async function createCheckout(values: unknown) {
+  const parsed = checkoutSchema.safeParse(values)
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0]?.message ?? 'CPF ou CNPJ inválido.' }
+  }
+
   const { user, workspaceId } = await getCurrentUserAndWorkspace()
   const supabase = await createClient()
 
@@ -57,10 +63,19 @@ export async function createCheckout() {
         body: JSON.stringify({
           name: workspace.name,
           email: user.email,
+          cpfCnpj: parsed.data.cpfCnpj,
           externalReference: workspaceId,
         }),
       })
       customerId = customer.id
+    } else {
+      // Cliente pode já existir de uma tentativa anterior — a Asaas exige
+      // CPF/CNPJ pra criar cobrança, então garante que está preenchido
+      // mesmo num cliente reaproveitado (idempotente, sempre atualiza).
+      await asaasFetch<AsaasCustomer>(`/customers/${customerId}`, {
+        method: 'PUT',
+        body: JSON.stringify({ cpfCnpj: parsed.data.cpfCnpj }),
+      })
     }
 
     if (!subscriptionId) {
