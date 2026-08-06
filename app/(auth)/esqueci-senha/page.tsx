@@ -54,7 +54,10 @@ export default function EsqueciSenhaPage() {
         </CardHeader>
         <CardContent>
           <p className="text-muted-foreground text-center text-sm">
-            <Link href="/login" className="text-foreground underline-offset-4 hover:underline">
+            <Link
+              href="/login"
+              className="text-foreground underline-offset-4 hover:underline"
+            >
               Voltar para o login
             </Link>
           </p>
@@ -72,7 +75,11 @@ export default function EsqueciSenhaPage() {
         </CardDescription>
       </CardHeader>
       <CardContent className="flex flex-col gap-4">
-        <form onSubmit={handleSubmit(onSubmit)} noValidate className="flex flex-col gap-4">
+        <form
+          onSubmit={handleSubmit(onSubmit)}
+          noValidate
+          className="flex flex-col gap-4"
+        >
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="email">E-mail</Label>
             <Input
@@ -85,7 +92,9 @@ export default function EsqueciSenhaPage() {
               {...register('email')}
             />
             {errors.email && (
-              <p className="text-destructive text-xs">{errors.email.message}</p>
+              <p role="alert" className="text-destructive text-xs">
+                {errors.email.message}
+              </p>
             )}
           </div>
 
@@ -96,7 +105,10 @@ export default function EsqueciSenhaPage() {
         </form>
 
         <p className="text-muted-foreground text-center text-sm">
-          <Link href="/login" className="text-foreground underline-offset-4 hover:underline">
+          <Link
+            href="/login"
+            className="text-foreground underline-offset-4 hover:underline"
+          >
             Voltar para o login
           </Link>
         </p>

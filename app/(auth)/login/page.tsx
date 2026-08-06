@@ -86,12 +86,19 @@ export default function LoginPage() {
         </div>
 
         {formError && (
-          <p className="bg-destructive/10 text-destructive rounded-md px-3 py-2 text-sm">
+          <p
+            role="alert"
+            className="bg-destructive/10 text-destructive rounded-md px-3 py-2 text-sm"
+          >
             {formError}
           </p>
         )}
 
-        <form onSubmit={handleSubmit(onSubmit)} noValidate className="flex flex-col gap-4">
+        <form
+          onSubmit={handleSubmit(onSubmit)}
+          noValidate
+          className="flex flex-col gap-4"
+        >
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="email">E-mail</Label>
             <Input
@@ -100,11 +107,14 @@ export default function LoginPage() {
               autoComplete="email"
               placeholder="voce@empresa.com.br"
               aria-invalid={!!errors.email}
+              aria-describedby={errors.email ? 'email-error' : undefined}
               disabled={isSubmitting}
               {...register('email')}
             />
             {errors.email && (
-              <p className="text-destructive text-xs">{errors.email.message}</p>
+              <p id="email-error" role="alert" className="text-destructive text-xs">
+                {errors.email.message}
+              </p>
             )}
           </div>
 
@@ -124,11 +134,14 @@ export default function LoginPage() {
               autoComplete="current-password"
               placeholder="••••••••"
               aria-invalid={!!errors.password}
+              aria-describedby={errors.password ? 'password-error' : undefined}
               disabled={isSubmitting}
               {...register('password')}
             />
             {errors.password && (
-              <p className="text-destructive text-xs">{errors.password.message}</p>
+              <p id="password-error" role="alert" className="text-destructive text-xs">
+                {errors.password.message}
+              </p>
             )}
           </div>
 
@@ -140,7 +153,10 @@ export default function LoginPage() {
 
         <p className="text-muted-foreground text-center text-sm">
           Não tem uma conta?{' '}
-          <Link href="/cadastro" className="text-foreground underline-offset-4 hover:underline">
+          <Link
+            href="/cadastro"
+            className="text-foreground underline-offset-4 hover:underline"
+          >
             Criar conta
           </Link>
         </p>

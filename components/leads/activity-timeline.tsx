@@ -1,6 +1,7 @@
-import { FileText, Mail, Phone, Users } from 'lucide-react'
+import { FileText, History, Mail, Phone, Users } from 'lucide-react'
 
 import { cn } from '@/lib/utils'
+import { EmptyState } from '@/components/ui/empty-state'
 import type { ActivityType } from '@/lib/leads/types'
 
 type ActivityRow = {
@@ -11,11 +12,18 @@ type ActivityRow = {
   author_name: string | null
 }
 
-const activityConfig: Record<ActivityType, { label: string; icon: typeof Phone; className: string }> = {
+const activityConfig: Record<
+  ActivityType,
+  { label: string; icon: typeof Phone; className: string }
+> = {
   ligacao: { label: 'Ligação', icon: Phone, className: 'bg-blue-500/10 text-blue-500' },
   email: { label: 'E-mail', icon: Mail, className: 'bg-violet-500/10 text-violet-500' },
   reuniao: { label: 'Reunião', icon: Users, className: 'bg-amber-500/10 text-amber-500' },
-  nota: { label: 'Nota', icon: FileText, className: 'bg-muted-foreground/10 text-muted-foreground' },
+  nota: {
+    label: 'Nota',
+    icon: FileText,
+    className: 'bg-muted-foreground/10 text-muted-foreground',
+  },
 }
 
 const dateTimeFormatter = new Intl.DateTimeFormat('pt-BR', {
@@ -26,9 +34,12 @@ const dateTimeFormatter = new Intl.DateTimeFormat('pt-BR', {
 export function ActivityTimeline({ activities }: { activities: ActivityRow[] }) {
   if (activities.length === 0) {
     return (
-      <p className="text-muted-foreground py-6 text-center text-sm">
-        Nenhuma atividade registrada ainda.
-      </p>
+      <EmptyState
+        icon={History}
+        size="sm"
+        title="Nenhuma atividade ainda"
+        description="Registre ligações, e-mails, reuniões e notas para manter o histórico do lead."
+      />
     )
   }
 

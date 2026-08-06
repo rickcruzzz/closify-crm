@@ -6,7 +6,11 @@ import { createClient } from '@/lib/supabase/server'
 import { getCurrentUserAndWorkspace } from '@/lib/supabase/workspace'
 import type { WorkspacePlan } from '@/types/supabase'
 
-export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
+export default async function DashboardLayout({
+  children,
+}: {
+  children: React.ReactNode
+}) {
   const { user } = await getCurrentUserAndWorkspace()
   const supabase = await createClient()
 
@@ -39,7 +43,9 @@ export default async function DashboardLayout({ children }: { children: React.Re
       <Sidebar workspaces={workspaces} />
       <div className="flex min-w-0 flex-1 flex-col">
         <Topbar workspaces={workspaces} currentUser={currentUser} />
-        <main className="flex-1 p-4 md:p-6">{children}</main>
+        <main id="conteudo" className="flex-1 p-4 md:p-6">
+          {children}
+        </main>
       </div>
     </div>
   )

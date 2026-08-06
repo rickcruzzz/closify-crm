@@ -86,14 +86,22 @@ export function ActivityFormDialog({
           <DialogDescription>Adicione um evento à timeline deste lead.</DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit(onSubmit)} noValidate className="flex flex-col gap-4">
+        <form
+          onSubmit={handleSubmit(onSubmit)}
+          noValidate
+          className="flex flex-col gap-4"
+        >
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="type">Tipo</Label>
             <Controller
               name="type"
               control={control}
               render={({ field }) => (
-                <Select value={field.value} onValueChange={field.onChange} disabled={isSubmitting}>
+                <Select
+                  value={field.value}
+                  onValueChange={field.onChange}
+                  disabled={isSubmitting}
+                >
                   <SelectTrigger id="type" className="w-full">
                     <SelectValue placeholder="Selecione">
                       {(value) => activityTypeLabels[value as ActivityType]}
@@ -109,7 +117,11 @@ export function ActivityFormDialog({
                 </Select>
               )}
             />
-            {errors.type && <p className="text-destructive text-xs">{errors.type.message}</p>}
+            {errors.type && (
+              <p role="alert" className="text-destructive text-xs">
+                {errors.type.message}
+              </p>
+            )}
           </div>
 
           <div className="flex flex-col gap-1.5">
@@ -123,7 +135,9 @@ export function ActivityFormDialog({
               {...register('description')}
             />
             {errors.description && (
-              <p className="text-destructive text-xs">{errors.description.message}</p>
+              <p role="alert" className="text-destructive text-xs">
+                {errors.description.message}
+              </p>
             )}
           </div>
 

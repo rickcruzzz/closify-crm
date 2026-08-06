@@ -1,7 +1,12 @@
+import Link from 'next/link'
+import { CalendarClock } from 'lucide-react'
+
 import { cn } from '@/lib/utils'
 import { dealStageLabels } from '@/lib/deals/types'
 import type { UpcomingDeal } from '@/lib/dashboard/queries'
+import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { EmptyState } from '@/components/ui/empty-state'
 import {
   Table,
   TableBody,
@@ -40,7 +45,16 @@ export function UpcomingDealsTable({ deals }: { deals: UpcomingDeal[] }) {
       </CardHeader>
       <CardContent>
         {deals.length === 0 ? (
-          <p className="text-muted-foreground text-sm">Nenhum negócio em aberto.</p>
+          <EmptyState
+            icon={CalendarClock}
+            title="Nenhum negócio em aberto"
+            description="Assim que você criar negócios no pipeline, os prazos mais próximos aparecem aqui."
+          >
+            <Button
+              variant="outline"
+              render={<Link href="/kanban">Ir para o pipeline</Link>}
+            />
+          </EmptyState>
         ) : (
           <Table>
             <TableHeader>

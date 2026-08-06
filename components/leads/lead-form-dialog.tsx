@@ -26,7 +26,11 @@ import {
 import { leadStatusLabels, type LeadStatus } from '@/lib/leads/types'
 import type { LeadRow } from '@/lib/leads/queries'
 import type { WorkspaceMember } from '@/lib/leads/queries'
-import { leadSchema, type LeadFormInput, type LeadFormValues } from '@/lib/validations/lead'
+import {
+  leadSchema,
+  type LeadFormInput,
+  type LeadFormValues,
+} from '@/lib/validations/lead'
 
 export function LeadFormDialog({
   open,
@@ -111,7 +115,11 @@ export function LeadFormDialog({
           </DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit(onSubmit)} noValidate className="flex flex-col gap-4">
+        <form
+          onSubmit={handleSubmit(onSubmit)}
+          noValidate
+          className="flex flex-col gap-4"
+        >
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="name">Nome completo</Label>
             <Input
@@ -121,7 +129,11 @@ export function LeadFormDialog({
               disabled={isSubmitting}
               {...register('name')}
             />
-            {errors.name && <p className="text-destructive text-xs">{errors.name.message}</p>}
+            {errors.name && (
+              <p role="alert" className="text-destructive text-xs">
+                {errors.name.message}
+              </p>
+            )}
           </div>
 
           <div className="grid grid-cols-2 gap-3">
@@ -135,7 +147,11 @@ export function LeadFormDialog({
                 disabled={isSubmitting}
                 {...register('email')}
               />
-              {errors.email && <p className="text-destructive text-xs">{errors.email.message}</p>}
+              {errors.email && (
+                <p role="alert" className="text-destructive text-xs">
+                  {errors.email.message}
+                </p>
+              )}
             </div>
 
             <div className="flex flex-col gap-1.5">
@@ -147,7 +163,11 @@ export function LeadFormDialog({
                 disabled={isSubmitting}
                 {...register('phone')}
               />
-              {errors.phone && <p className="text-destructive text-xs">{errors.phone.message}</p>}
+              {errors.phone && (
+                <p role="alert" className="text-destructive text-xs">
+                  {errors.phone.message}
+                </p>
+              )}
             </div>
           </div>
 
@@ -161,7 +181,9 @@ export function LeadFormDialog({
               {...register('company')}
             />
             {errors.company && (
-              <p className="text-destructive text-xs">{errors.company.message}</p>
+              <p role="alert" className="text-destructive text-xs">
+                {errors.company.message}
+              </p>
             )}
           </div>
 
@@ -193,7 +215,9 @@ export function LeadFormDialog({
                 )}
               />
               {errors.status && (
-                <p className="text-destructive text-xs">{errors.status.message}</p>
+                <p role="alert" className="text-destructive text-xs">
+                  {errors.status.message}
+                </p>
               )}
             </div>
 
@@ -210,7 +234,9 @@ export function LeadFormDialog({
                   >
                     <SelectTrigger id="ownerId" className="w-full">
                       <SelectValue placeholder="Selecione">
-                        {(value) => members.find((m) => m.id === value)?.name ?? 'Selecione'}
+                        {(value) =>
+                          members.find((m) => m.id === value)?.name ?? 'Selecione'
+                        }
                       </SelectValue>
                     </SelectTrigger>
                     <SelectContent>
@@ -224,7 +250,9 @@ export function LeadFormDialog({
                 )}
               />
               {errors.ownerId && (
-                <p className="text-destructive text-xs">{errors.ownerId.message}</p>
+                <p role="alert" className="text-destructive text-xs">
+                  {errors.ownerId.message}
+                </p>
               )}
             </div>
           </div>
@@ -240,7 +268,11 @@ export function LeadFormDialog({
               disabled={isSubmitting}
               {...register('value')}
             />
-            {errors.value && <p className="text-destructive text-xs">{errors.value.message}</p>}
+            {errors.value && (
+              <p role="alert" className="text-destructive text-xs">
+                {errors.value.message}
+              </p>
+            )}
           </div>
 
           <DialogFooter>

@@ -10,7 +10,11 @@ import { DealCard } from '@/components/kanban/deal-card'
 import { EmptyColumnState } from '@/components/kanban/empty-column-state'
 
 function formatBRL(value: number) {
-  return value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 })
+  return value.toLocaleString('pt-BR', {
+    style: 'currency',
+    currency: 'BRL',
+    maximumFractionDigits: 0,
+  })
 }
 
 export function KanbanColumn({
@@ -18,11 +22,13 @@ export function KanbanColumn({
   deals,
   leadsById,
   onOpenDeal,
+  filtered = false,
 }: {
   stage: DealStage
   deals: DealRow[]
   leadsById: Map<string, DealLeadRow>
   onOpenDeal: (dealId: string) => void
+  filtered?: boolean
 }) {
   const { setNodeRef, isOver } = useDroppable({ id: stage, data: { stage } })
   const total = deals.reduce((sum, deal) => sum + deal.value, 0)
@@ -34,7 +40,9 @@ export function KanbanColumn({
           <span className="text-sm font-medium">{dealStageLabels[stage]}</span>
           <Badge variant="secondary">{deals.length}</Badge>
         </div>
-        <span className="text-muted-foreground text-xs font-medium">{formatBRL(total)}</span>
+        <span className="text-muted-foreground text-xs font-medium">
+          {formatBRL(total)}
+        </span>
       </div>
 
       <ScrollArea className="h-[calc(100vh-14rem)]">
@@ -50,7 +58,7 @@ export function KanbanColumn({
             strategy={verticalListSortingStrategy}
           >
             {deals.length === 0 ? (
-              <EmptyColumnState />
+              <EmptyColumnState filtered={filtered} />
             ) : (
               deals.map((deal) => (
                 <DealCard

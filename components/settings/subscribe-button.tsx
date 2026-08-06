@@ -62,7 +62,11 @@ export function SubscribeButton() {
             </DialogDescription>
           </DialogHeader>
 
-          <form onSubmit={handleSubmit(onSubmit)} noValidate className="flex flex-col gap-4">
+          <form
+            onSubmit={handleSubmit(onSubmit)}
+            noValidate
+            className="flex flex-col gap-4"
+          >
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="cpfCnpj">CPF ou CNPJ</Label>
               <Input
@@ -73,7 +77,9 @@ export function SubscribeButton() {
                 {...register('cpfCnpj')}
               />
               {errors.cpfCnpj && (
-                <p className="text-destructive text-xs">{errors.cpfCnpj.message}</p>
+                <p role="alert" className="text-destructive text-xs">
+                  {errors.cpfCnpj.message}
+                </p>
               )}
             </div>
 
