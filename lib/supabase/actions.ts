@@ -77,22 +77,6 @@ export async function signUp(values: unknown) {
   redirect('/onboarding')
 }
 
-export async function signInWithGoogle() {
-  const supabase = await createClient()
-  const { data, error } = await supabase.auth.signInWithOAuth({
-    provider: 'google',
-    options: {
-      redirectTo: `${appUrl()}/auth/callback`,
-    },
-  })
-
-  if (error || !data.url) {
-    return { error: 'Não foi possível conectar com o Google.' }
-  }
-
-  redirect(data.url)
-}
-
 export async function requestPasswordReset(values: unknown) {
   const parsed = forgotPasswordSchema.safeParse(values)
   if (!parsed.success) {

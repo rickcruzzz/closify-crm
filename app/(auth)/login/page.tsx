@@ -19,7 +19,8 @@ import { Label } from '@/components/ui/label'
 import { Separator } from '@/components/ui/separator'
 import { GoogleIcon } from '@/components/auth/google-icon'
 import { loginSchema, type LoginValues } from '@/lib/validations/auth'
-import { signIn, signInWithGoogle } from '@/lib/supabase/actions'
+import { signIn } from '@/lib/supabase/actions'
+import { signInWithGoogleClient } from '@/lib/supabase/google-auth'
 
 export default function LoginPage() {
   const [isSubmitting, setIsSubmitting] = React.useState(false)
@@ -48,11 +49,12 @@ export default function LoginPage() {
   async function onGoogleClick() {
     setFormError(null)
     setIsGoogleLoading(true)
-    const result = await signInWithGoogle()
+    const result = await signInWithGoogleClient()
     if (result?.error) {
       setFormError(result.error)
       setIsGoogleLoading(false)
     }
+    // Sem erro: signInWithGoogleClient já redirecionou o browser pro Google.
   }
 
   return (
