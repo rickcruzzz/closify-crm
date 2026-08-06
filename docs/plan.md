@@ -278,10 +278,10 @@ dos limites do plano Free.
 
 **Entregas:**
 
-- [ ] Criação de cliente e assinatura via API do Asaas
-- [ ] Webhook de ativação/cancelamento de assinatura
-- [ ] Enforcement dos limites do Free (2 colaboradores, 50 leads)
-- [ ] Tela de billing conectada ao status real do plano
+- [x] Criação de cliente e assinatura via API do Asaas
+- [x] Webhook de ativação/cancelamento de assinatura
+- [x] Enforcement dos limites do Free (2 colaboradores, 50 leads)
+- [x] Tela de billing conectada ao status real do plano ([PR #19](https://github.com/rickcruzzz/closify-crm/pull/19))
 
 **Commit final:** `feat(backend): billing recorrente via Asaas`
 
