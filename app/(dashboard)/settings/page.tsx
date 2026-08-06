@@ -26,7 +26,7 @@ export default async function SettingsPage() {
         plan={workspace?.plan ?? 'free'}
       />
 
-      <PlanCard plan={workspace?.plan ?? 'free'} isAdmin={isAdmin} />
+      <PlanCard plan={workspace?.plan ?? 'free'} />
     </div>
   )
 }

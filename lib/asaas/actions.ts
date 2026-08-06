@@ -7,10 +7,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getCurrentUserAndWorkspace } from '@/lib/supabase/workspace'
 import { checkoutSchema } from '@/lib/validations/billing'
-
-// Preço do plano Pro definido no PRD (docs/prd.md) — R$49/mês, colaboradores
-// e leads ilimitados.
-const PRO_PLAN_PRICE = 49
+import { PRO_PLAN_PRICE } from '@/lib/limits'
 
 type AsaasCustomer = { id: string }
 type AsaasSubscription = { id: string }
@@ -56,6 +53,11 @@ export async function createCheckout(values: unknown) {
   let customerId = existingSubscription?.asaas_customer_id ?? null
   let subscriptionId = existingSubscription?.asaas_subscription_id ?? null
 
+  // externalReference fica opaco pro Asaas (eles só devolvem de volta nos
+  // webhooks) — codifica workspace e usuário juntos aqui pra permitir
+  // reconciliação/auditoria futura sem precisar de outra consulta.
+  const externalReference = JSON.stringify({ workspaceId, userId: user.id })
+
   try {
     if (!customerId) {
       const customer = await asaasFetch<AsaasCustomer>('/customers', {
@@ -64,7 +66,7 @@ export async function createCheckout(values: unknown) {
           name: workspace.name,
           email: user.email,
           cpfCnpj: parsed.data.cpfCnpj,
-          externalReference: workspaceId,
+          externalReference,
         }),
       })
       customerId = customer.id
@@ -88,7 +90,7 @@ export async function createCheckout(values: unknown) {
           value: PRO_PLAN_PRICE,
           nextDueDate: new Date().toISOString().slice(0, 10),
           description: 'Closify CRM - Plano Pro',
-          externalReference: workspaceId,
+          externalReference,
         }),
       })
       subscriptionId = subscription.id

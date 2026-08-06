@@ -6,6 +6,7 @@ import { createClient } from '@/lib/supabase/server'
 import { resend } from '@/lib/resend/client'
 import { inviteMemberSchema, updateWorkspaceNameSchema } from '@/lib/validations/workspace'
 import { getCurrentUserAndWorkspace } from '@/lib/supabase/workspace'
+import { canAddMember } from '@/lib/limits'
 
 function appUrl() {
   return process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'
@@ -62,7 +63,7 @@ export async function inviteMember(values: unknown) {
 
   const { data: workspace } = await supabase
     .from('workspaces')
-    .select('name, plan')
+    .select('name')
     .eq('id', workspaceId)
     .single()
 
@@ -70,22 +71,9 @@ export async function inviteMember(values: unknown) {
     return { error: 'Workspace não encontrado.' }
   }
 
-  const { count: memberCount } = await supabase
-    .from('workspace_members')
-    .select('user_id', { count: 'exact', head: true })
-    .eq('workspace_id', workspaceId)
-
-  const { count: pendingInvites } = await supabase
-    .from('workspace_invites')
-    .select('id', { count: 'exact', head: true })
-    .eq('workspace_id', workspaceId)
-    .eq('status', 'pending')
-
-  // Limite do Free conta membros já ativos + convites pendentes — sem isso,
-  // dava pra estourar o limite mandando vários convites de uma vez e todos
-  // aceitando depois.
-  if (workspace.plan === 'free' && (memberCount ?? 0) + (pendingInvites ?? 0) >= 2) {
-    return { error: 'Plano Free permite no máximo 2 membros. Faça upgrade para convidar mais.' }
+  const limit = await canAddMember(workspaceId)
+  if (!limit.allowed) {
+    return { error: limit.reason }
   }
 
   const { data: invite, error } = await supabase
