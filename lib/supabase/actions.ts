@@ -10,10 +10,7 @@ import {
   forgotPasswordSchema,
   resetPasswordSchema,
 } from '@/lib/validations/auth'
-
-function appUrl() {
-  return process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'
-}
+import { appUrl } from '@/lib/app-url'
 
 export async function signIn(values: unknown) {
   const parsed = loginSchema.safeParse(values)

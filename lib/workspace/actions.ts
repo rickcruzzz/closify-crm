@@ -7,10 +7,7 @@ import { resend } from '@/lib/resend/client'
 import { inviteMemberSchema, updateWorkspaceNameSchema } from '@/lib/validations/workspace'
 import { getCurrentUserAndWorkspace } from '@/lib/supabase/workspace'
 import { canAddMember } from '@/lib/limits'
-
-function appUrl() {
-  return process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'
-}
+import { appUrl } from '@/lib/app-url'
 
 async function requireAdmin() {
   const { user, workspaceId } = await getCurrentUserAndWorkspace()
