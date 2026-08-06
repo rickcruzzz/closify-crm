@@ -5,6 +5,7 @@ import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 import { leadSchema } from '@/lib/validations/lead'
 import { activitySchema } from '@/lib/validations/activity'
+import { canAddLead } from '@/lib/limits'
 
 async function getActiveWorkspaceId(supabase: Awaited<ReturnType<typeof createClient>>) {
   const {
@@ -55,6 +56,11 @@ export async function createLead(values: unknown) {
 
   if (!(await isWorkspaceMember(supabase, workspaceId, parsed.data.ownerId))) {
     return { error: 'Responsável inválido.' }
+  }
+
+  const limit = await canAddLead(workspaceId)
+  if (!limit.allowed) {
+    return { error: limit.reason }
   }
 
   const { error } = await supabase.from('leads').insert({

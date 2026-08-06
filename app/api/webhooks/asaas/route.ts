@@ -6,7 +6,12 @@ import { createAdminClient } from '@/lib/supabase/admin'
 
 const ACTIVE_EVENTS = new Set(['PAYMENT_CONFIRMED', 'PAYMENT_RECEIVED'])
 const PAST_DUE_EVENTS = new Set(['PAYMENT_OVERDUE'])
-const CANCELED_EVENTS = new Set(['SUBSCRIPTION_DELETED', 'PAYMENT_DELETED', 'PAYMENT_REFUNDED'])
+const CANCELED_EVENTS = new Set([
+  'SUBSCRIPTION_DELETED',
+  'SUBSCRIPTION_INACTIVATED',
+  'PAYMENT_DELETED',
+  'PAYMENT_REFUNDED',
+])
 
 type AsaasWebhookPayload = {
   event?: string
