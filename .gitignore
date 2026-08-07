@@ -26,8 +26,10 @@ yarn-debug.log*
 yarn-error.log*
 
 # local env files
-.env
-.env*.local
+# .env* pega tambem copias e backups (.env.local.bak, .env.local.old,
+# .env.producao). O padrao antigo era so `.env` + `.env*.local`, que deixava
+# passar qualquer arquivo que nao terminasse exatamente em `.local`.
+.env*
 !.env.example
 
 # vercel
