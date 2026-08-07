@@ -19,7 +19,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { createCheckout } from '@/lib/asaas/actions'
 import { checkoutSchema, type CheckoutValues } from '@/lib/validations/billing'
-import { PRO_PLAN_PRICE } from '@/lib/limits'
+import { PRO_PLAN_PRICE } from '@/lib/plans'
 
 export function SubscribeButton() {
   const [dialogOpen, setDialogOpen] = React.useState(false)

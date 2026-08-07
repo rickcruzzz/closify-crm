@@ -2,7 +2,7 @@ import { Check, Zap } from 'lucide-react'
 
 import { Badge } from '@/components/ui/badge'
 import { cn } from '@/lib/utils'
-import { FREE_LEAD_LIMIT, FREE_MEMBER_LIMIT, FREE_PLAN_PRICE, PRO_PLAN_PRICE } from '@/lib/limits'
+import { FREE_LEAD_LIMIT, FREE_MEMBER_LIMIT, FREE_PLAN_PRICE, PRO_PLAN_PRICE } from '@/lib/plans'
 
 const FREE_FEATURES = [
   `Até ${FREE_MEMBER_LIMIT} colaboradores`,

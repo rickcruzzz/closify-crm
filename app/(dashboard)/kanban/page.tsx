@@ -1,8 +1,11 @@
+import type { Metadata } from 'next'
 import { getBoardDeals, getWorkspaceLeadsForSelect } from '@/lib/deals/queries'
 import { getWorkspaceMembers } from '@/lib/leads/queries'
 import { getCurrentUserAndWorkspace } from '@/lib/supabase/workspace'
 import { PageHeader } from '@/components/layout/page-header'
 import { KanbanBoard } from '@/components/kanban/kanban-board'
+
+export const metadata: Metadata = { title: 'Pipeline' }
 
 export default async function KanbanPage() {
   const { workspaceId } = await getCurrentUserAndWorkspace()

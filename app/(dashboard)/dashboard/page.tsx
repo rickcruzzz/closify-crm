@@ -1,3 +1,4 @@
+import type { Metadata } from 'next'
 import {
   getDashboardMetrics,
   getFunnelCounts,
@@ -9,6 +10,8 @@ import { MetricCards } from '@/components/dashboard/metric-cards'
 import { FunnelChart } from '@/components/dashboard/funnel-chart'
 import { GettingStartedCard } from '@/components/dashboard/getting-started-card'
 import { UpcomingDealsTable } from '@/components/dashboard/upcoming-deals-table'
+
+export const metadata: Metadata = { title: 'Dashboard' }
 
 export default async function DashboardPage() {
   const { workspaceId } = await getCurrentUserAndWorkspace()

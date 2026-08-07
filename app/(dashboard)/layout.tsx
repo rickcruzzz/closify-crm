@@ -1,3 +1,4 @@
+import type { Metadata } from 'next'
 import { redirect } from 'next/navigation'
 
 import { Sidebar } from '@/components/layout/sidebar'
@@ -5,6 +6,12 @@ import { Topbar } from '@/components/layout/topbar'
 import { createClient } from '@/lib/supabase/server'
 import { getCurrentUserAndWorkspace } from '@/lib/supabase/workspace'
 import type { WorkspacePlan } from '@/types/supabase'
+
+// Tudo aqui dentro é área logada: nada deve ser indexado. As páginas filhas
+// só sobrescrevem o title; este robots vale para todas.
+export const metadata: Metadata = {
+  robots: { index: false, follow: false },
+}
 
 export default async function DashboardLayout({
   children,

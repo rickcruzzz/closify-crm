@@ -1,9 +1,12 @@
+import type { Metadata } from 'next'
 import { PageHeader } from '@/components/layout/page-header'
 import { WorkspaceNameCard } from '@/components/settings/workspace-name-card'
 import { MembersCard } from '@/components/settings/members-card'
 import { PlanCard } from '@/components/settings/plan-card'
 import { getCurrentUserAndWorkspace } from '@/lib/supabase/workspace'
 import { getWorkspaceSettingsData } from '@/lib/workspace/queries'
+
+export const metadata: Metadata = { title: 'Configurações' }
 
 export default async function SettingsPage() {
   const { user, workspaceId } = await getCurrentUserAndWorkspace()

@@ -1,3 +1,4 @@
+import type { Metadata } from 'next'
 import { PageHeader } from '@/components/layout/page-header'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -6,8 +7,10 @@ import { SubscribeButton } from '@/components/settings/subscribe-button'
 import { createClient } from '@/lib/supabase/server'
 import { getCurrentUserAndWorkspace } from '@/lib/supabase/workspace'
 import { getWorkspaceSettingsData } from '@/lib/workspace/queries'
-import { FREE_LEAD_LIMIT, FREE_MEMBER_LIMIT } from '@/lib/limits'
+import { FREE_LEAD_LIMIT, FREE_MEMBER_LIMIT } from '@/lib/plans'
 import { cn } from '@/lib/utils'
+
+export const metadata: Metadata = { title: 'Cobrança' }
 
 export default async function BillingPage() {
   const { user, workspaceId } = await getCurrentUserAndWorkspace()
