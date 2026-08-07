@@ -1,9 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
-
-export const FREE_LEAD_LIMIT = 50
-export const FREE_MEMBER_LIMIT = 2
-export const PRO_PLAN_PRICE = 49
-export const FREE_PLAN_PRICE = 0
+import { FREE_LEAD_LIMIT, FREE_MEMBER_LIMIT } from '@/lib/plans'
 
 type LimitCheck = { allowed: boolean; reason?: string }
 

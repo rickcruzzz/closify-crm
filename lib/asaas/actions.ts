@@ -7,7 +7,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getCurrentUserAndWorkspace } from '@/lib/supabase/workspace'
 import { checkoutSchema } from '@/lib/validations/billing'
-import { PRO_PLAN_PRICE } from '@/lib/limits'
+import { PRO_PLAN_PRICE } from '@/lib/plans'
 
 type AsaasCustomer = { id: string }
 type AsaasSubscription = { id: string }

@@ -4,7 +4,7 @@ import * as React from 'react'
 import Link from 'next/link'
 import { useRouter, useSearchParams, usePathname } from 'next/navigation'
 import { toast } from 'sonner'
-import { MoreHorizontal, Plus, Search } from 'lucide-react'
+import { MoreHorizontal, Plus, Search, SearchX, Users } from 'lucide-react'
 
 import { PageHeader } from '@/components/layout/page-header'
 import { Button } from '@/components/ui/button'
@@ -14,6 +14,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
+import { EmptyState } from '@/components/ui/empty-state'
 import { Input } from '@/components/ui/input'
 import {
   Select,
@@ -68,7 +69,11 @@ export function LeadsPageClient({
   const [deleteOpen, setDeleteOpen] = React.useState(false)
   const [deletingLead, setDeletingLead] = React.useState<LeadRow | undefined>()
 
-  function updateFilters(next: { search?: string; status?: string | null; cursor?: string | null }) {
+  function updateFilters(next: {
+    search?: string
+    status?: string | null
+    cursor?: string | null
+  }) {
     const params = new URLSearchParams(searchParams)
     if (next.search !== undefined) {
       if (next.search) params.set('search', next.search)
@@ -90,6 +95,15 @@ export function LeadsPageClient({
   function handleSearchSubmit(e: React.FormEvent) {
     e.preventDefault()
     updateFilters({ search })
+  }
+
+  // Usa os valores vindos do servidor, não o state local da busca: o input
+  // muda a cada tecla, mas a tabela só reflete o que já foi submetido.
+  const hasActiveFilters = !!initialSearch || initialStatus !== 'todos'
+
+  function clearFilters() {
+    setSearch('')
+    updateFilters({ search: '', status: 'todos' })
   }
 
   function openCreateForm() {
@@ -134,7 +148,10 @@ export function LeadsPageClient({
       <PageHeader title="Leads" description="Busque, filtre e acompanhe seus leads." />
 
       <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <form onSubmit={handleSearchSubmit} className="flex flex-1 flex-col gap-2 sm:flex-row">
+        <form
+          onSubmit={handleSearchSubmit}
+          className="flex flex-1 flex-col gap-2 sm:flex-row"
+        >
           <div className="relative max-w-sm flex-1">
             <Search className="text-muted-foreground pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2" />
             <Input
@@ -190,9 +207,30 @@ export function LeadsPageClient({
           </TableHeader>
           <TableBody>
             {leads.length === 0 && (
-              <TableRow>
-                <TableCell colSpan={7} className="text-muted-foreground py-8 text-center">
-                  Nenhum lead encontrado.
+              <TableRow className="hover:bg-transparent">
+                <TableCell colSpan={7}>
+                  {hasActiveFilters ? (
+                    <EmptyState
+                      icon={SearchX}
+                      title="Nenhum lead corresponde aos filtros"
+                      description="Tente outro termo de busca ou volte a ver todos os leads."
+                    >
+                      <Button variant="outline" onClick={clearFilters}>
+                        Limpar filtros
+                      </Button>
+                    </EmptyState>
+                  ) : (
+                    <EmptyState
+                      icon={Users}
+                      title="Nenhum lead ainda"
+                      description="Cadastre seu primeiro lead para começar a acompanhar oportunidades no funil."
+                    >
+                      <Button onClick={openCreateForm}>
+                        <Plus className="size-4" />
+                        Novo lead
+                      </Button>
+                    </EmptyState>
+                  )}
                 </TableCell>
               </TableRow>
             )}
@@ -217,7 +255,11 @@ export function LeadsPageClient({
                   <DropdownMenu>
                     <DropdownMenuTrigger
                       render={
-                        <Button variant="ghost" size="icon-sm">
+                        <Button
+                          variant="ghost"
+                          size="icon-sm"
+                          aria-label={`Ações de ${lead.name}`}
+                        >
                           <MoreHorizontal className="size-4" />
                         </Button>
                       }

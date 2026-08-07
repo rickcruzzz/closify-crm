@@ -54,7 +54,11 @@ export default function RedefinirSenhaPage() {
           </p>
         )}
 
-        <form onSubmit={handleSubmit(onSubmit)} noValidate className="flex flex-col gap-4">
+        <form
+          onSubmit={handleSubmit(onSubmit)}
+          noValidate
+          className="flex flex-col gap-4"
+        >
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="password">Nova senha</Label>
             <Input
@@ -67,7 +71,9 @@ export default function RedefinirSenhaPage() {
               {...register('password')}
             />
             {errors.password && (
-              <p className="text-destructive text-xs">{errors.password.message}</p>
+              <p role="alert" className="text-destructive text-xs">
+                {errors.password.message}
+              </p>
             )}
           </div>
 

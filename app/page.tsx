@@ -1,3 +1,5 @@
+import type { Metadata } from 'next'
+
 import { PublicNavbar } from '@/components/layout/public-navbar'
 import { HeroSection } from '@/components/landing/hero-section'
 import { StatsSection } from '@/components/landing/stats-section'
@@ -6,11 +8,27 @@ import { PricingSection } from '@/components/landing/pricing-section'
 import { CtaSection } from '@/components/landing/cta-section'
 import { PublicFooter } from '@/components/landing/public-footer'
 
+// A landing usa o title default (sem o template "| Closify CRM"), já que
+// aqui o nome do produto é o próprio título.
+export const metadata: Metadata = {
+  title: 'Closify CRM — pipeline de vendas em Kanban para PMEs',
+  description:
+    'Organize leads e negócios num funil visual, acompanhe métricas e substitua a planilha em um dia. Plano gratuito para começar.',
+  alternates: { canonical: '/' },
+  // Sem repetir aqui, o preview de link herdaria o openGraph genérico do
+  // layout raiz em vez do texto de conversão da landing.
+  openGraph: {
+    title: 'Closify CRM — pipeline de vendas em Kanban para PMEs',
+    description:
+      'Organize leads e negócios num funil visual, acompanhe métricas e substitua a planilha em um dia. Plano gratuito para começar.',
+  },
+}
+
 export default function Home() {
   return (
     <div className="flex min-h-screen flex-col">
       <PublicNavbar />
-      <main className="flex-1">
+      <main id="conteudo" className="flex-1">
         <HeroSection />
         <StatsSection />
         <FeaturesSection />

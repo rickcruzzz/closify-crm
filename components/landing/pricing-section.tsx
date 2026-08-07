@@ -100,7 +100,7 @@ export function PricingSection() {
                   <ul className="flex flex-col gap-2">
                     {plan.features.map((feature) => (
                       <li key={feature} className="flex items-center gap-2 text-sm">
-                        <Check className="size-4 shrink-0 text-emerald-500 dark:text-emerald-400" />
+                        <Check aria-hidden className="text-primary size-4 shrink-0" />
                         {feature}
                       </li>
                     ))}

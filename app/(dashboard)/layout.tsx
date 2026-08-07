@@ -1,3 +1,4 @@
+import type { Metadata } from 'next'
 import { redirect } from 'next/navigation'
 
 import { Sidebar } from '@/components/layout/sidebar'
@@ -6,7 +7,17 @@ import { createClient } from '@/lib/supabase/server'
 import { getCurrentUserAndWorkspace } from '@/lib/supabase/workspace'
 import type { WorkspacePlan } from '@/types/supabase'
 
-export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
+// Tudo aqui dentro é área logada: nada deve ser indexado. As páginas filhas
+// só sobrescrevem o title; este robots vale para todas.
+export const metadata: Metadata = {
+  robots: { index: false, follow: false },
+}
+
+export default async function DashboardLayout({
+  children,
+}: {
+  children: React.ReactNode
+}) {
   const { user } = await getCurrentUserAndWorkspace()
   const supabase = await createClient()
 
@@ -39,7 +50,9 @@ export default async function DashboardLayout({ children }: { children: React.Re
       <Sidebar workspaces={workspaces} />
       <div className="flex min-w-0 flex-1 flex-col">
         <Topbar workspaces={workspaces} currentUser={currentUser} />
-        <main className="flex-1 p-4 md:p-6">{children}</main>
+        <main id="conteudo" className="flex-1 p-4 md:p-6">
+          {children}
+        </main>
       </div>
     </div>
   )

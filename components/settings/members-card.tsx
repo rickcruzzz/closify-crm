@@ -4,7 +4,7 @@ import * as React from 'react'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useForm } from 'react-hook-form'
 import { toast } from 'sonner'
-import { Loader2, MoreHorizontal, Plus } from 'lucide-react'
+import { Loader2, MoreHorizontal, Plus, UserPlus } from 'lucide-react'
 
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -29,6 +29,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
+import { EmptyState } from '@/components/ui/empty-state'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import {
@@ -46,7 +47,12 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import { inviteMember, removeMember, revokeInvite, updateMemberRole } from '@/lib/workspace/actions'
+import {
+  inviteMember,
+  removeMember,
+  revokeInvite,
+  updateMemberRole,
+} from '@/lib/workspace/actions'
 import { inviteMemberSchema, type InviteMemberValues } from '@/lib/validations/workspace'
 
 type Member = { user_id: string; role: 'admin' | 'membro'; name: string }
@@ -82,6 +88,10 @@ export function MembersCard({
 
   const totalOccupied = members.length + invites.length
   const atLimit = plan === 'free' && totalOccupied >= 2
+
+  // Workspace nunca fica com zero membros (quem cria já entra como admin), então
+  // o estado vazio real é "só eu, sem convite pendente" — comum em conta nova.
+  const isAlone = members.length <= 1 && invites.length === 0
 
   async function onInvite(values: InviteMemberValues) {
     setIsSubmitting(true)
@@ -136,81 +146,104 @@ export function MembersCard({
         )}
       </CardHeader>
       <CardContent>
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Nome</TableHead>
-              <TableHead>Papel</TableHead>
-              {isAdmin && <TableHead className="w-10" />}
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {members.map((member) => (
-              <TableRow key={member.user_id}>
-                <TableCell>{member.name}</TableCell>
-                <TableCell>
-                  <Badge variant={member.role === 'admin' ? 'default' : 'secondary'}>
-                    {member.role === 'admin' ? 'Admin' : 'Membro'}
-                  </Badge>
-                </TableCell>
-                {isAdmin && (
+        {isAlone ? (
+          <EmptyState
+            icon={UserPlus}
+            title="Você está sozinho neste workspace"
+            description={
+              isAdmin
+                ? 'Convide seu time para dividir o pipeline e acompanhar os leads em conjunto.'
+                : 'Um admin pode convidar mais pessoas para este workspace.'
+            }
+          >
+            {isAdmin && (
+              <Button onClick={() => setInviteOpen(true)} disabled={atLimit}>
+                <Plus className="size-4" />
+                Convidar colaborador
+              </Button>
+            )}
+          </EmptyState>
+        ) : (
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Nome</TableHead>
+                <TableHead>Papel</TableHead>
+                {isAdmin && <TableHead className="w-10" />}
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {members.map((member) => (
+                <TableRow key={member.user_id}>
+                  <TableCell>{member.name}</TableCell>
                   <TableCell>
-                    {member.user_id !== currentUserId && (
-                      <DropdownMenu>
-                        <DropdownMenuTrigger
-                          render={
-                            <Button variant="ghost" size="icon">
-                              <MoreHorizontal className="size-4" />
-                            </Button>
-                          }
-                        />
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem
-                            onClick={() =>
-                              handleRoleChange(
-                                member.user_id,
-                                member.role === 'admin' ? 'membro' : 'admin',
-                              )
+                    <Badge variant={member.role === 'admin' ? 'default' : 'secondary'}>
+                      {member.role === 'admin' ? 'Admin' : 'Membro'}
+                    </Badge>
+                  </TableCell>
+                  {isAdmin && (
+                    <TableCell>
+                      {member.user_id !== currentUserId && (
+                        <DropdownMenu>
+                          <DropdownMenuTrigger
+                            render={
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                aria-label={`Ações de ${member.name}`}
+                              >
+                                <MoreHorizontal className="size-4" />
+                              </Button>
                             }
-                          >
-                            {member.role === 'admin' ? 'Tornar membro' : 'Tornar admin'}
-                          </DropdownMenuItem>
-                          <DropdownMenuItem
-                            variant="destructive"
-                            onClick={() => handleRemove(member.user_id)}
-                          >
-                            Remover
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    )}
-                  </TableCell>
-                )}
-              </TableRow>
-            ))}
-            {invites.map((invite) => (
-              <TableRow key={invite.id} className="text-muted-foreground">
-                <TableCell>{invite.email}</TableCell>
-                <TableCell>
-                  <Badge variant="outline">
-                    Convite pendente · {invite.role === 'admin' ? 'Admin' : 'Membro'}
-                  </Badge>
-                </TableCell>
-                {isAdmin && (
+                          />
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem
+                              onClick={() =>
+                                handleRoleChange(
+                                  member.user_id,
+                                  member.role === 'admin' ? 'membro' : 'admin',
+                                )
+                              }
+                            >
+                              {member.role === 'admin' ? 'Tornar membro' : 'Tornar admin'}
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              variant="destructive"
+                              onClick={() => handleRemove(member.user_id)}
+                            >
+                              Remover
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      )}
+                    </TableCell>
+                  )}
+                </TableRow>
+              ))}
+              {invites.map((invite) => (
+                <TableRow key={invite.id} className="text-muted-foreground">
+                  <TableCell>{invite.email}</TableCell>
                   <TableCell>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleRevoke(invite.id)}
-                    >
-                      Cancelar
-                    </Button>
+                    <Badge variant="outline">
+                      Convite pendente · {invite.role === 'admin' ? 'Admin' : 'Membro'}
+                    </Badge>
                   </TableCell>
-                )}
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+                  {isAdmin && (
+                    <TableCell>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleRevoke(invite.id)}
+                      >
+                        Cancelar
+                      </Button>
+                    </TableCell>
+                  )}
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        )}
       </CardContent>
 
       <Dialog open={inviteOpen} onOpenChange={setInviteOpen}>
@@ -220,7 +253,11 @@ export function MembersCard({
             <DialogDescription>Enviamos um link de convite por e-mail.</DialogDescription>
           </DialogHeader>
 
-          <form onSubmit={handleSubmit(onInvite)} noValidate className="flex flex-col gap-4">
+          <form
+            onSubmit={handleSubmit(onInvite)}
+            noValidate
+            className="flex flex-col gap-4"
+          >
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="email">E-mail</Label>
               <Input
@@ -231,7 +268,11 @@ export function MembersCard({
                 disabled={isSubmitting}
                 {...register('email')}
               />
-              {errors.email && <p className="text-destructive text-xs">{errors.email.message}</p>}
+              {errors.email && (
+                <p role="alert" className="text-destructive text-xs">
+                  {errors.email.message}
+                </p>
+              )}
             </div>
 
             <div className="flex flex-col gap-1.5">

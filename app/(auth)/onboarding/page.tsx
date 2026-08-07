@@ -54,11 +54,18 @@ export default function OnboardingPage() {
       </CardHeader>
       <CardContent>
         {formError && (
-          <p className="bg-destructive/10 text-destructive mb-4 rounded-md px-3 py-2 text-sm">
+          <p
+            role="alert"
+            className="bg-destructive/10 text-destructive mb-4 rounded-md px-3 py-2 text-sm"
+          >
             {formError}
           </p>
         )}
-        <form onSubmit={handleSubmit(onSubmit)} noValidate className="flex flex-col gap-4">
+        <form
+          onSubmit={handleSubmit(onSubmit)}
+          noValidate
+          className="flex flex-col gap-4"
+        >
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="workspaceName">Nome da empresa</Label>
             <Input
@@ -66,11 +73,18 @@ export default function OnboardingPage() {
               autoComplete="organization"
               placeholder="Ex: Agência Nova Era"
               aria-invalid={!!errors.workspaceName}
+              aria-describedby={errors.workspaceName ? 'workspaceName-error' : undefined}
               disabled={isSubmitting}
               {...register('workspaceName')}
             />
             {errors.workspaceName && (
-              <p className="text-destructive text-xs">{errors.workspaceName.message}</p>
+              <p
+                id="workspaceName-error"
+                role="alert"
+                className="text-destructive text-xs"
+              >
+                {errors.workspaceName.message}
+              </p>
             )}
           </div>
 

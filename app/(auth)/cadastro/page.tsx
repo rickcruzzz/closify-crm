@@ -88,12 +88,19 @@ export default function SignUpPage() {
         </div>
 
         {formError && (
-          <p className="bg-destructive/10 text-destructive rounded-md px-3 py-2 text-sm">
+          <p
+            role="alert"
+            className="bg-destructive/10 text-destructive rounded-md px-3 py-2 text-sm"
+          >
             {formError}
           </p>
         )}
 
-        <form onSubmit={handleSubmit(onSubmit)} noValidate className="flex flex-col gap-4">
+        <form
+          onSubmit={handleSubmit(onSubmit)}
+          noValidate
+          className="flex flex-col gap-4"
+        >
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="name">Nome completo</Label>
             <Input
@@ -101,10 +108,15 @@ export default function SignUpPage() {
               autoComplete="name"
               placeholder="Seu nome"
               aria-invalid={!!errors.name}
+              aria-describedby={errors.name ? 'name-error' : undefined}
               disabled={isSubmitting}
               {...register('name')}
             />
-            {errors.name && <p className="text-destructive text-xs">{errors.name.message}</p>}
+            {errors.name && (
+              <p id="name-error" role="alert" className="text-destructive text-xs">
+                {errors.name.message}
+              </p>
+            )}
           </div>
 
           <div className="flex flex-col gap-1.5">
@@ -115,10 +127,15 @@ export default function SignUpPage() {
               autoComplete="email"
               placeholder="voce@empresa.com.br"
               aria-invalid={!!errors.email}
+              aria-describedby={errors.email ? 'email-error' : undefined}
               disabled={isSubmitting}
               {...register('email')}
             />
-            {errors.email && <p className="text-destructive text-xs">{errors.email.message}</p>}
+            {errors.email && (
+              <p id="email-error" role="alert" className="text-destructive text-xs">
+                {errors.email.message}
+              </p>
+            )}
           </div>
 
           <div className="flex flex-col gap-1.5">
@@ -129,11 +146,14 @@ export default function SignUpPage() {
               autoComplete="new-password"
               placeholder="Mínimo 8 caracteres"
               aria-invalid={!!errors.password}
+              aria-describedby={errors.password ? 'password-error' : undefined}
               disabled={isSubmitting}
               {...register('password')}
             />
             {errors.password && (
-              <p className="text-destructive text-xs">{errors.password.message}</p>
+              <p id="password-error" role="alert" className="text-destructive text-xs">
+                {errors.password.message}
+              </p>
             )}
           </div>
 
@@ -148,6 +168,7 @@ export default function SignUpPage() {
                     checked={field.value === true}
                     onCheckedChange={(checked) => field.onChange(checked === true)}
                     aria-invalid={!!errors.terms}
+                    aria-describedby={errors.terms ? 'terms-error' : undefined}
                     disabled={isSubmitting}
                   />
                 )}
@@ -156,7 +177,11 @@ export default function SignUpPage() {
                 Aceito os termos de uso e a política de privacidade.
               </Label>
             </div>
-            {errors.terms && <p className="text-destructive text-xs">{errors.terms.message}</p>}
+            {errors.terms && (
+              <p id="terms-error" role="alert" className="text-destructive text-xs">
+                {errors.terms.message}
+              </p>
+            )}
           </div>
 
           <Button type="submit" className="w-full" disabled={isSubmitting}>
@@ -167,7 +192,10 @@ export default function SignUpPage() {
 
         <p className="text-muted-foreground text-center text-sm">
           Já tem uma conta?{' '}
-          <Link href="/login" className="text-foreground underline-offset-4 hover:underline">
+          <Link
+            href="/login"
+            className="text-foreground underline-offset-4 hover:underline"
+          >
             Entrar
           </Link>
         </p>

@@ -4,7 +4,7 @@ import * as React from 'react'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useForm } from 'react-hook-form'
 import { toast } from 'sonner'
-import { Loader2 } from 'lucide-react'
+import { Loader2, Zap } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
 import {
@@ -19,6 +19,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { createCheckout } from '@/lib/asaas/actions'
 import { checkoutSchema, type CheckoutValues } from '@/lib/validations/billing'
+import { PRO_PLAN_PRICE } from '@/lib/plans'
 
 export function SubscribeButton() {
   const [dialogOpen, setDialogOpen] = React.useState(false)
@@ -46,7 +47,10 @@ export function SubscribeButton() {
 
   return (
     <>
-      <Button onClick={() => setDialogOpen(true)}>Assinar Pro</Button>
+      <Button onClick={() => setDialogOpen(true)} className="w-fit">
+        <Zap className="size-4" />
+        Assinar Pro — R$ {PRO_PLAN_PRICE}/mês
+      </Button>
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="sm:max-w-md">
@@ -58,7 +62,11 @@ export function SubscribeButton() {
             </DialogDescription>
           </DialogHeader>
 
-          <form onSubmit={handleSubmit(onSubmit)} noValidate className="flex flex-col gap-4">
+          <form
+            onSubmit={handleSubmit(onSubmit)}
+            noValidate
+            className="flex flex-col gap-4"
+          >
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="cpfCnpj">CPF ou CNPJ</Label>
               <Input
@@ -69,7 +77,9 @@ export function SubscribeButton() {
                 {...register('cpfCnpj')}
               />
               {errors.cpfCnpj && (
-                <p className="text-destructive text-xs">{errors.cpfCnpj.message}</p>
+                <p role="alert" className="text-destructive text-xs">
+                  {errors.cpfCnpj.message}
+                </p>
               )}
             </div>
 

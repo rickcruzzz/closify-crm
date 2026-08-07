@@ -1,6 +1,7 @@
-import type { Metadata } from 'next'
+import type { Metadata, Viewport } from 'next'
 import localFont from 'next/font/local'
 import './globals.css'
+import { appUrl } from '@/lib/app-url'
 import { cn } from '@/lib/utils'
 import { ThemeProvider } from '@/components/theme-provider'
 import { Toaster } from '@/components/ui/sonner'
@@ -17,9 +18,42 @@ const geistMono = localFont({
   weight: '100 900',
 })
 
+const APP_NAME = 'Closify CRM'
+const APP_DESCRIPTION =
+  'CRM com pipeline de vendas em Kanban para PMEs de serviço no Brasil. Simples como planilha, premium como software líder.'
+
 export const metadata: Metadata = {
-  title: 'Closify CRM',
-  description: 'CRM SaaS multi-empresa para PMEs de serviço no Brasil',
+  // metadataBase resolve URLs relativas de OG/Twitter para absolutas — sem
+  // ele o Next avisa em build e os previews de link quebram.
+  metadataBase: new URL(appUrl()),
+  title: {
+    default: APP_NAME,
+    template: `%s | ${APP_NAME}`,
+  },
+  description: APP_DESCRIPTION,
+  applicationName: APP_NAME,
+  openGraph: {
+    type: 'website',
+    locale: 'pt_BR',
+    url: '/',
+    siteName: APP_NAME,
+    title: APP_NAME,
+    description: APP_DESCRIPTION,
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: APP_NAME,
+    description: APP_DESCRIPTION,
+  },
+  robots: {
+    index: true,
+    follow: true,
+  },
+}
+
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
 }
 
 export default function RootLayout({
@@ -34,6 +68,12 @@ export default function RootLayout({
       suppressHydrationWarning
     >
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
+        <a
+          href="#conteudo"
+          className="bg-background text-foreground focus:ring-ring sr-only focus:not-sr-only focus:fixed focus:top-4 focus:left-4 focus:z-50 focus:rounded-lg focus:px-4 focus:py-2 focus:ring-2"
+        >
+          Pular para o conteúdo
+        </a>
         <ThemeProvider
           attribute="class"
           defaultTheme="dark"

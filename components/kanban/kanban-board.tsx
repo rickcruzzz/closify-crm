@@ -12,7 +12,7 @@ import {
   type DragOverEvent,
   type DragStartEvent,
 } from '@dnd-kit/core'
-import { Plus } from 'lucide-react'
+import { Plus, Search } from 'lucide-react'
 import { toast } from 'sonner'
 
 import { dealStageLabels, dealStages, type DealStage } from '@/lib/deals/types'
@@ -21,6 +21,14 @@ import type { DealLeadRow, DealRow } from '@/lib/deals/queries'
 import type { WorkspaceMember } from '@/lib/leads/queries'
 import type { DealFormValues } from '@/lib/validations/deal'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { KanbanColumn } from '@/components/kanban/kanban-column'
 import { DealCardOverlay } from '@/components/kanban/deal-card-overlay'
 import { DealDetailSheet } from '@/components/kanban/deal-detail-sheet'
@@ -39,12 +47,17 @@ export function KanbanBoard({
   const [activeId, setActiveId] = React.useState<string | null>(null)
   const [selectedDealId, setSelectedDealId] = React.useState<string | null>(null)
   const [isFormOpen, setIsFormOpen] = React.useState(false)
+  const [search, setSearch] = React.useState('')
+  const [ownerFilter, setOwnerFilter] = React.useState('todos')
 
   React.useEffect(() => {
     setDeals(initialDeals)
   }, [initialDeals])
 
-  const leadsById = React.useMemo(() => new Map(leads.map((lead) => [lead.id, lead])), [leads])
+  const leadsById = React.useMemo(
+    () => new Map(leads.map((lead) => [lead.id, lead])),
+    [leads],
+  )
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
@@ -106,14 +119,18 @@ export function KanbanBoard({
 
   async function handleStageChange(dealId: string, stage: DealStage) {
     const previousStage = deals.find((deal) => deal.id === dealId)?.stage
-    setDeals((prev) => prev.map((deal) => (deal.id === dealId ? { ...deal, stage } : deal)))
+    setDeals((prev) =>
+      prev.map((deal) => (deal.id === dealId ? { ...deal, stage } : deal)),
+    )
 
     const result = await updateDealStage(dealId, stage)
     if (result?.error) {
       toast.error(result.error)
       if (previousStage) {
         setDeals((prev) =>
-          prev.map((deal) => (deal.id === dealId ? { ...deal, stage: previousStage } : deal)),
+          prev.map((deal) =>
+            deal.id === dealId ? { ...deal, stage: previousStage } : deal,
+          ),
         )
       }
       return
@@ -134,10 +151,70 @@ export function KanbanBoard({
   const selectedDeal = deals.find((deal) => deal.id === selectedDealId)
   const activeDeal = deals.find((deal) => deal.id === activeId)
 
+  const hasActiveFilters = search.trim() !== '' || ownerFilter !== 'todos'
+
+  // Filtra só o que é renderizado. O drag-and-drop continua operando sobre
+  // `deals` (estado completo), então update otimista e rollback não mudam.
+  const filteredDeals = React.useMemo(() => {
+    const term = search.trim().toLowerCase()
+
+    return deals.filter((deal) => {
+      if (ownerFilter !== 'todos' && deal.owner_id !== ownerFilter) return false
+      if (!term) return true
+
+      const lead = deal.lead_id ? leadsById.get(deal.lead_id) : undefined
+      return (
+        deal.title.toLowerCase().includes(term) ||
+        !!lead?.name.toLowerCase().includes(term) ||
+        !!lead?.company?.toLowerCase().includes(term)
+      )
+    })
+  }, [deals, leadsById, ownerFilter, search])
+
   return (
     <>
-      <div className="mb-4 flex justify-end">
-        <Button onClick={() => setIsFormOpen(true)}>
+      <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex flex-1 flex-col gap-2 sm:flex-row">
+          <div className="relative max-w-sm flex-1">
+            <Search className="text-muted-foreground pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2" />
+            <Input
+              placeholder="Buscar por negócio, lead ou empresa..."
+              aria-label="Buscar negócios"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="pl-8"
+            />
+          </div>
+
+          <Select
+            value={ownerFilter}
+            onValueChange={(value) => setOwnerFilter(value ?? 'todos')}
+          >
+            <SelectTrigger
+              className="w-full sm:w-56"
+              aria-label="Filtrar por responsável"
+            >
+              <SelectValue>
+                {(value) =>
+                  value === 'todos'
+                    ? 'Todos os responsáveis'
+                    : (members.find((m) => m.id === value)?.name ??
+                      'Todos os responsáveis')
+                }
+              </SelectValue>
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="todos">Todos os responsáveis</SelectItem>
+              {members.map((member) => (
+                <SelectItem key={member.id} value={member.id}>
+                  {member.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <Button onClick={() => setIsFormOpen(true)} className="shrink-0">
           <Plus className="size-4" />
           Novo negócio
         </Button>
@@ -154,9 +231,10 @@ export function KanbanBoard({
             <KanbanColumn
               key={stage}
               stage={stage}
-              deals={deals.filter((deal) => deal.stage === stage)}
+              deals={filteredDeals.filter((deal) => deal.stage === stage)}
               leadsById={leadsById}
               onOpenDeal={setSelectedDealId}
+              filtered={hasActiveFilters}
             />
           ))}
         </div>

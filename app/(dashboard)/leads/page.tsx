@@ -1,7 +1,10 @@
+import type { Metadata } from 'next'
 import { getLeadsPage, getWorkspaceMembers } from '@/lib/leads/queries'
 import type { LeadStatus } from '@/lib/leads/types'
 import { getCurrentUserAndWorkspace } from '@/lib/supabase/workspace'
 import { LeadsPageClient } from '@/components/leads/leads-page-client'
+
+export const metadata: Metadata = { title: 'Leads' }
 
 export default async function LeadsPage({
   searchParams,

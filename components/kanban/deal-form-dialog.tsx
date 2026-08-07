@@ -45,7 +45,10 @@ export function DealFormDialog({
   leads: DealLeadRow[]
   members: WorkspaceMember[]
 }) {
-  const leadsById = React.useMemo(() => new Map(leads.map((lead) => [lead.id, lead])), [leads])
+  const leadsById = React.useMemo(
+    () => new Map(leads.map((lead) => [lead.id, lead])),
+    [leads],
+  )
   const [isSubmitting, setIsSubmitting] = React.useState(false)
 
   const {
@@ -112,7 +115,9 @@ export function DealFormDialog({
               {...register('title')}
             />
             {errors.title && (
-              <p className="text-destructive text-xs">{errors.title.message}</p>
+              <p role="alert" className="text-destructive text-xs">
+                {errors.title.message}
+              </p>
             )}
           </div>
 
@@ -146,7 +151,9 @@ export function DealFormDialog({
               )}
             />
             {errors.leadId && (
-              <p className="text-destructive text-xs">{errors.leadId.message}</p>
+              <p role="alert" className="text-destructive text-xs">
+                {errors.leadId.message}
+              </p>
             )}
           </div>
 
@@ -178,7 +185,9 @@ export function DealFormDialog({
                 )}
               />
               {errors.stage && (
-                <p className="text-destructive text-xs">{errors.stage.message}</p>
+                <p role="alert" className="text-destructive text-xs">
+                  {errors.stage.message}
+                </p>
               )}
             </div>
 
@@ -195,7 +204,9 @@ export function DealFormDialog({
                   >
                     <SelectTrigger id="ownerId" className="w-full">
                       <SelectValue placeholder="Selecione">
-                        {(value) => members.find((m) => m.id === value)?.name ?? 'Selecione'}
+                        {(value) =>
+                          members.find((m) => m.id === value)?.name ?? 'Selecione'
+                        }
                       </SelectValue>
                     </SelectTrigger>
                     <SelectContent>
@@ -209,7 +220,9 @@ export function DealFormDialog({
                 )}
               />
               {errors.ownerId && (
-                <p className="text-destructive text-xs">{errors.ownerId.message}</p>
+                <p role="alert" className="text-destructive text-xs">
+                  {errors.ownerId.message}
+                </p>
               )}
             </div>
           </div>
@@ -227,7 +240,9 @@ export function DealFormDialog({
                 {...register('value')}
               />
               {errors.value && (
-                <p className="text-destructive text-xs">{errors.value.message}</p>
+                <p role="alert" className="text-destructive text-xs">
+                  {errors.value.message}
+                </p>
               )}
             </div>
 
@@ -241,7 +256,9 @@ export function DealFormDialog({
                 {...register('dueDate')}
               />
               {errors.dueDate && (
-                <p className="text-destructive text-xs">{errors.dueDate.message}</p>
+                <p role="alert" className="text-destructive text-xs">
+                  {errors.dueDate.message}
+                </p>
               )}
             </div>
           </div>
