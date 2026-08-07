@@ -4,10 +4,27 @@ import { revalidatePath } from 'next/cache'
 
 import { createClient } from '@/lib/supabase/server'
 import { resend } from '@/lib/resend/client'
-import { inviteMemberSchema, updateWorkspaceNameSchema } from '@/lib/validations/workspace'
+import {
+  inviteMemberSchema,
+  memberRoleSchema,
+  updateWorkspaceNameSchema,
+  uuidSchema,
+} from '@/lib/validations/workspace'
 import { getCurrentUserAndWorkspace } from '@/lib/supabase/workspace'
 import { canAddMember } from '@/lib/limits'
 import { appUrl } from '@/lib/app-url'
+
+// O nome do workspace é texto livre e vai interpolado no HTML do e-mail de
+// convite, que é entregue a quem ainda nem tem conta. Sem escape, um admin
+// consegue injetar link/markup e usar o remetente legítimo pra phishing.
+function escapeHtml(value: string) {
+  return value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;')
+}
 
 async function requireAdmin() {
   const { user, workspaceId } = await getCurrentUserAndWorkspace()
@@ -98,7 +115,7 @@ export async function inviteMember(values: unknown) {
     from: 'Closify CRM <onboarding@resend.dev>',
     to: parsed.data.email,
     subject: `Você foi convidado para o workspace ${workspace.name}`,
-    html: `<p>Você foi convidado para colaborar no workspace <strong>${workspace.name}</strong> no Closify CRM.</p><p><a href="${inviteUrl}">Aceitar convite</a></p><p>Este link expira em 7 dias.</p>`,
+    html: `<p>Você foi convidado para colaborar no workspace <strong>${escapeHtml(workspace.name)}</strong> no Closify CRM.</p><p><a href="${inviteUrl}">Aceitar convite</a></p><p>Este link expira em 7 dias.</p>`,
   })
 
   if (emailError) {
@@ -129,13 +146,34 @@ export async function revokeInvite(inviteId: string) {
   return { success: true }
 }
 
-export async function updateMemberRole(memberUserId: string, role: 'admin' | 'membro') {
+export async function updateMemberRole(memberUserId: string, role: unknown) {
+  // Server Action é endpoint HTTP: o tipo do parâmetro não protege nada em
+  // runtime, um request forjado manda qualquer string.
+  const parsed = memberRoleSchema.safeParse(role)
+  if (!parsed.success) {
+    return { error: 'Papel inválido.' }
+  }
+
   const admin = await requireAdmin()
   if ('error' in admin) return admin
 
+  // Rebaixar o último admin deixa o workspace sem ninguém que possa convidar,
+  // cobrar ou gerenciar membros — lockout que só se resolve no banco.
+  if (parsed.data === 'membro') {
+    const { count } = await admin.supabase
+      .from('workspace_members')
+      .select('user_id', { count: 'exact', head: true })
+      .eq('workspace_id', admin.workspaceId)
+      .eq('role', 'admin')
+
+    if ((count ?? 0) <= 1) {
+      return { error: 'O workspace precisa de pelo menos um administrador.' }
+    }
+  }
+
   const { error } = await admin.supabase
     .from('workspace_members')
-    .update({ role })
+    .update({ role: parsed.data })
     .eq('workspace_id', admin.workspaceId)
     .eq('user_id', memberUserId)
 
@@ -171,7 +209,22 @@ export async function removeMember(memberUserId: string) {
   return { success: true }
 }
 
-export async function acceptInvite(token: string) {
+// As exceções que a RPC levanta de propósito são seguras de mostrar. Qualquer
+// outra coisa (violação de constraint, erro de cast, nome de tabela) vira
+// mensagem genérica em vez de vazar o texto cru do Postgres pro browser.
+const INVITE_ERRORS = [
+  'Convite inválido ou já utilizado.',
+  'Convite expirado.',
+  'Este convite foi enviado para outro e-mail.',
+  'Workspace atingiu o limite de 2 membros do plano Free.',
+]
+
+export async function acceptInvite(token: unknown) {
+  const parsed = uuidSchema.safeParse(token)
+  if (!parsed.success) {
+    return { error: 'Convite inválido.' }
+  }
+
   const supabase = await createClient()
 
   const {
@@ -182,11 +235,14 @@ export async function acceptInvite(token: string) {
     return { error: 'not_authenticated' as const }
   }
 
-  const { error } = await supabase.rpc('accept_workspace_invite', { invite_token: token })
+  const { error } = await supabase.rpc('accept_workspace_invite', {
+    invite_token: parsed.data,
+  })
 
   if (error) {
     console.error('acceptInvite falhou', error)
-    return { error: error.message }
+    const known = INVITE_ERRORS.find((message) => error.message.includes(message))
+    return { error: known ?? 'Não foi possível aceitar o convite.' }
   }
 
   return { success: true }
