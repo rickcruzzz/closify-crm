@@ -25,6 +25,35 @@
 --      em algum caminho anônimo para ganhar nada — elas já retornam false
 --      sem sessão.
 
+-- 3) DRIFT DE SCHEMA: a 0009 nunca foi aplicada no banco. Verificado chamando
+--    a RPC como service role — get_open_pipeline_value não existe, enquanto
+--    todas as outras (0001, 0004, 0005, 0007, 0008, 0010, 0011) existem.
+--    Consequência visível: getDashboardMetrics faz
+--    `pipelineValueResult.data ?? 0`, então o erro da RPC ausente é engolido
+--    e o card "Valor do Pipeline" mostra R$ 0 para todo mundo, sempre.
+--    Recriada aqui para esta migration ser auto-suficiente.
+
+-- ============================================================================
+-- 0) Corrige o drift: recria a função que a 0009 deveria ter criado
+-- ============================================================================
+
+create or replace function public.get_open_pipeline_value(target_workspace_id uuid)
+returns numeric
+language sql
+security definer
+set search_path = ''
+stable
+as $$
+  select coalesce(sum(value), 0)
+  from public.deals
+  where workspace_id = target_workspace_id
+    and stage not in ('fechado_ganho', 'fechado_perdido')
+    and (select public.is_workspace_member(target_workspace_id));
+$$;
+
+revoke all on function public.get_open_pipeline_value(uuid) from public;
+grant execute on function public.get_open_pipeline_value(uuid) to authenticated;
+
 -- ============================================================================
 -- 1) workspace_has_no_members: guard interno em vez de depender de grant
 -- ============================================================================
