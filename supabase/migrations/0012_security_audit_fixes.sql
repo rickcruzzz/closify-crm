@@ -13,6 +13,10 @@
 -- 3) Helpers is_workspace_* / workspace_has_no_members nunca tiveram revoke.
 --    Retornam só booleanos sobre o próprio chamador, mas não há motivo para
 --    anon poder executá-los.
+--    ATENÇÃO: os `revoke ... from public` abaixo foram testados contra o banco
+--    real e NÃO surtem efeito — o Supabase concede EXECUTE explicitamente a
+--    `anon` via default privileges, e revogar de PUBLIC não remove grant de
+--    role. A correção que funciona está na 0013.
 -- 4) Webhook do Asaas não tinha idempotência: reenviar um PAYMENT_CONFIRMED
 --    legítimo reativava plan='pro' depois de um cancelamento. Tabela de
 --    eventos processados com unique no id do evento resolve replay e também
