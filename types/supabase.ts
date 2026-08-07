@@ -173,6 +173,26 @@ export type Database = {
         }
         Relationships: []
       }
+      // Dedupe de webhook do Asaas. Só a service_role escreve aqui (RLS ligada
+      // e sem policy) — ver 0012_security_audit_fixes.sql.
+      asaas_webhook_events: {
+        Row: {
+          event_id: string
+          event_type: string
+          processed_at: string
+        }
+        Insert: {
+          event_id: string
+          event_type: string
+          processed_at?: string
+        }
+        Update: {
+          event_id?: string
+          event_type?: string
+          processed_at?: string
+        }
+        Relationships: []
+      }
       subscriptions: {
         Row: {
           id: string

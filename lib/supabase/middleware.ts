@@ -28,13 +28,17 @@ export async function updateSession(request: NextRequest) {
   } = await supabase.auth.getUser()
 
   const { pathname } = request.nextUrl
-  const isDashboardPath =
+  // /onboarding também exige sessão: fica no grupo (auth), que não tem guard
+  // de layout, então sem isso a tela renderiza pra anônimo antes da Server
+  // Action recusar. Defesa em profundidade, não a única barreira.
+  const isProtectedPath =
     pathname.startsWith('/dashboard') ||
     pathname.startsWith('/kanban') ||
     pathname.startsWith('/leads') ||
-    pathname.startsWith('/settings')
+    pathname.startsWith('/settings') ||
+    pathname.startsWith('/onboarding')
 
-  if (!user && isDashboardPath) {
+  if (!user && isProtectedPath) {
     const url = request.nextUrl.clone()
     url.pathname = '/login'
     return NextResponse.redirect(url)

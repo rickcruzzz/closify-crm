@@ -18,12 +18,17 @@ export const getCurrentUserAndWorkspace = cache(async () => {
     redirect('/login')
   }
 
+  // order by created_at é obrigatório: sem ele o Postgres pode devolver um
+  // workspace diferente entre requests para quem participa de mais de um
+  // (convites já existem), e a gravação cairia no workspace errado.
   const { data: membership } = await supabase
     .from('workspace_members')
     .select('workspace_id')
     .eq('user_id', user.id)
+    .order('created_at', { ascending: true })
+    .order('workspace_id', { ascending: true })
     .limit(1)
-    .single()
+    .maybeSingle()
 
   if (!membership) {
     redirect('/onboarding')

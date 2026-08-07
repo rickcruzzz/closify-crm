@@ -13,12 +13,16 @@ async function getActiveWorkspaceId(supabase: Awaited<ReturnType<typeof createCl
 
   if (!user) return null
 
+  // Sem order by, o Postgres pode escolher um workspace diferente entre
+  // requests para quem participa de mais de um — gravaria no workspace errado.
   const { data } = await supabase
     .from('workspace_members')
     .select('workspace_id')
     .eq('user_id', user.id)
+    .order('created_at', { ascending: true })
+    .order('workspace_id', { ascending: true })
     .limit(1)
-    .single()
+    .maybeSingle()
 
   return data?.workspace_id ?? null
 }

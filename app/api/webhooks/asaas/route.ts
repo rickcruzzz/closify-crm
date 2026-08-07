@@ -14,8 +14,9 @@ const CANCELED_EVENTS = new Set([
 ])
 
 type AsaasWebhookPayload = {
+  id?: string
   event?: string
-  payment?: { subscription?: string }
+  payment?: { id?: string; subscription?: string }
   subscription?: { id?: string }
 }
 
@@ -65,6 +66,26 @@ export async function POST(request: Request) {
   }
 
   const supabase = createAdminClient()
+
+  // Idempotência: sem isso, reenviar um PAYMENT_CONFIRMED legítimo (retry do
+  // Asaas ou replay por quem tivesse o token) reativava plan='pro' depois de
+  // um cancelamento. O insert com PK no id do evento é a trava — se já
+  // existe, o evento já foi processado e não repetimos o efeito.
+  const eventId = body.id ?? `${event}:${body.payment?.id ?? subscriptionId}`
+
+  const { error: dedupeError } = await supabase
+    .from('asaas_webhook_events')
+    .insert({ event_id: eventId, event_type: event })
+
+  if (dedupeError) {
+    // 23505 = unique_violation: evento repetido. Responde 200 pra Asaas parar
+    // de reenviar; qualquer outro erro é falha real de infra.
+    if (dedupeError.code === '23505') {
+      return NextResponse.json({ received: true, duplicate: true })
+    }
+    console.error('Webhook Asaas: falha ao registrar evento', dedupeError)
+    return NextResponse.json({ error: 'internal_error' }, { status: 500 })
+  }
 
   const { data: subscription, error } = await supabase
     .from('subscriptions')

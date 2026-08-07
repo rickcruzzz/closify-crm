@@ -322,7 +322,7 @@ criação de conta.
 
 ## M17 — Deploy de Produção
 
-**Branch:** `chore/deploy-producao`
+**Branch:** `feat/deploy` (o plano previa `chore/deploy-producao`)
 
 **Objetivo:** Configurar o ambiente de produção completo e publicar a versão final.
 
@@ -330,7 +330,28 @@ criação de conta.
 
 - [ ] Variáveis de ambiente de produção (Supabase, Resend, Asaas, PostHog)
 - [ ] Domínio customizado configurado
-- [ ] Checklist de segurança revisado (RLS, chaves não expostas)
+- [x] Checklist de segurança revisado (RLS, chaves não expostas) — auditoria
+      completa, migrations `0012` e `0013` aplicadas e verificadas contra o
+      banco real
 - [ ] Deploy final em produção
+
+**Auditoria de segurança — pendências que exigem decisão/ação externa:**
+
+- [ ] Rotacionar `ASAAS_WEBHOOK_TOKEN` (apareceu no histórico de conversa)
+- [ ] Rotacionar `SUPABASE_SERVICE_ROLE_KEY` (ignora RLS; circulou localmente)
+- [ ] Next.js 14.2.35 tem advisories *high*; correção só no 16.3.0 (upgrade de
+      major, breaking)
+- [ ] Rate limiting em `signIn`, `inviteMember` e aceite de convite (precisa de
+      Upstash/Vercel KV)
+- [ ] Ligar *leaked password protection* no Supabase Auth (hoje senha só exige
+      `min(8)`, aceita `12345678`)
+- [ ] Configurar Resend como SMTP customizado no Supabase Auth — segue sendo o
+      gargalo real de entrega de e-mail
+- [ ] CSP (exige nonce via middleware no Next 14; começar em `Report-Only`)
+
+**Achado colateral da auditoria:** a migration `0009` nunca havia sido aplicada,
+e `getDashboardMetrics` engolia o erro com `?? 0` — o card "Valor do Pipeline"
+mostrava R$ 0 para todos os workspaces. Corrigido na `0013`. Vale conferir
+drift de schema sempre que aplicar migration pelo SQL Editor.
 
 **Commit final:** `chore: deploy de produção do Closify CRM`
