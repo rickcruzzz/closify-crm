@@ -337,8 +337,17 @@ criação de conta.
 
 **Auditoria de segurança — pendências que exigem decisão/ação externa:**
 
-- [ ] Rotacionar `ASAAS_WEBHOOK_TOKEN` (apareceu no histórico de conversa)
-- [ ] Rotacionar `SUPABASE_SERVICE_ROLE_KEY` (ignora RLS; circulou localmente)
+- [x] **Rotação de secrets concluída (07/08/2026)** — `ASAAS_WEBHOOK_TOKEN`,
+      `SUPABASE_SERVICE_ROLE_KEY`, `ASAAS_API_KEY` e `RESEND_API_KEY` trocadas,
+      antigas revogadas, tudo verificado contra as APIs reais e o webhook em
+      produção respondendo 200.
+      - `SUPABASE_SERVICE_ROLE_KEY` migrada do JWT legado (`eyJ...`) para o
+        formato novo (`sb_secret_...`).
+      - Aprendizado: **criar chave nova não revoga a antiga** no Supabase — a
+        revogação é passo separado e explícito.
+      - Armadilha: a *publishable key* e a *secret key* ficam na mesma tela; a
+        secret nasce oculta e exige "Reveal". Colar a publishable no lugar da
+        service role derruba o webhook com 500 (RLS sem policy barra a escrita).
 - [ ] Next.js 14.2.35 tem advisories *high*; correção só no 16.3.0 (upgrade de
       major, breaking)
 - [ ] Rate limiting em `signIn`, `inviteMember` e aceite de convite (precisa de
