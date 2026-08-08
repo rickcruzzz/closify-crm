@@ -335,6 +335,24 @@ criação de conta.
       **PostHog não entra aqui** — não há nenhuma referência a PostHog no
       código; a integração é da M16, ainda pendente.
 - [ ] Domínio customizado configurado
+- [ ] **Conta Asaas com `bankAccountInfo: PENDING`** — verificado em
+      `GET /myAccount/status` em 08/08/2026. `commercialInfo`, `documentation`
+      e `general` estão `APPROVED`; só a conta bancária não. Sem ela o cliente
+      paga e o valor fica retido no saldo do Asaas, sem transferir. É o maior
+      bloqueio real para monetizar, e só se resolve no painel.
+- [ ] **Nenhuma compra real jamais ocorreu** — `customers: 0`,
+      `subscriptions: 0`, `payments: 0` na conta do Asaas. O caminho
+      checkout → pagamento → webhook → Pro nunca rodou com dinheiro de
+      verdade. Dá para validar sem cobrança apontando `ASAAS_API_URL` para
+      `https://api-sandbox.asaas.com/v3` com uma chave de sandbox.
+- [ ] **Workspace "Agência Nova Era" tem Pro vitalício de graça** — veio do
+      `0002_seed.sql`, que rodou em produção: `plan: pro` com subscription
+      `active` e `asaas_subscription_id` nulo. Nenhum evento do Asaas
+      consegue rebaixá-lo, porque não há id para casar no `where`.
+- [ ] **Banco de produção com dados de teste** — 17 workspaces, dos quais ~10
+      são lixo de debug ("Debug sem select", "Verify fix", "Workspace Teste
+      E2E", ",k jk", "kjjj"...). Limpeza é destrutiva e precisa de revisão
+      caso a caso antes.
 - [x] Checklist de segurança revisado (RLS, chaves não expostas) — auditoria
       completa, migrations `0012` e `0013` aplicadas e verificadas contra o
       banco real
@@ -443,10 +461,30 @@ que é exatamente o bug corrigido na M18. Confirma que `main` está em
 `ad00773` e que os três commits da branch `feat/deploy` (M18, `.env.example`
 e o hardening do webhook) ainda não subiram — o PR #22 segue aberto.
 
-**Ordem obrigatória do próximo deploy:** aplicar a migration `0014` no SQL
-Editor **antes** de mergear o PR #22. O route handler novo chama
-`apply_asaas_subscription_status`, que ainda não existe no banco; subir o
-código primeiro faz todo webhook responder 500.
+**Deploy executado (08/08/2026), nesta ordem:**
+
+1. `0014` aplicada no SQL Editor.
+2. Verificada contra o banco real antes de qualquer código depender dela:
+   `apply_asaas_subscription_status` devolve `false` para assinatura
+   inexistente (caminho correto — o handler trata como "não é nossa" e
+   responde 200); `purge_old_asaas_webhook_events` devolve `0`; e **anon
+   recebe `42501 permission denied` nas duas**, ou seja, o `revoke` pegou de
+   verdade desta vez, ao contrário do que a `0013` documenta.
+3. PR #22 mergeado em `main` (`40f23c7`) e deploy automático da Vercel.
+
+Confirmado em produção depois do deploy:
+
+- Landing não estoura mais em 375px (era `scrollWidth` 476 contra 375).
+- Webhook responde `{"received":true,"matched":false}` — o campo `matched` só
+  existe no handler novo, então é a prova de que o código subiu.
+- Replay do mesmo `event_id` segue devolvendo `{"duplicate":true}`.
+- Token errado segue em 401.
+- Dados intactos: 1 `pro`, 16 `free`. Linha de dedupe do teste removida.
+
+Não verificado: o `revoke` do role `authenticated` (exigiria JWT de usuário
+logado) e a existência física do índice único (exigiria inserir linha
+duplicada em produção). Ambos foram criados pelo mesmo script que rodou sem
+erro — se houvesse duplicata, o `create unique index` teria falhado ali.
 
 **Como reconferir o drift sem CLI:** o projeto não usa a CLI do Supabase e as
 migrations são aplicadas à mão pelo SQL Editor, então não existe tabela de
