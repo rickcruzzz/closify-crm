@@ -5,7 +5,7 @@ import { appUrl } from '@/lib/app-url'
 import { cn } from '@/lib/utils'
 import { ThemeProvider } from '@/components/theme-provider'
 import { Toaster } from '@/components/ui/sonner'
-import { Analytics } from '@vercel/analytics/next'
+import { Analytics } from '@/components/analytics'
 
 const geistSans = localFont({
   src: './fonts/GeistVF.woff',
@@ -85,9 +85,10 @@ export default function RootLayout({
               bundle da landing sem nenhum consumidor. */}
           {children}
           <Toaster />
-          {/* Vercel Analytics: mede pageview e Web Vitals sem cookie e sem
-              identificar visitante, entao nao muda a exigencia de consentimento
-              da pagina. Fora da Vercel o script simplesmente nao carrega. */}
+          {/* Vercel Analytics: pageview e Web Vitals, sem cookie e sem
+              identificar visitante. O wrapper local higieniza a URL antes do
+              envio — o pacote manda o caminho REAL junto do padrão da rota, e
+              `/convite/<token>` carrega uma credencial de acesso. */}
           <Analytics />
         </ThemeProvider>
       </body>
