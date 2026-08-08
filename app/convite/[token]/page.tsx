@@ -5,11 +5,17 @@ import { Card, CardDescription, CardHeader, CardTitle } from '@/components/ui/ca
 import { createClient } from '@/lib/supabase/server'
 import { AcceptInviteCard } from '@/components/settings/accept-invite-card'
 
-export default async function ConvitePage({ params }: { params: Promise<{ token: string }> }) {
+export default async function ConvitePage({
+  params,
+}: {
+  params: Promise<{ token: string }>
+}) {
   const { token } = await params
   const supabase = await createClient()
 
-  const { data: inviteRows } = await supabase.rpc('get_invite_by_token', { invite_token: token })
+  const { data: inviteRows } = await supabase.rpc('get_invite_by_token', {
+    invite_token: token,
+  })
   const invite = inviteRows?.[0]
 
   const {
@@ -17,9 +23,12 @@ export default async function ConvitePage({ params }: { params: Promise<{ token:
   } = await supabase.auth.getUser()
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center gap-8 bg-background px-4 py-12">
-      <Link href="/" className="flex items-center gap-2 text-lg font-semibold tracking-tight">
-        <div className="flex size-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
+    <div className="bg-background flex min-h-dvh flex-col items-center justify-center gap-8 px-4 py-12">
+      <Link
+        href="/"
+        className="flex items-center gap-2 text-lg font-semibold tracking-tight"
+      >
+        <div className="bg-primary text-primary-foreground flex size-8 items-center justify-center rounded-lg">
           <KanbanSquare className="size-4" />
         </div>
         Closify

@@ -90,17 +90,20 @@ export function LeadDetailClient({
         Voltar para leads
       </Link>
 
-      <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <PageHeader title={lead.name} description={lead.company ?? ''} />
-        <div className="flex gap-2">
-          <Button variant="outline" onClick={() => setFormOpen(true)}>
-            Editar
-          </Button>
-          <Button variant="destructive" onClick={() => setDeleteOpen(true)}>
-            Excluir
-          </Button>
-        </div>
-      </div>
+      <PageHeader
+        title={lead.name}
+        description={lead.company ?? ''}
+        actions={
+          <>
+            <Button variant="outline" onClick={() => setFormOpen(true)}>
+              Editar
+            </Button>
+            <Button variant="destructive" onClick={() => setDeleteOpen(true)}>
+              Excluir
+            </Button>
+          </>
+        }
+      />
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
         <Card className="lg:col-span-1">
@@ -139,14 +142,18 @@ export function LeadDetailClient({
             </div>
 
             <div className="border-t pt-4">
-              <span className="text-muted-foreground mb-1 block text-xs">Valor estimado</span>
-              <span className="text-lg font-semibold">{currencyFormatter.format(lead.value)}</span>
+              <span className="text-muted-foreground mb-1 block text-xs">
+                Valor estimado
+              </span>
+              <span className="text-lg font-semibold">
+                {currencyFormatter.format(lead.value)}
+              </span>
             </div>
           </CardContent>
         </Card>
 
         <Card className="lg:col-span-2">
-          <CardHeader className="flex flex-row items-center justify-between">
+          <CardHeader className="flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between">
             <CardTitle>Timeline de atividades</CardTitle>
             <Button variant="outline" size="sm" onClick={() => setActivityFormOpen(true)}>
               Registrar atividade

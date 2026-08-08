@@ -173,8 +173,8 @@ export function KanbanBoard({
 
   return (
     <>
-      <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex flex-1 flex-col gap-2 sm:flex-row">
+      <div className="mb-4 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+        <div className="flex flex-1 flex-col gap-2 lg:flex-row">
           <div className="relative max-w-sm flex-1">
             <Search className="text-muted-foreground pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2" />
             <Input
@@ -191,7 +191,7 @@ export function KanbanBoard({
             onValueChange={(value) => setOwnerFilter(value ?? 'todos')}
           >
             <SelectTrigger
-              className="w-full sm:w-56"
+              className="w-full lg:w-56"
               aria-label="Filtrar por responsável"
             >
               <SelectValue>
@@ -226,7 +226,11 @@ export function KanbanBoard({
         onDragOver={handleDragOver}
         onDragEnd={handleDragEnd}
       >
-        <div className="flex gap-4 overflow-x-auto pb-4">
+        {/* Margem negativa + padding devolvem a faixa de scroll até a borda da
+            viewport: sem isso as colunas eram cortadas pelo padding do `main`
+            no mobile. O snap é só abaixo de `sm`, porque acima disso o board
+            inteiro cabe e o snap só atrapalharia o auto-scroll do drag. */}
+        <div className="-mx-4 flex snap-x snap-proximity scroll-pl-4 gap-4 overflow-x-auto overscroll-x-contain px-4 pb-4 sm:snap-none md:-mx-6 md:scroll-pl-6 md:px-6">
           {dealStages.map((stage) => (
             <KanbanColumn
               key={stage}

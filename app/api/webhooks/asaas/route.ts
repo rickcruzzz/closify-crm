@@ -4,6 +4,12 @@ import { NextResponse } from 'next/server'
 
 import { createAdminClient } from '@/lib/supabase/admin'
 
+// `timingSafeEqual` vem de `node:crypto` e o client admin usa a service role
+// key: nada disso pode rodar no runtime Edge. O padrão do Next 14 para route
+// handlers já é `nodejs`, mas deixar explícito evita que uma mudança de
+// config global mova o webhook de runtime sem ninguém perceber.
+export const runtime = 'nodejs'
+
 const ACTIVE_EVENTS = new Set(['PAYMENT_CONFIRMED', 'PAYMENT_RECEIVED'])
 const PAST_DUE_EVENTS = new Set(['PAYMENT_OVERDUE'])
 const CANCELED_EVENTS = new Set([
@@ -87,24 +93,26 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'internal_error' }, { status: 500 })
   }
 
-  const { data: subscription, error } = await supabase
-    .from('subscriptions')
-    .update({ status })
-    .eq('asaas_subscription_id', subscriptionId)
-    .select('workspace_id')
-    .maybeSingle()
+  // Atualizar `subscriptions.status` e `workspaces.plan` em dois round-trips
+  // deixava a porta aberta pra segunda escrita falhar e o plano ficar errado
+  // em silêncio — e, como o evento já estava registrado acima, nenhum retry
+  // do Asaas consertava. A RPC faz as duas na mesma transação.
+  const { data: matched, error } = await supabase.rpc('apply_asaas_subscription_status', {
+    p_asaas_subscription_id: subscriptionId,
+    p_status: status,
+  })
 
   if (error) {
-    console.error('Webhook Asaas: falha ao atualizar subscriptions', error)
+    // O registro de dedupe já foi gravado, então um retry cairia no 23505 e
+    // responderia 200 sem nunca processar o evento. Apagar a marca devolve o
+    // evento pra fila: o próximo retry do Asaas reprocessa de verdade.
+    await supabase.from('asaas_webhook_events').delete().eq('event_id', eventId)
+
+    console.error('Webhook Asaas: falha ao aplicar status da assinatura', error)
     return NextResponse.json({ error: 'internal_error' }, { status: 500 })
   }
 
-  if (subscription) {
-    await supabase
-      .from('workspaces')
-      .update({ plan: status === 'active' ? 'pro' : 'free' })
-      .eq('id', subscription.workspace_id)
-  }
-
-  return NextResponse.json({ received: true })
+  // Assinatura que não é nossa (ou já removida): não é erro. Responde 200 pro
+  // Asaas parar de reenviar.
+  return NextResponse.json({ received: true, matched: matched === true })
 }

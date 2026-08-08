@@ -13,6 +13,7 @@ import {
 import Link from 'next/link'
 import { Filter } from 'lucide-react'
 
+import { useMediaQuery } from '@/hooks/use-media-query'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { EmptyState } from '@/components/ui/empty-state'
@@ -43,6 +44,11 @@ export function FunnelChart({ data }: { data: FunnelStageCount[] }) {
   // quebrado em vez de "ainda não há dados".
   const isEmpty = data.every((stage) => stage.count === 0)
 
+  // O eixo Y do Recharts só aceita largura fixa em px. Com 130px sobrava
+  // menos de metade da tela para as barras em 375px, então o eixo encolhe no
+  // mobile — os rótulos truncam, mas o gráfico volta a ser legível.
+  const isCompact = useMediaQuery('(max-width: 639px)')
+
   return (
     <Card>
       <CardHeader>
@@ -50,7 +56,7 @@ export function FunnelChart({ data }: { data: FunnelStageCount[] }) {
       </CardHeader>
       <CardContent>
         {isEmpty ? (
-          <div className="flex h-72 items-center justify-center">
+          <div className="flex h-64 items-center justify-center sm:h-72">
             <EmptyState
               icon={Filter}
               title="Funil ainda vazio"
@@ -63,9 +69,13 @@ export function FunnelChart({ data }: { data: FunnelStageCount[] }) {
             </EmptyState>
           </div>
         ) : (
-          <div className="h-72 w-full">
+          <div className="h-64 w-full sm:h-72">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={data} layout="vertical" margin={{ left: 8, right: 16 }}>
+              <BarChart
+                data={data}
+                layout="vertical"
+                margin={{ left: isCompact ? 0 : 8, right: 16 }}
+              >
                 <CartesianGrid horizontal={false} stroke="var(--border)" />
                 <XAxis
                   type="number"
@@ -77,8 +87,11 @@ export function FunnelChart({ data }: { data: FunnelStageCount[] }) {
                 <YAxis
                   type="category"
                   dataKey="label"
-                  width={130}
-                  tick={{ fill: 'var(--muted-foreground)', fontSize: 12 }}
+                  width={isCompact ? 88 : 130}
+                  tick={{
+                    fill: 'var(--muted-foreground)',
+                    fontSize: isCompact ? 11 : 12,
+                  }}
                   axisLine={false}
                   tickLine={false}
                 />
