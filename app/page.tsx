@@ -5,6 +5,7 @@ import { HeroSection } from '@/components/landing/hero-section'
 import { StatsSection } from '@/components/landing/stats-section'
 import { FeaturesSection } from '@/components/landing/features-section'
 import { PricingSection } from '@/components/landing/pricing-section'
+import { FaqSection } from '@/components/landing/faq-section'
 import { CtaSection } from '@/components/landing/cta-section'
 import { PublicFooter } from '@/components/landing/public-footer'
 
@@ -33,6 +34,9 @@ export default function Home() {
         <StatsSection />
         <FeaturesSection />
         <PricingSection />
+        {/* A FAQ fica entre preço e CTA final de propósito: é onde a objeção
+            aparece — a pessoa acabou de ver quanto custa e ainda não decidiu. */}
+        <FaqSection />
         <CtaSection />
       </main>
       <PublicFooter />

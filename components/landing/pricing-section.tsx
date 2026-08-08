@@ -16,7 +16,7 @@ type Plan = {
   cta: string
   href: string
   highlighted?: boolean
-  delay: string
+  delay: number
 }
 
 const plans: Plan[] = [
@@ -32,7 +32,7 @@ const plans: Plan[] = [
     ],
     cta: 'Começar grátis',
     href: '/cadastro',
-    delay: 'delay-0',
+    delay: 0,
   },
   {
     name: 'Pro',
@@ -49,7 +49,7 @@ const plans: Plan[] = [
     cta: 'Assinar Pro',
     href: '/cadastro',
     highlighted: true,
-    delay: 'delay-150',
+    delay: 120,
   },
 ]
 
@@ -60,14 +60,17 @@ export function PricingSection() {
     <section id="planos" className="relative overflow-x-clip px-4 py-20 md:px-6 md:py-28">
       <div
         aria-hidden
-        className="bg-primary/5 pointer-events-none absolute top-1/3 left-1/2 -z-10 h-72 w-[36rem] -translate-x-1/2 rounded-full blur-3xl"
+        className="glow-radial pointer-events-none absolute top-1/3 left-1/2 -z-10 h-72 w-[36rem] -translate-x-1/2"
       />
       <div className="mx-auto max-w-4xl">
         <RevealOnScroll className="mx-auto mb-12 flex max-w-2xl flex-col items-center gap-3 text-center">
-          <h2 className="text-3xl font-semibold tracking-tight md:text-4xl">
+          <span className="text-muted-foreground font-mono text-[11px] tracking-wide uppercase">
+            Planos
+          </span>
+          <h2 className="text-3xl font-semibold tracking-[-0.02em] md:text-4xl">
             Planos para cada fase do seu negócio
           </h2>
-          <p className="text-muted-foreground text-lg">
+          <p className="text-muted-foreground text-lg text-balance">
             Comece grátis e faça upgrade quando o funil crescer.
           </p>
         </RevealOnScroll>
@@ -77,10 +80,11 @@ export function PricingSection() {
             <RevealOnScroll key={plan.name} delay={plan.delay}>
               <Card
                 className={cn(
-                  'h-full transition-all duration-300 hover:-translate-y-1 hover:shadow-lg',
+                  'h-full transition-[transform,box-shadow] duration-300',
+                  'pointer:hover:-translate-y-1 pointer:hover:shadow-lg',
                   plan.highlighted
                     ? 'ring-primary shadow-primary/10 shadow-lg ring-2'
-                    : 'hover:ring-border ring-1 ring-transparent',
+                    : 'ring-border ring-1',
                 )}
               >
                 <CardHeader className="flex flex-col gap-1">

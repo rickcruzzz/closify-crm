@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation'
 
 import { Sidebar } from '@/components/layout/sidebar'
 import { Topbar } from '@/components/layout/topbar'
+import { TooltipProvider } from '@/components/ui/tooltip'
 import { createClient } from '@/lib/supabase/server'
 import { getCurrentUserAndWorkspace } from '@/lib/supabase/workspace'
 import type { WorkspacePlan } from '@/types/supabase'
@@ -46,14 +47,18 @@ export default async function DashboardLayout({
   }
 
   return (
-    <div className="flex min-h-dvh">
-      <Sidebar workspaces={workspaces} />
-      <div className="flex min-w-0 flex-1 flex-col">
-        <Topbar workspaces={workspaces} currentUser={currentUser} />
-        <main id="conteudo" className="flex-1 p-4 md:p-6">
-          {children}
-        </main>
+    // O TooltipProvider fica aqui, e não no layout raiz: só a área logada usa
+    // tooltip, então a landing não carrega o JS do provider à toa.
+    <TooltipProvider delay={200}>
+      <div className="flex min-h-dvh">
+        <Sidebar workspaces={workspaces} />
+        <div className="flex min-w-0 flex-1 flex-col">
+          <Topbar workspaces={workspaces} currentUser={currentUser} />
+          <main id="conteudo" className="flex-1 p-4 md:p-6">
+            {children}
+          </main>
+        </div>
       </div>
-    </div>
+    </TooltipProvider>
   )
 }
