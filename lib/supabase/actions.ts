@@ -11,11 +11,20 @@ import {
   resetPasswordSchema,
 } from '@/lib/validations/auth'
 import { appUrl } from '@/lib/app-url'
+import { excedeuLimite, limparTentativas } from '@/lib/rate-limit'
 
 export async function signIn(values: unknown) {
   const parsed = loginSchema.safeParse(values)
   if (!parsed.success) {
     return { error: 'Dados inválidos.' }
+  }
+
+  // Limita por e-mail, nao por IP: o alvo de forca bruta e a conta, e IP
+  // atras de NAT e compartilhado por gente que nao tem nada a ver.
+  if (await excedeuLimite('signin', parsed.data.email)) {
+    return {
+      error: 'Muitas tentativas de login. Aguarde alguns minutos e tente novamente.',
+    }
   }
 
   const supabase = await createClient()
@@ -25,6 +34,9 @@ export async function signIn(values: unknown) {
     console.error('signInWithPassword falhou', error)
     return { error: 'E-mail ou senha incorretos.' }
   }
+
+  // Acertou a senha: nao deve carregar as tentativas erradas anteriores.
+  await limparTentativas('signin', parsed.data.email)
 
   redirect('/dashboard')
 }
@@ -46,13 +58,19 @@ export async function signUp(values: unknown) {
   })
 
   if (error) {
-    console.error('signUp falhou', { code: error.code, status: error.status, message: error.message })
+    console.error('signUp falhou', {
+      code: error.code,
+      status: error.status,
+      message: error.message,
+    })
 
     if (error.code === 'email_exists' || error.code === 'user_already_exists') {
       redirect('/verifique-email')
     }
     if (error.code === 'over_email_send_rate_limit') {
-      return { error: 'Muitas tentativas de cadastro. Aguarde alguns minutos e tente novamente.' }
+      return {
+        error: 'Muitas tentativas de cadastro. Aguarde alguns minutos e tente novamente.',
+      }
     }
     if (error.code === 'weak_password') {
       return { error: 'Senha muito fraca. Use uma senha mais forte.' }
@@ -93,7 +111,10 @@ export async function requestPasswordReset(values: unknown) {
   // pra e-mail inexistente, mas mantemos a checagem por segurança caso
   // o comportamento mude entre versões do SDK.
   if (error) {
-    console.error('resetPasswordForEmail falhou', { code: error.code, status: error.status })
+    console.error('resetPasswordForEmail falhou', {
+      code: error.code,
+      status: error.status,
+    })
   }
 
   return { success: true }
@@ -109,14 +130,20 @@ export async function updatePassword(values: unknown) {
   const { error } = await supabase.auth.updateUser({ password: parsed.data.password })
 
   if (error) {
-    console.error('updateUser (reset de senha) falhou', { code: error.code, status: error.status })
+    console.error('updateUser (reset de senha) falhou', {
+      code: error.code,
+      status: error.status,
+    })
     if (error.code === 'same_password') {
       return { error: 'A nova senha precisa ser diferente da atual.' }
     }
     if (error.code === 'weak_password') {
       return { error: 'Senha muito fraca. Use uma senha mais forte.' }
     }
-    return { error: 'Não foi possível redefinir a senha. O link pode ter expirado — solicite um novo.' }
+    return {
+      error:
+        'Não foi possível redefinir a senha. O link pode ter expirado — solicite um novo.',
+    }
   }
 
   redirect('/dashboard')

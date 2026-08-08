@@ -13,6 +13,7 @@ import {
 import { getCurrentUserAndWorkspace } from '@/lib/supabase/workspace'
 import { canAddMember } from '@/lib/limits'
 import { appUrl } from '@/lib/app-url'
+import { excedeuLimite } from '@/lib/rate-limit'
 
 // O nome do workspace é texto livre e vai interpolado no HTML do e-mail de
 // convite, que é entregue a quem ainda nem tem conta. Sem escape, um admin
@@ -75,6 +76,14 @@ export async function inviteMember(values: unknown) {
 
   const { supabase, workspaceId, user } = admin
 
+  // Limita por workspace: o abuso aqui e usar nosso Resend como maquina de
+  // spam, e quem dispara e sempre o mesmo workspace, variando o destinatario.
+  if (await excedeuLimite('invite', workspaceId)) {
+    return {
+      error: 'Muitos convites enviados. Aguarde alguns minutos e tente novamente.',
+    }
+  }
+
   const { data: workspace } = await supabase
     .from('workspaces')
     .select('name')
@@ -120,7 +129,9 @@ export async function inviteMember(values: unknown) {
 
   if (emailError) {
     console.error('Envio de e-mail de convite falhou', emailError)
-    return { error: 'Convite criado, mas não foi possível enviar o e-mail. Tente reenviar.' }
+    return {
+      error: 'Convite criado, mas não foi possível enviar o e-mail. Tente reenviar.',
+    }
   }
 
   revalidatePath('/settings')
@@ -233,6 +244,13 @@ export async function acceptInvite(token: unknown) {
 
   if (!user) {
     return { error: 'not_authenticated' as const }
+  }
+
+  // Limita por usuario: sem isso, uma sessao valida pode martelar tokens de
+  // convite a vontade. O token e UUID, entao adivinhar ja e inviavel -- isto
+  // fecha o custo de tentar.
+  if (await excedeuLimite('accept-invite', user.id)) {
+    return { error: 'Muitas tentativas. Aguarde alguns minutos e tente novamente.' }
   }
 
   const { error } = await supabase.rpc('accept_workspace_invite', {
