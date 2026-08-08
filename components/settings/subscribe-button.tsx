@@ -49,7 +49,7 @@ export function SubscribeButton() {
     <>
       <Button onClick={() => setDialogOpen(true)} className="w-fit">
         <Zap className="size-4" />
-        Assinar Pro — R$ {PRO_PLAN_PRICE}/mês
+        Assinar Pro por R$ {PRO_PLAN_PRICE}/mês
       </Button>
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>

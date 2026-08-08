@@ -69,7 +69,9 @@ export default function EsqueciSenhaPage() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-xl">Esqueceu a senha?</CardTitle>
+        <CardTitle className="text-xl">
+          <h1>Esqueceu a senha?</h1>
+        </CardTitle>
         <CardDescription>
           Informe seu e-mail e enviaremos um link para redefinir sua senha.
         </CardDescription>

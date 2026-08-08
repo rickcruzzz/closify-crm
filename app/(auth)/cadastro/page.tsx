@@ -62,7 +62,9 @@ export default function SignUpPage() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-xl">Criar conta</CardTitle>
+        <CardTitle className="text-xl">
+          <h1>Criar conta</h1>
+        </CardTitle>
         <CardDescription>Comece a organizar seu funil de vendas hoje.</CardDescription>
       </CardHeader>
       <CardContent className="flex flex-col gap-4">

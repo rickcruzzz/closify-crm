@@ -25,7 +25,7 @@ export function CtaSection() {
             href="/cadastro"
             className={cn(
               buttonVariants({ size: 'lg' }),
-              'pointer:hover:scale-105 gap-2 transition-transform duration-300',
+              'pointer:hover:scale-105 min-h-11 gap-2 transition-transform duration-300',
             )}
           >
             Começar grátis

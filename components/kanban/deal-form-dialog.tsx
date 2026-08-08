@@ -109,7 +109,7 @@ export function DealFormDialog({
             <Label htmlFor="title">Título do negócio</Label>
             <Input
               id="title"
-              placeholder="Ex: Plano anual — Agência Nova Era"
+              placeholder="Ex: Plano anual da Agência Nova Era"
               aria-invalid={!!errors.title}
               disabled={isSubmitting}
               {...register('title')}
@@ -136,14 +136,14 @@ export function DealFormDialog({
                     <SelectValue placeholder="Selecione um lead">
                       {(value) => {
                         const lead = leadsById.get(value as string)
-                        return lead ? `${lead.name} — ${lead.company}` : value
+                        return lead ? `${lead.name} (${lead.company})` : value
                       }}
                     </SelectValue>
                   </SelectTrigger>
                   <SelectContent>
                     {leads.map((lead) => (
                       <SelectItem key={lead.id} value={lead.id}>
-                        {lead.name} — {lead.company}
+                        {lead.name} ({lead.company})
                       </SelectItem>
                     ))}
                   </SelectContent>

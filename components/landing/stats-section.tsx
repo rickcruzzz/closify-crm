@@ -54,7 +54,7 @@ export function StatsSection() {
             >
               {stat.value}
             </span>
-            <span className="text-muted-foreground max-w-[16ch] font-mono text-[11px] leading-relaxed tracking-wide uppercase">
+            <span className="text-muted-foreground max-w-[16ch] font-mono text-sm leading-relaxed tracking-wide uppercase">
               {stat.label}
             </span>
           </RevealOnScroll>

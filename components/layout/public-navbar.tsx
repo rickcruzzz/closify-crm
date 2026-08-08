@@ -28,7 +28,7 @@ export function PublicNavbar() {
             <Link
               key={link.href}
               href={link.href}
-              className="text-muted-foreground hover:text-foreground text-sm font-medium transition-colors"
+              className="text-muted-foreground hover:text-foreground flex min-h-11 items-center text-sm font-medium transition-colors"
             >
               {link.label}
             </Link>
@@ -43,7 +43,7 @@ export function PublicNavbar() {
           >
             Entrar
           </Link>
-          <Link href="/cadastro" className={cn(buttonVariants())}>
+          <Link href="/cadastro" className={cn(buttonVariants(), 'min-h-11 md:min-h-8')}>
             Começar grátis
           </Link>
         </div>

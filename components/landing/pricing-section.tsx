@@ -64,7 +64,7 @@ export function PricingSection() {
       />
       <div className="mx-auto max-w-4xl">
         <RevealOnScroll className="mx-auto mb-12 flex max-w-2xl flex-col items-center gap-3 text-center">
-          <span className="text-muted-foreground font-mono text-[11px] tracking-wide uppercase">
+          <span className="text-muted-foreground font-mono text-xs tracking-wide uppercase">
             Planos
           </span>
           <h2 className="text-3xl font-semibold tracking-[-0.02em] md:text-4xl">
@@ -120,7 +120,7 @@ export function PricingSection() {
                       buttonVariants({
                         variant: plan.highlighted ? 'default' : 'outline',
                       }),
-                      'w-full',
+                      'min-h-11 w-full',
                     )}
                   >
                     {plan.cta}

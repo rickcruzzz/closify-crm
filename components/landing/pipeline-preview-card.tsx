@@ -26,7 +26,7 @@ export function PipelinePreviewCard() {
           <span className="size-2.5 rounded-full bg-emerald-500/70" />
         </div>
         <span className="text-muted-foreground font-mono text-xs">
-          pipeline — workspace: acme-corp
+          pipeline / workspace: acme-corp
         </span>
       </div>
 

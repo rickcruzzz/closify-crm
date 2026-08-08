@@ -12,14 +12,14 @@ import { PublicFooter } from '@/components/landing/public-footer'
 // A landing usa o title default (sem o template "| Closify CRM"), já que
 // aqui o nome do produto é o próprio título.
 export const metadata: Metadata = {
-  title: 'Closify CRM — pipeline de vendas em Kanban para PMEs',
+  title: 'Closify CRM: pipeline de vendas em Kanban para PMEs',
   description:
     'Organize leads e negócios num funil visual, acompanhe métricas e substitua a planilha em um dia. Plano gratuito para começar.',
   alternates: { canonical: '/' },
   // Sem repetir aqui, o preview de link herdaria o openGraph genérico do
   // layout raiz em vez do texto de conversão da landing.
   openGraph: {
-    title: 'Closify CRM — pipeline de vendas em Kanban para PMEs',
+    title: 'Closify CRM: pipeline de vendas em Kanban para PMEs',
     description:
       'Organize leads e negócios num funil visual, acompanhe métricas e substitua a planilha em um dia. Plano gratuito para começar.',
   },
