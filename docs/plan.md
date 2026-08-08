@@ -372,8 +372,7 @@ criação de conta.
 - [x] **Os `revoke ... from anon` da `0013` funcionam de fato.** Testado com a
       anon key sem sessão: `get_dashboard_counts`, `get_open_pipeline_value`,
       `create_workspace_with_admin` e `accept_workspace_invite` devolvem 401
-      `permission denied for function`; `get_workspace_member_names` devolve
-      404. As duas deixadas abertas de propósito se comportam como projetado —
+      `permission denied for function`; `get_workspace_member_names` devolve 404. As duas deixadas abertas de propósito se comportam como projetado —
       `workspace_has_no_members` devolve `false` (guard interno de `auth.uid()`)
       e `get_invite_by_token` devolve `[]`.
       As funções de escrita puderam ser testadas com segurança porque ambas
@@ -391,28 +390,62 @@ criação de conta.
 - [x] **Rotação de secrets concluída (07/08/2026)** — `ASAAS_WEBHOOK_TOKEN`,
       `SUPABASE_SERVICE_ROLE_KEY`, `ASAAS_API_KEY` e `RESEND_API_KEY` trocadas,
       antigas revogadas, tudo verificado contra as APIs reais e o webhook em
-      produção respondendo 200.
-      - `SUPABASE_SERVICE_ROLE_KEY` migrada do JWT legado (`eyJ...`) para o
-        formato novo (`sb_secret_...`).
-      - Aprendizado: **criar chave nova não revoga a antiga** no Supabase — a
-        revogação é passo separado e explícito.
-      - Armadilha: a *publishable key* e a *secret key* ficam na mesma tela; a
-        secret nasce oculta e exige "Reveal". Colar a publishable no lugar da
-        service role derruba o webhook com 500 (RLS sem policy barra a escrita).
-- [ ] Next.js 14.2.35 tem advisories *high*; correção só no 16.3.0 (upgrade de
+      produção respondendo 200. - `SUPABASE_SERVICE_ROLE_KEY` migrada do JWT legado (`eyJ...`) para o
+      formato novo (`sb_secret_...`). - Aprendizado: **criar chave nova não revoga a antiga** no Supabase — a
+      revogação é passo separado e explícito. - Armadilha: a _publishable key_ e a _secret key_ ficam na mesma tela; a
+      secret nasce oculta e exige "Reveal". Colar a publishable no lugar da
+      service role derruba o webhook com 500 (RLS sem policy barra a escrita).
+- [ ] Next.js 14.2.35 tem advisories _high_; correção só no 16.3.0 (upgrade de
       major, breaking). `npm audit` em 08/08/2026: **7 vulnerabilidades (6
       high, 1 moderate)**, todas no `next` e no `postcss` que ele empacota —
       SSRF em rewrites, exposição de endpoints de Server Function, payload
       ilimitado de Server Action no runtime Edge, e leitura arbitrária de
       arquivo via `sourceMappingURL` no postcss. Nenhuma tem correção sem o
       salto de major.
-- [ ] Rate limiting em `signIn`, `inviteMember` e aceite de convite (precisa de
-      Upstash/Vercel KV)
-- [ ] Ligar *leaked password protection* no Supabase Auth (hoje senha só exige
+- [x] **Rate limiting implementado** em `signIn`, `inviteMember` e aceite de
+      convite (migration `0015`). Não precisou de Upstash nem Vercel KV: uma
+      tabela no Postgres resolve neste volume e sobrevive a restart de função,
+      coisa que contador em memória não faz. Contagem e inserção na mesma
+      transação, senão duas requisições simultâneas passariam as duas.
+      Limites por ameaça: login 8/15min por e-mail, convite 20/hora por
+      workspace, aceite 15/15min por usuário. **Falha aberta** de propósito —
+      limitador indisponível não pode virar tranca no login de todo mundo.
+- [ ] Ligar _leaked password protection_ no Supabase Auth (hoje senha só exige
       `min(8)`, aceita `12345678`)
 - [ ] Configurar Resend como SMTP customizado no Supabase Auth — segue sendo o
       gargalo real de entrega de e-mail
-- [ ] CSP (exige nonce via middleware no Next 14; começar em `Report-Only`)
+- [x] **CSP em Report-Only** no `next.config`. A abordagem canônica (nonce +
+      `strict-dynamic`) foi implementada e medida: **28 a 32 violações por
+      página**, todos os chunks do próprio Next, porque as páginas públicas
+      são estáticas e não há requisição para carimbar nonce. Ativá-la
+      derrubaria o app. Nonce exigiria tornar tudo dinâmico, anulando o ganho
+      de TTFB. A política final dá **1 violação por página** (um `eval` de
+      dependência, documentado no config).
+
+**Auditoria de UI/UX (08/08/2026):** conduzida com as regras do skill
+`ui-ux-pro-max` e medida ao vivo com Playwright em 375/768/1440, nos dois
+temas. Entregue em `afd3356` (rotas públicas) e `8f15915` (área logada).
+
+- Traços removidos de todo texto de interface.
+- Texto abaixo de 12px: 14 na landing e 9 na área logada, ambos zerados.
+- **Login, cadastro e recuperação não tinham `<h1>`** — `CardTitle` renderiza
+  `<div>`, então a hierarquia de cabeçalhos quebrava para leitor de tela.
+- Botões de fechar anunciavam "Close" num app `lang="pt-BR"`.
+- Violações WCAG 2.2 de alvo de toque na área logada: mobile 6 → 1, desktop
+  10 → 1. O restante é o skip link `sr-only`, correto por design.
+- **Contraste: zero violações antes e depois.** A primeira medição acusou 106
+  e era artefato — o Tailwind v4 emite `oklch()` e o parser esperava `rgb()`,
+  então toda razão dava 1:1. Refeita com canvas. Nenhuma cor foi alterada,
+  porque nenhuma precisava.
+- `Input`, `Select`, `Textarea` e `Button` sobem para 44px abaixo de `md`.
+  Isso contraria a convenção de não editar `components/ui` à mão, e foi
+  deliberado: a altura vive na variante, então corrigir por uso significaria
+  repetir a regra em dezenas de lugares e deixar todo uso novo nascer errado.
+
+**Limpeza de dados de teste:** preparada em `0016_limpeza_dados_de_teste.sql`,
+dividida em três níveis de risco e **não executada** — apagar é irreversível.
+Nível 1 são 5 workspaces órfãos sem membro nem dado, inalcançáveis pela
+interface. O arquivo também documenta o Pro vitalício herdado do seed.
 
 **Achado colateral da auditoria:** a migration `0009` nunca havia sido aplicada,
 e `getDashboardMetrics` engolia o erro com `?? 0` — o card "Valor do Pipeline"
@@ -429,15 +462,9 @@ Aprovado:
       cadastro, esqueci-senha, convite inválido e 404. Todos 200 (404 devolve
       404 de verdade), zero erro de JS, `<title>` correto em cada rota.
 - [x] Webhook de produção exercitado ponta a ponta, com token válido e um id
-      de assinatura propositalmente inexistente — nenhum plano podia mudar:
-      - evento válido → `200 {"received":true}`
-      - replay do mesmo `event_id` → `200 {"duplicate":true}` (**a
-        idempotência foi confirmada no ambiente real, não só por leitura de
-        código**)
-      - evento sem assinatura vinculada → 200
-      - evento não mapeado → 200 (não gera tempestade de retry)
-      - JSON inválido → 400
-      - token errado → 401
+      de assinatura propositalmente inexistente — nenhum plano podia mudar: - evento válido → `200 {"received":true}` - replay do mesmo `event_id` → `200 {"duplicate":true}` (**a
+      idempotência foi confirmada no ambiente real, não só por leitura de
+      código**) - evento sem assinatura vinculada → 200 - evento não mapeado → 200 (não gera tempestade de retry) - JSON inválido → 400 - token errado → 401
 - [x] Depois do teste: 17 workspaces com os mesmos planos de antes (1 `pro`,
       16 `free`), nenhuma referência órfã entre `leads`, `deals`,
       `activities`, `workspace_members` e `workspace_invites`. A linha de
