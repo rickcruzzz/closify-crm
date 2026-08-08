@@ -87,11 +87,11 @@ export function FunnelChart({ data }: { data: FunnelStageCount[] }) {
                 <YAxis
                   type="category"
                   dataKey="label"
-                  width={isCompact ? 88 : 130}
-                  tick={{
-                    fill: 'var(--muted-foreground)',
-                    fontSize: isCompact ? 11 : 12,
-                  }}
+                  width={isCompact ? 96 : 130}
+                  // 12px é o piso de legibilidade. O eixo já perde largura no
+                  // mobile; encolher a fonte junto tornava os rótulos das
+                  // etapas difíceis de ler justamente onde a tela é menor.
+                  tick={{ fill: 'var(--muted-foreground)', fontSize: 12 }}
                   axisLine={false}
                   tickLine={false}
                 />

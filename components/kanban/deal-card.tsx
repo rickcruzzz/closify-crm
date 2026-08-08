@@ -92,7 +92,7 @@ export function DealCard({
                 alvo focável — senão a ação fica inacessível por teclado. */}
             <button
               type="button"
-              className="focus-visible:ring-ring/50 max-w-full truncate rounded-sm text-left text-sm outline-none hover:underline focus-visible:ring-3"
+              className="focus-visible:ring-ring/50 -my-1 flex min-h-6 max-w-full items-center rounded-sm py-1 text-left text-sm outline-none hover:underline focus-visible:ring-3"
               onClick={(event) => {
                 event.stopPropagation()
                 onOpen(deal.id)
