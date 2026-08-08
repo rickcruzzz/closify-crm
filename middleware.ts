@@ -23,5 +23,11 @@ export const config = {
     '/onboarding/:path*',
     '/login',
     '/cadastro',
+    // Não é rota protegida, mas lê `auth.getUser()` num Server Component, que
+    // não pode gravar cookie. Sem o middleware aqui, um usuário logado com
+    // token expirado apareceria como anônimo na tela de convite e veria
+    // "faça login" em vez do aceite. `/auth/callback` não precisa: é Route
+    // Handler e grava o cookie por conta própria.
+    '/convite/:path*',
   ],
 }
