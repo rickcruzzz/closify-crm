@@ -324,6 +324,21 @@ export type Database = {
       // Só o webhook do Asaas chama, via service role — `revoke` na 0014 tira
       // de anon e authenticated. Devolve false quando nenhuma assinatura casa
       // com o id, o que não é erro.
+      // Limitador de tentativas. Só Server Action chama, via service role —
+      // `revoke` na 0015 tira de anon e authenticated. Devolve true quando a
+      // ação deve ser bloqueada.
+      registrar_tentativa: {
+        Args: {
+          p_chave: string
+          p_limite: number
+          p_janela_segundos: number
+        }
+        Returns: boolean
+      }
+      limpar_tentativas: {
+        Args: { p_chave: string }
+        Returns: void
+      }
       apply_asaas_subscription_status: {
         Args: {
           p_asaas_subscription_id: string
