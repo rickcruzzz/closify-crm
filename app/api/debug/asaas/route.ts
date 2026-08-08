@@ -62,8 +62,21 @@ async function asaas(path: string, init?: RequestInit) {
       ...init?.headers,
     },
   })
+
   const texto = await res.text()
-  return { status: res.status, corpo: texto.slice(0, 400) }
+
+  // Faz o parse do corpo INTEIRO e só depois trunca para exibição. Truncar
+  // antes quebrava o JSON no meio, o `JSON.parse` estourava, o id nunca era
+  // capturado e a limpeza do `finally` não rodava — deixando cliente órfão na
+  // conta real.
+  let dados: unknown = null
+  try {
+    dados = JSON.parse(texto)
+  } catch {
+    dados = null
+  }
+
+  return { status: res.status, corpo: texto.slice(0, 300), dados }
 }
 
 export async function POST(request: Request) {
@@ -103,7 +116,7 @@ export async function POST(request: Request) {
       }),
     })
     etapas.criarCliente = cliente
-    if (cliente.status < 300) criados.customerId = JSON.parse(cliente.corpo).id
+    if (cliente.status < 300) criados.customerId = (cliente.dados as { id?: string })?.id
 
     if (criados.customerId) {
       const assinatura = await asaas('/subscriptions', {
@@ -120,7 +133,7 @@ export async function POST(request: Request) {
       })
       etapas.criarAssinatura = assinatura
       if (assinatura.status < 300)
-        criados.subscriptionId = JSON.parse(assinatura.corpo).id
+        criados.subscriptionId = (assinatura.dados as { id?: string })?.id
     }
 
     if (criados.subscriptionId) {
@@ -129,7 +142,9 @@ export async function POST(request: Request) {
       )
       etapas.buscarLinkDePagamento = pagamentos
       if (pagamentos.status < 300) {
-        etapas.invoiceUrlGerado = !!JSON.parse(pagamentos.corpo).data?.[0]?.invoiceUrl
+        etapas.invoiceUrlGerado = !!(
+          pagamentos.dados as { data?: { invoiceUrl?: string }[] }
+        )?.data?.[0]?.invoiceUrl
       }
     }
   } catch (err) {
