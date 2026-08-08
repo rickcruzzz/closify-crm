@@ -2,7 +2,7 @@
 
 import { redirect } from 'next/navigation'
 
-import { asaasFetch } from '@/lib/asaas/client'
+import { asaasFetch, AsaasApiError } from '@/lib/asaas/client'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getCurrentUserAndWorkspace } from '@/lib/supabase/workspace'
@@ -96,7 +96,18 @@ export async function createCheckout(values: unknown) {
       subscriptionId = subscription.id
     }
   } catch (err) {
-    console.error('createCheckout: falha na API do Asaas', err)
+    // O status HTTP diz o que aconteceu sem precisar adivinhar: 401 é chave
+    // de API errada ou desatualizada (segredo diferente do token do
+    // webhook — não confundir os dois na hora de depurar), 400 costuma ser
+    // campo inválido no corpo da requisição, 403 é permissão da conta Asaas.
+    if (err instanceof AsaasApiError) {
+      console.error(
+        `createCheckout: Asaas respondeu ${err.status} em ${err.path}`,
+        err.body.slice(0, 500),
+      )
+    } else {
+      console.error('createCheckout: falha ao chamar a API do Asaas', err)
+    }
     return { error: 'Não foi possível iniciar a assinatura no Asaas. Tente novamente.' }
   }
 
