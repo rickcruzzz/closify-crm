@@ -16,8 +16,9 @@ type Feature = {
   title: string
   description: string
   icon: LucideIcon
-  accent: { text: string; bg: string; ring: string }
-  delay: string
+  accent: { text: string; bg: string; hover: string }
+  /** Stagger em milissegundos, aplicado pelo RevealOnScroll. */
+  delay: number
 }
 
 const features: Feature[] = [
@@ -29,9 +30,9 @@ const features: Feature[] = [
     accent: {
       text: 'text-blue-500 dark:text-blue-400',
       bg: 'bg-blue-500/10 dark:bg-blue-400/10',
-      ring: 'hover:ring-blue-500/30 dark:hover:ring-blue-400/30',
+      hover: 'pointer:hover:bg-blue-500/[0.04] dark:pointer:hover:bg-blue-400/[0.04]',
     },
-    delay: 'delay-0',
+    delay: 0,
   },
   {
     title: 'Gestão de leads',
@@ -40,9 +41,9 @@ const features: Feature[] = [
     accent: {
       text: 'text-violet-500 dark:text-violet-400',
       bg: 'bg-violet-500/10 dark:bg-violet-400/10',
-      ring: 'hover:ring-violet-500/30 dark:hover:ring-violet-400/30',
+      hover: 'pointer:hover:bg-violet-500/[0.04] dark:pointer:hover:bg-violet-400/[0.04]',
     },
-    delay: 'delay-100',
+    delay: 90,
   },
   {
     title: 'Dashboard de métricas',
@@ -52,9 +53,10 @@ const features: Feature[] = [
     accent: {
       text: 'text-emerald-500 dark:text-emerald-400',
       bg: 'bg-emerald-500/10 dark:bg-emerald-400/10',
-      ring: 'hover:ring-emerald-500/30 dark:hover:ring-emerald-400/30',
+      hover:
+        'pointer:hover:bg-emerald-500/[0.04] dark:pointer:hover:bg-emerald-400/[0.04]',
     },
-    delay: 'delay-200',
+    delay: 180,
   },
   {
     title: 'Multi-empresa',
@@ -63,9 +65,9 @@ const features: Feature[] = [
     accent: {
       text: 'text-orange-500 dark:text-orange-400',
       bg: 'bg-orange-500/10 dark:bg-orange-400/10',
-      ring: 'hover:ring-orange-500/30 dark:hover:ring-orange-400/30',
+      hover: 'pointer:hover:bg-orange-500/[0.04] dark:pointer:hover:bg-orange-400/[0.04]',
     },
-    delay: 'delay-0',
+    delay: 0,
   },
   {
     title: 'Notificações e prazos',
@@ -74,9 +76,9 @@ const features: Feature[] = [
     accent: {
       text: 'text-amber-500 dark:text-amber-400',
       bg: 'bg-amber-500/10 dark:bg-amber-400/10',
-      ring: 'hover:ring-amber-500/30 dark:hover:ring-amber-400/30',
+      hover: 'pointer:hover:bg-amber-500/[0.04] dark:pointer:hover:bg-amber-400/[0.04]',
     },
-    delay: 'delay-100',
+    delay: 90,
   },
   {
     title: 'Permissões por papel',
@@ -86,9 +88,9 @@ const features: Feature[] = [
     accent: {
       text: 'text-red-500 dark:text-red-400',
       bg: 'bg-red-500/10 dark:bg-red-400/10',
-      ring: 'hover:ring-red-500/30 dark:hover:ring-red-400/30',
+      hover: 'pointer:hover:bg-red-500/[0.04] dark:pointer:hover:bg-red-400/[0.04]',
     },
-    delay: 'delay-200',
+    delay: 180,
   },
 ]
 
@@ -97,31 +99,43 @@ export function FeaturesSection() {
     <section id="funcionalidades" className="px-4 py-20 md:px-6 md:py-28">
       <div className="mx-auto max-w-5xl">
         <RevealOnScroll className="mx-auto mb-12 flex max-w-2xl flex-col items-center gap-3 text-center">
-          <h2 className="text-3xl font-semibold tracking-tight md:text-4xl">
+          <span className="text-muted-foreground font-mono text-[11px] tracking-wide uppercase">
+            Funcionalidades
+          </span>
+          <h2 className="text-3xl font-semibold tracking-[-0.02em] md:text-4xl">
             Tudo que seu funil precisa
           </h2>
-          <p className="text-muted-foreground text-lg">
+          <p className="text-muted-foreground text-lg text-balance">
             Sem planilha, sem complicação — só o essencial para vender mais.
           </p>
         </RevealOnScroll>
 
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {features.map((feature) => (
+        {/* `gap-px` sobre um fundo de borda: as divisórias viram linhas de 1px
+            perfeitas, sem borda dupla entre células nem canto quebrado. É o
+            truque que dá o acabamento de grade contínua. */}
+        <div className="bg-border ring-border grid grid-cols-1 gap-px overflow-hidden rounded-xl ring-1 sm:grid-cols-2 lg:grid-cols-3">
+          {features.map((feature, i) => (
             <RevealOnScroll key={feature.title} delay={feature.delay}>
               <Card
                 className={cn(
-                  'h-full ring-1 ring-transparent transition-all duration-300 hover:-translate-y-1 hover:shadow-lg',
-                  feature.accent.ring,
+                  'bg-card h-full rounded-none border-0 shadow-none ring-0',
+                  'transition-colors duration-200',
+                  feature.accent.hover,
                 )}
               >
                 <CardContent className="flex flex-col gap-3">
-                  <div
-                    className={cn(
-                      'flex size-10 shrink-0 items-center justify-center rounded-lg',
-                      feature.accent.bg,
-                    )}
-                  >
-                    <feature.icon className={cn('size-5', feature.accent.text)} />
+                  <div className="flex items-center gap-3">
+                    <div
+                      className={cn(
+                        'flex size-10 shrink-0 items-center justify-center rounded-lg',
+                        feature.accent.bg,
+                      )}
+                    >
+                      <feature.icon className={cn('size-5', feature.accent.text)} />
+                    </div>
+                    <span className="text-muted-foreground font-mono text-[11px] tracking-wide">
+                      {String(i + 1).padStart(2, '0')}
+                    </span>
                   </div>
                   <h3 className="font-semibold">{feature.title}</h3>
                   <p className="text-muted-foreground text-sm">{feature.description}</p>

@@ -5,7 +5,6 @@ import { appUrl } from '@/lib/app-url'
 import { cn } from '@/lib/utils'
 import { ThemeProvider } from '@/components/theme-provider'
 import { Toaster } from '@/components/ui/sonner'
-import { TooltipProvider } from '@/components/ui/tooltip'
 
 const geistSans = localFont({
   src: './fonts/GeistVF.woff',
@@ -80,10 +79,11 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          <TooltipProvider delay={200}>
-            {children}
-            <Toaster />
-          </TooltipProvider>
+          {/* O TooltipProvider vive em app/(dashboard)/layout.tsx: só a área
+              logada tem tooltip, e mantê-lo aqui punha JS de provider no
+              bundle da landing sem nenhum consumidor. */}
+          {children}
+          <Toaster />
         </ThemeProvider>
       </body>
     </html>

@@ -133,6 +133,26 @@
   text-wrap: balance;
 }
 
+/* Halo decorativo das seções da landing.
+   Substitui o `blur-3xl` que estava em hero/pricing/cta. `filter: blur(64px)`
+   numa área de ~670x380px é o item mais caro de GPU da página, e como a cor
+   deriva de `--primary` as três superfícies eram re-rasterizadas juntas a cada
+   troca de tema — era o "trava ao mudar de cor". Gradiente radial é composto
+   direto, sem passo de filtro. */
+@utility glow-radial {
+  background-image: radial-gradient(
+    closest-side,
+    color-mix(in oklab, var(--primary) 14%, transparent),
+    transparent 100%
+  );
+}
+
+/* Hover só onde existe ponteiro de verdade.
+   No touch o `:hover` gruda depois do tap: o card fica com sombra e deslocado
+   até você tocar em outro lugar. Esta variante mantém o efeito no desktop e o
+   remove no celular. Uso: `pointer:hover:-translate-y-1`. */
+@custom-variant pointer (@media (hover: hover) and (pointer: fine));
+
 /* O app tem bastante movimento (tw-animate-css, reveal-on-scroll, slide-in do
    hero, hover translate nos cards). Quem pede menos animação no sistema
    operacional recebe as mesmas telas, só que estáticas. */
