@@ -401,6 +401,53 @@ e `getDashboardMetrics` engolia o erro com `?? 0` — o card "Valor do Pipeline"
 mostrava R$ 0 para todos os workspaces. Corrigido na `0013`. Vale conferir
 drift de schema sempre que aplicar migration pelo SQL Editor.
 
+**Teste de fluxo em produção (08/08/2026):** a formação pedia esse teste com
+Stripe (`pipeflow.vercel.app`, evento de teste pelo Stripe Dashboard,
+`STRIPE_WEBHOOK_SECRET`). Traduzido para Asaas e para a URL real do Closify.
+
+Aprovado:
+
+- [x] Fluxo público em 375 / 768 / 1440 contra a produção: landing, login,
+      cadastro, esqueci-senha, convite inválido e 404. Todos 200 (404 devolve
+      404 de verdade), zero erro de JS, `<title>` correto em cada rota.
+- [x] Webhook de produção exercitado ponta a ponta, com token válido e um id
+      de assinatura propositalmente inexistente — nenhum plano podia mudar:
+      - evento válido → `200 {"received":true}`
+      - replay do mesmo `event_id` → `200 {"duplicate":true}` (**a
+        idempotência foi confirmada no ambiente real, não só por leitura de
+        código**)
+      - evento sem assinatura vinculada → 200
+      - evento não mapeado → 200 (não gera tempestade de retry)
+      - JSON inválido → 400
+      - token errado → 401
+- [x] Depois do teste: 17 workspaces com os mesmos planos de antes (1 `pro`,
+      16 `free`), nenhuma referência órfã entre `leads`, `deals`,
+      `activities`, `workspace_members` e `workspace_invites`. A linha de
+      dedupe criada pelo teste foi apagada.
+
+Não executado, e por quê:
+
+- [ ] Fluxo autenticado (Dashboard → Pipeline → Leads → Settings → Billing):
+      exige credenciais de um usuário de teste, que não temos.
+- [ ] Checkout real → webhook → Pro ativado: cria cliente, assinatura e
+      cobrança **de verdade** no Asaas. Precisa de decisão explícita e, de
+      preferência, de uma chave de sandbox (`ASAAS_API_URL` já aceita
+      `https://api-sandbox.asaas.com/v3`).
+- [ ] Logs do Vercel (aba Functions): o projeto não está linkado à CLI
+      (`.vercel` ausente) e não há token. A verificação foi feita pelo par
+      resposta HTTP + estado do banco, que é evidência mais forte que o log.
+
+**Achado do teste — o que está em produção está atrasado.** A landing em
+produção ainda estoura a viewport em 375px (`scrollWidth` 476 contra 375),
+que é exatamente o bug corrigido na M18. Confirma que `main` está em
+`ad00773` e que os três commits da branch `feat/deploy` (M18, `.env.example`
+e o hardening do webhook) ainda não subiram — o PR #22 segue aberto.
+
+**Ordem obrigatória do próximo deploy:** aplicar a migration `0014` no SQL
+Editor **antes** de mergear o PR #22. O route handler novo chama
+`apply_asaas_subscription_status`, que ainda não existe no banco; subir o
+código primeiro faz todo webhook responder 500.
+
 **Como reconferir o drift sem CLI:** o projeto não usa a CLI do Supabase e as
 migrations são aplicadas à mão pelo SQL Editor, então não existe tabela de
 controle de versão de migration. O caminho que funciona é bater o schema real
