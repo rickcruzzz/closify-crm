@@ -204,6 +204,7 @@ export function LeadsPageClient({
             <Search className="text-muted-foreground pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2" />
             <Input
               placeholder="Buscar por nome ou empresa..."
+              aria-label="Buscar leads por nome ou empresa"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="pl-8"
@@ -254,7 +255,7 @@ export function LeadsPageClient({
                   <div className="flex min-w-0 flex-col">
                     <Link
                       href={`/leads/${lead.id}`}
-                      className="truncate font-medium hover:underline"
+                      className="-my-1 truncate py-1 font-medium hover:underline"
                     >
                       {lead.name}
                     </Link>
@@ -313,7 +314,10 @@ export function LeadsPageClient({
             {leads.map((lead) => (
               <TableRow key={lead.id}>
                 <TableCell className="font-medium">
-                  <Link href={`/leads/${lead.id}`} className="hover:underline">
+                  <Link
+                    href={`/leads/${lead.id}`}
+                    className="-my-1 inline-block py-1 hover:underline"
+                  >
                     {lead.name}
                   </Link>
                   <div className="text-muted-foreground text-xs">{lead.email}</div>
