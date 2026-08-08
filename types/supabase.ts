@@ -1,4 +1,5 @@
-export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[]
+export type Json =
+  string | number | boolean | null | { [key: string]: Json | undefined } | Json[]
 
 export type WorkspaceRole = 'admin' | 'membro'
 export type WorkspacePlan = 'free' | 'pro'
@@ -319,6 +320,16 @@ export type Database = {
           expires_at: string
           workspace_name: string
         }[]
+      }
+      // Só o webhook do Asaas chama, via service role — `revoke` na 0014 tira
+      // de anon e authenticated. Devolve false quando nenhuma assinatura casa
+      // com o id, o que não é erro.
+      apply_asaas_subscription_status: {
+        Args: {
+          p_asaas_subscription_id: string
+          p_status: SubscriptionStatus
+        }
+        Returns: boolean
       }
     }
     Enums: Record<string, never>
