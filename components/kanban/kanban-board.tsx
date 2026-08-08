@@ -239,6 +239,9 @@ export function KanbanBoard({
               leadsById={leadsById}
               onOpenDeal={setSelectedDealId}
               filtered={hasActiveFilters}
+              // `deals`, não `filteredDeals`: quem filtrou até zerar a tela
+              // tem board com conteúdo, e a coluna deve manter a altura.
+              compact={deals.length === 0}
             />
           ))}
         </div>

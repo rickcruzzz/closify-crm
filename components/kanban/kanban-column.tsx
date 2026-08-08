@@ -23,12 +23,15 @@ export function KanbanColumn({
   leadsById,
   onOpenDeal,
   filtered = false,
+  compact = false,
 }: {
   stage: DealStage
   deals: DealRow[]
   leadsById: Map<string, DealLeadRow>
   onOpenDeal: (dealId: string) => void
   filtered?: boolean
+  /** Board inteiro sem nenhum negócio: encolhe a coluna. */
+  compact?: boolean
 }) {
   const { setNodeRef, isOver } = useDroppable({ id: stage, data: { stage } })
   const total = deals.reduce((sum, deal) => sum + deal.value, 0)
@@ -48,8 +51,16 @@ export function KanbanColumn({
       {/* `dvh` em vez de `vh`: no iOS/Android a barra de URL entra e sai do
           viewport e `100vh` deixa o fim da coluna abaixo da dobra. O desconto
           é maior abaixo de `lg` porque a barra de filtros empilha em três
-          linhas — o mesmo breakpoint usado em `kanban-board`. */}
-      <ScrollArea className="h-[calc(100dvh-22rem)] min-h-64 lg:h-[calc(100dvh-18rem)]">
+          linhas — o mesmo breakpoint usado em `kanban-board`.
+
+          Com o board vazio a coluna encolhe: o guia de primeiros passos ocupa
+          espaço acima, e manter altura cheia jogaria colunas vazias para baixo
+          da dobra sem nada dentro. */}
+      <ScrollArea
+        className={cn(
+          compact ? 'h-36' : 'h-[calc(100dvh-22rem)] min-h-64 lg:h-[calc(100dvh-18rem)]',
+        )}
+      >
         <div
           ref={setNodeRef}
           className={cn(
