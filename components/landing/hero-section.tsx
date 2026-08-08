@@ -17,7 +17,7 @@ export function HeroSection() {
         <div className="flex flex-col items-center gap-6 text-center lg:items-start lg:text-left">
           <Badge
             variant="secondary"
-            className="animate-in fade-in slide-in-from-bottom-2 font-mono text-[11px] tracking-wide uppercase duration-500"
+            className="animate-in fade-in slide-in-from-bottom-2 font-mono text-xs tracking-wide uppercase duration-500"
           >
             Feito para PMEs de serviço
           </Badge>
@@ -29,20 +29,23 @@ export function HeroSection() {
           </h1>
           <p className="text-muted-foreground animate-in fade-in slide-in-from-bottom-4 max-w-2xl text-lg text-balance duration-700">
             Substitua a planilha em um dia. Pipeline visual, leads organizados e métricas
-            em tempo real — tudo num CRM feito para agências, clínicas, consultorias e
+            em tempo real, tudo num CRM feito para agências, clínicas, consultorias e
             imobiliárias que estão começando.
           </p>
           <div className="animate-in fade-in slide-in-from-bottom-5 mt-2 flex flex-col gap-3 duration-700 sm:flex-row">
             <Link
               href="/cadastro"
-              className={cn(buttonVariants({ size: 'lg' }), 'gap-2')}
+              className={cn(buttonVariants({ size: 'lg' }), 'min-h-11 gap-2')}
             >
               Começar grátis
               <ArrowRight className="size-4" />
             </Link>
             <Link
               href="#funcionalidades"
-              className={cn(buttonVariants({ variant: 'outline', size: 'lg' }))}
+              className={cn(
+                buttonVariants({ variant: 'outline', size: 'lg' }),
+                'min-h-11',
+              )}
             >
               Ver funcionalidades
             </Link>

@@ -60,7 +60,9 @@ export default function LoginPage() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-xl">Entrar</CardTitle>
+        <CardTitle className="text-xl">
+          <h1>Entrar</h1>
+        </CardTitle>
         <CardDescription>Acesse o painel do seu workspace.</CardDescription>
       </CardHeader>
       <CardContent className="flex flex-col gap-4">
@@ -123,7 +125,7 @@ export default function LoginPage() {
               <Label htmlFor="password">Senha</Label>
               <Link
                 href="/esqueci-senha"
-                className="text-muted-foreground hover:text-foreground text-xs underline-offset-4 hover:underline"
+                className="text-muted-foreground hover:text-foreground -my-1.5 py-1.5 text-xs underline-offset-4 hover:underline"
               >
                 Esqueceu a senha?
               </Link>

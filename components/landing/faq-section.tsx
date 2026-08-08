@@ -18,7 +18,7 @@ const faqs = [
   },
   {
     q: 'Consigo trazer os leads da minha planilha?',
-    a: 'Hoje o cadastro é manual, um lead por vez — importação de planilha ainda não existe. Para quem está começando com algumas dezenas de contatos, dá para montar o funil em poucos minutos.',
+    a: 'Hoje o cadastro é manual, um lead por vez. A importação de planilha ainda não existe. Para quem está começando com algumas dezenas de contatos, dá para montar o funil em poucos minutos.',
   },
   {
     q: 'Meus dados ficam separados dos de outras empresas?',
@@ -39,7 +39,7 @@ export function FaqSection() {
     <section id="faq" className="px-4 py-20 md:px-6 md:py-28">
       <div className="mx-auto max-w-3xl">
         <RevealOnScroll className="mx-auto mb-12 flex max-w-2xl flex-col items-center gap-3 text-center">
-          <span className="text-muted-foreground font-mono text-[11px] tracking-wide uppercase">
+          <span className="text-muted-foreground font-mono text-xs tracking-wide uppercase">
             Dúvidas frequentes
           </span>
           <h2 className="text-3xl font-semibold tracking-[-0.02em] md:text-4xl">
@@ -77,7 +77,10 @@ export function FaqSection() {
 
         <p className="text-muted-foreground mt-8 text-center text-sm">
           Ficou outra dúvida?{' '}
-          <Link href="/cadastro" className="text-foreground underline underline-offset-4">
+          <Link
+            href="/cadastro"
+            className="text-foreground -my-2 inline-block py-2 underline underline-offset-4"
+          >
             Crie uma conta grátis
           </Link>{' '}
           e teste sem compromisso.

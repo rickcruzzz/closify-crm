@@ -99,14 +99,14 @@ export function FeaturesSection() {
     <section id="funcionalidades" className="px-4 py-20 md:px-6 md:py-28">
       <div className="mx-auto max-w-5xl">
         <RevealOnScroll className="mx-auto mb-12 flex max-w-2xl flex-col items-center gap-3 text-center">
-          <span className="text-muted-foreground font-mono text-[11px] tracking-wide uppercase">
+          <span className="text-muted-foreground font-mono text-xs tracking-wide uppercase">
             Funcionalidades
           </span>
           <h2 className="text-3xl font-semibold tracking-[-0.02em] md:text-4xl">
             Tudo que seu funil precisa
           </h2>
           <p className="text-muted-foreground text-lg text-balance">
-            Sem planilha, sem complicação — só o essencial para vender mais.
+            Sem planilha, sem complicação. Só o essencial para vender mais.
           </p>
         </RevealOnScroll>
 
@@ -133,7 +133,7 @@ export function FeaturesSection() {
                     >
                       <feature.icon className={cn('size-5', feature.accent.text)} />
                     </div>
-                    <span className="text-muted-foreground font-mono text-[11px] tracking-wide">
+                    <span className="text-muted-foreground font-mono text-xs tracking-wide">
                       {String(i + 1).padStart(2, '0')}
                     </span>
                   </div>
