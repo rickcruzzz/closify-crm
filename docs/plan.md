@@ -328,12 +328,45 @@ criação de conta.
 
 **Entregas:**
 
-- [ ] Variáveis de ambiente de produção (Supabase, Resend, Asaas, PostHog)
+- [x] Variáveis de ambiente de produção — documentadas em `.env.example`
+      (versionado; o `.gitignore` já reservava `!.env.example`, mas o arquivo
+      nunca tinha sido criado). O código lê 8 variáveis; `ASAAS_API_URL` é
+      opcional e cai no padrão de produção do Asaas quando ausente.
+      **PostHog não entra aqui** — não há nenhuma referência a PostHog no
+      código; a integração é da M16, ainda pendente.
 - [ ] Domínio customizado configurado
 - [x] Checklist de segurança revisado (RLS, chaves não expostas) — auditoria
       completa, migrations `0012` e `0013` aplicadas e verificadas contra o
       banco real
-- [ ] Deploy final em produção
+- [x] Deploy em produção no ar — <https://closify-crm-dr3t.vercel.app>
+      responde 200 com os 5 headers de segurança aplicados e sem
+      `X-Powered-By`. Falta apenas subir o conteúdo da M18 (PR #22).
+
+**Verificação da aula 5.3 (08/08/2026) — tudo somente leitura:**
+
+- [x] **Migrations já estavam todas aplicadas em produção; nada a aplicar.**
+      Conferido pelo spec OpenAPI do PostgREST com a service key: as 8 tabelas
+      existem com as colunas esperadas, e as 6 RPCs de aplicação
+      (`accept_workspace_invite`, `create_workspace_with_admin`,
+      `get_dashboard_counts`, `get_invite_by_token`, `get_open_pipeline_value`,
+      `get_workspace_member_names`) respondem. Zero drift — o buraco da `0009`
+      que a `0013` fechou continua fechado.
+- [x] **Os `revoke ... from anon` da `0013` funcionam de fato.** Testado com a
+      anon key sem sessão: `get_dashboard_counts`, `get_open_pipeline_value`,
+      `create_workspace_with_admin` e `accept_workspace_invite` devolvem 401
+      `permission denied for function`; `get_workspace_member_names` devolve
+      404. As duas deixadas abertas de propósito se comportam como projetado —
+      `workspace_has_no_members` devolve `false` (guard interno de `auth.uid()`)
+      e `get_invite_by_token` devolve `[]`.
+      As funções de escrita puderam ser testadas com segurança porque ambas
+      abortam (`not_authenticated` / `Convite inválido`) antes de qualquer
+      `insert`.
+- [x] **RLS bloqueia leitura anônima nas 8 tabelas** — todas devolvem
+      `200 []`, ou seja, policy ativa em vez de tabela aberta.
+- [x] **Build local limpo** — `next lint` sem avisos e `next build` gerando as
+      20 rotas, com `.next` apagado antes para não mascarar erro em cache.
+- [x] Supabase Auth: e-mail + Google ativos, `disable_signup: false`,
+      `mailer_autoconfirm: false` (confirmação de e-mail exigida).
 
 **Auditoria de segurança — pendências que exigem decisão/ação externa:**
 
@@ -349,7 +382,12 @@ criação de conta.
         secret nasce oculta e exige "Reveal". Colar a publishable no lugar da
         service role derruba o webhook com 500 (RLS sem policy barra a escrita).
 - [ ] Next.js 14.2.35 tem advisories *high*; correção só no 16.3.0 (upgrade de
-      major, breaking)
+      major, breaking). `npm audit` em 08/08/2026: **7 vulnerabilidades (6
+      high, 1 moderate)**, todas no `next` e no `postcss` que ele empacota —
+      SSRF em rewrites, exposição de endpoints de Server Function, payload
+      ilimitado de Server Action no runtime Edge, e leitura arbitrária de
+      arquivo via `sourceMappingURL` no postcss. Nenhuma tem correção sem o
+      salto de major.
 - [ ] Rate limiting em `signIn`, `inviteMember` e aceite de convite (precisa de
       Upstash/Vercel KV)
 - [ ] Ligar *leaked password protection* no Supabase Auth (hoje senha só exige
@@ -362,6 +400,14 @@ criação de conta.
 e `getDashboardMetrics` engolia o erro com `?? 0` — o card "Valor do Pipeline"
 mostrava R$ 0 para todos os workspaces. Corrigido na `0013`. Vale conferir
 drift de schema sempre que aplicar migration pelo SQL Editor.
+
+**Como reconferir o drift sem CLI:** o projeto não usa a CLI do Supabase e as
+migrations são aplicadas à mão pelo SQL Editor, então não existe tabela de
+controle de versão de migration. O caminho que funciona é bater o schema real
+contra os arquivos: `GET {SUPABASE_URL}/rest/v1/` com a service key e o header
+`Accept: application/openapi+json` devolve tabelas, colunas e RPCs expostas.
+Comparar com o que os arquivos de `supabase/migrations/` criam acusa qualquer
+migration esquecida.
 
 **Commit final:** `chore: deploy de produção do Closify CRM`
 
