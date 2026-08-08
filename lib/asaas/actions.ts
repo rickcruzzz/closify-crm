@@ -56,7 +56,16 @@ export async function createCheckout(values: unknown) {
   // externalReference fica opaco pro Asaas (eles só devolvem de volta nos
   // webhooks) — codifica workspace e usuário juntos aqui pra permitir
   // reconciliação/auditoria futura sem precisar de outra consulta.
-  const externalReference = JSON.stringify({ workspaceId, userId: user.id })
+  //
+  // O formato JSON `{"workspaceId":"<uuid>","userId":"<uuid>"}` tem 106
+  // caracteres e o Asaas rejeita acima de 100 com
+  // `400 invalid_object: O identificador externo não deve ultrapassar 100
+  // caracteres`. Estourava para todo usuário, sempre, porque UUID tem tamanho
+  // fixo — não era caso de borda.
+  //
+  // Dois UUIDs separados por `:` dão 73 caracteres e carregam a mesma
+  // informação. Quem lê isso depois faz `split(':')`.
+  const externalReference = `${workspaceId}:${user.id}`
 
   try {
     if (!customerId) {
