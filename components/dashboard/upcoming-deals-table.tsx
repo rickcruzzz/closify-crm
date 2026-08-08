@@ -56,44 +56,83 @@ export function UpcomingDealsTable({ deals }: { deals: UpcomingDeal[] }) {
             />
           </EmptyState>
         ) : (
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Negócio</TableHead>
-                <TableHead>Etapa</TableHead>
-                <TableHead>Valor</TableHead>
-                <TableHead>Responsável</TableHead>
-                <TableHead>Prazo</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
+          <>
+            {/* Mesmos dados em cards abaixo de `lg`: cinco colunas com
+                `whitespace-nowrap` só cabem quando o sidebar não divide a tela. */}
+            <ul className="divide-y lg:hidden">
               {deals.map((deal) => {
                 const due = deal.due_date ? dueDateInfo(deal.due_date) : null
                 return (
-                  <TableRow key={deal.id}>
-                    <TableCell>
-                      <div className="flex flex-col">
-                        <span className="font-medium">{deal.title}</span>
+                  <li key={deal.id} className="flex flex-col gap-2 py-3 first:pt-0">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex min-w-0 flex-col">
+                        <span className="truncate font-medium">{deal.title}</span>
                         {deal.lead_company && (
-                          <span className="text-muted-foreground text-xs">
+                          <span className="text-muted-foreground truncate text-xs">
                             {deal.lead_company}
                           </span>
                         )}
                       </div>
-                    </TableCell>
-                    <TableCell>
+                      <span className="shrink-0 font-medium">
+                        {formatBRL(deal.value)}
+                      </span>
+                    </div>
+
+                    <div className="flex flex-wrap items-center gap-2 text-xs">
                       <Badge variant="secondary">{dealStageLabels[deal.stage]}</Badge>
-                    </TableCell>
-                    <TableCell>{formatBRL(deal.value)}</TableCell>
-                    <TableCell>{deal.owner_name ?? 'Sem responsável'}</TableCell>
-                    <TableCell className={cn('font-medium', due?.className)}>
-                      {due?.label ?? 'Sem prazo'}
-                    </TableCell>
-                  </TableRow>
+                      <span className={cn('font-medium', due?.className)}>
+                        {due?.label ?? 'Sem prazo'}
+                      </span>
+                      <span className="text-muted-foreground">
+                        · {deal.owner_name ?? 'Sem responsável'}
+                      </span>
+                    </div>
+                  </li>
                 )
               })}
-            </TableBody>
-          </Table>
+            </ul>
+
+            <div className="hidden lg:block">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Negócio</TableHead>
+                    <TableHead>Etapa</TableHead>
+                    <TableHead>Valor</TableHead>
+                    <TableHead>Responsável</TableHead>
+                    <TableHead>Prazo</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {deals.map((deal) => {
+                    const due = deal.due_date ? dueDateInfo(deal.due_date) : null
+                    return (
+                      <TableRow key={deal.id}>
+                        <TableCell>
+                          <div className="flex flex-col">
+                            <span className="font-medium">{deal.title}</span>
+                            {deal.lead_company && (
+                              <span className="text-muted-foreground text-xs">
+                                {deal.lead_company}
+                              </span>
+                            )}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="secondary">{dealStageLabels[deal.stage]}</Badge>
+                        </TableCell>
+                        <TableCell>{formatBRL(deal.value)}</TableCell>
+                        <TableCell>{deal.owner_name ?? 'Sem responsável'}</TableCell>
+                        <TableCell className={cn('font-medium', due?.className)}>
+                          {due?.label ?? 'Sem prazo'}
+                        </TableCell>
+                      </TableRow>
+                    )
+                  })}
+                </TableBody>
+              </Table>
+            </div>
+          </>
         )}
       </CardContent>
     </Card>

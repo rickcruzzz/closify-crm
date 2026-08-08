@@ -46,7 +46,7 @@ export default async function DashboardLayout({
   }
 
   return (
-    <div className="flex min-h-screen">
+    <div className="flex min-h-dvh">
       <Sidebar workspaces={workspaces} />
       <div className="flex min-w-0 flex-1 flex-col">
         <Topbar workspaces={workspaces} currentUser={currentUser} />

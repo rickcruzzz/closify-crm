@@ -1,7 +1,13 @@
 import type { Metadata } from 'next'
 import { PageHeader } from '@/components/layout/page-header'
 import { Badge } from '@/components/ui/badge'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card'
 import { PlanComparisonTable } from '@/components/settings/plan-comparison-table'
 import { SubscribeButton } from '@/components/settings/subscribe-button'
 import { createClient } from '@/lib/supabase/server'
@@ -30,7 +36,7 @@ export default async function BillingPage() {
       <PageHeader title="Cobrança" description="Plano atual e comparação de recursos." />
 
       <Card>
-        <CardHeader className="flex flex-row items-start justify-between gap-4">
+        <CardHeader className="flex flex-col-reverse items-start gap-3 sm:flex-row sm:justify-between sm:gap-4">
           <div>
             <CardTitle>Plano atual</CardTitle>
             <CardDescription>
@@ -46,11 +52,7 @@ export default async function BillingPage() {
         <CardContent className="flex flex-col gap-5">
           {plan === 'free' && (
             <div className="grid gap-4 sm:grid-cols-2">
-              <UsageBar
-                label="Leads"
-                used={leadCount ?? 0}
-                limit={FREE_LEAD_LIMIT}
-              />
+              <UsageBar label="Leads" used={leadCount ?? 0} limit={FREE_LEAD_LIMIT} />
               <UsageBar
                 label="Colaboradores"
                 used={members.length}
@@ -75,7 +77,15 @@ export default async function BillingPage() {
   )
 }
 
-function UsageBar({ label, used, limit }: { label: string; used: number; limit: number }) {
+function UsageBar({
+  label,
+  used,
+  limit,
+}: {
+  label: string
+  used: number
+  limit: number
+}) {
   const percent = Math.min(100, Math.round((used / limit) * 100))
   const isNearLimit = percent >= 80
 

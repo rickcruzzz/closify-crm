@@ -55,7 +55,9 @@ const plans: Plan[] = [
 
 export function PricingSection() {
   return (
-    <section id="planos" className="relative px-4 py-20 md:px-6 md:py-28">
+    // `overflow-x-clip` segura o brilho decorativo abaixo, que é mais largo
+    // que a viewport no mobile e gerava scroll horizontal na página inteira.
+    <section id="planos" className="relative overflow-x-clip px-4 py-20 md:px-6 md:py-28">
       <div
         aria-hidden
         className="bg-primary/5 pointer-events-none absolute top-1/3 left-1/2 -z-10 h-72 w-[36rem] -translate-x-1/2 rounded-full blur-3xl"
@@ -77,8 +79,8 @@ export function PricingSection() {
                 className={cn(
                   'h-full transition-all duration-300 hover:-translate-y-1 hover:shadow-lg',
                   plan.highlighted
-                    ? 'ring-primary shadow-primary/10 ring-2 shadow-lg'
-                    : 'ring-1 ring-transparent hover:ring-border',
+                    ? 'ring-primary shadow-primary/10 shadow-lg ring-2'
+                    : 'hover:ring-border ring-1 ring-transparent',
                 )}
               >
                 <CardHeader className="flex flex-col gap-1">

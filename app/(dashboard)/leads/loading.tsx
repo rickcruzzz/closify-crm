@@ -6,7 +6,7 @@ export default function LeadsLoading() {
     <div>
       <PageHeader title="Leads" description="Busque, filtre e acompanhe seus leads." />
 
-      <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+      <div className="mb-4 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
         <Skeleton className="h-9 max-w-sm flex-1" />
         <Skeleton className="h-9 w-40" />
       </div>

@@ -364,3 +364,70 @@ mostrava R$ 0 para todos os workspaces. Corrigido na `0013`. Vale conferir
 drift de schema sempre que aplicar migration pelo SQL Editor.
 
 **Commit final:** `chore: deploy de produção do Closify CRM`
+
+---
+
+## M18 — Responsividade e Polish Visual
+
+**Branch:** `feat/deploy`
+
+**Objetivo:** Fechar as quebras de layout em mobile/tablet e elevar o
+acabamento visual ao nível prometido pela identidade ("premium como software
+líder"), sem alterar comportamento de dados.
+
+**Baseline já existente** (não refazer): `focus-visible` em todos os
+componentes shadcn, `prefers-reduced-motion` em `app/globals.css`, sidebar
+`hidden md:block` com `MobileSidebar`, `Table` já embrulhado em
+`overflow-x-auto`, toasts via sonner, `metric-cards` e `features-section` com
+grids responsivos.
+
+**Entregas — responsividade:**
+
+- [x] `kanban-column.tsx` — `h-[calc(100vh-14rem)]` virou altura em `dvh` com
+      offset por breakpoint. `100vh` quebrava em iOS/Android (barra de URL) e
+      o offset fixo de 14rem não cobria o mobile
+- [x] `kanban-board.tsx` — faixa de scroll horizontal com bleed até a borda da
+      viewport (`-mx-4 px-4`) e `scroll-snap` por coluna abaixo de `sm`
+- [x] Tabelas de 5+ colunas viram lista de cards abaixo de `lg`
+      (`leads-page-client`, `upcoming-deals-table`)
+- [x] `members-card.tsx` e `billing/page.tsx` — `CardHeader` de `flex-row`
+      fixo para `flex-col sm:flex-row`
+- [x] `funnel-chart.tsx` — altura e largura do eixo Y responsivas via
+      `useMediaQuery` (novo hook em `hooks/use-media-query.ts`)
+- [x] Barras de filtro de kanban e leads empilham até `lg`
+- [x] `min-h-screen` → `min-h-dvh` em todas as rotas de tela cheia
+- [x] `pricing-section.tsx` — `overflow-x-clip` no brilho decorativo de
+      `w-[36rem]`, que gerava scroll horizontal na landing em 375px
+
+**Entregas — polish visual e acessibilidade:**
+
+- [x] `deal-card.tsx` — título virou `<button>` focável (o dnd-kit ocupa
+      Enter/Espaço no card para o drag, então abrir o detalhe precisava do
+      próprio alvo); adicionado `hover` com transição
+- [x] `PageHeader` ganhou slots `actions` e `className`, usados no detalhe do
+      lead
+
+**Entregas — loading e estados vazios:**
+
+- [x] `loading.tsx` novos em `settings`, `settings/billing`, `leads/[id]` e
+      `convite/[token]`
+- [x] Estados vazios auditados — já cobertos por `EmptyState` em kanban,
+      leads, funil, negócios do prazo, colaboradores e timeline
+
+**Verificação:** medido com Playwright em 375 / 768 / 1440 (dark mode) sobre
+uma rota de preview temporária com dados sintéticos de texto longo. Resultado
+final: `document.scrollWidth === clientWidth` nos três tamanhos em landing,
+login, cadastro, kanban, leads e dashboard; zero erro de JS; colunas do kanban
+alinhadas ao gutter da página. `next lint` e `next build` limpos.
+
+**Achado durante o teste:** o breakpoint da troca tabela↔cards não podia ser
+`md` — em 768px o sidebar já está visível e consome 256px, deixando ~430px de
+conteúdo. Por isso a troca (e o empilhamento das barras de filtro) acontece em
+`lg`, não em `md`.
+
+**Fora de escopo:** mudanças de dados, Server Actions, schema ou billing.
+Auditoria de contraste WCAG AA e verificação de foco preso em Dialog/Sheet
+ficaram pendentes — precisam de ferramenta de auditoria (axe) rodando contra
+sessão autenticada real.
+
+**Commit final:** `feat(ui): responsividade e polish visual`

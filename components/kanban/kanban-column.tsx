@@ -34,7 +34,7 @@ export function KanbanColumn({
   const total = deals.reduce((sum, deal) => sum + deal.value, 0)
 
   return (
-    <div className="w-72 shrink-0">
+    <div className="w-72 shrink-0 snap-start">
       <div className="mb-3 flex items-center justify-between">
         <div className="flex items-center gap-2">
           <span className="text-sm font-medium">{dealStageLabels[stage]}</span>
@@ -45,7 +45,11 @@ export function KanbanColumn({
         </span>
       </div>
 
-      <ScrollArea className="h-[calc(100vh-14rem)]">
+      {/* `dvh` em vez de `vh`: no iOS/Android a barra de URL entra e sai do
+          viewport e `100vh` deixa o fim da coluna abaixo da dobra. O desconto
+          é maior abaixo de `lg` porque a barra de filtros empilha em três
+          linhas — o mesmo breakpoint usado em `kanban-board`. */}
+      <ScrollArea className="h-[calc(100dvh-22rem)] min-h-64 lg:h-[calc(100dvh-18rem)]">
         <div
           ref={setNodeRef}
           className={cn(

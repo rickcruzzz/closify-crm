@@ -79,15 +79,33 @@ export function DealCard({
       <Card
         size="sm"
         className={cn(
-          'cursor-grab border-l-2 active:cursor-grabbing',
+          'hover:bg-accent/40 cursor-grab border-l-2 transition-colors hover:shadow-sm active:cursor-grabbing',
           stageAccent[deal.stage],
           isDragging && 'opacity-40',
         )}
       >
         <CardContent className="flex flex-col gap-1.5">
           <span className="text-base font-semibold">{formatBRL(deal.value)}</span>
-          <div className="flex flex-col">
-            <span className="truncate text-sm">{deal.title}</span>
+          <div className="flex flex-col items-start">
+            {/* O card inteiro é o alvo de drag (dnd-kit ocupa Enter/Espaço
+                para pegar e soltar), então abrir o detalhe precisa do próprio
+                alvo focável — senão a ação fica inacessível por teclado. */}
+            <button
+              type="button"
+              className="focus-visible:ring-ring/50 max-w-full truncate rounded-sm text-left text-sm outline-none hover:underline focus-visible:ring-3"
+              onClick={(event) => {
+                event.stopPropagation()
+                onOpen(deal.id)
+              }}
+              onKeyDown={(event) => {
+                if (event.key !== 'Enter' && event.key !== ' ') return
+                event.preventDefault()
+                event.stopPropagation()
+                onOpen(deal.id)
+              }}
+            >
+              {deal.title}
+            </button>
             {lead && (
               <span className="text-muted-foreground truncate text-xs">
                 {lead.company}
@@ -99,7 +117,9 @@ export function DealCard({
               <AvatarFallback>{initials(deal.owner_name ?? '?')}</AvatarFallback>
             </Avatar>
             {due && (
-              <span className={cn('text-xs font-medium whitespace-nowrap', due.className)}>
+              <span
+                className={cn('text-xs font-medium whitespace-nowrap', due.className)}
+              >
                 {due.label}
               </span>
             )}

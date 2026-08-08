@@ -143,14 +143,62 @@ export function LeadsPageClient({
     router.refresh()
   }
 
+  // Extraído para ser reaproveitado pela tabela (desktop) e pela lista de
+  // cards (mobile), que renderizam os mesmos dados em layouts diferentes.
+  const emptyState = hasActiveFilters ? (
+    <EmptyState
+      icon={SearchX}
+      title="Nenhum lead corresponde aos filtros"
+      description="Tente outro termo de busca ou volte a ver todos os leads."
+    >
+      <Button variant="outline" onClick={clearFilters}>
+        Limpar filtros
+      </Button>
+    </EmptyState>
+  ) : (
+    <EmptyState
+      icon={Users}
+      title="Nenhum lead ainda"
+      description="Cadastre seu primeiro lead para começar a acompanhar oportunidades no funil."
+    >
+      <Button onClick={openCreateForm}>
+        <Plus className="size-4" />
+        Novo lead
+      </Button>
+    </EmptyState>
+  )
+
+  function leadActions(lead: LeadRow) {
+    return (
+      <DropdownMenu>
+        <DropdownMenuTrigger
+          render={
+            <Button variant="ghost" size="icon-sm" aria-label={`Ações de ${lead.name}`}>
+              <MoreHorizontal className="size-4" />
+            </Button>
+          }
+        />
+        <DropdownMenuContent align="end">
+          <DropdownMenuItem render={<Link href={`/leads/${lead.id}`} />}>
+            Ver detalhes
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={() => openEditForm(lead)}>Editar</DropdownMenuItem>
+          <DropdownMenuItem variant="destructive" onClick={() => openDeleteDialog(lead)}>
+            Excluir
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+    )
+  }
+
   return (
     <div>
       <PageHeader title="Leads" description="Busque, filtre e acompanhe seus leads." />
 
-      <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+      <div className="mb-4 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
         <form
           onSubmit={handleSearchSubmit}
-          className="flex flex-1 flex-col gap-2 sm:flex-row"
+          className="flex flex-1 flex-col gap-2 lg:flex-row"
         >
           <div className="relative max-w-sm flex-1">
             <Search className="text-muted-foreground pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2" />
@@ -166,7 +214,7 @@ export function LeadsPageClient({
             value={initialStatus}
             onValueChange={(value) => updateFilters({ status: value })}
           >
-            <SelectTrigger className="w-full sm:w-56">
+            <SelectTrigger className="w-full lg:w-56">
               <SelectValue placeholder="Filtrar por status">
                 {(value) =>
                   value === 'todos'
@@ -192,7 +240,58 @@ export function LeadsPageClient({
         </Button>
       </div>
 
-      <div className="ring-foreground/10 overflow-hidden rounded-xl ring-1">
+      {/* Abaixo de `lg` a tabela de 7 colunas viraria um scroll horizontal
+          longo e sem pista visual (em 768px o sidebar já ocupa 256px), então os
+          mesmos dados viram cards. */}
+      <div className="ring-foreground/10 overflow-hidden rounded-xl ring-1 lg:hidden">
+        {leads.length === 0 ? (
+          <div className="p-4">{emptyState}</div>
+        ) : (
+          <ul className="divide-y">
+            {leads.map((lead) => (
+              <li key={lead.id} className="flex items-start gap-3 p-4">
+                <div className="flex min-w-0 flex-1 flex-col gap-2">
+                  <div className="flex min-w-0 flex-col">
+                    <Link
+                      href={`/leads/${lead.id}`}
+                      className="truncate font-medium hover:underline"
+                    >
+                      {lead.name}
+                    </Link>
+                    <span className="text-muted-foreground truncate text-xs">
+                      {lead.email}
+                    </span>
+                  </div>
+
+                  <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm">
+                    <LeadStatusBadge status={lead.status} />
+                    <span className="font-medium">
+                      {currencyFormatter.format(lead.value)}
+                    </span>
+                  </div>
+
+                  <dl className="text-muted-foreground grid grid-cols-[auto_1fr] gap-x-2 gap-y-0.5 text-xs">
+                    <dt>Empresa</dt>
+                    <dd className="text-foreground truncate">{lead.company}</dd>
+                    <dt>Responsável</dt>
+                    <dd className="text-foreground truncate">
+                      {lead.owner_name ?? 'Sem responsável'}
+                    </dd>
+                    <dt>Criado em</dt>
+                    <dd className="text-foreground">
+                      {dateFormatter.format(new Date(lead.created_at))}
+                    </dd>
+                  </dl>
+                </div>
+
+                {leadActions(lead)}
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+
+      <div className="ring-foreground/10 hidden overflow-hidden rounded-xl ring-1 lg:block">
         <Table>
           <TableHeader>
             <TableRow>
@@ -208,30 +307,7 @@ export function LeadsPageClient({
           <TableBody>
             {leads.length === 0 && (
               <TableRow className="hover:bg-transparent">
-                <TableCell colSpan={7}>
-                  {hasActiveFilters ? (
-                    <EmptyState
-                      icon={SearchX}
-                      title="Nenhum lead corresponde aos filtros"
-                      description="Tente outro termo de busca ou volte a ver todos os leads."
-                    >
-                      <Button variant="outline" onClick={clearFilters}>
-                        Limpar filtros
-                      </Button>
-                    </EmptyState>
-                  ) : (
-                    <EmptyState
-                      icon={Users}
-                      title="Nenhum lead ainda"
-                      description="Cadastre seu primeiro lead para começar a acompanhar oportunidades no funil."
-                    >
-                      <Button onClick={openCreateForm}>
-                        <Plus className="size-4" />
-                        Novo lead
-                      </Button>
-                    </EmptyState>
-                  )}
-                </TableCell>
+                <TableCell colSpan={7}>{emptyState}</TableCell>
               </TableRow>
             )}
             {leads.map((lead) => (
@@ -251,35 +327,7 @@ export function LeadsPageClient({
                 <TableCell className="text-muted-foreground">
                   {dateFormatter.format(new Date(lead.created_at))}
                 </TableCell>
-                <TableCell>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger
-                      render={
-                        <Button
-                          variant="ghost"
-                          size="icon-sm"
-                          aria-label={`Ações de ${lead.name}`}
-                        >
-                          <MoreHorizontal className="size-4" />
-                        </Button>
-                      }
-                    />
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem render={<Link href={`/leads/${lead.id}`} />}>
-                        Ver detalhes
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => openEditForm(lead)}>
-                        Editar
-                      </DropdownMenuItem>
-                      <DropdownMenuItem
-                        variant="destructive"
-                        onClick={() => openDeleteDialog(lead)}
-                      >
-                        Excluir
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </TableCell>
+                <TableCell>{leadActions(lead)}</TableCell>
               </TableRow>
             ))}
           </TableBody>
