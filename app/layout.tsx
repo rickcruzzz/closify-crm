@@ -5,6 +5,7 @@ import { appUrl } from '@/lib/app-url'
 import { cn } from '@/lib/utils'
 import { ThemeProvider } from '@/components/theme-provider'
 import { Toaster } from '@/components/ui/sonner'
+import { Analytics } from '@vercel/analytics/next'
 
 const geistSans = localFont({
   src: './fonts/GeistVF.woff',
@@ -84,6 +85,10 @@ export default function RootLayout({
               bundle da landing sem nenhum consumidor. */}
           {children}
           <Toaster />
+          {/* Vercel Analytics: mede pageview e Web Vitals sem cookie e sem
+              identificar visitante, entao nao muda a exigencia de consentimento
+              da pagina. Fora da Vercel o script simplesmente nao carrega. */}
+          <Analytics />
         </ThemeProvider>
       </body>
     </html>
