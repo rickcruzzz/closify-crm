@@ -22,5 +22,20 @@ export default function sitemap(): MetadataRoute.Sitemap {
       changeFrequency: 'yearly',
       priority: 0.3,
     },
+    // Documentos legais entram no sitemap porque a LGPD (art. 9º) exige acesso
+    // facilitado à informação sobre o tratamento — e porque são a página que
+    // um titular ou a própria ANPD procura primeiro.
+    {
+      url: `${base}/privacidade`,
+      lastModified,
+      changeFrequency: 'yearly',
+      priority: 0.3,
+    },
+    {
+      url: `${base}/termos`,
+      lastModified,
+      changeFrequency: 'yearly',
+      priority: 0.3,
+    },
   ]
 }

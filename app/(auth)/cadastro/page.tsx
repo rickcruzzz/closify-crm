@@ -196,8 +196,28 @@ export default function SignUpPage() {
                   />
                 )}
               />
+              {/* Os dois documentos precisam ser alcançáveis daqui: aceite de
+                  texto que a pessoa não consegue abrir é frágil como prova de
+                  consentimento. `target="_blank"` para não perder o formulário
+                  já preenchido. */}
               <Label htmlFor="terms" className="text-muted-foreground font-normal">
-                Aceito os termos de uso e a política de privacidade.
+                Aceito os{' '}
+                <Link
+                  href="/termos"
+                  target="_blank"
+                  className="text-foreground underline underline-offset-4"
+                >
+                  termos de uso
+                </Link>{' '}
+                e a{' '}
+                <Link
+                  href="/privacidade"
+                  target="_blank"
+                  className="text-foreground underline underline-offset-4"
+                >
+                  política de privacidade
+                </Link>
+                .
               </Label>
             </div>
             {errors.terms && (

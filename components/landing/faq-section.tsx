@@ -5,8 +5,9 @@ import { RevealOnScroll } from '@/components/landing/reveal-on-scroll'
 import { FREE_LEAD_LIMIT, FREE_MEMBER_LIMIT, PRO_PLAN_PRICE } from '@/lib/plans'
 
 // Respostas honestas sobre o produto COMO ELE É HOJE. Nada aqui promete
-// funcionalidade que não existe — a pergunta sobre importar planilha responde
-// "cadastro manual", porque importador de CSV ainda não foi construído.
+// funcionalidade que não existe. A resposta sobre planilha ficou desatualizada
+// quando a importação por CSV foi construída — negar um recurso que existe é
+// tão danoso quanto prometer um que não existe.
 const faqs = [
   {
     q: 'O plano grátis é grátis mesmo?',
@@ -18,7 +19,7 @@ const faqs = [
   },
   {
     q: 'Consigo trazer os leads da minha planilha?',
-    a: 'Hoje o cadastro é manual, um lead por vez. A importação de planilha ainda não existe. Para quem está começando com algumas dezenas de contatos, dá para montar o funil em poucos minutos.',
+    a: 'Sim. Exporte sua planilha como .csv com as colunas Nome, Telefone, E-mail e Valor e importe direto na tela de Leads. Contatos repetidos são ignorados automaticamente, e você também pode cadastrar um por um, se preferir.',
   },
   {
     q: 'Meus dados ficam separados dos de outras empresas?',

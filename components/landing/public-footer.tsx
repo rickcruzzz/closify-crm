@@ -2,11 +2,13 @@ import Link from 'next/link'
 
 import { Logo } from '@/components/branding/logo'
 
-const footerLinks = [
-  { label: 'Funcionalidades', href: '#funcionalidades' },
-  { label: 'Planos', href: '#planos' },
-  { label: 'Entrar', href: '/login' },
-  { label: 'Começar grátis', href: '/cadastro' },
+// O rodapé repetia os links do menu do topo (Funcionalidades, Planos, Entrar,
+// Começar grátis), que já estão visíveis na navbar fixa. Espaço de rodapé
+// rende mais com o que não cabe em outro lugar: os documentos legais, que a
+// LGPD exige serem de acesso fácil e permanente (Art. 9º).
+const legalLinks = [
+  { label: 'Privacidade', href: '/privacidade' },
+  { label: 'Termos de uso', href: '/termos' },
 ]
 
 export function PublicFooter() {
@@ -17,8 +19,11 @@ export function PublicFooter() {
         {/* `min-h-11` em vez de só texto: um link de 20px de altura é um alvo
             de toque ruim no polegar, e abaixo do mínimo de 24px da WCAG 2.2.
             O `-my-2` mantém o espaçamento visual original. */}
-        <nav className="-my-2 flex flex-wrap items-center justify-center gap-x-6">
-          {footerLinks.map((link) => (
+        <nav
+          aria-label="Links legais"
+          className="-my-2 flex flex-wrap items-center justify-center gap-x-6"
+        >
+          {legalLinks.map((link) => (
             <Link
               key={link.href}
               href={link.href}
