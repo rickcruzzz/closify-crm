@@ -36,7 +36,8 @@ const features: Feature[] = [
   },
   {
     title: 'Gestão de leads',
-    description: 'Cadastre, busque e filtre leads com timeline completa de atividades.',
+    description:
+      'Importe sua planilha em CSV e cadastre, busque e filtre leads com timeline completa de atividades.',
     icon: ListChecks,
     accent: {
       text: 'text-violet-500 dark:text-violet-400',
@@ -106,7 +107,8 @@ export function FeaturesSection() {
             Tudo que seu funil precisa
           </h2>
           <p className="text-muted-foreground text-lg text-balance">
-            Sem planilha, sem complicação. Só o essencial para vender mais.
+            Sem planilha, sem complicação. Já dá para importar seus leads por CSV e
+            começar hoje.
           </p>
         </RevealOnScroll>
 

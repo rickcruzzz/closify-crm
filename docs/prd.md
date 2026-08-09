@@ -1,4 +1,4 @@
-# PRD: Closify CRM
+# PRD: Velo Funil
 
 ## 1. Contexto e Problema
 
@@ -10,7 +10,7 @@ esfriam por falta de follow-up organizado.
 
 ## 2. Solução Proposta
 
-O Closify CRM é um SaaS multi-empresa de gestão de vendas com pipeline visual Kanban, feito para
+O Velo Funil é um SaaS multi-empresa de gestão de vendas com pipeline visual Kanban, feito para
 substituir a planilha em um dia. Cadastro de leads, pipeline Kanban com drag-and-drop, timeline de
 atividades, dashboard de métricas e billing via Asaas, posicionado como "o CRM simples que cabe no
 bolso de quem está começando".

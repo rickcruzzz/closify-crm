@@ -121,10 +121,13 @@ export async function inviteMember(values: unknown) {
   const inviteUrl = `${appUrl()}/convite/${invite.token}`
 
   const { error: emailError } = await resend.emails.send({
-    from: 'Closify CRM <onboarding@resend.dev>',
+    // `onboarding@resend.dev` é o domínio de teste do Resend — só o nome de
+    // exibição mudou aqui. Trocar para um endereço @velofunil exige verificar
+    // o domínio no painel do Resend antes, senão o envio passa a falhar.
+    from: 'Velo Funil <onboarding@resend.dev>',
     to: parsed.data.email,
     subject: `Você foi convidado para o workspace ${workspace.name}`,
-    html: `<p>Você foi convidado para colaborar no workspace <strong>${escapeHtml(workspace.name)}</strong> no Closify CRM.</p><p><a href="${inviteUrl}">Aceitar convite</a></p><p>Este link expira em 7 dias.</p>`,
+    html: `<p>Você foi convidado para colaborar no workspace <strong>${escapeHtml(workspace.name)}</strong> no Velo Funil.</p><p><a href="${inviteUrl}">Aceitar convite</a></p><p>Este link expira em 7 dias.</p>`,
   })
 
   if (emailError) {

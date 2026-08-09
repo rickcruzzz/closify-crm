@@ -1,9 +1,9 @@
 import Link from 'next/link'
-import { KanbanSquare } from 'lucide-react'
 
 import { Card, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { createClient } from '@/lib/supabase/server'
 import { AcceptInviteCard } from '@/components/settings/accept-invite-card'
+import { Logo } from '@/components/branding/logo'
 
 export default async function ConvitePage({
   params,
@@ -24,14 +24,8 @@ export default async function ConvitePage({
 
   return (
     <div className="bg-background flex min-h-dvh flex-col items-center justify-center gap-8 px-4 py-12">
-      <Link
-        href="/"
-        className="flex items-center gap-2 text-lg font-semibold tracking-tight"
-      >
-        <div className="bg-primary text-primary-foreground flex size-8 items-center justify-center rounded-lg">
-          <KanbanSquare className="size-4" />
-        </div>
-        Closify
+      <Link href="/">
+        <Logo />
       </Link>
       <div className="w-full max-w-sm">
         {!invite || invite.status !== 'pending' ? (

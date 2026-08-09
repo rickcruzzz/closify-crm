@@ -98,7 +98,10 @@ export async function createCheckout(values: unknown) {
           cycle: 'MONTHLY',
           value: PRO_PLAN_PRICE,
           nextDueDate: new Date().toISOString().slice(0, 10),
-          description: 'Closify CRM - Plano Pro',
+          // Aparece na fatura e no extrato do cartão do cliente. Só vale para
+          // assinaturas novas — as já criadas mantêm a descrição antiga no
+          // Asaas, que é a fonte da verdade da cobrança.
+          description: 'Velo Funil - Plano Pro',
           externalReference,
         }),
       })

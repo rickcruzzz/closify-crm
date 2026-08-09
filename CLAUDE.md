@@ -1,4 +1,4 @@
-# Closify CRM
+# Velo Funil
 
 CRM SaaS multi-empresa para PMEs de serviço no Brasil (agências, consultorias,
 clínicas, imobiliárias pequenas, software houses), com pipeline de vendas
@@ -23,7 +23,7 @@ arquivo orienta como estruturar e construir o projeto a partir do zero.
 > **Importante:** este projeto usa **Asaas**, não Stripe, para pagamentos —
 > mesmo que existam agente/skill de Stripe configurados neste repo
 > (`.claude/agents/payment-integration.md`, `.claude/skills/stripe-integration`),
-> eles não se aplicam à parte de billing do Closify.
+> eles não se aplicam à parte de billing do Velo Funil.
 
 ## Estrutura de Pastas
 

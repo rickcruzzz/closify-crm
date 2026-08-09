@@ -29,7 +29,7 @@ export function PublicFooter() {
           ))}
         </nav>
         <span className="text-muted-foreground text-sm">
-          © {new Date().getFullYear()} Closify. Todos os direitos reservados.
+          © {new Date().getFullYear()} Velo Funil. Todos os direitos reservados.
         </span>
       </div>
     </footer>

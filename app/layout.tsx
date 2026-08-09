@@ -18,7 +18,7 @@ const geistMono = localFont({
   weight: '100 900',
 })
 
-const APP_NAME = 'Closify CRM'
+const APP_NAME = 'Velo Funil'
 const APP_DESCRIPTION =
   'CRM com pipeline de vendas em Kanban para PMEs de serviço no Brasil. Simples como planilha, premium como software líder.'
 

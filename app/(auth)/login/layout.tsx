@@ -4,7 +4,7 @@ import type { Metadata } from 'next'
 // exportar metadata — daí este layout só para o título da aba.
 export const metadata: Metadata = {
   title: 'Entrar',
-  description: 'Acesse o painel do seu workspace no Closify CRM.',
+  description: 'Acesse o painel do seu workspace no Velo Funil.',
 }
 
 export default function LoginLayout({ children }: { children: React.ReactNode }) {

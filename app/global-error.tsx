@@ -48,7 +48,7 @@ export default function GlobalError({
           Algo deu errado
         </h1>
         <p style={{ color: '#a1a1a1', maxWidth: '28rem', margin: 0, lineHeight: 1.6 }}>
-          Ocorreu um erro inesperado ao carregar o Closify. Tente novamente em alguns
+          Ocorreu um erro inesperado ao carregar o Velo Funil. Tente novamente em alguns
           instantes.
         </p>
         <button
