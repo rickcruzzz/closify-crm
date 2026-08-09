@@ -24,6 +24,15 @@ export const CONTROLADOR = {
   /** Canal do titular e do encarregado (LGPD, Art. 41, §2º, I e Art. 18). */
   email: 'suporte@velofunil.com.br',
   site: 'https://www.velofunil.com.br',
+  /**
+   * Suporte por WhatsApp. Guardado em duas formas de propósito: o link
+   * `wa.me` exige o número cru com DDI e sem pontuação, e a exibição precisa
+   * do formato brasileiro legível.
+   */
+  whatsapp: {
+    numero: '5571993309404',
+    exibicao: '(71) 99330-9404',
+  },
 } as const
 
 /** Prazo de resposta ao titular. Art. 19, II — 15 dias para pedido completo. */

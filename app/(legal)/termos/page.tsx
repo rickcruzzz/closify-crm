@@ -38,6 +38,15 @@ export default function TermosPage() {
             className="text-foreground underline underline-offset-4"
           >
             {CONTROLADOR.email}
+          </a>{' '}
+          ou WhatsApp{' '}
+          <a
+            href={`https://wa.me/${CONTROLADOR.whatsapp.numero}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-foreground underline underline-offset-4"
+          >
+            {CONTROLADOR.whatsapp.exibicao}
           </a>
           .
         </LegalP>

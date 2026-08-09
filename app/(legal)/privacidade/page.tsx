@@ -44,7 +44,17 @@ export default function PrivacidadePage() {
           >
             {CONTROLADOR.email}
           </a>
-          .
+          . Também atendemos pela central de suporte no WhatsApp{' '}
+          <a
+            href={`https://wa.me/${CONTROLADOR.whatsapp.numero}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-foreground underline underline-offset-4"
+          >
+            {CONTROLADOR.whatsapp.exibicao}
+          </a>
+          , mas pedidos formais de titular devem ser enviados por e-mail, para que
+          fiquem registrados.
         </LegalP>
       </LegalSection>
 
