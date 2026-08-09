@@ -23,6 +23,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import {
+  formatarMoedaBRL,
+  formatarTelefoneBR,
+  moedaParaNumero,
+  numeroParaMoeda,
+} from '@/lib/format-input'
 import { leadStatusLabels, type LeadStatus } from '@/lib/leads/types'
 import type { LeadRow } from '@/lib/leads/queries'
 import type { WorkspaceMember } from '@/lib/leads/queries'
@@ -156,12 +162,22 @@ export function LeadFormDialog({
 
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="phone">Telefone</Label>
-              <Input
-                id="phone"
-                placeholder="(11) 90000-0000"
-                aria-invalid={!!errors.phone}
-                disabled={isSubmitting}
-                {...register('phone')}
+              {/* Formata enquanto digita: sem isso o campo aceitava
+                  "71993309404" cru e cada lead ficava num formato diferente. */}
+              <Controller
+                name="phone"
+                control={control}
+                render={({ field }) => (
+                  <Input
+                    id="phone"
+                    inputMode="numeric"
+                    placeholder="(11) 90000-0000"
+                    aria-invalid={!!errors.phone}
+                    disabled={isSubmitting}
+                    value={field.value ?? ''}
+                    onChange={(e) => field.onChange(formatarTelefoneBR(e.target.value))}
+                  />
+                )}
               />
               {errors.phone && (
                 <p role="alert" className="text-destructive text-xs">
@@ -259,14 +275,30 @@ export function LeadFormDialog({
 
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="value">Valor estimado (R$)</Label>
-            <Input
-              id="value"
-              type="number"
-              min={0}
-              step="0.01"
-              aria-invalid={!!errors.value}
-              disabled={isSubmitting}
-              {...register('value')}
+            {/* Máscara de moeda em vez de `type="number"`: digitar 1500 mostra
+                "15,00" e vai formatando os milhares sozinho, como teclado de
+                caixa. Antes o campo aceitava "1500" cru e não dava para saber
+                se era mil e quinhentos ou quinze reais. */}
+            <Controller
+              name="value"
+              control={control}
+              render={({ field }) => (
+                <Input
+                  id="value"
+                  inputMode="numeric"
+                  placeholder="0,00"
+                  aria-invalid={!!errors.value}
+                  disabled={isSubmitting}
+                  value={
+                    typeof field.value === 'number'
+                      ? numeroParaMoeda(field.value)
+                      : formatarMoedaBRL(String(field.value ?? ''))
+                  }
+                  onChange={(e) =>
+                    field.onChange(moedaParaNumero(formatarMoedaBRL(e.target.value)))
+                  }
+                />
+              )}
             />
             {errors.value && (
               <p role="alert" className="text-destructive text-xs">

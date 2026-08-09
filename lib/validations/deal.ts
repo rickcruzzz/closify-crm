@@ -16,7 +16,30 @@ export const dealSchema = z.object({
     { error: 'Selecione uma etapa.' },
   ),
   ownerId: z.uuid('Selecione um responsável.'),
-  dueDate: z.string().min(1, 'Informe o prazo.'),
+  // Um `<input type="date">` aceita qualquer ano, inclusive 0111 — digitar o
+  // ano com o teclado é fácil de errar, e o campo não reclama. Isso encheu o
+  // banco de prazos como 0111-11-11 e 2000-11-11, que a tela exibia como
+  // "atrasado há 699.346 dias".
+  //
+  // A faixa vai de 2000 a 2100: cobre negócio antigo importado de planilha e
+  // contrato de longo prazo, e barra o erro de digitação sem inventar uma
+  // regra que o usuário não entenderia.
+  dueDate: z
+    .string()
+    .min(1, 'Informe o prazo.')
+    .refine((valor) => /^\d{4}-\d{2}-\d{2}$/.test(valor), 'Data inválida.')
+    .refine((valor) => {
+      const [ano, mes, dia] = valor.split('-').map(Number)
+      const data = new Date(ano!, mes! - 1, dia!)
+      // Rejeita data que não existe no calendário (31/02 vira 3 de março).
+      return (
+        data.getFullYear() === ano && data.getMonth() === mes! - 1 && data.getDate() === dia
+      )
+    }, 'Essa data não existe.')
+    .refine((valor) => {
+      const ano = Number(valor.slice(0, 4))
+      return ano >= 2000 && ano <= 2100
+    }, 'Informe um ano entre 2000 e 2100.'),
 })
 
 export type DealFormInput = z.input<typeof dealSchema>

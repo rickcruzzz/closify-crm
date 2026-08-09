@@ -17,6 +17,11 @@ import {
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import {
+  formatarMoedaBRL,
+  moedaParaNumero,
+  numeroParaMoeda,
+} from '@/lib/format-input'
+import {
   Select,
   SelectContent,
   SelectItem,
@@ -230,14 +235,29 @@ export function DealFormDialog({
           <div className="grid grid-cols-2 gap-3">
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="value">Valor (R$)</Label>
-              <Input
-                id="value"
-                type="number"
-                min={0}
-                step="0.01"
-                aria-invalid={!!errors.value}
-                disabled={isSubmitting}
-                {...register('value')}
+              {/* Mesma máscara do formulário de lead: formata os milhares
+                  durante a digitação, com os dois últimos dígitos sempre nos
+                  centavos. */}
+              <Controller
+                name="value"
+                control={control}
+                render={({ field }) => (
+                  <Input
+                    id="value"
+                    inputMode="numeric"
+                    placeholder="0,00"
+                    aria-invalid={!!errors.value}
+                    disabled={isSubmitting}
+                    value={
+                      typeof field.value === 'number'
+                        ? numeroParaMoeda(field.value)
+                        : formatarMoedaBRL(String(field.value ?? ''))
+                    }
+                    onChange={(e) =>
+                      field.onChange(moedaParaNumero(formatarMoedaBRL(e.target.value)))
+                    }
+                  />
+                )}
               />
               {errors.value && (
                 <p role="alert" className="text-destructive text-xs">
@@ -251,6 +271,11 @@ export function DealFormDialog({
               <Input
                 id="dueDate"
                 type="date"
+                // O seletor nativo aceita qualquer ano quando digitado pelo
+                // teclado. `min`/`max` fazem o próprio navegador barrar antes
+                // do submit — o zod cobre o resto, para quem contornar a UI.
+                min="2000-01-01"
+                max="2100-12-31"
                 aria-invalid={!!errors.dueDate}
                 disabled={isSubmitting}
                 {...register('dueDate')}
