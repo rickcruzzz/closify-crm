@@ -12,6 +12,15 @@ export async function GET(request: NextRequest) {
   const next = searchParams.get('next')
   const safeNext = next === '/redefinir-senha' ? next : '/dashboard'
 
+  // E-mails de recuperação enviados antes da correção ainda apontam para cá,
+  // e chegam SEM `code`: a sessão vem em `#access_token=`, que o servidor não
+  // enxerga. Mandar para `/login` fazia a pessoa ver a tela de entrar com um
+  // erro cru na barra de endereços. Repassar para `/redefinir-senha` preserva
+  // o fragmento no redirect e a tela consegue lê-lo no browser.
+  if (!code && next === '/redefinir-senha') {
+    return NextResponse.redirect(`${origin}/redefinir-senha`)
+  }
+
   if (code) {
     const supabase = await createClient()
     const { data, error } = await supabase.auth.exchangeCodeForSession(code)

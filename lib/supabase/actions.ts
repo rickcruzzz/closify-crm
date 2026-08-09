@@ -111,8 +111,17 @@ export async function requestPasswordReset(values: unknown) {
   }
 
   const supabase = await createClient()
+  // Aponta direto para a tela, não para `/auth/callback`.
+  //
+  // O link de recuperação devolve a sessão em `#access_token=...`, um FRAGMENTO
+  // de URL — e fragmento nunca é enviado ao servidor. O `/auth/callback` é
+  // Route Handler: ele só enxerga `?code=`, que neste fluxo não existe. O
+  // resultado era cair em `/login` mesmo com link válido.
+  //
+  // `/redefinir-senha` é client component e lê o fragmento no browser, que é
+  // o único lugar onde ele existe.
   const { error } = await supabase.auth.resetPasswordForEmail(parsed.data.email, {
-    redirectTo: `${appUrl()}/auth/callback?next=/redefinir-senha`,
+    redirectTo: `${appUrl()}/redefinir-senha`,
   })
 
   // Mesma lógica de anti-enumeration do signUp: não revela se o e-mail
