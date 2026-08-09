@@ -2,7 +2,7 @@
 
 import * as React from 'react'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { useForm } from 'react-hook-form'
+import { Controller, useForm } from 'react-hook-form'
 import { toast } from 'sonner'
 import { Loader2, Zap } from 'lucide-react'
 
@@ -20,13 +20,14 @@ import { Label } from '@/components/ui/label'
 import { createCheckout } from '@/lib/asaas/actions'
 import { checkoutSchema, type CheckoutValues } from '@/lib/validations/billing'
 import { PRO_PLAN_PRICE } from '@/lib/plans'
+import { formatarCpfCnpj } from '@/lib/documento-br'
 
 export function SubscribeButton() {
   const [dialogOpen, setDialogOpen] = React.useState(false)
   const [isSubmitting, setIsSubmitting] = React.useState(false)
 
   const {
-    register,
+    control,
     handleSubmit,
     formState: { errors },
   } = useForm<CheckoutValues>({
@@ -69,12 +70,25 @@ export function SubscribeButton() {
           >
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="cpfCnpj">CPF ou CNPJ</Label>
-              <Input
-                id="cpfCnpj"
-                placeholder="Só números"
-                aria-invalid={!!errors.cpfCnpj}
-                disabled={isSubmitting}
-                {...register('cpfCnpj')}
+              {/* Formata durante a digitação e alterna sozinho para CNPJ ao
+                  passar de 11 dígitos. O dígito verificador é conferido no
+                  schema, antes de chamar o Asaas: sem isso um número errado só
+                  falhava lá, com mensagem genérica que não dizia o que
+                  corrigir. */}
+              <Controller
+                name="cpfCnpj"
+                control={control}
+                render={({ field }) => (
+                  <Input
+                    id="cpfCnpj"
+                    inputMode="numeric"
+                    placeholder="000.000.000-00"
+                    aria-invalid={!!errors.cpfCnpj}
+                    disabled={isSubmitting}
+                    value={field.value ?? ''}
+                    onChange={(e) => field.onChange(formatarCpfCnpj(e.target.value))}
+                  />
+                )}
               />
               {errors.cpfCnpj && (
                 <p role="alert" className="text-destructive text-xs">

@@ -1,12 +1,13 @@
 'use server'
 
 import { redirect } from 'next/navigation'
+import { revalidatePath } from 'next/cache'
 
 import { asaasFetch, AsaasApiError } from '@/lib/asaas/client'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getCurrentUserAndWorkspace } from '@/lib/supabase/workspace'
-import { checkoutSchema } from '@/lib/validations/billing'
+import { cancelSubscriptionSchema, checkoutSchema } from '@/lib/validations/billing'
 import { PRO_PLAN_PRICE } from '@/lib/plans'
 
 type AsaasCustomer = { id: string }
@@ -158,4 +159,103 @@ export async function createCheckout(values: unknown) {
   }
 
   redirect(invoiceUrl)
+}
+
+/**
+ * Cancela a assinatura Pro do workspace.
+ *
+ * Ordem deliberada: cancela PRIMEIRO no Asaas, depois marca no banco. O Asaas
+ * é quem de fato cobra — se a ordem fosse invertida e a chamada remota
+ * falhasse, o app mostraria "cancelado" enquanto a fatura continuaria caindo
+ * todo mês. Melhor a pessoa ver um erro e tentar de novo do que acreditar num
+ * cancelamento que não aconteceu.
+ *
+ * O plano volta para `free` junto: manter Pro sem assinatura ativa é o mesmo
+ * defeito que a auditoria encontrou no workspace de seed.
+ */
+export async function cancelSubscription(values: unknown) {
+  const parsed = cancelSubscriptionSchema.safeParse(values)
+  if (!parsed.success) {
+    return { error: 'Digite CANCELAR para confirmar.' }
+  }
+
+  const { workspaceId } = await getCurrentUserAndWorkspace()
+  const supabase = await createClient()
+
+  const { data: isAdmin } = await supabase.rpc('is_workspace_admin', {
+    target_workspace_id: workspaceId,
+  })
+  if (!isAdmin) {
+    return { error: 'Apenas administradores podem cancelar a assinatura.' }
+  }
+
+  const { data: assinatura } = await supabase
+    .from('subscriptions')
+    .select('asaas_subscription_id, status')
+    .eq('workspace_id', workspaceId)
+    .maybeSingle()
+
+  if (!assinatura?.asaas_subscription_id) {
+    return { error: 'Não há assinatura ativa para cancelar.' }
+  }
+
+  if (assinatura.status === 'canceled') {
+    return { error: 'Esta assinatura já foi cancelada.' }
+  }
+
+  try {
+    await asaasFetch(`/subscriptions/${assinatura.asaas_subscription_id}`, {
+      method: 'DELETE',
+    })
+  } catch (err) {
+    if (err instanceof AsaasApiError) {
+      console.error(
+        `cancelSubscription: Asaas respondeu ${err.status} em ${err.path}`,
+        err.body.slice(0, 500),
+      )
+      // 404 significa que a assinatura já não existe lá — seguir e acertar o
+      // banco é o resultado correto, não um erro para a pessoa.
+      if (err.status !== 404) {
+        return {
+          error: 'Não foi possível cancelar no Asaas. Tente novamente em instantes.',
+        }
+      }
+    } else {
+      console.error('cancelSubscription: falha ao chamar o Asaas', err)
+      return { error: 'Não foi possível cancelar a assinatura. Tente novamente.' }
+    }
+  }
+
+  // `subscriptions` e `workspaces.plan` não têm policy de escrita para o
+  // client — o webhook é quem mexe nisso, via service role. Mesma justificativa
+  // do upsert em `createCheckout`.
+  const admin = createAdminClient()
+
+  const { error: erroStatus } = await admin
+    .from('subscriptions')
+    .update({ status: 'canceled' })
+    .eq('workspace_id', workspaceId)
+
+  const { error: erroPlano } = await admin
+    .from('workspaces')
+    .update({ plan: 'free' })
+    .eq('id', workspaceId)
+
+  if (erroStatus || erroPlano) {
+    // A cobrança JÁ parou no Asaas neste ponto. Deixar o app achando que ainda
+    // é Pro é o lado seguro do erro, e o log permite acertar à mão.
+    console.error('cancelSubscription: cancelou no Asaas mas falhou no banco', {
+      workspaceId,
+      erroStatus,
+      erroPlano,
+    })
+    return {
+      error:
+        'A cobrança foi cancelada, mas houve falha ao atualizar sua conta. Fale com o suporte.',
+    }
+  }
+
+  revalidatePath('/settings/billing')
+  revalidatePath('/settings')
+  return { success: true }
 }

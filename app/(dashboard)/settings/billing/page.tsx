@@ -10,9 +10,11 @@ import {
 } from '@/components/ui/card'
 import { PlanComparisonTable } from '@/components/settings/plan-comparison-table'
 import { SubscribeButton } from '@/components/settings/subscribe-button'
+import { SubscriptionCard } from '@/components/settings/subscription-card'
 import { createClient } from '@/lib/supabase/server'
 import { getCurrentUserAndWorkspace } from '@/lib/supabase/workspace'
 import { getWorkspaceSettingsData } from '@/lib/workspace/queries'
+import { getEstadoAssinatura } from '@/lib/asaas/queries'
 import { FREE_LEAD_LIMIT, FREE_MEMBER_LIMIT } from '@/lib/plans'
 import { cn } from '@/lib/utils'
 
@@ -30,6 +32,11 @@ export default async function BillingPage() {
     .from('leads')
     .select('id', { count: 'exact', head: true })
     .eq('workspace_id', workspaceId)
+
+  // Estado real da cobrança, não só o plano. Sem isto, quem tinha assinatura
+  // criada com fatura em aberto via "Free" e um botão de assinar de novo —
+  // sem saber que já existia uma cobrança esperando pagamento.
+  const assinatura = await getEstadoAssinatura(workspaceId)
 
   return (
     <div className="flex flex-col gap-6">
@@ -61,7 +68,17 @@ export default async function BillingPage() {
             </div>
           )}
 
-          {plan === 'free' && isAdmin && <SubscribeButton />}
+          {/* A assinatura aparece sempre que existir, inclusive no plano Free:
+              é justamente quem criou a cobrança e ainda não pagou que precisa
+              ver a fatura em aberto. */}
+          {assinatura && <SubscriptionCard estado={assinatura} isAdmin={isAdmin} />}
+
+          {/* Só oferece assinar quem não tem cobrança em andamento — senão a
+              pessoa criaria uma segunda assinatura sem perceber que a primeira
+              está esperando pagamento. */}
+          {plan === 'free' &&
+            isAdmin &&
+            (!assinatura || assinatura.status === 'canceled') && <SubscribeButton />}
         </CardContent>
       </Card>
 

@@ -1,6 +1,10 @@
 import { defineConfig } from 'vitest/config'
 import { resolve } from 'node:path'
 
+// `import.meta.dirname` em vez de `__dirname`: o carregador nativo do Vite não
+// define `__dirname` em arquivo ESM, e avisa a cada execução.
+const raizDoProjeto = import.meta.dirname
+
 /**
  * Testes de unidade da lógica pura — schemas de validação, parser de CSV,
  * medidor de força e formatadores.
@@ -23,7 +27,7 @@ export default defineConfig({
   },
   resolve: {
     alias: {
-      '@': resolve(__dirname, '.'),
+      '@': resolve(raizDoProjeto, '.'),
     },
   },
 })
