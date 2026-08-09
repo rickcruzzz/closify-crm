@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache'
 
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { resend } from '@/lib/resend/client'
 import {
   inviteMemberSchema,
@@ -266,6 +267,65 @@ export async function acceptInvite(token: unknown) {
     const known = INVITE_ERRORS.find((message) => error.message.includes(message))
     return { error: known ?? 'Não foi possível aceitar o convite.' }
   }
+
+  return { success: true }
+}
+
+/**
+ * Exclui a conta do usuário autenticado — LGPD, art. 18, VI.
+ *
+ * Duas etapas, nesta ordem, e a ordem importa:
+ *
+ * 1. A RPC `excluir_minha_conta` apaga os dados de aplicação sob a sessão do
+ *    próprio usuário. Ela roda como `security definer` porque `workspaces` tem
+ *    RLS sem policy de DELETE — um `delete` direto do client seria negado em
+ *    silêncio, devolvendo sucesso com zero linhas apagadas.
+ * 2. Só então a linha em `auth.users` é removida com a service role, que é o
+ *    único caminho para o schema `auth`.
+ *
+ * Se a etapa 2 falhar, sobra um login sem nenhum dado — inconveniente, mas
+ * recuperável. Se fosse ao contrário, os dados ficariam órfãos e sem dono, que
+ * é exatamente o que o pedido de eliminação quer evitar.
+ */
+export async function deleteAccount() {
+  const supabase = await createClient()
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  if (!user) {
+    return { error: 'Sessão expirada. Entre novamente.' }
+  }
+
+  const { error: rpcError } = await supabase.rpc('excluir_minha_conta')
+
+  if (rpcError) {
+    console.error('excluir_minha_conta falhou', rpcError)
+    // A RPC lança mensagem própria quando há assinatura ativa; ela é útil para
+    // a pessoa e pode ser repassada.
+    if (rpcError.message.includes('Cancele sua assinatura')) {
+      return {
+        error:
+          'Cancele sua assinatura em Cobrança antes de excluir a conta. Assim a cobrança no Asaas não continua.',
+      }
+    }
+    return { error: 'Não foi possível excluir a conta. Tente novamente.' }
+  }
+
+  const { error: authError } = await createAdminClient().auth.admin.deleteUser(user.id)
+
+  if (authError) {
+    // Os dados de aplicação já se foram neste ponto. Falhar aqui deixa apenas
+    // um login vazio, então não vale bloquear a pessoa: registramos para
+    // limpeza manual e seguimos para o logout.
+    console.error('deleteUser (auth) falhou após limpar dados', {
+      userId: user.id,
+      message: authError.message,
+    })
+  }
+
+  await supabase.auth.signOut()
 
   return { success: true }
 }

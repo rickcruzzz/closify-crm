@@ -168,16 +168,22 @@ export default function TermosPage() {
 
       <LegalSection titulo="10. Encerramento da conta">
         <LegalP>
-          Você pode encerrar sua conta a qualquer momento solicitando por{' '}
+          Você pode encerrar sua conta a qualquer momento em Configurações, sem precisar
+          solicitar nem esperar aprovação. Recomendamos salvar o que precisar antes: a
+          remoção é imediata e definitiva, e leva junto os workspaces em que você é o
+          único membro, com todos os leads e negócios neles.
+        </LegalP>
+        <LegalP>
+          Se houver assinatura ativa, cancele-a antes: excluir a conta não interrompe a
+          cobrança recorrente, que é processada pelo Asaas. Em caso de dúvida, escreva
+          para{' '}
           <a
             href={`mailto:${CONTROLADOR.email}`}
             className="text-foreground underline underline-offset-4"
           >
             {CONTROLADOR.email}
           </a>
-          . Recomendamos exportar o que precisar antes: após o encerramento, os dados do
-          workspace são eliminados em definitivo, dentro do prazo indicado na Política de
-          Privacidade.
+          .
         </LegalP>
       </LegalSection>
 

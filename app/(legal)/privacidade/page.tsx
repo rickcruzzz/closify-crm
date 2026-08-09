@@ -219,9 +219,16 @@ export default function PrivacidadePage() {
           >
             {CONTROLADOR.email}
           </a>{' '}
-          e responderemos em até {PRAZO_RESPOSTA_TITULAR_DIAS} dias. Pedidos de exclusão
-          de conta são atendidos por esse mesmo canal, no mesmo prazo. Você também pode
+          e responderemos em até {PRAZO_RESPOSTA_TITULAR_DIAS} dias. Você também pode
           apresentar reclamação à Autoridade Nacional de Proteção de Dados (ANPD).
+        </LegalP>
+        <LegalP>
+          <strong className="text-foreground">Exclusão da conta:</strong> você mesmo pode
+          excluir sua conta a qualquer momento, em Configurações, sem precisar solicitar
+          nem esperar. A remoção é imediata e definitiva: os workspaces em que você é o
+          único membro são apagados junto, com os leads, negócios e atividades neles.
+          Workspaces compartilhados com outras pessoas continuam existindo — apenas o seu
+          vínculo é removido.
         </LegalP>
       </LegalSection>
 

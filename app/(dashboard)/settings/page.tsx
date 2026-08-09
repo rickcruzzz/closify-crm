@@ -3,8 +3,12 @@ import { PageHeader } from '@/components/layout/page-header'
 import { WorkspaceNameCard } from '@/components/settings/workspace-name-card'
 import { MembersCard } from '@/components/settings/members-card'
 import { PlanCard } from '@/components/settings/plan-card'
+import { DeleteAccountCard } from '@/components/settings/delete-account-card'
 import { getCurrentUserAndWorkspace } from '@/lib/supabase/workspace'
-import { getWorkspaceSettingsData } from '@/lib/workspace/queries'
+import {
+  getWorkspaceSettingsData,
+  getWorkspacesExclusivosDoUsuario,
+} from '@/lib/workspace/queries'
 
 export const metadata: Metadata = { title: 'Configurações' }
 
@@ -14,6 +18,12 @@ export default async function SettingsPage() {
 
   const currentMember = members.find((m) => m.user_id === user.id)
   const isAdmin = currentMember?.role === 'admin'
+
+  // Mesma regra da RPC `excluir_minha_conta`: workspace com um único membro
+  // morre junto da conta. Listado no diálogo para a pessoa ver o que perde —
+  // ela costuma pensar só na própria conta e esquecer dos dados dos clientes
+  // que estão lá dentro.
+  const workspacesQueSeraoApagados = await getWorkspacesExclusivosDoUsuario(user.id)
 
   return (
     <div className="flex flex-col gap-6">
@@ -30,6 +40,8 @@ export default async function SettingsPage() {
       />
 
       <PlanCard plan={workspace?.plan ?? 'free'} />
+
+      <DeleteAccountCard workspacesQueSeraoApagados={workspacesQueSeraoApagados} />
     </div>
   )
 }
