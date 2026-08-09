@@ -2,7 +2,7 @@
 
 import * as React from 'react'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { useForm } from 'react-hook-form'
+import { Controller, useForm } from 'react-hook-form'
 import { Loader2 } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
@@ -13,8 +13,7 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
+import { PasswordField } from '@/components/auth/password-field'
 import { resetPasswordSchema, type ResetPasswordValues } from '@/lib/validations/auth'
 import { updatePassword } from '@/lib/supabase/actions'
 
@@ -23,12 +22,17 @@ export default function RedefinirSenhaPage() {
   const [formError, setFormError] = React.useState<string | null>(null)
 
   const {
-    register,
+    control,
+    setValue,
     handleSubmit,
     formState: { errors },
   } = useForm<ResetPasswordValues>({
     resolver: zodResolver(resetPasswordSchema),
-    defaultValues: { password: '' },
+    // `confirmPassword` precisa nascer aqui: o schema exige o campo, e sem ele
+    // no defaultValues o resolver falhava com `undefined` num campo que a tela
+    // nem renderizava — o erro não tinha onde aparecer e o submit nunca
+    // disparava, deixando o botão "Salvar nova senha" inerte.
+    defaultValues: { password: '', confirmPassword: '' },
   })
 
   async function onSubmit(values: ResetPasswordValues) {
@@ -49,7 +53,10 @@ export default function RedefinirSenhaPage() {
       </CardHeader>
       <CardContent className="flex flex-col gap-4">
         {formError && (
-          <p className="bg-destructive/10 text-destructive rounded-md px-3 py-2 text-sm">
+          <p
+            role="alert"
+            className="bg-destructive/10 text-destructive rounded-md px-3 py-2 text-sm"
+          >
             {formError}
           </p>
         )}
@@ -59,23 +66,43 @@ export default function RedefinirSenhaPage() {
           noValidate
           className="flex flex-col gap-4"
         >
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor="password">Nova senha</Label>
-            <Input
-              id="password"
-              type="password"
-              autoComplete="new-password"
-              placeholder="Mínimo 8 caracteres"
-              aria-invalid={!!errors.password}
-              disabled={isSubmitting}
-              {...register('password')}
-            />
-            {errors.password && (
-              <p role="alert" className="text-destructive text-xs">
-                {errors.password.message}
-              </p>
+          <Controller
+            name="password"
+            control={control}
+            render={({ field }) => (
+              <PasswordField
+                id="password"
+                label="Nova senha"
+                valor={field.value ?? ''}
+                onChange={field.onChange}
+                // Mesma regra do cadastro: a senha sugerida preenche a
+                // confirmação junto, porque redigitar 16 caracteres aleatórios
+                // que a pessoa não escolheu só geraria erro de digitação.
+                onSugerir={(senha) =>
+                  setValue('confirmPassword', senha, { shouldValidate: true })
+                }
+                erro={errors.password?.message}
+                desabilitado={isSubmitting}
+                mostrarForca
+                permitirSugestao
+              />
             )}
-          </div>
+          />
+
+          <Controller
+            name="confirmPassword"
+            control={control}
+            render={({ field }) => (
+              <PasswordField
+                id="confirmPassword"
+                label="Confirmar nova senha"
+                valor={field.value ?? ''}
+                onChange={field.onChange}
+                erro={errors.confirmPassword?.message}
+                desabilitado={isSubmitting}
+              />
+            )}
+          />
 
           <Button type="submit" className="w-full" disabled={isSubmitting}>
             {isSubmitting && <Loader2 className="size-4 animate-spin" />}

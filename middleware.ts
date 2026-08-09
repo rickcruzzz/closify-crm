@@ -29,5 +29,10 @@ export const config = {
     // "faça login" em vez do aceite. `/auth/callback` não precisa: é Route
     // Handler e grava o cookie por conta própria.
     '/convite/:path*',
+    // Mesmo motivo: a sessão de recuperação vem do `/auth/callback` e precisa
+    // do refresh de cookie do `updateSession` enquanto a pessoa escolhe a nova
+    // senha. Continua FORA de `isProtectedPath` de propósito — mandar para
+    // `/login` quem chega com a sessão de recovery quebraria o próprio fluxo.
+    '/redefinir-senha',
   ],
 }

@@ -101,6 +101,14 @@ export async function requestPasswordReset(values: unknown) {
     return { error: 'Dados inválidos.' }
   }
 
+  // Limita por e-mail: o alvo do abuso é a caixa de entrada de quem recebe.
+  // Ao estourar, sai pelo MESMO retorno de sucesso do caminho normal — uma
+  // mensagem de "muitas tentativas" diria que aquele endereço tem conta, que
+  // é exatamente o que o anti-enumeration abaixo evita.
+  if (await excedeuLimite('reset-password', parsed.data.email)) {
+    return { success: true }
+  }
+
   const supabase = await createClient()
   const { error } = await supabase.auth.resetPasswordForEmail(parsed.data.email, {
     redirectTo: `${appUrl()}/auth/callback?next=/redefinir-senha`,
@@ -127,7 +135,9 @@ export async function updatePassword(values: unknown) {
   }
 
   const supabase = await createClient()
-  const { error } = await supabase.auth.updateUser({ password: parsed.data.password })
+  const { data, error } = await supabase.auth.updateUser({
+    password: parsed.data.password,
+  })
 
   if (error) {
     console.error('updateUser (reset de senha) falhou', {
@@ -144,6 +154,35 @@ export async function updatePassword(values: unknown) {
       error:
         'Não foi possível redefinir a senha. O link pode ter expirado — solicite um novo.',
     }
+  }
+
+  // Capturado ANTES do signOut abaixo: depois de mexer na sessão, buscar o
+  // usuário de novo seria um round-trip extra e dependeria de um estado que
+  // acabou de mudar. O `updateUser` já devolve o usuário atualizado.
+  const email = data.user?.email
+
+  // Quem redefine a senha muitas vezes está reagindo a uma conta comprometida.
+  // Sem isto, o invasor continua logado nos aparelhos dele: trocar a senha não
+  // derruba sessão nenhuma por conta própria.
+  //
+  // `others` e não `global`: revoga os outros refresh tokens e preserva a
+  // sessão atual — confirmado na implementação do auth-js, que só chama
+  // `removeCurrentSession()` quando o escopo é diferente de `others`. É o que
+  // permite cair no dashboard já autenticado logo abaixo.
+  const { error: signOutError } = await supabase.auth.signOut({ scope: 'others' })
+  if (signOutError) {
+    // A senha já mudou — falhar aqui não pode desfazer isso nem travar o
+    // fluxo. Fica o log para investigar.
+    console.error('signOut das outras sessões falhou após reset', {
+      code: signOutError.code,
+      status: signOutError.status,
+    })
+  }
+
+  // Provou posse da conta: não deve carregar as tentativas de login erradas
+  // que antecederam o reset.
+  if (email) {
+    await limparTentativas('signin', email)
   }
 
   redirect('/dashboard')
