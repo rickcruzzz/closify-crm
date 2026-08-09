@@ -1,6 +1,7 @@
 'use client'
 
 import { useTransition } from 'react'
+import Link from 'next/link'
 import { LogOut, Settings, User } from 'lucide-react'
 
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
@@ -39,11 +40,19 @@ export function UserMenu({ currentUser }: { currentUser: CurrentUser }) {
           </DropdownMenuLabel>
         </DropdownMenuGroup>
         <DropdownMenuSeparator />
-        <DropdownMenuItem className="gap-2">
+        {/* `render` em vez de `onClick` + `router.push`: assim o item vira uma
+            âncora de verdade, que abre em nova aba com clique do meio e é
+            anunciada como link por leitor de tela. Sem isso os dois itens não
+            tinham destino nenhum — o menu fechava e nada acontecia.
+
+            Ambos apontam para `/settings` porque não existe rota de perfil: o
+            que a pessoa procura ali (nome, workspace, plano, sair da conta)
+            está tudo em Configurações. */}
+        <DropdownMenuItem className="gap-2" render={<Link href="/settings" />}>
           <User className="size-4" />
           Meu perfil
         </DropdownMenuItem>
-        <DropdownMenuItem className="gap-2">
+        <DropdownMenuItem className="gap-2" render={<Link href="/settings" />}>
           <Settings className="size-4" />
           Configurações
         </DropdownMenuItem>
