@@ -1,3 +1,6 @@
+import Link from 'next/link'
+import { ArrowLeft } from 'lucide-react'
+
 import { cn } from '@/lib/utils'
 
 /**
@@ -54,6 +57,25 @@ export function LegalList({ children }: { children: React.ReactNode }) {
     <ul className="text-muted-foreground flex list-disc flex-col gap-2 pl-5 leading-relaxed">
       {children}
     </ul>
+  )
+}
+
+/**
+ * Saída no fim do documento. Quem terminou de ler um texto longo está no fim
+ * da página, não no topo — obrigar a rolar tudo de volta para achar o link do
+ * cabeçalho é atrito à toa.
+ */
+export function LegalBackLink() {
+  return (
+    <div className="border-border/50 mt-12 border-t pt-6">
+      <Link
+        href="/"
+        className="text-muted-foreground hover:text-foreground inline-flex min-h-11 items-center gap-1.5 text-sm transition-colors"
+      >
+        <ArrowLeft aria-hidden className="size-4" />
+        Voltar ao site
+      </Link>
+    </div>
   )
 }
 

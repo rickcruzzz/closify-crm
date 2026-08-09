@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { ATUALIZADO_EM, CONTROLADOR } from '@/lib/legal'
 import { FREE_LEAD_LIMIT, FREE_MEMBER_LIMIT, PRO_PLAN_PRICE } from '@/lib/plans'
 import {
+  LegalBackLink,
   LegalList,
   LegalP,
   LegalSection,
@@ -187,6 +188,8 @@ export default function TermosPage() {
           Consumidor.
         </LegalP>
       </LegalSection>
+
+      <LegalBackLink />
     </article>
   )
 }

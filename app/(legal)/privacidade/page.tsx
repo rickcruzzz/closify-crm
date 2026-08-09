@@ -8,6 +8,7 @@ import {
   SUBOPERADORES,
 } from '@/lib/legal'
 import {
+  LegalBackLink,
   LegalList,
   LegalP,
   LegalSection,
@@ -250,6 +251,8 @@ export default function PrivacidadePage() {
           .
         </LegalP>
       </LegalSection>
+
+      <LegalBackLink />
     </article>
   )
 }
