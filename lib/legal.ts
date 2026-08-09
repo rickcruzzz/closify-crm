@@ -14,11 +14,16 @@
 export const CONTROLADOR = {
   nomeFantasia: 'Velo Funil',
   /**
-   * TODO(legal): trocar pela razão social exata do cartão CNPJ. Enquanto
-   * estiver assim, a política identifica o controlador só pelo CNPJ — que já
-   * é suficiente para localizá-lo, mas o Art. 9º, I pede identificação clara.
+   * A identificação do controlador é feita pelo CNPJ, não pela razão social.
+   *
+   * Decisão consciente, não pendência: o número identifica a empresa de forma
+   * inequívoca e atende o art. 9º, I. Acrescentar o nome empresarial é
+   * refinamento — se for feito, preencher aqui (campo NOME EMPRESARIAL do
+   * cartão CNPJ) e citá-lo nas páginas legais junto do nome fantasia.
+   *
+   * Este campo NÃO é renderizado em lugar nenhum enquanto estiver vazio.
    */
-  razaoSocial: '[RAZÃO SOCIAL — conferir no cartão CNPJ]',
+  razaoSocial: '',
   /** Dígitos verificadores conferidos. */
   cnpj: '64.543.748/0001-13',
   /** Canal do titular e do encarregado (LGPD, Art. 41, §2º, I e Art. 18). */
