@@ -54,6 +54,7 @@ import {
   updateMemberRole,
 } from '@/lib/workspace/actions'
 import { inviteMemberSchema, type InviteMemberValues } from '@/lib/validations/workspace'
+import { FREE_MEMBER_LIMIT } from '@/lib/plans'
 
 type Member = { user_id: string; role: 'admin' | 'membro'; name: string }
 type Invite = { id: string; email: string; role: 'admin' | 'membro'; expires_at: string }
@@ -86,8 +87,12 @@ export function MembersCard({
     defaultValues: { email: '', role: 'membro' },
   })
 
+  // Usa a constante compartilhada em vez de repetir o número: com o `2`
+  // escrito à mão aqui, mudar o limite do plano faria a tela dizer uma coisa e
+  // o servidor aplicar outra — o tipo de divergência que faz o usuário achar
+  // que o limite "não funciona".
   const totalOccupied = members.length + invites.length
-  const atLimit = plan === 'free' && totalOccupied >= 2
+  const atLimit = plan === 'free' && totalOccupied >= FREE_MEMBER_LIMIT
 
   // Workspace nunca fica com zero membros (quem cria já entra como admin), então
   // o estado vazio real é "só eu, sem convite pendente" — comum em conta nova.
@@ -134,7 +139,9 @@ export function MembersCard({
           <CardTitle>Colaboradores</CardTitle>
           <CardDescription>
             {plan === 'free'
-              ? `Plano Free: ${totalOccupied}/2 vagas usadas.`
+              ? `Plano Free: ${totalOccupied}/${FREE_MEMBER_LIMIT} vagas usadas${
+                  invites.length > 0 ? ` (${invites.length} convite pendente)` : ''
+                }.`
               : `${members.length} membro(s).`}
           </CardDescription>
         </div>

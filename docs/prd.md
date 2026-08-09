@@ -32,7 +32,10 @@ bolso de quem está começando".
 ### Funcionalidades Principais
 
 **Login e Autenticação**
-Login com Supabase Auth, incluindo recuperação de senha via Resend. Suporte a Google OAuth e magic link.
+Login com Supabase Auth, incluindo recuperação de senha via Resend e Google OAuth.
+Magic link foi descartado: com Google OAuth e recuperação de senha funcionando, ele
+seria um terceiro caminho de entrada sem cobrir nenhum caso que os outros dois deixam
+de fora.
 
 **Kanban**
 Pipeline visual com drag-and-drop entre etapas, persistência no banco e cards com dados essenciais do negócio.
@@ -116,7 +119,7 @@ Empresário que já vende bem, mas sente que perdeu controle da operação comer
 - Tailwind CSS
 - shadcn/ui
 - Supabase
-- Stripe
+- Asaas
 - Vercel
 - Claude Code
 - Node.js
@@ -169,3 +172,60 @@ Um CRM com aparência premium, limpa e confiante. Interface escura como padrão,
 - Cada milestone deve ser um incremento entregável.
 - Priorizar funcionalidade core primeiro, depois iterar.
 - Testar cada milestone antes de avançar para o próximo.
+
+## 8. Auditoria de qualidade e correção de bugs
+
+Para garantir que o Velo Funil esteja pronto para produção, use este prompt de auditoria e correção como guia:
+
+- Leia `CLAUDE.md`, `docs/prd.md` e `docs/plan.md`.
+- Use o código atual como fonte de verdade.
+- Corrija todos os bugs e inconsistências restantes no produto.
+
+### Áreas de foco
+
+- **Pagamentos e billing**
+  - Audite `lib/asaas/*`, `app/api/webhooks/asaas/route.ts` e componentes de cobrança.
+  - Verifique o uso correto de `ASAAS_API_KEY`, `ASAAS_WEBHOOK_TOKEN` e `ASAAS_API_URL`.
+  - Garanta que o webhook ative o plano Pro e mantenha o estado do Supabase consistente.
+  - Remova qualquer vestígio de exemplos ou instruções incompatíveis.
+
+- **Autenticação**
+  - Complete o fluxo de recuperação de senha em `app/(auth)/esqueci-senha` e `app/(auth)/redefinir-senha`.
+  - Revise a necessidade de magic link e remova referências enganosas se não estiver pronto.
+  - Configure Resend como SMTP customizado para Supabase Auth e verifique convites/resets.
+
+- **Dados e produto**
+  - Verifique persistência real de Kanban, leads, deals e atividades.
+  - Garanta que o dashboard de métricas use queries reais e não dados mockados.
+  - Valide filtros de período, contagem de pipeline e métricas de funil.
+  - Verifique workspace, membros, convites, papéis e permissões.
+
+- **Segurança e infraestrutura**
+  - Execute build local e corrija erros de compilação.
+  - Confirme que as migrations do Supabase estão completas e aplicáveis em produção.
+  - Garanta que rotas protegidas, RLS e políticas de permissão estejam consistentes.
+  - Atualize a documentação e as variáveis de ambiente de deploy para refletir Asaas.
+
+- **Qualidade**
+  - Alinhe textos e copy ao produto real.
+  - Remova comentários e links que não se aplicam.
+  - Sugira testes automatizados para fluxos críticos: auth, billing, webhook, kanban, leads e dashboard.
+
+### Entregáveis esperados
+
+1. Lista de correções realizadas.
+2. Arquivos alterados.
+3. Checklist final de deploy e validação para produção.
+
+### Checklist de deploy/validação final
+
+- [ ] Build local concluído sem erros.
+- [ ] Migrations aplicadas no Supabase de produção.
+- [ ] Webhook Asaas configurado em produção e validado.
+- [ ] Plano Pro ativado corretamente após evento de pagamento.
+- [ ] Fluxo de auth completo (login, cadastro, reset de senha, convites).
+- [ ] Dashboard de métricas com dados reais e filtros.
+- [ ] Permissões e workspaces validados.
+- [ ] Documentação interna alinhada com Asaas.
+- [ ] Texto e copy do produto consistentes com a solução real.
+- [ ] Proposta de testes automatizados para os fluxos críticos.

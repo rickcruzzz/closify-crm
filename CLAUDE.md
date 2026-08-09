@@ -31,7 +31,7 @@ Convenção proposta para o scaffold Next.js App Router, organizada por domínio
 
 ```
 app/
-  (auth)/              # login, cadastro, recuperação de senha, magic link
+  (auth)/              # login, cadastro, recuperação de senha, boas-vindas
   (dashboard)/
     kanban/            # pipeline de vendas
     leads/             # listagem, busca, detalhe/timeline

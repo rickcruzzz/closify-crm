@@ -79,8 +79,9 @@ ainda sem integração real (estado local/mock).
 
 - [x] Tela de login (e-mail/senha + Google)
 - [x] Tela de cadastro
-- [ ] Tela de recuperação de senha
-- [ ] Tela de magic link
+- [x] Tela de recuperação de senha (`/esqueci-senha` e `/redefinir-senha`)
+- [~] Magic link — descartado na M19. Com Google OAuth e recuperação de senha
+      funcionando, seria um terceiro caminho de entrada sem cobrir caso novo
 - [x] Fluxo de onboarding (criar workspace — cadastro de primeiro lead ainda pendente)
 
 **Commit final:** `feat(ui): telas de autenticação e onboarding`
@@ -190,8 +191,11 @@ Supabase Auth e Resend.
 
 - [x] Login e cadastro com Supabase Auth
 - [x] Google OAuth
-- [ ] Magic link
-- [ ] Recuperação de senha com e-mail via Resend
+- [~] Magic link — descartado na M19 (ver M3)
+- [x] Recuperação de senha por e-mail. O envio sai pelo SMTP do Supabase Auth
+      apontado para o Resend, não pela API do Resend: e-mail de auth é gerado
+      pelo próprio Supabase (`resetPasswordForEmail`), então trocar o SMTP no
+      painel é o que muda o remetente
 - [x] Middleware de proteção de rotas autenticadas
 - [x] Onboarding criando o workspace de fato no banco (workspace + membro admin, com policy de bootstrap corrigida — ver migrations 0004/0005)
 
