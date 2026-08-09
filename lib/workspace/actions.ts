@@ -4,7 +4,7 @@ import { revalidatePath } from 'next/cache'
 
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { resend } from '@/lib/resend/client'
+import { getResend } from '@/lib/resend/client'
 import {
   inviteMemberSchema,
   memberRoleSchema,
@@ -120,6 +120,20 @@ export async function inviteMember(values: unknown) {
   }
 
   const inviteUrl = `${appUrl()}/convite/${invite.token}`
+
+  // O convite já está gravado neste ponto. Falhar no envio não pode derrubar a
+  // requisição com 500: a pessoa precisa saber que o convite existe e pode ser
+  // reenviado, em vez de ver o diálogo travado sem explicação.
+  let resend: ReturnType<typeof getResend>
+  try {
+    resend = getResend()
+  } catch (err) {
+    console.error('Resend indisponível ao enviar convite', err)
+    return {
+      error:
+        'Convite criado, mas o serviço de e-mail não está configurado. Avise o suporte.',
+    }
+  }
 
   const { error: emailError } = await resend.emails.send({
     // Domínio próprio, verificado no Resend (SPF em `send`, DKIM em
