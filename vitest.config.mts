@@ -1,0 +1,29 @@
+import { defineConfig } from 'vitest/config'
+import { resolve } from 'node:path'
+
+/**
+ * Testes de unidade da lógica pura — schemas de validação, parser de CSV,
+ * medidor de força e formatadores.
+ *
+ * Deliberadamente sem jsdom e sem testes de componente: o que quebrou de
+ * verdade neste projeto foi regra, não renderização. O bug que trancou o reset
+ * de senha foi um schema alterado sem a tela acompanhar, e é exatamente o tipo
+ * de coisa que um teste de schema pega em milissegundos.
+ *
+ * `lib/**` só entra aqui quando o módulo não toca em rede nem em `next/*` —
+ * Server Actions e queries precisariam de banco e viram teste de integração,
+ * que é outro escopo.
+ */
+export default defineConfig({
+  test: {
+    environment: 'node',
+    include: ['lib/**/*.test.ts'],
+    // O build de produção não deve enxergar os testes.
+    exclude: ['node_modules/**', '.next/**'],
+  },
+  resolve: {
+    alias: {
+      '@': resolve(__dirname, '.'),
+    },
+  },
+})
