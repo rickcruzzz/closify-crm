@@ -9,6 +9,7 @@ import {
   onboardingSchema,
   forgotPasswordSchema,
   resetPasswordSchema,
+  definirSenhaSchema,
 } from '@/lib/validations/auth'
 import { appUrl } from '@/lib/app-url'
 import { excedeuLimite, limparTentativas } from '@/lib/rate-limit'
@@ -194,6 +195,45 @@ export async function updatePassword(values: unknown) {
   }
 
   redirect('/dashboard')
+}
+
+/**
+ * Define uma senha para quem entrou por um provedor externo (Google).
+ *
+ * Diferente de `updatePassword`, que roda no fluxo de recuperação: aqui a
+ * pessoa já está autenticada e está ADICIONANDO um método de acesso, não
+ * trocando um existente. Por isso não invalida outras sessões — não há
+ * suspeita de conta comprometida neste caminho.
+ */
+export async function definirSenhaInicial(values: unknown) {
+  const parsed = definirSenhaSchema.safeParse(values)
+  if (!parsed.success) {
+    return { error: 'Dados inválidos.' }
+  }
+
+  const supabase = await createClient()
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) {
+    return { error: 'Sessão expirada. Entre novamente.' }
+  }
+
+  const { error } = await supabase.auth.updateUser({ password: parsed.data.password })
+
+  if (error) {
+    console.error('definirSenhaInicial falhou', { code: error.code, status: error.status })
+    if (error.code === 'weak_password') {
+      return { error: 'Senha muito fraca. Use uma senha mais forte.' }
+    }
+    if (error.code === 'same_password') {
+      return { error: 'Escolha uma senha diferente da atual.' }
+    }
+    return { error: 'Não foi possível definir a senha. Tente novamente.' }
+  }
+
+  return { success: true }
 }
 
 export async function signOut() {

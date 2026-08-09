@@ -21,6 +21,7 @@ export const config = {
     '/leads/:path*',
     '/settings/:path*',
     '/onboarding/:path*',
+    '/bem-vindo',
     '/login',
     '/cadastro',
     // Não é rota protegida, mas lê `auth.getUser()` num Server Component, que

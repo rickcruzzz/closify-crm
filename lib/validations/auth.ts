@@ -50,3 +50,18 @@ export const resetPasswordSchema = z
   })
 
 export type ResetPasswordValues = z.infer<typeof resetPasswordSchema>
+
+// Quem entra pelo Google não tem senha: a autenticação é o próprio provedor.
+// Definir uma aqui é opcional e serve como via reserva, para a pessoa não
+// depender da conta Google para sempre. Mesmas regras do cadastro comum.
+export const definirSenhaSchema = z
+  .object({
+    password: z.string().min(8, 'A senha precisa ter no mínimo 8 caracteres.'),
+    confirmPassword: z.string().min(1, 'Confirme sua senha.'),
+  })
+  .refine((dados) => dados.password === dados.confirmPassword, {
+    message: 'As senhas não coincidem.',
+    path: ['confirmPassword'],
+  })
+
+export type DefinirSenhaValues = z.infer<typeof definirSenhaSchema>

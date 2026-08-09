@@ -14,9 +14,32 @@ export async function GET(request: NextRequest) {
 
   if (code) {
     const supabase = await createClient()
-    const { error } = await supabase.auth.exchangeCodeForSession(code)
+    const { data, error } = await supabase.auth.exchangeCodeForSession(code)
 
     if (!error) {
+      // Recuperação de senha tem destino próprio e não passa por boas-vindas.
+      if (next === '/redefinir-senha') {
+        return NextResponse.redirect(`${origin}${safeNext}`)
+      }
+
+      // Sem workspace, a pessoa acabou de criar a conta. Antes ela caía em
+      // `/dashboard`, que só então a mandava para `/onboarding` — um salto
+      // seco, sem nenhum sinal de que a conta tinha sido criada. Conferimos
+      // aqui e mandamos direto para a tela certa.
+      const userId = data.user?.id
+      if (userId) {
+        const { data: membership } = await supabase
+          .from('workspace_members')
+          .select('workspace_id')
+          .eq('user_id', userId)
+          .limit(1)
+          .maybeSingle()
+
+        if (!membership) {
+          return NextResponse.redirect(`${origin}/bem-vindo`)
+        }
+      }
+
       return NextResponse.redirect(`${origin}${safeNext}`)
     }
   }
