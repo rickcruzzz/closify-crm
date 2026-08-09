@@ -29,6 +29,29 @@ export async function canAddLead(workspaceId: string): Promise<LimitCheck> {
   return { allowed: true }
 }
 
+// A importação por CSV grava várias linhas de uma vez, então `canAddLead`
+// (que só responde sim/não para UMA linha) deixaria passar um arquivo de 300
+// leads num workspace Free com 1 vaga sobrando. Devolve quantas cabem;
+// `null` significa sem teto (plano Pro).
+export async function remainingLeadSlots(workspaceId: string): Promise<number | null> {
+  const supabase = await createClient()
+
+  const { data: workspace } = await supabase
+    .from('workspaces')
+    .select('plan')
+    .eq('id', workspaceId)
+    .single()
+
+  if (workspace?.plan === 'pro') return null
+
+  const { count } = await supabase
+    .from('leads')
+    .select('id', { count: 'exact', head: true })
+    .eq('workspace_id', workspaceId)
+
+  return Math.max(0, FREE_LEAD_LIMIT - (count ?? 0))
+}
+
 export async function canAddMember(workspaceId: string): Promise<LimitCheck> {
   const supabase = await createClient()
 
