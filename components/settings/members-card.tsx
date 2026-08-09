@@ -2,7 +2,7 @@
 
 import * as React from 'react'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { useForm } from 'react-hook-form'
+import { Controller, useForm } from 'react-hook-form'
 import { toast } from 'sonner'
 import { Loader2, MoreHorizontal, Plus, UserPlus } from 'lucide-react'
 
@@ -79,8 +79,7 @@ export function MembersCard({
     register,
     handleSubmit,
     reset,
-    setValue,
-    watch,
+    control,
     formState: { errors },
   } = useForm<InviteMemberValues>({
     resolver: zodResolver(inviteMemberSchema),
@@ -284,19 +283,37 @@ export function MembersCard({
 
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="role">Papel</Label>
-              <Select
-                value={watch('role')}
-                onValueChange={(value) => setValue('role', value as 'admin' | 'membro')}
-                disabled={isSubmitting}
-              >
-                <SelectTrigger id="role" className="w-full">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="membro">Membro</SelectItem>
-                  <SelectItem value="admin">Admin</SelectItem>
-                </SelectContent>
-              </Select>
+              {/* `Controller` em vez de `watch` + `setValue`: sem registrar o
+                  campo, `role` podia não chegar ao resolver, e o zod reprovava
+                  num campo que a tela não exibia erro nenhum — o clique em
+                  "Enviar convite" não fazia nada, sem toast e sem fechar o
+                  diálogo. Mesmo modo de falha do bug do reset de senha. */}
+              <Controller
+                name="role"
+                control={control}
+                render={({ field }) => (
+                  <Select
+                    value={field.value}
+                    onValueChange={field.onChange}
+                    disabled={isSubmitting}
+                  >
+                    <SelectTrigger id="role" className="w-full">
+                      <SelectValue placeholder="Selecione">
+                        {(value) => (value === 'admin' ? 'Admin' : 'Membro')}
+                      </SelectValue>
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="membro">Membro</SelectItem>
+                      <SelectItem value="admin">Admin</SelectItem>
+                    </SelectContent>
+                  </Select>
+                )}
+              />
+              {errors.role && (
+                <p role="alert" className="text-destructive text-xs">
+                  {errors.role.message}
+                </p>
+              )}
             </div>
 
             <DialogFooter>
