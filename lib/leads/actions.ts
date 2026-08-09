@@ -238,6 +238,12 @@ export async function importLeadsFromCsv(
 
   // Corta no limite em vez de recusar o arquivo inteiro: importar o que cabe
   // e dizer o que ficou de fora é mais útil do que não importar nada.
+  //
+  // ATENÇÃO: contar e inserir são duas idas ao banco, sem transação entre
+  // elas. Duas importações simultâneas no mesmo workspace leem a MESMA
+  // contagem e cada uma insere o que acha que cabe, estourando o teto do
+  // plano. A checagem abaixo é a primeira barreira; a definitiva é a
+  // reconferência depois do insert, que desfaz o excedente.
   const aInserir = vagas === null ? novos : novos.slice(0, vagas)
   if (vagas !== null && novos.length > vagas) {
     avisos.push(
@@ -245,34 +251,73 @@ export async function importLeadsFromCsv(
     )
   }
 
-  const { error } = await supabase.from('leads').insert(
-    aInserir.map((v) => ({
-      workspace_id: workspaceId,
-      name: v.dados.name,
-      email: v.dados.email,
-      phone: v.dados.phone,
-      // O CSV não traz empresa; a coluna aceita nulo e a tela já mostra
-      // "Sem empresa" nesse caso.
-      company: null,
-      status: 'novo' as const,
-      // Quem importou vira responsável — é membro do workspace por definição,
-      // então não precisa da checagem de `isWorkspaceMember` do createLead.
-      owner_id: user.id,
-      value: v.dados.value,
-    })),
-  )
+  const { data: inseridos, error } = await supabase
+    .from('leads')
+    .insert(
+      aInserir.map((v) => ({
+        workspace_id: workspaceId,
+        name: v.dados.name,
+        email: v.dados.email,
+        phone: v.dados.phone,
+        // O CSV não traz empresa; a coluna aceita nulo e a tela já mostra
+        // "Sem empresa" nesse caso.
+        company: null,
+        status: 'novo' as const,
+        // Quem importou vira responsável — é membro do workspace por
+        // definição, então não precisa da checagem de `isWorkspaceMember` do
+        // createLead.
+        owner_id: user.id,
+        value: v.dados.value,
+      })),
+    )
+    // Precisa dos ids de volta para conseguir desfazer o excedente abaixo.
+    .select('id, created_at')
 
   if (error) {
     console.error('importLeadsFromCsv falhou', error)
     return { error: 'Não foi possível importar os leads.' }
   }
 
+  let importados = inseridos?.length ?? aInserir.length
+
+  // Fecha a janela entre contar e inserir: se duas importações correram junto,
+  // a soma pode ter passado do teto do plano. Reconferimos DEPOIS da escrita e
+  // removemos o que sobrou, sempre os mais recentes — desfazer o excedente da
+  // própria chamada é melhor do que deixar o workspace acima do limite que ele
+  // paga. Só entra no caminho caro quando o estouro de fato aconteceu.
+  const restantes = await remainingLeadSlots(workspaceId)
+  if (restantes !== null && restantes < 0 && inseridos && inseridos.length > 0) {
+    const excedente = Math.min(-restantes, inseridos.length)
+    const idsParaRemover = [...inseridos]
+      .sort((a, b) => b.created_at.localeCompare(a.created_at))
+      .slice(0, excedente)
+      .map((l) => l.id)
+
+    const { error: erroDesfazer } = await supabase
+      .from('leads')
+      .delete()
+      .eq('workspace_id', workspaceId)
+      .in('id', idsParaRemover)
+
+    if (erroDesfazer) {
+      console.error('falha ao desfazer excedente de importação', erroDesfazer)
+    } else {
+      importados -= idsParaRemover.length
+      avisos.push(
+        `${idsParaRemover.length} lead(s) não couberam no limite do plano Free e não foram importados.`,
+      )
+    }
+  }
+
   revalidatePath('/leads')
   revalidatePath('/dashboard')
 
   return {
-    importados: aInserir.length,
-    ignorados: linhas.length - aInserir.length + erros.length,
+    importados,
+    // `linhas` já exclui o que o parser rejeitou, então somar `erros.length`
+    // aqui contaria essas linhas duas vezes e mostraria um total maior do que
+    // o arquivo tem.
+    ignorados: erros.length + (linhas.length - importados),
     avisos,
   }
 }

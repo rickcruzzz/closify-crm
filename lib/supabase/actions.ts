@@ -170,19 +170,27 @@ export async function updatePassword(values: unknown) {
   // `removeCurrentSession()` quando o escopo é diferente de `others`. É o que
   // permite cair no dashboard já autenticado logo abaixo.
   const { error: signOutError } = await supabase.auth.signOut({ scope: 'others' })
-  if (signOutError) {
-    // A senha já mudou — falhar aqui não pode desfazer isso nem travar o
-    // fluxo. Fica o log para investigar.
-    console.error('signOut das outras sessões falhou após reset', {
-      code: signOutError.code,
-      status: signOutError.status,
-    })
-  }
 
   // Provou posse da conta: não deve carregar as tentativas de login erradas
   // que antecederam o reset.
   if (email) {
     await limparTentativas('signin', email)
+  }
+
+  if (signOutError) {
+    console.error('signOut das outras sessões falhou após reset', {
+      code: signOutError.code,
+      status: signOutError.status,
+    })
+
+    // A senha JÁ mudou neste ponto — não dá para desfazer, e mandar para o
+    // dashboard em silêncio faria a pessoa acreditar que os outros aparelhos
+    // foram desconectados. Quem redefine senha por invasão precisa saber que
+    // essa parte não valeu, para encerrar as sessões na mão em Configurações.
+    return {
+      error:
+        'Sua senha foi alterada, mas não conseguimos desconectar os outros dispositivos. Se você suspeita de acesso indevido, troque a senha novamente em alguns instantes.',
+    }
   }
 
   redirect('/dashboard')

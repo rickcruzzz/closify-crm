@@ -121,10 +121,11 @@ export async function inviteMember(values: unknown) {
   const inviteUrl = `${appUrl()}/convite/${invite.token}`
 
   const { error: emailError } = await resend.emails.send({
-    // `onboarding@resend.dev` é o domínio de teste do Resend — só o nome de
-    // exibição mudou aqui. Trocar para um endereço @velofunil exige verificar
-    // o domínio no painel do Resend antes, senão o envio passa a falhar.
-    from: 'Velo Funil <onboarding@resend.dev>',
+    // Domínio próprio, verificado no Resend (SPF em `send`, DKIM em
+    // `resend._domainkey` e DMARC publicados no registro.br). Sair do
+    // `onboarding@resend.dev` tira o convite do domínio compartilhado de
+    // teste, que é o que mais empurra esse e-mail para spam.
+    from: 'Velo Funil <suporte@velofunil.com.br>',
     to: parsed.data.email,
     subject: `Você foi convidado para o workspace ${workspace.name}`,
     html: `<p>Você foi convidado para colaborar no workspace <strong>${escapeHtml(workspace.name)}</strong> no Velo Funil.</p><p><a href="${inviteUrl}">Aceitar convite</a></p><p>Este link expira em 7 dias.</p>`,
