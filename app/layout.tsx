@@ -5,6 +5,7 @@ import { appUrl } from '@/lib/app-url'
 import { cn } from '@/lib/utils'
 import { ThemeProvider } from '@/components/theme-provider'
 import { Toaster } from '@/components/ui/sonner'
+import { Analytics } from '@/components/analytics'
 
 const geistSans = localFont({
   src: './fonts/GeistVF.woff',
@@ -17,7 +18,7 @@ const geistMono = localFont({
   weight: '100 900',
 })
 
-const APP_NAME = 'Closify CRM'
+const APP_NAME = 'Velo Funil'
 const APP_DESCRIPTION =
   'CRM com pipeline de vendas em Kanban para PMEs de serviço no Brasil. Simples como planilha, premium como software líder.'
 
@@ -84,6 +85,11 @@ export default function RootLayout({
               bundle da landing sem nenhum consumidor. */}
           {children}
           <Toaster />
+          {/* Vercel Analytics: pageview e Web Vitals, sem cookie e sem
+              identificar visitante. O wrapper local higieniza a URL antes do
+              envio — o pacote manda o caminho REAL junto do padrão da rota, e
+              `/convite/<token>` carrega uma credencial de acesso. */}
+          <Analytics />
         </ThemeProvider>
       </body>
     </html>

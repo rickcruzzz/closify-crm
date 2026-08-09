@@ -48,8 +48,8 @@ export default function EsqueciSenhaPage() {
           </div>
           <CardTitle className="text-xl">Verifique seu e-mail</CardTitle>
           <CardDescription>
-            Se esse e-mail tiver uma conta no Closify, enviamos um link para redefinir sua
-            senha.
+            Se esse e-mail tiver uma conta no Velo Funil, enviamos um link para
+            redefinir sua senha.
           </CardDescription>
         </CardHeader>
         <CardContent>

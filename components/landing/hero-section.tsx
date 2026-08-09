@@ -28,9 +28,10 @@ export function HeroSection() {
             Simples como planilha, premium como software líder.
           </h1>
           <p className="text-muted-foreground animate-in fade-in slide-in-from-bottom-4 max-w-2xl text-lg text-balance duration-700">
-            Substitua a planilha em um dia. Pipeline visual, leads organizados e métricas
-            em tempo real, tudo num CRM feito para agências, clínicas, consultorias e
-            imobiliárias que estão começando.
+            Substitua a planilha em um dia — agora com importação direta do seu CSV.
+            Pipeline visual, leads organizados e métricas em tempo real, tudo num CRM
+            feito para agências, clínicas, consultorias e imobiliárias que estão
+            começando.
           </p>
           <div className="animate-in fade-in slide-in-from-bottom-5 mt-2 flex flex-col gap-3 duration-700 sm:flex-row">
             <Link

@@ -13,11 +13,15 @@ import { createAdminClient } from '@/lib/supabase/admin'
  * - `accept-invite`: adivinhação de token de convite. O token é UUID, então
  *   adivinhar é inviável de qualquer forma; o limite existe para não deixar
  *   ninguém martelar o endpoint de graça.
+ * - `reset-password`: usar nosso Resend para encher a caixa de entrada de um
+ *   terceiro. 5 por hora cobre quem não recebeu e pediu de novo, sem servir de
+ *   canhão contra um endereço conhecido.
  */
 const LIMITES = {
   signin: { limite: 8, janelaSegundos: 15 * 60 },
   invite: { limite: 20, janelaSegundos: 60 * 60 },
   'accept-invite': { limite: 15, janelaSegundos: 15 * 60 },
+  'reset-password': { limite: 5, janelaSegundos: 60 * 60 },
 } as const
 
 export type AcaoLimitada = keyof typeof LIMITES

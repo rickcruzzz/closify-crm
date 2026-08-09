@@ -1,17 +1,15 @@
 import Link from 'next/link'
-import { KanbanSquare } from 'lucide-react'
+
+import { Logo } from '@/components/branding/logo'
 
 export default function AuthLayout({ children }: { children: React.ReactNode }) {
   return (
     <div className="bg-background flex min-h-dvh flex-col items-center justify-center gap-8 px-4 py-12">
-      <Link
-        href="/"
-        className="flex items-center gap-2 text-lg font-semibold tracking-tight"
-      >
-        <div className="bg-primary text-primary-foreground flex size-8 items-center justify-center rounded-lg">
-          <KanbanSquare aria-hidden className="size-4" />
-        </div>
-        Closify
+      {/* Usa o componente de marca em vez de remontar o lockup à mão: esta
+          tela tinha uma cópia com o ícone KanbanSquare do lucide, então quem
+          fazia login via um símbolo diferente do resto do app. */}
+      <Link href="/">
+        <Logo />
       </Link>
       <main id="conteudo" className="w-full max-w-sm">
         {children}

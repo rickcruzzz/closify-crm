@@ -12,6 +12,6 @@ export const mockWorkspaces: Workspace[] = [
 
 export const mockCurrentUser = {
   name: 'Rick Cruz',
-  email: 'rick@closify.com.br',
+  email: 'rick@velofunil.com.br',
   initials: 'RC',
 }

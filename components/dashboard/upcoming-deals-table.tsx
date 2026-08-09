@@ -18,8 +18,37 @@ import {
 import { Badge } from '@/components/ui/badge'
 import { formatBRL } from '@/lib/deals/metrics'
 
-function dueDateInfo(dueDate: string) {
-  const due = new Date(dueDate)
+// Devolve `null` sempre que não há prazo confiável para mostrar — quem chama
+// exibe "Sem prazo". Antes a função aceitava qualquer string e calculava em
+// cima do que `new Date()` devolvesse, o que produzia dois defeitos visíveis:
+//
+// 1) String vazia ou fora do formato vira `Invalid Date`, e todo o cálculo
+//    vira `NaN` — a célula mostrava "vence em NaN dias".
+// 2) Ano de dois dígitos ou zerado ("0026-08-09") é remapeado por
+//    `new Date(ano, ...)` para 1900+ano, e a diferença virava dezenas de
+//    milhares de dias: o famoso "atrasado há 46.000 dias".
+//
+// A validação abaixo cobre os dois, mais data que não existe no calendário
+// (31/02, que o Date silenciosamente empurra para março).
+function dueDateInfo(dueDate: string | null | undefined) {
+  if (!dueDate) return null
+
+  const match = /^(\d{4})-(\d{2})-(\d{2})/.exec(dueDate.trim())
+  if (!match) return null
+
+  const ano = Number(match[1])
+  const mes = Number(match[2])
+  const dia = Number(match[3])
+
+  // Constrói em horário local de propósito: `due_date` é `date` no Postgres
+  // (sem fuso), e `new Date('2026-08-09')` seria interpretado como meia-noite
+  // UTC — em UTC-3 isso desloca a comparação contra a meia-noite local.
+  const due = new Date(ano, mes - 1, dia)
+
+  const dataReal =
+    due.getFullYear() === ano && due.getMonth() === mes - 1 && due.getDate() === dia
+  if (!dataReal) return null
+
   const today = new Date()
   today.setHours(0, 0, 0, 0)
   const diffDays = Math.round((due.getTime() - today.getTime()) / 86_400_000)
@@ -61,7 +90,7 @@ export function UpcomingDealsTable({ deals }: { deals: UpcomingDeal[] }) {
                 `whitespace-nowrap` só cabem quando o sidebar não divide a tela. */}
             <ul className="divide-y lg:hidden">
               {deals.map((deal) => {
-                const due = deal.due_date ? dueDateInfo(deal.due_date) : null
+                const due = dueDateInfo(deal.due_date)
                 return (
                   <li key={deal.id} className="flex flex-col gap-2 py-3 first:pt-0">
                     <div className="flex items-start justify-between gap-3">
@@ -105,7 +134,7 @@ export function UpcomingDealsTable({ deals }: { deals: UpcomingDeal[] }) {
                 </TableHeader>
                 <TableBody>
                   {deals.map((deal) => {
-                    const due = deal.due_date ? dueDateInfo(deal.due_date) : null
+                    const due = dueDateInfo(deal.due_date)
                     return (
                       <TableRow key={deal.id}>
                         <TableCell>

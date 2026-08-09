@@ -58,7 +58,7 @@ export function AcceptInviteCard({
         <CardTitle className="text-xl">Convite para {workspaceName}</CardTitle>
         <CardDescription>
           Você foi convidado para colaborar no workspace <strong>{workspaceName}</strong> no
-          Closify CRM, com o e-mail {inviteEmail}.
+          Velo Funil, com o e-mail {inviteEmail}.
         </CardDescription>
       </CardHeader>
       <CardContent className="flex flex-col gap-3">

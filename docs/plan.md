@@ -1,4 +1,4 @@
-# Plano de Execução — Closify CRM
+# Plano de Execução — Velo Funil
 
 Plano dividido em milestones incrementais, do setup ao deploy, seguindo a
 diretriz do [CLAUDE.md](../CLAUDE.md) e do [PRD](prd.md): construir a
@@ -589,3 +589,94 @@ ficaram pendentes — precisam de ferramenta de auditoria (axe) rodando contra
 sessão autenticada real.
 
 **Commit final:** `feat(ui): responsividade e polish visual`
+
+---
+
+## M19 — Senha forte, importação de CSV e rebrand Velo Funil
+
+**Branch:** `feat/senha-forte`
+
+**Objetivo:** Fechar o que impedia a publicação: o fluxo de redefinição de
+senha estava quebrado, a captação de leads dependia de digitação manual e o
+produto ainda se chamava Closify em todas as telas.
+
+**Entregas — correção do reset de senha:**
+
+- [x] `redefinir-senha/page.tsx` — o `resetPasswordSchema` passou a exigir
+      `confirmPassword`, mas a tela nunca foi atualizada: o `zodResolver`
+      falhava num campo que não existia, o erro não tinha onde aparecer e o
+      submit nunca disparava. O botão "Salvar nova senha" era inerte, sem
+      nenhuma mensagem. Corrigido com os dois campos via `PasswordField`
+- [x] Rate limit `reset-password` (5/hora por e-mail) em
+      `requestPasswordReset` — o envio era ilimitado, o que transformava nosso
+      Resend em canhão contra a caixa de entrada de terceiros. Ao estourar,
+      retorna o MESMO sucesso do caminho normal para não virar oráculo de
+      enumeração de contas
+- [x] `updatePassword` chama `signOut({ scope: 'others' })` — trocar a senha
+      não derrubava sessão nenhuma, então quem redefinia por suspeita de
+      invasão continuava com o invasor logado nos outros aparelhos. `others`
+      e não `global`, para preservar a sessão que redireciona ao dashboard
+- [x] `updatePassword` limpa as tentativas de `signin` após o sucesso
+- [x] `/redefinir-senha` no matcher do middleware (refresh de cookie da sessão
+      de recuperação). Continua fora de `isProtectedPath` de propósito
+- [x] `password-strength.ts` — o detector de sequência óbvia derrubava para
+      "fraca" qualquer senha contendo `12345` em qualquer posição:
+      `Kmtbvn123456` (12 caracteres, 3 classes) recebia nota pior que
+      `Xyzqwr12` (8 caracteres). Passou a medir a PROPORÇÃO do padrão sobre o
+      total, e a exigir as 4 classes para "forte" quando há padrão previsível
+
+**Entregas — senha forte no cadastro:**
+
+- [x] `lib/password-strength.ts` — `avaliarSenha` (fraca/média/forte) e
+      `gerarSenhaForte` com `crypto.getRandomValues`, alfabeto sem caracteres
+      ambíguos (`l`, `I`, `O`, `0`, `1`) porque a pessoa lê da tela para anotar
+- [x] `components/auth/password-field.tsx` — campo com mostrar/ocultar, copiar,
+      "Sugerir senha forte" e barra de força com `aria-live="polite"` (cor
+      sozinha não comunica)
+- [x] `confirmPassword` com `.refine` apontando o erro para o campo de
+      confirmação, não para o formulário
+
+**Entregas — importação de leads por CSV:**
+
+- [x] `lib/leads/csv.ts` — parser sem dependência nova: detecta separador
+      (`;` do Excel pt-BR, `,`, tab), consome BOM, respeita aspas com quebra de
+      linha dentro e casa o cabeçalho por apelido sem acento/caixa
+- [x] `parseValorBRL` resolve `R$ 1.234,56`, `1.200` (milhar) e `1234.56`
+      (decimal en) pelo tamanho do último grupo
+- [x] `importLeadsFromCsv` — teto de 512 KB e 1.000 linhas, dedupe dentro do
+      arquivo e contra os e-mails já no workspace, erro por linha em vez de
+      abortar o arquivo inteiro
+- [x] `remainingLeadSlots` em `lib/limits.ts` — `canAddLead` só responde sobre
+      UMA linha, então um CSV de 300 leads passaria por cima do teto Free
+- [x] `ImportLeadsDialog` com modelo para baixar e lista das linhas rejeitadas
+
+**Entregas — rebrand Velo Funil:**
+
+- [x] `LogoMark` redesenhado: três camadas convergentes que formam funil, V e
+      etapas do pipeline. A primeira versão (barras retas) lia como o ícone
+      genérico de filtro — descartada após comparar variantes em 64/32/16px
+- [x] Acento cyan-teal em `--primary`/`--ring`, calibrado por contraste WCAG:
+      claro `oklch(0.5 0.13 195)` (5.14 no botão), escuro `oklch(0.72 0.14 195)`
+      (8.46). O primeiro candidato do tema claro dava 4.22 e reprovava em AA
+- [x] Lockups duplicados de `(auth)/layout.tsx` e `convite/[token]/page.tsx`
+      (que usavam `KanbanSquare`) trocados pelo componente `Logo`
+- [x] `app/icon.tsx` gerado via `ImageResponse` com `runtime = 'edge'` — no
+      runtime Node o `@vercel/og` estoura `Invalid URL` no prerender
+- [x] Metadata, OG image, copy, e-mail de convite e descrição da fatura Asaas
+
+**Verificação:** `tsc --noEmit`, `next lint` e `next build` limpos. Fluxo de
+reset percorrido no browser: senhas divergentes mostram o erro no campo de
+confirmação; senhas válidas disparam o submit e chegam ao dashboard (antes o
+botão não fazia nada). Medidor conferido nos três níveis (vermelho 33% / âmbar
+66% / verde 100%) e o botão de sugestão preenche os dois campos com 16
+caracteres. Rate limit validado contra o banco real: 5 passam, a 6ª bloqueia.
+Parser de CSV testado com vírgula, ponto e vírgula, BOM, aspas com quebra de
+linha, cabeçalho inválido, duplicata, valor lixo e valor negativo.
+
+**Fora de escopo:** domínio próprio e remetente de e-mail profissional (o
+código já lê de `NEXT_PUBLIC_APP_URL`; o remetente é uma string em
+`lib/workspace/actions.ts`). Suíte de testes automatizada continua pendente da
+M16 — a causa deste bug (schema mudou, tela não) é exatamente o que um teste de
+schema pegaria. `Input` cru do login não virou `PasswordField`.
+
+**Commit final:** `fix(auth): corrige redefinição de senha e endurece o fluxo de recuperação`

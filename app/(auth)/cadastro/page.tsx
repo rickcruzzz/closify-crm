@@ -19,6 +19,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Separator } from '@/components/ui/separator'
 import { GoogleIcon } from '@/components/auth/google-icon'
+import { PasswordField } from '@/components/auth/password-field'
 import { signUpSchema, type SignUpValues } from '@/lib/validations/auth'
 import { signUp } from '@/lib/supabase/actions'
 import { signInWithGoogleClient } from '@/lib/supabase/google-auth'
@@ -31,6 +32,7 @@ export default function SignUpPage() {
   const {
     register,
     control,
+    setValue,
     handleSubmit,
     formState: { errors },
   } = useForm<SignUpValues>({
@@ -140,24 +142,43 @@ export default function SignUpPage() {
             )}
           </div>
 
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor="password">Senha</Label>
-            <Input
-              id="password"
-              type="password"
-              autoComplete="new-password"
-              placeholder="Mínimo 8 caracteres"
-              aria-invalid={!!errors.password}
-              aria-describedby={errors.password ? 'password-error' : undefined}
-              disabled={isSubmitting}
-              {...register('password')}
-            />
-            {errors.password && (
-              <p id="password-error" role="alert" className="text-destructive text-xs">
-                {errors.password.message}
-              </p>
+          <Controller
+            name="password"
+            control={control}
+            render={({ field }) => (
+              <PasswordField
+                id="password"
+                label="Senha"
+                valor={field.value ?? ''}
+                onChange={field.onChange}
+                // A senha sugerida preenche a confirmação junto: obrigar a
+                // pessoa a redigitar 16 caracteres aleatórios que ela nem
+                // escolheu só produziria erro de digitação.
+                onSugerir={(senha) =>
+                  setValue('confirmPassword', senha, { shouldValidate: true })
+                }
+                erro={errors.password?.message}
+                desabilitado={isSubmitting}
+                mostrarForca
+                permitirSugestao
+              />
             )}
-          </div>
+          />
+
+          <Controller
+            name="confirmPassword"
+            control={control}
+            render={({ field }) => (
+              <PasswordField
+                id="confirmPassword"
+                label="Confirmar senha"
+                valor={field.value ?? ''}
+                onChange={field.onChange}
+                erro={errors.confirmPassword?.message}
+                desabilitado={isSubmitting}
+              />
+            )}
+          />
 
           <div className="flex flex-col gap-1.5">
             <div className="flex items-start gap-2">

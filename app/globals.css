@@ -44,6 +44,21 @@
   --font-mono: var(--font-geist-mono);
 }
 
+/* Acento de marca do Velo Funil: cyan-teal (hue 195) sobre a base cinza.
+   Só --primary e --ring carregam cor — o resto da paleta segue acromático de
+   propósito, para o acento marcar CTA, logo e foco sem tingir a interface
+   inteira.
+
+   Os valores foram calibrados por contraste WCAG contra os tokens reais deste
+   arquivo, não escolhidos no olho. No tema claro o primeiro candidato
+   (L=0.55) dava 4.22 no botão primário e reprovava em AA; por isso o claro é
+   mais escuro que o escuro. Medições:
+
+     claro   texto sobre botão 5.14 · primary sobre fundo 5.27
+     escuro  texto sobre botão 8.46 · primary sobre fundo 8.66
+
+   Mexer no L/C exige refazer a conta — AA pede 4.5 para texto e 3.0 para
+   elemento de UI (o ring de foco). */
 :root {
   --background: oklch(1 0 0);
   --foreground: oklch(0.145 0 0);
@@ -51,8 +66,8 @@
   --card-foreground: oklch(0.145 0 0);
   --popover: oklch(1 0 0);
   --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
+  --primary: oklch(0.5 0.13 195);
+  --primary-foreground: oklch(0.99 0.01 195);
   --secondary: oklch(0.97 0 0);
   --secondary-foreground: oklch(0.205 0 0);
   --muted: oklch(0.97 0 0);
@@ -63,7 +78,9 @@
   --destructive-foreground: oklch(0.985 0 0);
   --border: oklch(0.922 0 0);
   --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
+  /* Ring de foco na cor da marca: o anel de teclado vira sinal de identidade
+     em vez de um cinza que some contra a borda. */
+  --ring: oklch(0.5 0.13 195);
   --chart-1: oklch(0.87 0 0);
   --chart-2: oklch(0.556 0 0);
   --chart-3: oklch(0.439 0 0);
@@ -87,8 +104,8 @@
   --card-foreground: oklch(0.985 0 0);
   --popover: oklch(0.205 0 0);
   --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
+  --primary: oklch(0.72 0.14 195);
+  --primary-foreground: oklch(0.16 0.02 195);
   --secondary: oklch(0.269 0 0);
   --secondary-foreground: oklch(0.985 0 0);
   --muted: oklch(0.269 0 0);
@@ -99,7 +116,7 @@
   --destructive-foreground: oklch(0.145 0 0);
   --border: oklch(1 0 0 / 10%);
   --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
+  --ring: oklch(0.72 0.14 195);
   --chart-1: oklch(0.87 0 0);
   --chart-2: oklch(0.556 0 0);
   --chart-3: oklch(0.439 0 0);

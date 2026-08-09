@@ -4,7 +4,7 @@ import * as React from 'react'
 import Link from 'next/link'
 import { useRouter, useSearchParams, usePathname } from 'next/navigation'
 import { toast } from 'sonner'
-import { MoreHorizontal, Plus, Search, SearchX, Users } from 'lucide-react'
+import { MoreHorizontal, Plus, Search, SearchX, Upload, Users } from 'lucide-react'
 
 import { PageHeader } from '@/components/layout/page-header'
 import { Button } from '@/components/ui/button'
@@ -34,6 +34,7 @@ import {
 import { LeadStatusBadge } from '@/components/leads/lead-status-badge'
 import { LeadFormDialog } from '@/components/leads/lead-form-dialog'
 import { DeleteLeadDialog } from '@/components/leads/delete-lead-dialog'
+import { ImportLeadsDialog } from '@/components/leads/import-leads-dialog'
 import { createLead, deleteLead, updateLead } from '@/lib/leads/actions'
 import type { LeadRow, WorkspaceMember } from '@/lib/leads/queries'
 import { leadStatusLabels, type LeadStatus } from '@/lib/leads/types'
@@ -68,6 +69,7 @@ export function LeadsPageClient({
   const [editingLead, setEditingLead] = React.useState<LeadRow | undefined>()
   const [deleteOpen, setDeleteOpen] = React.useState(false)
   const [deletingLead, setDeletingLead] = React.useState<LeadRow | undefined>()
+  const [importOpen, setImportOpen] = React.useState(false)
 
   function updateFilters(next: {
     search?: string
@@ -159,11 +161,15 @@ export function LeadsPageClient({
     <EmptyState
       icon={Users}
       title="Nenhum lead ainda"
-      description="Cadastre seu primeiro lead para começar a acompanhar oportunidades no funil."
+      description="Cadastre seu primeiro lead ou traga sua planilha atual para começar a acompanhar oportunidades no funil."
     >
       <Button onClick={openCreateForm}>
         <Plus className="size-4" />
         Novo lead
+      </Button>
+      <Button variant="outline" onClick={() => setImportOpen(true)}>
+        <Upload className="size-4" />
+        Importar CSV
       </Button>
     </EmptyState>
   )
@@ -235,10 +241,16 @@ export function LeadsPageClient({
           </Select>
         </form>
 
-        <Button onClick={openCreateForm} className="shrink-0">
-          <Plus className="size-4" />
-          Novo lead
-        </Button>
+        <div className="flex shrink-0 gap-2">
+          <Button variant="outline" onClick={() => setImportOpen(true)}>
+            <Upload className="size-4" />
+            Importar CSV
+          </Button>
+          <Button onClick={openCreateForm}>
+            <Plus className="size-4" />
+            Novo lead
+          </Button>
+        </div>
       </div>
 
       {/* Abaixo de `lg` a tabela de 7 colunas viraria um scroll horizontal
@@ -352,6 +364,12 @@ export function LeadsPageClient({
         lead={editingLead}
         members={members}
         onSave={handleSave}
+      />
+
+      <ImportLeadsDialog
+        open={importOpen}
+        onOpenChange={setImportOpen}
+        onImported={() => router.refresh()}
       />
 
       <DeleteLeadDialog

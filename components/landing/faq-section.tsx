@@ -14,7 +14,7 @@ const faqs = [
   },
   {
     q: 'Preciso instalar alguma coisa?',
-    a: 'Não. O Closify roda inteiro no navegador, no computador ou no celular. Você cria a conta e já começa a usar.',
+    a: 'Não. O Velo Funil roda inteiro no navegador, no computador ou no celular. Você cria a conta e já começa a usar.',
   },
   {
     q: 'Consigo trazer os leads da minha planilha?',
