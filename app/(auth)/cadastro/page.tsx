@@ -32,7 +32,6 @@ export default function SignUpPage() {
   const {
     register,
     control,
-    setValue,
     handleSubmit,
     formState: { errors },
   } = useForm<SignUpValues>({
@@ -151,16 +150,13 @@ export default function SignUpPage() {
                 label="Senha"
                 valor={field.value ?? ''}
                 onChange={field.onChange}
-                // A senha sugerida preenche a confirmação junto: obrigar a
-                // pessoa a redigitar 16 caracteres aleatórios que ela nem
-                // escolheu só produziria erro de digitação.
-                onSugerir={(senha) =>
-                  setValue('confirmPassword', senha, { shouldValidate: true })
-                }
                 erro={errors.password?.message}
                 desabilitado={isSubmitting}
+                // Sem `permitirSugestao` aqui: o botão dividia a atenção com o
+                // rótulo do campo no momento em que a pessoa está decidindo se
+                // cria a conta. O medidor de força fica, porque orienta a
+                // escolha sem pedir nenhuma ação.
                 mostrarForca
-                permitirSugestao
               />
             )}
           />
@@ -181,13 +177,17 @@ export default function SignUpPage() {
           />
 
           <div className="flex flex-col gap-1.5">
-            <div className="flex items-start gap-2">
+            {/* `mt-0.5` no checkbox: com o texto em `leading-relaxed` e em duas
+                linhas, alinhar pelo topo puro deixaria o quadrado acima da
+                primeira linha. */}
+            <div className="flex items-start gap-2.5">
               <Controller
                 name="terms"
                 control={control}
                 render={({ field }) => (
                   <Checkbox
                     id="terms"
+                    className="mt-0.5 shrink-0"
                     checked={field.value === true}
                     onCheckedChange={(checked) => field.onChange(checked === true)}
                     aria-invalid={!!errors.terms}
@@ -199,8 +199,17 @@ export default function SignUpPage() {
               {/* Os dois documentos precisam ser alcançáveis daqui: aceite de
                   texto que a pessoa não consegue abrir é frágil como prova de
                   consentimento. `target="_blank"` para não perder o formulário
-                  já preenchido. */}
-              <Label htmlFor="terms" className="text-muted-foreground font-normal">
+                  já preenchido.
+
+                  `block` anula o `flex items-center gap-2` que o Label do
+                  shadcn traz por padrão: em modo flex cada trecho ("Aceito
+                  os", cada link, "e a") virava um item separado, quebrando a
+                  frase em blocos empilhados e desalinhados. Como bloco, o
+                  texto volta a fluir como frase corrida. */}
+              <Label
+                htmlFor="terms"
+                className="text-muted-foreground block text-sm leading-relaxed font-normal"
+              >
                 Aceito os{' '}
                 <Link
                   href="/termos"
