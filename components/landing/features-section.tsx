@@ -4,6 +4,7 @@ import {
   ListChecks,
   Building2,
   Bell,
+  FileSpreadsheet,
   ShieldCheck,
   type LucideIcon,
 } from 'lucide-react'
@@ -46,6 +47,21 @@ const features: Feature[] = [
     delay: 90,
   },
   {
+    // A importação existia desde antes e não aparecia na landing — é a
+    // resposta para "vou ter que digitar tudo de novo?", a objeção que mais
+    // trava a troca da planilha.
+    title: 'Importação de planilha',
+    description:
+      'Traga seus contatos de uma vez com um arquivo .csv, sem redigitar nada. Duplicados são ignorados sozinhos.',
+    icon: FileSpreadsheet,
+    accent: {
+      text: 'text-cyan-500 dark:text-cyan-400',
+      bg: 'bg-cyan-500/10 dark:bg-cyan-400/10',
+      hover: 'pointer:hover:bg-cyan-500/[0.04] dark:pointer:hover:bg-cyan-400/[0.04]',
+    },
+    delay: 180,
+  },
+  {
     title: 'Dashboard de métricas',
     description:
       'Cards e gráfico de funil para acompanhar conversão e valor do pipeline.',
@@ -56,7 +72,7 @@ const features: Feature[] = [
       hover:
         'pointer:hover:bg-emerald-500/[0.04] dark:pointer:hover:bg-emerald-400/[0.04]',
     },
-    delay: 180,
+    delay: 0,
   },
   {
     title: 'Multi-empresa',
@@ -67,7 +83,7 @@ const features: Feature[] = [
       bg: 'bg-orange-500/10 dark:bg-orange-400/10',
       hover: 'pointer:hover:bg-orange-500/[0.04] dark:pointer:hover:bg-orange-400/[0.04]',
     },
-    delay: 0,
+    delay: 90,
   },
   {
     title: 'Notificações e prazos',
@@ -78,7 +94,7 @@ const features: Feature[] = [
       bg: 'bg-amber-500/10 dark:bg-amber-400/10',
       hover: 'pointer:hover:bg-amber-500/[0.04] dark:pointer:hover:bg-amber-400/[0.04]',
     },
-    delay: 90,
+    delay: 180,
   },
   {
     title: 'Permissões por papel',
@@ -90,7 +106,7 @@ const features: Feature[] = [
       bg: 'bg-red-500/10 dark:bg-red-400/10',
       hover: 'pointer:hover:bg-red-500/[0.04] dark:pointer:hover:bg-red-400/[0.04]',
     },
-    delay: 180,
+    delay: 0,
   },
 ]
 

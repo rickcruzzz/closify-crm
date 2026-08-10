@@ -3,6 +3,7 @@ import type { Metadata } from 'next'
 import { PublicNavbar } from '@/components/layout/public-navbar'
 import { HeroSection } from '@/components/landing/hero-section'
 import { StatsSection } from '@/components/landing/stats-section'
+import { HowItWorksSection } from '@/components/landing/how-it-works-section'
 import { FeaturesSection } from '@/components/landing/features-section'
 import { PricingSection } from '@/components/landing/pricing-section'
 import { FaqSection } from '@/components/landing/faq-section'
@@ -32,6 +33,11 @@ export default function Home() {
       <main id="conteudo" className="flex-1">
         <HeroSection />
         <StatsSection />
+        {/* "Como funciona" vem antes das funcionalidades de propósito: quem
+            controla vendas em planilha precisa ver o caminho (trago meus
+            contatos → arrasto → acompanho) antes de uma lista de recursos, que
+            só significa algo para quem já usou CRM. */}
+        <HowItWorksSection />
         <FeaturesSection />
         <PricingSection />
         {/* A FAQ fica entre preço e CTA final de propósito: é onde a objeção
