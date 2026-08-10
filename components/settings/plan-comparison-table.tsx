@@ -2,9 +2,16 @@ import { Check, Zap } from 'lucide-react'
 
 import { Badge } from '@/components/ui/badge'
 import { cn } from '@/lib/utils'
-import { FREE_LEAD_LIMIT, FREE_MEMBER_LIMIT, FREE_PLAN_PRICE, PRO_PLAN_PRICE } from '@/lib/plans'
+import {
+  FREE_LEAD_LIMIT,
+  FREE_MEMBER_LIMIT,
+  FREE_PLAN_PRICE,
+  FREE_WORKSPACE_LIMIT,
+  PRO_PLAN_PRICE,
+} from '@/lib/plans'
 
 const FREE_FEATURES = [
+  `${FREE_WORKSPACE_LIMIT} empresa`,
   `Até ${FREE_MEMBER_LIMIT} colaboradores`,
   `Até ${FREE_LEAD_LIMIT} leads`,
   'Pipeline Kanban',
@@ -13,6 +20,7 @@ const FREE_FEATURES = [
 ]
 
 const PRO_FEATURES = [
+  'Várias empresas no mesmo login',
   'Colaboradores ilimitados',
   'Leads ilimitados',
   'Pipeline Kanban',

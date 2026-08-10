@@ -88,7 +88,9 @@ Workspaces separados por empresa ou cliente. Convite de colaboradores por e-mail
 
 ### Monetização (Asaas)
 
-Plano Free: até 2 colaboradores e 50 leads.
+Plano Free: 1 empresa, até 2 colaboradores e 50 leads.
+Multi-empresa é recurso do Pro — sem esse limite, o teto de colaboradores não
+segura nada: bastava criar uma empresa nova para cada dupla.
 Plano Pro: colaboradores e leads ilimitados por R$49/mês.
 Cliente e assinatura criados via API do Asaas, com cobrança recorrente e webhook para ativação automática.
 

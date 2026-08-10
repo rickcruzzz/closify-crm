@@ -11,7 +11,7 @@ import { FREE_LEAD_LIMIT, FREE_MEMBER_LIMIT, PRO_PLAN_PRICE } from '@/lib/plans'
 const faqs = [
   {
     q: 'O plano grátis é grátis mesmo?',
-    a: `É. Sem cartão de crédito, sem prazo para expirar. O plano Free cobre até ${FREE_MEMBER_LIMIT} colaboradores e ${FREE_LEAD_LIMIT} leads. Se a sua equipe passar disso, aí sim faz sentido o Pro.`,
+    a: `É. Sem cartão de crédito, sem prazo para expirar. O plano Free cobre 1 empresa, com até ${FREE_MEMBER_LIMIT} colaboradores e ${FREE_LEAD_LIMIT} leads. Se a sua equipe crescer ou você precisar separar mais de uma empresa, aí sim faz sentido o Pro.`,
   },
   {
     q: 'Preciso instalar alguma coisa?',

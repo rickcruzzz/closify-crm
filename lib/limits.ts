@@ -1,5 +1,9 @@
 import { createClient } from '@/lib/supabase/server'
-import { FREE_LEAD_LIMIT, FREE_MEMBER_LIMIT } from '@/lib/plans'
+import {
+  FREE_LEAD_LIMIT,
+  FREE_MEMBER_LIMIT,
+  FREE_WORKSPACE_LIMIT,
+} from '@/lib/plans'
 
 type LimitCheck = { allowed: boolean; reason?: string }
 
@@ -82,6 +86,52 @@ export async function canAddMember(workspaceId: string): Promise<LimitCheck> {
     return {
       allowed: false,
       reason: `Plano Free permite no máximo ${FREE_MEMBER_LIMIT} membros. Faça upgrade para o Pro para convidar mais.`,
+    }
+  }
+
+  return { allowed: true }
+}
+
+/**
+ * Pode criar mais uma empresa?
+ *
+ * Diferente dos outros limites, este é POR USUÁRIO, não por workspace: o que
+ * se está contendo é justamente a criação de workspaces novos para escapar do
+ * teto de colaboradores.
+ *
+ * A conta é feita sobre workspaces onde a pessoa é ADMIN — participar de uma
+ * empresa a convite de outro não deve consumir a vaga dela, senão quem aceita
+ * dois convites fica impedido de ter a própria empresa.
+ *
+ * Quem já passou do limite antes desta regra existir mantém o que criou: a
+ * checagem só barra criações novas.
+ */
+export async function canAddWorkspace(userId: string): Promise<LimitCheck> {
+  const supabase = await createClient()
+
+  const { data: vinculos } = await supabase
+    .from('workspace_members')
+    .select('workspace_id, role')
+    .eq('user_id', userId)
+    .eq('role', 'admin')
+
+  const ids = (vinculos ?? []).map((v) => v.workspace_id)
+  if (ids.length === 0) return { allowed: true }
+
+  // Uma empresa Pro libera a criação: o plano é do workspace, e quem paga por
+  // qualquer um deles tem direito a multi-empresa.
+  const { data: workspaces } = await supabase
+    .from('workspaces')
+    .select('plan')
+    .in('id', ids)
+
+  const temPro = (workspaces ?? []).some((w) => w.plan === 'pro')
+  if (temPro) return { allowed: true }
+
+  if (ids.length >= FREE_WORKSPACE_LIMIT) {
+    return {
+      allowed: false,
+      reason: `O plano Free inclui ${FREE_WORKSPACE_LIMIT} empresa. Faça upgrade para o Pro para gerenciar várias.`,
     }
   }
 

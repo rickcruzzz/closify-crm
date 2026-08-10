@@ -2,9 +2,10 @@
 
 import * as React from 'react'
 import { useRouter } from 'next/navigation'
-import { Building2, ChevronsUpDown, Plus } from 'lucide-react'
+import { Building2, ChevronsUpDown, Plus, Zap } from 'lucide-react'
 
 import { Badge } from '@/components/ui/badge'
+import { FREE_WORKSPACE_LIMIT } from '@/lib/plans'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -25,6 +26,13 @@ export function WorkspaceSwitcher({ workspaces }: { workspaces: WorkspaceSummary
   const router = useRouter()
   const [activeId, setActiveId] = React.useState(workspaces[0]?.id)
   const active = workspaces.find((w) => w.id === activeId) ?? workspaces[0]
+
+  // Espelha `canAddWorkspace` no servidor: uma empresa Pro libera multi-empresa,
+  // e quem já passou do limite antes da regra existir continua enxergando as
+  // que criou — só não cria mais. Isto é conveniência de interface; quem
+  // decide de verdade é a RPC no banco.
+  const temPro = workspaces.some((w) => w.plan === 'pro')
+  const podeCriarEmpresa = temPro || workspaces.length < FREE_WORKSPACE_LIMIT
 
   if (!active) {
     return null
@@ -60,10 +68,29 @@ export function WorkspaceSwitcher({ workspaces }: { workspaces: WorkspaceSummary
           </DropdownMenuItem>
         ))}
         <DropdownMenuSeparator />
-        <DropdownMenuItem className="gap-2" onClick={() => router.push('/onboarding')}>
-          <Plus className="size-4" />
-          Nova empresa
-        </DropdownMenuItem>
+        {/* No Free o limite é de uma empresa. Mostrar "Nova empresa" para quem
+            não pode criar leva a pessoa a preencher o formulário inteiro e só
+            então tomar o erro — melhor dizer o motivo aqui e mandar direto
+            para a comparação de planos. */}
+        {podeCriarEmpresa ? (
+          <DropdownMenuItem className="gap-2" onClick={() => router.push('/onboarding')}>
+            <Plus className="size-4" />
+            Nova empresa
+          </DropdownMenuItem>
+        ) : (
+          <DropdownMenuItem
+            className="gap-2"
+            onClick={() => router.push('/settings/billing')}
+          >
+            <Zap className="size-4" />
+            <span className="flex flex-col">
+              <span>Nova empresa</span>
+              <span className="text-muted-foreground text-xs">
+                Disponível no plano Pro
+              </span>
+            </span>
+          </DropdownMenuItem>
+        )}
       </DropdownMenuContent>
     </DropdownMenu>
   )

@@ -13,6 +13,8 @@ import {
 } from '@/lib/validations/auth'
 import { appUrl } from '@/lib/app-url'
 import { excedeuLimite, limparTentativas } from '@/lib/rate-limit'
+import { canAddWorkspace } from '@/lib/limits'
+import { FREE_WORKSPACE_LIMIT } from '@/lib/plans'
 
 export async function signIn(values: unknown) {
   const parsed = loginSchema.safeParse(values)
@@ -266,6 +268,15 @@ export async function createWorkspace(values: unknown) {
     redirect('/login')
   }
 
+  // Sem este teto, o limite de 2 colaboradores não segurava nada: bastava
+  // criar uma empresa nova para cada dupla e ter equipe ilimitada de graça.
+  // A RPC repete a checagem no banco — esta aqui existe para dar mensagem
+  // clara antes de chegar lá.
+  const limite = await canAddWorkspace(user.id)
+  if (!limite.allowed) {
+    return { error: limite.reason }
+  }
+
   // create_workspace_with_admin roda os dois inserts (workspace + membro
   // admin) numa única transação — sem isso, uma falha no segundo insert
   // deixava um workspace órfão sem membro, e o retry do usuário acumulava
@@ -276,6 +287,13 @@ export async function createWorkspace(values: unknown) {
 
   if (rpcError) {
     console.error('create_workspace_with_admin falhou', rpcError)
+    // A RPC repete a checagem de limite e levanta essa exceção de propósito —
+    // é mensagem segura de mostrar, ao contrário do texto cru do Postgres.
+    if (rpcError.message.includes('O plano Free inclui')) {
+      return {
+        error: `O plano Free inclui ${FREE_WORKSPACE_LIMIT} empresa. Faça upgrade para o Pro para gerenciar várias.`,
+      }
+    }
     return { error: 'Não foi possível criar o workspace.' }
   }
 

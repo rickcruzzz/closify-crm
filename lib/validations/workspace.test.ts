@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest'
 
 import { inviteMemberSchema, updateWorkspaceNameSchema, uuidSchema } from './workspace'
+import {
+  FREE_LEAD_LIMIT,
+  FREE_MEMBER_LIMIT,
+  FREE_WORKSPACE_LIMIT,
+} from '@/lib/plans'
 
 /**
  * Regressão do convite que não enviava.
@@ -65,5 +70,21 @@ describe('uuidSchema', () => {
     // runtime, e mandar string arbitrária ao Postgres devolve erro de cast cru.
     expect(uuidSchema.safeParse('11111111-1111-4111-8111-111111111111').success).toBe(true)
     expect(uuidSchema.safeParse('abc').success).toBe(false)
+  })
+})
+
+describe('limites do plano Free', () => {
+  it('mantém 1 empresa, 2 colaboradores e 50 leads', () => {
+    // O limite de workspaces não existia: o teto de colaboradores era por
+    // empresa, então bastava criar uma empresa nova para cada dupla e ter
+    // equipe ilimitada de graça. Um usuário de produção já tinha 4 workspaces
+    // quando isto foi detectado.
+    //
+    // Se algum destes números mudar, a mensagem da RPC
+    // `create_workspace_with_admin` (migration 0018) precisa mudar junto — ela
+    // tem o texto embutido e a Server Action casa por substring.
+    expect(FREE_WORKSPACE_LIMIT).toBe(1)
+    expect(FREE_MEMBER_LIMIT).toBe(2)
+    expect(FREE_LEAD_LIMIT).toBe(50)
   })
 })
