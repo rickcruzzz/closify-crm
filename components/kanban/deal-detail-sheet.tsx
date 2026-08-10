@@ -1,5 +1,20 @@
+'use client'
+
+import * as React from 'react'
+import { toast } from 'sonner'
+import { Loader2, Trash2 } from 'lucide-react'
+
 import { dealStageLabels, dealStages, type DealStage } from '@/lib/deals/types'
 import type { DealRow, DealLeadRow } from '@/lib/deals/queries'
+import { deleteDeal } from '@/lib/deals/actions'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
 import {
   Sheet,
   SheetClose,
@@ -44,13 +59,36 @@ export function DealDetailSheet({
   open,
   onOpenChange,
   onStageChange,
+  onDeleted,
 }: {
   deal: DealRow | undefined
   lead: DealLeadRow | undefined
   open: boolean
   onOpenChange: (open: boolean) => void
   onStageChange: (dealId: string, stage: DealStage) => void
+  /** Avisa o board para tirar o card sem esperar o refresh do servidor. */
+  onDeleted: (dealId: string) => void
 }) {
+  const [confirmando, setConfirmando] = React.useState(false)
+  const [excluindo, setExcluindo] = React.useState(false)
+
+  async function handleExcluir() {
+    if (!deal) return
+    setExcluindo(true)
+    const r = await deleteDeal(deal.id)
+    setExcluindo(false)
+
+    if (r?.error) {
+      toast.error(r.error)
+      return
+    }
+
+    toast.success('Negócio excluído.')
+    setConfirmando(false)
+    onOpenChange(false)
+    onDeleted(deal.id)
+  }
+
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent>
@@ -121,12 +159,54 @@ export function DealDetailSheet({
               </div>
             </div>
 
-            <SheetFooter>
+            {/* A exclusão vive aqui, e não no card do Kanban: no card ela
+                ficaria a um clique de distância do arrastar, e apagar negócio
+                por engano não tem desfazer. */}
+            <SheetFooter className="sm:justify-between">
+              <Button
+                variant="ghost"
+                className="text-muted-foreground hover:text-destructive"
+                disabled={excluindo}
+                onClick={() => setConfirmando(true)}
+              >
+                {excluindo ? (
+                  <Loader2 className="size-4 animate-spin" />
+                ) : (
+                  <Trash2 className="size-4" />
+                )}
+                Excluir negócio
+              </Button>
               <SheetClose render={<Button variant="outline" />}>Fechar</SheetClose>
             </SheetFooter>
           </>
         )}
       </SheetContent>
+
+      <Dialog open={confirmando} onOpenChange={setConfirmando}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Excluir este negócio?</DialogTitle>
+            <DialogDescription>
+              {deal?.title
+                ? `"${deal.title}" sai do funil em definitivo. O lead vinculado continua cadastrado.`
+                : 'O negócio sai do funil em definitivo.'}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="sm:justify-between">
+            <Button
+              variant="ghost"
+              onClick={() => setConfirmando(false)}
+              disabled={excluindo}
+            >
+              Cancelar
+            </Button>
+            <Button variant="destructive" onClick={handleExcluir} disabled={excluindo}>
+              {excluindo && <Loader2 className="size-4 animate-spin" />}
+              Excluir
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Sheet>
   )
 }

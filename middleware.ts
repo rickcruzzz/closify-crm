@@ -20,6 +20,7 @@ export const config = {
     '/kanban/:path*',
     '/leads/:path*',
     '/settings/:path*',
+    '/perfil',
     '/onboarding/:path*',
     '/bem-vindo',
     '/login',

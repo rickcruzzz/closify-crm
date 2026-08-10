@@ -42,13 +42,13 @@ export function UserMenu({ currentUser }: { currentUser: CurrentUser }) {
         <DropdownMenuSeparator />
         {/* `render` em vez de `onClick` + `router.push`: assim o item vira uma
             âncora de verdade, que abre em nova aba com clique do meio e é
-            anunciada como link por leitor de tela. Sem isso os dois itens não
-            tinham destino nenhum — o menu fechava e nada acontecia.
+            anunciada como link por leitor de tela.
 
-            Ambos apontam para `/settings` porque não existe rota de perfil: o
-            que a pessoa procura ali (nome, workspace, plano, sair da conta)
-            está tudo em Configurações. */}
-        <DropdownMenuItem className="gap-2" render={<Link href="/settings" />}>
+            Destinos separados pelo dono do dado: `/perfil` é da pessoa (nome,
+            e-mail, senha), `/settings` é da empresa (workspace, colaboradores,
+            plano). Antes os dois apontavam para cá porque não existia página de
+            perfil — o menu oferecia dois caminhos e entregava um. */}
+        <DropdownMenuItem className="gap-2" render={<Link href="/perfil" />}>
           <User className="size-4" />
           Meu perfil
         </DropdownMenuItem>

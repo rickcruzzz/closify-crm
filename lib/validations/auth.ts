@@ -65,3 +65,13 @@ export const definirSenhaSchema = z
   })
 
 export type DefinirSenhaValues = z.infer<typeof definirSenhaSchema>
+
+// O nome vai para `user_metadata.name`, que é de onde
+// `get_workspace_member_names` lê o nome exibido na lista de colaboradores e
+// como autor de atividade — por isso o mínimo de 2 caracteres, igual ao
+// cadastro: um nome de uma letra deixaria a timeline ilegível.
+export const perfilSchema = z.object({
+  name: z.string().trim().min(2, 'Informe seu nome completo.').max(80, 'Nome muito longo.'),
+})
+
+export type PerfilValues = z.infer<typeof perfilSchema>

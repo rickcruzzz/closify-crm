@@ -39,7 +39,7 @@ export default async function SettingsPage() {
         plan={workspace?.plan ?? 'free'}
       />
 
-      <PlanCard plan={workspace?.plan ?? 'free'} />
+      <PlanCard plan={workspace?.plan ?? 'free'} isAdmin={isAdmin} />
 
       <DeleteAccountCard workspacesQueSeraoApagados={workspacesQueSeraoApagados} />
     </div>

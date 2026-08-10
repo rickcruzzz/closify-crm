@@ -262,6 +262,13 @@ export function KanbanBoard({
         open={!!selectedDealId}
         onOpenChange={(open) => !open && setSelectedDealId(null)}
         onStageChange={handleStageChange}
+        // Tira o card na hora. A action já revalida no servidor, mas esperar o
+        // round-trip deixaria o negócio visível no funil por um instante
+        // depois de a pessoa confirmar a exclusão.
+        onDeleted={(dealId) => {
+          setDeals((atual) => atual.filter((d) => d.id !== dealId))
+          setSelectedDealId(null)
+        }}
       />
 
       <DealFormDialog

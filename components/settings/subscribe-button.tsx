@@ -22,8 +22,17 @@ import { checkoutSchema, type CheckoutValues } from '@/lib/validations/billing'
 import { PRO_PLAN_PRICE } from '@/lib/plans'
 import { formatarCpfCnpj } from '@/lib/documento-br'
 import { CONTROLADOR } from '@/lib/legal'
+import { cn } from '@/lib/utils'
 
-export function SubscribeButton() {
+/**
+ * Botão que abre o checkout do Asaas.
+ *
+ * `className` existe para o mesmo componente servir na tela de Cobrança (onde
+ * o botão é `w-fit`) e no card de Plano em Configurações (onde ocupa a
+ * largura toda no celular). Duplicar o componente para mudar uma classe
+ * significaria manter duas cópias da validação de CPF e do fluxo de checkout.
+ */
+export function SubscribeButton({ className }: { className?: string }) {
   const [dialogOpen, setDialogOpen] = React.useState(false)
   const [isSubmitting, setIsSubmitting] = React.useState(false)
 
@@ -49,7 +58,7 @@ export function SubscribeButton() {
 
   return (
     <>
-      <Button onClick={() => setDialogOpen(true)} className="w-fit">
+      <Button onClick={() => setDialogOpen(true)} className={cn('w-fit', className)}>
         <Zap className="size-4" />
         Assinar Pro por R$ {PRO_PLAN_PRICE}/mês
       </Button>

@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache'
 
 import { createClient } from '@/lib/supabase/server'
 import { dealSchema } from '@/lib/validations/deal'
+import { uuidSchema } from '@/lib/validations/workspace'
 import { dealStages, type DealStage } from '@/lib/deals/types'
 
 async function getActiveWorkspaceId(supabase: Awaited<ReturnType<typeof createClient>>) {
@@ -118,6 +119,45 @@ export async function updateDealStage(dealId: string, stage: DealStage) {
   if (error) {
     console.error('updateDealStage falhou', error)
     return { error: 'Não foi possível mover o negócio.' }
+  }
+
+  revalidatePath('/kanban')
+  revalidatePath('/dashboard')
+  return { success: true }
+}
+
+/**
+ * Exclui um negócio do workspace ativo.
+ *
+ * Faltava: até aqui um negócio criado por engano só podia mudar de etapa —
+ * ficava no funil para sempre, inflando o valor do pipeline no dashboard.
+ *
+ * `.eq('workspace_id')` junto do `.eq('id')` não é redundância com a RLS: a
+ * policy garante que ninguém apague de outra empresa, e esta cláusula garante
+ * que a exclusão aconteça no workspace ATIVO da sessão, para quem participa de
+ * mais de um.
+ */
+export async function deleteDeal(dealId: unknown) {
+  const parsed = uuidSchema.safeParse(dealId)
+  if (!parsed.success) {
+    return { error: 'Negócio inválido.' }
+  }
+
+  const supabase = await createClient()
+  const workspaceId = await getActiveWorkspaceId(supabase)
+  if (!workspaceId) {
+    return { error: 'Workspace não encontrado.' }
+  }
+
+  const { error } = await supabase
+    .from('deals')
+    .delete()
+    .eq('id', parsed.data)
+    .eq('workspace_id', workspaceId)
+
+  if (error) {
+    console.error('deleteDeal falhou', error)
+    return { error: 'Não foi possível excluir o negócio.' }
   }
 
   revalidatePath('/kanban')

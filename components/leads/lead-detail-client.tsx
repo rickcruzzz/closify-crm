@@ -32,6 +32,9 @@ type ActivityRow = {
   type: ActivityType
   description: string
   created_at: string
+  // `author_id` decide quem pode editar o registro; a timeline compara com o
+  // usuário da sessão.
+  author_id: string | null
   author_name: string | null
 }
 
@@ -39,10 +42,14 @@ export function LeadDetailClient({
   lead,
   activities,
   members,
+  currentUserId,
+  isAdmin,
 }: {
   lead: LeadRow
   activities: ActivityRow[]
   members: WorkspaceMember[]
+  currentUserId: string
+  isAdmin: boolean
 }) {
   const router = useRouter()
   const [formOpen, setFormOpen] = React.useState(false)
@@ -160,7 +167,11 @@ export function LeadDetailClient({
             </Button>
           </CardHeader>
           <CardContent>
-            <ActivityTimeline activities={activities} />
+            <ActivityTimeline
+              activities={activities}
+              currentUserId={currentUserId}
+              isAdmin={isAdmin}
+            />
           </CardContent>
         </Card>
       </div>

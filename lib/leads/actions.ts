@@ -5,6 +5,7 @@ import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 import { csvLeadSchema, leadSchema, type CsvLeadValues } from '@/lib/validations/lead'
 import { activitySchema } from '@/lib/validations/activity'
+import { uuidSchema } from '@/lib/validations/workspace'
 import { canAddLead, remainingLeadSlots } from '@/lib/limits'
 import { CSV_MAX_BYTES, parseCsvLeads } from '@/lib/leads/csv'
 import { FREE_LEAD_LIMIT } from '@/lib/plans'
@@ -391,5 +392,123 @@ export async function deleteLead(leadId: string) {
   }
 
   revalidatePath('/leads')
+  return { success: true }
+}
+
+/**
+ * Confere se a pessoa pode mexer numa atividade: precisa ser o autor dela ou
+ * admin do workspace.
+ *
+ * A RLS de `activities` permite update/delete a qualquer membro do workspace —
+ * é o isolamento entre EMPRESAS, não entre pessoas da mesma empresa. Sem esta
+ * checagem, um colaborador poderia reescrever o registro de ligação feito por
+ * outro, e a timeline deixaria de ser prova do que aconteceu.
+ */
+async function podeEditarAtividade(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  workspaceId: string,
+  activityId: string,
+  userId: string,
+) {
+  const { data: atividade } = await supabase
+    .from('activities')
+    .select('author_id')
+    .eq('id', activityId)
+    .eq('workspace_id', workspaceId)
+    .maybeSingle()
+
+  if (!atividade) return { ok: false as const, error: 'Atividade não encontrada.' }
+  if (atividade.author_id === userId) return { ok: true as const }
+
+  const { data: isAdmin } = await supabase.rpc('is_workspace_admin', {
+    target_workspace_id: workspaceId,
+  })
+  if (isAdmin) return { ok: true as const }
+
+  return {
+    ok: false as const,
+    error: 'Só o autor da atividade ou um administrador pode alterá-la.',
+  }
+}
+
+export async function updateActivity(activityId: unknown, values: unknown) {
+  const parsedId = uuidSchema.safeParse(activityId)
+  if (!parsedId.success) {
+    return { error: 'Atividade inválida.' }
+  }
+
+  const parsed = activitySchema.safeParse(values)
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0]?.message ?? 'Dados inválidos.' }
+  }
+
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) return { error: 'Sessão expirada.' }
+
+  const workspaceId = await getActiveWorkspaceId(supabase)
+  if (!workspaceId) return { error: 'Workspace não encontrado.' }
+
+  const permissao = await podeEditarAtividade(supabase, workspaceId, parsedId.data, user.id)
+  if (!permissao.ok) return { error: permissao.error }
+
+  const { data: atualizada, error } = await supabase
+    .from('activities')
+    .update({ type: parsed.data.type, description: parsed.data.description })
+    .eq('id', parsedId.data)
+    .eq('workspace_id', workspaceId)
+    .select('lead_id')
+    .single()
+
+  if (error) {
+    console.error('updateActivity falhou', error)
+    return { error: 'Não foi possível atualizar a atividade.' }
+  }
+
+  revalidatePath(`/leads/${atualizada.lead_id}`)
+  return { success: true }
+}
+
+export async function deleteActivity(activityId: unknown) {
+  const parsedId = uuidSchema.safeParse(activityId)
+  if (!parsedId.success) {
+    return { error: 'Atividade inválida.' }
+  }
+
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) return { error: 'Sessão expirada.' }
+
+  const workspaceId = await getActiveWorkspaceId(supabase)
+  if (!workspaceId) return { error: 'Workspace não encontrado.' }
+
+  const permissao = await podeEditarAtividade(supabase, workspaceId, parsedId.data, user.id)
+  if (!permissao.ok) return { error: permissao.error }
+
+  // Lê o lead antes de apagar: depois do delete não há linha de onde tirar o
+  // id para revalidar a página certa.
+  const { data: alvo } = await supabase
+    .from('activities')
+    .select('lead_id')
+    .eq('id', parsedId.data)
+    .eq('workspace_id', workspaceId)
+    .maybeSingle()
+
+  const { error } = await supabase
+    .from('activities')
+    .delete()
+    .eq('id', parsedId.data)
+    .eq('workspace_id', workspaceId)
+
+  if (error) {
+    console.error('deleteActivity falhou', error)
+    return { error: 'Não foi possível excluir a atividade.' }
+  }
+
+  if (alvo?.lead_id) revalidatePath(`/leads/${alvo.lead_id}`)
   return { success: true }
 }

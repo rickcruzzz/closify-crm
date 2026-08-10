@@ -2,6 +2,7 @@ import { FileText, History, Mail, Phone, Users } from 'lucide-react'
 
 import { cn } from '@/lib/utils'
 import { EmptyState } from '@/components/ui/empty-state'
+import { ActivityActions } from '@/components/leads/activity-actions'
 import type { ActivityType } from '@/lib/leads/types'
 
 type ActivityRow = {
@@ -9,6 +10,7 @@ type ActivityRow = {
   type: ActivityType
   description: string
   created_at: string
+  author_id: string | null
   author_name: string | null
 }
 
@@ -31,7 +33,16 @@ const dateTimeFormatter = new Intl.DateTimeFormat('pt-BR', {
   timeStyle: 'short',
 })
 
-export function ActivityTimeline({ activities }: { activities: ActivityRow[] }) {
+export function ActivityTimeline({
+  activities,
+  currentUserId,
+  isAdmin,
+}: {
+  activities: ActivityRow[]
+  currentUserId: string
+  /** Admin corrige registro de qualquer membro; os demais, só o próprio. */
+  isAdmin: boolean
+}) {
   if (activities.length === 0) {
     return (
       <EmptyState
@@ -64,9 +75,17 @@ export function ActivityTimeline({ activities }: { activities: ActivityRow[] }) 
             <div className="flex flex-1 flex-col gap-0.5 pb-1">
               <div className="flex items-center justify-between gap-2">
                 <span className="text-sm font-medium">{config.label}</span>
-                <span className="text-muted-foreground text-xs whitespace-nowrap">
-                  {dateTimeFormatter.format(new Date(activity.created_at))}
-                </span>
+                <div className="flex items-center gap-1">
+                  <span className="text-muted-foreground text-xs whitespace-nowrap">
+                    {dateTimeFormatter.format(new Date(activity.created_at))}
+                  </span>
+                  <ActivityActions
+                    activityId={activity.id}
+                    tipoAtual={activity.type}
+                    descricaoAtual={activity.description}
+                    podeEditar={isAdmin || activity.author_id === currentUserId}
+                  />
+                </div>
               </div>
               <p className="text-muted-foreground text-sm">{activity.description}</p>
               <span className="text-muted-foreground text-xs">

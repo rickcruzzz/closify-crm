@@ -1,6 +1,7 @@
 'use server'
 
 import { redirect } from 'next/navigation'
+import { revalidatePath } from 'next/cache'
 
 import { createClient } from '@/lib/supabase/server'
 import {
@@ -10,6 +11,7 @@ import {
   forgotPasswordSchema,
   resetPasswordSchema,
   definirSenhaSchema,
+  perfilSchema,
 } from '@/lib/validations/auth'
 import { appUrl } from '@/lib/app-url'
 import { excedeuLimite, limparTentativas } from '@/lib/rate-limit'
@@ -303,4 +305,44 @@ export async function createWorkspace(values: unknown) {
   }
 
   redirect('/dashboard')
+}
+
+/**
+ * Atualiza o nome de exibição do usuário.
+ *
+ * Grava em `user_metadata.name`, que é de onde a RPC
+ * `get_workspace_member_names` lê o nome mostrado na lista de colaboradores e
+ * como autor das atividades — mudar aqui reflete em todo lugar que exibe
+ * "quem fez o quê", sem tabela de perfil separada.
+ */
+export async function updateProfile(values: unknown) {
+  const parsed = perfilSchema.safeParse(values)
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0]?.message ?? 'Dados inválidos.' }
+  }
+
+  const supabase = await createClient()
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) {
+    return { error: 'Sessão expirada. Entre novamente.' }
+  }
+
+  const { error } = await supabase.auth.updateUser({
+    data: { name: parsed.data.name },
+  })
+
+  if (error) {
+    console.error('updateProfile falhou', { code: error.code, status: error.status })
+    return { error: 'Não foi possível salvar seu nome. Tente novamente.' }
+  }
+
+  // A lista de colaboradores e a timeline leem esse nome no servidor.
+  revalidatePath('/perfil')
+  revalidatePath('/settings')
+  revalidatePath('/leads', 'layout')
+
+  return { success: true }
 }
