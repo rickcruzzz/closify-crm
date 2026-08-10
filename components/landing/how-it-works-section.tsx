@@ -1,6 +1,7 @@
 import { ArrowRight, FileSpreadsheet, LayoutGrid, TrendingUp } from 'lucide-react'
 
 import { RevealOnScroll } from '@/components/landing/reveal-on-scroll'
+import { KanbanPreview } from '@/components/landing/kanban-preview'
 import { FREE_LEAD_LIMIT } from '@/lib/plans'
 
 /**
@@ -84,8 +85,15 @@ export function HowItWorksSection() {
           ))}
         </ol>
 
-        <RevealOnScroll delay={280}>
-          <p className="text-muted-foreground mt-8 flex items-center justify-center gap-1.5 text-center text-sm">
+        {/* A tela de verdade, logo abaixo dos passos. A landing vendia
+            "pipeline visual Kanban" sem nunca mostrar um — quem nunca usou CRM
+            não tem como imaginar o formato a partir do texto. */}
+        <RevealOnScroll delay={280} className="mt-10">
+          <KanbanPreview />
+        </RevealOnScroll>
+
+        <RevealOnScroll delay={340}>
+          <p className="text-muted-foreground mt-6 flex items-center justify-center gap-1.5 text-center text-sm">
             Leva menos de dois minutos do cadastro ao primeiro lead
             <ArrowRight aria-hidden className="size-4" />
           </p>
