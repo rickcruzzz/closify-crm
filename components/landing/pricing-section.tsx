@@ -6,6 +6,11 @@ import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { buttonVariants } from '@/components/ui/button'
 import { RevealOnScroll } from '@/components/landing/reveal-on-scroll'
+import {
+  FREE_LEAD_LIMIT,
+  FREE_MEMBER_LIMIT,
+  FREE_WORKSPACE_LIMIT,
+} from '@/lib/plans'
 
 type Plan = {
   name: string
@@ -24,9 +29,13 @@ const plans: Plan[] = [
     name: 'Free',
     price: 'R$0',
     description: 'Para começar a organizar seu funil sem custo.',
+    // Números vêm das constantes, não escritos à mão: a landing anunciava "Até
+    // 2 colaboradores" sem citar o limite de empresa, e um texto fixo aqui
+    // volta a divergir do produto na primeira mudança de plano.
     features: [
-      'Até 2 colaboradores',
-      'Até 50 leads',
+      `${FREE_WORKSPACE_LIMIT} empresa`,
+      `Até ${FREE_MEMBER_LIMIT} colaboradores`,
+      `Até ${FREE_LEAD_LIMIT} leads`,
       'Pipeline Kanban',
       'Dashboard de métricas',
     ],
@@ -40,6 +49,7 @@ const plans: Plan[] = [
     period: '/mês',
     description: 'Para times que já venderam a planilha e querem escalar.',
     features: [
+      'Várias empresas no mesmo login',
       'Colaboradores ilimitados',
       'Leads ilimitados',
       'Pipeline Kanban',

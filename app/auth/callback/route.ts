@@ -12,13 +12,20 @@ export async function GET(request: NextRequest) {
   const next = searchParams.get('next')
   const safeNext = next === '/redefinir-senha' ? next : '/dashboard'
 
-  // E-mails de recuperação enviados antes da correção ainda apontam para cá,
-  // e chegam SEM `code`: a sessão vem em `#access_token=`, que o servidor não
-  // enxerga. Mandar para `/login` fazia a pessoa ver a tela de entrar com um
-  // erro cru na barra de endereços. Repassar para `/redefinir-senha` preserva
-  // o fragmento no redirect e a tela consegue lê-lo no browser.
-  if (!code && next === '/redefinir-senha') {
-    return NextResponse.redirect(`${origin}/redefinir-senha`)
+  // Links de auth que voltam SEM `code` trazem a sessão em `#access_token=`,
+  // um fragmento que nunca chega ao servidor. Nada aqui consegue lê-lo, então
+  // a única saída correta é repassar para uma página cliente — o redirect
+  // preserva o fragmento e o browser faz o resto.
+  //
+  // Sem isto, a pessoa caía em `/login` com uma sessão válida jogada fora na
+  // barra de endereços: conta confirmada, mas obrigada a digitar a senha de
+  // novo. Vale para os e-mails já enviados com a URL antiga, que continuam
+  // circulando por 24h.
+  if (!code) {
+    if (next === '/redefinir-senha') {
+      return NextResponse.redirect(`${origin}/redefinir-senha`)
+    }
+    return NextResponse.redirect(`${origin}/confirmar`)
   }
 
   if (code) {

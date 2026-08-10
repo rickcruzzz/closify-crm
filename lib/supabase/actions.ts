@@ -56,7 +56,12 @@ export async function signUp(values: unknown) {
     password: parsed.data.password,
     options: {
       data: { name: parsed.data.name },
-      emailRedirectTo: `${appUrl()}/auth/callback`,
+      // `/confirmar`, não `/auth/callback`: a confirmação de cadastro devolve
+      // a sessão em `#access_token=`, e fragmento nunca chega ao servidor. O
+      // Route Handler só lê `?code=`, então caía em `/login` mesmo com sessão
+      // válida — a pessoa confirmava a conta e precisava digitar a senha de
+      // novo. `/confirmar` é client component e lê o fragmento no browser.
+      emailRedirectTo: `${appUrl()}/confirmar`,
     },
   })
 
