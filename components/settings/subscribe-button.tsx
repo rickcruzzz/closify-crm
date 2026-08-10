@@ -21,6 +21,7 @@ import { createCheckout } from '@/lib/asaas/actions'
 import { checkoutSchema, type CheckoutValues } from '@/lib/validations/billing'
 import { PRO_PLAN_PRICE } from '@/lib/plans'
 import { formatarCpfCnpj } from '@/lib/documento-br'
+import { CONTROLADOR } from '@/lib/legal'
 
 export function SubscribeButton() {
   const [dialogOpen, setDialogOpen] = React.useState(false)
@@ -96,6 +97,15 @@ export function SubscribeButton() {
                 </p>
               )}
             </div>
+
+            {/* Diz de antemão o que aparece na fatura. Em MEI o recebedor é a
+                razão social da Receita, não o nome fantasia — quem não sabe
+                disso estranha ver um nome de pessoa física na cobrança e
+                desiste de pagar, achando que errou de site. */}
+            <p className="text-muted-foreground text-xs">
+              A cobrança é emitida por {CONTROLADOR.razaoSocial} (CNPJ{' '}
+              {CONTROLADOR.cnpj}), razão social do {CONTROLADOR.nomeFantasia}.
+            </p>
 
             <DialogFooter>
               <Button type="submit" disabled={isSubmitting}>

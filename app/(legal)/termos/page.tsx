@@ -32,7 +32,8 @@ export default function TermosPage() {
           representá-la. Caso não concorde, não utilize a plataforma.
         </LegalP>
         <LegalP>
-          Contratante: {CONTROLADOR.nomeFantasia}, CNPJ {CONTROLADOR.cnpj}. Contato:{' '}
+          Contratante: {CONTROLADOR.razaoSocial}, CNPJ {CONTROLADOR.cnpj}, sob o nome
+          fantasia {CONTROLADOR.nomeFantasia}. Contato:{' '}
           <a
             href={`mailto:${CONTROLADOR.email}`}
             className="text-foreground underline underline-offset-4"

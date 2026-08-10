@@ -14,16 +14,14 @@
 export const CONTROLADOR = {
   nomeFantasia: 'Velo Funil',
   /**
-   * A identificação do controlador é feita pelo CNPJ, não pela razão social.
+   * Razão social conforme o cadastro da Receita, confirmada no cadastro
+   * comercial da conta Asaas. Formato típico de MEI: o número do CNPJ seguido
+   * do nome civil do titular.
    *
-   * Decisão consciente, não pendência: o número identifica a empresa de forma
-   * inequívoca e atende o art. 9º, I. Acrescentar o nome empresarial é
-   * refinamento — se for feito, preencher aqui (campo NOME EMPRESARIAL do
-   * cartão CNPJ) e citá-lo nas páginas legais junto do nome fantasia.
-   *
-   * Este campo NÃO é renderizado em lugar nenhum enquanto estiver vazio.
+   * Citada junto do nome fantasia nas páginas legais — o art. 9º, I pede
+   * identificação clara do controlador, e é isto que consta no CNPJ.
    */
-  razaoSocial: '',
+  razaoSocial: '64.543.748 ORLANDO HENRIQUE BASTOS DA CRUZ',
   /** Dígitos verificadores conferidos. */
   cnpj: '64.543.748/0001-13',
   /** Canal do titular e do encarregado (LGPD, Art. 41, §2º, I e Art. 18). */

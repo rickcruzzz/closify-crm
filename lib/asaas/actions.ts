@@ -9,6 +9,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { getCurrentUserAndWorkspace } from '@/lib/supabase/workspace'
 import { cancelSubscriptionSchema, checkoutSchema } from '@/lib/validations/billing'
 import { PRO_PLAN_PRICE } from '@/lib/plans'
+import { CONTROLADOR } from '@/lib/legal'
 
 type AsaasCustomer = { id: string }
 type AsaasSubscription = { id: string }
@@ -99,10 +100,13 @@ export async function createCheckout(values: unknown) {
           cycle: 'MONTHLY',
           value: PRO_PLAN_PRICE,
           nextDueDate: new Date().toISOString().slice(0, 10),
-          // Aparece na fatura e no extrato do cartão do cliente. Só vale para
-          // assinaturas novas — as já criadas mantêm a descrição antiga no
-          // Asaas, que é a fonte da verdade da cobrança.
-          description: 'Velo Funil - Plano Pro',
+          // Aparece na fatura, no boleto e no extrato do cartão. É o único
+          // texto de marca que controlamos nessa tela: o nome do recebedor vem
+          // do cadastro da conta Asaas e, em MEI, é a razão social da Receita.
+          //
+          // Só vale para assinaturas novas — as já criadas mantêm a descrição
+          // gravada no Asaas, que é a fonte da verdade da cobrança.
+          description: `Velo Funil — Plano Pro (assinatura mensal) · ${CONTROLADOR.site}`,
           externalReference,
         }),
       })
