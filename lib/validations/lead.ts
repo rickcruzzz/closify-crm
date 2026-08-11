@@ -1,5 +1,7 @@
 import { z } from 'zod'
 
+import { CSV_MAX_LINHAS } from '@/lib/leads/csv'
+
 export const leadSchema = z.object({
   name: z.string().min(2, 'Informe o nome completo.'),
   email: z.string().min(1, 'Informe o e-mail.').pipe(z.email('E-mail inválido.')),
@@ -16,16 +18,35 @@ export const leadSchema = z.object({
 export type LeadFormInput = z.input<typeof leadSchema>
 export type LeadFormValues = z.output<typeof leadSchema>
 
-// Importação por CSV: o arquivo só traz Nome, Telefone, E-mail e Valor, então
-// `company`, `status` e `ownerId` não vêm daqui — são preenchidos pela Server
-// Action. Telefone é opcional porque a coluna `phone` aceita nulo e uma lista
-// de e-mails sem telefone é um caso legítimo; e-mail continua obrigatório
-// porque a coluna é `not null` no banco.
-export const csvLeadSchema = z.object({
-  name: z.string().min(2, 'Nome muito curto.'),
-  email: z.string().min(1, 'E-mail obrigatório.').pipe(z.email('E-mail inválido.')),
-  phone: z.string().max(40, 'Telefone longo demais.').nullable(),
-  value: z.number().min(0, 'O valor não pode ser negativo.'),
+/** Colunas que a importação sabe preencher. Espelha `CampoDestino`. */
+const campoDestino = z.enum(['name', 'email', 'phone', 'company', 'value', 'status'])
+
+/**
+ * O que a tela de importação manda para o servidor.
+ *
+ * Só a FORMA é validada aqui — que veio matriz de texto e um mapeamento de
+ * coluna. O conteúdo de cada linha é reinterpretado no servidor por
+ * `interpretarPlanilha`, porque esta Server Action é um endpoint HTTP: dá para
+ * chamá-la sem passar pela tela, mandando qualquer coisa.
+ *
+ * O teto de células existe antes de qualquer trabalho. Sem ele, uma matriz de
+ * dezenas de milhares de colunas seguraria a função à toa — o limite de linhas
+ * sozinho não impede isso, porque a largura também é livre.
+ */
+const MAX_COLUNAS = 60
+const MAX_CELULAS = CSV_MAX_LINHAS * MAX_COLUNAS
+
+export const planilhaSchema = z.object({
+  matriz: z
+    .array(z.array(z.string().max(2000, 'Célula longa demais.')).max(MAX_COLUNAS, 'Planilha com colunas demais.'))
+    // +1 pelo cabeçalho, que também vem na matriz.
+    .min(2, 'A planilha não tem nenhuma linha além do cabeçalho.')
+    .max(CSV_MAX_LINHAS + 1, `A planilha passa de ${CSV_MAX_LINHAS} linhas.`)
+    .refine(
+      (m) => m.reduce((total, linha) => total + linha.length, 0) <= MAX_CELULAS,
+      'Planilha grande demais.',
+    ),
+  mapeamento: z.record(campoDestino, z.number().int().min(0).max(MAX_COLUNAS - 1)),
 })
 
-export type CsvLeadValues = z.output<typeof csvLeadSchema>
+export type PlanilhaPayload = z.output<typeof planilhaSchema>

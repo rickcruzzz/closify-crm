@@ -16,7 +16,8 @@ export type DealRow = {
 export type DealLeadRow = {
   id: string
   name: string
-  email: string
+  /** Nulo quando o lead veio de planilha sem coluna de e-mail. */
+  email: string | null
   company: string | null
   phone: string | null
 }

@@ -75,7 +75,7 @@ export type Database = {
           workspace_id: string
           owner_id: string | null
           name: string
-          email: string
+          email: string | null
           phone: string | null
           company: string | null
           status: DealStage
@@ -87,7 +87,7 @@ export type Database = {
           workspace_id: string
           owner_id?: string | null
           name: string
-          email: string
+          email: string | null
           phone?: string | null
           company?: string | null
           status?: DealStage
@@ -99,7 +99,7 @@ export type Database = {
           workspace_id?: string
           owner_id?: string | null
           name?: string
-          email?: string
+          email?: string | null
           phone?: string | null
           company?: string | null
           status?: DealStage

@@ -6,7 +6,8 @@ const PAGE_SIZE = 25
 export type LeadRow = {
   id: string
   name: string
-  email: string
+  /** Nulo quando o lead veio de planilha sem coluna de e-mail. */
+  email: string | null
   phone: string | null
   company: string | null
   status: LeadStatus

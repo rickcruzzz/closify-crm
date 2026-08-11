@@ -272,7 +272,7 @@ export function LeadsPageClient({
                       {lead.name}
                     </Link>
                     <span className="text-muted-foreground truncate text-xs">
-                      {lead.email}
+                      {lead.email ?? 'Sem e-mail'}
                     </span>
                   </div>
 
@@ -332,7 +332,7 @@ export function LeadsPageClient({
                   >
                     {lead.name}
                   </Link>
-                  <div className="text-muted-foreground text-xs">{lead.email}</div>
+                  <div className="text-muted-foreground text-xs">{lead.email ?? 'Sem e-mail'}</div>
                 </TableCell>
                 <TableCell>{lead.company}</TableCell>
                 <TableCell>

@@ -125,12 +125,12 @@ export function LeadDetailClient({
 
             <div className="flex items-start gap-2 text-sm">
               <Mail className="text-muted-foreground mt-0.5 size-4 shrink-0" />
-              <span className="break-all">{lead.email}</span>
+              <span className={lead.email ? "break-all" : "break-all text-muted-foreground"}>{lead.email ?? "Sem e-mail"}</span>
             </div>
 
             <div className="flex items-start gap-2 text-sm">
               <Phone className="text-muted-foreground mt-0.5 size-4 shrink-0" />
-              <span>{lead.phone}</span>
+              <span className={lead.phone ? undefined : "text-muted-foreground"}>{lead.phone ?? "Sem telefone"}</span>
             </div>
 
             <div className="flex items-start gap-2 text-sm">

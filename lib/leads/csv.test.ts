@@ -1,12 +1,86 @@
 import { describe, expect, it } from 'vitest'
 
-import { parseCsvLeads, parseValorBRL } from './csv'
+import { decodificarPlanilha, detectarSeparador, lerCsv, parseValorBRL } from './csv'
 
-/**
- * O parser precisa engolir o que planilha brasileira de verdade exporta, não
- * só o CSV ideal. Cada caso aqui corresponde a um formato que apareceu no
- * desenvolvimento ou a um defeito encontrado testando à mão.
- */
+/** Windows-1252 e Unicode coincidem byte a byte para o texto destes testes. */
+function bytesWindows1252(texto: string): Uint8Array {
+  const bytes = new Uint8Array(texto.length)
+  for (let i = 0; i < texto.length; i++) bytes[i] = texto.codePointAt(i)!
+  return bytes
+}
+
+describe('decodificarPlanilha', () => {
+  // Defeito confirmado em 11/08/2026: o diálogo usava `File.text()`, que
+  // decodifica SEMPRE em UTF-8, e o Excel em português salva CSV em
+  // Windows-1252. "José Antônio" chegava ao banco como "Jos<?> Ant<?>nio".
+  it('lê arquivo do Excel pt-BR sem quebrar o acento', () => {
+    const texto = decodificarPlanilha(bytesWindows1252('Nome;Cidade\nJosé Antônio;Salvador\n'))
+    expect(texto).toContain('José Antônio')
+    expect(texto).not.toContain('�')
+  })
+
+  it('não estraga arquivo que já é UTF-8', () => {
+    const bytes = new TextEncoder().encode('Nome,Cidade\nJosé Antônio,Salvador\n')
+    expect(decodificarPlanilha(bytes)).toContain('José Antônio')
+  })
+
+  // O BOM do Excel ("CSV UTF-8") vira caractere invisível grudado no primeiro
+  // cabeçalho e faz "Nome" deixar de casar com "nome".
+  it('remove o BOM do Excel', () => {
+    const corpo = new TextEncoder().encode('Nome,Cidade\nAna,Salvador\n')
+    const comBom = new Uint8Array(corpo.length + 3)
+    comBom.set([0xef, 0xbb, 0xbf], 0)
+    comBom.set(corpo, 3)
+    expect(decodificarPlanilha(comBom).startsWith('Nome')).toBe(true)
+  })
+})
+
+describe('detectarSeparador', () => {
+  it('reconhece o ponto e vírgula do Excel pt-BR', () => {
+    expect(detectarSeparador('Nome;Telefone;E-mail;Valor')).toBe(';')
+  })
+
+  it('reconhece a vírgula do Google Sheets', () => {
+    expect(detectarSeparador('Nome,Telefone,E-mail,Valor')).toBe(',')
+  })
+
+  // Sem ignorar o conteúdo entre aspas, "2.500,00" faria a vírgula ganhar de
+  // um arquivo que na verdade é separado por ponto e vírgula.
+  it('ignora separador que está dentro de aspas', () => {
+    expect(detectarSeparador('Nome;Valor;"a,b,c,d,e"')).toBe(';')
+  })
+})
+
+describe('lerCsv', () => {
+  it('devolve cabeçalho e linhas como matriz', () => {
+    const matriz = lerCsv('Nome;E-mail\nAna;ana@x.com\nBruno;bruno@x.com\n')
+    expect(matriz).toEqual([
+      ['Nome', 'E-mail'],
+      ['Ana', 'ana@x.com'],
+      ['Bruno', 'bruno@x.com'],
+    ])
+  })
+
+  // `split('\n')` quebraria aqui: endereço colado da planilha traz quebra de
+  // linha dentro de campo entre aspas.
+  it('mantém quebra de linha dentro de campo entre aspas', () => {
+    const matriz = lerCsv('Nome,Obs\nAna,"linha 1\nlinha 2"\n')
+    expect(matriz).toHaveLength(2)
+    expect(matriz[1]?.[1]).toBe('linha 1\nlinha 2')
+  })
+
+  it('trata aspas duplicadas como aspa literal', () => {
+    expect(lerCsv('A\n"diz ""oi"""\n')[1]?.[0]).toBe('diz "oi"')
+  })
+
+  it('descarta linha totalmente vazia', () => {
+    expect(lerCsv('Nome\nAna\n\n\nBruno\n')).toHaveLength(3)
+  })
+
+  it('devolve matriz vazia para arquivo em branco', () => {
+    expect(lerCsv('   \n  ')).toEqual([])
+  })
+})
 
 describe('parseValorBRL', () => {
   it('lê o formato brasileiro com milhar e centavos', () => {
@@ -14,102 +88,26 @@ describe('parseValorBRL', () => {
     expect(parseValorBRL('1.200,00')).toBe(1200)
   })
 
-  it('lê decimal em inglês', () => {
+  it('lê o formato em inglês', () => {
     expect(parseValorBRL('1234.56')).toBe(1234.56)
   })
 
-  // Defeito corrigido: "R$ 1.200" virava 1.2 porque o ponto era tratado como
-  // decimal. O tamanho do último grupo desempata — três dígitos é milhar.
-  it('trata ponto isolado com 3 dígitos como separador de milhar', () => {
+  // "1.200" numa planilha brasileira é mil e duzentos; o tamanho do último
+  // grupo desempata contra "1234.56", que é decimal exportado em inglês.
+  it('desempata ponto de milhar e ponto decimal pelo tamanho do grupo', () => {
     expect(parseValorBRL('1.200')).toBe(1200)
-    expect(parseValorBRL('12.345.678')).toBe(12345678)
+    expect(parseValorBRL('1.20')).toBe(1.2)
   })
 
-  it('célula vazia vale zero', () => {
+  it('célula em branco é zero, porque lead sem valor estimado é normal', () => {
     expect(parseValorBRL('')).toBe(0)
     expect(parseValorBRL('   ')).toBe(0)
   })
 
-  // Defeito corrigido: "abc" virava R$ 0,00 em silêncio. Num CRM de vendas,
-  // gravar zero errado é pior do que recusar a linha.
+  // Defeito corrigido: "abc" virava R$ 0,00 em silêncio, o que é pior do que
+  // recusar a linha — num CRM de vendas o valor errado contamina o dashboard.
   it('recusa texto sem dígito em vez de virar zero', () => {
     expect(parseValorBRL('abc')).toBeNull()
-    expect(parseValorBRL('R$')).toBeNull()
-  })
-})
-
-describe('parseCsvLeads', () => {
-  const cabecalho = 'Nome,Telefone,E-mail,Valor'
-
-  it('lê arquivo simples separado por vírgula', () => {
-    const { linhas, erros } = parseCsvLeads(
-      `${cabecalho}\nMaria Silva,(11) 90000-0000,maria@x.com,"2.500,50"\n`,
-    )
-    expect(erros).toEqual([])
-    expect(linhas).toHaveLength(1)
-    expect(linhas[0]).toMatchObject({
-      name: 'Maria Silva',
-      email: 'maria@x.com',
-      value: 2500.5,
-    })
-  })
-
-  // Excel em português exporta com ponto e vírgula; sem detectar, o arquivo
-  // inteiro vira uma coluna só e nada é importado.
-  it('detecta ponto e vírgula do Excel pt-BR', () => {
-    const { linhas } = parseCsvLeads('NOME;Celular;E-MAIL;Valor\nAna;11999;ana@x.com;300\n')
-    expect(linhas).toHaveLength(1)
-    expect(linhas[0]?.value).toBe(300)
-  })
-
-  it('consome o BOM do Excel sem quebrar o cabeçalho', () => {
-    const { linhas, erros } = parseCsvLeads(`﻿${cabecalho}\nJoão,,joao@x.com,10\n`)
-    expect(erros).toEqual([])
-    expect(linhas[0]?.name).toBe('João')
-  })
-
-  it('respeita quebra de linha dentro de aspas', () => {
-    const { linhas } = parseCsvLeads(`${cabecalho}\n"Fulano\nde Tal",1,f@x.com,7\n`)
-    expect(linhas).toHaveLength(1)
-    expect(linhas[0]?.name).toContain('de Tal')
-  })
-
-  it('normaliza e-mail para minúsculo', () => {
-    const { linhas } = parseCsvLeads(`${cabecalho}\nAna,,ANA@Empresa.COM,1\n`)
-    expect(linhas[0]?.email).toBe('ana@empresa.com')
-  })
-
-  it('rejeita a linha e segue quando o dado está sujo', () => {
-    const { linhas, erros } = parseCsvLeads(
-      `${cabecalho}\n` +
-        'A,1,a@x.com,10\n' + // nome curto demais
-        'Bruno,,,\n' + // sem e-mail
-        'Carlos,,carlos@x.com,abc\n' + // valor inválido
-        'Erica,,erica@x.com,-5\n' + // valor negativo
-        'Valida,,valida@x.com,100\n',
-    )
-    // A linha boa entra mesmo com quatro linhas ruins no meio: derrubar o
-    // arquivo inteiro por causa de uma linha suja seria pior.
-    expect(linhas).toHaveLength(1)
-    expect(linhas[0]?.email).toBe('valida@x.com')
-    expect(erros).toHaveLength(4)
-  })
-
-  it('marca e-mail repetido dentro do próprio arquivo', () => {
-    const { linhas, erros } = parseCsvLeads(
-      `${cabecalho}\nUm,,igual@x.com,1\nDois,,IGUAL@x.com,2\n`,
-    )
-    expect(linhas).toHaveLength(1)
-    expect(erros.some((e) => e.includes('repetido'))).toBe(true)
-  })
-
-  it('recusa arquivo sem as colunas obrigatórias', () => {
-    const { linhas, erros } = parseCsvLeads('a,b,c\n1,2,3\n')
-    expect(linhas).toEqual([])
-    expect(erros[0]).toContain('Cabeçalho')
-  })
-
-  it('recusa arquivo vazio', () => {
-    expect(parseCsvLeads('').erros).toHaveLength(1)
+    expect(parseValorBRL('a combinar')).toBeNull()
   })
 })

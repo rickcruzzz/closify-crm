@@ -3,11 +3,17 @@
 import { revalidatePath } from 'next/cache'
 
 import { createClient } from '@/lib/supabase/server'
-import { csvLeadSchema, leadSchema, type CsvLeadValues } from '@/lib/validations/lead'
+import { leadSchema, planilhaSchema } from '@/lib/validations/lead'
 import { activitySchema } from '@/lib/validations/activity'
 import { uuidSchema } from '@/lib/validations/workspace'
 import { canAddLead, remainingLeadSlots } from '@/lib/limits'
-import { CSV_MAX_BYTES, parseCsvLeads } from '@/lib/leads/csv'
+import { CSV_MAX_LINHAS } from '@/lib/leads/csv'
+import {
+  chaveDeContato,
+  contarAvisosDeArquivo,
+  interpretarPlanilha,
+  type LinhaPlanilha,
+} from '@/lib/leads/planilha'
 import { FREE_LEAD_LIMIT } from '@/lib/plans'
 
 async function getActiveWorkspaceId(supabase: Awaited<ReturnType<typeof createClient>>) {
@@ -133,28 +139,79 @@ export async function updateLead(leadId: string, values: unknown) {
 export type ResultadoImportacao = {
   importados: number
   ignorados: number
+  duplicados: number
+  /** Linhas que não couberam no teto do plano Free. */
+  foraDoLimite: number
   /** Mensagens por linha descartada, para a pessoa corrigir a planilha. */
   avisos: string[]
 }
 
 /**
- * Importa leads de um CSV simples (Nome, Telefone, E-mail, Valor).
+ * Todos os contatos que já existem no workspace, como chaves de dedupe.
  *
- * O texto do arquivo é lido no cliente e chega aqui como string — todo o
- * parse, validação e limite de plano acontece no servidor, porque o cliente
- * pode mandar qualquer coisa nesta chamada, inclusive sem passar pela tela.
+ * Antes isto era `.in('email', [...])` com os e-mails do arquivo. Medido
+ * contra produção: `in` com 500 valores vira URL de 25 KB e o gateway devolve
+ * 400 — e o código não olhava o erro, então `jaExistem` vinha nulo, o conjunto
+ * de duplicados saía vazio e a planilha inteira era importada DE NOVO, calada.
+ * Ler o workspace por páginas troca uma URL gigante por N requisições curtas.
+ *
+ * O custo é limitado pelo próprio produto: no Free são no máximo 50 leads, e
+ * mesmo um workspace Pro grande cabe em poucas páginas.
  */
-export async function importLeadsFromCsv(
-  csvText: unknown,
-): Promise<{ error: string } | ResultadoImportacao> {
-  if (typeof csvText !== 'string') {
-    return { error: 'Arquivo inválido.' }
+async function chavesJaCadastradas(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  workspaceId: string,
+): Promise<Set<string>> {
+  const chaves = new Set<string>()
+  const tamanhoDaPagina = 1000
+
+  for (let pagina = 0; pagina < 50; pagina++) {
+    const inicio = pagina * tamanhoDaPagina
+    const { data, error } = await supabase
+      .from('leads')
+      .select('email, phone')
+      .eq('workspace_id', workspaceId)
+      .range(inicio, inicio + tamanhoDaPagina - 1)
+
+    // Falhar aqui é grave: sem as chaves, tudo pareceria novo e a importação
+    // duplicaria a base. Melhor propagar do que importar errado em silêncio.
+    if (error) throw error
+    if (!data || data.length === 0) break
+
+    for (const lead of data) {
+      const chave = chaveDeContato(lead.email, lead.phone)
+      if (chave) chaves.add(chave)
+    }
+
+    if (data.length < tamanhoDaPagina) break
   }
 
-  // Limite antes de qualquer trabalho: o parser percorre caractere a
-  // caractere, e um texto de dezenas de MB seguraria a função à toa.
-  if (Buffer.byteLength(csvText, 'utf8') > CSV_MAX_BYTES) {
-    return { error: 'Arquivo grande demais. O limite é 512 KB por importação.' }
+  return chaves
+}
+
+/**
+ * Importa leads e negócios de uma planilha (.xlsx ou .csv).
+ *
+ * O arquivo é lido e mapeado no navegador — o `.xlsx` porque é um ZIP com XML
+ * dentro, e o CSV porque a tela precisa mostrar a prévia antes de gravar. O
+ * que chega aqui é a matriz de células e a escolha de colunas.
+ *
+ * NADA disso é confiável: esta função é um endpoint HTTP e pode ser chamada
+ * direto, sem passar pela tela. Por isso o servidor reinterpreta a matriz do
+ * zero, revalida cada linha, refaz a deduplicação e reaplica o limite do
+ * plano. O cliente só transporta.
+ *
+ * Cria um NEGÓCIO para cada lead importado. Sem isso o Kanban e o dashboard
+ * continuavam vazios depois de importar 300 contatos — as duas telas leem
+ * `deals`, e a importação antiga só escrevia em `leads`. A pessoa concluía que
+ * a importação não tinha funcionado.
+ */
+export async function importarPlanilha(
+  payload: unknown,
+): Promise<{ error: string } | ResultadoImportacao> {
+  const parsed = planilhaSchema.safeParse(payload)
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0]?.message ?? 'Planilha inválida.' }
   }
 
   const supabase = await createClient()
@@ -171,63 +228,35 @@ export async function importLeadsFromCsv(
     return { error: 'Workspace não encontrado.' }
   }
 
-  const { linhas, erros } = parseCsvLeads(csvText)
+  const { linhas, erros } = interpretarPlanilha(
+    parsed.data.matriz,
+    parsed.data.mapeamento,
+    CSV_MAX_LINHAS,
+  )
   const avisos = [...erros]
 
   if (linhas.length === 0) {
-    return {
-      error:
-        avisos[0] ??
-        'Nenhuma linha válida encontrada. Confira o cabeçalho: Nome, Telefone, E-mail, Valor.',
-    }
+    return { error: avisos[0] ?? 'Nenhuma linha válida encontrada na planilha.' }
   }
 
-  // Revalida com o mesmo schema do resto do app: o parser cuida do formato do
-  // arquivo, o zod cuida do formato do dado (e-mail principalmente).
-  const validos: { linha: number; dados: CsvLeadValues }[] = []
-  for (const linha of linhas) {
-    const parsed = csvLeadSchema.safeParse({
-      name: linha.name,
-      email: linha.email,
-      phone: linha.phone,
-      value: linha.value,
-    })
-    if (!parsed.success) {
-      avisos.push(
-        `Linha ${linha.linha}: ${parsed.error.issues[0]?.message ?? 'dado inválido.'}`,
-      )
-      continue
-    }
-    validos.push({ linha: linha.linha, dados: parsed.data })
+  let jaCadastradas: Set<string>
+  try {
+    jaCadastradas = await chavesJaCadastradas(supabase, workspaceId)
+  } catch (err) {
+    console.error('importarPlanilha: falha ao ler contatos existentes', err)
+    return { error: 'Não foi possível conferir os contatos já cadastrados. Tente de novo.' }
   }
 
-  if (validos.length === 0) {
-    return { error: 'Nenhuma linha válida encontrada no arquivo.' }
-  }
-
-  // Duplicata contra o que já existe no workspace. A consulta é limitada aos
-  // e-mails do próprio arquivo, então não cresce com o tamanho da base.
-  const { data: jaExistem } = await supabase
-    .from('leads')
-    .select('email')
-    .eq('workspace_id', workspaceId)
-    .in(
-      'email',
-      validos.map((v) => v.dados.email),
-    )
-
-  const emailsExistentes = new Set((jaExistem ?? []).map((l) => l.email.toLowerCase()))
-
-  const novos = validos.filter((v) => {
-    if (emailsExistentes.has(v.dados.email)) {
-      avisos.push(`Linha ${v.linha}: ${v.dados.email} já existe neste workspace.`)
-      return false
-    }
-    return true
+  let duplicados = 0
+  const novos = linhas.filter((linha) => {
+    if (!jaCadastradas.has(linha.chave)) return true
+    duplicados++
+    avisos.push(`Linha ${linha.linha}: ${linha.email ?? linha.phone} já está cadastrado.`)
+    return false
   })
 
   if (novos.length === 0) {
-    return { error: 'Todos os leads do arquivo já existem neste workspace.' }
+    return { error: 'Todos os contatos da planilha já estão cadastrados nesta empresa.' }
   }
 
   const vagas = await remainingLeadSlots(workspaceId)
@@ -246,40 +275,57 @@ export async function importLeadsFromCsv(
   // plano. A checagem abaixo é a primeira barreira; a definitiva é a
   // reconferência depois do insert, que desfaz o excedente.
   const aInserir = vagas === null ? novos : novos.slice(0, vagas)
-  if (vagas !== null && novos.length > vagas) {
+  let foraDoLimite = vagas === null ? 0 : Math.max(0, novos.length - vagas)
+  if (foraDoLimite > 0) {
     avisos.push(
-      `O plano Free comporta mais ${vagas} lead(s): ${novos.length - vagas} linha(s) ficaram de fora.`,
+      `O plano Free comporta mais ${vagas} lead(s): ${foraDoLimite} linha(s) ficaram de fora.`,
     )
   }
+
+  const porId = new Map<string, LinhaPlanilha>()
 
   const { data: inseridos, error } = await supabase
     .from('leads')
     .insert(
-      aInserir.map((v) => ({
+      aInserir.map((linha) => ({
         workspace_id: workspaceId,
-        name: v.dados.name,
-        email: v.dados.email,
-        phone: v.dados.phone,
-        // O CSV não traz empresa; a coluna aceita nulo e a tela já mostra
-        // "Sem empresa" nesse caso.
-        company: null,
-        status: 'novo' as const,
+        name: linha.name,
+        email: linha.email,
+        phone: linha.phone,
+        company: linha.company,
+        status: linha.status,
         // Quem importou vira responsável — é membro do workspace por
         // definição, então não precisa da checagem de `isWorkspaceMember` do
         // createLead.
         owner_id: user.id,
-        value: v.dados.value,
+        value: linha.value,
       })),
     )
-    // Precisa dos ids de volta para conseguir desfazer o excedente abaixo.
-    .select('id, created_at')
+    // Precisa dos ids de volta para criar os negócios e para conseguir
+    // desfazer o excedente abaixo.
+    .select('id, created_at, email, phone')
 
   if (error) {
-    console.error('importLeadsFromCsv falhou', error)
+    // 42501 é a trava de limite de plano no banco (migration 0023). Sem tratar
+    // o código, a pessoa recebia "Não foi possível importar os leads" e não
+    // tinha como saber que era o teto do Free — a mensagem certa existia só
+    // dentro do Postgres.
+    if (error.code === '42501') {
+      return {
+        error: `Plano Free permite no máximo ${FREE_LEAD_LIMIT} leads. Faça upgrade para o Pro para importar mais.`,
+      }
+    }
+    console.error('importarPlanilha falhou', error)
     return { error: 'Não foi possível importar os leads.' }
   }
 
-  let importados = inseridos?.length ?? aInserir.length
+  for (const registro of inseridos ?? []) {
+    const chave = chaveDeContato(registro.email, registro.phone)
+    const origem = chave ? aInserir.find((l) => l.chave === chave) : undefined
+    if (origem) porId.set(registro.id, origem)
+  }
+
+  let sobreviventes = inseridos ?? []
 
   // Fecha a janela entre contar e inserir: se duas importações correram junto,
   // a soma pode ter passado do teto do plano. Reconferimos DEPOIS da escrita e
@@ -287,12 +333,12 @@ export async function importLeadsFromCsv(
   // própria chamada é melhor do que deixar o workspace acima do limite que ele
   // paga. Só entra no caminho caro quando o estouro de fato aconteceu.
   const restantes = await remainingLeadSlots(workspaceId)
-  if (restantes !== null && restantes < 0 && inseridos && inseridos.length > 0) {
-    const excedente = Math.min(-restantes, inseridos.length)
-    const idsParaRemover = [...inseridos]
+  if (restantes !== null && restantes < 0 && sobreviventes.length > 0) {
+    const excedente = Math.min(-restantes, sobreviventes.length)
+    const removidos = [...sobreviventes]
       .sort((a, b) => b.created_at.localeCompare(a.created_at))
       .slice(0, excedente)
-      .map((l) => l.id)
+    const idsParaRemover = removidos.map((l) => l.id)
 
     const { error: erroDesfazer } = await supabase
       .from('leads')
@@ -303,22 +349,60 @@ export async function importLeadsFromCsv(
     if (erroDesfazer) {
       console.error('falha ao desfazer excedente de importação', erroDesfazer)
     } else {
-      importados -= idsParaRemover.length
+      const removidosSet = new Set(idsParaRemover)
+      sobreviventes = sobreviventes.filter((l) => !removidosSet.has(l.id))
+      foraDoLimite += idsParaRemover.length
       avisos.push(
         `${idsParaRemover.length} lead(s) não couberam no limite do plano Free e não foram importados.`,
       )
     }
   }
 
+  // Os negócios entram DEPOIS do acerto do excedente, nunca antes:
+  // `deals.lead_id` é `on delete set null`, então apagar um lead excedente que
+  // já tivesse negócio deixaria um card órfão no Kanban, sem contato por trás.
+  if (sobreviventes.length > 0) {
+    const { error: erroDeals } = await supabase.from('deals').insert(
+      sobreviventes.map((registro) => {
+        const origem = porId.get(registro.id)
+        return {
+          workspace_id: workspaceId,
+          lead_id: registro.id,
+          // O título do card é o nome da pessoa; com empresa, os dois, que é
+          // como um vendedor procura no board.
+          title: origem?.company ? `${origem.name} — ${origem.company}` : (origem?.name ?? 'Negócio'),
+          value: origem?.value ?? 0,
+          stage: origem?.status ?? ('novo' as const),
+          owner_id: user.id,
+        }
+      }),
+    )
+
+    if (erroDeals) {
+      // O lead já entrou e é o dado que importa; o negócio é a projeção dele no
+      // Kanban. Falhar aqui não desfaz a importação — avisa, para a pessoa não
+      // achar que o board quebrou.
+      console.error('importarPlanilha: falha ao criar negócios', erroDeals)
+      avisos.push(
+        'Os contatos foram importados, mas os negócios não puderam ser criados no Kanban.',
+      )
+    }
+  }
+
   revalidatePath('/leads')
+  revalidatePath('/kanban')
   revalidatePath('/dashboard')
+
+  const importados = sobreviventes.length
 
   return {
     importados,
-    // `linhas` já exclui o que o parser rejeitou, então somar `erros.length`
-    // aqui contaria essas linhas duas vezes e mostraria um total maior do que
-    // o arquivo tem.
-    ignorados: erros.length + (linhas.length - importados),
+    // `contarAvisosDeArquivo` desconta as mensagens que falam do ARQUIVO (por
+    // exemplo o truncamento em 1.000 linhas) e não de uma linha descartada.
+    // Sem isso o total de ignorados ficava maior do que o arquivo tinha.
+    ignorados: erros.length - contarAvisosDeArquivo(erros) + (linhas.length - importados),
+    duplicados,
+    foraDoLimite,
     avisos,
   }
 }

@@ -79,7 +79,10 @@ export function LeadFormDialog({
         lead
           ? {
               name: lead.name,
-              email: lead.email,
+              // Lead vindo de planilha de WhatsApp não tem e-mail. O campo
+              // segue obrigatório no formulário manual — quem abre para editar
+              // preenche —, mas o valor inicial precisa ser texto, não nulo.
+              email: lead.email ?? '',
               phone: lead.phone ?? '',
               company: lead.company ?? '',
               status: lead.status,
