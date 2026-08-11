@@ -49,7 +49,7 @@ export function ProfileClient({
 
   const formSenha = useForm<DefinirSenhaValues>({
     resolver: zodResolver(definirSenhaSchema),
-    defaultValues: { password: '', confirmPassword: '' },
+    defaultValues: { password: '', confirmPassword: '', email },
   })
 
   async function salvarNome(values: PerfilValues) {
@@ -164,13 +164,9 @@ export function ProfileClient({
                   label={temSenha ? 'Nova senha' : 'Senha'}
                   valor={field.value ?? ''}
                   onChange={field.onChange}
-                  onSugerir={(senha) =>
-                    formSenha.setValue('confirmPassword', senha, { shouldValidate: true })
-                  }
                   erro={formSenha.formState.errors.password?.message}
                   desabilitado={salvandoSenha}
                   mostrarForca
-                  permitirSugestao
                 />
               )}
             />

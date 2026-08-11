@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { avaliarSenha, gerarSenhaForte } from './password-strength'
+import { avaliarSenha, senhaDerivadaDoEmail } from './password-strength'
 
 describe('avaliarSenha', () => {
   it('marca como fraca o que não protege nada', () => {
@@ -45,31 +45,46 @@ describe('avaliarSenha', () => {
   })
 })
 
-describe('gerarSenhaForte', () => {
-  it('sempre gera senha classificada como forte', () => {
-    // Repete porque a geração é aleatória: um sorteio infeliz que caísse em
-    // "média" só apareceria de vez em quando, e em produção seria confuso ver
-    // o próprio botão sugerir uma senha que o medidor reprova.
-    for (let i = 0; i < 50; i++) {
-      expect(avaliarSenha(gerarSenhaForte()).nivel).toBe('forte')
-    }
+
+describe('senhaDerivadaDoEmail', () => {
+  const email = 'henriquestn24@gmail.com'
+
+  // O caso que motivou a regra: usar o próprio endereço como senha. É a
+  // primeira combinação que qualquer lista de credenciais tenta, e funciona
+  // sem depender de vazamento nenhum — o e-mail costuma ser público.
+  it('recusa a senha igual ao e-mail inteiro', () => {
+    expect(senhaDerivadaDoEmail(email, email)).toBe(true)
   })
 
-  it('respeita o tamanho pedido', () => {
-    expect(gerarSenhaForte(16)).toHaveLength(16)
-    expect(gerarSenhaForte(24)).toHaveLength(24)
+  it('recusa a senha igual ao nome de usuário do e-mail', () => {
+    expect(senhaDerivadaDoEmail('henriquestn24', email)).toBe(true)
   })
 
-  it('evita caracteres que se confundem ao ler da tela', () => {
-    // A pessoa lê a senha sugerida da tela para anotar; l/I/O/0/1 viram erro
-    // de transcrição.
-    for (let i = 0; i < 20; i++) {
-      expect(gerarSenhaForte()).not.toMatch(/[lIO01]/)
-    }
+  // O disfarce mais comum: manter o nome de usuário e pendurar símbolo e ano.
+  // Continua sendo a primeira derivação óbvia do endereço.
+  it('recusa a senha que apenas embute o nome de usuário', () => {
+    expect(senhaDerivadaDoEmail('Henriquestn24#2026', email)).toBe(true)
+    expect(senhaDerivadaDoEmail('@@henriquestn24!!', email)).toBe(true)
   })
 
-  it('não repete a mesma senha', () => {
-    const geradas = new Set(Array.from({ length: 30 }, () => gerarSenhaForte()))
-    expect(geradas.size).toBe(30)
+  it('ignora diferença de caixa e espaço em volta', () => {
+    expect(senhaDerivadaDoEmail('  HENRIQUESTN24@GMAIL.COM  ', email)).toBe(true)
+  })
+
+  it('aceita senha que não tem relação com o endereço', () => {
+    expect(senhaDerivadaDoEmail('Tr0vao#Chuva2026', email)).toBe(false)
+  })
+
+  // Sem o corte de tamanho, quem usa um endereço curto teria senhas
+  // legítimas recusadas só por conterem três letras comuns.
+  it('não recusa por causa de nome de usuário curto demais', () => {
+    expect(senhaDerivadaDoEmail('planejamento2026', 'ana@empresa.com')).toBe(false)
+  })
+
+  // Sem e-mail conhecido a regra não tem como valer, e recusar a troca de
+  // senha inteira por isso seria pior do que deixar passar.
+  it('não bloqueia quando o e-mail não veio', () => {
+    expect(senhaDerivadaDoEmail('qualquercoisa', undefined)).toBe(false)
+    expect(senhaDerivadaDoEmail('qualquercoisa', '')).toBe(false)
   })
 })

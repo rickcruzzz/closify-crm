@@ -1,5 +1,7 @@
 import { z } from 'zod'
 
+import { senhaDerivadaDoEmail } from '@/lib/password-strength'
+
 export const loginSchema = z.object({
   email: z.string().min(1, 'Informe seu e-mail.').pipe(z.email('E-mail inválido.')),
   password: z.string().min(1, 'Informe sua senha.'),
@@ -26,6 +28,12 @@ export const signUpSchema = z
     convite: z.uuid().optional(),
     plano: z.literal('pro').optional(),
   })
+  // Aqui o e-mail já está no próprio formulário, então não precisa vir de fora.
+  .refine((dados) => !senhaDerivadaDoEmail(dados.password, dados.email), {
+    message:
+      'A senha não pode ser o seu e-mail nem contê-lo. É a primeira coisa que um ataque tenta.',
+    path: ['password'],
+  })
   // O erro precisa apontar para o campo de confirmação, não para o formulário
   // inteiro: senão a mensagem aparece longe do campo que a pessoa tem que
   // corrigir.
@@ -48,14 +56,43 @@ export const forgotPasswordSchema = z.object({
 
 export type ForgotPasswordValues = z.infer<typeof forgotPasswordSchema>
 
+/**
+ * Mensagem única para a senha derivada do e-mail.
+ *
+ * Repetida por três schemas; escrita uma vez para não divergirem — o tipo de
+ * divergência que faz a mesma recusa aparecer com texto diferente dependendo
+ * da tela em que a pessoa está.
+ */
+const ERRO_SENHA_IGUAL_AO_EMAIL =
+  'A senha não pode ser o seu e-mail nem contê-lo. É a primeira coisa que um ataque tenta.'
+
+/**
+ * O e-mail acompanha o formulário de senha sem aparecer na tela.
+ *
+ * As telas de redefinir e de definir senha não perguntam o e-mail — a pessoa
+ * já está identificada pela sessão. Mas a validação precisa dele para recusar
+ * "senha igual ao e-mail", então ele entra como valor inicial escondido, vindo
+ * da sessão.
+ *
+ * Opcional de propósito: se por qualquer motivo a sessão não trouxer o
+ * endereço, a validação de tamanho e de confirmação continua valendo. Recusar
+ * a troca de senha inteira porque não deu para conferir uma regra seria pior.
+ */
+const emailDaSessao = z.string().optional()
+
 export const resetPasswordSchema = z
   .object({
     password: z.string().min(8, 'A senha precisa ter no mínimo 8 caracteres.'),
     confirmPassword: z.string().min(1, 'Confirme sua senha.'),
+    email: emailDaSessao,
   })
   .refine((dados) => dados.password === dados.confirmPassword, {
     message: 'As senhas não coincidem.',
     path: ['confirmPassword'],
+  })
+  .refine((dados) => !senhaDerivadaDoEmail(dados.password, dados.email), {
+    message: ERRO_SENHA_IGUAL_AO_EMAIL,
+    path: ['password'],
   })
 
 export type ResetPasswordValues = z.infer<typeof resetPasswordSchema>
@@ -67,10 +104,15 @@ export const definirSenhaSchema = z
   .object({
     password: z.string().min(8, 'A senha precisa ter no mínimo 8 caracteres.'),
     confirmPassword: z.string().min(1, 'Confirme sua senha.'),
+    email: emailDaSessao,
   })
   .refine((dados) => dados.password === dados.confirmPassword, {
     message: 'As senhas não coincidem.',
     path: ['confirmPassword'],
+  })
+  .refine((dados) => !senhaDerivadaDoEmail(dados.password, dados.email), {
+    message: ERRO_SENHA_IGUAL_AO_EMAIL,
+    path: ['password'],
   })
 
 export type DefinirSenhaValues = z.infer<typeof definirSenhaSchema>

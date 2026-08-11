@@ -75,44 +75,39 @@ export function avaliarSenha(senha: string): ForcaSenha {
 }
 
 /**
- * Gera uma senha forte usando `crypto.getRandomValues`, não `Math.random`,
- * que é previsível e não serve para gerar segredo.
+ * A senha é o próprio e-mail, ou o nome de usuário dele?
+ *
+ * É o padrão mais explorado que existe: quem monta lista de credenciais tenta
+ * o e-mail como senha antes de qualquer outra coisa, porque funciona sozinho —
+ * não precisa nem de vazamento anterior. Um endereço público basta.
+ *
+ * Três formas do mesmo erro são barradas, tomando "fulano@gmail.com" como
+ * exemplo:
+ *
+ * 1. a senha igual ao e-mail inteiro — "fulano@gmail.com"
+ * 2. a senha igual à parte antes do arroba — "fulano"
+ * 3. a senha CONTENDO essa parte — "Fulano#2026"
+ *
+ * A terceira é a que mais pega gente na prática, e a que mais gera dúvida:
+ * uma senha longa que embute o próprio nome de usuário continua sendo a
+ * primeira coisa que um ataque de dicionário deriva do endereço.
+ *
+ * O corte de 4 caracteres evita falso positivo em endereço curto: com
+ * "ana@empresa.com", qualquer senha contendo "ana" seria recusada — inclusive
+ * "planejamento", que não tem nada a ver com o endereço.
  */
-export function gerarSenhaForte(tamanho = 16): string {
-  const minusculas = 'abcdefghijkmnopqrstuvwxyz'
-  const maiusculas = 'ABCDEFGHJKLMNPQRSTUVWXYZ'
-  // Sem l, I, O, 0 e 1: a pessoa vai ler isso da tela para anotar.
-  const numeros = '23456789'
-  const simbolos = '!@#$%&*?'
-  const todos = minusculas + maiusculas + numeros + simbolos
+export function senhaDerivadaDoEmail(senha: string, email: string | undefined | null): boolean {
+  if (!senha || !email) return false
 
-  const sorteia = (alfabeto: string) => {
-    const buf = new Uint32Array(1)
-    crypto.getRandomValues(buf)
-    return alfabeto[buf[0]! % alfabeto.length]!
-  }
+  const s = senha.trim().toLowerCase()
+  const e = email.trim().toLowerCase()
+  if (!s || !e) return false
 
-  // Garante pelo menos um de cada classe, senão o sorteio puro pode devolver
-  // algo sem número e cair para "média".
-  const obrigatorios = [
-    sorteia(minusculas),
-    sorteia(maiusculas),
-    sorteia(numeros),
-    sorteia(simbolos),
-  ]
-  const resto = Array.from({ length: Math.max(0, tamanho - obrigatorios.length) }, () =>
-    sorteia(todos),
-  )
+  if (s === e) return true
 
-  const chars = [...obrigatorios, ...resto]
+  const usuario = e.split('@')[0] ?? ''
+  if (!usuario) return false
+  if (s === usuario) return true
 
-  // Embaralha, senão as quatro primeiras posições teriam classe previsível.
-  for (let i = chars.length - 1; i > 0; i--) {
-    const buf = new Uint32Array(1)
-    crypto.getRandomValues(buf)
-    const j = buf[0]! % (i + 1)
-    ;[chars[i], chars[j]] = [chars[j]!, chars[i]!]
-  }
-
-  return chars.join('')
+  return usuario.length >= 4 && s.includes(usuario)
 }

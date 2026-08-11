@@ -213,11 +213,6 @@ export async function limparTentativasDeLogin(email: string) {
  * suspeita de conta comprometida neste caminho.
  */
 export async function definirSenhaInicial(values: unknown) {
-  const parsed = definirSenhaSchema.safeParse(values)
-  if (!parsed.success) {
-    return { error: 'Dados inválidos.' }
-  }
-
   const supabase = await createClient()
 
   const {
@@ -225,6 +220,21 @@ export async function definirSenhaInicial(values: unknown) {
   } = await supabase.auth.getUser()
   if (!user) {
     return { error: 'Sessão expirada. Entre novamente.' }
+  }
+
+  // O e-mail vem da SESSÃO, não do payload.
+  //
+  // A tela manda o endereço junto para o schema conseguir recusar "senha igual
+  // ao e-mail" enquanto a pessoa digita. Mas Server Action é endpoint HTTP:
+  // quem chama direto simplesmente omite o campo e a validação passa batido.
+  // Sobrescrever aqui com o e-mail de quem está logado é o que transforma a
+  // dica de tela em regra de verdade.
+  const parsed = definirSenhaSchema.safeParse({
+    ...(typeof values === 'object' && values !== null ? values : {}),
+    email: user.email,
+  })
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0]?.message ?? 'Dados inválidos.' }
   }
 
   const { error } = await supabase.auth.updateUser({ password: parsed.data.password })

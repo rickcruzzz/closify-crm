@@ -136,6 +136,20 @@ function RedefinirSenhaPageInner() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
+  // O e-mail da sessão alimenta a validação que recusa "senha igual ao
+  // e-mail". A tela não pergunta o endereço — a pessoa já está identificada
+  // pelo link — então ele entra no formulário como valor escondido, assim que
+  // a sessão de recuperação existe.
+  React.useEffect(() => {
+    if (estadoDoLink !== 'sessao-pronta') return
+    createClient()
+      .auth.getUser()
+      .then(({ data }) => {
+        if (data.user?.email) setValue('email', data.user.email)
+      })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [estadoDoLink])
+
   const {
     control,
     setValue,
@@ -307,13 +321,9 @@ function RedefinirSenhaPageInner() {
                 // Mesma regra do cadastro: a senha sugerida preenche a
                 // confirmação junto, porque redigitar 16 caracteres aleatórios
                 // que a pessoa não escolheu só geraria erro de digitação.
-                onSugerir={(senha) =>
-                  setValue('confirmPassword', senha, { shouldValidate: true })
-                }
                 erro={errors.password?.message}
                 desabilitado={isSubmitting}
                 mostrarForca
-                permitirSugestao
               />
             )}
           />

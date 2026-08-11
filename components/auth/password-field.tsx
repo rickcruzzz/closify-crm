@@ -1,13 +1,13 @@
 'use client'
 
 import * as React from 'react'
-import { Check, Copy, Eye, EyeOff, Sparkles } from 'lucide-react'
+import { Check, Copy, Eye, EyeOff } from 'lucide-react'
 
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { avaliarSenha, gerarSenhaForte, type NivelSenha } from '@/lib/password-strength'
+import { avaliarSenha, type NivelSenha } from '@/lib/password-strength'
 
 const CORES: Record<NivelSenha, { barra: string; texto: string }> = {
   fraca: { barra: 'bg-red-500', texto: 'text-red-500 dark:text-red-400' },
@@ -15,42 +15,41 @@ const CORES: Record<NivelSenha, { barra: string; texto: string }> = {
   forte: { barra: 'bg-emerald-500', texto: 'text-emerald-500 dark:text-emerald-400' },
 }
 
+/**
+ * Campo de senha com medidor de força.
+ *
+ * Não gera senha. O botão "Sugerir senha forte" existiu e foi retirado: senha
+ * que a pessoa não escolheu é senha que ela não decora, e o que acontece
+ * depois é ela anotar num papel, guardar num bloco de notas sem proteção, ou
+ * pedir recuperação toda vez que entra. Nenhum desses desfechos é mais seguro
+ * do que uma senha escolhida por ela e medida aqui na tela.
+ *
+ * O que sobra é o que importa: mostrar a força enquanto digita, e recusar
+ * senha derivada do e-mail — regra que vive nos schemas de validação, não
+ * aqui, porque precisa valer também para quem chama a Server Action direto.
+ */
 export function PasswordField({
   id,
   label,
   valor,
   onChange,
-  onSugerir,
   erro,
   desabilitado,
   autoComplete = 'new-password',
   mostrarForca = false,
-  permitirSugestao = false,
 }: {
   id: string
   label: string
   valor: string
   onChange: (valor: string) => void
-  /** Chamado junto com a senha gerada, para preencher também a confirmação. */
-  onSugerir?: (senha: string) => void
   erro?: string
   desabilitado?: boolean
   autoComplete?: string
   mostrarForca?: boolean
-  permitirSugestao?: boolean
 }) {
   const [visivel, setVisivel] = React.useState(false)
   const [copiada, setCopiada] = React.useState(false)
   const forca = avaliarSenha(valor)
-
-  function sugerir() {
-    const senha = gerarSenhaForte()
-    onChange(senha)
-    onSugerir?.(senha)
-    // Revela ao gerar: senha sugerida que a pessoa não consegue ver é senha
-    // que ela não anota, e aí perde o acesso.
-    setVisivel(true)
-  }
 
   async function copiar() {
     try {
@@ -65,22 +64,7 @@ export function PasswordField({
 
   return (
     <div className="flex flex-col gap-1.5">
-      <div className="flex items-center justify-between gap-2">
-        <Label htmlFor={id}>{label}</Label>
-        {permitirSugestao && (
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            className="h-auto gap-1.5 px-2 py-1 text-xs"
-            onClick={sugerir}
-            disabled={desabilitado}
-          >
-            <Sparkles aria-hidden className="size-3.5" />
-            Sugerir senha forte
-          </Button>
-        )}
-      </div>
+      <Label htmlFor={id}>{label}</Label>
 
       <div className="relative">
         <Input

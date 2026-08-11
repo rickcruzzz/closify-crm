@@ -41,12 +41,11 @@ export function BemVindoClient({
 
   const {
     control,
-    setValue,
     handleSubmit,
     formState: { errors },
   } = useForm<DefinirSenhaValues>({
     resolver: zodResolver(definirSenhaSchema),
-    defaultValues: { password: '', confirmPassword: '' },
+    defaultValues: { password: '', confirmPassword: '', email },
   })
 
   async function onSubmit(values: DefinirSenhaValues) {
@@ -120,13 +119,9 @@ export function BemVindoClient({
                   label="Senha"
                   valor={field.value ?? ''}
                   onChange={field.onChange}
-                  onSugerir={(senha) =>
-                    setValue('confirmPassword', senha, { shouldValidate: true })
-                  }
                   erro={errors.password?.message}
                   desabilitado={isSubmitting}
                   mostrarForca
-                  permitirSugestao
                 />
               )}
             />
