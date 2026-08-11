@@ -5,6 +5,7 @@ import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getResend } from '@/lib/resend/client'
+import { renderConviteEmail } from '@/lib/emails/convite'
 import {
   inviteMemberSchema,
   memberRoleSchema,
@@ -15,18 +16,6 @@ import { getCurrentUserAndWorkspace } from '@/lib/supabase/workspace'
 import { canAddMember } from '@/lib/limits'
 import { appUrl } from '@/lib/app-url'
 import { excedeuLimite } from '@/lib/rate-limit'
-
-// O nome do workspace é texto livre e vai interpolado no HTML do e-mail de
-// convite, que é entregue a quem ainda nem tem conta. Sem escape, um admin
-// consegue injetar link/markup e usar o remetente legítimo pra phishing.
-function escapeHtml(value: string) {
-  return value
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;')
-}
 
 async function requireAdmin() {
   const { user, workspaceId } = await getCurrentUserAndWorkspace()
@@ -135,6 +124,14 @@ export async function inviteMember(values: unknown) {
     }
   }
 
+  // O escape do nome do workspace acontece dentro de `renderConviteEmail` —
+  // ver o comentário de `escapeHtml` em `lib/emails/layout.ts`, que explica por
+  // que ele existe.
+  const { subject, html } = renderConviteEmail({
+    workspaceName: workspace.name,
+    inviteUrl,
+  })
+
   const { error: emailError } = await resend.emails.send({
     // Domínio próprio, verificado no Resend (SPF em `send`, DKIM em
     // `resend._domainkey` e DMARC publicados no registro.br). Sair do
@@ -142,8 +139,8 @@ export async function inviteMember(values: unknown) {
     // teste, que é o que mais empurra esse e-mail para spam.
     from: 'Velo Funil <suporte@velofunil.com.br>',
     to: parsed.data.email,
-    subject: `Você foi convidado para o workspace ${workspace.name}`,
-    html: `<p>Você foi convidado para colaborar no workspace <strong>${escapeHtml(workspace.name)}</strong> no Velo Funil.</p><p><a href="${inviteUrl}">Aceitar convite</a></p><p>Este link expira em 7 dias.</p>`,
+    subject,
+    html,
   })
 
   if (emailError) {
