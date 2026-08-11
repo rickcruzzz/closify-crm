@@ -58,6 +58,23 @@ aba por vez** — o painel não salva todas de uma vez.
 | Magic Link     | `magic-link.html`           | `Seu link de acesso ao Velo Funil`  |
 | Invite user    | `convite.html`              | `Convite para o Velo Funil`         |
 
+As abas **Change email address** e **Reauthentication** ficam como estão — ver
+abaixo.
+
+### Sobre `reautenticacao.html`
+
+Não precisa ser colado agora. O produto não chama `supabase.auth.reauthenticate()`
+em lugar nenhum, então esse e-mail nunca é disparado.
+
+Ele passa a ser disparado se a opção **Secure password change** for ativada em
+_Authentication → Policies_: aí o Supabase exige reautenticação por e-mail
+sempre que alguém troca a senha estando logado, o que afetaria as chamadas de
+`updateUser` em `lib/supabase/actions.ts`. O arquivo existe para esse dia — se
+a opção for ativada sem ele, o e-mail sai sem marca nenhuma.
+
+É o único template sem botão: o Supabase manda um código (`{{ .Token }}`) para
+digitar na tela, não um link para clicar.
+
 ### Sobre `convite.html`
 
 É o template do `inviteUserByEmail` do Supabase Auth, que **o produto não
