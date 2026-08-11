@@ -2,6 +2,19 @@ import { z } from 'zod'
 
 import { senhaDerivadaDoEmail } from '@/lib/password-strength'
 
+/**
+ * Mensagem única para a senha derivada do e-mail.
+ *
+ * Usada pelos três schemas que criam ou trocam senha. Escrita uma vez para não
+ * divergirem — o tipo de diferença que faz a mesma recusa aparecer com texto
+ * diferente dependendo da tela, e a pessoa achar que são dois problemas.
+ *
+ * Diz o que fazer, não o que está errado no mundo: quem está tentando entrar
+ * quer saber qual é o próximo passo, não uma aula sobre segurança.
+ */
+const ERRO_SENHA_IGUAL_AO_EMAIL =
+  'A senha não pode conter o seu e-mail de login. Escolha outra senha.'
+
 export const loginSchema = z.object({
   email: z.string().min(1, 'Informe seu e-mail.').pipe(z.email('E-mail inválido.')),
   password: z.string().min(1, 'Informe sua senha.'),
@@ -30,8 +43,7 @@ export const signUpSchema = z
   })
   // Aqui o e-mail já está no próprio formulário, então não precisa vir de fora.
   .refine((dados) => !senhaDerivadaDoEmail(dados.password, dados.email), {
-    message:
-      'A senha não pode ser o seu e-mail nem contê-lo. É a primeira coisa que um ataque tenta.',
+    message: ERRO_SENHA_IGUAL_AO_EMAIL,
     path: ['password'],
   })
   // O erro precisa apontar para o campo de confirmação, não para o formulário
@@ -55,16 +67,6 @@ export const forgotPasswordSchema = z.object({
 })
 
 export type ForgotPasswordValues = z.infer<typeof forgotPasswordSchema>
-
-/**
- * Mensagem única para a senha derivada do e-mail.
- *
- * Repetida por três schemas; escrita uma vez para não divergirem — o tipo de
- * divergência que faz a mesma recusa aparecer com texto diferente dependendo
- * da tela em que a pessoa está.
- */
-const ERRO_SENHA_IGUAL_AO_EMAIL =
-  'A senha não pode ser o seu e-mail nem contê-lo. É a primeira coisa que um ataque tenta.'
 
 /**
  * O e-mail acompanha o formulário de senha sem aparecer na tela.

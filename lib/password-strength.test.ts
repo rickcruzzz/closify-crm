@@ -49,9 +49,8 @@ describe('avaliarSenha', () => {
 describe('senhaDerivadaDoEmail', () => {
   const email = 'henriquestn24@gmail.com'
 
-  // O caso que motivou a regra: usar o próprio endereço como senha. É a
-  // primeira combinação que qualquer lista de credenciais tenta, e funciona
-  // sem depender de vazamento nenhum — o e-mail costuma ser público.
+  // O caso que motivou a regra: a pessoa usar o próprio endereço de login
+  // como senha.
   it('recusa a senha igual ao e-mail inteiro', () => {
     expect(senhaDerivadaDoEmail(email, email)).toBe(true)
   })
@@ -60,8 +59,8 @@ describe('senhaDerivadaDoEmail', () => {
     expect(senhaDerivadaDoEmail('henriquestn24', email)).toBe(true)
   })
 
-  // O disfarce mais comum: manter o nome de usuário e pendurar símbolo e ano.
-  // Continua sendo a primeira derivação óbvia do endereço.
+  // Variação mais comum: manter o nome de usuário e pendurar símbolo e ano.
+  // Continua sendo o e-mail de login dentro da senha.
   it('recusa a senha que apenas embute o nome de usuário', () => {
     expect(senhaDerivadaDoEmail('Henriquestn24#2026', email)).toBe(true)
     expect(senhaDerivadaDoEmail('@@henriquestn24!!', email)).toBe(true)

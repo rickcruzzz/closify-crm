@@ -75,22 +75,18 @@ export function avaliarSenha(senha: string): ForcaSenha {
 }
 
 /**
- * A senha é o próprio e-mail, ou o nome de usuário dele?
+ * A senha é o próprio e-mail de login, ou o nome de usuário dele?
  *
- * É o padrão mais explorado que existe: quem monta lista de credenciais tenta
- * o e-mail como senha antes de qualquer outra coisa, porque funciona sozinho —
- * não precisa nem de vazamento anterior. Um endereço público basta.
- *
- * Três formas do mesmo erro são barradas, tomando "fulano@gmail.com" como
+ * Três formas do mesmo caso são reconhecidas, tomando "fulano@gmail.com" como
  * exemplo:
  *
  * 1. a senha igual ao e-mail inteiro — "fulano@gmail.com"
  * 2. a senha igual à parte antes do arroba — "fulano"
  * 3. a senha CONTENDO essa parte — "Fulano#2026"
  *
- * A terceira é a que mais pega gente na prática, e a que mais gera dúvida:
- * uma senha longa que embute o próprio nome de usuário continua sendo a
- * primeira coisa que um ataque de dicionário deriva do endereço.
+ * A terceira é a que mais aparece na prática e a que mais gera dúvida de quem
+ * lê o código: uma senha longa parece forte, mas se ela embute o nome de
+ * usuário do endereço, é derivada dele.
  *
  * O corte de 4 caracteres evita falso positivo em endereço curto: com
  * "ana@empresa.com", qualquer senha contendo "ana" seria recusada — inclusive
