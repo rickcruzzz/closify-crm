@@ -9,11 +9,15 @@ visual em Kanban, feito para substituir a planilha em um dia. PRD completo em
 Kanban, leads, dashboard, multi-empresa, billing pelo Asaas e e-mails
 transacionais funcionando. Não é greenfield — não recrie nada do zero.
 
-**Antes de qualquer coisa, leia [docs/estado-atual.md](docs/estado-atual.md):**
-traz o que está pendente, as decisões que não devem ser refeitas e as
-armadilhas já pagas neste projeto. Depois disso, `git log` conta o resto — as
-mensagens de commit registram o porquê de cada decisão, e são a memória real
-daqui.
+O estado atual do projeto — o que está pendente, as decisões que não devem ser
+refeitas e as armadilhas já pagas — vem importado logo abaixo. É `@` e não link
+markdown de propósito: o `@` embute o conteúdo do arquivo neste, e link
+dependeria de alguém decidir abrir.
+
+@docs/estado-atual.md
+
+Depois disso, `git log` conta o resto: as mensagens de commit registram o
+porquê de cada decisão e são a memória real daqui.
 
 ## Stack Técnica
 
