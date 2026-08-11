@@ -5,8 +5,15 @@ clínicas, imobiliárias pequenas, software houses), com pipeline de vendas
 visual em Kanban, feito para substituir a planilha em um dia. PRD completo em
 [docs/prd.md](docs/prd.md).
 
-Projeto ainda greenfield — nenhum scaffold de código existe ainda. Este
-arquivo orienta como estruturar e construir o projeto a partir do zero.
+**O produto está em produção** em <https://www.velofunil.com.br>, com auth,
+Kanban, leads, dashboard, multi-empresa, billing pelo Asaas e e-mails
+transacionais funcionando. Não é greenfield — não recrie nada do zero.
+
+**Antes de qualquer coisa, leia [docs/estado-atual.md](docs/estado-atual.md):**
+traz o que está pendente, as decisões que não devem ser refeitas e as
+armadilhas já pagas neste projeto. Depois disso, `git log` conta o resto — as
+mensagens de commit registram o porquê de cada decisão, e são a memória real
+daqui.
 
 ## Stack Técnica
 
@@ -27,7 +34,7 @@ arquivo orienta como estruturar e construir o projeto a partir do zero.
 
 ## Estrutura de Pastas
 
-Convenção proposta para o scaffold Next.js App Router, organizada por domínio:
+Estrutura em uso, organizada por domínio (já implementada, não é proposta):
 
 ```
 app/
@@ -74,6 +81,24 @@ Convenções:
 
 ## Processo de Desenvolvimento
 
-Construir em milestones incrementais e testáveis, priorizando o core antes do
-resto: **auth → kanban → leads → dashboard → multi-empresa/permissões →
-billing (Asaas) → integrações**. Testar cada milestone antes de avançar.
+Os milestones **auth → kanban → leads → dashboard → multi-empresa/permissões →
+billing (Asaas)** estão entregues e em produção. O que resta são integrações —
+a próxima é importação de Excel/planilha.
+
+### Verificar contra produção, não supor
+
+O padrão daqui: nada é dado como funcionando sem prova. Script descartável em
+Node lendo o ambiente (`node --env-file=.env.local`), exercitando o caminho
+real — webhook, API do Supabase, envio de e-mail — e limpando o que criou num
+`finally`. Vários defeitos desta base só apareceram assim, e pelo menos dois
+alarmes falsos foram descartados pelo mesmo método.
+
+Para regra de permissão e limite de plano, simular sessão real no Postgres
+(`set local role authenticated` + `set local request.jwt.claims`) e **tentar a
+escrita indevida**. Se passar, a regra não existe.
+
+### Antes de encerrar qualquer mudança
+
+`npx tsc --noEmit`, `npm run lint`, `npm test` e `npm run build` — os quatro
+limpos. Testes cobrem lógica pura em `lib/**` (schemas, parsers, formatadores);
+cada caso documenta o defeito que o motivou, e é assim que devem continuar.
