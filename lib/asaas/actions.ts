@@ -102,11 +102,20 @@ export async function createCheckout(values: unknown) {
           nextDueDate: new Date().toISOString().slice(0, 10),
           // Aparece na fatura, no boleto e no extrato do cartão. É o único
           // texto de marca que controlamos nessa tela: o nome do recebedor vem
-          // do cadastro da conta Asaas e, em MEI, é a razão social da Receita.
+          // do cadastro da conta Asaas e, em MEI, é a razão social da Receita —
+          // aqui, um CNPJ seguido do nome civil do titular. Trinta dias depois
+          // da compra, ninguém reconhece aquilo, e é dessa não-identificação
+          // que nasce a contestação.
+          //
+          // Por isso a descrição carrega três coisas, nesta ordem: a marca que
+          // a pessoa reconhece, o que ela está pagando, e o canal para
+          // perguntar antes de contestar. O e-mail entra no lugar da URL
+          // porque quem não reconheceu a cobrança precisa FALAR com alguém, e
+          // não visitar um site.
           //
           // Só vale para assinaturas novas — as já criadas mantêm a descrição
           // gravada no Asaas, que é a fonte da verdade da cobrança.
-          description: `Velo Funil — Plano Pro (assinatura mensal) · ${CONTROLADOR.site}`,
+          description: `Velo Funil — Plano Pro · CRM de vendas · Assinatura mensal · ${CONTROLADOR.email}`,
           externalReference,
         }),
       })
