@@ -10,13 +10,9 @@ type LimitCheck = { allowed: boolean; reason?: string }
 export async function canAddLead(workspaceId: string): Promise<LimitCheck> {
   const supabase = await createClient()
 
-  const { data: workspace } = await supabase
-    .from('workspaces')
-    .select('plan')
-    .eq('id', workspaceId)
-    .single()
+  const { data: pro } = await supabase.rpc('pro_vigente', { target_workspace_id: workspaceId })
 
-  if (workspace?.plan === 'pro') return { allowed: true }
+  if (pro) return { allowed: true }
 
   const { count } = await supabase
     .from('leads')
@@ -40,13 +36,9 @@ export async function canAddLead(workspaceId: string): Promise<LimitCheck> {
 export async function remainingLeadSlots(workspaceId: string): Promise<number | null> {
   const supabase = await createClient()
 
-  const { data: workspace } = await supabase
-    .from('workspaces')
-    .select('plan')
-    .eq('id', workspaceId)
-    .single()
+  const { data: pro } = await supabase.rpc('pro_vigente', { target_workspace_id: workspaceId })
 
-  if (workspace?.plan === 'pro') return null
+  if (pro) return null
 
   const { count } = await supabase
     .from('leads')
@@ -59,13 +51,9 @@ export async function remainingLeadSlots(workspaceId: string): Promise<number | 
 export async function canAddMember(workspaceId: string): Promise<LimitCheck> {
   const supabase = await createClient()
 
-  const { data: workspace } = await supabase
-    .from('workspaces')
-    .select('plan')
-    .eq('id', workspaceId)
-    .single()
+  const { data: pro } = await supabase.rpc('pro_vigente', { target_workspace_id: workspaceId })
 
-  if (workspace?.plan === 'pro') return { allowed: true }
+  if (pro) return { allowed: true }
 
   // Conta membros já ativos + convites pendentes — sem isso, dava pra
   // estourar o limite mandando vários convites de uma vez e todos aceitando
@@ -120,12 +108,16 @@ export async function canAddWorkspace(userId: string): Promise<LimitCheck> {
 
   // Uma empresa Pro libera a criação: o plano é do workspace, e quem paga por
   // qualquer um deles tem direito a multi-empresa.
-  const { data: workspaces } = await supabase
-    .from('workspaces')
-    .select('plan')
-    .in('id', ids)
+  //
+  // Pergunta por workspace em vez de ler a coluna `plan` em lote: a coluna é o
+  // último valor gravado e não sabe que o período pago venceu. `pro_vigente`
+  // confere a validade. São poucas chamadas — o Free permite uma empresa, e
+  // quem tem várias é justamente quem paga.
+  const validades = await Promise.all(
+    ids.map((id) => supabase.rpc('pro_vigente', { target_workspace_id: id })),
+  )
 
-  const temPro = (workspaces ?? []).some((w) => w.plan === 'pro')
+  const temPro = validades.some(({ data }) => data === true)
   if (temPro) return { allowed: true }
 
   if (ids.length >= FREE_WORKSPACE_LIMIT) {

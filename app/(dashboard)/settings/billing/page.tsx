@@ -20,7 +20,12 @@ import { cn } from '@/lib/utils'
 
 export const metadata: Metadata = { title: 'Cobrança' }
 
-export default async function BillingPage() {
+export default async function BillingPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ assinar?: string; pago?: string }>
+}) {
+  const { assinar, pago } = await searchParams
   const { user, workspaceId } = await getCurrentUserAndWorkspace()
   const { workspace, members } = await getWorkspaceSettingsData(workspaceId)
   const plan = workspace?.plan ?? 'free'
@@ -41,6 +46,23 @@ export default async function BillingPage() {
   return (
     <div className="flex flex-col gap-6">
       <PageHeader title="Cobrança" description="Plano atual e comparação de recursos." />
+
+      {/* Volta do Asaas depois de pagar. O Pro não é liberado aqui e sim pelo
+          webhook, que é assíncrono — Pix costuma levar segundos, boleto pode
+          levar dias. Sem este aviso a pessoa voltaria, veria "Free" e concluiria
+          que o pagamento não funcionou. */}
+      {pago === '1' && plan !== 'pro' && (
+        <Card className="border-primary/40">
+          <CardHeader>
+            <CardTitle className="text-base">Pagamento recebido</CardTitle>
+            <CardDescription>
+              Estamos aguardando a confirmação do Asaas para liberar o Pro. Pix costuma
+              levar alguns segundos; boleto, até três dias úteis. Você recebe um e-mail
+              assim que estiver ativo.
+            </CardDescription>
+          </CardHeader>
+        </Card>
+      )}
 
       <Card>
         <CardHeader className="flex flex-col-reverse items-start gap-3 sm:flex-row sm:justify-between sm:gap-4">
@@ -78,7 +100,9 @@ export default async function BillingPage() {
               está esperando pagamento. */}
           {plan === 'free' &&
             isAdmin &&
-            (!assinatura || assinatura.status === 'canceled') && <SubscribeButton />}
+            (!assinatura || assinatura.status === 'canceled') && (
+              <SubscribeButton abrirDeInicio={assinar === '1'} />
+            )}
         </CardContent>
       </Card>
 

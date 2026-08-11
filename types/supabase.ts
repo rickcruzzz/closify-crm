@@ -294,6 +294,16 @@ export type Database = {
         Args: { target_email: string; target_workspace_id: string }
         Returns: boolean
       }
+      /** O período pago ainda vale? Ver migration 0027. */
+      pro_vigente: {
+        Args: { target_workspace_id: string }
+        Returns: boolean
+      }
+      /** Rebaixa `workspaces.plan` quando o período venceu. Nunca promove. */
+      sincronizar_plano_do_workspace: {
+        Args: { target_workspace_id: string }
+        Returns: 'free' | 'pro' | null
+      }
       excluir_minha_conta: { Args: never; Returns: undefined }
       get_workspace_member_names: {
         Args: { target_workspace_id: string; target_user_ids: string[] }

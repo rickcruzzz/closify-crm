@@ -16,6 +16,15 @@ export const signUpSchema = z
     terms: z.literal(true, {
       error: 'Você precisa aceitar os termos para continuar.',
     }),
+    // De onde a pessoa veio. Não são campos do formulário — chegam pela URL
+    // (`/cadastro?convite=...` ou `?plano=pro`) e a Server Action os guarda em
+    // cookie para sobreviverem à ida ao e-mail de confirmação.
+    //
+    // Opcionais e tolerantes: link torto não pode impedir alguém de criar
+    // conta. Um token inválido simplesmente não encontra convite depois, e a
+    // pessoa segue pelo caminho normal.
+    convite: z.uuid().optional(),
+    plano: z.literal('pro').optional(),
   })
   // O erro precisa apontar para o campo de confirmação, não para o formulário
   // inteiro: senão a mensagem aparece longe do campo que a pessoa tem que

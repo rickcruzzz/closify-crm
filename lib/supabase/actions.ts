@@ -16,6 +16,13 @@ import { appUrl } from '@/lib/app-url'
 import { excedeuLimite, limparTentativas } from '@/lib/rate-limit'
 import { canAddWorkspace } from '@/lib/limits'
 import { FREE_WORKSPACE_LIMIT } from '@/lib/plans'
+import {
+  guardarIntencao,
+  lerConvitePendente,
+  lerEmailPendente,
+  lerPlanoDesejado,
+  limparIntencao,
+} from '@/lib/auth/intencao'
 
 export async function signIn(values: unknown) {
   const parsed = loginSchema.safeParse(values)
@@ -50,6 +57,19 @@ export async function signUp(values: unknown) {
   if (!parsed.success) {
     return { error: 'Dados inválidos.' }
   }
+
+  // Guarda ANTES de qualquer chamada de rede, porque todos os caminhos daqui
+  // para baixo terminam em `redirect()`, que lança — não haveria depois.
+  //
+  // O e-mail entra para a tela seguinte poder dizer para onde mandou e
+  // oferecer reenvio. Convite e plano entram porque o link do e-mail de
+  // confirmação não carrega parâmetro nenhum: sem isto, quem foi convidado
+  // termina criando a própria empresa em vez de virar colaborador.
+  await guardarIntencao({
+    email: parsed.data.email,
+    convite: parsed.data.convite ?? null,
+    plano: parsed.data.plano ?? null,
+  })
 
   const supabase = await createClient()
   const { data, error } = await supabase.auth.signUp({
@@ -244,6 +264,21 @@ export async function createWorkspace(values: unknown) {
     redirect('/login')
   }
 
+  // Quem foi convidado não deveria estar criando empresa nenhuma. Antes, o
+  // token do convite se perdia no caminho para o cadastro e a pessoa terminava
+  // aqui, criando a PRÓPRIA empresa — virava uma conta paralela em vez de
+  // colaborador, e o convite ficava `pending` para sempre.
+  //
+  // Mandar de volta ao convite em vez de só bloquear: a pessoa não errou nada,
+  // ela só foi parar na tela errada. E impedir a empresa órfã importa além da
+  // confusão — `getActiveWorkspaceId` escolhe sempre o workspace MAIS ANTIGO,
+  // então a empresa criada por engano viraria a padrão, e depois de aceitar o
+  // convite ela cairia justamente na empresa errada.
+  const convitePendente = await lerConvitePendente()
+  if (convitePendente) {
+    redirect(`/convite/${convitePendente}`)
+  }
+
   // Sem este teto, o limite de 2 colaboradores não segurava nada: bastava
   // criar uma empresa nova para cada dupla e ter equipe ilimitada de graça.
   // A RPC repete a checagem no banco — esta aqui existe para dar mensagem
@@ -273,7 +308,76 @@ export async function createWorkspace(values: unknown) {
     return { error: 'Não foi possível criar o workspace.' }
   }
 
+  // A empresa acabou de nascer; se a pessoa veio da landing querendo o Pro,
+  // este é o momento de levá-la ao pagamento. Antes ela caía no dashboard em
+  // Free e tinha que descobrir Configurações → Cobrança sozinha — o clique em
+  // "Assinar Pro" morria seis telas antes de qualquer campo de pagamento.
+  //
+  // A intenção é consumida aqui: deixá-la no cookie faria toda criação de
+  // empresa futura desviar para o checkout.
+  const plano = await lerPlanoDesejado()
+  if (plano === 'pro') {
+    await limparIntencao(['plano'])
+    redirect('/settings/billing?assinar=1')
+  }
+
   redirect('/dashboard')
+}
+
+/**
+ * Para onde mandar quem acabou de confirmar o e-mail, quando veio de convite.
+ *
+ * A tela `/confirmar` é Client Component — ela verifica o token no navegador,
+ * porque a sessão de recuperação vive lá — e cookie `httpOnly` não é legível
+ * por script. Daí esta ponte mínima: devolve o caminho ou `null`, sem expor o
+ * token para o JavaScript da página.
+ */
+export async function destinoDoConvite(): Promise<string | null> {
+  const token = await lerConvitePendente()
+  return token ? `/convite/${token}` : null
+}
+
+/**
+ * Reenvia o e-mail de confirmação de cadastro.
+ *
+ * `/verifique-email` era beco sem saída: não dizia para onde o e-mail tinha
+ * ido e não tinha como tentar de novo. E-mail que cai no spam, ou endereço
+ * digitado errado, significava cadastro perdido sem recurso — a pessoa teria
+ * que criar outra conta, e aí o Supabase devolve "e-mail já existe".
+ *
+ * O destinatário sai do cookie gravado no `signUp`, nunca de parâmetro do
+ * cliente: esta é uma Server Action, e aceitar o endereço de fora
+ * transformaria o botão numa máquina de disparar e-mail para qualquer pessoa,
+ * queimando a reputação do domínio no Resend.
+ */
+export async function reenviarConfirmacao() {
+  const email = await lerEmailPendente()
+  if (!email) {
+    return { error: 'Não sabemos para qual e-mail reenviar. Faça o cadastro novamente.' }
+  }
+
+  // Mesmo limitador do login e da recuperação de senha, por e-mail e não por
+  // IP — o alvo é o endereço, e IP atrás de NAT é compartilhado.
+  if (await excedeuLimite('reenviar-confirmacao', email)) {
+    return { error: 'Aguarde alguns minutos antes de pedir outro e-mail.' }
+  }
+
+  const supabase = await createClient()
+  const { error } = await supabase.auth.resend({
+    type: 'signup',
+    email,
+    options: { emailRedirectTo: `${appUrl()}/confirmar` },
+  })
+
+  if (error) {
+    console.error('reenviarConfirmacao falhou', { code: error.code, message: error.message })
+    // Não distingue "não existe" de "já confirmado": as duas respostas
+    // permitiriam descobrir quais e-mails têm conta, mesma razão pela qual o
+    // login não diz se a conta existe.
+    return { success: true }
+  }
+
+  return { success: true }
 }
 
 /**

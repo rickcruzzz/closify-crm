@@ -3,6 +3,10 @@ import { timingSafeEqual } from 'node:crypto'
 import { NextResponse } from 'next/server'
 
 import { createAdminClient } from '@/lib/supabase/admin'
+import { getResend } from '@/lib/resend/client'
+import { renderPagamentoConfirmadoEmail } from '@/lib/emails/pagamento-confirmado'
+import { PRO_PLAN_PRICE } from '@/lib/plans'
+import { appUrl } from '@/lib/app-url'
 
 // `timingSafeEqual` vem de `node:crypto` e o client admin usa a service role
 // key: nada disso pode rodar no runtime Edge. O padrão do Next 14 para route
@@ -112,7 +116,76 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'internal_error' }, { status: 500 })
   }
 
+  // Pagamento confirmado é o único momento em que o produto tinha algo a dizer
+  // e ficava calado. A pessoa pagava — muitas vezes por Pix, fora do horário
+  // comercial — e a única confirmação era a fatura do próprio Asaas, que traz a
+  // razão social do MEI e não a marca. Como a liberação do Pro é assíncrona,
+  // ela não tinha como saber quando voltar a olhar.
+  if (status === 'active' && matched === true) {
+    await avisarPagamentoConfirmado(supabase, subscriptionId)
+  }
+
   // Assinatura que não é nossa (ou já removida): não é erro. Responde 200 pro
   // Asaas parar de reenviar.
   return NextResponse.json({ received: true, matched: matched === true })
+}
+
+/**
+ * Manda o e-mail de "Pro ativado".
+ *
+ * Engole qualquer falha de propósito. O e-mail é aviso, não é o efeito: o Pro
+ * já foi liberado na transação anterior. Deixar uma exceção escapar aqui faria
+ * o webhook responder 500, o Asaas reenviar o evento, e o dedupe por `event_id`
+ * — que já gravou este evento — devolver 200 sem reprocessar nada. Ou seja: um
+ * Resend fora do ar viraria pagamento sem confirmação e sem retentativa útil.
+ *
+ * A idempotência do envio vem de graça do dedupe: um `event_id` só chega aqui
+ * uma vez, então não há risco de mandar o mesmo e-mail duas vezes.
+ */
+async function avisarPagamentoConfirmado(
+  supabase: ReturnType<typeof createAdminClient>,
+  subscriptionId: string,
+) {
+  try {
+    const { data: assinatura } = await supabase
+      .from('subscriptions')
+      .select('workspace_id')
+      .eq('asaas_subscription_id', subscriptionId)
+      .maybeSingle()
+
+    if (!assinatura) return
+
+    const { data: workspace } = await supabase
+      .from('workspaces')
+      .select('name, created_by')
+      .eq('id', assinatura.workspace_id)
+      .maybeSingle()
+
+    // `created_by` é quem abriu a empresa e, pela regra do checkout, o único
+    // que pode assinar — é para ele que a cobrança vai.
+    if (!workspace?.created_by) return
+
+    const { data: dono } = await supabase.auth.admin.getUserById(workspace.created_by)
+    const destinatario = dono?.user?.email
+    if (!destinatario) return
+
+    const { subject, html } = renderPagamentoConfirmadoEmail({
+      workspaceName: workspace.name,
+      valor: PRO_PLAN_PRICE,
+      appUrl: appUrl(),
+    })
+
+    const { error } = await getResend().emails.send({
+      from: 'Velo Funil <suporte@velofunil.com.br>',
+      to: destinatario,
+      subject,
+      html,
+    })
+
+    if (error) {
+      console.error('Webhook Asaas: falha ao enviar e-mail de pagamento', error)
+    }
+  } catch (err) {
+    console.error('Webhook Asaas: erro ao avisar pagamento confirmado', err)
+  }
 }

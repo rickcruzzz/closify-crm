@@ -1,6 +1,5 @@
 'use server'
 
-import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
 
 import { asaasFetch, AsaasApiError } from '@/lib/asaas/client'
@@ -171,7 +170,18 @@ export async function createCheckout(values: unknown) {
     return { error: 'Assinatura criada, mas não foi possível gerar o link de pagamento.' }
   }
 
-  redirect(invoiceUrl)
+  // Devolve a URL em vez de fazer `redirect(invoiceUrl)`.
+  //
+  // Com o redirect, a pessoa saía do produto e não voltava: pagava na página do
+  // Asaas e ficava lá. A saída natural seria o `callback.successUrl` do Asaas,
+  // mas ele **não funciona** — testado contra a API em 11/08/2026: o
+  // `POST /subscriptions` aceita o campo com HTTP 200, não o devolve na
+  // leitura, não propaga para a cobrança gerada, e o `PUT /payments` com
+  // `callback` responde 500.
+  //
+  // Sem cooperação do Asaas, o retorno tem que ser nosso: quem chama abre a
+  // fatura em outra aba e mantém esta em `/settings/billing?pago=1`.
+  return { url: invoiceUrl }
 }
 
 /**

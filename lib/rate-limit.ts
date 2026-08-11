@@ -16,12 +16,18 @@ import { createAdminClient } from '@/lib/supabase/admin'
  * - `reset-password`: usar nosso Resend para encher a caixa de entrada de um
  *   terceiro. 5 por hora cobre quem não recebeu e pediu de novo, sem servir de
  *   canhão contra um endereço conhecido.
+ * - `reenviar-confirmacao`: mesma ameaça do reset, e o mesmo número. Quem não
+ *   recebeu o e-mail de cadastro tenta de novo uma ou duas vezes; cinco por
+ *   hora cobre isso com folga e não serve de canhão. O limite do próprio
+ *   Supabase existe, mas é global por projeto — barrar aqui, por endereço,
+ *   impede que uma pessoa insistindo consuma a cota de todo mundo.
  */
 const LIMITES = {
   signin: { limite: 8, janelaSegundos: 15 * 60 },
   invite: { limite: 20, janelaSegundos: 60 * 60 },
   'accept-invite': { limite: 15, janelaSegundos: 15 * 60 },
   'reset-password': { limite: 5, janelaSegundos: 60 * 60 },
+  'reenviar-confirmacao': { limite: 5, janelaSegundos: 60 * 60 },
 } as const
 
 export type AcaoLimitada = keyof typeof LIMITES

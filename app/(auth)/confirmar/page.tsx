@@ -4,7 +4,7 @@ import * as React from 'react'
 import { Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
-import { Loader2, MailWarning } from 'lucide-react'
+import { CheckCircle2, Loader2, MailWarning } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
 import {
@@ -15,8 +15,9 @@ import {
   CardTitle,
 } from '@/components/ui/card'
 import { createClient } from '@/lib/supabase/client'
+import { destinoDoConvite } from '@/lib/supabase/actions'
 
-type Estado = 'aguardando' | 'confirmando' | 'erro'
+type Estado = 'aguardando' | 'confirmando' | 'confirmado' | 'erro'
 
 /**
  * Recebe os links de confirmação de cadastro. Dois formatos coexistem:
@@ -65,6 +66,19 @@ function ConfirmarPageInner() {
       data: { user },
     } = await supabase.auth.getUser()
 
+    // Convite pendente tem prioridade sobre tudo: a pessoa não veio criar
+    // empresa, veio entrar numa que já existe. Sem este desvio ela caía em
+    // `/bem-vindo` → `/onboarding` e criava a PRÓPRIA empresa, virando conta
+    // separada em vez de colaboradora — com o convite preso em `pending`.
+    //
+    // O token vem do cookie gravado no cadastro, porque o link do e-mail de
+    // confirmação não carrega parâmetro nenhum.
+    const convite = await destinoDoConvite()
+    if (convite) {
+      router.replace(convite)
+      return
+    }
+
     if (user) {
       const { data: membership } = await supabase
         .from('workspace_members')
@@ -106,7 +120,9 @@ function ConfirmarPageInner() {
           return
         }
         window.history.replaceState(null, '', window.location.pathname)
-        irParaDestino()
+        // Mesma tela de sucesso do fluxo novo: duas experiências diferentes
+        // para o mesmo resultado só confundiriam quem recebeu um e-mail antigo.
+        setEstado('confirmado')
       })
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
@@ -128,7 +144,14 @@ function ConfirmarPageInner() {
       setEstado('erro')
       return
     }
-    await irParaDestino()
+
+    // Para aqui de propósito, em vez de redirecionar sozinho.
+    //
+    // A pessoa acabou de sair do e-mail e precisa de sinal claro de que o
+    // clique funcionou. Navegar em silêncio faz parecer que nada aconteceu —
+    // é a mesma razão pela qual existe o botão "Confirmar meu e-mail" antes
+    // desta etapa.
+    setEstado('confirmado')
   }
 
   if (estado === 'erro') {
@@ -160,6 +183,27 @@ function ConfirmarPageInner() {
         <CardContent className="flex min-h-40 flex-col items-center justify-center gap-3">
           <Loader2 aria-hidden className="size-5 animate-spin" />
           <p className="text-muted-foreground text-sm">Confirmando sua conta...</p>
+        </CardContent>
+      </Card>
+    )
+  }
+
+  if (estado === 'confirmado') {
+    return (
+      <Card>
+        <CardHeader className="items-center text-center">
+          <div className="mb-2 flex size-10 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+            <CheckCircle2 className="size-5" />
+          </div>
+          <CardTitle className="text-xl">E-mail verificado</CardTitle>
+          <CardDescription>
+            Sua conta no Velo Funil está ativa. É só entrar e começar.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Button className="w-full" onClick={() => void irParaDestino()}>
+            Acessar o Velo Funil
+          </Button>
         </CardContent>
       </Card>
     )

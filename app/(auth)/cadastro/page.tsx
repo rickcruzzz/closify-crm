@@ -2,6 +2,7 @@
 
 import * as React from 'react'
 import Link from 'next/link'
+import { useSearchParams } from 'next/navigation'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { Controller, useForm } from 'react-hook-form'
 import { Loader2 } from 'lucide-react'
@@ -24,10 +25,19 @@ import { signUpSchema, type SignUpValues } from '@/lib/validations/auth'
 import { signUp } from '@/lib/supabase/actions'
 import { signInWithGoogleClient } from '@/lib/supabase/google-auth'
 
-export default function SignUpPage() {
+function SignUpForm() {
+  const searchParams = useSearchParams()
   const [isSubmitting, setIsSubmitting] = React.useState(false)
   const [isGoogleLoading, setIsGoogleLoading] = React.useState(false)
   const [formError, setFormError] = React.useState<string | null>(null)
+
+  // De onde a pessoa chegou. `convite` vem da tela de convite; `plano=pro`, do
+  // botão "Assinar Pro" da landing. Os dois seguem para a Server Action, que os
+  // guarda em cookie — o link do e-mail de confirmação não carrega parâmetro,
+  // e sem o cookie a intenção morre na caixa de entrada.
+  const convite = searchParams.get('convite') ?? undefined
+  const plano = searchParams.get('plano') === 'pro' ? ('pro' as const) : undefined
+  const emailConvidado = searchParams.get('email') ?? ''
 
   const {
     register,
@@ -36,13 +46,23 @@ export default function SignUpPage() {
     formState: { errors },
   } = useForm<SignUpValues>({
     resolver: zodResolver(signUpSchema),
-    defaultValues: { name: '', email: '', password: '', terms: undefined },
+    defaultValues: {
+      name: '',
+      // Vindo de convite, o e-mail já vem preenchido: a RPC de aceite recusa
+      // endereço diferente do convidado, e deixar digitar outro só adia a
+      // frustração para quatro telas depois.
+      email: emailConvidado,
+      password: '',
+      terms: undefined,
+      convite,
+      plano,
+    },
   })
 
   async function onSubmit(values: SignUpValues) {
     setFormError(null)
     setIsSubmitting(true)
-    const result = await signUp(values)
+    const result = await signUp({ ...values, convite, plano })
     if (result?.error) {
       setFormError(result.error)
       setIsSubmitting(false)
@@ -253,5 +273,15 @@ export default function SignUpPage() {
         </p>
       </CardContent>
     </Card>
+  )
+}
+
+// `useSearchParams` obriga a fronteira de Suspense, senão o build falha ao
+// tentar pré-renderizar a página estaticamente.
+export default function SignUpPage() {
+  return (
+    <React.Suspense fallback={null}>
+      <SignUpForm />
+    </React.Suspense>
   )
 }

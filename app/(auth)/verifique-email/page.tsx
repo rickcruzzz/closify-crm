@@ -1,35 +1,27 @@
-import Link from 'next/link'
-import { MailCheck } from 'lucide-react'
+import { Card, CardHeader } from '@/components/ui/card'
+import { VerifiqueEmailClient } from '@/components/auth/verifique-email-client'
+import { lerEmailPendente } from '@/lib/auth/intencao'
 
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card'
+/**
+ * Tela de espera da confirmação de cadastro.
+ *
+ * Era um beco sem saída: não dizia para onde o e-mail tinha ido e não oferecia
+ * nada além de "Entrar". E-mail que cai no spam, ou endereço digitado errado,
+ * significava cadastro perdido sem recurso — e tentar de novo esbarra no
+ * "e-mail já existe" do Supabase.
+ *
+ * O endereço vem do cookie gravado pela `signUp`, não da URL: em querystring
+ * ele apareceria no histórico do navegador e no cabeçalho `Referer` de toda
+ * requisição feita a partir daqui.
+ */
+export default async function VerifiqueEmailPage() {
+  const email = await lerEmailPendente()
 
-export default function VerifiqueEmailPage() {
   return (
     <Card>
-      <CardHeader className="items-center text-center">
-        <div className="bg-primary text-primary-foreground mb-2 flex size-10 items-center justify-center rounded-lg">
-          <MailCheck className="size-5" />
-        </div>
-        <CardTitle className="text-xl">Confirme seu e-mail</CardTitle>
-        <CardDescription>
-          Enviamos um link de confirmação para o e-mail cadastrado. Clique nele para
-          continuar e criar seu workspace.
-        </CardDescription>
+      <CardHeader className="items-center">
+        <VerifiqueEmailClient email={email} />
       </CardHeader>
-      <CardContent>
-        <p className="text-muted-foreground text-center text-sm">
-          Já confirmou?{' '}
-          <Link href="/login" className="text-foreground underline-offset-4 hover:underline">
-            Entrar
-          </Link>
-        </p>
-      </CardContent>
     </Card>
   )
 }

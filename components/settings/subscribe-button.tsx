@@ -1,5 +1,6 @@
 'use client'
 
+import { useRouter } from 'next/navigation'
 import * as React from 'react'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { Controller, useForm } from 'react-hook-form'
@@ -32,8 +33,23 @@ import { cn } from '@/lib/utils'
  * largura toda no celular). Duplicar o componente para mudar uma classe
  * significaria manter duas cópias da validação de CPF e do fluxo de checkout.
  */
-export function SubscribeButton({ className }: { className?: string }) {
-  const [dialogOpen, setDialogOpen] = React.useState(false)
+export function SubscribeButton({
+  className,
+  abrirDeInicio = false,
+}: {
+  className?: string
+  /**
+   * Já abre o formulário de CPF ao montar.
+   *
+   * Serve a quem clicou em "Assinar Pro" na landing: essa pessoa atravessa
+   * cadastro, e-mail de confirmação e criação de empresa antes de chegar
+   * aqui. Fazer ela procurar e clicar de novo, depois de tudo isso, é onde a
+   * compra se perde.
+   */
+  abrirDeInicio?: boolean
+}) {
+  const router = useRouter()
+  const [dialogOpen, setDialogOpen] = React.useState(abrirDeInicio)
   const [isSubmitting, setIsSubmitting] = React.useState(false)
 
   const {
@@ -47,13 +63,35 @@ export function SubscribeButton({ className }: { className?: string }) {
 
   async function onSubmit(values: CheckoutValues) {
     setIsSubmitting(true)
+
+    // A aba é aberta ANTES da chamada, ainda dentro do gesto do clique.
+    // Depois do `await`, o navegador não trata mais `window.open` como
+    // resposta direta a uma ação da pessoa e o bloqueador de pop-up mata a
+    // janela — que é justamente o link de pagamento.
+    const abaDaFatura = window.open('', '_blank')
+
     const result = await createCheckout(values)
+
     if (result?.error) {
+      abaDaFatura?.close()
       toast.error(result.error)
       setIsSubmitting(false)
+      return
     }
-    // Sem erro: createCheckout já fez redirect() pro link de pagamento do
-    // Asaas, não sobra nada pra fazer aqui.
+
+    if (result?.url) {
+      if (abaDaFatura) {
+        abaDaFatura.location.href = result.url
+        // Esta aba fica no produto, mostrando que a cobrança está a caminho.
+        // Antes o app dava `redirect()` para o Asaas e a pessoa simplesmente
+        // não voltava: pagava e ficava na página do banco.
+        router.replace('/settings/billing?pago=1')
+      } else {
+        // Pop-up bloqueado: melhor ir para o pagamento na mesma aba do que
+        // deixar a pessoa sem link nenhum.
+        window.location.href = result.url
+      }
+    }
   }
 
   return (

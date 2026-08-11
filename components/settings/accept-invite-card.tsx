@@ -35,6 +35,17 @@ export function AcceptInviteCard({
 
   const wrongAccount = isAuthenticated && userEmail !== inviteEmail
 
+  // O token viaja junto para o cadastro e para o login.
+  //
+  // Sem ele, a pessoa convidada cadastrava, confirmava o e-mail, caía em
+  // `/onboarding` e criava a PRÓPRIA empresa — entrava como conta separada em
+  // vez de colaborador, e o convite ficava `pending` para sempre no painel de
+  // quem convidou. O e-mail também vai, para o formulário já vir preenchido:
+  // a RPC de aceite recusa endereço diferente do convidado, e descobrir isso
+  // quatro telas depois é frustração garantida.
+  const paraCadastro = `/cadastro?convite=${encodeURIComponent(token)}&email=${encodeURIComponent(inviteEmail)}`
+  const paraLogin = `/login?convite=${encodeURIComponent(token)}`
+
   async function handleAccept() {
     setIsSubmitting(true)
     setError(null)
@@ -42,7 +53,7 @@ export function AcceptInviteCard({
     setIsSubmitting(false)
 
     if (result?.error === 'not_authenticated') {
-      router.push('/cadastro')
+      router.push(paraCadastro)
       return
     }
     if (result?.error) {
@@ -70,7 +81,8 @@ export function AcceptInviteCard({
         )}
         {!isAuthenticated && (
           <p className="text-muted-foreground text-sm">
-            Crie uma conta ou faça login com {inviteEmail} e volte a este link para aceitar.
+            Crie sua conta com {inviteEmail} para entrar na equipe. Assim que confirmar o
+            e-mail, você já cai direto aqui dentro.
           </p>
         )}
         {error && <p className="text-destructive text-sm">{error}</p>}
@@ -86,10 +98,10 @@ export function AcceptInviteCard({
             Aceitar convite
           </Button>
         ) : (
-          <Button className="w-full" render={<Link href="/cadastro">Criar conta</Link>} />
+          <Button className="w-full" render={<Link href={paraCadastro}>Criar conta</Link>} />
         )}
         <p className="text-muted-foreground text-center text-sm">
-          <Link href="/login" className="text-foreground underline-offset-4 hover:underline">
+          <Link href={paraLogin} className="text-foreground underline-offset-4 hover:underline">
             Já tenho conta, fazer login
           </Link>
         </p>

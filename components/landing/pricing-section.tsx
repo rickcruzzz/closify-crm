@@ -57,7 +57,13 @@ const plans: Plan[] = [
       'Suporte prioritário',
     ],
     cta: 'Assinar Pro',
-    href: '/cadastro',
+    // O `?plano=pro` é o que faz o clique valer alguma coisa. Sem ele, este
+    // botão levava ao MESMO destino do plano Free, e a intenção de compra
+    // morria ali: a pessoa terminava no dashboard em Free, tendo que descobrir
+    // Configurações → Cobrança sozinha. O parâmetro vira cookie no cadastro e
+    // atravessa a ida ao e-mail de confirmação, para o checkout abrir assim
+    // que a empresa nascer.
+    href: '/cadastro?plano=pro',
     highlighted: true,
     delay: 120,
   },

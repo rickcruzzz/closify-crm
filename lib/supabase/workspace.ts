@@ -34,5 +34,19 @@ export const getCurrentUserAndWorkspace = cache(async () => {
     redirect('/onboarding')
   }
 
+  // Alinha `workspaces.plan` com a validade real da assinatura, e só para
+  // baixo. A coluna guarda o último valor gravado pelo webhook e não sabe que
+  // o tempo passou: sem esta chamada, um Pro vencido continuaria aparecendo
+  // como Pro na tela até o próximo evento do Asaas — que, em quem parou de
+  // pagar, não vem nunca.
+  //
+  // É o único lugar onde isso precisa acontecer: toda página do dashboard passa
+  // por aqui, e o `cache()` garante uma chamada por requisição. Os LIMITES não
+  // dependem desta sincronização — eles consultam `pro_vigente` direto, no
+  // banco, porque coluna desatualizada não pode virar permissão.
+  await supabase.rpc('sincronizar_plano_do_workspace', {
+    target_workspace_id: membership.workspace_id,
+  })
+
   return { user, workspaceId: membership.workspace_id }
 })
