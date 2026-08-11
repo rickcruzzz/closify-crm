@@ -9,7 +9,6 @@ import {
   signUpSchema,
   onboardingSchema,
   forgotPasswordSchema,
-  resetPasswordSchema,
   definirSenhaSchema,
   perfilSchema,
 } from '@/lib/validations/auth'
@@ -147,72 +146,36 @@ export async function requestPasswordReset(values: unknown) {
   return { success: true }
 }
 
-export async function updatePassword(values: unknown) {
-  const parsed = resetPasswordSchema.safeParse(values)
-  if (!parsed.success) {
-    return { error: 'Dados inválidos.' }
-  }
+/**
+ * Limpa as tentativas de login erradas depois de uma troca de senha bem
+ * sucedida. Quem redefiniu a senha provou posse da conta e não deve carregar o
+ * bloqueio das tentativas que antecederam o reset.
+ *
+ * A troca de senha em si **não** acontece aqui, e isso é deliberado.
+ *
+ * A sessão de recuperação nasce no navegador: o link do e-mail devolve o token
+ * em `#access_token=`, um fragmento de URL, que nunca é enviado ao servidor.
+ * A página lê o fragmento e chama `setSession()` no browser. Uma Server Action
+ * só enxerga essa sessão depois que o cookie escrito pelo cliente volta numa
+ * requisição nova — uma travessia a mais entre "a pessoa clicou em salvar" e
+ * "a senha mudou de fato", e a única etapa da cadeia que não dá para observar
+ * de fora.
+ *
+ * O sintoma disso é exatamente o que foi relatado: a pessoa redefine a senha e
+ * a antiga continua entrando. Não porque a antiga sobreviveu — o Supabase
+ * invalida a senha na hora, verificado contra produção —, mas porque a troca
+ * nunca chegou a acontecer. Nos logs de autenticação apareciam vários
+ * `POST /recover` e nenhum `PUT /user`.
+ *
+ * Fazendo o `updateUser` no cliente, ele roda no mesmo lugar onde a sessão de
+ * recuperação acabou de ser criada. Não há travessia, e o erro — se houver —
+ * chega direto na tela com o código real.
+ */
+export async function limparTentativasDeLogin(email: string) {
+  const parsed = forgotPasswordSchema.safeParse({ email })
+  if (!parsed.success) return
 
-  const supabase = await createClient()
-  const { data, error } = await supabase.auth.updateUser({
-    password: parsed.data.password,
-  })
-
-  if (error) {
-    console.error('updateUser (reset de senha) falhou', {
-      code: error.code,
-      status: error.status,
-    })
-    if (error.code === 'same_password') {
-      return { error: 'A nova senha precisa ser diferente da atual.' }
-    }
-    if (error.code === 'weak_password') {
-      return { error: 'Senha muito fraca. Use uma senha mais forte.' }
-    }
-    return {
-      error:
-        'Não foi possível redefinir a senha. O link pode ter expirado — solicite um novo.',
-    }
-  }
-
-  // Capturado ANTES do signOut abaixo: depois de mexer na sessão, buscar o
-  // usuário de novo seria um round-trip extra e dependeria de um estado que
-  // acabou de mudar. O `updateUser` já devolve o usuário atualizado.
-  const email = data.user?.email
-
-  // Quem redefine a senha muitas vezes está reagindo a uma conta comprometida.
-  // Sem isto, o invasor continua logado nos aparelhos dele: trocar a senha não
-  // derruba sessão nenhuma por conta própria.
-  //
-  // `others` e não `global`: revoga os outros refresh tokens e preserva a
-  // sessão atual — confirmado na implementação do auth-js, que só chama
-  // `removeCurrentSession()` quando o escopo é diferente de `others`. É o que
-  // permite cair no dashboard já autenticado logo abaixo.
-  const { error: signOutError } = await supabase.auth.signOut({ scope: 'others' })
-
-  // Provou posse da conta: não deve carregar as tentativas de login erradas
-  // que antecederam o reset.
-  if (email) {
-    await limparTentativas('signin', email)
-  }
-
-  if (signOutError) {
-    console.error('signOut das outras sessões falhou após reset', {
-      code: signOutError.code,
-      status: signOutError.status,
-    })
-
-    // A senha JÁ mudou neste ponto — não dá para desfazer, e mandar para o
-    // dashboard em silêncio faria a pessoa acreditar que os outros aparelhos
-    // foram desconectados. Quem redefine senha por invasão precisa saber que
-    // essa parte não valeu, para encerrar as sessões na mão em Configurações.
-    return {
-      error:
-        'Sua senha foi alterada, mas não conseguimos desconectar os outros dispositivos. Se você suspeita de acesso indevido, troque a senha novamente em alguns instantes.',
-    }
-  }
-
-  redirect('/dashboard')
+  await limparTentativas('signin', parsed.data.email)
 }
 
 /**

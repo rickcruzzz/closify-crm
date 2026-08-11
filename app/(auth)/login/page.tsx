@@ -87,13 +87,34 @@ export default function LoginPage() {
           <Separator className="flex-1" />
         </div>
 
+        {/* A mensagem é a mesma para senha errada e para e-mail sem conta, de
+            propósito: distinguir as duas permitiria testar uma lista de
+            endereços e descobrir quem tem conta no Velo Funil — insumo direto
+            para phishing dirigido.
+
+            Mas a dúvida de quem errou é legítima ("não tenho conta ou errei a
+            senha?"), e antes ela ficava sem saída. Os dois caminhos abaixo
+            resolvem sem responder a pergunta a quem está sondando. */}
         {formError && (
-          <p
+          <div
             role="alert"
-            className="bg-destructive/10 text-destructive rounded-md px-3 py-2 text-sm"
+            className="bg-destructive/10 text-destructive flex flex-col gap-2 rounded-md px-3 py-2 text-sm"
           >
-            {formError}
-          </p>
+            <p>{formError}</p>
+            <p className="text-destructive/90 text-xs">
+              Ainda não tem conta?{' '}
+              <Link href="/cadastro" className="font-medium underline underline-offset-2">
+                Criar conta grátis
+              </Link>{' '}
+              · Esqueceu a senha?{' '}
+              <Link
+                href="/esqueci-senha"
+                className="font-medium underline underline-offset-2"
+              >
+                Recuperar acesso
+              </Link>
+            </p>
+          </div>
         )}
 
         <form

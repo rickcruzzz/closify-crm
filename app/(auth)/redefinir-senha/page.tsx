@@ -2,6 +2,7 @@
 
 import * as React from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { Controller, useForm } from 'react-hook-form'
 import { Loader2, MailWarning } from 'lucide-react'
@@ -17,12 +18,37 @@ import {
 import { PasswordField } from '@/components/auth/password-field'
 import { createClient } from '@/lib/supabase/client'
 import { resetPasswordSchema, type ResetPasswordValues } from '@/lib/validations/auth'
-import { updatePassword } from '@/lib/supabase/actions'
+import { limparTentativasDeLogin } from '@/lib/supabase/actions'
 
 /** Enquanto o fragmento não foi lido, não dá para saber se o link presta. */
 type EstadoDoLink = 'verificando' | 'valido' | 'invalido'
 
+/**
+ * Traduz o erro do Supabase para uma frase que diz o que fazer.
+ *
+ * Antes, três causas diferentes — link velho, sessão ausente e senha recusada
+ * pela política — caíam todas em "o link pode ter expirado". Quem tinha sessão
+ * ausente pedia link novo para sempre, porque não era esse o problema.
+ */
+function mensagemDoErro(codigo: string | undefined, mensagem: string): string {
+  if (codigo === 'same_password') {
+    return 'A nova senha precisa ser diferente da atual.'
+  }
+  if (codigo === 'weak_password') {
+    return 'Senha muito fraca. Use uma senha mais forte.'
+  }
+  if (
+    codigo === 'session_not_found' ||
+    codigo === 'refresh_token_not_found' ||
+    /session|jwt/i.test(mensagem)
+  ) {
+    return 'Sua sessão de recuperação expirou. Peça um novo link para redefinir a senha.'
+  }
+  return 'Não foi possível redefinir a senha. Peça um novo link e tente de novo.'
+}
+
 export default function RedefinirSenhaPage() {
+  const router = useRouter()
   const [isSubmitting, setIsSubmitting] = React.useState(false)
   const [formError, setFormError] = React.useState<string | null>(null)
   const [estadoDoLink, setEstadoDoLink] = React.useState<EstadoDoLink>('verificando')
@@ -86,14 +112,69 @@ export default function RedefinirSenhaPage() {
     defaultValues: { password: '', confirmPassword: '' },
   })
 
+  /**
+   * A troca roda AQUI, no navegador, e não numa Server Action.
+   *
+   * A sessão de recuperação nasce neste componente, no `setSession()` acima —
+   * o token vem em `#access_token=`, que nunca chega ao servidor. Uma Server
+   * Action só a enxergaria depois que o cookie escrito pelo cliente voltasse
+   * numa requisição nova, e essa travessia era a única etapa da cadeia que não
+   * dava para observar de fora. Era também onde o `PUT /user` sumia: nos logs
+   * apareciam vários `POST /recover` e nenhuma troca de senha concluída.
+   *
+   * Aqui a chamada acontece no mesmo lugar onde a sessão acabou de nascer, e
+   * qualquer erro chega à tela com o código real em vez de virar silêncio.
+   */
   async function onSubmit(values: ResetPasswordValues) {
     setFormError(null)
     setIsSubmitting(true)
-    const result = await updatePassword(values)
-    if (result?.error) {
-      setFormError(result.error)
+
+    const supabase = createClient()
+    const { data, error } = await supabase.auth.updateUser({ password: values.password })
+
+    if (error) {
+      console.error('updateUser (reset de senha) falhou', {
+        code: error.code,
+        status: error.status,
+      })
+      setFormError(mensagemDoErro(error.code, error.message))
       setIsSubmitting(false)
+      return
     }
+
+    // Quem redefine a senha costuma estar reagindo a uma conta invadida. Sem
+    // isto o invasor continua logado nos aparelhos dele: trocar a senha não
+    // derruba sessão nenhuma por conta própria.
+    //
+    // `others` e não `global`: revoga os outros refresh tokens e preserva a
+    // sessão atual, que é o que permite cair no dashboard já autenticado.
+    const { error: signOutError } = await supabase.auth.signOut({ scope: 'others' })
+
+    if (signOutError) {
+      // A senha JÁ mudou — não dá para desfazer, e seguir em silêncio faria a
+      // pessoa acreditar que os outros aparelhos foram desconectados.
+      console.error('signOut das outras sessões falhou após reset', signOutError)
+      setFormError(
+        'Sua senha foi alterada, mas não conseguimos desconectar os outros dispositivos. Se suspeita de acesso indevido, troque a senha de novo em instantes.',
+      )
+      setIsSubmitting(false)
+      return
+    }
+
+    // Provou posse da conta: não deve carregar o bloqueio das tentativas de
+    // login erradas que antecederam o reset. Falhar aqui não pode travar
+    // ninguém — a senha já está trocada e o acesso, garantido.
+    try {
+      if (data.user?.email) await limparTentativasDeLogin(data.user.email)
+    } catch (err) {
+      console.error('limparTentativasDeLogin falhou após reset', err)
+    }
+
+    // `refresh` antes de navegar: o cookie de sessão acabou de mudar e o
+    // dashboard é renderizado no servidor — sem isso ele poderia ser servido
+    // com o estado anterior.
+    router.refresh()
+    router.replace('/dashboard')
   }
 
   if (estadoDoLink === 'verificando') {
