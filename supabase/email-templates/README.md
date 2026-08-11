@@ -85,6 +85,25 @@ Está preenchido mesmo assim porque o Supabase dispara esse template se alguém
 convidar um usuário pelo painel — e um e-mail sem marca saindo de um domínio
 verificado é pior do que nenhum.
 
+## Por que estes arquivos são mais simples que o e-mail de convite
+
+Os arquivos daqui são gerados com `paraPainelDoSupabase: true`, o que produz
+HTML sem o bloco VML do botão e sem linhas longas.
+
+O motivo é o editor do painel: ele é um CodeMirror que engasga com linhas de
+mais de mil caracteres e rejeita o comentário condicional aninhado
+(`<!--[if !mso]><!-- -->`), usado para esconder do Outlook a versão não-VML do
+botão. O sintoma é o **botão "Save" não responder — sem nenhuma mensagem de
+erro**. A primeira versão destes arquivos tinha uma linha de 1.200 caracteres e
+não salvava.
+
+O que se perde: os cantos arredondados do botão no Outlook desktop. O
+`bgcolor` da célula continua valendo, então ele segue colorido, legível e
+clicável — apenas retangular.
+
+O e-mail de convite, enviado pelo Resend em `lib/workspace/actions.ts`, não
+passa por editor nenhum e continua com o VML.
+
 ## Quando regerar
 
 Estes `.html` são cópias estáticas. Se `lib/emails/layout.ts` mudar, o snapshot

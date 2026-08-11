@@ -92,6 +92,37 @@ describe('renderEmail', () => {
     expect(ocorrencias).toHaveLength(2)
   })
 
+  /**
+   * O editor do painel do Supabase engasga com linhas muito longas e rejeita o
+   * comentário condicional aninhado — o sintoma é o botão "Save" simplesmente
+   * não responder, sem mensagem de erro. Estes testes fixam o formato que
+   * comprovadamente cola e salva.
+   */
+  describe('variante para o painel do Supabase', () => {
+    const paraPainel = renderEmail({
+      ...base,
+      action: { label: 'Confirmar e-mail', url: '{{ .ConfirmationURL }}' },
+      paraPainelDoSupabase: true,
+    })
+
+    it('não usa comentário condicional aninhado', () => {
+      expect(paraPainel).not.toContain('<!--[if !mso]>')
+      expect(paraPainel).not.toContain('<!--<![endif]-->')
+    })
+
+    it('mantém nenhuma linha acima de 500 caracteres', () => {
+      const maior = Math.max(...paraPainel.split('\n').map((l) => l.length))
+      expect(maior).toBeLessThan(500)
+    })
+
+    // Sem o VML o botão perde só os cantos arredondados no Outlook: o bgcolor
+    // da célula continua valendo, então ele segue colorido e clicável.
+    it('mantém o botão colorido e com o link certo', () => {
+      expect(paraPainel).toContain(`bgcolor="#00787A"`)
+      expect(paraPainel).toContain('href="{{ .ConfirmationURL }}"')
+    })
+  })
+
   it('escapa o título, que vai para o <title> e para o <h1>', () => {
     const html = renderEmail({ ...base, title: 'Bem-vindo <b>você</b>' })
     expect(html).not.toContain('<b>você</b>')

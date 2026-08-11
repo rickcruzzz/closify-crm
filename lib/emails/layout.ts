@@ -120,6 +120,23 @@ export type EmailLayoutOptions = {
   action?: EmailAction
   /** Linha discreta abaixo do botão, para avisos de expiração e afins. */
   footnote?: string
+  /**
+   * Gera HTML simplificado, para colar no editor do painel do Supabase.
+   *
+   * O editor do painel é um CodeMirror que engasga com linhas muito longas e
+   * rejeita o comentário condicional aninhado (`<!--[if !mso]><!-- -->`), o
+   * truque usado para esconder do Outlook a versão não-VML do botão. O
+   * sintoma é o botão "Save" não responder — sem mensagem de erro.
+   *
+   * Com esta opção o botão perde só o VML, ou seja, os cantos arredondados no
+   * Outlook desktop: o `bgcolor` da célula continua valendo, então ele segue
+   * colorido e legível, apenas retangular. Troca barata por um template que
+   * de fato salva.
+   *
+   * Os e-mails enviados pelo Resend (convite) não passam por editor nenhum e
+   * continuam com o VML.
+   */
+  paraPainelDoSupabase?: boolean
 }
 
 /**
@@ -158,9 +175,20 @@ function lockup(): string {
  * propósito: dentro do VML e no `<a>`; esquecer um deles deixa o botão morto
  * em metade dos clientes.
  */
-function botao(action: EmailAction): string {
+function botao(action: EmailAction, simplificado: boolean): string {
   const href = escapeAttr(action.url)
   const label = escapeHtml(action.label)
+
+  const simples = `<table role="presentation" cellpadding="0" cellspacing="0" border="0"><tr>
+<td bgcolor="${MARCA}" align="center" style="background-color:${MARCA};border:1px solid ${MARCA_ESCURA};border-radius:8px;">
+<a href="${href}" style="display:inline-block;padding:12px 24px;font-family:${FONTE};font-size:15px;font-weight:600;color:#ffffff;text-decoration:none;">${label}</a>
+</td></tr></table>`
+
+  if (simplificado) {
+    return `<table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:28px 0 8px;"><tr><td>
+${simples}
+</td></tr></table>`
+  }
 
   return `<table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:28px 0 8px;"><tr><td>
 <!--[if mso]>
@@ -170,10 +198,7 @@ function botao(action: EmailAction): string {
 </v:roundrect>
 <![endif]-->
 <!--[if !mso]><!-- -->
-<table role="presentation" cellpadding="0" cellspacing="0" border="0"><tr>
-<td bgcolor="${MARCA}" align="center" style="background-color:${MARCA};border:1px solid ${MARCA_ESCURA};border-radius:8px;">
-<a href="${href}" style="display:inline-block;padding:12px 24px;font-family:${FONTE};font-size:15px;font-weight:600;color:#ffffff;text-decoration:none;">${label}</a>
-</td></tr></table>
+${simples}
 <!--<![endif]-->
 </td></tr></table>`
 }
@@ -208,8 +233,18 @@ function rodape(): string {
  */
 export function renderEmail(options: EmailLayoutOptions): string {
   const { preheader, title, bodyHtml, action, footnote } = options
+  const simplificado = options.paraPainelDoSupabase ?? false
 
-  const enchimentoDoPreheader = '&#847;&zwnj;&nbsp;'.repeat(60)
+  /**
+   * Enchimento invisível depois do preheader. Sem ele, o Gmail completa a
+   * prévia da caixa de entrada com o começo do conteúdo visível, e o que se lê
+   * na lista vira "Velo Funil V Confirme seu...".
+   *
+   * Eram 60 repetições, o que produzia uma única linha de 1.200 caracteres —
+   * o bastante para travar o editor do painel do Supabase. 12 já empurram a
+   * prévia para além do limite que o Gmail exibe.
+   */
+  const enchimentoDoPreheader = '&#847;&zwnj;&nbsp;'.repeat(12)
 
   return `<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml" lang="pt-BR">
@@ -219,9 +254,6 @@ export function renderEmail(options: EmailLayoutOptions): string {
 <meta name="color-scheme" content="light dark" />
 <meta name="supported-color-schemes" content="light dark" />
 <title>${escapeHtml(title)}</title>
-<!--[if mso]>
-<style type="text/css">body,table,td,a{font-family:'Segoe UI',Arial,sans-serif !important;}</style>
-<![endif]-->
 <style type="text/css">
 @media only screen and (max-width:600px){
 .velo-card{padding-left:24px !important;padding-right:24px !important;}
@@ -237,7 +269,7 @@ export function renderEmail(options: EmailLayoutOptions): string {
 <tr><td class="velo-card" style="padding:0 40px;">
 <h1 style="margin:24px 0 12px;font-family:${FONTE};font-size:22px;font-weight:600;line-height:30px;letter-spacing:-0.4px;color:${TEXTO};">${escapeHtml(title)}</h1>
 ${bodyHtml}
-${action ? botao(action) : ''}
+${action ? botao(action, simplificado) : ''}
 ${footnote ? `<p style="margin:${action ? '16px' : '0'} 0 0;font-family:${FONTE};font-size:13px;line-height:20px;color:${TEXTO_TERCIARIO};">${escapeHtml(footnote)}</p>` : ''}
 </td></tr>
 <tr><td style="height:32px;line-height:32px;font-size:0;">&nbsp;</td></tr>
