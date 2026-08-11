@@ -47,6 +47,15 @@ export const planilhaSchema = z.object({
       'Planilha grande demais.',
     ),
   mapeamento: z.record(campoDestino, z.number().int().min(0).max(MAX_COLUNAS - 1)),
+  /**
+   * O que fazer com quem já está cadastrado.
+   *
+   * O padrão é `ignorar` de propósito: quem não escolheu nada não pode ter a
+   * base sobrescrita. Reimportar atualizando é o que dá a sensação de planilha
+   * conectada — a pessoa corrige o arquivo, sobe de novo e o CRM acompanha —
+   * sem manter a planilha viva como fonte da verdade.
+   */
+  duplicados: z.enum(['ignorar', 'atualizar']).default('ignorar'),
 })
 
 export type PlanilhaPayload = z.output<typeof planilhaSchema>

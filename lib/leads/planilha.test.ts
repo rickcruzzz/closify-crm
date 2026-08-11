@@ -197,6 +197,39 @@ describe('interpretarPlanilha', () => {
     expect(contarAvisosDeArquivo(erros)).toBe(1)
   })
 
+  // `preenchidos` só existe por causa da reimportação: célula em branco não
+  // pode apagar dado que já está no CRM. Sem essa lista, subir de novo uma
+  // planilha com a coluna Empresa vazia limparia a empresa de todo mundo, e um
+  // Valor em branco viraria R$ 0,00 por cima do valor real.
+  it('marca só os campos que vieram preenchidos', () => {
+    const { linhas } = interpretarPlanilha(
+      [cabecalho, ['Ana', '11900000000', 'ana@x.com', '', '', '']],
+      mapa,
+      SEM_LIMITE,
+    )
+    expect(linhas[0]?.preenchidos.sort()).toEqual(['email', 'name', 'phone'])
+  })
+
+  it('valor zero escrito na planilha conta como preenchido', () => {
+    const { linhas } = interpretarPlanilha(
+      [['Nome', 'E-mail', 'Valor'], ['Ana', 'ana@x.com', '0']],
+      { name: 0, email: 1, value: 2 },
+      SEM_LIMITE,
+    )
+    expect(linhas[0]?.value).toBe(0)
+    expect(linhas[0]?.preenchidos).toContain('value')
+  })
+
+  it('etapa em branco não conta como preenchida, mesmo caindo em "novo"', () => {
+    const { linhas } = interpretarPlanilha(
+      [['Nome', 'E-mail', 'Etapa'], ['Ana', 'ana@x.com', '']],
+      { name: 0, email: 1, status: 2 },
+      SEM_LIMITE,
+    )
+    expect(linhas[0]?.status).toBe('novo')
+    expect(linhas[0]?.preenchidos).not.toContain('status')
+  })
+
   it('ignora linha totalmente vazia sem reclamar', () => {
     const { linhas, erros } = interpretarPlanilha(
       [['Nome', 'E-mail'], ['', ''], ['Ana', 'ana@x.com']],

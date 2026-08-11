@@ -13,6 +13,7 @@ import {
   contarAvisosDeArquivo,
   interpretarPlanilha,
   type LinhaPlanilha,
+  type Mapeamento,
 } from '@/lib/leads/planilha'
 import { FREE_LEAD_LIMIT } from '@/lib/plans'
 
@@ -140,6 +141,8 @@ export type ResultadoImportacao = {
   importados: number
   ignorados: number
   duplicados: number
+  /** Contatos que já existiam e foram atualizados com os dados da planilha. */
+  atualizados: number
   /** Linhas que não couberam no teto do plano Free. */
   foraDoLimite: number
   /** Mensagens por linha descartada, para a pessoa corrigir a planilha. */
@@ -161,15 +164,17 @@ export type ResultadoImportacao = {
 async function chavesJaCadastradas(
   supabase: Awaited<ReturnType<typeof createClient>>,
   workspaceId: string,
-): Promise<Set<string>> {
-  const chaves = new Set<string>()
+): Promise<Map<string, string>> {
+  // Guarda o id junto da chave porque a reimportação precisa saber QUAL lead
+  // atualizar, não só que ele existe.
+  const chaves = new Map<string, string>()
   const tamanhoDaPagina = 1000
 
   for (let pagina = 0; pagina < 50; pagina++) {
     const inicio = pagina * tamanhoDaPagina
     const { data, error } = await supabase
       .from('leads')
-      .select('email, phone')
+      .select('id, email, phone')
       .eq('workspace_id', workspaceId)
       .range(inicio, inicio + tamanhoDaPagina - 1)
 
@@ -180,13 +185,189 @@ async function chavesJaCadastradas(
 
     for (const lead of data) {
       const chave = chaveDeContato(lead.email, lead.phone)
-      if (chave) chaves.add(chave)
+      if (chave && !chaves.has(chave)) chaves.set(chave, lead.id)
     }
 
     if (data.length < tamanhoDaPagina) break
   }
 
   return chaves
+}
+
+/**
+ * Monta o que muda num lead que já existe, a partir de uma linha da planilha.
+ *
+ * Duas regras, e as duas existem para não perder dado:
+ *
+ * 1. Só campo MAPEADO entra. Sem isso, uma planilha sem coluna de Etapa
+ *    devolveria o `novo` que `interpretarPlanilha` usa como padrão e jogaria
+ *    o pipeline inteiro de volta para a primeira coluna do Kanban.
+ * 2. Só campo PREENCHIDO entra. Célula em branco não apaga o que está no CRM —
+ *    quem quer limpar um campo faz isso na tela do lead, não por omissão.
+ */
+type MudancasDoLead = {
+  name?: string
+  email?: string | null
+  phone?: string | null
+  company?: string | null
+  value?: number
+  status?: LinhaPlanilha['status']
+}
+
+function mudancasDoLead(linha: LinhaPlanilha, mapeamento: Mapeamento): MudancasDoLead {
+  const mudancas: MudancasDoLead = {}
+
+  if (mapeamento.name !== undefined && linha.preenchidos.includes('name')) {
+    mudancas.name = linha.name
+  }
+  if (mapeamento.email !== undefined && linha.preenchidos.includes('email')) {
+    mudancas.email = linha.email
+  }
+  if (mapeamento.phone !== undefined && linha.preenchidos.includes('phone')) {
+    mudancas.phone = linha.phone
+  }
+  if (mapeamento.company !== undefined && linha.preenchidos.includes('company')) {
+    mudancas.company = linha.company
+  }
+  if (mapeamento.value !== undefined && linha.preenchidos.includes('value')) {
+    mudancas.value = linha.value
+  }
+  if (mapeamento.status !== undefined && linha.preenchidos.includes('status')) {
+    mudancas.status = linha.status
+  }
+
+  return mudancas
+}
+
+/**
+ * Roda as promessas em blocos.
+ *
+ * O PostgREST não atualiza N linhas com N valores diferentes numa requisição
+ * só, então cada lead atualizado é uma chamada. Trezentas em sequência
+ * estourariam o tempo da função na Vercel; todas de uma vez abririam trezentas
+ * conexões. Vinte por vez resolve os dois.
+ */
+async function emBlocos<T, R>(itens: T[], tamanho: number, fn: (item: T) => Promise<R>) {
+  const resultados: R[] = []
+  for (let i = 0; i < itens.length; i += tamanho) {
+    resultados.push(...(await Promise.all(itens.slice(i, i + tamanho).map(fn))))
+  }
+  return resultados
+}
+
+/**
+ * Atualiza os contatos que a planilha traz e que já existem no workspace.
+ *
+ * É o que faz a reimportação parecer uma planilha conectada: a pessoa corrige
+ * o arquivo, sobe de novo, e o CRM acompanha — sem que a planilha continue
+ * sendo a fonte da verdade.
+ *
+ * O negócio no Kanban só é atualizado quando o lead tem EXATAMENTE UM. Com dois
+ * ou mais, não há como saber qual deles a linha da planilha representa, e
+ * escolher errado moveria um negócio de verdade para a etapa errada. Nesse caso
+ * o lead é atualizado e o negócio fica como está, com aviso.
+ */
+async function atualizarRepetidos(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  workspaceId: string,
+  repetidas: { linha: LinhaPlanilha; leadId: string }[],
+  mapeamento: Mapeamento,
+  avisos: string[],
+): Promise<number> {
+  if (repetidas.length === 0) return 0
+
+  const comMudanca = repetidas
+    .map((item) => ({ ...item, mudancas: mudancasDoLead(item.linha, mapeamento) }))
+    .filter((item) => Object.keys(item.mudancas).length > 0)
+
+  if (comMudanca.length === 0) return 0
+
+  const resultados = await emBlocos(comMudanca, 20, async ({ leadId, linha, mudancas }) => {
+    const { error } = await supabase
+      .from('leads')
+      .update(mudancas)
+      .eq('id', leadId)
+      .eq('workspace_id', workspaceId)
+
+    if (error) {
+      avisos.push(`Linha ${linha.linha}: não foi possível atualizar — ${error.message}`)
+      return null
+    }
+    return leadId
+  })
+
+  const atualizadosIds = resultados.filter((id): id is string => id !== null)
+  if (atualizadosIds.length === 0) return 0
+
+  // Só faz sentido mexer no Kanban se a planilha trouxe valor ou etapa.
+  const mexeNoNegocio =
+    mapeamento.value !== undefined || mapeamento.status !== undefined
+  if (!mexeNoNegocio) return atualizadosIds.length
+
+  const porLead = new Map(comMudanca.map((item) => [item.leadId, item]))
+  const negociosPorLead = new Map<string, string[]>()
+
+  // `in` em blocos de 100: são UUIDs de 36 caracteres, e a mesma URL longa que
+  // derrubou a deduplicação por e-mail derrubaria esta consulta.
+  await emBlocos(
+    Array.from({ length: Math.ceil(atualizadosIds.length / 100) }, (_, i) =>
+      atualizadosIds.slice(i * 100, i * 100 + 100),
+    ),
+    1,
+    async (bloco) => {
+      const { data } = await supabase
+        .from('deals')
+        .select('id, lead_id')
+        .eq('workspace_id', workspaceId)
+        .in('lead_id', bloco)
+
+      for (const negocio of data ?? []) {
+        if (!negocio.lead_id) continue
+        const lista = negociosPorLead.get(negocio.lead_id) ?? []
+        lista.push(negocio.id)
+        negociosPorLead.set(negocio.lead_id, lista)
+      }
+    },
+  )
+
+  const paraAtualizar: {
+    dealId: string
+    mudancas: { value?: number; stage?: LinhaPlanilha['status'] }
+  }[] = []
+  let ambiguos = 0
+
+  for (const [leadId, negocios] of Array.from(negociosPorLead)) {
+    if (negocios.length > 1) {
+      ambiguos++
+      continue
+    }
+    const item = porLead.get(leadId)
+    if (!item) continue
+
+    const mudancas: { value?: number; stage?: LinhaPlanilha['status'] } = {}
+    if (mapeamento.value !== undefined && item.linha.preenchidos.includes('value')) {
+      mudancas.value = item.linha.value
+    }
+    if (mapeamento.status !== undefined && item.linha.preenchidos.includes('status')) {
+      mudancas.stage = item.linha.status
+    }
+    if (Object.keys(mudancas).length > 0) {
+      paraAtualizar.push({ dealId: negocios[0]!, mudancas })
+    }
+  }
+
+  await emBlocos(paraAtualizar, 20, async ({ dealId, mudancas }) => {
+    await supabase.from('deals').update(mudancas).eq('id', dealId).eq('workspace_id', workspaceId)
+  })
+
+  if (ambiguos > 0) {
+    avisos.push(
+      `${ambiguos} contato(s) têm mais de um negócio no Kanban — os dados do contato foram` +
+        ' atualizados, mas nenhum negócio foi movido, para não mexer no negócio errado.',
+    )
+  }
+
+  return atualizadosIds.length
 }
 
 /**
@@ -239,7 +420,7 @@ export async function importarPlanilha(
     return { error: avisos[0] ?? 'Nenhuma linha válida encontrada na planilha.' }
   }
 
-  let jaCadastradas: Set<string>
+  let jaCadastradas: Map<string, string>
   try {
     jaCadastradas = await chavesJaCadastradas(supabase, workspaceId)
   } catch (err) {
@@ -247,15 +428,39 @@ export async function importarPlanilha(
     return { error: 'Não foi possível conferir os contatos já cadastrados. Tente de novo.' }
   }
 
-  let duplicados = 0
+  const repetidas: { linha: LinhaPlanilha; leadId: string }[] = []
   const novos = linhas.filter((linha) => {
-    if (!jaCadastradas.has(linha.chave)) return true
-    duplicados++
-    avisos.push(`Linha ${linha.linha}: ${linha.email ?? linha.phone} já está cadastrado.`)
+    const leadId = jaCadastradas.get(linha.chave)
+    if (!leadId) return true
+    repetidas.push({ linha, leadId })
     return false
   })
 
+  let duplicados = 0
+  let atualizados = 0
+
+  if (parsed.data.duplicados === 'atualizar') {
+    atualizados = await atualizarRepetidos(
+      supabase,
+      workspaceId,
+      repetidas,
+      parsed.data.mapeamento,
+      avisos,
+    )
+  } else {
+    duplicados = repetidas.length
+    for (const { linha } of repetidas) {
+      avisos.push(`Linha ${linha.linha}: ${linha.email ?? linha.phone} já está cadastrado.`)
+    }
+  }
+
   if (novos.length === 0) {
+    if (atualizados > 0) {
+      revalidatePath('/leads')
+      revalidatePath('/kanban')
+      revalidatePath('/dashboard')
+      return { importados: 0, ignorados: 0, duplicados, atualizados, foraDoLimite: 0, avisos }
+    }
     return { error: 'Todos os contatos da planilha já estão cadastrados nesta empresa.' }
   }
 
@@ -402,6 +607,7 @@ export async function importarPlanilha(
     // Sem isso o total de ignorados ficava maior do que o arquivo tinha.
     ignorados: erros.length - contarAvisosDeArquivo(erros) + (linhas.length - importados),
     duplicados,
+    atualizados,
     foraDoLimite,
     avisos,
   }

@@ -164,6 +164,16 @@ export type LinhaPlanilha = {
   value: number
   status: LeadStatus
   chave: string
+  /**
+   * Campos cuja célula veio PREENCHIDA nesta linha.
+   *
+   * Existe por causa da reimportação: célula em branco não pode apagar dado que
+   * já está no CRM. Sem isso, subir de novo uma planilha onde a coluna Empresa
+   * está vazia limparia a empresa de todo mundo, e um Valor em branco viraria
+   * R$ 0,00 por cima do valor real — perda silenciosa, do tipo que só aparece
+   * no fechamento do mês.
+   */
+  preenchidos: CampoDestino[]
 }
 
 export type ResultadoPlanilha = {
@@ -271,6 +281,14 @@ export function interpretarPlanilha(
       }
     }
 
+    const preenchidos: CampoDestino[] = []
+    if (name) preenchidos.push('name')
+    if (email) preenchidos.push('email')
+    if (phone) preenchidos.push('phone')
+    if (company) preenchidos.push('company')
+    if (valorBruto.trim()) preenchidos.push('value')
+    if (etapaBruta.trim()) preenchidos.push('status')
+
     chavesVistas.add(chave)
     linhas.push({
       linha: numeroDaLinha,
@@ -281,6 +299,7 @@ export function interpretarPlanilha(
       value,
       status,
       chave,
+      preenchidos,
     })
   })
 

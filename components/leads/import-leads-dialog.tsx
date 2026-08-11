@@ -63,6 +63,7 @@ export function ImportLeadsDialog({
   const [nomeDoArquivo, setNomeDoArquivo] = React.useState('')
   const [matriz, setMatriz] = React.useState<string[][]>([])
   const [mapeamento, setMapeamento] = React.useState<Mapeamento>({})
+  const [duplicados, setDuplicados] = React.useState<'ignorar' | 'atualizar'>('ignorar')
   const [lendo, setLendo] = React.useState(false)
   const [enviando, setEnviando] = React.useState(false)
   const [resultado, setResultado] = React.useState<ResultadoImportacao | null>(null)
@@ -73,6 +74,7 @@ export function ImportLeadsDialog({
       setNomeDoArquivo('')
       setMatriz([])
       setMapeamento({})
+      setDuplicados('ignorar')
       setResultado(null)
     }
   }, [open])
@@ -173,7 +175,7 @@ export function ImportLeadsDialog({
   async function enviar() {
     setEnviando(true)
     try {
-      const retorno = await importarPlanilha({ matriz, mapeamento })
+      const retorno = await importarPlanilha({ matriz, mapeamento, duplicados })
       if ('error' in retorno) {
         toast.error(retorno.error)
         return
@@ -276,6 +278,35 @@ export function ImportLeadsDialog({
               ))}
             </div>
 
+            <div className="border-border flex flex-col gap-1.5 rounded-lg border p-3">
+              <Label htmlFor="duplicados" className="text-sm">
+                Contatos que já estão no CRM
+              </Label>
+              <Select
+                value={duplicados}
+                onValueChange={(valor) => setDuplicados(valor as 'ignorar' | 'atualizar')}
+              >
+                <SelectTrigger id="duplicados" className="w-full">
+                  <SelectValue>
+                    {(valor) =>
+                      valor === 'atualizar'
+                        ? 'Atualizar com os dados da planilha'
+                        : 'Deixar como estão'
+                    }
+                  </SelectValue>
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="ignorar">Deixar como estão</SelectItem>
+                  <SelectItem value="atualizar">Atualizar com os dados da planilha</SelectItem>
+                </SelectContent>
+              </Select>
+              <p className="text-muted-foreground text-xs">
+                {duplicados === 'atualizar'
+                  ? 'Corrija a planilha e suba de novo: quem já existe recebe os dados novos. Célula em branco não apaga nada.'
+                  : 'Quem já existe é ignorado. Só entram os contatos novos.'}
+              </p>
+            </div>
+
             {previa.linhas.length > 0 && (
               <div className="border-border rounded-lg border p-3">
                 <p className="mb-2 text-xs font-medium">
@@ -335,15 +366,21 @@ export function ImportLeadsDialog({
           <div className="flex flex-col gap-4">
             <p className="flex items-center gap-2 text-sm font-medium">
               <CheckCircle2 aria-hidden className="size-4 text-emerald-500 dark:text-emerald-400" />
-              {resultado.importados === 1
-                ? '1 lead importado, com o negócio criado no Kanban.'
-                : `${resultado.importados} leads importados, com os negócios criados no Kanban.`}
+              {resultado.importados === 0
+                ? `${resultado.atualizados} contato(s) atualizados.`
+                : resultado.importados === 1
+                  ? '1 lead importado, com o negócio criado no Kanban.'
+                  : `${resultado.importados} leads importados, com os negócios criados no Kanban.`}
             </p>
 
             {(resultado.duplicados > 0 ||
+              resultado.atualizados > 0 ||
               resultado.ignorados > 0 ||
               resultado.foraDoLimite > 0) && (
               <ul className="text-muted-foreground flex flex-col gap-1 text-sm">
+                {resultado.atualizados > 0 && resultado.importados > 0 && (
+                  <li>{resultado.atualizados} já existiam e foram atualizados.</li>
+                )}
                 {resultado.duplicados > 0 && (
                   <li>{resultado.duplicados} já estavam cadastrados e foram ignorados.</li>
                 )}
