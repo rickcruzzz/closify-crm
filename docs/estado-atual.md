@@ -21,6 +21,15 @@ requisição sem token toma 401. O que ninguém provou é um Pix real.
 Importação de planilha (`.xlsx` e `.csv`) entregue em 11/08, com mapeamento de
 coluna, etapa lida do arquivo e criação de negócio junto do lead.
 
+O Pro passou a ter prazo (0027): pagou, vale 30 dias; venceu, o limite do Free
+volta a valer. Sem `pg_cron` de propósito — a validade é uma função consultada
+por quem aplica limite, então plano vencido para de valer no instante em que
+alguém tenta usá-lo.
+
+Fluxo de entrada refeito em 11/08: convite deixa de virar conta separada,
+confirmação de e-mail termina numa tela com botão, `/verifique-email` reenvia,
+e quem clica em "Assinar Pro" na landing chega ao checkout.
+
 Ambiente local: rode `node --env-file=.env.local scripts/verificar-ambiente.mjs`.
 Ele confere as 9 conexões e diz o que falta.
 
@@ -101,6 +110,28 @@ Windows-1252 aceita qualquer byte e nunca falharia.
 duplicados saía vazio e a planilha inteira era reimportada em silêncio. Trocado
 por leitura paginada do workspace.
 
+**Link de e-mail não carrega parâmetro.** O link de confirmação é montado pelo
+template do Supabase e só sabe ir para o `emailRedirectTo` fixo — então tudo que
+a pessoa escolheu antes de abrir a caixa de entrada morre ali. Dois defeitos
+vieram disso: o convite virando conta separada (o token se perdia no caminho
+para `/cadastro`, a pessoa caía em `/onboarding` e criava a própria empresa, com
+o convite preso em `pending`) e a intenção de compra descartada ("Assinar Pro"
+apontava para o mesmo destino do Free). A travessia agora é por cookie
+`httpOnly` em `lib/auth/intencao.ts` — não querystring, que vazaria e-mail e
+token no histórico e no `Referer`.
+
+**Coluna de plano e validade de plano são coisas diferentes.** Depois da 0027,
+qualquer regra que leia `workspaces.plan` pode discordar de `pro_vigente()` — a
+coluna é o último valor gravado e não sabe que o tempo passou. Foi o caso do
+aceite de convite (0028): um Pro vencido aceitava o terceiro membro e a trigger
+de leads recusava o lead dele. **Regra de plano lê a função, nunca a coluna.**
+
+**O `callback.successUrl` do Asaas não funciona.** Medido em 11/08:
+`POST /subscriptions` aceita o campo com HTTP 200, não o devolve na leitura, não
+propaga para a cobrança gerada, e `PUT /payments` com `callback` responde 500.
+Por isso o retorno depois do pagamento é feito por conta própria — a fatura abre
+em outra aba e o app fica na de trás.
+
 **Erro do Postgres não chega à UI sozinho.** A mensagem de limite de plano da
 trigger 0023 morria em `console.error` e virava "Não foi possível importar".
 Quem trata `error.code === '42501'` é o TypeScript, e a mensagem boa precisa
@@ -155,6 +186,8 @@ HTML, ou script Node contra a API.
 
 | Commit    | O quê                                                              |
 | --------- | ------------------------------------------------------------------ |
+| `3779d72` | Convite deixa de virar conta separada; confirmação de e-mail tem fim |
+| `9fe5cd4` | Reimportar planilha atualiza quem já existe                        |
 | `efcf2be` | Importação de planilha: Excel, mapeamento de coluna, negócio junto do lead |
 | `b8b9ec0` | Descrição da cobrança que o cliente reconhece                      |
 | `7b67e23` | Verificador de ambiente local                                      |
