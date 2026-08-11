@@ -290,6 +290,10 @@ export type Database = {
         Args: { workspace_name: string }
         Returns: string
       }
+      email_e_membro_do_workspace: {
+        Args: { target_email: string; target_workspace_id: string }
+        Returns: boolean
+      }
       excluir_minha_conta: { Args: never; Returns: undefined }
       get_workspace_member_names: {
         Args: { target_workspace_id: string; target_user_ids: string[] }

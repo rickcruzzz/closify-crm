@@ -40,6 +40,36 @@ describe('inviteMemberSchema', () => {
     }
   })
 
+  /**
+   * O índice único de convites pendentes é `(workspace_id, email)` sobre o
+   * texto cru. Sem normalizar na escrita, `ana@x.com` e `Ana@X.com` viravam
+   * dois convites para a mesma pessoa — e cada um consome uma vaga do limite
+   * de membros, porque `canAddMember` soma convites pendentes aos membros
+   * ativos. No Free isso esgotava o plano com um convidado só.
+   */
+  it('normaliza o e-mail, para o índice único pegar o duplicado', () => {
+    const r = inviteMemberSchema.safeParse({
+      email: '  ANA@Exemplo.COM  ',
+      role: 'membro',
+    })
+
+    expect(r.success).toBe(true)
+    if (r.success) {
+      expect(r.data.email).toBe('ana@exemplo.com')
+    }
+  })
+
+  // A ordem `trim → toLowerCase → email` não pode afrouxar a validação: se o
+  // `.pipe(z.email())` saísse do fim da cadeia, lixo passaria normalizado.
+  it('continua recusando e-mail inválido depois de normalizar', () => {
+    expect(inviteMemberSchema.safeParse({ email: '  NAO É EMAIL  ', role: 'membro' }).success).toBe(
+      false,
+    )
+    expect(inviteMemberSchema.safeParse({ email: '   ', role: 'membro' }).success).toBe(
+      false,
+    )
+  })
+
   it('recusa papel fora do enum', () => {
     const r = inviteMemberSchema.safeParse({
       email: 'pessoa@empresa.com.br',

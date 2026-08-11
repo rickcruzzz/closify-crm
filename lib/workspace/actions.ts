@@ -66,6 +66,29 @@ export async function inviteMember(values: unknown) {
 
   const { supabase, workspaceId, user } = admin
 
+  // Convidar a si mesmo era possível e acontecia de verdade em produção. Não
+  // dá erro visível, mas gasta uma vaga do plano: `canAddMember` soma convites
+  // pendentes aos membros ativos, então no Free (limite 2) o admin vira 1
+  // membro + 1 convite e fica impedido de convidar alguém de verdade. E o
+  // convite nunca serve para nada — `accept_workspace_invite` termina em
+  // `on conflict do nothing`.
+  //
+  // A trava de fato é o trigger `validar_convite_de_workspace` (migration
+  // 0024), porque a RLS permite INSERT direto na tabela. A checagem aqui existe
+  // pela mensagem: sem ela, o erro chegaria à tela como falha crua do Postgres.
+  if (parsed.data.email === user.email?.trim().toLowerCase()) {
+    return { error: 'Você já faz parte desta empresa. Convide o e-mail de outra pessoa.' }
+  }
+
+  const { data: jaEMembro } = await supabase.rpc('email_e_membro_do_workspace', {
+    target_workspace_id: workspaceId,
+    target_email: parsed.data.email,
+  })
+
+  if (jaEMembro) {
+    return { error: 'Esta pessoa já faz parte da empresa.' }
+  }
+
   // Limita por workspace: o abuso aqui e usar nosso Resend como maquina de
   // spam, e quem dispara e sempre o mesmo workspace, variando o destinatario.
   if (await excedeuLimite('invite', workspaceId)) {
