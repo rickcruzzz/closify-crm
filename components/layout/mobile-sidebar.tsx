@@ -8,7 +8,8 @@ import { Sheet, SheetContent, SheetTitle } from '@/components/ui/sheet'
 import { SidebarContent } from '@/components/layout/sidebar-content'
 import type { WorkspaceSummary } from '@/components/layout/workspace-switcher'
 
-export function MobileSidebar({ workspaces }: { workspaces: WorkspaceSummary[] }) {
+export function MobileSidebar({ workspaces, activeWorkspaceId }: { workspaces: WorkspaceSummary[]
+  activeWorkspaceId: string }) {
   const [open, setOpen] = React.useState(false)
 
   return (
@@ -24,7 +25,7 @@ export function MobileSidebar({ workspaces }: { workspaces: WorkspaceSummary[] }
       </Button>
       <SheetContent side="left" className="w-64 p-0">
         <SheetTitle className="sr-only">Menu de navegação</SheetTitle>
-        <SidebarContent workspaces={workspaces} onNavigate={() => setOpen(false)} />
+        <SidebarContent workspaces={workspaces} activeWorkspaceId={activeWorkspaceId} onNavigate={() => setOpen(false)} />
       </SheetContent>
     </Sheet>
   )

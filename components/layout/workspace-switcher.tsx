@@ -2,7 +2,10 @@
 
 import * as React from 'react'
 import { useRouter } from 'next/navigation'
-import { Building2, ChevronsUpDown, Plus, Zap } from 'lucide-react'
+import { Building2, Check, ChevronsUpDown, Loader2, Plus, Zap } from 'lucide-react'
+import { toast } from 'sonner'
+
+import { trocarEmpresa } from '@/lib/workspace/actions'
 
 import { Badge } from '@/components/ui/badge'
 import { FREE_WORKSPACE_LIMIT } from '@/lib/plans'
@@ -22,10 +25,41 @@ export type WorkspaceSummary = {
   plan: string
 }
 
-export function WorkspaceSwitcher({ workspaces }: { workspaces: WorkspaceSummary[] }) {
+export function WorkspaceSwitcher({
+  workspaces,
+  activeId,
+}: {
+  workspaces: WorkspaceSummary[]
+  /** Empresa em uso agora, resolvida no servidor a partir do cookie. */
+  activeId: string
+}) {
   const router = useRouter()
-  const [activeId, setActiveId] = React.useState(workspaces[0]?.id)
+  const [trocando, setTrocando] = React.useState(false)
   const active = workspaces.find((w) => w.id === activeId) ?? workspaces[0]
+
+  /**
+   * A escolha vai para o servidor, não para um estado local.
+   *
+   * Antes isto era `setActiveId(...)` e nada mais: o rótulo do seletor mudava
+   * e os dados continuavam da outra empresa, porque cada página é um Server
+   * Component e não enxerga estado de React. Quem foi convidado como
+   * colaborador tendo empresa própria não conseguia abrir a empresa que o
+   * convidou — o clique não fazia nada de verdade.
+   */
+  async function trocar(id: string) {
+    if (id === activeId || trocando) return
+    setTrocando(true)
+    const resultado = await trocarEmpresa(id)
+    if (resultado?.error) {
+      toast.error(resultado.error)
+      setTrocando(false)
+      return
+    }
+    // `refresh` e não `push`: a pessoa continua na mesma tela, só que agora
+    // preenchida com os dados da outra empresa.
+    router.refresh()
+    setTrocando(false)
+  }
 
   // Espelha `canAddWorkspace` no servidor: uma empresa Pro libera multi-empresa,
   // e quem já passou do limite antes da regra existir continua enxergando as
@@ -58,10 +92,19 @@ export function WorkspaceSwitcher({ workspaces }: { workspaces: WorkspaceSummary
         {workspaces.map((workspace) => (
           <DropdownMenuItem
             key={workspace.id}
-            onClick={() => setActiveId(workspace.id)}
+            onClick={() => void trocar(workspace.id)}
             className="flex items-center justify-between gap-2"
           >
-            <span className="truncate">{workspace.name}</span>
+            <span className="flex min-w-0 items-center gap-2">
+              {workspace.id === activeId ? (
+                <Check aria-hidden className="size-4 shrink-0" />
+              ) : trocando ? (
+                <Loader2 aria-hidden className="size-4 shrink-0 animate-spin opacity-0" />
+              ) : (
+                <span aria-hidden className="size-4 shrink-0" />
+              )}
+              <span className="truncate">{workspace.name}</span>
+            </span>
             <Badge variant="secondary" className="shrink-0 capitalize">
               {workspace.plan}
             </Badge>

@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache'
 
 import { createClient } from '@/lib/supabase/server'
+import { resolverWorkspaceAtivo } from '@/lib/workspace/ativo'
 import { leadSchema, planilhaSchema } from '@/lib/validations/lead'
 import { activitySchema } from '@/lib/validations/activity'
 import { uuidSchema } from '@/lib/validations/workspace'
@@ -24,18 +25,10 @@ async function getActiveWorkspaceId(supabase: Awaited<ReturnType<typeof createCl
 
   if (!user) return null
 
-  // Sem order by, o Postgres pode escolher um workspace diferente entre
-  // requests para quem participa de mais de um — gravaria no workspace errado.
-  const { data } = await supabase
-    .from('workspace_members')
-    .select('workspace_id')
-    .eq('user_id', user.id)
-    .order('created_at', { ascending: true })
-    .order('workspace_id', { ascending: true })
-    .limit(1)
-    .maybeSingle()
-
-  return data?.workspace_id ?? null
+  // Mesma resolução que as páginas usam para LER. Precisa ser a mesma: se a
+  // tela mostra a empresa escolhida no seletor e a gravação cai na mais
+  // antiga, o registro some da vista de quem acabou de criá-lo.
+  return resolverWorkspaceAtivo(supabase, user.id)
 }
 
 // owner_id não é validado pela RLS de leads (a policy só confere workspace_id

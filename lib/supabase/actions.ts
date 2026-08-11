@@ -286,7 +286,25 @@ export async function createWorkspace(values: unknown) {
   // convite ela cairia justamente na empresa errada.
   const convitePendente = await lerConvitePendente()
   if (convitePendente) {
-    redirect(`/convite/${convitePendente}`)
+    // Confere se o convite AINDA está de pé antes de desviar. Sem isto, quem
+    // já aceitou entraria num vaivém: tentaria criar uma empresa própria mais
+    // tarde, seria mandado de volta ao convite, e lá leria "convite inválido"
+    // — porque o convite já foi usado.
+    //
+    // Aqui, numa Server Action, o cookie PODE ser apagado. Na página do
+    // convite não pode: mexer em cookie durante a renderização de um Server
+    // Component é proibido pelo Next, e foi exatamente o que quebrou a tela
+    // com "Algo deu errado" logo depois de um aceite bem-sucedido — o convite
+    // era aceito e a exceção estourava em seguida.
+    const { data: convite } = await supabase.rpc('get_invite_by_token', {
+      invite_token: convitePendente,
+    })
+
+    if (convite?.[0]?.status === 'pending') {
+      redirect(`/convite/${convitePendente}`)
+    }
+
+    await limparIntencao(['convite'])
   }
 
   // Sem este teto, o limite de 2 colaboradores não segurava nada: bastava

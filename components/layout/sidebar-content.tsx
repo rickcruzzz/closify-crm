@@ -6,9 +6,11 @@ import { Logo } from '@/components/branding/logo'
 
 export function SidebarContent({
   workspaces,
+  activeWorkspaceId,
   onNavigate,
 }: {
   workspaces: WorkspaceSummary[]
+  activeWorkspaceId: string
   onNavigate?: () => void
 }) {
   return (
@@ -16,7 +18,7 @@ export function SidebarContent({
       <Link href="/dashboard" className="px-1.5 py-2">
         <Logo size="sm" />
       </Link>
-      <WorkspaceSwitcher workspaces={workspaces} />
+      <WorkspaceSwitcher workspaces={workspaces} activeId={activeWorkspaceId} />
       <SidebarNav onNavigate={onNavigate} />
     </div>
   )

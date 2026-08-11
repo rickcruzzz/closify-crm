@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache'
 
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { definirWorkspaceAtivo } from '@/lib/workspace/ativo'
 import { getResend } from '@/lib/resend/client'
 import { renderConviteEmail } from '@/lib/emails/convite'
 import {
@@ -360,6 +361,59 @@ export async function deleteAccount() {
   }
 
   await supabase.auth.signOut()
+
+  return { success: true }
+}
+
+/**
+ * Troca a empresa que a pessoa está usando.
+ *
+ * O seletor da barra lateral era decorativo: `onClick` só mudava um estado do
+ * React, e as páginas — que são Server Components e não enxergam esse estado —
+ * continuavam lendo sempre a empresa mais antiga. Quem participava de duas via
+ * as duas na lista, clicava na segunda, o rótulo mudava, e todos os dados
+ * continuavam da primeira. Para quem foi convidado como colaborador tendo
+ * empresa própria, isso significava nunca conseguir abrir a empresa que o
+ * convidou.
+ *
+ * A escolha precisa virar cookie, e cookie só pode ser gravado em Server
+ * Action ou Route Handler — daí esta função existir em vez de a página
+ * resolver sozinha.
+ */
+export async function trocarEmpresa(workspaceId: unknown) {
+  const parsed = uuidSchema.safeParse(workspaceId)
+  if (!parsed.success) {
+    return { error: 'Empresa inválida.' }
+  }
+
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) {
+    return { error: 'Sessão expirada. Entre novamente.' }
+  }
+
+  // Confere a participação AQUI, e não só na leitura. A RLS já impediria a
+  // pessoa de ver dados de uma empresa alheia — o efeito seria tela vazia, não
+  // vazamento —, mas gravar um cookie apontando para onde ela não pertence
+  // deixaria o app num estado sem saída até o cookie expirar.
+  const { data: vinculo } = await supabase
+    .from('workspace_members')
+    .select('workspace_id')
+    .eq('workspace_id', parsed.data)
+    .eq('user_id', user.id)
+    .maybeSingle()
+
+  if (!vinculo) {
+    return { error: 'Você não participa desta empresa.' }
+  }
+
+  await definirWorkspaceAtivo(parsed.data)
+
+  // Revalida tudo: cada tela do painel é montada a partir da empresa ativa, e
+  // deixar qualquer uma em cache mostraria dados da empresa anterior.
+  revalidatePath('/', 'layout')
 
   return { success: true }
 }

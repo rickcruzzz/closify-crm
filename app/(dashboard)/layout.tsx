@@ -19,7 +19,7 @@ export default async function DashboardLayout({
 }: {
   children: React.ReactNode
 }) {
-  const { user } = await getCurrentUserAndWorkspace()
+  const { user, workspaceId } = await getCurrentUserAndWorkspace()
   const supabase = await createClient()
 
   const { data: memberships } = await supabase
@@ -51,9 +51,9 @@ export default async function DashboardLayout({
     // tooltip, então a landing não carrega o JS do provider à toa.
     <TooltipProvider delay={200}>
       <div className="flex min-h-dvh">
-        <Sidebar workspaces={workspaces} />
+        <Sidebar workspaces={workspaces} activeWorkspaceId={workspaceId} />
         <div className="flex min-w-0 flex-1 flex-col">
-          <Topbar workspaces={workspaces} currentUser={currentUser} />
+          <Topbar workspaces={workspaces} activeWorkspaceId={workspaceId} currentUser={currentUser} />
           <main id="conteudo" className="flex-1 p-4 md:p-6">
             {children}
           </main>

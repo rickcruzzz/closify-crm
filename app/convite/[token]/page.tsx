@@ -5,7 +5,6 @@ import { Card, CardDescription, CardHeader, CardTitle } from '@/components/ui/ca
 import { createClient } from '@/lib/supabase/server'
 import { AcceptInviteCard } from '@/components/settings/accept-invite-card'
 import { Logo } from '@/components/branding/logo'
-import { limparIntencao } from '@/lib/auth/intencao'
 
 export default async function ConvitePage({
   params,
@@ -47,9 +46,6 @@ export default async function ConvitePage({
     const { error } = await supabase.rpc('accept_workspace_invite', { invite_token: token })
 
     if (!error) {
-      // Consome a intenção: sem isso, a próxima criação de empresa seria
-      // desviada de volta para cá.
-      await limparIntencao(['convite'])
       redirect('/dashboard')
     }
 
