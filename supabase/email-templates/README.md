@@ -34,9 +34,34 @@ e ainda freia abuso.
 
 **Authentication → URL Configuration**: conferir que _Site URL_ é
 `https://www.velofunil.com.br` e que _Redirect URLs_ cobre
-`https://www.velofunil.com.br/**`. O `{{ .ConfirmationURL }}` dos templates é
-construído a partir desses valores — template certo com Site URL errada gera
-link quebrado.
+`https://www.velofunil.com.br/**`. Os botões de `confirmacao-cadastro.html` e
+`recuperacao-de-senha.html` usam `{{ .RedirectTo }}` (não `{{ .ConfirmationURL }}`)
+— ver seção abaixo — mas `.RedirectTo` só resolve certo se a URL passada em
+`emailRedirectTo`/`redirectTo` (em `lib/supabase/actions.ts`) estiver coberta
+por essa allowlist de Redirect URLs; fora dela o Supabase ignora o valor e cai
+no Site URL puro, sem o `/confirmar` ou `/redefinir-senha` no caminho.
+
+### Por que `confirmacao-cadastro.html` e `recuperacao-de-senha.html` não usam `{{ .ConfirmationURL }}`
+
+`{{ .ConfirmationURL }}` aponta para o endpoint de verificação do próprio
+Supabase (`/auth/v1/verify?...`) e **verifica o token de uso único no próprio
+GET** — antes mesmo da pessoa clicar. Qualquer requisição que visite essa URL
+primeiro consome o token: scanner de link de provedor corporativo, antivírus
+de e-mail, preview de webmail. Confirmado em produção com `temp-mail.org` —
+a pessoa clica em "Confirmar e-mail" e cai direto em "link expirado", porque
+algo já tinha visitado o link antes do clique real.
+
+Os dois templates agora usam `{{ .RedirectTo }}?token_hash={{ .TokenHash }}&type=signup`
+(ou `&type=recovery`), que aponta para o próprio domínio do Velo Funil. A
+página só carrega — não verifica nada — e a chamada real
+(`supabase.auth.verifyOtp`) só dispara num clique explícito (botão "Confirmar
+meu e-mail" em `/confirmar`, ou o submit do formulário de nova senha em
+`/redefinir-senha`). Um GET passivo de scanner não aciona nenhum dos dois, só
+carrega a página.
+
+`magic-link.html` e `convite.html` continuam em `{{ .ConfirmationURL }}` —
+nenhum dos dois é usado pelo fluxo real do produto (ver seções abaixo), então
+o mesmo defeito ali não tem efeito prático hoje.
 
 ### Recomendação: uma API key só para isto
 

@@ -57,11 +57,15 @@ export async function signUp(values: unknown) {
     password: parsed.data.password,
     options: {
       data: { name: parsed.data.name },
-      // `/confirmar`, não `/auth/callback`: a confirmação de cadastro devolve
-      // a sessão em `#access_token=`, e fragmento nunca chega ao servidor. O
-      // Route Handler só lê `?code=`, então caía em `/login` mesmo com sessão
-      // válida — a pessoa confirmava a conta e precisava digitar a senha de
-      // novo. `/confirmar` é client component e lê o fragmento no browser.
+      // `/confirmar`, não `/auth/callback`: o template de e-mail (colado no
+      // painel do Supabase) monta o link como `{{ .RedirectTo }}?token_hash=
+      // {{ .TokenHash }}&type=signup` — a verificação roda no clique, dentro
+      // de `/confirmar`, não automaticamente num GET do Supabase. Isso evita
+      // que scanner de link de provedor de e-mail consuma o token de uso
+      // único antes da pessoa clicar (era exatamente o defeito de antes:
+      // `.ConfirmationURL` verificava no próprio GET, e qualquer prefetch
+      // matava o link antes do clique real). `/confirmar` também sabe ler o
+      // formato antigo em `#access_token=` para e-mails já enviados.
       emailRedirectTo: `${appUrl()}/confirmar`,
     },
   })
@@ -121,13 +125,15 @@ export async function requestPasswordReset(values: unknown) {
   const supabase = await createClient()
   // Aponta direto para a tela, não para `/auth/callback`.
   //
-  // O link de recuperação devolve a sessão em `#access_token=...`, um FRAGMENTO
-  // de URL — e fragmento nunca é enviado ao servidor. O `/auth/callback` é
-  // Route Handler: ele só enxerga `?code=`, que neste fluxo não existe. O
-  // resultado era cair em `/login` mesmo com link válido.
-  //
-  // `/redefinir-senha` é client component e lê o fragmento no browser, que é
-  // o único lugar onde ele existe.
+  // O template de e-mail (colado no painel do Supabase) monta o link como
+  // `{{ .RedirectTo }}?token_hash={{ .TokenHash }}&type=recovery` — a
+  // verificação (`verifyOtp`) só roda no submit do formulário de nova senha,
+  // dentro de `/redefinir-senha`, nunca num GET automático. Sem isso, um
+  // scanner de link do provedor de e-mail consumia o token de uso único antes
+  // do clique real da pessoa, que caía em "link expirado" sem nunca ter tido
+  // chance — era exatamente o defeito de `.ConfirmationURL`, que verifica no
+  // próprio GET. `/redefinir-senha` também sabe ler o formato antigo em
+  // `#access_token=` para e-mails já enviados.
   const { error } = await supabase.auth.resetPasswordForEmail(parsed.data.email, {
     redirectTo: `${appUrl()}/redefinir-senha`,
   })

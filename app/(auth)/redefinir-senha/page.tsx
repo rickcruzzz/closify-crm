@@ -1,8 +1,9 @@
 'use client'
 
 import * as React from 'react'
+import { Suspense } from 'react'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { Controller, useForm } from 'react-hook-form'
 import { Loader2, MailWarning } from 'lucide-react'
@@ -20,8 +21,14 @@ import { createClient } from '@/lib/supabase/client'
 import { resetPasswordSchema, type ResetPasswordValues } from '@/lib/validations/auth'
 import { limparTentativasDeLogin } from '@/lib/supabase/actions'
 
-/** Enquanto o fragmento não foi lido, não dá para saber se o link presta. */
-type EstadoDoLink = 'verificando' | 'valido' | 'invalido'
+/**
+ * 'token-pendente': novo formato do e-mail (`?token_hash=`), token ainda não
+ * verificado — a verificação só dispara no submit do formulário, não no
+ * carregamento da página (ver comentário no efeito abaixo).
+ * 'sessao-pronta': sessão de recuperação já existe (formato antigo por
+ * fragmento, já verificado pelo Supabase antes do redirect).
+ */
+type EstadoDoLink = 'verificando' | 'sessao-pronta' | 'token-pendente' | 'invalido'
 
 /**
  * Traduz o erro do Supabase para uma frase que diz o que fazer.
@@ -48,22 +55,45 @@ function mensagemDoErro(codigo: string | undefined, mensagem: string): string {
 }
 
 export default function RedefinirSenhaPage() {
+  return (
+    <Suspense
+      fallback={
+        <Card>
+          <CardContent className="flex min-h-40 items-center justify-center">
+            <Loader2 aria-label="Verificando o link" className="size-5 animate-spin" />
+          </CardContent>
+        </Card>
+      }
+    >
+      <RedefinirSenhaPageInner />
+    </Suspense>
+  )
+}
+
+function RedefinirSenhaPageInner() {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const [isSubmitting, setIsSubmitting] = React.useState(false)
   const [formError, setFormError] = React.useState<string | null>(null)
   const [estadoDoLink, setEstadoDoLink] = React.useState<EstadoDoLink>('verificando')
 
   /**
-   * O link de recuperação devolve a sessão em `#access_token=...`.
+   * Dois formatos de link coexistem.
    *
-   * Fragmento de URL não é enviado ao servidor — nem Server Component nem
-   * Route Handler conseguem lê-lo. Por isso a troca acontece aqui, no browser,
-   * que é o único lugar onde esses valores existem.
+   * **Novo, em `?token_hash=`**: NÃO verifica nada aqui — só guarda o estado
+   * `token-pendente` e deixa a verificação (`verifyOtp`) para o submit do
+   * formulário, em `onSubmit`. Verificar já no carregamento da página teria o
+   * mesmo problema do link antigo: qualquer requisição que visite a URL antes
+   * da pessoa — antivírus de provedor de e-mail, scanner de link corporativo,
+   * preview de webmail — consumiria o token de uso único primeiro, e a pessoa
+   * cairia em "link expirado" sem nunca ter tido chance real. Isso já
+   * acontecia aqui (era o `#error=otp_expired` tratado abaixo) e é a causa
+   * raiz, não só um efeito colateral aceitável.
    *
-   * O mesmo fragmento carrega o caminho de erro (`#error=access_denied&
-   * error_code=otp_expired`), que é o que aparece quando o link já foi aberto
-   * antes — inclusive pelo antivírus do provedor de e-mail, que visita URLs
-   * automaticamente e consome o token de uso único sem ninguém clicar.
+   * **Antigo, em `#access_token=...`**: o Supabase já verificou o token antes
+   * de redirecionar — a troca de `setSession` acontece aqui, no browser, que é
+   * o único lugar onde o fragmento existe (nunca chega ao servidor). Mantido
+   * para e-mails já enviados antes desta mudança.
    */
   React.useEffect(() => {
     const hash = window.location.hash.slice(1)
@@ -77,25 +107,33 @@ export default function RedefinirSenhaPage() {
     const accessToken = params.get('access_token')
     const refreshToken = params.get('refresh_token')
 
-    if (!accessToken || !refreshToken) {
-      // Sem fragmento: ou a pessoa digitou a URL na mão, ou já existe sessão
-      // de recuperação estabelecida (por exemplo, ao recarregar a página).
+    if (accessToken && refreshToken) {
       const supabase = createClient()
-      supabase.auth.getSession().then(({ data }) => {
-        setEstadoDoLink(data.session ? 'valido' : 'invalido')
-      })
+      supabase.auth.setSession({ access_token: accessToken, refresh_token: refreshToken }).then(
+        ({ error }) => {
+          setEstadoDoLink(error ? 'invalido' : 'sessao-pronta')
+          // Tira o token da barra de endereços: ele dá acesso à conta e não
+          // deveria sobreviver no histórico do navegador nem em um print.
+          window.history.replaceState(null, '', window.location.pathname)
+        },
+      )
       return
     }
 
+    const tokenHash = searchParams.get('token_hash')
+    if (tokenHash) {
+      setEstadoDoLink('token-pendente')
+      return
+    }
+
+    // Nem fragmento nem query: ou a pessoa digitou a URL na mão, ou já existe
+    // sessão de recuperação estabelecida (por exemplo, ao recarregar a página
+    // depois de já ter verificado o token-pendente uma vez).
     const supabase = createClient()
-    supabase.auth.setSession({ access_token: accessToken, refresh_token: refreshToken }).then(
-      ({ error }) => {
-        setEstadoDoLink(error ? 'invalido' : 'valido')
-        // Tira o token da barra de endereços: ele dá acesso à conta e não
-        // deveria sobreviver no histórico do navegador nem em um print.
-        window.history.replaceState(null, '', window.location.pathname)
-      },
-    )
+    supabase.auth.getSession().then(({ data }) => {
+      setEstadoDoLink(data.session ? 'sessao-pronta' : 'invalido')
+    })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   const {
@@ -130,6 +168,27 @@ export default function RedefinirSenhaPage() {
     setIsSubmitting(true)
 
     const supabase = createClient()
+
+    // Fluxo novo: a sessão de recuperação ainda não existe — o token só é
+    // trocado por sessão agora, no submit, nunca no carregamento da página
+    // (ver comentário no efeito acima sobre por que isso importa).
+    if (estadoDoLink === 'token-pendente') {
+      const tokenHash = searchParams.get('token_hash')
+      const { error: verifyError } = await supabase.auth.verifyOtp({
+        type: 'recovery',
+        token_hash: tokenHash ?? '',
+      })
+      if (verifyError) {
+        console.error('verifyOtp (reset de senha) falhou', {
+          code: verifyError.code,
+          status: verifyError.status,
+        })
+        setEstadoDoLink('invalido')
+        setIsSubmitting(false)
+        return
+      }
+    }
+
     const { data, error } = await supabase.auth.updateUser({ password: values.password })
 
     if (error) {

@@ -19,13 +19,19 @@ rebaixa, requisição sem token toma 401.
 
 ## Pendente do dono (não é código)
 
+- [ ] **Colar de novo no painel do Supabase** (Authentication → Emails →
+      Templates) os arquivos `confirmacao-cadastro.html` e
+      `recuperacao-de-senha.html` — mudaram de `{{ .ConfirmationURL }}` para
+      `{{ .RedirectTo }}?token_hash=...` (corrige o "link expirado" no
+      clique). O painel não lê do repositório; sem colar de novo, produção
+      continua com o link antigo e o defeito continua.
 - [ ] **Pagar um Pix real de R$ 49** pelo próprio checkout. É o último elo sem
       prova — o webhook foi testado com evento real, mas pagamento de verdade
       ninguém simulou.
 - [ ] **Cancelar 2 assinaturas de teste no Asaas** (`pedro eee`,
       `Henrique System`), que seguem gerando fatura mensal.
-- [ ] **Supabase → Authentication → Rate Limits**: subir "Rate limit for
-      sending emails" de 30 para 100/hora.
+- [x] **Supabase → Authentication → Rate Limits**: subir "Rate limit for
+      sending emails" de 30 para 100/hora. Feito.
 - [ ] **Supabase → Authentication → Policies**: senha mínima de 6 para 8 e
       ligar _Leaked password protection_. A tela já exige 8; a API atrás dela
       aceita 6.
@@ -67,6 +73,15 @@ Action). Tudo que depende da sessão de recuperação roda no cliente.
 mil caracteres e rejeita comentário condicional aninhado — o botão "Save"
 simplesmente não responde, sem erro. Por isso os arquivos em
 `supabase/email-templates/` são gerados com `paraPainelDoSupabase: true`.
+
+**`{{ .ConfirmationURL }}` verifica o token no próprio GET, antes do clique.**
+Causou "link expirado" em confirmação de cadastro e recuperação de senha —
+qualquer requisição que visite o link primeiro (scanner de e-mail, antivírus,
+preview de webmail como temp-mail.org) consome o token de uso único antes da
+pessoa clicar de verdade. `confirmacao-cadastro.html` e
+`recuperacao-de-senha.html` agora usam `{{ .RedirectTo }}?token_hash=...`,
+que só carrega a página; a verificação (`verifyOtp`) espera um clique
+explícito. Ver `supabase/email-templates/README.md`.
 
 ## Como verificar as coisas aqui
 
