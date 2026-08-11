@@ -17,6 +17,30 @@ pagantes ainda**. O fluxo de dinheiro foi auditado ponta a ponta e funciona:
 pagamento confirmado libera o Pro, retry do Asaas é deduplicado, cancelamento
 rebaixa, requisição sem token toma 401.
 
+## Ambiente local quebrado desde 11/08 02:26
+
+O `.env.local` foi substituído por um modelo em branco. **Produção não foi
+afetada** — as variáveis dela vivem na Vercel, e o webhook continua devolvendo
+401 sem token, o que prova que a chave real está lá.
+
+Rode `node --env-file=.env.local scripts/verificar-ambiente.mjs` para ver o
+estado atual. Hoje ele acusa:
+
+| Variável              | Problema                                                                                                       |
+| --------------------- | -------------------------------------------------------------------------------------------------------------- |
+| `ASAAS_API_KEY`       | vazia                                                                                                          |
+| `ASAAS_WEBHOOK_TOKEN` | vazia                                                                                                          |
+| `RESEND_API_KEY`      | trocada; a chave atual é válida mas de uma conta **sem o domínio velofunil.com.br**, então todo envio falharia |
+
+As do Supabase estão intactas. `NEXT_PUBLIC_APP_URL` aponta para
+`localhost:3000`, o que é correto para desenvolvimento.
+
+Como recuperar, na ordem: **histórico de versões do OneDrive** (clique direito
+no `.env.local` → _Histórico de versões_ → restaurar a versão anterior a
+11/08 02:26); ou `vercel env pull` **da conta que hospeda o domínio** — a que
+estava logada no CLI (`estefanyy929a-gif`) tem 0 domínios e não é essa; ou
+regerar nos painéis do Asaas e do Resend.
+
 ## Pendente do dono (não é código)
 
 - [ ] **Colar de novo no painel do Supabase** (Authentication → Emails →
