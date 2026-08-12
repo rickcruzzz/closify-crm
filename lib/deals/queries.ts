@@ -22,39 +22,116 @@ export type DealLeadRow = {
   phone: string | null
 }
 
-// Kanban carrega o board inteiro de uma vez (sem paginação) porque o
-// dnd-kit precisa de todos os itens em memória para o drag-and-drop
-// funcionar entre colunas — paginação faria sentido só se um workspace
-// acumulasse milhares de deals abertos simultaneamente, o que não é o
-// padrão de uso (deals fechados não ficam void aberto no board).
-export async function getBoardDeals(workspaceId: string): Promise<DealRow[]> {
+/**
+ * O board com o que foi cortado, explicitamente.
+ *
+ * Quantos negócios cada etapa TEM, ao lado de quantos vieram. A tela usa a
+ * diferença para avisar — sem isso o corte seria tão silencioso quanto o teto
+ * do PostgREST que ele veio substituir, só que decidido por nós.
+ */
+export type BoardDoKanban = {
+  deals: DealRow[]
+  totalPorEtapa: Record<DealStage, number>
+}
+
+/**
+ * Quantos cards cada coluna carrega.
+ *
+ * Teto POR ETAPA e não global: as etapas fechadas acumulam para sempre, e um
+ * limite único deixaria "Fechado ganho" comendo a cota das colunas onde o
+ * trabalho acontece. Duzentos é bem mais do que cabe numa tela e bem menos do
+ * que o teto de 1.000 do PostgREST.
+ */
+const CARDS_POR_ETAPA = 200
+
+/**
+ * O board do Kanban, com teto por etapa.
+ *
+ * A versão anterior lia a tabela inteira sem limite. O PostgREST corta em
+ * 1.000 linhas e NÃO devolve erro — como a ordem era por data decrescente, os
+ * negócios mais antigos simplesmente sumiam do quadro. Card desaparecendo sem
+ * aviso é a pior forma de falhar: parece dado perdido.
+ *
+ * A RPC devolve `total_na_etapa` junto para a tela poder dizer quantos ficaram
+ * de fora em vez de fingir que aqueles são todos.
+ */
+export async function getBoardDeals(workspaceId: string): Promise<BoardDoKanban> {
   const supabase = await createClient()
 
-  const { data, error } = await supabase
-    .from('deals')
-    .select('id, title, lead_id, value, stage, due_date, created_at, owner_id')
-    .eq('workspace_id', workspaceId)
-    .order('created_at', { ascending: false })
+  const vazio: BoardDoKanban = { deals: [], totalPorEtapa: {} as Record<DealStage, number> }
 
-  if (error || !data) return []
+  const { data, error } = await supabase.rpc('get_board_deals', {
+    target_workspace_id: workspaceId,
+    por_etapa: CARDS_POR_ETAPA,
+  })
+
+  if (error || !data) {
+    if (error) console.error('getBoardDeals falhou', error)
+    return vazio
+  }
 
   const ownerIds = Array.from(new Set(data.map((d) => d.owner_id).filter((id): id is string => !!id)))
   const ownerNames = ownerIds.length > 0 ? await getMemberNames(workspaceId, ownerIds) : new Map()
 
-  return data.map((deal) => ({
-    ...deal,
-    owner_name: deal.owner_id ? ownerNames.get(deal.owner_id) ?? null : null,
-  }))
+  const totalPorEtapa = {} as Record<DealStage, number>
+
+  const deals: DealRow[] = data.map((linha) => {
+    // `total_na_etapa` vem repetido em toda linha da mesma etapa — é uma
+    // janela, não uma agregação separada. Sai do card e vai para o cabeçalho
+    // da coluna, então é lido aqui e não segue adiante.
+    totalPorEtapa[linha.stage] = Number(linha.total_na_etapa)
+
+    return {
+      id: linha.id,
+      title: linha.title,
+      lead_id: linha.lead_id,
+      value: linha.value,
+      stage: linha.stage,
+      due_date: linha.due_date,
+      created_at: linha.created_at,
+      owner_id: linha.owner_id,
+      owner_name: linha.owner_id ? ownerNames.get(linha.owner_id) ?? null : null,
+    }
+  })
+
+  return { deals, totalPorEtapa }
 }
 
+/**
+ * Teto do seletor de leads do formulário de negócio.
+ *
+ * Não é paginação: um `<select>` com mais de algumas centenas de itens já é
+ * inútil para escolher, muito antes de ser pesado. O limite é explícito para
+ * que o corte seja uma decisão nossa, e não o teto silencioso do PostgREST.
+ */
+const LEADS_NO_SELETOR = 500
+
+/**
+ * Os leads que o formulário de negócio oferece.
+ *
+ * Ordenava por NOME e sem limite. Passando de 1.000 leads o PostgREST cortava
+ * calado, e sumia justamente quem vinha depois no alfabeto — a pessoa não
+ * conseguia criar negócio para um cliente que existia e aparecia na lista de
+ * Leads.
+ *
+ * Agora vem por data decrescente: lead recém-cadastrado é o que mais entra em
+ * negócio novo, e é o que a pessoa acabou de digitar. Ordem alfabética punia
+ * exatamente esse caso.
+ */
 export async function getWorkspaceLeadsForSelect(workspaceId: string): Promise<DealLeadRow[]> {
   const supabase = await createClient()
 
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from('leads')
     .select('id, name, email, company, phone')
     .eq('workspace_id', workspaceId)
-    .order('name', { ascending: true })
+    .order('created_at', { ascending: false })
+    .limit(LEADS_NO_SELETOR)
+
+  if (error) {
+    console.error('getWorkspaceLeadsForSelect falhou', error)
+    return []
+  }
 
   return data ?? []
 }

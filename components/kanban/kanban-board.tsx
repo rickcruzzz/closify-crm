@@ -37,12 +37,21 @@ import { DealFormDialog } from '@/components/kanban/deal-form-dialog'
 
 export function KanbanBoard({
   initialDeals,
+  totalPorEtapa,
   leads,
   members,
   currentUserId,
   proximasAcoes,
 }: {
   initialDeals: DealRow[]
+  /**
+   * Quantos negócios cada etapa tem no banco.
+   *
+   * O board carrega no máximo 200 por etapa (0032). Sem este número a coluna
+   * não teria como avisar que há mais — e cortar calado é justamente o defeito
+   * que o teto explícito veio substituir.
+   */
+  totalPorEtapa: Record<DealStage, number>
   leads: DealLeadRow[]
   members: WorkspaceMember[]
   /** Responsável padrão da tarefa agendada pelo painel do negócio. */
@@ -255,6 +264,7 @@ export function KanbanBoard({
               deals={filteredDeals.filter((deal) => deal.stage === stage)}
               leadsById={leadsById}
               proximaAcaoPorNegocio={proximaAcaoPorNegocio}
+              totalNaEtapa={totalPorEtapa[stage] ?? 0}
               onOpenDeal={setSelectedDealId}
               filtered={hasActiveFilters}
               // `deals`, não `filteredDeals`: quem filtrou até zerar a tela

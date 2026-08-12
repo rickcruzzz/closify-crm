@@ -447,6 +447,29 @@ export type Database = {
         Args: { target_workspace_id: string }
         Returns: number
       }
+      // Agrupa no banco: no máximo 6 linhas, qualquer que seja o tamanho do
+      // funil. A versão anterior lia uma linha por negócio e batia no teto de
+      // 1.000 do PostgREST — ver 0032.
+      get_funnel_counts: {
+        Args: { target_workspace_id: string }
+        Returns: { stage: DealStage; total: number }[]
+      }
+      // Teto POR ETAPA, com o total de cada uma junto, para a tela poder dizer
+      // quantos ficaram de fora em vez de sumir com os cards.
+      get_board_deals: {
+        Args: { target_workspace_id: string; por_etapa?: number }
+        Returns: {
+          id: string
+          title: string
+          lead_id: string | null
+          value: number
+          stage: DealStage
+          due_date: string | null
+          created_at: string
+          owner_id: string | null
+          total_na_etapa: number
+        }[]
+      }
       get_dashboard_counts: {
         Args: { target_workspace_id: string }
         Returns: {

@@ -23,6 +23,7 @@ export function KanbanColumn({
   deals,
   leadsById,
   proximaAcaoPorNegocio,
+  totalNaEtapa,
   onOpenDeal,
   filtered = false,
   compact = false,
@@ -32,6 +33,8 @@ export function KanbanColumn({
   leadsById: Map<string, DealLeadRow>
   /** Tarefa aberta mais próxima de cada negócio, resolvida uma vez no servidor. */
   proximaAcaoPorNegocio: Map<string, ProximaAcaoRow>
+  /** Quantos negócios esta etapa tem no banco, além dos que vieram. */
+  totalNaEtapa: number
   onOpenDeal: (dealId: string) => void
   filtered?: boolean
   /** Board inteiro sem nenhum negócio: encolhe a coluna. */
@@ -40,12 +43,22 @@ export function KanbanColumn({
   const { setNodeRef, isOver } = useDroppable({ id: stage, data: { stage } })
   const total = deals.reduce((sum, deal) => sum + deal.value, 0)
 
+  // Compara com o total do BANCO, não com o board filtrado: quem digitou na
+  // busca reduziu a lista de propósito e não precisa ser avisado disso.
+  const cortou = !filtered && totalNaEtapa > deals.length
+
   return (
     <div className="w-72 shrink-0 snap-start">
       <div className="mb-3 flex items-center justify-between">
         <div className="flex items-center gap-2">
           <span className="text-sm font-medium">{dealStageLabels[stage]}</span>
-          <Badge variant="secondary">{deals.length}</Badge>
+          {/* Quando a etapa tem mais do que o board carrega, o número mostra os
+              dois. Cortar em silêncio é o defeito que a 0032 veio consertar —
+              repeti-lo aqui, com um número nosso em vez do teto do PostgREST,
+              não seria melhor. */}
+          <Badge variant="secondary" title={cortou ? `${totalNaEtapa} no total` : undefined}>
+            {cortou ? `${deals.length} de ${totalNaEtapa}` : deals.length}
+          </Badge>
         </div>
         <span className="text-muted-foreground text-xs font-medium">
           {formatBRL(total)}

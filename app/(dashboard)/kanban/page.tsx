@@ -15,7 +15,7 @@ export default async function KanbanPage() {
   // Quarta consulta no mesmo `Promise.all`, não uma por card: o board já
   // carrega todos os negócios abertos de uma vez, e uma consulta por card
   // multiplicaria o custo em vez de somar uma leitura.
-  const [deals, leads, members, proximasAcoes] = await Promise.all([
+  const [board, leads, members, proximasAcoes] = await Promise.all([
     getBoardDeals(workspaceId),
     getWorkspaceLeadsForSelect(workspaceId),
     getWorkspaceMembers(workspaceId),
@@ -33,10 +33,11 @@ export default async function KanbanPage() {
           resolvida no servidor, sobre `deals`, não sobre o resultado do filtro
           do board — quem filtrou até zerar a tela não é um usuário novo e não
           deve receber tutorial. */}
-      {deals.length === 0 && <GettingStartedCard />}
+      {board.deals.length === 0 && <GettingStartedCard />}
 
       <KanbanBoard
-        initialDeals={deals}
+        initialDeals={board.deals}
+        totalPorEtapa={board.totalPorEtapa}
         leads={leads}
         members={members}
         currentUserId={user.id}
