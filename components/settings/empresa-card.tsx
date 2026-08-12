@@ -306,6 +306,17 @@ export function EmpresaCard({
         <CardHeader>
           <CardTitle className="text-base">Endereço</CardTitle>
         </CardHeader>
+        {/*
+          Ordem pensada pra fechar em pares — 7 campos é ímpar, e num grid de
+          2 colunas alguém sempre sobra sozinho na última linha. Deixar
+          "Estado" sobrando no FIM lia como formulário quebrado (vão vazio
+          bem antes do fim do card). A resposta é decidir de propósito QUEM
+          fica de fora do par: Endereço, que costuma ser o valor mais longo
+          do formulário, vira largura cheia — e os dois pares mais padrão de
+          endereço brasileiro (Número/Complemento, Cidade/Estado) continuam
+          juntos. CEP e Bairro, os dois que sobraram, ficam juntos no topo;
+          CEP lidera por ser quem dispara a busca automática.
+        */}
         <CardContent className="grid gap-4 sm:grid-cols-2">
           <Campo
             id="cep"
@@ -334,7 +345,11 @@ export function EmpresaCard({
             </div>
           </Campo>
 
-          <Campo id="endereco" rotulo="Endereço">
+          <Campo id="bairro" rotulo="Bairro">
+            <Input id="bairro" disabled={bloqueado} {...register('bairro')} />
+          </Campo>
+
+          <Campo id="endereco" rotulo="Endereço" largura="cheia">
             <Input id="endereco" disabled={bloqueado} {...register('endereco')} />
           </Campo>
 
@@ -344,10 +359,6 @@ export function EmpresaCard({
 
           <Campo id="complemento" rotulo="Complemento">
             <Input id="complemento" disabled={bloqueado} {...register('complemento')} />
-          </Campo>
-
-          <Campo id="bairro" rotulo="Bairro">
-            <Input id="bairro" disabled={bloqueado} {...register('bairro')} />
           </Campo>
 
           <Campo id="cidade" rotulo="Cidade">
