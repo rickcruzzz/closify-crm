@@ -262,7 +262,7 @@ const TITULOS: Record<OnboardingEtapa, string> = {
   empresa: 'Qual é o nome da sua empresa?',
   segmento: 'Qual é o segmento dela?',
   venda: 'Como sua empresa vende?',
-  equipe: 'Quantas pessoas vão usar o Velo Funil?',
+  equipe: 'Quantas pessoas trabalham na sua empresa hoje?',
   processando: 'Preparando seu Velo Funil…',
 }
 
@@ -270,7 +270,14 @@ const SUBTITULOS: Record<OnboardingEtapa, string> = {
   empresa: 'É o nome que aparece no topo do sistema e nos convites da equipe.',
   segmento: 'Usamos para deixar os exemplos e os textos com a sua cara.',
   venda: 'Ajuda a entender o que é uma oportunidade no seu negócio.',
-  equipe: 'Você pode convidar colaboradores a qualquer momento.',
+  // Antes perguntava "quantas pessoas vão usar o Velo Funil", que soa como
+  // promessa de vaga — e o Free trava em 2 pessoas de verdade
+  // (accept_workspace_invite). Quem respondia "6 a 20" só descobria o teto
+  // semanas depois, ao tentar convidar a 3ª pessoa, sem ligação nenhuma com
+  // o que respondeu aqui. Isto é só perfil do negócio; o aviso do teto
+  // fecha essa lacuna de expectativa antes dela virar surpresa.
+  equipe:
+    'É só pra personalizar sua experiência. No plano grátis, até 2 pessoas usam o sistema ao mesmo tempo — dá pra ampliar no Pro quando precisar.',
   processando: 'Leva alguns segundos.',
 }
 
