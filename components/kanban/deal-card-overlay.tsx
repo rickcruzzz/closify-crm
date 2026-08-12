@@ -3,6 +3,8 @@ import type { DealStage } from '@/lib/deals/types'
 import type { DealRow, DealLeadRow } from '@/lib/deals/queries'
 import { Card, CardContent } from '@/components/ui/card'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
+import { ProximaAcao } from '@/components/kanban/proxima-acao'
+import type { ProximaAcaoRow } from '@/lib/tasks/types'
 
 const stageAccent: Record<DealStage, string> = {
   novo: 'border-l-blue-500 dark:border-l-blue-400',
@@ -26,7 +28,18 @@ function initials(name: string) {
     .join('')
 }
 
-export function DealCardOverlay({ deal, lead }: { deal: DealRow; lead: DealLeadRow | undefined }) {
+// Espelha `DealCard` de propósito, campo a campo. O overlay é o que a pessoa
+// vê enquanto arrasta: se ele omitir a linha da próxima ação, o card muda de
+// altura no instante em que é pego e o movimento parece um defeito.
+export function DealCardOverlay({
+  deal,
+  lead,
+  proximaAcao,
+}: {
+  deal: DealRow
+  lead: DealLeadRow | undefined
+  proximaAcao: ProximaAcaoRow | undefined
+}) {
   return (
     <Card
       size="sm"
@@ -43,10 +56,11 @@ export function DealCardOverlay({ deal, lead }: { deal: DealRow; lead: DealLeadR
             <span className="text-muted-foreground truncate text-xs">{lead.company}</span>
           )}
         </div>
-        <div className="mt-1 flex items-center justify-between">
+        <div className="mt-1 flex items-center justify-between gap-2">
           <Avatar size="sm">
             <AvatarFallback>{initials(deal.owner_name ?? '?')}</AvatarFallback>
           </Avatar>
+          <ProximaAcao task={proximaAcao} />
         </div>
       </CardContent>
     </Card>

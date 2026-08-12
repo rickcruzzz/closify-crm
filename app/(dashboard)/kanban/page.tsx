@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import { getBoardDeals, getWorkspaceLeadsForSelect } from '@/lib/deals/queries'
 import { getWorkspaceMembers } from '@/lib/leads/queries'
+import { getProximaAcaoPorNegocio } from '@/lib/tasks/queries'
 import { getCurrentUserAndWorkspace } from '@/lib/supabase/workspace'
 import { PageHeader } from '@/components/layout/page-header'
 import { KanbanBoard } from '@/components/kanban/kanban-board'
@@ -9,12 +10,16 @@ import { GettingStartedCard } from '@/components/kanban/getting-started-card'
 export const metadata: Metadata = { title: 'Pipeline' }
 
 export default async function KanbanPage() {
-  const { workspaceId } = await getCurrentUserAndWorkspace()
+  const { user, workspaceId } = await getCurrentUserAndWorkspace()
 
-  const [deals, leads, members] = await Promise.all([
+  // Quarta consulta no mesmo `Promise.all`, não uma por card: o board já
+  // carrega todos os negócios abertos de uma vez, e uma consulta por card
+  // multiplicaria o custo em vez de somar uma leitura.
+  const [deals, leads, members, proximasAcoes] = await Promise.all([
     getBoardDeals(workspaceId),
     getWorkspaceLeadsForSelect(workspaceId),
     getWorkspaceMembers(workspaceId),
+    getProximaAcaoPorNegocio(workspaceId),
   ])
 
   return (
@@ -30,7 +35,14 @@ export default async function KanbanPage() {
           deve receber tutorial. */}
       {deals.length === 0 && <GettingStartedCard />}
 
-      <KanbanBoard initialDeals={deals} leads={leads} members={members} />
+      <KanbanBoard
+        initialDeals={deals}
+        leads={leads}
+        members={members}
+        currentUserId={user.id}
+        // `Map` não sobrevive à serialização servidor→cliente; vai como pares.
+        proximasAcoes={Array.from(proximasAcoes)}
+      />
     </div>
   )
 }

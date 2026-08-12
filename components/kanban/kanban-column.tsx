@@ -4,6 +4,7 @@ import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable'
 import { cn } from '@/lib/utils'
 import { dealStageLabels, type DealStage } from '@/lib/deals/types'
 import type { DealRow, DealLeadRow } from '@/lib/deals/queries'
+import type { ProximaAcaoRow } from '@/lib/tasks/types'
 import { Badge } from '@/components/ui/badge'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { DealCard } from '@/components/kanban/deal-card'
@@ -21,6 +22,7 @@ export function KanbanColumn({
   stage,
   deals,
   leadsById,
+  proximaAcaoPorNegocio,
   onOpenDeal,
   filtered = false,
   compact = false,
@@ -28,6 +30,8 @@ export function KanbanColumn({
   stage: DealStage
   deals: DealRow[]
   leadsById: Map<string, DealLeadRow>
+  /** Tarefa aberta mais próxima de cada negócio, resolvida uma vez no servidor. */
+  proximaAcaoPorNegocio: Map<string, ProximaAcaoRow>
   onOpenDeal: (dealId: string) => void
   filtered?: boolean
   /** Board inteiro sem nenhum negócio: encolhe a coluna. */
@@ -80,6 +84,7 @@ export function KanbanColumn({
                   key={deal.id}
                   deal={deal}
                   lead={deal.lead_id ? leadsById.get(deal.lead_id) : undefined}
+                  proximaAcao={proximaAcaoPorNegocio.get(deal.id)}
                   onOpen={onOpenDeal}
                 />
               ))

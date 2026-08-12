@@ -174,6 +174,52 @@ export type Database = {
         }
         Relationships: []
       }
+      // Tarefas com prazo — o que ainda vai acontecer. Separada de `activities`
+      // de propósito: atividade é log do que aconteceu, tarefa muda de estado.
+      // `lead_id` e `deal_id` são os dois opcionais, mas o check
+      // `tasks_alvo_minimo` exige pelo menos um — ver 0029_tarefas.sql.
+      tasks: {
+        Row: {
+          id: string
+          workspace_id: string
+          lead_id: string | null
+          deal_id: string | null
+          assignee_id: string | null
+          created_by: string | null
+          title: string
+          type: ActivityType
+          due_at: string
+          done_at: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          workspace_id: string
+          lead_id?: string | null
+          deal_id?: string | null
+          assignee_id?: string | null
+          created_by?: string | null
+          title: string
+          type?: ActivityType
+          due_at: string
+          done_at?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          workspace_id?: string
+          lead_id?: string | null
+          deal_id?: string | null
+          assignee_id?: string | null
+          created_by?: string | null
+          title?: string
+          type?: ActivityType
+          due_at?: string
+          done_at?: string | null
+          created_at?: string
+        }
+        Relationships: []
+      }
       // Dedupe de webhook do Asaas. Só a service_role escreve aqui (RLS ligada
       // e sem policy) — ver 0012_security_audit_fixes.sql.
       asaas_webhook_events: {
