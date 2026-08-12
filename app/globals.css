@@ -164,6 +164,35 @@
   );
 }
 
+/* A curva de entrada do site, num lugar só.
+
+   `easeOutQuad`. Escolhida contra a alternativa óbvia: curvas do tipo
+   `cubic-bezier(0.16, 1, 0.3, 1)` põem metade do movimento nos primeiros 15%
+   do tempo, então o elemento chega quase no lugar num piscar e gasta o resto
+   percorrendo os últimos pixels — parece RÁPIDA por mais longa que seja a
+   duração. Esta distribui: aos 20% do tempo, 25% do caminho.
+
+   Existe como variável porque duas coisas diferentes animam a entrada: o hero,
+   que usa `animate-in` do tw-animate-css no carregamento, e o RevealOnScroll,
+   que usa transição no scroll. Com a curva copiada nos dois, a primeira dobra
+   e o resto da página teriam ritmos diferentes — e ninguém saberia dizer por
+   que o site "parece" inconsistente. */
+   Uso: `ease-(--ease-entrada)` nas classes, e `var(--ease-entrada)` no estilo
+   inline do RevealOnScroll.
+
+   NÃO virou uma classe própria com `animation-timing-function`. Tentei, e
+   funcionava — mas por sorte de ordem: o `animate-in` do tw-animate-css usa a
+   forma ABREVIADA `animation: enter ... var(--tw-ease, ease) ...`, e a
+   abreviada redefine o timing function. A classe só vencia porque caía depois
+   no arquivo gerado. Bastava a ordem dos imports mudar para a curva sumir sem
+   erro nenhum.
+
+   O utilitário `ease-*` do Tailwind escreve em `--tw-ease`, que é exatamente
+   de onde o `animate-in` lê. Sem disputa de cascata. */
+:root {
+  --ease-entrada: cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+
 /* Hover só onde existe ponteiro de verdade.
    No touch o `:hover` gruda depois do tap: o card fica com sombra e deslocado
    até você tocar em outro lugar. Esta variante mantém o efeito no desktop e o

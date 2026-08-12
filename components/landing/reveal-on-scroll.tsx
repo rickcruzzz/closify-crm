@@ -23,6 +23,33 @@ import { cn } from '@/lib/utils'
  *    conteúdo acima da dobra.
  * 3. `disconnect()` assim que revela: anima uma vez, sem custo residual.
  */
+/**
+ * Duração e curva da entrada.
+ *
+ * 750ms com `easeOutQuad`. As duas coisas juntas é que dão o resultado —
+ * mexer só na duração não adianta.
+ *
+ * A curva anterior, `cubic-bezier(0.16, 1, 0.3, 1)`, punha METADE do movimento
+ * nos primeiros 15% do tempo: o elemento chegava quase no lugar num piscar e
+ * gastava o resto dos 550ms percorrendo os últimos pixels, que ninguém
+ * enxerga. Por isso parecia rápida mesmo sendo longa.
+ *
+ * `cubic-bezier(0.25, 0.46, 0.45, 0.94)` distribui: aos 20% do tempo, 25% do
+ * caminho. O movimento é visível do começo ao fim, e a chegada é macia em vez
+ * de brusca.
+ */
+const DURACAO = 750
+/** Definida em `globals.css` e compartilhada com o hero — ver `--ease-entrada`. */
+const CURVA = 'var(--ease-entrada)'
+
+/**
+ * Quanto o elemento sobe.
+ *
+ * Passou de 16px para 24px junto com a duração. Distância curta em animação
+ * lenta é o pior dos dois mundos: demora e não parece que algo aconteceu.
+ */
+const DISTANCIA = 24
+
 export function RevealOnScroll({
   children,
   className,
@@ -36,6 +63,14 @@ export function RevealOnScroll({
   const ref = React.useRef<HTMLDivElement>(null)
   const [visible, setVisible] = React.useState(true)
   const [hydrated, setHydrated] = React.useState(false)
+  // `will-change` avisa o navegador para promover o elemento a camada própria
+  // ANTES de a animação começar — é o que evita o engasgo do primeiro quadro,
+  // quando ele descobre que precisa promover no meio do movimento.
+  //
+  // Só enquanto o elemento espera e enquanto anda. Camada custa memória de
+  // GPU, e a landing tem ~20 destes: deixá-las promovidas para sempre trocaria
+  // um engasgo por consumo permanente.
+  const [animando, setAnimando] = React.useState(false)
 
   React.useEffect(() => {
     const el = ref.current
@@ -56,6 +91,7 @@ export function RevealOnScroll({
 
     setVisible(false)
     setHydrated(true)
+    setAnimando(true)
 
     const observer = new IntersectionObserver(
       ([entry]) => {
@@ -74,21 +110,25 @@ export function RevealOnScroll({
     <div
       ref={ref}
       className={cn(className)}
+      // Assim que a transição termina, a camada de GPU é devolvida. Dispara
+      // uma vez por propriedade (opacidade e transform), e `setAnimando(false)`
+      // repetido não custa nada — o React ignora estado igual.
+      onTransitionEnd={() => setAnimando(false)}
       style={
         hydrated
           ? {
               opacity: visible ? 1 : 0,
-              transform: visible ? 'translateY(0)' : 'translateY(16px)',
-              // `ease-out` e não `ease`: entrada tem que começar rápida e
-              // desacelerar. O `ease` acelera no início, e o elemento parece
-              // hesitar meio quadro antes de sair do lugar — some quando você
-              // procura, aparece quando você não está.
-              //
-              // A curva é escrita à mão em vez de `ease-out` por nome: a
-              // padrão do CSS (0, 0, .58, 1) desacelera cedo demais e deixa um
-              // rastro no fim dos 550ms. Esta chega perto do repouso antes e
-              // some.
-              transition: `opacity 550ms cubic-bezier(0.16, 1, 0.3, 1) ${delay}ms, transform 550ms cubic-bezier(0.16, 1, 0.3, 1) ${delay}ms`,
+              // `translate3d` e não `translateY`: a forma com três eixos é a
+              // que garante o caminho da GPU em todos os navegadores. A de um
+              // eixo costuma ser promovida também, mas "costuma" não é
+              // garantia — e é justamente no celular mais fraco, onde a
+              // diferença aparece, que ela falha.
+              transform: visible ? 'translate3d(0,0,0)' : `translate3d(0,${DISTANCIA}px,0)`,
+              transition: `opacity ${DURACAO}ms ${CURVA} ${delay}ms, transform ${DURACAO}ms ${CURVA} ${delay}ms`,
+              // Só opacidade e transform são animadas, e as duas o
+              // compositor resolve sozinho, sem recalcular layout nem
+              // repintar. É o que sustenta 60fps aqui — não a duração.
+              willChange: animando ? 'opacity, transform' : undefined,
             }
           : undefined
       }

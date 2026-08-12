@@ -44,7 +44,7 @@ const features: Feature[] = [
       bg: 'bg-violet-500/10 dark:bg-violet-400/10',
       hover: 'pointer:hover:bg-violet-500/[0.04] dark:pointer:hover:bg-violet-400/[0.04]',
     },
-    delay: 90,
+    delay: 130,
   },
   {
     // A importação existia desde antes e não aparecia na landing — é a
@@ -59,7 +59,7 @@ const features: Feature[] = [
       bg: 'bg-cyan-500/10 dark:bg-cyan-400/10',
       hover: 'pointer:hover:bg-cyan-500/[0.04] dark:pointer:hover:bg-cyan-400/[0.04]',
     },
-    delay: 180,
+    delay: 260,
   },
   {
     title: 'Dashboard de métricas',
@@ -83,7 +83,7 @@ const features: Feature[] = [
       bg: 'bg-orange-500/10 dark:bg-orange-400/10',
       hover: 'pointer:hover:bg-orange-500/[0.04] dark:pointer:hover:bg-orange-400/[0.04]',
     },
-    delay: 90,
+    delay: 130,
   },
   {
     title: 'Notificações e prazos',
@@ -94,7 +94,7 @@ const features: Feature[] = [
       bg: 'bg-amber-500/10 dark:bg-amber-400/10',
       hover: 'pointer:hover:bg-amber-500/[0.04] dark:pointer:hover:bg-amber-400/[0.04]',
     },
-    delay: 180,
+    delay: 260,
   },
   {
     title: 'Permissões por papel',

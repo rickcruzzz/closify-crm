@@ -20,19 +20,19 @@ const stats = [
     value: '2 min',
     label: 'do cadastro ao primeiro lead',
     accent: 'text-blue-500 dark:text-blue-400',
-    delay: 90,
+    delay: 130,
   },
   {
     value: 'RLS',
     label: 'dados isolados por empresa',
     accent: 'text-violet-500 dark:text-violet-400',
-    delay: 180,
+    delay: 260,
   },
   {
     value: 'Pix',
     label: 'boleto e cartão também',
     accent: 'text-orange-500 dark:text-orange-400',
-    delay: 270,
+    delay: 390,
   },
 ]
 

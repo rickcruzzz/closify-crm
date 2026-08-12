@@ -57,7 +57,7 @@ export function FaqSection() {
             fechado. Numa página cujo problema era lentidão, é a escolha certa.
             A seta anima só `transform` — animar altura causaria reflow por
             frame. */}
-        <RevealOnScroll delay={90}>
+        <RevealOnScroll delay={130}>
           <div className="bg-border ring-border grid gap-px overflow-hidden rounded-xl ring-1">
             {faqs.map((faq) => (
               <details key={faq.q} name="faq" className="bg-card group">

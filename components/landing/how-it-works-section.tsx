@@ -64,7 +64,7 @@ export function HowItWorksSection() {
 
         <ol className="grid gap-4 md:grid-cols-3">
           {passos.map((passo, i) => (
-            <RevealOnScroll key={passo.numero} delay={i * 90}>
+            <RevealOnScroll key={passo.numero} delay={i * 130}>
               <li className="ring-border bg-card flex h-full flex-col gap-3 rounded-xl p-6 ring-1">
                 <div className="flex items-center gap-3">
                   <span
@@ -88,11 +88,11 @@ export function HowItWorksSection() {
         {/* A tela de verdade, logo abaixo dos passos. A landing vendia
             "pipeline visual Kanban" sem nunca mostrar um — quem nunca usou CRM
             não tem como imaginar o formato a partir do texto. */}
-        <RevealOnScroll delay={280} className="mt-10">
+        <RevealOnScroll delay={400} className="mt-10">
           <KanbanPreview />
         </RevealOnScroll>
 
-        <RevealOnScroll delay={340}>
+        <RevealOnScroll delay={490}>
           <p className="text-muted-foreground mt-6 flex items-center justify-center gap-1.5 text-center text-sm">
             Leva menos de dois minutos do cadastro ao primeiro lead
             <ArrowRight aria-hidden className="size-4" />

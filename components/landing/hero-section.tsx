@@ -17,17 +17,17 @@ export function HeroSection() {
         <div className="flex flex-col items-center gap-6 text-center lg:items-start lg:text-left">
           <Badge
             variant="secondary"
-            className="animate-in fade-in slide-in-from-bottom-2 font-mono text-xs tracking-wide uppercase duration-500"
+            className="animate-in fade-in slide-in-from-bottom-2 ease-entrada font-mono text-xs tracking-wide uppercase duration-[650ms]"
           >
             Feito para PMEs de serviço
           </Badge>
           {/* Tracking fica mais negativo quanto maior o texto — é o que separa
               um título "de template" de um desenhado. Ver também o h2 das
               demais seções, em -0.02em. */}
-          <h1 className="animate-in fade-in slide-in-from-bottom-3 text-4xl font-semibold tracking-[-0.03em] text-balance duration-700 md:text-6xl">
+          <h1 className="animate-in fade-in slide-in-from-bottom-3 ease-entrada text-4xl font-semibold tracking-[-0.03em] text-balance duration-[750ms] md:text-6xl">
             Simples como planilha, premium como software líder.
           </h1>
-          <p className="text-muted-foreground animate-in fade-in slide-in-from-bottom-4 max-w-2xl text-lg text-balance duration-700">
+          <p className="text-muted-foreground animate-in fade-in slide-in-from-bottom-4 ease-entrada max-w-2xl text-lg text-balance duration-[800ms]">
             Substitua a planilha em um dia. Pipeline visual, leads organizados e métricas
             em tempo real, tudo num CRM feito para agências, clínicas, consultorias e
             imobiliárias que estão começando.
@@ -42,7 +42,7 @@ export function HeroSection() {
               mudança pareça ter relação. Escrito, é decisão; implícito, é
               acidente esperando. Acima de `sm` os botões vão lado a lado e o
               alinhamento passa a ser vertical. */}
-          <div className="animate-in fade-in slide-in-from-bottom-5 mt-2 flex flex-col items-stretch gap-3 duration-700 sm:flex-row sm:items-center">
+          <div className="animate-in fade-in slide-in-from-bottom-5 ease-entrada mt-2 flex flex-col items-stretch gap-3 duration-[850ms] sm:flex-row sm:items-center">
             <Link
               href="/cadastro"
               className={cn(buttonVariants({ size: 'lg' }), 'min-h-11 gap-2')}
@@ -62,7 +62,7 @@ export function HeroSection() {
           </div>
         </div>
 
-        <div className="animate-in fade-in slide-in-from-bottom-5 duration-700">
+        <div className="animate-in fade-in slide-in-from-bottom-5 ease-entrada duration-[900ms]">
           <PipelinePreviewCard />
         </div>
       </div>

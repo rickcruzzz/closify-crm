@@ -65,7 +65,7 @@ const plans: Plan[] = [
     // que a empresa nascer.
     href: '/cadastro?plano=pro',
     highlighted: true,
-    delay: 120,
+    delay: 160,
   },
 ]
 
