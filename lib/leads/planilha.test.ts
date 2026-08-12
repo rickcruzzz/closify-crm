@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
 import {
+  amostraDaColuna,
   apenasDigitos,
   chaveDeContato,
   contarAvisosDeArquivo,
@@ -238,5 +239,45 @@ describe('interpretarPlanilha', () => {
     )
     expect(linhas).toHaveLength(1)
     expect(erros).toEqual([])
+  })
+})
+
+describe('amostraDaColuna', () => {
+  // Achado numa planilha de ERP real: cabeçalho mapeado por posição
+  // ("Coluna 2") sem nenhuma amostra visível fazia a pessoa confiar num
+  // mapeamento errado até a importação inteira falhar com "sem e-mail nem
+  // telefone". A amostra existe pra pegar isso ANTES de importar.
+  it('devolve o primeiro valor não-vazio da coluna', () => {
+    const corpo = [
+      ['', '(11) 90000-0000'],
+      ['Ana', '(21) 98888-7777'],
+    ]
+    expect(amostraDaColuna(corpo, 1)).toBe('(11) 90000-0000')
+  })
+
+  it('pula linhas em branco até achar um valor', () => {
+    const corpo = [
+      ['', ''],
+      ['', '   '],
+      ['', 'ana@x.com'],
+    ]
+    expect(amostraDaColuna(corpo, 1)).toBe('ana@x.com')
+  })
+
+  it('devolve null quando a coluna está vazia em toda linha', () => {
+    const corpo = [
+      ['Ana', ''],
+      ['João', '   '],
+    ]
+    expect(amostraDaColuna(corpo, 1)).toBeNull()
+  })
+
+  it('devolve null para índice fora do range da linha', () => {
+    const corpo = [['Ana', 'ana@x.com']]
+    expect(amostraDaColuna(corpo, 5)).toBeNull()
+  })
+
+  it('devolve null quando o corpo está vazio', () => {
+    expect(amostraDaColuna([], 0)).toBeNull()
   })
 })

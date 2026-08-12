@@ -310,3 +310,20 @@ export function interpretarPlanilha(
 export function contarAvisosDeArquivo(erros: string[]): number {
   return erros.filter((e) => !/^Linha \d+:/.test(e)).length
 }
+
+/**
+ * O primeiro valor não-vazio de uma coluna, entre as linhas de corpo.
+ *
+ * Existe pra tela mostrar "Telefone → Coluna 2 · ex: (11) 98888-7777" ao
+ * lado de cada campo mapeado — a diferença entre escolher uma coluna às
+ * cegas (só pelo número ou por um cabeçalho que pode nem existir) e escolher
+ * vendo o dado real por trás dela. `null` quando a coluna está vazia em toda
+ * linha de corpo, ou o índice não existe.
+ */
+export function amostraDaColuna(corpo: string[][], indice: number): string | null {
+  for (const linha of corpo) {
+    const valor = (linha[indice] ?? '').trim()
+    if (valor) return valor
+  }
+  return null
+}

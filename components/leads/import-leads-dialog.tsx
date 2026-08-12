@@ -11,6 +11,7 @@ import {
   Upload,
 } from 'lucide-react'
 
+import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -32,6 +33,7 @@ import {
 import { CSV_MAX_BYTES, CSV_MAX_LINHAS, decodificarPlanilha, lerCsv } from '@/lib/leads/csv'
 import {
   CAMPOS,
+  amostraDaColuna,
   interpretarPlanilha,
   sugerirMapeamento,
   type CampoDestino,
@@ -67,6 +69,10 @@ export function ImportLeadsDialog({
   const [lendo, setLendo] = React.useState(false)
   const [enviando, setEnviando] = React.useState(false)
   const [resultado, setResultado] = React.useState<ResultadoImportacao | null>(null)
+  // Quantas linhas do topo do arquivo NÃO são dado nem cabeçalho — planilha
+  // de ERP costuma ter linha de título, linha em branco, ou logo antes da
+  // linha real de colunas. 0 é o caso comum (cabeçalho já na linha 1).
+  const [pularLinhas, setPularLinhas] = React.useState(0)
 
   React.useEffect(() => {
     if (open) {
@@ -76,6 +82,7 @@ export function ImportLeadsDialog({
       setMapeamento({})
       setDuplicados('ignorar')
       setResultado(null)
+      setPularLinhas(0)
     }
   }, [open])
 
@@ -135,6 +142,7 @@ export function ImportLeadsDialog({
 
       setNomeDoArquivo(arquivo.name)
       setMatriz(lida)
+      setPularLinhas(0)
       setMapeamento(sugerirMapeamento(lida[0] ?? []))
       setPasso('colunas')
     } catch (err) {
@@ -164,18 +172,47 @@ export function ImportLeadsDialog({
     })
   }
 
-  const cabecalho = matriz[0] ?? []
+  // A matriz "de verdade" começa depois das linhas puladas — linha de
+  // título, linha em branco, o que a planilha de ERP tiver antes do
+  // cabeçalho real. Tudo daqui pra baixo (prévia, envio) usa ESTA matriz, não
+  // a crua: é o que faz "pular N linhas" corrigir a importação inteira sem
+  // o servidor precisar saber que isso existe.
+  const matrizEfetiva = React.useMemo(
+    () => matriz.slice(pularLinhas),
+    [matriz, pularLinhas],
+  )
+  const cabecalho = React.useMemo(() => matrizEfetiva[0] ?? [], [matrizEfetiva])
+  const corpo = React.useMemo(() => matrizEfetiva.slice(1), [matrizEfetiva])
+
+  // Recalculada sempre que a linha de cabeçalho muda — não é a `mapeamento`
+  // que o usuário pode ter ajustado à mão, só serve pra saber se a linha
+  // ATUAL tem cara de cabeçalho reconhecível. Se não tiver nenhum campo
+  // aqui, é sinal forte de que a linha de cabeçalho real é outra.
+  const nadaReconhecido = React.useMemo(
+    () => matriz.length > 0 && Object.keys(sugerirMapeamento(cabecalho)).length === 0,
+    [matriz, cabecalho],
+  )
+
+  function ajustarPularLinhas(novo: number) {
+    const limitado = Math.max(0, Math.min(novo, Math.max(0, matriz.length - 2)))
+    setPularLinhas(limitado)
+    // A pessoa não deveria precisar remapear tudo de novo só porque a linha
+    // de cabeçalho mudou — se a nova linha tiver título reconhecível, o
+    // mapeamento automático já resolve.
+    setMapeamento(sugerirMapeamento(matriz.slice(limitado)[0] ?? []))
+  }
+
   // A mesma função que o servidor roda, só que aqui para mostrar a prévia. O
   // servidor NÃO confia nisto — ele reinterpreta a matriz do zero.
   const previa = React.useMemo(
-    () => interpretarPlanilha(matriz, mapeamento, CSV_MAX_LINHAS),
-    [matriz, mapeamento],
+    () => interpretarPlanilha(matrizEfetiva, mapeamento, CSV_MAX_LINHAS),
+    [matrizEfetiva, mapeamento],
   )
 
   async function enviar() {
     setEnviando(true)
     try {
-      const retorno = await importarPlanilha({ matriz, mapeamento, duplicados })
+      const retorno = await importarPlanilha({ matriz: matrizEfetiva, mapeamento, duplicados })
       if ('error' in retorno) {
         toast.error(retorno.error)
         return
@@ -246,36 +283,114 @@ export function ImportLeadsDialog({
 
         {passo === 'colunas' && (
           <div className="flex flex-col gap-4">
+            <div className="border-border rounded-lg border p-3">
+              <p className="mb-2 text-xs font-medium">Primeiras linhas do arquivo</p>
+              <div className="overflow-x-auto">
+                <table className="text-xs">
+                  <tbody>
+                    {matriz.slice(0, 3).map((linha, i) => (
+                      <tr key={i}>
+                        <td
+                          className={cn(
+                            'text-muted-foreground pr-2 align-top tabular-nums',
+                            i === pularLinhas && 'text-primary font-medium',
+                          )}
+                        >
+                          {i + 1}
+                        </td>
+                        {linha.slice(0, 6).map((celula, j) => (
+                          <td
+                            key={j}
+                            className={cn(
+                              'text-muted-foreground max-w-28 truncate pr-3 align-top',
+                              i === pularLinhas && 'text-foreground font-medium',
+                            )}
+                          >
+                            {celula || '—'}
+                          </td>
+                        ))}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              <div className="mt-3 flex items-center gap-2">
+                <Label htmlFor="pular-linhas" className="text-xs whitespace-nowrap">
+                  A linha em destaque é o cabeçalho? Se não, pule
+                </Label>
+                <Input
+                  id="pular-linhas"
+                  type="number"
+                  min={0}
+                  max={Math.max(0, matriz.length - 2)}
+                  value={pularLinhas}
+                  className="h-8 w-16"
+                  onChange={(e) => ajustarPularLinhas(Number(e.target.value) || 0)}
+                />
+                <span className="text-muted-foreground text-xs whitespace-nowrap">
+                  linha(s) antes dele
+                </span>
+              </div>
+
+              {nadaReconhecido && (
+                <p className="mt-2 flex items-start gap-1.5 text-xs text-amber-600 dark:text-amber-400">
+                  <AlertTriangle aria-hidden className="mt-0.5 size-3.5 shrink-0" />
+                  Não reconhecemos nenhum título de coluna nesta linha (Nome, Telefone, E-mail…).
+                  Se sua planilha tem uma linha de título ou linha em branco antes do cabeçalho de
+                  verdade, ajuste acima até a linha certa ficar em destaque.
+                </p>
+              )}
+            </div>
+
             <div className="flex flex-col gap-2">
-              {CAMPOS.map(({ campo, rotulo }) => (
-                <div key={campo} className="grid grid-cols-[7rem_1fr] items-center gap-3">
-                  <Label htmlFor={`col-${campo}`} className="text-sm">
-                    {rotulo}
-                  </Label>
-                  <Select
-                    value={String(mapeamento[campo] ?? NAO_IMPORTAR)}
-                    onValueChange={(valor) => trocarColuna(campo, String(valor))}
-                  >
-                    <SelectTrigger id={`col-${campo}`} className="w-full">
-                      <SelectValue>
-                        {(valor) =>
-                          valor === NAO_IMPORTAR
-                            ? 'Não importar'
-                            : (cabecalho[Number(valor)] || `Coluna ${Number(valor) + 1}`)
-                        }
-                      </SelectValue>
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value={NAO_IMPORTAR}>Não importar</SelectItem>
-                      {cabecalho.map((titulo, indice) => (
-                        <SelectItem key={indice} value={String(indice)}>
-                          {titulo || `Coluna ${indice + 1}`}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              ))}
+              {CAMPOS.map(({ campo, rotulo }) => {
+                const indiceSelecionado = mapeamento[campo]
+                const amostra =
+                  indiceSelecionado !== undefined
+                    ? amostraDaColuna(corpo, indiceSelecionado)
+                    : null
+
+                return (
+                  <div key={campo} className="grid grid-cols-[7rem_1fr] items-start gap-3">
+                    <Label htmlFor={`col-${campo}`} className="pt-2 text-sm">
+                      {rotulo}
+                    </Label>
+                    <div className="flex min-w-0 flex-col gap-1">
+                      <Select
+                        value={String(mapeamento[campo] ?? NAO_IMPORTAR)}
+                        onValueChange={(valor) => trocarColuna(campo, String(valor))}
+                      >
+                        <SelectTrigger id={`col-${campo}`} className="w-full">
+                          <SelectValue>
+                            {(valor) =>
+                              valor === NAO_IMPORTAR
+                                ? 'Não importar'
+                                : (cabecalho[Number(valor)] || `Coluna ${Number(valor) + 1}`)
+                            }
+                          </SelectValue>
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value={NAO_IMPORTAR}>Não importar</SelectItem>
+                          {cabecalho.map((titulo, indice) => (
+                            <SelectItem key={indice} value={String(indice)}>
+                              {titulo || `Coluna ${indice + 1}`}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      {/* Amostra do dado real por trás da coluna escolhida — é o
+                          que transforma "escolher por número e torcer" em
+                          "escolher e confirmar visualmente" antes de importar. */}
+                      {indiceSelecionado !== undefined && (
+                        <span className="text-muted-foreground truncate text-xs">
+                          {amostra ? `ex: ${amostra}` : 'coluna vazia nas linhas de dado'}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                )
+              })}
             </div>
 
             <div className="border-border flex flex-col gap-1.5 rounded-lg border p-3">
