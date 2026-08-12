@@ -17,6 +17,7 @@ import {
 } from '@/components/ui/card'
 import { PasswordField } from '@/components/auth/password-field'
 import { definirSenhaInicial } from '@/lib/supabase/actions'
+import { pularOnboarding } from '@/lib/onboarding/actions'
 import {
   definirSenhaSchema,
   type DefinirSenhaValues,
@@ -26,13 +27,17 @@ export function BemVindoClient({
   primeiroNome,
   email,
   podeDefinirSenha,
+  retomando,
 }: {
   primeiroNome: string | null
   email: string
   podeDefinirSenha: boolean
+  /** Já tinha começado o assistente e voltou depois. */
+  retomando: boolean
 }) {
   const router = useRouter()
   const [isSubmitting, setIsSubmitting] = React.useState(false)
+  const [pulando, setPulando] = React.useState(false)
   const [formError, setFormError] = React.useState<string | null>(null)
   // A senha só aparece quando a pessoa pede: abrir a tela já com dois campos
   // de senha contradiz a promessa do "entrar com Google", que é justamente
@@ -63,6 +68,21 @@ export function BemVindoClient({
     router.push('/onboarding')
   }
 
+  async function pular() {
+    setPulando(true)
+    const resultado = await pularOnboarding()
+
+    if ('error' in resultado) {
+      toast.error(resultado.error)
+      setPulando(false)
+      return
+    }
+
+    router.push('/dashboard')
+  }
+
+  const ocupado = isSubmitting || pulando
+
   return (
     <Card>
       <CardHeader className="items-center text-center">
@@ -70,11 +90,21 @@ export function BemVindoClient({
           <PartyPopper className="size-5" />
         </div>
         <CardTitle className="text-xl">
-          {primeiroNome ? `Bem-vindo, ${primeiroNome}!` : 'Bem-vindo!'}
+          {retomando
+            ? 'Vamos continuar de onde você parou'
+            : primeiroNome
+              ? `Bem-vindo ao Velo Funil, ${primeiroNome}!`
+              : 'Bem-vindo ao Velo Funil!'}
         </CardTitle>
         <CardDescription>
-          Sua conta foi criada com <span className="text-foreground">{email}</span>. Falta
-          só um passo para começar a usar.
+          {retomando ? (
+            <>Sua configuração ficou pela metade. Retomamos no ponto exato.</>
+          ) : (
+            <>
+              Sua conta foi criada com <span className="text-foreground">{email}</span>.
+              Vamos preparar seu ambiente de vendas — leva cerca de 2 minutos.
+            </>
+          )}
         </CardDescription>
       </CardHeader>
 
@@ -158,11 +188,30 @@ export function BemVindoClient({
           type="button"
           variant={mostrandoSenha ? 'ghost' : 'default'}
           className="w-full"
-          disabled={isSubmitting}
+          disabled={ocupado}
           onClick={() => router.push('/onboarding')}
         >
-          {podeDefinirSenha ? 'Continuar sem senha' : 'Continuar'}
+          {retomando
+            ? 'Continuar de onde parei'
+            : podeDefinirSenha && mostrandoSenha
+              ? 'Continuar sem senha'
+              : 'Começar configuração'}
           <ArrowRight className="size-4" />
+        </Button>
+
+        {/* Pular é oferta de verdade, não armadilha: não bloqueia nada, guarda
+            o que já foi respondido, e não volta a aparecer a cada login. Sem
+            uma saída visível, o assistente vira pedágio. */}
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          className="text-muted-foreground w-full"
+          disabled={ocupado}
+          onClick={pular}
+        >
+          {pulando && <Loader2 className="size-4 animate-spin" />}
+          Pular por enquanto
         </Button>
       </CardContent>
     </Card>

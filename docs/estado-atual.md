@@ -36,6 +36,11 @@ lead, agendar/concluir no painel do negócio, e botão de WhatsApp por link
 `wa.me`. Zero credencial nova e zero dependência nova — nada disso depende de
 serviço externo.
 
+**Onboarding entregue em 12/08** (migrations 0030 e 0031). Boas-vindas para
+quem chega, assistente de 4 perguntas que retoma de onde parou, dados da
+empresa em 18 campos com logo no Storage, tour de 5 passos e checklist de
+ativação derivado do estado real. Também sem credencial nova.
+
 Ambiente local: rode `node --env-file=.env.local scripts/verificar-ambiente.mjs`.
 Ele confere as 9 conexões e diz o que falta.
 
@@ -69,6 +74,11 @@ Ele confere as 9 conexões e diz o que falta.
 
 ## Fila técnica, na ordem
 
+0. **Paginar o que não pagina.** O teto de 1.000 do PostgREST já está provado
+   (ver armadilhas). `getFunnelCounts` deve virar `group by` no banco;
+   `getBoardDeals` e `getWorkspaceLeadsForSelect` precisam de limite explícito
+   e de um caminho para quem passar dele. É o primeiro item porque é dado
+   sumindo da tela, não lentidão.
 1. **Negócio parado (aging).** `deals` **não tem `updated_at`** nem histórico de
    etapa — conferido na 0001. Precisa de coluna e trigger antes de qualquer
    aviso de negócio esquecido.
@@ -106,6 +116,44 @@ Ele confere as 9 conexões e diz o que falta.
 | **Tarefa não entra no limite de plano**     | Travar follow-up empurra a pessoa de volta para o WhatsApp e mata o hábito diário que faz ela pagar. O teto de 5.000 abertas é defesa contra abuso, não regra de negócio |
 
 ## Armadilhas já pagas — não repetir
+
+**O PostgREST corta em 1.000 linhas, e quem não pagina mente em silêncio.**
+Medido em 12/08 com 1.100 negócios: o app recebe 1.000 e não recebe erro
+nenhum. Três funções são anteriores a isto e não paginam — `getFunnelCounts`
+(gráfico com número errado), `getBoardDeals` (**cards somem do Kanban**, e como
+ordena por data são os mais antigos) e `getWorkspaceLeadsForSelect` (leads
+somem do seletor de novo negócio, ordenado por nome). O banco tem 14 negócios
+hoje, então ninguém é afetado — mas qualquer consulta nova sem `.limit()`
+explícito herda o mesmo defeito.
+
+**PATCH que não casa com nenhuma linha devolve 204, e 204 é sucesso.** O
+primeiro roteiro de prova da 0030 deu um `check constraint` como aprovado sem
+nunca tê-lo exercitado: a conta de teste não tinha linha em `onboarding_state`,
+o `PATCH` não casou com nada e o script leu o 204 como "passou". Prova de
+constraint precisa garantir que a linha existe antes.
+
+**`.select()` do supabase-js precisa ser string LITERAL.** Quebrar em
+`'a, b' + 'c, d'` para caber na linha faz o tipo do retorno inteiro virar
+`GenericStringError` — o supabase-js analisa essa string no nível de tipo.
+
+**`storage.foldername(name)[1]::uuid` estoura em caminho fora do padrão**, e
+quem escolhe o caminho é quem envia o arquivo. A 0031 usa
+`workspace_do_caminho`, que devolve `null` nesse caso — e
+`is_workspace_member(null)` é `false`, então caminho torto não pertence a
+ninguém.
+
+**No `update` de policy, `using` sem `with check` deixa renomear para fora.**
+Só com os dois é que um admin fica impedido de mover o próprio arquivo para a
+pasta de outra empresa: `using` avalia a linha ANTES da mudança e aprovaria.
+
+**Quem aceita convite não tem empresa para configurar.** Sem marcar o
+onboarding como concluído no aceite — nos DOIS caminhos, a página e a Server
+Action —, o middleware manda a pessoa às boas-vindas e ela atravessa quatro
+perguntas sobre uma empresa que não é dela.
+
+**Abrir tour por parâmetro de URL exclui quem não passa pela URL.** A primeira
+versão dependia de `?tour=1`, posto pela finalização do assistente; quem entra
+por convite nunca passaria por lá. O gatilho é o estado no banco.
 
 **O servidor da Vercel roda em UTC, e "hoje" do usuário não é o dele.** Às 21h
 de São Paulo já é o dia seguinte em UTC — `toISOString().slice(0,10)` no

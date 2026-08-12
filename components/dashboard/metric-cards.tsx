@@ -1,7 +1,10 @@
+import Link from 'next/link'
 import { Briefcase, DollarSign, Target, Users, type LucideIcon } from 'lucide-react'
 
 import { cn } from '@/lib/utils'
+import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { EmptyState } from '@/components/ui/empty-state'
 import { formatCompactBRL } from '@/lib/deals/metrics'
 import type { DashboardMetrics } from '@/lib/dashboard/queries'
 
@@ -56,6 +59,30 @@ const cards: MetricCardConfig[] = [
 ]
 
 export function MetricCards({ metrics }: { metrics: DashboardMetrics }) {
+  // Workspace sem nenhum lead: quatro zeros não informam nada e ainda dão a
+  // impressão de sistema quebrado. Um convite à ação ocupa o mesmo espaço e
+  // diz o que fazer. Basta o primeiro lead para os cartões voltarem — e eles
+  // voltam com número de verdade, não com zero.
+  if (metrics.totalLeads === 0 && metrics.openDeals === 0) {
+    return (
+      <Card>
+        <CardContent>
+          <EmptyState
+            icon={Target}
+            title="Seu pipeline está pronto"
+            description="Cadastre o primeiro lead para começar a acompanhar suas oportunidades. As métricas aparecem aqui assim que houver movimento."
+          >
+            <Button render={<Link href="/leads">Adicionar primeiro lead</Link>} />
+            <Button
+              variant="outline"
+              render={<Link href="/kanban">Ver o pipeline</Link>}
+            />
+          </EmptyState>
+        </CardContent>
+      </Card>
+    )
+  }
+
   return (
     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
       {cards.map((card) => (

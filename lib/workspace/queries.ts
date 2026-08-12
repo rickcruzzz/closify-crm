@@ -4,7 +4,14 @@ export async function getWorkspaceSettingsData(workspaceId: string) {
   const supabase = await createClient()
 
   const [{ data: workspace }, { data: members }, { data: invites }] = await Promise.all([
-    supabase.from('workspaces').select('id, name, plan').eq('id', workspaceId).single(),
+    // Uma linha só, sem concatenar: o supabase-js analisa esta string no nível
+    // de TIPO para saber o formato do retorno. Quebrada em `'a' + 'b'` ela
+    // deixa de ser literal e o resultado inteiro vira `GenericStringError`.
+    supabase
+      .from('workspaces')
+      .select('id, name, plan, segmento, nome_fantasia, cnpj, descricao, logo_url, email_comercial, whatsapp, telefone, site, cep, endereco, numero, complemento, bairro, cidade, estado')
+      .eq('id', workspaceId)
+      .single(),
     supabase
       .from('workspace_members')
       .select('user_id, role, created_at')

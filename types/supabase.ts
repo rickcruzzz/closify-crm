@@ -11,12 +11,50 @@ export type DealStage =
   | 'fechado_ganho'
   | 'fechado_perdido'
 export type ActivityType = 'ligacao' | 'email' | 'reuniao' | 'nota'
+export type OnboardingStatus = 'not_started' | 'in_progress' | 'skipped' | 'completed'
+export type OnboardingEtapa = 'empresa' | 'segmento' | 'venda' | 'equipe' | 'processando'
+export type TourStatus = 'not_started' | 'skipped' | 'completed'
+export type ModeloVenda = 'servicos' | 'produtos' | 'ambos'
+export type TamanhoEquipe = 'so_eu' | '2_5' | '6_20' | '21_mais'
+
+/**
+ * Os campos de empresa acrescentados em 0030.
+ *
+ * Separados num tipo próprio porque `Row`, `Insert` e `Update` repetiriam os
+ * 18 três vezes — e a terceira cópia é onde um campo some sem ninguém notar.
+ * Todos anuláveis: o banco não exige nenhum deles.
+ */
+export type DadosDaEmpresa = {
+  segmento: string | null
+  modelo_venda: ModeloVenda | null
+  tamanho_equipe: TamanhoEquipe | null
+  logo_url: string | null
+  nome_fantasia: string | null
+  /** Só dígitos — o banco recusa máscara (`^[0-9]{14}$`). */
+  cnpj: string | null
+  descricao: string | null
+  email_comercial: string | null
+  whatsapp: string | null
+  telefone: string | null
+  site: string | null
+  cep: string | null
+  endereco: string | null
+  numero: string | null
+  complemento: string | null
+  bairro: string | null
+  cidade: string | null
+  /** UF em maiúscula — o banco recusa minúscula (`^[A-Z]{2}$`). */
+  estado: string | null
+}
 export type SubscriptionStatus = 'trialing' | 'active' | 'past_due' | 'canceled'
 export type WorkspaceInviteStatus = 'pending' | 'accepted' | 'expired'
 
 export type Database = {
   public: {
     Tables: {
+      // Os campos de empresa (0030) são todos anuláveis: as empresas que já
+      // existiam continuam válidas sem uma linha ser tocada. Só `name` é
+      // obrigatório, e ele já era.
       workspaces: {
         Row: {
           id: string
@@ -24,20 +62,57 @@ export type Database = {
           plan: WorkspacePlan
           created_by: string | null
           created_at: string
-        }
+        } & DadosDaEmpresa
         Insert: {
           id?: string
           name: string
           plan?: WorkspacePlan
           created_by?: string | null
           created_at?: string
-        }
+        } & Partial<DadosDaEmpresa>
         Update: {
           id?: string
           name?: string
           plan?: WorkspacePlan
           created_by?: string | null
           created_at?: string
+        } & Partial<DadosDaEmpresa>
+        Relationships: []
+      }
+      // Estado do onboarding, por PESSOA e não por empresa — quem é convidado
+      // para uma empresa que já existe tem o próprio onboarding a fazer. É a
+      // única tabela do projeto cuja RLS é `user_id = auth.uid()`; ver
+      // 0030_onboarding.sql.
+      onboarding_state: {
+        Row: {
+          user_id: string
+          status: OnboardingStatus
+          etapa: OnboardingEtapa | null
+          tour_status: TourStatus
+          checklist_oculto: boolean
+          respostas: Json
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          user_id: string
+          status?: OnboardingStatus
+          etapa?: OnboardingEtapa | null
+          tour_status?: TourStatus
+          checklist_oculto?: boolean
+          respostas?: Json
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          user_id?: string
+          status?: OnboardingStatus
+          etapa?: OnboardingEtapa | null
+          tour_status?: TourStatus
+          checklist_oculto?: boolean
+          respostas?: Json
+          created_at?: string
+          updated_at?: string
         }
         Relationships: []
       }
@@ -334,6 +409,19 @@ export type Database = {
       }
       create_workspace_with_admin: {
         Args: { workspace_name: string }
+        Returns: string
+      }
+      // Idempotente, ao contrário da de cima: se a pessoa já é membro de
+      // alguma empresa, devolve a MAIS ANTIGA (mesma regra de
+      // `resolverWorkspaceAtivo`) e só atualiza os campos informados. Chamar
+      // três vezes deixa uma empresa só — provado em produção.
+      garantir_workspace_do_onboarding: {
+        Args: {
+          p_nome: string
+          p_segmento?: string | null
+          p_modelo_venda?: string | null
+          p_tamanho_equipe?: string | null
+        }
         Returns: string
       }
       email_e_membro_do_workspace: {

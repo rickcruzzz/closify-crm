@@ -97,6 +97,35 @@ volta para o WhatsApp e mataria o hábito diário que faz ela pagar depois. Há 
 teto de 5.000 abertas por empresa, que é defesa contra abuso pelo PostgREST, não
 regra de negócio.
 
+**Onboarding e ativação**
+Quem cria conta passa por boas-vindas, responde 4 perguntas curtas (empresa,
+segmento, modelo de venda, tamanho da equipe) e cai num Dashboard com checklist
+de ativação. O assistente **retoma de onde parou** — o estado vive em
+`onboarding_state`, uma linha por pessoa, não por empresa.
+
+Pular é oferta de verdade: não bloqueia nada, guarda o que já foi respondido e
+não volta a aparecer a cada login. Quem entra por convite não vê o assistente —
+a empresa dele já está montada.
+
+O checklist tem 5 itens e é **derivado** do estado real do workspace, não
+gravado: apagar o único lead reabre o item. Um booleano salvo continuaria
+dizendo "feito" e o produto mentiria sobre si mesmo.
+
+O segmento é guardado e personaliza texto. **As 6 etapas do funil continuam
+fixas** — elas são um enum do Postgres usado por `deals` e `leads` em 22
+arquivos, e torná-las editáveis é um projeto próprio.
+
+**Dados da empresa**
+Identificação (logo, nome, nome fantasia, CNPJ, segmento, descrição), contato
+comercial (e-mail, WhatsApp, telefone, site) e endereço completo. Só o nome é
+obrigatório; CNPJ é opcional, validado pelos dois dígitos verificadores quando
+preenchido.
+
+A logo vive num bucket **privado** do Supabase Storage, isolado por empresa, e
+é exibida por URL assinada. O tipo do arquivo é conferido pelos bytes iniciais,
+não pela extensão nem pelo `Content-Type` — os dois são escolhidos por quem
+envia.
+
 **WhatsApp por link**
 Lead com telefone válido ganha "Chamar no WhatsApp", abrindo `wa.me`. A Cloud
 API oficial exige Meta Business verificado, que exige CNPJ ativo, mais aprovação
