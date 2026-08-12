@@ -23,11 +23,15 @@ export function SidebarNav({ onNavigate }: { onNavigate?: () => void }) {
         // acende em QUALQUER outra aba (empresa/equipe/plano), que não têm
         // entrada própria no menu — por isso não é uma comparação direta de
         // igualdade, e sim "não é a aba de alguém mais".
+        //
+        // O `if` precisa ser sobre a rota DESTE item, não sobre a página
+        // atual: comparar com `pathname` direto acendia TODO item do menu
+        // (Hoje, Pipeline, Leads, Dashboard) sempre que a pessoa estivesse em
+        // `/settings`, porque a condição nunca checava se o item em questão
+        // era um dos dois de `/settings`.
         const active =
-          pathname === '/settings'
-            ? item.aba
-              ? abaAtual === item.aba
-              : abaAtual !== 'integracoes'
+          rotaDoItem === '/settings'
+            ? mesmaRota && (item.aba ? abaAtual === item.aba : abaAtual !== 'integracoes')
             : mesmaRota
 
         const Icon = item.icon
