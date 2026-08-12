@@ -118,6 +118,10 @@ export default async function BillingPage({
   )
 }
 
+// "Perto do limite" em 2/2 é falso: o limite não está perto, já acabou — e
+// quem lê "perto" tenta adicionar mais um e toma o erro do banco sem entender
+// por quê. Os dois estados ficam separados, e o texto do cheio diz o que fazer
+// em vez de só constatar o problema.
 function UsageBar({
   label,
   used,
@@ -128,13 +132,21 @@ function UsageBar({
   limit: number
 }) {
   const percent = Math.min(100, Math.round((used / limit) * 100))
-  const isNearLimit = percent >= 80
+  const noLimite = used >= limit
+  const perto = !noLimite && percent >= 80
+  const emAlerta = noLimite || perto
 
   return (
     <div className="flex flex-col gap-1.5">
       <div className="flex items-center justify-between text-sm">
         <span className="text-muted-foreground">{label}</span>
-        <span className={cn('font-medium', isNearLimit && 'text-destructive')}>
+        <span
+          className={cn(
+            'font-medium',
+            noLimite && 'text-destructive',
+            perto && 'text-amber-600 dark:text-amber-500',
+          )}
+        >
           {used}/{limit}
         </span>
       </div>
@@ -142,13 +154,22 @@ function UsageBar({
         <div
           className={cn(
             'h-full rounded-full transition-all',
-            isNearLimit ? 'bg-destructive' : 'bg-primary',
+            noLimite && 'bg-destructive',
+            perto && 'bg-amber-500',
+            !emAlerta && 'bg-primary',
           )}
           style={{ width: `${percent}%` }}
         />
       </div>
-      {isNearLimit && (
-        <p className="text-destructive text-xs">Perto do limite do plano Free.</p>
+      {noLimite && (
+        <p className="text-destructive text-xs">
+          Limite do plano Free atingido. Assine o Pro para adicionar mais.
+        </p>
+      )}
+      {perto && (
+        <p className="text-xs text-amber-600 dark:text-amber-500">
+          Restam {limit - used} de {limit} no plano Free.
+        </p>
       )}
     </div>
   )
