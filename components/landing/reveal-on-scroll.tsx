@@ -79,7 +79,16 @@ export function RevealOnScroll({
           ? {
               opacity: visible ? 1 : 0,
               transform: visible ? 'translateY(0)' : 'translateY(16px)',
-              transition: `opacity 550ms ease ${delay}ms, transform 550ms ease ${delay}ms`,
+              // `ease-out` e não `ease`: entrada tem que começar rápida e
+              // desacelerar. O `ease` acelera no início, e o elemento parece
+              // hesitar meio quadro antes de sair do lugar — some quando você
+              // procura, aparece quando você não está.
+              //
+              // A curva é escrita à mão em vez de `ease-out` por nome: a
+              // padrão do CSS (0, 0, .58, 1) desacelera cedo demais e deixa um
+              // rastro no fim dos 550ms. Esta chega perto do repouso antes e
+              // some.
+              transition: `opacity 550ms cubic-bezier(0.16, 1, 0.3, 1) ${delay}ms, transform 550ms cubic-bezier(0.16, 1, 0.3, 1) ${delay}ms`,
             }
           : undefined
       }
