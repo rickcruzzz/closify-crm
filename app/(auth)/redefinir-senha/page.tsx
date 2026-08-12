@@ -6,7 +6,7 @@ import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { Controller, useForm } from 'react-hook-form'
-import { Loader2, MailWarning } from 'lucide-react'
+import { Loader2, MailWarning, PartyPopper } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
 import {
@@ -21,6 +21,11 @@ import { createClient } from '@/lib/supabase/client'
 import { resetPasswordSchema, type ResetPasswordValues } from '@/lib/validations/auth'
 import { limparTentativasDeLogin } from '@/lib/supabase/actions'
 
+/** ~1800ms dá tempo de ler "Bem-vindo de volta" sem parecer trava. */
+const ESPERA_ANTES_DO_DASHBOARD_MS = 1800
+/** Com `prefers-reduced-motion`, a pessoa não quer esperar animação nenhuma. */
+const ESPERA_REDUZIDA_MS = 300
+
 /**
  * 'token-pendente': novo formato do e-mail (`?token_hash=`), token ainda não
  * verificado — a verificação só dispara no submit do formulário, não no
@@ -28,7 +33,7 @@ import { limparTentativasDeLogin } from '@/lib/supabase/actions'
  * 'sessao-pronta': sessão de recuperação já existe (formato antigo por
  * fragmento, já verificado pelo Supabase antes do redirect).
  */
-type EstadoDoLink = 'verificando' | 'sessao-pronta' | 'token-pendente' | 'invalido'
+type EstadoDoLink = 'verificando' | 'sessao-pronta' | 'token-pendente' | 'invalido' | 'sucesso'
 
 /**
  * Traduz o erro do Supabase para uma frase que diz o que fazer.
@@ -76,6 +81,7 @@ function RedefinirSenhaPageInner() {
   const [isSubmitting, setIsSubmitting] = React.useState(false)
   const [formError, setFormError] = React.useState<string | null>(null)
   const [estadoDoLink, setEstadoDoLink] = React.useState<EstadoDoLink>('verificando')
+  const [primeiroNome, setPrimeiroNome] = React.useState('')
 
   /**
    * Dois formatos de link coexistem.
@@ -243,18 +249,67 @@ function RedefinirSenhaPageInner() {
       console.error('limparTentativasDeLogin falhou após reset', err)
     }
 
-    // `refresh` antes de navegar: o cookie de sessão acabou de mudar e o
-    // dashboard é renderizado no servidor — sem isso ele poderia ser servido
-    // com o estado anterior.
-    router.refresh()
-    router.replace('/dashboard')
+    const nome = (data.user?.user_metadata?.name as string | undefined) ?? data.user?.email ?? ''
+    setPrimeiroNome(nome.split(' ')[0] ?? '')
+    setIsSubmitting(false)
+    setEstadoDoLink('sucesso')
   }
+
+  // O redirect pro dashboard some por trás da animação de boas-vindas, mas
+  // continua acontecendo sozinho — a pessoa não precisa clicar em nada. Quem
+  // pediu `prefers-reduced-motion` não quer esperar a animação, só o
+  // suficiente pra tela não parecer ter travado.
+  React.useEffect(() => {
+    if (estadoDoLink !== 'sucesso') return
+
+    const reduzido = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    const espera = reduzido ? ESPERA_REDUZIDA_MS : ESPERA_ANTES_DO_DASHBOARD_MS
+
+    const timer = setTimeout(() => {
+      // `refresh` antes de navegar: o cookie de sessão acabou de mudar e o
+      // dashboard é renderizado no servidor — sem isso ele poderia ser
+      // servido com o estado anterior.
+      router.refresh()
+      router.replace('/dashboard')
+    }, espera)
+
+    return () => clearTimeout(timer)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [estadoDoLink])
 
   if (estadoDoLink === 'verificando') {
     return (
       <Card>
         <CardContent className="flex min-h-40 items-center justify-center">
           <Loader2 aria-label="Verificando o link" className="size-5 animate-spin" />
+        </CardContent>
+      </Card>
+    )
+  }
+
+  if (estadoDoLink === 'sucesso') {
+    return (
+      <Card>
+        <CardHeader className="items-center text-center">
+          <div className="bg-primary/10 text-primary animate-in zoom-in fade-in ease-entrada mb-2 flex size-10 items-center justify-center rounded-lg duration-500">
+            <PartyPopper className="size-5" />
+          </div>
+          <CardTitle className="animate-in fade-in slide-in-from-bottom-2 ease-entrada text-xl duration-[650ms]">
+            Bem-vindo de volta{primeiroNome ? `, ${primeiroNome}` : ''}
+          </CardTitle>
+          <CardDescription className="animate-in fade-in slide-in-from-bottom-3 ease-entrada duration-[750ms]">
+            Sua senha foi atualizada. Já estamos te levando pro painel.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="animate-in fade-in ease-entrada flex flex-col items-center gap-3 duration-[850ms]">
+          <Loader2 aria-hidden className="text-muted-foreground size-5 animate-spin" />
+          <Button
+            variant="ghost"
+            size="sm"
+            render={<Link href="/dashboard" />}
+          >
+            Ir para o painel agora
+          </Button>
         </CardContent>
       </Card>
     )
