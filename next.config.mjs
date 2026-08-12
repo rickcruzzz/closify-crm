@@ -64,6 +64,14 @@ const securityHeaders = [
 
 const nextConfig = {
   poweredByHeader: false,
+  // Cache do Router do lado do cliente, explícito. O padrão para rota
+  // dinâmica mudou entre versões do Next — sem isto, voltar para uma tela do
+  // dashboard recém-visitada (ex: Kanban → Leads → Kanban) refaz a busca no
+  // servidor mesmo sem nada ter mudado. 30s cobre o vaivém comum entre telas
+  // do produto; passado isso, busca de novo — dado de CRM muda o tempo todo.
+  experimental: {
+    staleTimes: { dynamic: 30, static: 180 },
+  },
   async headers() {
     return [{ source: '/:path*', headers: securityHeaders }]
   },

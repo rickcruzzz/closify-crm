@@ -2,12 +2,20 @@ import { cache } from 'react'
 import { redirect } from 'next/navigation'
 
 import { createClient } from '@/lib/supabase/server'
-import { resolverWorkspaceAtivo } from '@/lib/workspace/ativo'
+import { resolverWorkspaceAtivoComVinculos, workspaceEscolhidoNoCookie } from '@/lib/workspace/ativo'
+import type { WorkspacePlan } from '@/types/supabase'
+
+export type WorkspaceDoUsuario = { id: string; name: string; plan: WorkspacePlan }
 
 // Layout e cada page do (dashboard) precisam do usuário logado + workspace_id.
 // React cache() memoiza por request: mesma consulta chamada em layout.tsx e
 // na page correspondente reaproveita o resultado em vez de bater no Supabase
 // duas vezes na mesma navegação.
+//
+// Também devolve `workspaces`: o `DashboardLayout` precisa da lista com nome e
+// plano para o seletor da barra lateral, e antes buscava `workspace_members` +
+// `workspaces` de novo, por conta própria — a mesma tabela lida duas vezes na
+// mesma navegação. Agora é uma consulta só, aqui.
 export const getCurrentUserAndWorkspace = cache(async () => {
   const supabase = await createClient()
 
@@ -19,29 +27,28 @@ export const getCurrentUserAndWorkspace = cache(async () => {
     redirect('/login')
   }
 
+  const { data: memberships } = await supabase
+    .from('workspace_members')
+    .select('workspace_id, workspaces (id, name, plan)')
+    .eq('user_id', user.id)
+    .order('created_at', { ascending: true })
+    .order('workspace_id', { ascending: true })
+
+  const workspaces = (memberships ?? [])
+    .map((m) => m.workspaces)
+    .filter((w): w is WorkspaceDoUsuario => w !== null)
+
   // Respeita a empresa escolhida no seletor da barra lateral, caindo na mais
   // antiga quando não há escolha. A lógica vive num lugar só porque a leitura
   // e a ESCRITA precisam concordar: se a página lê de uma empresa e a Server
   // Action grava noutra, o lead some da tela de quem acabou de criá-lo.
-  const workspaceId = await resolverWorkspaceAtivo(supabase, user.id)
+  const vinculos = (memberships ?? []).map((m) => ({ workspace_id: m.workspace_id }))
+  const escolhido = await workspaceEscolhidoNoCookie()
+  const workspaceId = resolverWorkspaceAtivoComVinculos(vinculos, escolhido)
 
   if (!workspaceId) {
     redirect('/onboarding')
   }
 
-  // Alinha `workspaces.plan` com a validade real da assinatura, e só para
-  // baixo. A coluna guarda o último valor gravado pelo webhook e não sabe que
-  // o tempo passou: sem esta chamada, um Pro vencido continuaria aparecendo
-  // como Pro na tela até o próximo evento do Asaas — que, em quem parou de
-  // pagar, não vem nunca.
-  //
-  // É o único lugar onde isso precisa acontecer: toda página do dashboard passa
-  // por aqui, e o `cache()` garante uma chamada por requisição. Os LIMITES não
-  // dependem desta sincronização — eles consultam `pro_vigente` direto, no
-  // banco, porque coluna desatualizada não pode virar permissão.
-  await supabase.rpc('sincronizar_plano_do_workspace', {
-    target_workspace_id: workspaceId,
-  })
-
-  return { user, workspaceId }
+  return { user, workspaceId, workspaces }
 })

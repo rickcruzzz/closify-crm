@@ -63,12 +63,32 @@ export async function resolverWorkspaceAtivo(
 
   if (!vinculos || vinculos.length === 0) return null
 
-  const escolhido = (await cookies()).get(COOKIE)?.value
-  if (escolhido && vinculos.some((v) => v.workspace_id === escolhido)) {
-    return escolhido
+  const escolhido = await workspaceEscolhidoNoCookie()
+  return resolverWorkspaceAtivoComVinculos(vinculos, escolhido)
+}
+
+/**
+ * Mesma regra de `resolverWorkspaceAtivo`, mas recebendo os vínculos já
+ * carregados por quem chama — usada em `getCurrentUserAndWorkspace`, que já
+ * busca `workspace_members` para montar a lista do seletor. Sem isto, a
+ * mesma tabela era lida duas vezes na mesma navegação.
+ */
+export function resolverWorkspaceAtivoComVinculos(
+  vinculos: { workspace_id: string }[],
+  cookieEscolhido: string | undefined,
+): string | null {
+  if (vinculos.length === 0) return null
+
+  if (cookieEscolhido && vinculos.some((v) => v.workspace_id === cookieEscolhido)) {
+    return cookieEscolhido
   }
 
   return vinculos[0]!.workspace_id
+}
+
+/** Lê a escolha guardada no cookie, para passar a `resolverWorkspaceAtivo`. */
+export async function workspaceEscolhidoNoCookie(): Promise<string | undefined> {
+  return (await cookies()).get(COOKIE)?.value
 }
 
 /**

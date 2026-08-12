@@ -34,7 +34,9 @@ export function WorkspaceSwitcher({
   activeId: string
 }) {
   const router = useRouter()
-  const [trocando, setTrocando] = React.useState(false)
+  const [enviando, setEnviando] = React.useState(false)
+  const [atualizando, startTransition] = React.useTransition()
+  const trocando = enviando || atualizando
   const active = workspaces.find((w) => w.id === activeId) ?? workspaces[0]
 
   /**
@@ -45,20 +47,27 @@ export function WorkspaceSwitcher({
    * Component e não enxerga estado de React. Quem foi convidado como
    * colaborador tendo empresa própria não conseguia abrir a empresa que o
    * convidou — o clique não fazia nada de verdade.
+   *
+   * `router.refresh()` não é um Promise que espera os dados novos — ele só
+   * inicia a busca. Por isso vai dentro de `startTransition`: o spinner some
+   * quando o React aplica o RSC payload novo, não quando o `refresh` é
+   * disparado. Antes o spinner parava um instante depois do clique e a tela
+   * mostrava a empresa antiga por ~1s, sem sinal nenhum de que algo mudou.
    */
   async function trocar(id: string) {
     if (id === activeId || trocando) return
-    setTrocando(true)
+    setEnviando(true)
     const resultado = await trocarEmpresa(id)
+    setEnviando(false)
     if (resultado?.error) {
       toast.error(resultado.error)
-      setTrocando(false)
       return
     }
     // `refresh` e não `push`: a pessoa continua na mesma tela, só que agora
     // preenchida com os dados da outra empresa.
-    router.refresh()
-    setTrocando(false)
+    startTransition(() => {
+      router.refresh()
+    })
   }
 
   // Espelha `canAddWorkspace` no servidor: uma empresa Pro libera multi-empresa,

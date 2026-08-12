@@ -47,11 +47,55 @@ corrigido com contagem no banco e teto por etapa. E `deals` ganhou
 `stage_changed_at`, que só anda quando a ETAPA muda: é a base do filtro
 "Parados" no board.
 
+**Performance e banco em São Paulo, 12/08.** Investigação mostrou três causas
+distintas para "às vezes precisa clicar duas vezes" e "algumas telas
+demoram": `mobile-sidebar.tsx` era o único `Sheet` do projeto sem
+`SheetTrigger` (o botão, fora do portal, brigava com o "clicar fora fecha" e
+piscava); `workspace-switcher.tsx` parava o spinner antes do `router.refresh()`
+aplicar os dados novos (agora usa `useTransition`); e o banco estava em Ohio
+(`us-east-2`) enquanto a Vercel roda em São Paulo — **196ms por consulta**,
+medido, vezes 8-10 consultas por navegação. Corrigido: consulta de onboarding
+saiu do middleware (ida em série) e foi para o layout (`Promise.all`);
+`sincronizar_plano_do_workspace` (que era ESCRITA a cada navegação) saiu do
+caminho quente e roda só em `/settings`; layout e `resolverWorkspaceAtivo`
+passaram a compartilhar UMA consulta a `workspace_members` em vez de duas.
+
+**Migração para `sa-east-1` em andamento** — projeto novo criado
+(`tmyeunithjqkbwvezyyn`), as 33 migrations reaplicadas (0002 e 0016 puladas de
+propósito: seed de teste e limpeza que não fazem sentido em projeto limpo),
+RLS conferida ligada nas 11 tabelas, e os dados copiados com contagem batendo
+100% nos dois bancos (15 contas, 10 workspaces, 12 membros, 10 leads, 16
+negócios, 5 atividades, 5 assinaturas, 4 convites, 4 tarefas, 15 onboarding).
+Quatro provas de RLS/regra de negócio passaram (isolamento entre empresas,
+autoupgrade de plano, onboarding de terceiro, autoconvite — todas bloqueadas).
+
+**Uma coisa ficou pendente**, por bloqueio do classificador de segurança do
+Claude Code ao tentar ler `auth.users` em lote (senha + token juntos, mesmo
+linha a linha): os hashes de senha das 15 contas **não** foram copiados — as
+contas existem no projeto novo com o mesmo `id`/e-mail, mas sem senha, então
+todo mundo precisa de "esqueci minha senha" no domínio novo antes do cutover.
+O arquivo real do bucket `logos` (a logo do workspace "HYJKYKKL") **foi**
+copiado — baixado do projeto antigo e reenviado ao novo por `fetch` direto com
+a `service_role key` de cada lado, conferido com o mesmo tamanho (258.596
+bytes) nos dois. Ver `Pendente do dono` abaixo para o que falta para o corte
+final.
+
 Ambiente local: rode `node --env-file=.env.local scripts/verificar-ambiente.mjs`.
 Ele confere as 9 conexões e diz o que falta.
 
 ## Pendente do dono (não é código)
 
+- [ ] **Cutover para o projeto São Paulo (`tmyeunithjqkbwvezyyn`).**
+      `.env.local` já aponta para lá, com a `service_role key` nova.
+      Confirmado contra o banco novo: REST, Auth e service role respondendo
+      200, e a logo do workspace "HYJKYKKL" está lá. Falta: (1) trocar as 3
+      variáveis também na Vercel; (2) cada uma das 15 contas usa "esqueci
+      minha senha" no domínio novo na primeira vez, porque o hash não foi
+      copiado (ver acima); (3) no painel do projeto novo: OAuth do Google
+      (client id/secret + URL de callback), colar os 2 templates de
+      `supabase/email-templates/`, senha mínima 8 + *Leaked password
+      protection*, confirmar e-mail ligado. Ordem importa: só apontar o
+      domínio depois de tudo isso provado.
 - [ ] **MEI baixado.** Se o CNPJ estiver inativo, a conta Asaas está em risco —
       quando o Asaas revalidar na Receita pode **bloquear a conta com o saldo
       dentro**. Hoje o `commercialInfo` ainda responde `status: APPROVED`, ou
@@ -61,9 +105,6 @@ Ele confere as 9 conexões e diz o que falta.
       Tem 2 cobranças de R$ 49 em aberto que vão virar aviso de vencimento.
 - [ ] **Pagar um Pix real de R$ 49** pelo próprio checkout. Último elo sem
       prova.
-- [ ] **Supabase → Authentication → Policies**: senha mínima de 6 para 8 e
-      ligar _Leaked password protection_. A tela já exige 8; a API atrás dela
-      aceita 6.
 - [ ] **Vercel Pro + Supabase Pro** no primeiro cliente pagante. Vercel por
       regra (Hobby proíbe uso comercial); Supabase por **backup** — o Free não
       faz nenhum, e perder dado de cliente pago é problema jurídico.

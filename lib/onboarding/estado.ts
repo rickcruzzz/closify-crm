@@ -8,6 +8,8 @@ export type EstadoDoOnboarding = {
   etapa: OnboardingEtapa | null
   tourStatus: TourStatus
   checklistOculto: boolean
+  /** Marca falha de leitura, para quem decide redirecionar não confundir com `not_started` de verdade. */
+  erro?: boolean
 }
 
 /**
@@ -52,7 +54,7 @@ export const lerEstadoDoOnboarding = cache(async (): Promise<EstadoDoOnboarding>
   // precisa aparecer no log para não virar mistério.
   if (error) {
     console.error('lerEstadoDoOnboarding falhou', error)
-    return PADRAO
+    return { ...PADRAO, erro: true }
   }
 
   if (!data) return PADRAO
@@ -68,6 +70,18 @@ export const lerEstadoDoOnboarding = cache(async (): Promise<EstadoDoOnboarding>
 /** Quem ainda deve ver o assistente. `skipped` não vê: foi decisão dela. */
 export function precisaDeOnboarding(estado: EstadoDoOnboarding): boolean {
   return estado.status === 'not_started' || estado.status === 'in_progress'
+}
+
+/**
+ * Quem nunca configurou nada precisa passar pelas boas-vindas antes do
+ * produto — mesma regra que vivia no middleware. `in_progress` e `skipped`
+ * NÃO desviam: pular foi decisão da pessoa, e quem está no meio já está na
+ * tela certa. Falha de leitura (`erro`) também não desvia — um erro
+ * transitório do banco não pode empurrar para as boas-vindas quem está
+ * trabalhando.
+ */
+export function precisaDeBoasVindas(estado: EstadoDoOnboarding): boolean {
+  return estado.status === 'not_started' && !estado.erro
 }
 
 /**
