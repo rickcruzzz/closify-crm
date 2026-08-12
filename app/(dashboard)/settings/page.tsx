@@ -5,7 +5,12 @@ import { urlDaLogo } from '@/lib/workspace/empresa'
 import { MembersCard } from '@/components/settings/members-card'
 import { PlanCard } from '@/components/settings/plan-card'
 import { DeleteAccountCard } from '@/components/settings/delete-account-card'
+import {
+  SettingsTabs,
+  type AbaDeConfiguracoes,
+} from '@/components/settings/settings-tabs'
 import { getCurrentUserAndWorkspace } from '@/lib/supabase/workspace'
+import { createClient } from '@/lib/supabase/server'
 import {
   getWorkspaceSettingsData,
   getWorkspacesExclusivosDoUsuario,
@@ -13,9 +18,40 @@ import {
 
 export const metadata: Metadata = { title: 'Configurações' }
 
-export default async function SettingsPage() {
+const ABAS_VALIDAS: AbaDeConfiguracoes[] = ['empresa', 'equipe', 'plano']
+
+/**
+ * Configurações em três abas, na mesma rota.
+ *
+ * Antes eram quatro cards empilhados — empresa com dezoito campos, membros,
+ * plano e excluir conta —, e chegar ao plano exigia rolar por todo o cadastro
+ * da empresa.
+ *
+ * A aba vive em `?aba=`, não em estado de cliente: recarregar mantém o lugar,
+ * dá para mandar o link de uma aba a um colega, e o botão de voltar funciona.
+ */
+export default async function SettingsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ aba?: string }>
+}) {
+  const params = await searchParams
   const { user, workspaceId } = await getCurrentUserAndWorkspace()
+
+  // Único lugar que ainda sincroniza `workspaces.plan` com a validade real da
+  // assinatura — saiu do caminho quente (`getCurrentUserAndWorkspace`, que
+  // roda em toda navegação) porque era uma ESCRITA a cada tela. Aqui é onde a
+  // pessoa de fato olha o próprio plano, e o rótulo "Free/Pro" merece estar em
+  // dia. Os LIMITES não dependem disto: consultam `pro_vigente()` direto no
+  // banco, então plano vencido é barrado na hora mesmo com o rótulo atrasado.
+  const supabase = await createClient()
+  await supabase.rpc('sincronizar_plano_do_workspace', { target_workspace_id: workspaceId })
+
   const { workspace, members, invites } = await getWorkspaceSettingsData(workspaceId)
+
+  const aba: AbaDeConfiguracoes = ABAS_VALIDAS.includes(params.aba as AbaDeConfiguracoes)
+    ? (params.aba as AbaDeConfiguracoes)
+    : 'empresa'
 
   const currentMember = members.find((m) => m.user_id === user.id)
   const isAdmin = currentMember?.role === 'admin'
@@ -24,49 +60,66 @@ export default async function SettingsPage() {
   // morre junto da conta. Listado no diálogo para a pessoa ver o que perde —
   // ela costuma pensar só na própria conta e esquecer dos dados dos clientes
   // que estão lá dentro.
-  const workspacesQueSeraoApagados = await getWorkspacesExclusivosDoUsuario(user.id)
+  const workspacesQueSeraoApagados =
+    aba === 'equipe' ? await getWorkspacesExclusivosDoUsuario(user.id) : []
+
+  const descricao: Record<AbaDeConfiguracoes, string> = {
+    empresa: 'Dados da sua empresa, usados no sistema e nas comunicações.',
+    equipe: 'Quem tem acesso a esta empresa e com qual permissão.',
+    plano: 'Seu plano atual e o que cada um inclui.',
+  }
 
   return (
     <div className="flex flex-col gap-6">
-      <PageHeader title="Configurações" description="Workspace, colaboradores e plano." />
+      <PageHeader title="Configurações" description={descricao[aba]} className="mb-0" />
 
-      {/* O `WorkspaceNameCard` foi absorvido pelo card de Empresa: manter os
-          dois deixaria o nome da empresa em duas telas, com dois botões de
-          salvar e um vencendo o outro. */}
-      <EmpresaCard
-        isAdmin={isAdmin}
-        inicial={{
-          name: workspace?.name ?? '',
-          nome_fantasia: workspace?.nome_fantasia ?? '',
-          segmento: workspace?.segmento ?? '',
-          descricao: workspace?.descricao ?? '',
-          cnpj: workspace?.cnpj ?? '',
-          email_comercial: workspace?.email_comercial ?? '',
-          whatsapp: workspace?.whatsapp ?? '',
-          telefone: workspace?.telefone ?? '',
-          site: workspace?.site ?? '',
-          cep: workspace?.cep ?? '',
-          endereco: workspace?.endereco ?? '',
-          numero: workspace?.numero ?? '',
-          complemento: workspace?.complemento ?? '',
-          bairro: workspace?.bairro ?? '',
-          cidade: workspace?.cidade ?? '',
-          estado: workspace?.estado ?? '',
-          logoUrl: await urlDaLogo(workspace?.logo_url ?? null),
-        }}
-      />
+      <SettingsTabs ativa={aba} />
 
-      <MembersCard
-        currentUserId={user.id}
-        isAdmin={isAdmin}
-        members={members}
-        invites={invites}
-        plan={workspace?.plan ?? 'free'}
-      />
+      {aba === 'empresa' && (
+        <EmpresaCard
+          isAdmin={isAdmin}
+          inicial={{
+            name: workspace?.name ?? '',
+            nome_fantasia: workspace?.nome_fantasia ?? '',
+            segmento: workspace?.segmento ?? '',
+            descricao: workspace?.descricao ?? '',
+            cnpj: workspace?.cnpj ?? '',
+            email_comercial: workspace?.email_comercial ?? '',
+            whatsapp: workspace?.whatsapp ?? '',
+            telefone: workspace?.telefone ?? '',
+            site: workspace?.site ?? '',
+            cep: workspace?.cep ?? '',
+            endereco: workspace?.endereco ?? '',
+            numero: workspace?.numero ?? '',
+            complemento: workspace?.complemento ?? '',
+            bairro: workspace?.bairro ?? '',
+            cidade: workspace?.cidade ?? '',
+            estado: workspace?.estado ?? '',
+            logoUrl: await urlDaLogo(workspace?.logo_url ?? null),
+          }}
+        />
+      )}
 
-      <PlanCard plan={workspace?.plan ?? 'free'} isAdmin={isAdmin} />
+      {aba === 'equipe' && (
+        <div className="flex flex-col gap-6">
+          <MembersCard
+            currentUserId={user.id}
+            isAdmin={isAdmin}
+            members={members}
+            invites={invites}
+            plan={workspace?.plan ?? 'free'}
+          />
 
-      <DeleteAccountCard workspacesQueSeraoApagados={workspacesQueSeraoApagados} />
+          {/* Excluir conta fica aqui, separado por uma linha e no fim: é a
+              única ação irreversível da tela, e dividir card com o convite de
+              colaborador é convite a errar o clique. */}
+          <div className="border-border/60 border-t pt-6">
+            <DeleteAccountCard workspacesQueSeraoApagados={workspacesQueSeraoApagados} />
+          </div>
+        </div>
+      )}
+
+      {aba === 'plano' && <PlanCard plan={workspace?.plan ?? 'free'} isAdmin={isAdmin} />}
     </div>
   )
 }

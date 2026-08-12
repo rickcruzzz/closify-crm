@@ -11,7 +11,7 @@ import { Button } from '@/components/ui/button'
 // Compartilhado entre a landing e o cabeçalho de dentro do app. Os 4px a mais
 // cabem nos dois: a barra do app é `h-14` (56px). Deixar tamanhos diferentes
 // nos dois lugares seria pior do que os 4px.
-const ALVO_DE_TOQUE = 'size-12 md:size-8'
+const ALVO_DE_TOQUE = 'size-12 md:size-10'
 
 export function ThemeToggle() {
   const { resolvedTheme, setTheme } = useTheme()

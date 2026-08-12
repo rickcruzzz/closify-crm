@@ -4,9 +4,8 @@ import { redirect } from 'next/navigation'
 import { Sidebar } from '@/components/layout/sidebar'
 import { Topbar } from '@/components/layout/topbar'
 import { TooltipProvider } from '@/components/ui/tooltip'
-import { createClient } from '@/lib/supabase/server'
 import { getCurrentUserAndWorkspace } from '@/lib/supabase/workspace'
-import type { WorkspacePlan } from '@/types/supabase'
+import { lerEstadoDoOnboarding, precisaDeBoasVindas } from '@/lib/onboarding/estado'
 
 // Tudo aqui dentro é área logada: nada deve ser indexado. As páginas filhas
 // só sobrescrevem o title; este robots vale para todas.
@@ -19,20 +18,21 @@ export default async function DashboardLayout({
 }: {
   children: React.ReactNode
 }) {
-  const { user, workspaceId } = await getCurrentUserAndWorkspace()
-  const supabase = await createClient()
-
-  const { data: memberships } = await supabase
-    .from('workspace_members')
-    .select('workspace_id, workspaces (id, name, plan)')
-    .eq('user_id', user.id)
-
-  const workspaces = (memberships ?? [])
-    .map((m) => m.workspaces)
-    .filter((w): w is { id: string; name: string; plan: WorkspacePlan } => w !== null)
+  const [{ user, workspaceId, workspaces }, estadoOnboarding] = await Promise.all([
+    getCurrentUserAndWorkspace(),
+    lerEstadoDoOnboarding(),
+  ])
 
   if (workspaces.length === 0) {
     redirect('/onboarding')
+  }
+
+  // Mesma regra que vivia no middleware, movida para cá: quem nunca
+  // configurou nada passa pelas boas-vindas antes do produto. Rodar em
+  // paralelo com `getCurrentUserAndWorkspace`, e não em série antes dele,
+  // é o que tira a ida extra da navegação.
+  if (precisaDeBoasVindas(estadoOnboarding)) {
+    redirect('/bem-vindo')
   }
 
   const currentUser = {
@@ -55,7 +55,16 @@ export default async function DashboardLayout({
         <div className="flex min-w-0 flex-1 flex-col">
           <Topbar workspaces={workspaces} activeWorkspaceId={workspaceId} currentUser={currentUser} />
           <main id="conteudo" className="flex-1 p-4 md:p-6">
+          {/* Largura máxima no conteúdo, não no `main`: o `main` continua
+              ocupando a tela para o fundo não cortar, e o miolo centraliza.
+              1160px é a faixa em que um formulário de duas colunas ainda se lê
+              sem o olho atravessar o monitor inteiro.
+
+              O Kanban rola na horizontal por conta própria e é a exceção — ele
+              passa por cima com `max-w-none`. */}
+          <div className="mx-auto w-full max-w-[1160px]">
             {children}
+          </div>
           </main>
         </div>
       </div>

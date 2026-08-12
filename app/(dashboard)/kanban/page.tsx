@@ -23,7 +23,9 @@ export default async function KanbanPage() {
   ])
 
   return (
-    <div>
+    // `max-w-none` desfaz o teto de 1160px do layout: o board rola na
+    // horizontal e espremê-lo esconderia colunas atrás da rolagem.
+    <div className="-mx-4 max-w-none px-4 md:-mx-6 md:px-6">
       <PageHeader
         title="Pipeline"
         description="Acompanhe seus negócios em cada etapa do funil."
