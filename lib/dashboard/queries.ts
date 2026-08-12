@@ -52,17 +52,30 @@ export async function getDashboardMetrics(workspaceId: string): Promise<Dashboar
   }
 }
 
+/**
+ * Contagem por etapa, agrupada no BANCO.
+ *
+ * A versão anterior trazia uma linha por negócio e contava em memória — e o
+ * PostgREST corta em 1.000 linhas sem devolver erro. Medido em produção: com
+ * 1.100 negócios o gráfico mostrava 1.000, calado. Não era lentidão, era
+ * número errado na tela do cliente.
+ *
+ * Agora são no máximo 6 linhas, independentemente do tamanho do funil.
+ */
 export async function getFunnelCounts(workspaceId: string): Promise<FunnelStageCount[]> {
   const supabase = await createClient()
 
-  const { data } = await supabase
-    .from('deals')
-    .select('stage')
-    .eq('workspace_id', workspaceId)
+  const { data, error } = await supabase.rpc('get_funnel_counts', {
+    target_workspace_id: workspaceId,
+  })
+
+  if (error) {
+    console.error('getFunnelCounts falhou', error)
+  }
 
   const counts = new Map<DealStage, number>()
   for (const row of data ?? []) {
-    counts.set(row.stage, (counts.get(row.stage) ?? 0) + 1)
+    counts.set(row.stage, Number(row.total))
   }
 
   return dealStages.map((stage) => ({

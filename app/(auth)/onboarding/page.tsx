@@ -1,99 +1,73 @@
-'use client'
+import type { Metadata } from 'next'
+import { redirect } from 'next/navigation'
 
-import * as React from 'react'
-import { zodResolver } from '@hookform/resolvers/zod'
-import { useForm } from 'react-hook-form'
-import { Building2, Loader2 } from 'lucide-react'
-
-import { Button } from '@/components/ui/button'
+import { createClient } from '@/lib/supabase/server'
+import { lerEstadoDoOnboarding } from '@/lib/onboarding/estado'
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { onboardingSchema, type OnboardingValues } from '@/lib/validations/auth'
-import { createWorkspace } from '@/lib/supabase/actions'
+  AssistenteDeOnboarding,
+  type RespostasSalvas,
+} from '@/components/onboarding/assistente'
+import type { ModeloVenda, OnboardingEtapa, TamanhoEquipe } from '@/types/supabase'
 
-export default function OnboardingPage() {
-  const [isSubmitting, setIsSubmitting] = React.useState(false)
-  const [formError, setFormError] = React.useState<string | null>(null)
+export const metadata: Metadata = {
+  title: 'Configuração inicial',
+  robots: { index: false, follow: false },
+}
+
+/**
+ * O assistente de 4 perguntas.
+ *
+ * A tela antiga — só "nome da empresa" — virou o passo 1 daqui. As respostas
+ * ficam no `jsonb` de `onboarding_state` até a etapa de processamento; a
+ * empresa só é criada no fim, pela RPC idempotente. Quem desiste no meio não
+ * deixa uma empresa com o nome preenchido e mais nada dentro.
+ */
+export default async function OnboardingPage() {
+  const supabase = await createClient()
 
   const {
-    register,
-    handleSubmit,
-    formState: { errors },
-  } = useForm<OnboardingValues>({
-    resolver: zodResolver(onboardingSchema),
-    defaultValues: { workspaceName: '' },
-  })
+    data: { user },
+  } = await supabase.auth.getUser()
 
-  async function onSubmit(values: OnboardingValues) {
-    setFormError(null)
-    setIsSubmitting(true)
-    const result = await createWorkspace(values)
-    if (result?.error) {
-      setFormError(result.error)
-      setIsSubmitting(false)
-    }
+  if (!user) {
+    redirect('/login')
   }
 
-  return (
-    <Card>
-      <CardHeader className="items-center text-center">
-        <div className="bg-primary text-primary-foreground mb-2 flex size-10 items-center justify-center rounded-lg">
-          <Building2 className="size-5" />
-        </div>
-        <CardTitle className="text-xl">Crie sua empresa</CardTitle>
-        <CardDescription>
-          Vamos configurar seu workspace. Você poderá convidar colaboradores depois.
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
-        {formError && (
-          <p
-            role="alert"
-            className="bg-destructive/10 text-destructive mb-4 rounded-md px-3 py-2 text-sm"
-          >
-            {formError}
-          </p>
-        )}
-        <form
-          onSubmit={handleSubmit(onSubmit)}
-          noValidate
-          className="flex flex-col gap-4"
-        >
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor="workspaceName">Nome da empresa</Label>
-            <Input
-              id="workspaceName"
-              autoComplete="organization"
-              placeholder="Ex: Agência Nova Era"
-              aria-invalid={!!errors.workspaceName}
-              aria-describedby={errors.workspaceName ? 'workspaceName-error' : undefined}
-              disabled={isSubmitting}
-              {...register('workspaceName')}
-            />
-            {errors.workspaceName && (
-              <p
-                id="workspaceName-error"
-                role="alert"
-                className="text-destructive text-xs"
-              >
-                {errors.workspaceName.message}
-              </p>
-            )}
-          </div>
+  const estado = await lerEstadoDoOnboarding()
 
-          <Button type="submit" className="w-full" disabled={isSubmitting}>
-            {isSubmitting && <Loader2 className="size-4 animate-spin" />}
-            Continuar
-          </Button>
-        </form>
-      </CardContent>
-    </Card>
+  // Quem já concluiu ou pulou não volta para cá nem digitando a URL: sem isto,
+  // terminar o assistente e apertar "voltar" no navegador ofereceria refazer a
+  // configuração de uma empresa que já existe.
+  if (estado.status === 'completed' || estado.status === 'skipped') {
+    redirect('/dashboard')
+  }
+
+  const { data: linha } = await supabase
+    .from('onboarding_state')
+    .select('respostas')
+    .eq('user_id', user.id)
+    .maybeSingle()
+
+  // O `jsonb` é escrito pela própria pessoa e pode conter qualquer coisa —
+  // é uma tabela alcançável pelo PostgREST com a chave pública. Ler campo a
+  // campo, conferindo o tipo, em vez de confiar no formato.
+  const cru = (linha?.respostas ?? {}) as Record<string, unknown>
+  const texto = (v: unknown) => (typeof v === 'string' && v.trim() !== '' ? v : undefined)
+
+  const respostas: RespostasSalvas = {
+    nomeEmpresa: texto(cru.nomeEmpresa),
+    segmento: texto(cru.segmento),
+    modeloVenda: texto(cru.modeloVenda) as ModeloVenda | undefined,
+    tamanhoEquipe: texto(cru.tamanhoEquipe) as TamanhoEquipe | undefined,
+  }
+
+  // Retomar em `processando` recomeçaria a finalização sozinho, sem a pessoa
+  // pedir. Volta para a última pergunta, que é onde ela pode conferir o que
+  // respondeu antes de concluir.
+  const etapaInicial: OnboardingEtapa =
+    !estado.etapa || estado.etapa === 'processando' ? 'empresa' : estado.etapa
+
+  return (
+    <AssistenteDeOnboarding etapaInicial={etapaInicial} respostasIniciais={respostas} />
   )
 }

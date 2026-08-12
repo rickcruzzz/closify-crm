@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation'
 
 import { Card, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { createClient } from '@/lib/supabase/server'
+import { concluirOnboardingPorConvite } from '@/lib/onboarding/estado'
 import { AcceptInviteCard } from '@/components/settings/accept-invite-card'
 import { Logo } from '@/components/branding/logo'
 
@@ -46,6 +47,12 @@ export default async function ConvitePage({
     const { error } = await supabase.rpc('accept_workspace_invite', { invite_token: token })
 
     if (!error) {
+      // A empresa já existe, montada por quem convidou — não há o que
+      // configurar. Sem esta marca, o middleware mandaria a pessoa às
+      // boas-vindas e ela atravessaria quatro perguntas sobre uma empresa que
+      // não é dela, terminando sem alterar nada (colaborador não é admin, e a
+      // RLS recusa a escrita).
+      await concluirOnboardingPorConvite(supabase, user!.id)
       redirect('/dashboard')
     }
 

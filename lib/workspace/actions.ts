@@ -16,6 +16,7 @@ import {
 import { getCurrentUserAndWorkspace } from '@/lib/supabase/workspace'
 import { canAddMember } from '@/lib/limits'
 import { appUrl } from '@/lib/app-url'
+import { concluirOnboardingPorConvite } from '@/lib/onboarding/estado'
 import { excedeuLimite } from '@/lib/rate-limit'
 
 async function requireAdmin() {
@@ -302,6 +303,12 @@ export async function acceptInvite(token: unknown) {
     const known = INVITE_ERRORS.find((message) => error.message.includes(message))
     return { error: known ?? 'Não foi possível aceitar o convite.' }
   }
+
+  // Mesma razão do aceite automático na página do convite: quem entra numa
+  // empresa que já existe não tem empresa para configurar. Os dois caminhos
+  // levam ao mesmo estado — deixar só um marcado faria o assistente aparecer
+  // dependendo de por onde a pessoa aceitou.
+  await concluirOnboardingPorConvite(supabase, user.id)
 
   return { success: true }
 }

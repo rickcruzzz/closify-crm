@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import { PageHeader } from '@/components/layout/page-header'
-import { WorkspaceNameCard } from '@/components/settings/workspace-name-card'
+import { EmpresaCard } from '@/components/settings/empresa-card'
+import { urlDaLogo } from '@/lib/workspace/empresa'
 import { MembersCard } from '@/components/settings/members-card'
 import { PlanCard } from '@/components/settings/plan-card'
 import { DeleteAccountCard } from '@/components/settings/delete-account-card'
@@ -29,7 +30,31 @@ export default async function SettingsPage() {
     <div className="flex flex-col gap-6">
       <PageHeader title="Configurações" description="Workspace, colaboradores e plano." />
 
-      <WorkspaceNameCard initialName={workspace?.name ?? ''} isAdmin={isAdmin} />
+      {/* O `WorkspaceNameCard` foi absorvido pelo card de Empresa: manter os
+          dois deixaria o nome da empresa em duas telas, com dois botões de
+          salvar e um vencendo o outro. */}
+      <EmpresaCard
+        isAdmin={isAdmin}
+        inicial={{
+          name: workspace?.name ?? '',
+          nome_fantasia: workspace?.nome_fantasia ?? '',
+          segmento: workspace?.segmento ?? '',
+          descricao: workspace?.descricao ?? '',
+          cnpj: workspace?.cnpj ?? '',
+          email_comercial: workspace?.email_comercial ?? '',
+          whatsapp: workspace?.whatsapp ?? '',
+          telefone: workspace?.telefone ?? '',
+          site: workspace?.site ?? '',
+          cep: workspace?.cep ?? '',
+          endereco: workspace?.endereco ?? '',
+          numero: workspace?.numero ?? '',
+          complemento: workspace?.complemento ?? '',
+          bairro: workspace?.bairro ?? '',
+          cidade: workspace?.cidade ?? '',
+          estado: workspace?.estado ?? '',
+          logoUrl: await urlDaLogo(workspace?.logo_url ?? null),
+        }}
+      />
 
       <MembersCard
         currentUserId={user.id}
