@@ -60,9 +60,12 @@ export function PublicNavbar() {
             Entrar
           </Link>
 
+          {/* 48px de alvo de toque no celular, 32 no desktop. Os links do
+              menu lateral já estavam em `min-h-12`; o cabeçalho ficava em 44 e
+              destoava. O `h-16` do container não muda, então nada é empurrado. */}
           <Link
             href="/cadastro"
-            className={cn(buttonVariants(), 'min-h-11 md:min-h-8')}
+            className={cn(buttonVariants(), 'min-h-12 md:min-h-8')}
           >
             Começar grátis
           </Link>
@@ -77,7 +80,7 @@ export function PublicNavbar() {
                   variant="ghost"
                   size="icon"
                   aria-label="Abrir menu"
-                  className="md:hidden"
+                  className="size-12 md:hidden"
                 >
                   <Menu className="size-5" />
                 </Button>
@@ -90,14 +93,30 @@ export function PublicNavbar() {
                 </SheetTitle>
               </SheetHeader>
 
-              <nav className="mt-4 flex flex-col">
+              {/* O padding horizontal vive AQUI, no container, e não em cada
+                  filho.
+
+                  O `SheetContent` não tem padding nenhum — conferido na classe
+                  base de components/ui/sheet.tsx. O que sustentava o conteúdo
+                  era margem peça a peça, e cada uma escolheu um valor: o
+                  cabeçalho em 16px (`p-4`), os links em 12px, e os botões em
+                  ZERO — colados na borda direita do drawer, que é a borda da
+                  tela.
+
+                  No container porque o que for acrescentado aqui amanhã já
+                  nasce alinhado. Margem item a item é uma regra que a próxima
+                  pessoa precisa lembrar de repetir. */}
+              <nav className="mt-4 flex flex-col px-4">
                 {navLinks.map((link) => (
                   <SheetClose
                     key={link.href}
                     render={
                       <Link
                         href={link.href}
-                        className="hover:bg-muted flex min-h-12 items-center rounded-lg px-3 text-sm font-medium transition-colors"
+                        // `min-h-12` são os 48px de alvo de toque. `px-2` e não
+                        // `px-3`: o realce de hover ainda ultrapassa o texto,
+                        // agora sem furar a margem do container.
+                        className="hover:bg-muted flex min-h-12 items-center rounded-lg px-2 text-sm font-medium transition-colors"
                       />
                     }
                   >

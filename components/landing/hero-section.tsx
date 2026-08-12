@@ -32,7 +32,17 @@ export function HeroSection() {
             em tempo real, tudo num CRM feito para agências, clínicas, consultorias e
             imobiliárias que estão começando.
           </p>
-          <div className="animate-in fade-in slide-in-from-bottom-5 mt-2 flex flex-col gap-3 duration-700 sm:flex-row">
+          {/* `items-stretch` é o padrão do flex — e é por ser padrão que
+              ninguém percebe quando some. É ele que dá aos dois botões a mesma
+              largura no celular: o container encolhe até o filho mais largo, e
+              os dois esticam nele.
+
+              Basta alguém acrescentar `items-center` aqui um dia, para
+              centralizar um ícone qualquer, e as larguras se separam sem que a
+              mudança pareça ter relação. Escrito, é decisão; implícito, é
+              acidente esperando. Acima de `sm` os botões vão lado a lado e o
+              alinhamento passa a ser vertical. */}
+          <div className="animate-in fade-in slide-in-from-bottom-5 mt-2 flex flex-col items-stretch gap-3 duration-700 sm:flex-row sm:items-center">
             <Link
               href="/cadastro"
               className={cn(buttonVariants({ size: 'lg' }), 'min-h-11 gap-2')}
