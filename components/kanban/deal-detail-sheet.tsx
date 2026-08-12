@@ -3,7 +3,7 @@
 import * as React from 'react'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
-import { AlarmClock, Loader2, Plus, Trash2 } from 'lucide-react'
+import { AlarmClock, CalendarPlus, Loader2, Plus, Trash2 } from 'lucide-react'
 
 import { dealStageLabels, dealStages, type DealStage } from '@/lib/deals/types'
 import type { DealRow, DealLeadRow } from '@/lib/deals/queries'
@@ -11,6 +11,7 @@ import type { WorkspaceMember } from '@/lib/leads/queries'
 import type { ProximaAcaoRow } from '@/lib/tasks/types'
 import type { TaskFormValues } from '@/lib/validations/task'
 import { criarTarefa, concluirTarefa } from '@/lib/tasks/actions'
+import { agendarReuniaoNoGoogleCalendar } from '@/lib/integrations/workflow-actions'
 import { deleteDeal } from '@/lib/deals/actions'
 import { estadoDeMovimento, rotuloDeParado } from '@/lib/deals/parado'
 import { ProximaAcao } from '@/components/kanban/proxima-acao'
@@ -87,6 +88,7 @@ export function DealDetailSheet({
   const [confirmando, setConfirmando] = React.useState(false)
   const [excluindo, setExcluindo] = React.useState(false)
   const [agendando, setAgendando] = React.useState(false)
+  const [agendandoNoCalendario, setAgendandoNoCalendario] = React.useState(false)
 
   // Relógio do cliente: o servidor roda em UTC e erraria a virada do dia.
   const [agora, setAgora] = React.useState<Date | null>(null)
@@ -106,6 +108,21 @@ export function DealDetailSheet({
     }
 
     toast.success('Próxima ação agendada.')
+    router.refresh()
+  }
+
+  async function adicionarAoCalendario() {
+    if (!proximaAcao) return
+    setAgendandoNoCalendario(true)
+    const resultado = await agendarReuniaoNoGoogleCalendar(proximaAcao.id)
+    setAgendandoNoCalendario(false)
+
+    if ('error' in resultado) {
+      toast.error(resultado.error)
+      return
+    }
+
+    toast.success('Evento criado no Google Calendar.')
     router.refresh()
   }
 
@@ -247,9 +264,25 @@ export function DealDetailSheet({
                       </span>
                       <ProximaAcao task={proximaAcao} />
                     </div>
-                    <Button variant="outline" size="sm" onClick={concluir}>
-                      Concluir
-                    </Button>
+                    <div className="flex shrink-0 gap-2">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        aria-label="Adicionar ao Google Calendar"
+                        title="Adicionar ao Google Calendar"
+                        disabled={agendandoNoCalendario}
+                        onClick={adicionarAoCalendario}
+                      >
+                        {agendandoNoCalendario ? (
+                          <Loader2 className="size-4 animate-spin" />
+                        ) : (
+                          <CalendarPlus className="size-4" />
+                        )}
+                      </Button>
+                      <Button variant="outline" size="sm" onClick={concluir}>
+                        Concluir
+                      </Button>
+                    </div>
                   </div>
                 ) : (
                   <div className="mt-1 flex items-center justify-between gap-2">

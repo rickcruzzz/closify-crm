@@ -1,0 +1,31 @@
+import { IntegrationCard } from '@/components/settings/integration-card'
+import type { IntegrationConnectionRow } from '@/lib/integrations/queries'
+import type { IntegrationProvider } from '@/types/supabase'
+
+const PROVIDERS: IntegrationProvider[] = ['google_calendar', 'gmail', 'whatsapp']
+
+export function IntegrationsTab({
+  isAdmin,
+  connections,
+}: {
+  isAdmin: boolean
+  connections: IntegrationConnectionRow[]
+}) {
+  return (
+    <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+      {PROVIDERS.map((provider) => {
+        const conexao = connections.find((c) => c.provider === provider)
+        return (
+          <IntegrationCard
+            key={provider}
+            provider={provider}
+            isAdmin={isAdmin}
+            status={conexao?.status ?? 'disconnected'}
+            accountLabel={conexao?.accountLabel ?? null}
+            lastError={conexao?.lastError ?? null}
+          />
+        )
+      })}
+    </div>
+  )
+}

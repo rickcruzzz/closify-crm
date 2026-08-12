@@ -4,7 +4,7 @@ Documento de continuidade. É lido no começo de toda sessão (referenciado no
 [CLAUDE.md](../CLAUDE.md)) para que uma conversa nova — ou outra conta — comece
 sabendo o que já foi feito, o que foi decidido e onde estão as armadilhas.
 
-**Atualizado em:** 12/08/2026
+**Atualizado em:** 12/08/2026 (integrações)
 
 > Mantenha este arquivo curto. O detalhe de _por que_ cada coisa é assim mora
 > nas mensagens de commit e nos comentários do código, que são a memória real
@@ -80,26 +80,88 @@ a `service_role key` de cada lado, conferido com o mesmo tamanho (258.596
 bytes) nos dois. Ver `Pendente do dono` abaixo para o que falta para o corte
 final.
 
+**Integrações oficiais entregues em 12/08** (migration 0034): WhatsApp
+Business Platform (Cloud API), Google Calendar e Gmail, conectáveis em
+**Configurações → Integrações**. Ver seção própria abaixo — grande o
+suficiente para não caber neste resumo.
+
 Ambiente local: rode `node --env-file=.env.local scripts/verificar-ambiente.mjs`.
 Ele confere as 9 conexões e diz o que falta.
 
+## Integrações — WhatsApp, Google Calendar, Gmail (12/08)
+
+Pedido: reduzir o "esqueci de responder" ligando o funil a canais reais —
+sem virar CRM inchado. Uma tabela para as três (`integration_connections`,
+migration `0034`), token cifrado (AES-256-GCM, `lib/integrations/crypto.ts`),
+`state` do OAuth assinado por HMAC contra CSRF (`lib/integrations/state.ts`).
+
+**Encontrado e corrigido durante a auditoria**: `revoke select (coluna) ...
+from authenticated` **sozinho não bloqueia nada** — testado contra o banco
+real, o Supabase já concede `select` na tabela inteira por default privilege
+(mesma armadilha que a 0013 documentou para `EXECUTE` de função). A correção
+que funciona é revogar `select` da TABELA INTEIRA e conceder de volta só nas
+colunas seguras — só assim `access_token_enc`/`refresh_token_enc` ficam
+inacessíveis mesmo para o próprio admin da empresa lendo pela API pública.
+Provado com sessão real: token não decifrável por `authenticated`, membro sem
+admin vê status mas não desconecta, empresa B não enxerga linha de empresa A.
+
+**Google Calendar e Gmail**: OAuth próprio (`/api/integrations/google/*`),
+separado do OAuth de login — aquele não persiste refresh token utilizável em
+background. Um escopo por conexão (`calendar.events` ou `gmail.send`, nunca
+os dois), renovação automática de access_token perto de expirar. Workflow:
+botão "Adicionar ao Google Calendar" na próxima ação do negócio (Kanban),
+"Enviar e-mail" no painel do lead — os dois registram atividade na timeline.
+
+**WhatsApp Cloud API**: Embedded Signup da Meta (popup do SDK, não redirect
+de página inteira — `code` do login e `phone_number_id`/`waba_id` de um
+evento `message` da Meta precisam ser combinados no client antes de chamar a
+Server Action). Só modelo aprovado para iniciar conversa, nunca texto livre —
+regra da própria plataforma. Webhook (`/api/webhooks/whatsapp`) recebe
+resposta, registra atividade e cria tarefa "Responder no WhatsApp" se não
+houver nenhuma aberta pro lead — o "esqueci de responder" batendo na porta de
+volta. Casamento de lead por telefone é pelos últimos 8 dígitos (limitação
+aceita: DDDs diferentes com mesmo final colidiriam, raro).
+
+O link `wa.me` **continua existindo** — decisão travada abaixo atualizada,
+não removida. A Cloud API soma (modelo + webhook), o link resolve o caso
+simples (abrir a conversa) sem depender de nada.
+
+**Limitação conhecida**: o token do WhatsApp (Embedded Signup) não tem
+`refresh_token` no sentido do OAuth do Google — é um token de sistema de
+~60 dias. Sem caminho de renovação automática, reconexão manual periódica.
+
+**Pendências de configuração manual** (mesmo padrão do Asaas/Resend — eu não
+tenho acesso a nenhum destes painéis):
+
+1. **Google Cloud Console**: no projeto OAuth já usado para o login, adicionar
+   o redirect URI `https://www.velofunil.com.br/api/integrations/google/callback`
+   e ativar a Calendar API + Gmail API. Copiar Client ID/Secret para
+   `GOOGLE_OAUTH_CLIENT_ID`/`GOOGLE_OAUTH_CLIENT_SECRET`.
+2. **Meta App** (business.facebook.com → Meta for Developers): app tipo
+   Business, produto WhatsApp, Embedded Signup configurado (gera
+   `META_WHATSAPP_CONFIG_ID`), `META_APP_ID`/`META_APP_SECRET`, e no painel do
+   produto WhatsApp o webhook `https://www.velofunil.com.br/api/webhooks/whatsapp`
+   com um `META_WEBHOOK_VERIFY_TOKEN` à escolha.
+3. Gerar `INTEGRATIONS_ENCRYPTION_KEY` (32 bytes hex — `openssl rand -hex 32`)
+   e colar local + Vercel.
+4. Variáveis públicas (`NEXT_PUBLIC_META_APP_ID`,
+   `NEXT_PUBLIC_META_WHATSAPP_CONFIG_ID`) são o mesmo App ID/Config ID de
+   cima — só precisam existir também com o prefixo `NEXT_PUBLIC_` porque o SDK
+   do Facebook roda no browser.
+
+Sem essas variáveis, os cards de integração aparecem normalmente em
+"Não conectado" — nada quebra, só o botão "Conectar" falha ao tentar.
+
 ## Pendente do dono (não é código)
 
-- [ ] **Cutover para o projeto São Paulo (`tmyeunithjqkbwvezyyn`).**
-      `.env.local` já aponta para lá, com a `service_role key` nova.
-      Confirmado contra o banco novo: REST, Auth e service role respondendo
-      200, e a logo do workspace "HYJKYKKL" está lá. Falta: (1) trocar as 3
-      variáveis também na Vercel; (2) cada uma das 15 contas usa "esqueci
-      minha senha" no domínio novo na primeira vez, porque o hash não foi
-      copiado (ver acima); (3) no painel do projeto novo: OAuth do Google
-      (client id/secret + URL de callback), colar os 2 templates de
-      `supabase/email-templates/`, senha mínima 8 + *Leaked password
-      protection*, confirmar e-mail ligado. Ordem importa: só apontar o
-      domínio depois de tudo isso provado.
-- [ ] **MEI baixado.** Se o CNPJ estiver inativo, a conta Asaas está em risco —
-      quando o Asaas revalidar na Receita pode **bloquear a conta com o saldo
-      dentro**. Hoje o `commercialInfo` ainda responde `status: APPROVED`, ou
-      seja, ele não percebeu. É o item mais urgente.
+- [x] **Cutover para o projeto São Paulo (`tmyeunithjqkbwvezyyn`).** Feito:
+      env vars trocadas local + Vercel (confirmado pelo header CSP em
+      produção apontando pro projeto novo), SMTP customizado corrigido
+      (usuário `resend`, não `rezende`), Site URL/Redirect URLs corrigidos,
+      reset de senha testado ponta a ponta com sucesso.
+- [x] **MEI baixado.** Confirmado pelo dono nos canais oficiais (gov.br +
+      Meta Business Manager) — CNPJ ativo, Meta Business verificado. É o que
+      abriu a trava do WhatsApp Cloud API acima.
 - [ ] **Cobrança da Fani Mayara** (`fanimayara67@gmail.com`): usuária real
       (logou em 11/08, 1 lead), plano `free`, começou o checkout e nunca pagou.
       Tem 2 cobranças de R$ 49 em aberto que vão virar aviso de vencimento.
@@ -151,8 +213,8 @@ Ele confere as 9 conexões e diz o que falta.
 | **Google Sheets por API está fora**         | Exige `GOOGLE_CLIENT_ID`/`SECRET` e verificação do app pelo Google (semanas). A importação de planilha já cobre a dor                                          |
 | **`read-excel-file`, não `xlsx` nem `exceljs`** | O `xlsx` do npm está parado em 0.18.5 com CVE-2023-30533 e CVE-2024-22363, sem correção publicada lá; o `exceljs` está sem release há anos                |
 | **Lead precisa de e-mail OU telefone**      | A planilha do público-alvo é lista de WhatsApp. Com `email not null` ela importava zero linhas (migration 0025)                                               |
-| **WhatsApp por link `wa.me`, não Cloud API** | A API exige Meta Business verificado, que exige **CNPJ ativo** — com o MEI baixado é bloqueio não-técnico. Mais template aprovado e custo por mensagem. O link abre a conversa, que é o que a pessoa quer |
-| **Meta Lead Ads adiado**                    | Puxar lead da página de um cliente exige OAuth dele + App Review (semanas) + verificação de negócio. Volta quando o CNPJ resolver. Guardar o padrão certo: webhook **mais** job de reconciliação, porque o Meta só guarda 90 dias |
+| **WhatsApp: link `wa.me` E Cloud API, não Cloud API sozinha** | Resolvido em 12/08 (CNPJ ativo, Meta Business verificado) — Cloud API implementada, mas o link `wa.me` continua: é o atalho sem depender de token/modelo aprovado, e a API soma (modelo + webhook), não substitui |
+| **Meta Lead Ads ainda adiado**              | Puxar lead da página de um cliente exige OAuth dele + App Review (semanas) + verificação de negócio — degrau acima do que o CNPJ ativo resolve sozinho. Guardar o padrão certo: webhook **mais** job de reconciliação, porque o Meta só guarda 90 dias |
 | **IA / lead scoring fora**                  | Com 50 leads é ruído caro. O funil já pontua sozinho: negócio sem próxima ação e tarefa vencida são o sinal |
 | **GA4 fora**                                | Ferramenta de site, não de app logado — mediria pageview, não ativação, e traria banner de cookie por LGPD. A necessidade é real; a ferramenta é que estava errada |
 | **Tarefa não entra no limite de plano**     | Travar follow-up empurra a pessoa de volta para o WhatsApp e mata o hábito diário que faz ela pagar. O teto de 5.000 abertas é defesa contra abuso, não regra de negócio |
@@ -187,6 +249,16 @@ ninguém.
 **No `update` de policy, `using` sem `with check` deixa renomear para fora.**
 Só com os dois é que um admin fica impedido de mover o próprio arquivo para a
 pasta de outra empresa: `using` avalia a linha ANTES da mudança e aprovaria.
+
+**`revoke select (coluna) ... from authenticated` sozinho não bloqueia nada.**
+Mesma família de defeito que a 0013 já pagou para `EXECUTE` de função: o
+Supabase concede `select` na TABELA INTEIRA para `authenticated` por default
+privilege, e revogar uma coluna não subtrai de um grant mais amplo já
+concedido. Achado testando `integration_connections` (0034) — um admin lia
+`access_token_enc` cifrado direto pela API pública, apesar do `revoke`
+explícito na migration. A correção que funciona: revogar `select` da tabela
+inteira e conceder de volta só nas colunas seguras, para o grant específico
+ser o único que existe.
 
 **Quem aceita convite não tem empresa para configurar.** Sem marcar o
 onboarding como concluído no aceite — nos DOIS caminhos, a página e a Server

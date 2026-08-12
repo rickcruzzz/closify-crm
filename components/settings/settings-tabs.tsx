@@ -1,16 +1,17 @@
 'use client'
 
 import Link from 'next/link'
-import { Building2, CreditCard, Users, type LucideIcon } from 'lucide-react'
+import { Building2, CreditCard, Plug, Users, type LucideIcon } from 'lucide-react'
 
 import { cn } from '@/lib/utils'
 
-export type AbaDeConfiguracoes = 'empresa' | 'equipe' | 'plano'
+export type AbaDeConfiguracoes = 'empresa' | 'equipe' | 'plano' | 'integracoes'
 
 const ABAS: { valor: AbaDeConfiguracoes; rotulo: string; icone: LucideIcon }[] = [
   { valor: 'empresa', rotulo: 'Empresa', icone: Building2 },
   { valor: 'equipe', rotulo: 'Equipe', icone: Users },
   { valor: 'plano', rotulo: 'Plano', icone: CreditCard },
+  { valor: 'integracoes', rotulo: 'Integrações', icone: Plug },
 ]
 
 /**

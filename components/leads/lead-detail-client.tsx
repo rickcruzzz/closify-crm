@@ -14,11 +14,14 @@ import { LeadFormDialog } from '@/components/leads/lead-form-dialog'
 import { DeleteLeadDialog } from '@/components/leads/delete-lead-dialog'
 import { ActivityTimeline } from '@/components/leads/activity-timeline'
 import { ActivityFormDialog } from '@/components/leads/activity-form-dialog'
+import { SendEmailDialog } from '@/components/leads/send-email-dialog'
+import { SendWhatsAppTemplateDialog } from '@/components/leads/send-whatsapp-template-dialog'
 import { EmptyState } from '@/components/ui/empty-state'
 import { TaskItem } from '@/components/tasks/task-item'
 import { TaskFormDialog, type TarefaEmEdicao } from '@/components/tasks/task-form-dialog'
 import { createActivity, deleteLead, updateLead } from '@/lib/leads/actions'
 import { criarTarefa, concluirTarefa, excluirTarefa, atualizarTarefa } from '@/lib/tasks/actions'
+import { enviarEmailViaGmail, enviarMensagemWhatsapp } from '@/lib/integrations/workflow-actions'
 import { linkDoWhatsApp } from '@/lib/leads/whatsapp'
 import type { TaskRow } from '@/lib/tasks/types'
 import type { LeadRow, WorkspaceMember } from '@/lib/leads/queries'
@@ -26,6 +29,8 @@ import type { ActivityType } from '@/lib/leads/types'
 import type { LeadFormValues } from '@/lib/validations/lead'
 import type { TaskFormValues } from '@/lib/validations/task'
 import type { ActivityFormValues } from '@/lib/validations/activity'
+import type { EmailMessageFormValues } from '@/lib/validations/email'
+import type { WhatsAppTemplateFormValues } from '@/lib/validations/whatsapp-template'
 
 const currencyFormatter = new Intl.NumberFormat('pt-BR', {
   style: 'currency',
@@ -64,6 +69,8 @@ export function LeadDetailClient({
   const [formOpen, setFormOpen] = React.useState(false)
   const [deleteOpen, setDeleteOpen] = React.useState(false)
   const [activityFormOpen, setActivityFormOpen] = React.useState(false)
+  const [emailFormOpen, setEmailFormOpen] = React.useState(false)
+  const [whatsappTemplateOpen, setWhatsappTemplateOpen] = React.useState(false)
   const [taskFormOpen, setTaskFormOpen] = React.useState(false)
   const [tarefaEmEdicao, setTarefaEmEdicao] = React.useState<TarefaEmEdicao | null>(null)
 
@@ -96,6 +103,26 @@ export function LeadDetailClient({
     }
     toast.success('Lead excluído.')
     router.push('/leads')
+  }
+
+  async function handleSendEmail(values: EmailMessageFormValues) {
+    const result = await enviarEmailViaGmail(lead.id, values)
+    if ('error' in result) {
+      toast.error(result.error)
+      return
+    }
+    toast.success('E-mail enviado.')
+    router.refresh()
+  }
+
+  async function handleSendWhatsAppTemplate(values: WhatsAppTemplateFormValues) {
+    const result = await enviarMensagemWhatsapp(lead.id, values)
+    if ('error' in result) {
+      toast.error(result.error)
+      return
+    }
+    toast.success('Mensagem enviada.')
+    router.refresh()
   }
 
   async function handleCreateActivity(values: ActivityFormValues) {
@@ -174,6 +201,25 @@ export function LeadDetailClient({
                   </a>
                 }
               />
+            )}
+            {/* Modelo aprovado, via Cloud API — soma ao link acima, não
+                substitui: o link abre a conversa no aparelho da pessoa sem
+                depender de integração nenhuma; isto aqui manda mensagem
+                iniciando contato pelo número comercial conectado. */}
+            {whatsapp && (
+              <Button variant="outline" onClick={() => setWhatsappTemplateOpen(true)}>
+                <MessageCircle className="size-4" />
+                Enviar modelo
+              </Button>
+            )}
+            {/* Só aparece com e-mail cadastrado — sem endereço, não há para
+                onde mandar. Se o Gmail não estiver conectado, o erro vem do
+                servidor ao tentar enviar, com o caminho pra Configurações. */}
+            {lead.email && (
+              <Button variant="outline" onClick={() => setEmailFormOpen(true)}>
+                <Mail className="size-4" />
+                Enviar e-mail
+              </Button>
             )}
             <Button variant="outline" onClick={() => setFormOpen(true)}>
               Editar
@@ -332,6 +378,23 @@ export function LeadDetailClient({
         onOpenChange={setActivityFormOpen}
         onCreate={handleCreateActivity}
       />
+
+      {lead.email && (
+        <SendEmailDialog
+          open={emailFormOpen}
+          onOpenChange={setEmailFormOpen}
+          destinatario={lead.email}
+          onSend={handleSendEmail}
+        />
+      )}
+
+      {whatsapp && (
+        <SendWhatsAppTemplateDialog
+          open={whatsappTemplateOpen}
+          onOpenChange={setWhatsappTemplateOpen}
+          onSend={handleSendWhatsAppTemplate}
+        />
+      )}
 
       <TaskFormDialog
         open={taskFormOpen}

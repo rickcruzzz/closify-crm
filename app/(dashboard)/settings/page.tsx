@@ -5,6 +5,7 @@ import { urlDaLogo } from '@/lib/workspace/empresa'
 import { MembersCard } from '@/components/settings/members-card'
 import { PlanCard } from '@/components/settings/plan-card'
 import { DeleteAccountCard } from '@/components/settings/delete-account-card'
+import { IntegrationsTab } from '@/components/settings/integrations-tab'
 import {
   SettingsTabs,
   type AbaDeConfiguracoes,
@@ -15,10 +16,11 @@ import {
   getWorkspaceSettingsData,
   getWorkspacesExclusivosDoUsuario,
 } from '@/lib/workspace/queries'
+import { getIntegrationConnections } from '@/lib/integrations/queries'
 
 export const metadata: Metadata = { title: 'Configurações' }
 
-const ABAS_VALIDAS: AbaDeConfiguracoes[] = ['empresa', 'equipe', 'plano']
+const ABAS_VALIDAS: AbaDeConfiguracoes[] = ['empresa', 'equipe', 'plano', 'integracoes']
 
 /**
  * Configurações em três abas, na mesma rota.
@@ -30,10 +32,25 @@ const ABAS_VALIDAS: AbaDeConfiguracoes[] = ['empresa', 'equipe', 'plano']
  * A aba vive em `?aba=`, não em estado de cliente: recarregar mantém o lugar,
  * dá para mandar o link de uma aba a um colega, e o botão de voltar funciona.
  */
+const MENSAGEM_DE_ERRO_DA_INTEGRACAO: Record<string, string> = {
+  provider_invalido: 'Integração desconhecida.',
+  somente_admin: 'Apenas administradores podem conectar integrações.',
+  cancelado: 'Conexão cancelada — nada foi alterado.',
+  parametros_ausentes: 'O Google não devolveu os dados esperados. Tente conectar de novo.',
+  state_invalido: 'O link de conexão expirou ou é inválido. Tente conectar de novo.',
+  falha_ao_conectar: 'Não foi possível concluir a conexão. Tente de novo em instantes.',
+}
+
+const NOME_DA_INTEGRACAO: Record<string, string> = {
+  google_calendar: 'Google Calendar',
+  gmail: 'Gmail',
+  whatsapp: 'WhatsApp',
+}
+
 export default async function SettingsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ aba?: string }>
+  searchParams: Promise<{ aba?: string; conectado?: string; erro?: string }>
 }) {
   const params = await searchParams
   const { user, workspaceId } = await getCurrentUserAndWorkspace()
@@ -63,17 +80,39 @@ export default async function SettingsPage({
   const workspacesQueSeraoApagados =
     aba === 'equipe' ? await getWorkspacesExclusivosDoUsuario(user.id) : []
 
+  const integrationConnections =
+    aba === 'integracoes' ? await getIntegrationConnections(workspaceId) : []
+
   const descricao: Record<AbaDeConfiguracoes, string> = {
     empresa: 'Dados da sua empresa, usados no sistema e nas comunicações.',
     equipe: 'Quem tem acesso a esta empresa e com qual permissão.',
     plano: 'Seu plano atual e o que cada um inclui.',
+    integracoes: 'Conecte WhatsApp, Google Calendar e Gmail ao fluxo do funil.',
   }
+
+  const mensagemDeErro = params.erro ? MENSAGEM_DE_ERRO_DA_INTEGRACAO[params.erro] : null
+  const nomeConectado = params.conectado ? NOME_DA_INTEGRACAO[params.conectado] : null
 
   return (
     <div className="flex flex-col gap-6">
       <PageHeader title="Configurações" description={descricao[aba]} className="mb-0" />
 
       <SettingsTabs ativa={aba} />
+
+      {aba === 'integracoes' && nomeConectado && (
+        <p
+          role="status"
+          className="rounded-md bg-emerald-500/10 px-3 py-2 text-sm text-emerald-600 dark:text-emerald-400"
+        >
+          {nomeConectado} conectado com sucesso.
+        </p>
+      )}
+
+      {aba === 'integracoes' && mensagemDeErro && (
+        <p role="alert" className="bg-destructive/10 text-destructive rounded-md px-3 py-2 text-sm">
+          {mensagemDeErro}
+        </p>
+      )}
 
       {aba === 'empresa' && (
         <EmpresaCard
@@ -120,6 +159,10 @@ export default async function SettingsPage({
       )}
 
       {aba === 'plano' && <PlanCard plan={workspace?.plan ?? 'free'} isAdmin={isAdmin} />}
+
+      {aba === 'integracoes' && (
+        <IntegrationsTab isAdmin={isAdmin} connections={integrationConnections} />
+      )}
     </div>
   )
 }

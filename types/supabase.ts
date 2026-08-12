@@ -48,6 +48,8 @@ export type DadosDaEmpresa = {
 }
 export type SubscriptionStatus = 'trialing' | 'active' | 'past_due' | 'canceled'
 export type WorkspaceInviteStatus = 'pending' | 'accepted' | 'expired'
+export type IntegrationProvider = 'google_calendar' | 'gmail' | 'whatsapp'
+export type IntegrationStatus = 'connected' | 'error' | 'disconnected'
 
 export type Database = {
   public: {
@@ -393,6 +395,80 @@ export type Database = {
             referencedColumns: ['id']
           },
         ]
+      }
+      // Tokens cifrados no app antes de gravar aqui — ver lib/integrations/crypto.ts.
+      // access_token_enc/refresh_token_enc não são legíveis por `authenticated`
+      // (revoke por coluna na 0034), mesmo com RLS de select liberado na linha.
+      integration_connections: {
+        Row: {
+          id: string
+          workspace_id: string
+          provider: IntegrationProvider
+          status: IntegrationStatus
+          account_label: string | null
+          external_id: string | null
+          scopes: string[]
+          access_token_enc: string | null
+          refresh_token_enc: string | null
+          token_expires_at: string | null
+          last_synced_at: string | null
+          last_error: string | null
+          connected_by: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          workspace_id: string
+          provider: IntegrationProvider
+          status?: IntegrationStatus
+          account_label?: string | null
+          external_id?: string | null
+          scopes?: string[]
+          access_token_enc?: string | null
+          refresh_token_enc?: string | null
+          token_expires_at?: string | null
+          last_synced_at?: string | null
+          last_error?: string | null
+          connected_by?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          workspace_id?: string
+          provider?: IntegrationProvider
+          status?: IntegrationStatus
+          account_label?: string | null
+          external_id?: string | null
+          scopes?: string[]
+          access_token_enc?: string | null
+          refresh_token_enc?: string | null
+          token_expires_at?: string | null
+          last_synced_at?: string | null
+          last_error?: string | null
+          connected_by?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      // Dedupe de mensagem recebida do webhook do WhatsApp — mesmo desenho de
+      // asaas_webhook_events. Só a service_role escreve (RLS ligada, sem policy).
+      whatsapp_webhook_events: {
+        Row: {
+          event_id: string
+          processed_at: string
+        }
+        Insert: {
+          event_id: string
+          processed_at?: string
+        }
+        Update: {
+          event_id?: string
+          processed_at?: string
+        }
+        Relationships: []
       }
     }
     Views: Record<string, never>
