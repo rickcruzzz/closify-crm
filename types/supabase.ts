@@ -183,6 +183,9 @@ export type Database = {
         }
         Relationships: []
       }
+      // `updated_at` e `stage_changed_at` (0033) são escritos por trigger, e a
+      // trigger sobrescreve o que vier do app — por isso ficam fora de `Insert`
+      // e de `Update`. Mandá-los pelo PostgREST não adianta.
       deals: {
         Row: {
           id: string
@@ -194,6 +197,9 @@ export type Database = {
           stage: DealStage
           due_date: string | null
           created_at: string
+          updated_at: string
+          /** Só muda quando a ETAPA muda. É a base de "parado". */
+          stage_changed_at: string
         }
         Insert: {
           id?: string
@@ -466,6 +472,7 @@ export type Database = {
           stage: DealStage
           due_date: string | null
           created_at: string
+          stage_changed_at: string
           owner_id: string | null
           total_na_etapa: number
         }[]

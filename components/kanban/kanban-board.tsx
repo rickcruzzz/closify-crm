@@ -12,16 +12,18 @@ import {
   type DragOverEvent,
   type DragStartEvent,
 } from '@dnd-kit/core'
-import { Plus, Search } from 'lucide-react'
+import { AlarmClock, Plus, Search } from 'lucide-react'
 import { toast } from 'sonner'
 
 import { dealStageLabels, dealStages, type DealStage } from '@/lib/deals/types'
+import { estadoDeMovimento } from '@/lib/deals/parado'
 import { createDeal, updateDealStage } from '@/lib/deals/actions'
 import type { DealLeadRow, DealRow } from '@/lib/deals/queries'
 import type { WorkspaceMember } from '@/lib/leads/queries'
 import type { DealFormValues } from '@/lib/validations/deal'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { Badge } from '@/components/ui/badge'
 import {
   Select,
   SelectContent,
@@ -70,6 +72,15 @@ export function KanbanBoard({
   const [isFormOpen, setIsFormOpen] = React.useState(false)
   const [search, setSearch] = React.useState('')
   const [ownerFilter, setOwnerFilter] = React.useState('todos')
+  const [soParados, setSoParados] = React.useState(false)
+
+  // Relógio único e do CLIENTE: o servidor da Vercel roda em UTC, e "parado há
+  // N dias" calculado lá erraria a virada do dia.
+  const [agora, setAgora] = React.useState<Date | null>(null)
+
+  React.useEffect(() => {
+    setAgora(new Date())
+  }, [])
 
   React.useEffect(() => {
     setDeals(initialDeals)
@@ -177,7 +188,14 @@ export function KanbanBoard({
   const selectedDeal = deals.find((deal) => deal.id === selectedDealId)
   const activeDeal = deals.find((deal) => deal.id === activeId)
 
-  const hasActiveFilters = search.trim() !== '' || ownerFilter !== 'todos'
+  const hasActiveFilters = search.trim() !== '' || ownerFilter !== 'todos' || soParados
+
+  // Contado sobre `deals`, não sobre o filtrado: o botão precisa dizer quantos
+  // existem, inclusive quando o próprio filtro está ligado.
+  const quantosParados = React.useMemo(() => {
+    if (!agora) return 0
+    return deals.filter((d) => estadoDeMovimento(d, agora).parado).length
+  }, [deals, agora])
 
   // Filtra só o que é renderizado. O drag-and-drop continua operando sobre
   // `deals` (estado completo), então update otimista e rollback não mudam.
@@ -186,6 +204,7 @@ export function KanbanBoard({
 
     return deals.filter((deal) => {
       if (ownerFilter !== 'todos' && deal.owner_id !== ownerFilter) return false
+      if (soParados && !(agora && estadoDeMovimento(deal, agora).parado)) return false
       if (!term) return true
 
       const lead = deal.lead_id ? leadsById.get(deal.lead_id) : undefined
@@ -195,7 +214,7 @@ export function KanbanBoard({
         !!lead?.company?.toLowerCase().includes(term)
       )
     })
-  }, [deals, leadsById, ownerFilter, search])
+  }, [deals, leadsById, ownerFilter, search, soParados, agora])
 
   return (
     <>
@@ -238,6 +257,25 @@ export function KanbanBoard({
               ))}
             </SelectContent>
           </Select>
+
+          {/* Só aparece quando há negócio parado de verdade. Um botão que
+              nunca acende ocupa espaço e ensina a pessoa a ignorá-lo — e num
+              funil saudável ele deve mesmo ficar escondido. */}
+          {quantosParados > 0 && (
+            <Button
+              type="button"
+              variant={soParados ? 'default' : 'outline'}
+              aria-pressed={soParados}
+              onClick={() => setSoParados((v) => !v)}
+              className="shrink-0"
+            >
+              <AlarmClock className="size-4" />
+              Parados
+              <Badge variant={soParados ? 'secondary' : 'destructive'}>
+                {quantosParados}
+              </Badge>
+            </Button>
+          )}
         </div>
 
         <Button onClick={() => setIsFormOpen(true)} className="shrink-0">

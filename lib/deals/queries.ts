@@ -9,6 +9,8 @@ export type DealRow = {
   stage: DealStage
   due_date: string | null
   created_at: string
+  /** Quando a etapa mudou pela última vez — base de "parado" (0033). */
+  stage_changed_at: string
   owner_id: string | null
   owner_name: string | null
 }
@@ -89,6 +91,7 @@ export async function getBoardDeals(workspaceId: string): Promise<BoardDoKanban>
       stage: linha.stage,
       due_date: linha.due_date,
       created_at: linha.created_at,
+      stage_changed_at: linha.stage_changed_at,
       owner_id: linha.owner_id,
       owner_name: linha.owner_id ? ownerNames.get(linha.owner_id) ?? null : null,
     }

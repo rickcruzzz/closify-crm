@@ -3,7 +3,7 @@
 import * as React from 'react'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
-import { Loader2, Plus, Trash2 } from 'lucide-react'
+import { AlarmClock, Loader2, Plus, Trash2 } from 'lucide-react'
 
 import { dealStageLabels, dealStages, type DealStage } from '@/lib/deals/types'
 import type { DealRow, DealLeadRow } from '@/lib/deals/queries'
@@ -12,6 +12,7 @@ import type { ProximaAcaoRow } from '@/lib/tasks/types'
 import type { TaskFormValues } from '@/lib/validations/task'
 import { criarTarefa, concluirTarefa } from '@/lib/tasks/actions'
 import { deleteDeal } from '@/lib/deals/actions'
+import { estadoDeMovimento, rotuloDeParado } from '@/lib/deals/parado'
 import { ProximaAcao } from '@/components/kanban/proxima-acao'
 import { TaskFormDialog } from '@/components/tasks/task-form-dialog'
 import {
@@ -86,6 +87,15 @@ export function DealDetailSheet({
   const [confirmando, setConfirmando] = React.useState(false)
   const [excluindo, setExcluindo] = React.useState(false)
   const [agendando, setAgendando] = React.useState(false)
+
+  // Relógio do cliente: o servidor roda em UTC e erraria a virada do dia.
+  const [agora, setAgora] = React.useState<Date | null>(null)
+
+  React.useEffect(() => {
+    setAgora(new Date())
+  }, [])
+
+  const movimento = agora && deal ? estadoDeMovimento(deal, agora) : null
 
   async function agendar(values: TaskFormValues) {
     const resultado = await criarTarefa(values)
@@ -200,6 +210,30 @@ export function DealDetailSheet({
                   <span className="text-muted-foreground text-xs">Criado em</span>
                   <p className="text-sm">{formatDate(deal.created_at)}</p>
                 </div>
+              </div>
+
+              {/* Há quanto tempo o negócio não muda de etapa. Fica aqui e não
+                  no card: lá já mora a próxima ação, e duas datas competindo
+                  fazem a pessoa não saber qual obedecer — a mesma razão pela
+                  qual o prazo saiu de lá. */}
+              <div>
+                <span className="text-muted-foreground text-xs">Movimento</span>
+                {movimento === null ? (
+                  <p className="text-muted-foreground text-sm">Calculando…</p>
+                ) : movimento.parado ? (
+                  <p className="text-destructive flex items-center gap-1.5 text-sm font-medium">
+                    <AlarmClock aria-hidden className="size-4 shrink-0" />
+                    {rotuloDeParado(movimento.dias)}
+                  </p>
+                ) : (
+                  <p className="text-sm">
+                    {movimento.dias === 0
+                      ? 'Mudou de etapa hoje'
+                      : movimento.dias === 1
+                        ? 'Mudou de etapa ontem'
+                        : `Na mesma etapa há ${movimento.dias} dias`}
+                  </p>
+                )}
               </div>
 
               <div className="border-t pt-4">
