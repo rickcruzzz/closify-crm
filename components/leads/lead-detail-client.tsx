@@ -4,7 +4,7 @@ import * as React from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
-import { ArrowLeft, Building2, Calendar, Mail, Phone, User } from 'lucide-react'
+import { ArrowLeft, Building2, Calendar, ListTodo, Mail, MessageCircle, Phone, Plus, User } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -14,10 +14,17 @@ import { LeadFormDialog } from '@/components/leads/lead-form-dialog'
 import { DeleteLeadDialog } from '@/components/leads/delete-lead-dialog'
 import { ActivityTimeline } from '@/components/leads/activity-timeline'
 import { ActivityFormDialog } from '@/components/leads/activity-form-dialog'
+import { EmptyState } from '@/components/ui/empty-state'
+import { TaskItem } from '@/components/tasks/task-item'
+import { TaskFormDialog, type TarefaEmEdicao } from '@/components/tasks/task-form-dialog'
 import { createActivity, deleteLead, updateLead } from '@/lib/leads/actions'
+import { criarTarefa, concluirTarefa, excluirTarefa, atualizarTarefa } from '@/lib/tasks/actions'
+import { linkDoWhatsApp } from '@/lib/leads/whatsapp'
+import type { TaskRow } from '@/lib/tasks/types'
 import type { LeadRow, WorkspaceMember } from '@/lib/leads/queries'
 import type { ActivityType } from '@/lib/leads/types'
 import type { LeadFormValues } from '@/lib/validations/lead'
+import type { TaskFormValues } from '@/lib/validations/task'
 import type { ActivityFormValues } from '@/lib/validations/activity'
 
 const currencyFormatter = new Intl.NumberFormat('pt-BR', {
@@ -41,12 +48,14 @@ type ActivityRow = {
 export function LeadDetailClient({
   lead,
   activities,
+  tasks,
   members,
   currentUserId,
   isAdmin,
 }: {
   lead: LeadRow
   activities: ActivityRow[]
+  tasks: TaskRow[]
   members: WorkspaceMember[]
   currentUserId: string
   isAdmin: boolean
@@ -55,6 +64,18 @@ export function LeadDetailClient({
   const [formOpen, setFormOpen] = React.useState(false)
   const [deleteOpen, setDeleteOpen] = React.useState(false)
   const [activityFormOpen, setActivityFormOpen] = React.useState(false)
+  const [taskFormOpen, setTaskFormOpen] = React.useState(false)
+  const [tarefaEmEdicao, setTarefaEmEdicao] = React.useState<TarefaEmEdicao | null>(null)
+
+  // Um relógio só para a lista, nascido no cliente: o servidor da Vercel roda
+  // em UTC e calcularia "atrasada" com três horas de erro.
+  const [agora, setAgora] = React.useState<Date | null>(null)
+
+  React.useEffect(() => {
+    setAgora(new Date())
+  }, [])
+
+  const whatsapp = linkDoWhatsApp(lead.phone)
 
   async function handleSave(values: LeadFormValues) {
     const result = await updateLead(lead.id, values)
@@ -87,6 +108,44 @@ export function LeadDetailClient({
     router.refresh()
   }
 
+  async function salvarTarefa(values: TaskFormValues) {
+    const resultado = tarefaEmEdicao
+      ? await atualizarTarefa(tarefaEmEdicao.id, values)
+      : await criarTarefa(values)
+
+    if ('error' in resultado) {
+      toast.error(resultado.error)
+      return
+    }
+
+    toast.success(tarefaEmEdicao ? 'Tarefa atualizada.' : 'Tarefa criada.')
+    setTarefaEmEdicao(null)
+    router.refresh()
+  }
+
+  async function concluir(taskId: string) {
+    const resultado = await concluirTarefa(taskId)
+    if ('error' in resultado) {
+      toast.error(resultado.error)
+      return
+    }
+    // Sem update otimista aqui: concluir grava uma atividade na timeline logo
+    // ao lado, e as duas listas precisam mudar juntas. Deixar a tarefa sumir
+    // antes da atividade aparecer mostraria um estado que nunca existiu.
+    toast.success('Tarefa concluída.')
+    router.refresh()
+  }
+
+  async function excluir(taskId: string) {
+    const resultado = await excluirTarefa(taskId)
+    if ('error' in resultado) {
+      toast.error(resultado.error)
+      return
+    }
+    toast.success('Tarefa excluída.')
+    router.refresh()
+  }
+
   return (
     <div>
       <Link
@@ -102,6 +161,20 @@ export function LeadDetailClient({
         description={lead.company ?? ''}
         actions={
           <>
+            {/* Só aparece quando o telefone vira um link válido. `wa.me` com
+                número torto abre uma tela de erro do WhatsApp, e quem clicou
+                acha que o defeito é nosso. */}
+            {whatsapp && (
+              <Button
+                variant="outline"
+                render={
+                  <a href={whatsapp} target="_blank" rel="noopener noreferrer">
+                    <MessageCircle className="size-4" />
+                    Chamar no WhatsApp
+                  </a>
+                }
+              />
+            )}
             <Button variant="outline" onClick={() => setFormOpen(true)}>
               Editar
             </Button>
@@ -159,21 +232,84 @@ export function LeadDetailClient({
           </CardContent>
         </Card>
 
-        <Card className="lg:col-span-2">
-          <CardHeader className="flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <CardTitle>Timeline de atividades</CardTitle>
-            <Button variant="outline" size="sm" onClick={() => setActivityFormOpen(true)}>
-              Registrar atividade
-            </Button>
-          </CardHeader>
-          <CardContent>
-            <ActivityTimeline
-              activities={activities}
-              currentUserId={currentUserId}
-              isAdmin={isAdmin}
-            />
-          </CardContent>
-        </Card>
+        <div className="flex flex-col gap-4 lg:col-span-2">
+          {/* Tarefas acima da timeline de propósito: o que falta fazer vale
+              mais do que o que já foi feito, e enterrar as pendências abaixo
+              do histórico faria a pessoa rolar para descobrir o que deve. */}
+          <Card>
+            <CardHeader className="flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <CardTitle>Tarefas</CardTitle>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  setTarefaEmEdicao(null)
+                  setTaskFormOpen(true)
+                }}
+              >
+                <Plus className="size-4" />
+                Nova tarefa
+              </Button>
+            </CardHeader>
+            <CardContent>
+              {tasks.length === 0 ? (
+                <EmptyState
+                  icon={ListTodo}
+                  size="sm"
+                  title="Sem próxima ação"
+                  description="Lead sem tarefa é lead que some. Agende o próximo passo agora."
+                />
+              ) : (
+                <ul className="flex flex-col">
+                  {tasks.map((task) => (
+                    <TaskItem
+                      key={task.id}
+                      task={task}
+                      agora={agora ?? new Date(task.due_at)}
+                      atrasada={
+                        !task.done_at &&
+                        agora !== null &&
+                        new Date(task.due_at).getTime() < agora.getTime()
+                      }
+                      onConcluir={concluir}
+                      onEditar={(t) => {
+                        setTarefaEmEdicao({
+                          id: t.id,
+                          title: t.title,
+                          type: t.type,
+                          due_at: t.due_at,
+                          assignee_id: t.assignee_id,
+                        })
+                        setTaskFormOpen(true)
+                      }}
+                      onExcluir={excluir}
+                    />
+                  ))}
+                </ul>
+              )}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <CardTitle>Timeline de atividades</CardTitle>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setActivityFormOpen(true)}
+              >
+                Registrar atividade
+              </Button>
+            </CardHeader>
+            <CardContent>
+              <ActivityTimeline
+                activities={activities}
+                currentUserId={currentUserId}
+                isAdmin={isAdmin}
+              />
+            </CardContent>
+          </Card>
+        </div>
       </div>
 
       <LeadFormDialog
@@ -195,6 +331,19 @@ export function LeadDetailClient({
         open={activityFormOpen}
         onOpenChange={setActivityFormOpen}
         onCreate={handleCreateActivity}
+      />
+
+      <TaskFormDialog
+        open={taskFormOpen}
+        onOpenChange={(aberto) => {
+          setTaskFormOpen(aberto)
+          if (!aberto) setTarefaEmEdicao(null)
+        }}
+        onSubmit={salvarTarefa}
+        members={members}
+        currentUserId={currentUserId}
+        leadId={lead.id}
+        tarefa={tarefaEmEdicao}
       />
     </div>
   )

@@ -1,12 +1,19 @@
 'use client'
 
 import * as React from 'react'
+import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
-import { Loader2, Trash2 } from 'lucide-react'
+import { Loader2, Plus, Trash2 } from 'lucide-react'
 
 import { dealStageLabels, dealStages, type DealStage } from '@/lib/deals/types'
 import type { DealRow, DealLeadRow } from '@/lib/deals/queries'
+import type { WorkspaceMember } from '@/lib/leads/queries'
+import type { ProximaAcaoRow } from '@/lib/tasks/types'
+import type { TaskFormValues } from '@/lib/validations/task'
+import { criarTarefa, concluirTarefa } from '@/lib/tasks/actions'
 import { deleteDeal } from '@/lib/deals/actions'
+import { ProximaAcao } from '@/components/kanban/proxima-acao'
+import { TaskFormDialog } from '@/components/tasks/task-form-dialog'
 import {
   Dialog,
   DialogContent,
@@ -56,6 +63,9 @@ function initials(name: string) {
 export function DealDetailSheet({
   deal,
   lead,
+  proximaAcao,
+  members,
+  currentUserId,
   open,
   onOpenChange,
   onStageChange,
@@ -63,14 +73,45 @@ export function DealDetailSheet({
 }: {
   deal: DealRow | undefined
   lead: DealLeadRow | undefined
+  proximaAcao: ProximaAcaoRow | undefined
+  members: WorkspaceMember[]
+  currentUserId: string
   open: boolean
   onOpenChange: (open: boolean) => void
   onStageChange: (dealId: string, stage: DealStage) => void
   /** Avisa o board para tirar o card sem esperar o refresh do servidor. */
   onDeleted: (dealId: string) => void
 }) {
+  const router = useRouter()
   const [confirmando, setConfirmando] = React.useState(false)
   const [excluindo, setExcluindo] = React.useState(false)
+  const [agendando, setAgendando] = React.useState(false)
+
+  async function agendar(values: TaskFormValues) {
+    const resultado = await criarTarefa(values)
+
+    if ('error' in resultado) {
+      toast.error(resultado.error)
+      return
+    }
+
+    toast.success('Próxima ação agendada.')
+    router.refresh()
+  }
+
+  async function concluir() {
+    if (!proximaAcao) return
+
+    const resultado = await concluirTarefa(proximaAcao.id)
+
+    if ('error' in resultado) {
+      toast.error(resultado.error)
+      return
+    }
+
+    toast.success('Tarefa concluída.')
+    router.refresh()
+  }
 
   async function handleExcluir() {
     if (!deal) return
@@ -149,6 +190,9 @@ export function DealDetailSheet({
 
               <div className="flex justify-between">
                 <div>
+                  {/* O prazo saiu do card do Kanban e mora aqui: ele é
+                      previsão de fechamento, não ordem do dia. O card mostra a
+                      próxima ação, que é o que dá para cumprir hoje. */}
                   <span className="text-muted-foreground text-xs">Prazo</span>
                   <p className="text-sm">{formatDate(deal.due_date)}</p>
                 </div>
@@ -156,6 +200,38 @@ export function DealDetailSheet({
                   <span className="text-muted-foreground text-xs">Criado em</span>
                   <p className="text-sm">{formatDate(deal.created_at)}</p>
                 </div>
+              </div>
+
+              <div className="border-t pt-4">
+                <span className="text-muted-foreground text-xs">Próxima ação</span>
+
+                {proximaAcao ? (
+                  <div className="mt-1 flex items-center justify-between gap-2">
+                    <div className="flex min-w-0 flex-col">
+                      <span className="truncate text-sm font-medium">
+                        {proximaAcao.title}
+                      </span>
+                      <ProximaAcao task={proximaAcao} />
+                    </div>
+                    <Button variant="outline" size="sm" onClick={concluir}>
+                      Concluir
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="mt-1 flex items-center justify-between gap-2">
+                    <span className="text-muted-foreground text-sm">
+                      Nenhuma agendada.
+                    </span>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setAgendando(true)}
+                    >
+                      <Plus className="size-4" />
+                      Agendar
+                    </Button>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -181,6 +257,18 @@ export function DealDetailSheet({
           </>
         )}
       </SheetContent>
+
+      {/* A tarefa nasce presa ao negócio E ao lead dele. Só ao negócio faria
+          ela sumir da página do cliente, que é onde a pessoa vai procurar. */}
+      <TaskFormDialog
+        open={agendando}
+        onOpenChange={setAgendando}
+        onSubmit={agendar}
+        members={members}
+        currentUserId={currentUserId}
+        dealId={deal?.id ?? null}
+        leadId={deal?.lead_id ?? null}
+      />
 
       <Dialog open={confirmando} onOpenChange={setConfirmando}>
         <DialogContent className="sm:max-w-md">

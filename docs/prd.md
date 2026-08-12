@@ -78,6 +78,31 @@ Cards com valor, lead vinculado, responsável e prazo. Drag-and-drop via `@dnd-k
 Tipos: Ligação, E-mail, Reunião, Nota.
 Timeline cronológica vinculada a cada lead.
 
+**Tarefas e Próxima Ação**
+Tarefa com prazo, responsável e conclusão, presa a um lead ou a um negócio.
+Tela **Hoje** — primeira do menu — agrupa em Atrasadas, Hoje, Próximos 7 dias e
+Depois, com filtro entre "minhas" e "da equipe".
+
+No card do Kanban a próxima ação ocupa o lugar do prazo do negócio: prazo é
+previsão de fechamento, próxima ação é o que dá para cumprir hoje, e duas datas
+no mesmo card fazem a pessoa não saber qual obedecer. Sem tarefa aberta o card
+diz **"Sem próxima ação"** — negócio sem próximo passo é o que morre calado no
+funil, e é a informação mais valiosa que o card pode dar.
+
+Concluir uma tarefa grava a atividade correspondente na timeline do lead. Sem
+isso o histórico teria buraco justamente no que foi feito por follow-up.
+
+Tarefa não entra no limite do plano: travar follow-up empurraria a pessoa de
+volta para o WhatsApp e mataria o hábito diário que faz ela pagar depois. Há um
+teto de 5.000 abertas por empresa, que é defesa contra abuso pelo PostgREST, não
+regra de negócio.
+
+**WhatsApp por link**
+Lead com telefone válido ganha "Chamar no WhatsApp", abrindo `wa.me`. A Cloud
+API oficial exige Meta Business verificado, que exige CNPJ ativo, mais aprovação
+de template e custo por mensagem — o link resolve o que a pessoa quer, que é
+abrir a conversa, sem nenhuma dessas dependências.
+
 **Dashboard de Métricas**
 Cards com Total de Leads, Negócios Abertos, Valor do Pipeline e Taxa de Conversão.
 Gráfico de funil feito com Recharts.

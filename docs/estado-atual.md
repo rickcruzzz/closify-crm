@@ -4,7 +4,7 @@ Documento de continuidade. É lido no começo de toda sessão (referenciado no
 [CLAUDE.md](../CLAUDE.md)) para que uma conversa nova — ou outra conta — comece
 sabendo o que já foi feito, o que foi decidido e onde estão as armadilhas.
 
-**Atualizado em:** 11/08/2026
+**Atualizado em:** 12/08/2026
 
 > Mantenha este arquivo curto. O detalhe de _por que_ cada coisa é assim mora
 > nas mensagens de commit e nos comentários do código, que são a memória real
@@ -29,6 +29,12 @@ alguém tenta usá-lo.
 Fluxo de entrada refeito em 11/08: convite deixa de virar conta separada,
 confirmação de e-mail termina numa tela com botão, `/verifique-email` reenvia,
 e quem clica em "Assinar Pro" na landing chega ao checkout.
+
+**Tarefas e próxima ação entregues em 12/08** (migration 0029). Tela `/hoje`,
+próxima ação no card do Kanban no lugar do prazo, bloco de tarefas na página do
+lead, agendar/concluir no painel do negócio, e botão de WhatsApp por link
+`wa.me`. Zero credencial nova e zero dependência nova — nada disso depende de
+serviço externo.
 
 Ambiente local: rode `node --env-file=.env.local scripts/verificar-ambiente.mjs`.
 Ele confere as 9 conexões e diz o que falta.
@@ -61,6 +67,27 @@ Ele confere as 9 conexões e diz o que falta.
       o link sai como `.../redefinir-senha?token_hash=…`.
 - [x] Cancelar as assinaturas de teste no Asaas. Feito — eram 3, não 2.
 
+## Fila técnica, na ordem
+
+1. **Negócio parado (aging).** `deals` **não tem `updated_at`** nem histórico de
+   etapa — conferido na 0001. Precisa de coluna e trigger antes de qualquer
+   aviso de negócio esquecido.
+2. **Dashboard de receita.** Ganho no mês e ticket médio saem do que já existe;
+   tempo médio de fechamento depende do histórico de etapa do item 1.
+3. **Exportar para Excel/CSV.** Tira a objeção "vou ficar preso no sistema" na
+   hora da venda.
+4. **Paginar o `/kanban`.** Carrega todos os negócios abertos de uma vez; cresce
+   linear e é o primeiro a degradar num cliente grande.
+5. **Sandbox do Asaas nos testes de checkout.** Hoje o checkout é exercitado
+   contra produção, e foi isso que deixou 2 cobranças de R$ 49 em aberto no nome
+   de uma usuária real. O resto do projeto continua provando contra produção — a
+   exceção é só onde o teste **cria cobrança no nome de outra pessoa**.
+6. **Monitoramento de erro.** Não existe nenhum: erro em produção morre em
+   `console.error` no log da Vercel, e a próxima tela de erro só aparece quando
+   um cliente reclamar.
+7. **Campos e pipelines customizáveis.** `deal_stage` é enum do Postgres; virar
+   tabela é mudança grande. Só com cliente pagante pedindo.
+
 ## Decisões travadas — não refazer
 
 | Decisão                                     | Motivo                                                                                                                                                        |
@@ -72,8 +99,48 @@ Ele confere as 9 conexões e diz o que falta.
 | **Google Sheets por API está fora**         | Exige `GOOGLE_CLIENT_ID`/`SECRET` e verificação do app pelo Google (semanas). A importação de planilha já cobre a dor                                          |
 | **`read-excel-file`, não `xlsx` nem `exceljs`** | O `xlsx` do npm está parado em 0.18.5 com CVE-2023-30533 e CVE-2024-22363, sem correção publicada lá; o `exceljs` está sem release há anos                |
 | **Lead precisa de e-mail OU telefone**      | A planilha do público-alvo é lista de WhatsApp. Com `email not null` ela importava zero linhas (migration 0025)                                               |
+| **WhatsApp por link `wa.me`, não Cloud API** | A API exige Meta Business verificado, que exige **CNPJ ativo** — com o MEI baixado é bloqueio não-técnico. Mais template aprovado e custo por mensagem. O link abre a conversa, que é o que a pessoa quer |
+| **Meta Lead Ads adiado**                    | Puxar lead da página de um cliente exige OAuth dele + App Review (semanas) + verificação de negócio. Volta quando o CNPJ resolver. Guardar o padrão certo: webhook **mais** job de reconciliação, porque o Meta só guarda 90 dias |
+| **IA / lead scoring fora**                  | Com 50 leads é ruído caro. O funil já pontua sozinho: negócio sem próxima ação e tarefa vencida são o sinal |
+| **GA4 fora**                                | Ferramenta de site, não de app logado — mediria pageview, não ativação, e traria banner de cookie por LGPD. A necessidade é real; a ferramenta é que estava errada |
+| **Tarefa não entra no limite de plano**     | Travar follow-up empurra a pessoa de volta para o WhatsApp e mata o hábito diário que faz ela pagar. O teto de 5.000 abertas é defesa contra abuso, não regra de negócio |
 
 ## Armadilhas já pagas — não repetir
+
+**O servidor da Vercel roda em UTC, e "hoje" do usuário não é o dele.** Às 21h
+de São Paulo já é o dia seguinte em UTC — `toISOString().slice(0,10)` no
+servidor mandaria toda tarefa marcada para hoje à noite para o grupo "Depois".
+Por isso `diaEmSaoPaulo` usa `Intl.DateTimeFormat` com `timeZone`, e o relógio
+das telas de tarefa nasce num `useEffect`, no cliente. Tem teste travando os
+dois casos em `lib/tasks/buckets.test.ts`.
+
+**Prefixar `55` em número de 11 dígitos transforma telefone dos EUA em
+brasileiro.** `+1 415 555 2671` vira `14155552671`, mesmo tamanho de um celular
+com DDD. O teste pegou. O que separa os dois é o dígito depois do DDD: celular
+brasileiro é sempre `9`, fixo começa em 2–5. Sem isso o `wa.me` abriria tela de
+erro do WhatsApp e pareceria defeito nosso.
+
+**`select` largo em rota sem paginação dobra o custo dela.** O `/kanban`
+carrega todos os negócios abertos de uma vez. Medido em produção com 100
+negócios: a consulta da próxima ação com as 8 colunas de `TaskRow` custava
+315 B por negócio contra 292 B da consulta de negócios — mais que dobrava a
+rota. Com as 5 colunas que o card usa de fato, 198 B. Daí o tipo
+`ProximaAcaoRow` separado.
+
+**`Map` não sobrevive à travessia servidor→cliente.** Prop de Server Component
+é serializada; `Map` chega vazio, sem erro. Vai como pares `[chave, valor]` e
+vira `Map` num `useMemo` do lado do cliente.
+
+**O overlay do arrasto duplica o card à mão.** `deal-card-overlay.tsx` repete a
+marcação de `deal-card.tsx`. Mudar um sem o outro faz o card trocar de altura no
+instante em que é pego, e o movimento parece defeito.
+
+**Contar linha com `for update` nem sempre vale.** A 0026 precisou do lock
+porque 50 leads é fronteira de monetização e o 51º é receita perdida. O teto de
+tarefas da 0029 é 5.000, defesa contra abuso: sob corrida o estouro é do tamanho
+da concorrência e para na leva seguinte. O lock ali seria na MESMA linha de
+workspace que a trava de leads pega, e faria toda tarefa criada durante uma
+importação de planilha esperar a importação inteira.
 
 **Regra que só vive na Server Action não é regra.** Server Action é endpoint
 HTTP; quem chama o PostgREST direto com a chave pública (que está no HTML por
@@ -186,6 +253,8 @@ HTML, ou script Node contra a API.
 
 | Commit    | O quê                                                              |
 | --------- | ------------------------------------------------------------------ |
+| _(a fazer)_ | Tarefas com próxima ação, tela `/hoje` e WhatsApp por link (0029) |
+| `312225b` | Seletor de empresa passa a trocar de empresa de verdade            |
 | `3779d72` | Convite deixa de virar conta separada; confirmação de e-mail tem fim |
 | `9fe5cd4` | Reimportar planilha atualiza quem já existe                        |
 | `efcf2be` | Importação de planilha: Excel, mapeamento de coluna, negócio junto do lead |

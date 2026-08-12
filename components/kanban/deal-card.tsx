@@ -7,6 +7,8 @@ import type { DealStage } from '@/lib/deals/types'
 import type { DealRow, DealLeadRow } from '@/lib/deals/queries'
 import { Card, CardContent } from '@/components/ui/card'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
+import { ProximaAcao } from '@/components/kanban/proxima-acao'
+import type { ProximaAcaoRow } from '@/lib/tasks/types'
 
 const stageAccent: Record<DealStage, string> = {
   novo: 'border-l-blue-500 dark:border-l-blue-400',
@@ -21,27 +23,6 @@ function formatBRL(value: number) {
   return value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
 }
 
-function dueDateInfo(dueDate: string) {
-  const due = new Date(dueDate)
-  const today = new Date()
-  today.setHours(0, 0, 0, 0)
-  const diffDays = Math.round((due.getTime() - today.getTime()) / 86_400_000)
-
-  if (diffDays < 0) {
-    const label = diffDays === -1 ? 'atrasado há 1 dia' : `atrasado há ${-diffDays} dias`
-    return { label, className: 'text-destructive' }
-  }
-  if (diffDays === 0) {
-    return { label: 'vence hoje', className: 'text-amber-500 dark:text-amber-400' }
-  }
-  if (diffDays <= 3) {
-    const label = diffDays === 1 ? 'vence em 1 dia' : `vence em ${diffDays} dias`
-    return { label, className: 'text-amber-500 dark:text-amber-400' }
-  }
-  const label = `vence em ${diffDays} dias`
-  return { label, className: 'text-muted-foreground' }
-}
-
 function initials(name: string) {
   return name
     .split(' ')
@@ -54,10 +35,13 @@ function initials(name: string) {
 export function DealCard({
   deal,
   lead,
+  proximaAcao,
   onOpen,
 }: {
   deal: DealRow
   lead: DealLeadRow | undefined
+  /** A tarefa aberta mais próxima deste negócio. Ausente: não há nenhuma. */
+  proximaAcao: ProximaAcaoRow | undefined
   onOpen: (dealId: string) => void
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
@@ -65,8 +49,6 @@ export function DealCard({
       id: deal.id,
       data: { stage: deal.stage },
     })
-
-  const due = deal.due_date ? dueDateInfo(deal.due_date) : null
 
   return (
     <div
@@ -112,17 +94,11 @@ export function DealCard({
               </span>
             )}
           </div>
-          <div className="mt-1 flex items-center justify-between">
+          <div className="mt-1 flex items-center justify-between gap-2">
             <Avatar size="sm">
               <AvatarFallback>{initials(deal.owner_name ?? '?')}</AvatarFallback>
             </Avatar>
-            {due && (
-              <span
-                className={cn('text-xs font-medium whitespace-nowrap', due.className)}
-              >
-                {due.label}
-              </span>
-            )}
+            <ProximaAcao task={proximaAcao} />
           </div>
         </CardContent>
       </Card>

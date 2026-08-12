@@ -31,6 +31,7 @@ import {
 } from '@/components/ui/select'
 import { KanbanColumn } from '@/components/kanban/kanban-column'
 import { DealCardOverlay } from '@/components/kanban/deal-card-overlay'
+import type { ProximaAcaoRow } from '@/lib/tasks/types'
 import { DealDetailSheet } from '@/components/kanban/deal-detail-sheet'
 import { DealFormDialog } from '@/components/kanban/deal-form-dialog'
 
@@ -38,10 +39,21 @@ export function KanbanBoard({
   initialDeals,
   leads,
   members,
+  currentUserId,
+  proximasAcoes,
 }: {
   initialDeals: DealRow[]
   leads: DealLeadRow[]
   members: WorkspaceMember[]
+  /** Responsável padrão da tarefa agendada pelo painel do negócio. */
+  currentUserId: string
+  /**
+   * A tarefa aberta mais próxima de cada negócio, em pares [dealId, tarefa].
+   *
+   * Chega como array e não como `Map` porque o servidor serializa a prop antes
+   * de mandar para o cliente, e `Map` não sobrevive a essa travessia.
+   */
+  proximasAcoes: [string, ProximaAcaoRow][]
 }) {
   const [deals, setDeals] = React.useState(initialDeals)
   const [activeId, setActiveId] = React.useState<string | null>(null)
@@ -57,6 +69,11 @@ export function KanbanBoard({
   const leadsById = React.useMemo(
     () => new Map(leads.map((lead) => [lead.id, lead])),
     [leads],
+  )
+
+  const proximaAcaoPorNegocio = React.useMemo(
+    () => new Map(proximasAcoes),
+    [proximasAcoes],
   )
 
   const sensors = useSensors(
@@ -237,6 +254,7 @@ export function KanbanBoard({
               stage={stage}
               deals={filteredDeals.filter((deal) => deal.stage === stage)}
               leadsById={leadsById}
+              proximaAcaoPorNegocio={proximaAcaoPorNegocio}
               onOpenDeal={setSelectedDealId}
               filtered={hasActiveFilters}
               // `deals`, não `filteredDeals`: quem filtrou até zerar a tela
@@ -251,6 +269,7 @@ export function KanbanBoard({
             <DealCardOverlay
               deal={activeDeal}
               lead={activeDeal.lead_id ? leadsById.get(activeDeal.lead_id) : undefined}
+              proximaAcao={proximaAcaoPorNegocio.get(activeDeal.id)}
             />
           ) : null}
         </DragOverlay>
@@ -259,6 +278,9 @@ export function KanbanBoard({
       <DealDetailSheet
         deal={selectedDeal}
         lead={selectedDeal?.lead_id ? leadsById.get(selectedDeal.lead_id) : undefined}
+        proximaAcao={selectedDeal ? proximaAcaoPorNegocio.get(selectedDeal.id) : undefined}
+        members={members}
+        currentUserId={currentUserId}
         open={!!selectedDealId}
         onOpenChange={(open) => !open && setSelectedDealId(null)}
         onStageChange={handleStageChange}
