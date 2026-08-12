@@ -126,6 +126,20 @@ A logo vive num bucket **privado** do Supabase Storage, isolado por empresa, e
 não pela extensão nem pelo `Content-Type` — os dois são escolhidos por quem
 envia.
 
+**Negócio parado**
+`deals` guarda quando a ETAPA mudou pela última vez, separado de qualquer outra
+alteração. Um negócio cujo valor foi corrigido ontem mas que está na mesma
+etapa há três semanas conta como parado; usar a data de edição esconderia
+exatamente esse caso.
+
+Aparece como filtro "Parados" no Pipeline, com contagem, e só quando existe
+algum — num funil saudável o botão fica escondido. O card não mostra:
+lá já mora a próxima ação, e duas datas competindo fazem a pessoa não saber
+qual obedecer.
+
+Catorze dias é o limite. É escolha, não medição — quando houver histórico de
+mudança de etapa, vira média por etapa.
+
 **WhatsApp por link**
 Lead com telefone válido ganha "Chamar no WhatsApp", abrindo `wa.me`. A Cloud
 API oficial exige Meta Business verificado, que exige CNPJ ativo, mais aprovação

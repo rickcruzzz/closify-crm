@@ -41,6 +41,12 @@ quem chega, assistente de 4 perguntas que retoma de onde parou, dados da
 empresa em 18 campos com logo no Storage, tour de 5 passos e checklist de
 ativação derivado do estado real. Também sem credencial nova.
 
+**Escala e negócio parado, 12/08** (0032 e 0033). O teto de 1.000 linhas do
+PostgREST fazia o funil, o Kanban e o seletor de leads mentirem em silêncio —
+corrigido com contagem no banco e teto por etapa. E `deals` ganhou
+`stage_changed_at`, que só anda quando a ETAPA muda: é a base do filtro
+"Parados" no board.
+
 Ambiente local: rode `node --env-file=.env.local scripts/verificar-ambiente.mjs`.
 Ele confere as 9 conexões e diz o que falta.
 
@@ -74,29 +80,24 @@ Ele confere as 9 conexões e diz o que falta.
 
 ## Fila técnica, na ordem
 
-0. **Paginar o que não pagina.** O teto de 1.000 do PostgREST já está provado
-   (ver armadilhas). `getFunnelCounts` deve virar `group by` no banco;
-   `getBoardDeals` e `getWorkspaceLeadsForSelect` precisam de limite explícito
-   e de um caminho para quem passar dele. É o primeiro item porque é dado
-   sumindo da tela, não lentidão.
-1. **Negócio parado (aging).** `deals` **não tem `updated_at`** nem histórico de
-   etapa — conferido na 0001. Precisa de coluna e trigger antes de qualquer
-   aviso de negócio esquecido.
-2. **Dashboard de receita.** Ganho no mês e ticket médio saem do que já existe;
-   tempo médio de fechamento depende do histórico de etapa do item 1.
-3. **Exportar para Excel/CSV.** Tira a objeção "vou ficar preso no sistema" na
-   hora da venda.
-4. **Paginar o `/kanban`.** Carrega todos os negócios abertos de uma vez; cresce
-   linear e é o primeiro a degradar num cliente grande.
-5. **Sandbox do Asaas nos testes de checkout.** Hoje o checkout é exercitado
+1. **Exportar para Excel/CSV.** Tira a objeção "vou ficar preso no sistema" na
+   hora da venda. É o próximo, e o mais barato dos que restam.
+2. **Dashboard de receita.** Ganho no mês e ticket médio saem do que já existe.
+   Tempo médio de fechamento ainda não: exige histórico de MUDANÇA de etapa, e
+   a 0033 guarda só a última — saber que um negócio está em "Negociação" há 12
+   dias não diz quanto ele levou em "Proposta".
+3. **Sandbox do Asaas nos testes de checkout.** Hoje o checkout é exercitado
    contra produção, e foi isso que deixou 2 cobranças de R$ 49 em aberto no nome
    de uma usuária real. O resto do projeto continua provando contra produção — a
    exceção é só onde o teste **cria cobrança no nome de outra pessoa**.
-6. **Monitoramento de erro.** Não existe nenhum: erro em produção morre em
+4. **Monitoramento de erro.** Não existe nenhum: erro em produção morre em
    `console.error` no log da Vercel, e a próxima tela de erro só aparece quando
    um cliente reclamar.
-7. **Campos e pipelines customizáveis.** `deal_stage` é enum do Postgres; virar
+5. **Campos e pipelines customizáveis.** `deal_stage` é enum do Postgres; virar
    tabela é mudança grande. Só com cliente pagante pedindo.
+
+**Entregues em 12/08, saíram desta fila:** paginação do que não paginava
+(0032), e negócio parado (0033).
 
 ## Decisões travadas — não refazer
 
