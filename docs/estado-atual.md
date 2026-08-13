@@ -4,7 +4,7 @@ Documento de continuidade. É lido no começo de toda sessão (referenciado no
 [CLAUDE.md](../CLAUDE.md)) para que uma conversa nova — ou outra conta — comece
 sabendo o que já foi feito, o que foi decidido e onde estão as armadilhas.
 
-**Atualizado em:** 12/08/2026 (integrações)
+**Atualizado em:** 12/08/2026 (lag de navegação)
 
 > Mantenha este arquivo curto. O detalhe de _por que_ cada coisa é assim mora
 > nas mensagens de commit e nos comentários do código, que são a memória real
@@ -87,6 +87,25 @@ suficiente para não caber neste resumo.
 
 Ambiente local: rode `node --env-file=.env.local scripts/verificar-ambiente.mjs`.
 Ele confere as 9 conexões e diz o que falta.
+
+**Lag de navegação investigado e corrigido em 12/08.** Sintoma relatado:
+atraso entre clicar num item do menu (Leads, Configurações, Dashboard...) e a
+tela mudar, às vezes exigindo dois cliques. Causa raiz, achada lendo código
+(não suposta): `getCurrentUserAndWorkspace` e `lerEstadoDoOnboarding` — as
+duas rodam em paralelo no `app/(dashboard)/layout.tsx` a cada navegação —
+cada uma tinha sua PRÓPRIA chamada a `supabase.auth.getUser()`, cada uma no
+seu `cache()` do React. `cache()` deduplica chamadas repetidas à MESMA
+função, não duas funções diferentes fazendo a mesma coisa — então toda
+navegação pagava 2 idas redundantes ao Supabase Auth, além da do middleware.
+As duas passaram a compartilhar uma única função cacheada
+(`lib/supabase/usuario-autenticado.ts`). Complementar: como o layout do
+dashboard faz `await` de tudo isso ANTES de renderizar, sem `<Suspense>`,
+nenhum `loading.tsx` de rota aparecia enquanto essa cadeia rodava — zero
+sinal entre o clique e qualquer pixel novo, o que faz a pessoa clicar de novo
+achando que não funcionou. `components/layout/navigation-progress.tsx`
+resolve isso: liga no clique real (delegação de evento em `document`,
+qualquer `<a>` interno), desliga quando a rota muda de verdade — não é
+temporizador fingindo progresso.
 
 ## Integrações — WhatsApp, Google Calendar, Gmail (12/08)
 
@@ -220,6 +239,27 @@ Sem essas variáveis, os cards de integração aparecem normalmente em
 | **Tarefa não entra no limite de plano**     | Travar follow-up empurra a pessoa de volta para o WhatsApp e mata o hábito diário que faz ela pagar. O teto de 5.000 abertas é defesa contra abuso, não regra de negócio |
 
 ## Armadilhas já pagas — não repetir
+
+**`cache()` do React deduplica a MESMA função, não duas que fazem a mesma
+coisa.** `getCurrentUserAndWorkspace` e `lerEstadoDoOnboarding` (chamadas em
+paralelo no layout do dashboard a cada navegação) cada uma tinha seu próprio
+`cache(async () => supabase.auth.getUser())` — o React não enxerga que as duas
+pedem a mesma coisa, então cada navegação pagava a ida ao Supabase Auth duas
+vezes em vez de uma. A correção não é "cachear mais forte": é ter UMA função
+cacheada (`lib/supabase/usuario-autenticado.ts`) e todo mundo chamar ELA, para
+o `cache()` ter algo de fato idêntico para deduplicar.
+
+**Layout `async` sem `<Suspense>` esconde que a navegação está rodando.**
+`app/(dashboard)/layout.tsx` faz `await Promise.all(...)` antes do `return` —
+nenhum `loading.tsx` de rota aparece enquanto isso não resolve, porque não há
+fronteira de Suspense delegando o fetch. Clique processa, navegação começa,
+mas fica muda por toda a cadeia de rede; sem sinal nenhum, a pessoa clica de
+novo achando que não funcionou. Não dá para envolver esse `await` em Suspense
+sem enfraquecer o guard: os dois `redirect()` do layout (workspace vazio,
+onboarding pendente) dependem do resultado dele para decidir SE a página
+deve renderizar. A correção ficou no lado visual —
+`components/layout/navigation-progress.tsx` liga no clique real e desliga na
+troca real de rota — não em tentar apressar o guard.
 
 **O PostgREST corta em 1.000 linhas, e quem não pagina mente em silêncio.**
 Medido em 12/08 com 1.100 negócios: o app recebe 1.000 e não recebe erro

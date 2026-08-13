@@ -6,6 +6,7 @@ import { cn } from '@/lib/utils'
 import { ThemeProvider } from '@/components/theme-provider'
 import { Toaster } from '@/components/ui/sonner'
 import { Analytics } from '@/components/analytics'
+import { NavigationProgress } from '@/components/layout/navigation-progress'
 
 const geistSans = localFont({
   src: './fonts/GeistVF.woff',
@@ -80,6 +81,11 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
+          {/* Fica no layout raiz, fora do `app/(dashboard)/layout.tsx`, de
+              propósito: aquele layout faz `await` de várias consultas antes
+              de renderizar, e a barra precisa aparecer no clique mesmo
+              enquanto isso ainda está resolvendo. */}
+          <NavigationProgress />
           {/* O TooltipProvider vive em app/(dashboard)/layout.tsx: só a área
               logada tem tooltip, e mantê-lo aqui punha JS de provider no
               bundle da landing sem nenhum consumidor. */}

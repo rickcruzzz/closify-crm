@@ -1,6 +1,7 @@
 import { cache } from 'react'
 
 import { createClient } from '@/lib/supabase/server'
+import { obterUsuarioAutenticado } from '@/lib/supabase/usuario-autenticado'
 import type { OnboardingEtapa, OnboardingStatus, TourStatus } from '@/types/supabase'
 
 export type EstadoDoOnboarding = {
@@ -36,9 +37,7 @@ const PADRAO: EstadoDoOnboarding = {
 export const lerEstadoDoOnboarding = cache(async (): Promise<EstadoDoOnboarding> => {
   const supabase = await createClient()
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+  const user = await obterUsuarioAutenticado()
 
   if (!user) return PADRAO
 

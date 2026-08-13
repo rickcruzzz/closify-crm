@@ -2,6 +2,7 @@ import { cache } from 'react'
 import { redirect } from 'next/navigation'
 
 import { createClient } from '@/lib/supabase/server'
+import { obterUsuarioAutenticado } from '@/lib/supabase/usuario-autenticado'
 import { resolverWorkspaceAtivoComVinculos, workspaceEscolhidoNoCookie } from '@/lib/workspace/ativo'
 import type { WorkspacePlan } from '@/types/supabase'
 
@@ -19,9 +20,7 @@ export type WorkspaceDoUsuario = { id: string; name: string; plan: WorkspacePlan
 export const getCurrentUserAndWorkspace = cache(async () => {
   const supabase = await createClient()
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+  const user = await obterUsuarioAutenticado()
 
   if (!user) {
     redirect('/login')
