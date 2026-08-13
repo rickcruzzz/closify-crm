@@ -13,25 +13,39 @@ import type { IntegrationProvider, IntegrationStatus } from '@/types/supabase'
 
 const META: Record<
   IntegrationProvider,
-  { titulo: string; descricao: string; icone: LucideIcon; conectarHref: string | null }
+  {
+    titulo: string
+    descricao: string
+    icone: LucideIcon
+    conectarHref: string | null
+    /** Como nomear o uso pro cliente — singular e plural, linguagem dele, não termo técnico. */
+    usoSingular: string
+    usoPlural: string
+  }
 > = {
   google_calendar: {
     titulo: 'Google Calendar',
     descricao: 'Agende reuniões direto do painel do negócio.',
     icone: CalendarDays,
     conectarHref: '/api/integrations/google/connect?provider=google_calendar',
+    usoSingular: 'reunião agendada',
+    usoPlural: 'reuniões agendadas',
   },
   gmail: {
     titulo: 'Gmail',
     descricao: 'Envie e-mail para o lead sem sair do CRM.',
     icone: Mail,
     conectarHref: '/api/integrations/google/connect?provider=gmail',
+    usoSingular: 'e-mail enviado',
+    usoPlural: 'e-mails enviados',
   },
   whatsapp: {
     titulo: 'WhatsApp',
     descricao: 'Mensagem por modelo aprovado, com resposta registrada no histórico.',
     icone: MessageCircle,
     conectarHref: null,
+    usoSingular: 'mensagem trocada',
+    usoPlural: 'mensagens trocadas',
   },
 }
 
@@ -48,12 +62,15 @@ export function IntegrationCard({
   status,
   accountLabel,
   lastError,
+  uso,
 }: {
   provider: IntegrationProvider
   isAdmin: boolean
   status: IntegrationStatus
   accountLabel: string | null
   lastError: string | null
+  /** Quantas vezes essa integração foi usada nos últimos 30 dias. */
+  uso: number
 }) {
   const [pendente, startTransition] = React.useTransition()
   const info = META[provider]
@@ -94,6 +111,16 @@ export function IntegrationCard({
       </CardHeader>
       <CardContent className="flex flex-col gap-3">
         {accountLabel && <p className="text-muted-foreground text-sm">{accountLabel}</p>}
+
+        {/* Só mostra uso pra quem já conectou — card desconectado não tem
+            número nenhum pra exibir, e "0" ali só soaria vazio. */}
+        {conectado && (
+          <p className="text-muted-foreground text-xs">
+            {uso === 0
+              ? 'Nenhum uso nos últimos 30 dias.'
+              : `${uso} ${uso === 1 ? info.usoSingular : info.usoPlural} nos últimos 30 dias.`}
+          </p>
+        )}
 
         {status === 'error' && lastError && (
           <p role="alert" className="bg-destructive/10 text-destructive rounded-md px-3 py-2 text-sm">

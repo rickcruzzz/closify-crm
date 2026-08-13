@@ -80,6 +80,7 @@ export async function agendarReuniaoNoGoogleCalendar(taskId: string) {
         author_id: sessao.userId,
         type: 'reuniao',
         description: `Reunião agendada no Google Calendar: ${task.title} (${evento.htmlLink})`,
+        integration_provider: 'google_calendar',
       })
       if (erroAtividade) {
         console.error('agendarReuniaoNoGoogleCalendar: atividade não registrada', erroAtividade)
@@ -140,6 +141,7 @@ export async function enviarEmailViaGmail(leadId: string, values: unknown) {
       author_id: sessao.userId,
       type: 'email',
       description: `${parsed.data.assunto}\n\n${parsed.data.corpo}`,
+      integration_provider: 'gmail',
     })
     if (erroAtividade) {
       console.error('enviarEmailViaGmail: atividade não registrada', erroAtividade)
@@ -205,6 +207,7 @@ export async function enviarMensagemWhatsapp(leadId: string, values: unknown) {
       author_id: sessao.userId,
       type: 'nota',
       description: `Modelo do WhatsApp enviado: ${parsed.data.nomeDoModelo}`,
+      integration_provider: 'whatsapp',
     })
     if (erroAtividade) {
       console.error('enviarMensagemWhatsapp: atividade não registrada', erroAtividade)

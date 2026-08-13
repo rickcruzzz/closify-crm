@@ -7,9 +7,11 @@ const PROVIDERS: IntegrationProvider[] = ['google_calendar', 'gmail', 'whatsapp'
 export function IntegrationsTab({
   isAdmin,
   connections,
+  uso,
 }: {
   isAdmin: boolean
   connections: IntegrationConnectionRow[]
+  uso: Record<IntegrationProvider, number>
 }) {
   return (
     <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
@@ -23,6 +25,7 @@ export function IntegrationsTab({
             status={conexao?.status ?? 'disconnected'}
             accountLabel={conexao?.accountLabel ?? null}
             lastError={conexao?.lastError ?? null}
+            uso={uso[provider]}
           />
         )
       })}

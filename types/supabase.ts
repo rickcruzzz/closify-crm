@@ -235,6 +235,9 @@ export type Database = {
           author_id: string | null
           type: ActivityType
           description: string
+          // Preenchido só quando a atividade nasceu de uma integração
+          // automática (Calendar/Gmail/WhatsApp) — null pra lançamento manual.
+          integration_provider: IntegrationProvider | null
           created_at: string
         }
         Insert: {
@@ -244,6 +247,7 @@ export type Database = {
           author_id?: string | null
           type: ActivityType
           description: string
+          integration_provider?: IntegrationProvider | null
           created_at?: string
         }
         Update: {
@@ -253,6 +257,7 @@ export type Database = {
           author_id?: string | null
           type?: ActivityType
           description?: string
+          integration_provider?: IntegrationProvider | null
           created_at?: string
         }
         Relationships: []

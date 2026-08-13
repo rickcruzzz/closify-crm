@@ -137,6 +137,7 @@ export async function POST(request: NextRequest) {
           author_id: null,
           type: 'nota',
           description: `WhatsApp recebido: ${texto}`,
+          integration_provider: 'whatsapp',
         })
 
         // Sem tarefa aberta pro lead: uma resposta de cliente sem follow-up

@@ -16,7 +16,7 @@ import {
   getWorkspaceSettingsData,
   getWorkspacesExclusivosDoUsuario,
 } from '@/lib/workspace/queries'
-import { getIntegrationConnections } from '@/lib/integrations/queries'
+import { getIntegrationConnections, getUsoDasIntegracoes } from '@/lib/integrations/queries'
 
 export const metadata: Metadata = { title: 'Configurações' }
 
@@ -80,8 +80,10 @@ export default async function SettingsPage({
   const workspacesQueSeraoApagados =
     aba === 'equipe' ? await getWorkspacesExclusivosDoUsuario(user.id) : []
 
-  const integrationConnections =
-    aba === 'integracoes' ? await getIntegrationConnections(workspaceId) : []
+  const [integrationConnections, usoDasIntegracoes] =
+    aba === 'integracoes'
+      ? await Promise.all([getIntegrationConnections(workspaceId), getUsoDasIntegracoes(workspaceId)])
+      : [[], { google_calendar: 0, gmail: 0, whatsapp: 0 }]
 
   const descricao: Record<AbaDeConfiguracoes, string> = {
     empresa: 'Dados da sua empresa, usados no sistema e nas comunicações.',
@@ -161,7 +163,11 @@ export default async function SettingsPage({
       {aba === 'plano' && <PlanCard plan={workspace?.plan ?? 'free'} isAdmin={isAdmin} />}
 
       {aba === 'integracoes' && (
-        <IntegrationsTab isAdmin={isAdmin} connections={integrationConnections} />
+        <IntegrationsTab
+          isAdmin={isAdmin}
+          connections={integrationConnections}
+          uso={usoDasIntegracoes}
+        />
       )}
     </div>
   )
