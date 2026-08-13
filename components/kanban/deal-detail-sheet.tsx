@@ -68,6 +68,7 @@ export function DealDetailSheet({
   proximaAcao,
   members,
   currentUserId,
+  calendarConectado,
   open,
   onOpenChange,
   onStageChange,
@@ -78,6 +79,8 @@ export function DealDetailSheet({
   proximaAcao: ProximaAcaoRow | undefined
   members: WorkspaceMember[]
   currentUserId: string
+  /** Se dá pra oferecer "mandar pro Google Calendar" — vem de Integrações. */
+  calendarConectado: boolean
   open: boolean
   onOpenChange: (open: boolean) => void
   onStageChange: (dealId: string, stage: DealStage) => void
@@ -264,12 +267,14 @@ export function DealDetailSheet({
                       </span>
                       <ProximaAcao task={proximaAcao} />
                     </div>
-                    <div className="flex shrink-0 gap-2">
+                    <div className="flex shrink-0 flex-wrap gap-2">
+                      {/* Ícone sozinho, antes, dependia só do `title` (tooltip)
+                          pra alguém entender o que o botão faz — igual ao
+                          Gmail (`lead-detail-client.tsx`) já é ícone + texto,
+                          este passa a ser também. */}
                       <Button
-                        variant="ghost"
-                        size="icon"
-                        aria-label="Adicionar ao Google Calendar"
-                        title="Adicionar ao Google Calendar"
+                        variant="outline"
+                        size="sm"
                         disabled={agendandoNoCalendario}
                         onClick={adicionarAoCalendario}
                       >
@@ -278,6 +283,7 @@ export function DealDetailSheet({
                         ) : (
                           <CalendarPlus className="size-4" />
                         )}
+                        Google Calendar
                       </Button>
                       <Button variant="outline" size="sm" onClick={concluir}>
                         Concluir
@@ -285,18 +291,30 @@ export function DealDetailSheet({
                     </div>
                   </div>
                 ) : (
-                  <div className="mt-1 flex items-center justify-between gap-2">
-                    <span className="text-muted-foreground text-sm">
-                      Nenhuma agendada.
-                    </span>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setAgendando(true)}
-                    >
-                      <Plus className="size-4" />
-                      Agendar
-                    </Button>
+                  <div className="mt-1 flex flex-col gap-1.5">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-muted-foreground text-sm">
+                        Nenhuma agendada.
+                      </span>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setAgendando(true)}
+                      >
+                        <Plus className="size-4" />
+                        Agendar
+                      </Button>
+                    </div>
+                    {/* Só quando o Calendar está conectado — sem isso a dica
+                        prometeria um botão que ainda não vai aparecer depois
+                        de agendar. Prepara quem tá vendo pela primeira vez:
+                        quando o botão de verdade surgir (depois de agendar),
+                        já não é surpresa. */}
+                    {calendarConectado && (
+                      <p className="text-muted-foreground text-xs">
+                        Depois de agendar, dá pra mandar direto pro Google Calendar.
+                      </p>
+                    )}
                   </div>
                 )}
               </div>

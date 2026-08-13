@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import { getBoardDeals, getWorkspaceLeadsForSelect } from '@/lib/deals/queries'
 import { getWorkspaceMembers } from '@/lib/leads/queries'
 import { getProximaAcaoPorNegocio } from '@/lib/tasks/queries'
+import { getIntegrationConnections } from '@/lib/integrations/queries'
 import { getCurrentUserAndWorkspace } from '@/lib/supabase/workspace'
 import { PageHeader } from '@/components/layout/page-header'
 import { KanbanBoard } from '@/components/kanban/kanban-board'
@@ -12,15 +13,22 @@ export const metadata: Metadata = { title: 'Pipeline' }
 export default async function KanbanPage() {
   const { user, workspaceId } = await getCurrentUserAndWorkspace()
 
-  // Quarta consulta no mesmo `Promise.all`, não uma por card: o board já
+  // Quinta consulta no mesmo `Promise.all`, não uma por card: o board já
   // carrega todos os negócios abertos de uma vez, e uma consulta por card
   // multiplicaria o custo em vez de somar uma leitura.
-  const [board, leads, members, proximasAcoes] = await Promise.all([
+  const [board, leads, members, proximasAcoes, integracoes] = await Promise.all([
     getBoardDeals(workspaceId),
     getWorkspaceLeadsForSelect(workspaceId),
     getWorkspaceMembers(workspaceId),
     getProximaAcaoPorNegocio(workspaceId),
+    getIntegrationConnections(workspaceId),
   ])
+
+  // Só pra saber se dá pra oferecer "mandar pro Google Calendar" no painel
+  // do negócio — mesma função que a aba Integrações usa, uma consulta leve.
+  const calendarConectado = integracoes.some(
+    (c) => c.provider === 'google_calendar' && c.status === 'connected',
+  )
 
   return (
     // `max-w-none` desfaz o teto de 1160px do layout: o board rola na
@@ -45,6 +53,7 @@ export default async function KanbanPage() {
         currentUserId={user.id}
         // `Map` não sobrevive à serialização servidor→cliente; vai como pares.
         proximasAcoes={Array.from(proximasAcoes)}
+        calendarConectado={calendarConectado}
       />
     </div>
   )

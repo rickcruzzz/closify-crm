@@ -44,6 +44,7 @@ export function KanbanBoard({
   members,
   currentUserId,
   proximasAcoes,
+  calendarConectado,
 }: {
   initialDeals: DealRow[]
   /**
@@ -65,6 +66,8 @@ export function KanbanBoard({
    * de mandar para o cliente, e `Map` não sobrevive a essa travessia.
    */
   proximasAcoes: [string, ProximaAcaoRow][]
+  /** Se dá pra oferecer "mandar pro Google Calendar" no painel do negócio. */
+  calendarConectado: boolean
 }) {
   const [deals, setDeals] = React.useState(initialDeals)
   const [activeId, setActiveId] = React.useState<string | null>(null)
@@ -329,6 +332,7 @@ export function KanbanBoard({
         proximaAcao={selectedDeal ? proximaAcaoPorNegocio.get(selectedDeal.id) : undefined}
         members={members}
         currentUserId={currentUserId}
+        calendarConectado={calendarConectado}
         open={!!selectedDealId}
         onOpenChange={(open) => !open && setSelectedDealId(null)}
         onStageChange={handleStageChange}
