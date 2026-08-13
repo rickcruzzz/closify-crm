@@ -20,7 +20,7 @@ const passos = [
   {
     numero: '01',
     titulo: 'Traga sua planilha',
-    descricao: `Exporte a planilha como .csv e importe de uma vez. Contatos repetidos são ignorados sozinhos. Se preferir, cadastre um a um — no plano grátis cabem ${FREE_LEAD_LIMIT} leads.`,
+    descricao: `Exporte a planilha como .csv e importe de uma vez. Contatos repetidos são ignorados sozinhos. Se preferir, cadastre um a um. No plano grátis cabem ${FREE_LEAD_LIMIT} leads.`,
     icone: FileSpreadsheet,
     accent: 'text-blue-500 dark:text-blue-400',
     fundo: 'bg-blue-500/10 dark:bg-blue-400/10',
@@ -38,7 +38,7 @@ const passos = [
     numero: '03',
     titulo: 'Veja onde está o dinheiro',
     descricao:
-      'O painel mostra quanto você tem em negociação, a taxa de conversão e quais negócios estão perto do prazo — sem montar fórmula nenhuma.',
+      'O painel mostra quanto você tem em negociação, a taxa de conversão e quais negócios estão perto do prazo, sem montar fórmula nenhuma.',
     icone: TrendingUp,
     accent: 'text-emerald-500 dark:text-emerald-400',
     fundo: 'bg-emerald-500/10 dark:bg-emerald-400/10',
@@ -50,8 +50,10 @@ export function HowItWorksSection() {
     <section id="como-funciona" className="px-4 py-20 md:px-6 md:py-28">
       <div className="mx-auto max-w-5xl">
         <RevealOnScroll className="mx-auto mb-12 flex max-w-2xl flex-col items-center gap-3 text-center">
-          <span className="text-muted-foreground font-mono text-xs tracking-wide uppercase">
+          <span className="text-muted-foreground inline-flex items-center gap-2 font-mono text-xs tracking-wide uppercase">
+            <span aria-hidden className="bg-primary h-px w-4" />
             Como funciona
+            <span aria-hidden className="bg-primary h-px w-4" />
           </span>
           <h2 className="text-3xl font-semibold tracking-[-0.02em] md:text-4xl">
             Da planilha ao funil em três passos

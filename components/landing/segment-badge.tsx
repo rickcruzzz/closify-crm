@@ -5,7 +5,7 @@ import { useSearchParams } from 'next/navigation'
 
 import { Badge } from '@/components/ui/badge'
 
-const TEXTO_PADRAO = 'Feito para PMEs de serviço'
+const TEXTO_PADRAO = 'Feito para prestadores de serviço'
 
 /**
  * Mesmos valores de `SEGMENTOS` em lib/validations/onboarding.ts — reaproveita

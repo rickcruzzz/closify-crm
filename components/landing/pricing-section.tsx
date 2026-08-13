@@ -34,7 +34,7 @@ const plans: Plan[] = [
   {
     name: 'Free',
     price: 'R$0',
-    description: 'Pra sempre — sem cartão, sem prazo pra decidir.',
+    description: 'Pra sempre, sem cartão e sem prazo pra decidir.',
     // Números vêm das constantes, não escritos à mão: a landing anunciava "Até
     // 2 colaboradores" sem citar o limite de empresa, e um texto fixo aqui
     // volta a divergir do produto na primeira mudança de plano.
@@ -53,9 +53,9 @@ const plans: Plan[] = [
     name: 'Pro',
     price: 'R$49',
     period: '/mês',
-    precoLegenda: 'Da empresa inteira — nunca por vendedor a mais.',
+    precoLegenda: 'Da empresa inteira, nunca por vendedor a mais.',
     description:
-      'Menos de R$2 por dia — um cliente perdido por esquecimento custa mais que isso no ano inteiro.',
+      'Menos de R$2 por dia. Um cliente perdido por esquecimento custa mais que isso no ano inteiro.',
     features: [
       'Várias empresas no mesmo login',
       'Colaboradores ilimitados',
@@ -87,8 +87,10 @@ export function PricingSection() {
       />
       <div className="mx-auto max-w-4xl">
         <RevealOnScroll className="mx-auto mb-12 flex max-w-2xl flex-col items-center gap-3 text-center">
-          <span className="text-muted-foreground font-mono text-xs tracking-wide uppercase">
+          <span className="text-muted-foreground inline-flex items-center gap-2 font-mono text-xs tracking-wide uppercase">
+            <span aria-hidden className="bg-primary h-px w-4" />
             Planos
+            <span aria-hidden className="bg-primary h-px w-4" />
           </span>
           <h2 className="text-3xl font-semibold tracking-[-0.02em] md:text-4xl">
             Pare de perder venda por esquecimento

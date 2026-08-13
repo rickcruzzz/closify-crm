@@ -24,9 +24,9 @@ export function HeroSection() {
             Simples como planilha, premium como software líder.
           </h1>
           <p className="text-muted-foreground animate-in fade-in slide-in-from-bottom-4 ease-entrada max-w-2xl text-lg text-balance duration-[800ms]">
-            Substitua a planilha em um dia. Pipeline visual, leads organizados e métricas
-            em tempo real, tudo num CRM feito para agências, clínicas, consultorias e
-            imobiliárias que estão começando.
+            Lead esquecido na planilha é venda perdida. O Velo Funil organiza seu funil
+            visualmente e mostra onde está o dinheiro, pronto para agências, clínicas,
+            consultorias e imobiliárias que estão começando.
           </p>
           {/* `items-stretch` é o padrão do flex — e é por ser padrão que
               ninguém percebe quando some. É ele que dá aos dois botões a mesma
@@ -58,7 +58,7 @@ export function HeroSection() {
             </ScrollLink>
           </div>
           <p className="text-muted-foreground animate-in fade-in slide-in-from-bottom-5 ease-entrada text-sm duration-[850ms]">
-            A partir de R$0, sem cartão — Pro por R$49/mês, da empresa inteira
+            A partir de R$0, sem cartão. Pro por R$49/mês, da empresa inteira.
           </p>
         </div>
 

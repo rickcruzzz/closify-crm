@@ -80,7 +80,7 @@ export function VerifiqueEmailClient({ email }: { email: string | null }) {
 
       <CardFooter className="justify-center">
         <p className="text-muted-foreground text-sm">
-          Já confirmou?{' '}
+          Já tem conta?{' '}
           <Link href="/login" className="text-foreground underline-offset-4 hover:underline">
             Entrar
           </Link>

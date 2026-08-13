@@ -115,8 +115,10 @@ export function FeaturesSection() {
     <section id="funcionalidades" className="px-4 py-20 md:px-6 md:py-28">
       <div className="mx-auto max-w-5xl">
         <RevealOnScroll className="mx-auto mb-12 flex max-w-2xl flex-col items-center gap-3 text-center">
-          <span className="text-muted-foreground font-mono text-xs tracking-wide uppercase">
+          <span className="text-muted-foreground inline-flex items-center gap-2 font-mono text-xs tracking-wide uppercase">
+            <span aria-hidden className="bg-primary h-px w-4" />
             Funcionalidades
+            <span aria-hidden className="bg-primary h-px w-4" />
           </span>
           <h2 className="text-3xl font-semibold tracking-[-0.02em] md:text-4xl">
             Tudo que seu funil precisa
