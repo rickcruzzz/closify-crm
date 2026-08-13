@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { Briefcase, DollarSign, Target, Users, type LucideIcon } from 'lucide-react'
+import { ArrowRight, Briefcase, DollarSign, Target, Users, type LucideIcon } from 'lucide-react'
 
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
@@ -13,6 +13,9 @@ type MetricCardConfig = {
   icon: LucideIcon
   accent: { text: string; bg: string }
   format: (metrics: DashboardMetrics) => string
+  /** Só os dois cards que têm pra onde ir de verdade ganham link. */
+  href?: string
+  hrefLabel?: string
 }
 
 // Sem histórico de métricas por período no schema ainda, não há como
@@ -28,6 +31,8 @@ const cards: MetricCardConfig[] = [
       bg: 'bg-blue-500/10 dark:bg-blue-400/10',
     },
     format: (metrics) => metrics.totalLeads.toString(),
+    href: '/leads',
+    hrefLabel: 'Ver leads',
   },
   {
     label: 'Negócios Abertos',
@@ -55,6 +60,12 @@ const cards: MetricCardConfig[] = [
       bg: 'bg-amber-500/10 dark:bg-amber-400/10',
     },
     format: (metrics) => `${metrics.conversionRate.toFixed(0)}%`,
+    // Não existe tela própria de detalhamento de conversão (ganho/perdido
+    // por período) ainda — o Kanban já mostra as colunas Fechado Ganho e
+    // Fechado Perdido lado a lado, que é o dado por trás do percentual.
+    // Reaproveita em vez de construir uma tela nova só pra isso.
+    href: '/kanban',
+    hrefLabel: 'Ver no pipeline',
   },
 ]
 
@@ -100,8 +111,17 @@ export function MetricCards({ metrics }: { metrics: DashboardMetrics }) {
               <card.icon className={cn('size-4.5', card.accent.text)} />
             </div>
           </CardHeader>
-          <CardContent>
+          <CardContent className="flex flex-col gap-1">
             <span className="text-2xl font-semibold">{card.format(metrics)}</span>
+            {card.href && (
+              <Link
+                href={card.href}
+                className="text-muted-foreground hover:text-foreground inline-flex w-fit items-center gap-1 text-xs transition-colors"
+              >
+                {card.hrefLabel}
+                <ArrowRight aria-hidden className="size-3" />
+              </Link>
+            )}
           </CardContent>
         </Card>
       ))}

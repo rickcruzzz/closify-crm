@@ -531,14 +531,14 @@ export type Database = {
         Returns: { user_id: string; name: string }[]
       }
       get_open_pipeline_value: {
-        Args: { target_workspace_id: string }
+        Args: { target_workspace_id: string; desde?: string | null; ate?: string | null }
         Returns: number
       }
       // Agrupa no banco: no máximo 6 linhas, qualquer que seja o tamanho do
       // funil. A versão anterior lia uma linha por negócio e batia no teto de
       // 1.000 do PostgREST — ver 0032.
       get_funnel_counts: {
-        Args: { target_workspace_id: string }
+        Args: { target_workspace_id: string; desde?: string | null; ate?: string | null }
         Returns: { stage: DealStage; total: number }[]
       }
       // Teto POR ETAPA, com o total de cada uma junto, para a tela poder dizer
@@ -559,7 +559,7 @@ export type Database = {
         }[]
       }
       get_dashboard_counts: {
-        Args: { target_workspace_id: string }
+        Args: { target_workspace_id: string; desde?: string | null; ate?: string | null }
         Returns: {
           total_leads: number
           open_deals: number

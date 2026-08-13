@@ -24,6 +24,9 @@ export type UpcomingDeal = {
   owner_name: string | null
 }
 
+/** ISO. `desde`/`ate` filtram por `created_at` — quando o lead/negócio nasceu. */
+export type PeriodoDoDashboard = { desde: string; ate: string }
+
 const CLOSED_STAGES: DealStage[] = ['fechado_ganho', 'fechado_perdido']
 
 // Dashboard agrega no servidor via count/sum em vez de buscar todas as
@@ -32,12 +35,25 @@ const CLOSED_STAGES: DealStage[] = ['fechado_ganho', 'fechado_perdido']
 // o Postgres já calcula de forma mais barata. Os 4 counts (leads, deals
 // abertos/fechados/ganhos) saem numa única RPC em vez de 4 queries
 // count:exact separadas, para reduzir round-trips de rede.
-export async function getDashboardMetrics(workspaceId: string): Promise<DashboardMetrics> {
+export async function getDashboardMetrics(
+  workspaceId: string,
+  periodo?: PeriodoDoDashboard,
+): Promise<DashboardMetrics> {
   const supabase = await createClient()
 
   const [countsResult, pipelineValueResult] = await Promise.all([
-    supabase.rpc('get_dashboard_counts', { target_workspace_id: workspaceId }).single(),
-    supabase.rpc('get_open_pipeline_value', { target_workspace_id: workspaceId }),
+    supabase
+      .rpc('get_dashboard_counts', {
+        target_workspace_id: workspaceId,
+        desde: periodo?.desde ?? null,
+        ate: periodo?.ate ?? null,
+      })
+      .single(),
+    supabase.rpc('get_open_pipeline_value', {
+      target_workspace_id: workspaceId,
+      desde: periodo?.desde ?? null,
+      ate: periodo?.ate ?? null,
+    }),
   ])
 
   const counts = countsResult.data
@@ -62,11 +78,16 @@ export async function getDashboardMetrics(workspaceId: string): Promise<Dashboar
  *
  * Agora são no máximo 6 linhas, independentemente do tamanho do funil.
  */
-export async function getFunnelCounts(workspaceId: string): Promise<FunnelStageCount[]> {
+export async function getFunnelCounts(
+  workspaceId: string,
+  periodo?: PeriodoDoDashboard,
+): Promise<FunnelStageCount[]> {
   const supabase = await createClient()
 
   const { data, error } = await supabase.rpc('get_funnel_counts', {
     target_workspace_id: workspaceId,
+    desde: periodo?.desde ?? null,
+    ate: periodo?.ate ?? null,
   })
 
   if (error) {
