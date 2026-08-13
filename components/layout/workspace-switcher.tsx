@@ -83,7 +83,7 @@ export function WorkspaceSwitcher({
 
   return (
     <DropdownMenu>
-      <DropdownMenuTrigger className="hover:bg-muted flex w-full items-center gap-2 rounded-lg border border-transparent px-2 py-2 text-left text-sm transition-colors outline-none">
+      <DropdownMenuTrigger className="hover:bg-muted flex w-full min-w-0 items-center gap-2 rounded-lg border border-transparent px-2.5 py-2 text-left text-sm transition-colors outline-none">
         <div className="bg-primary text-primary-foreground flex size-7 shrink-0 items-center justify-center rounded-md">
           <Building2 className="size-4" />
         </div>

@@ -50,9 +50,17 @@ export default async function DashboardLayout({
     // O TooltipProvider fica aqui, e não no layout raiz: só a área logada usa
     // tooltip, então a landing não carrega o JS do provider à toa.
     <TooltipProvider delay={200}>
-      <div className="flex min-h-dvh">
+      {/* `h-dvh overflow-hidden` no lugar de `min-h-dvh`: sem isso, flexbox
+          estica o `<aside>` do sidebar pra bater com a altura do CONTEÚDO
+          (align-items: stretch é o padrão), e em página comprida (Configurações)
+          o sidebar ficava mais alto que a tela — rolar a página rolava ele
+          junto, incluindo o rodapé de conta, pra fora de vista. Travando o
+          container em UM viewport e movendo o scroll pra dentro da coluna
+          principal, o sidebar nunca mais estica além da tela: fica fixo sem
+          precisar de `position: sticky`. */}
+      <div className="flex h-dvh overflow-hidden">
         <Sidebar workspaces={workspaces} activeWorkspaceId={workspaceId} currentUser={currentUser} />
-        <div className="flex min-w-0 flex-1 flex-col">
+        <div className="flex min-w-0 flex-1 flex-col overflow-y-auto">
           <Topbar workspaces={workspaces} activeWorkspaceId={workspaceId} currentUser={currentUser} />
           <main id="conteudo" className="flex-1 p-4 md:p-6">
           {/* Largura máxima no conteúdo, não no `main`: o `main` continua

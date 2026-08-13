@@ -43,10 +43,15 @@ export function SidebarNav({ onNavigate }: { onNavigate?: () => void }) {
             onClick={onNavigate}
             aria-current={active ? 'page' : undefined}
             className={cn(
-              'flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm font-medium transition-colors',
+              'flex items-center gap-2.5 rounded-lg py-2 text-sm font-medium transition-colors',
+              // Ativo ganha margin negativo + padding maior na mesma
+              // proporção (-4px / +4px): a pill fica 8px mais larga (mais
+              // respiro do fundo colorido em volta do ícone), mas o ícone
+              // continua exatamente na mesma posição horizontal do item
+              // inativo — padding e margin se cancelam.
               active
-                ? 'bg-primary text-primary-foreground'
-                : 'text-muted-foreground hover:bg-muted hover:text-foreground',
+                ? '-mx-1 bg-primary px-3.5 text-primary-foreground'
+                : 'text-muted-foreground hover:bg-muted hover:text-foreground px-2.5',
             )}
           >
             <Icon aria-hidden className="size-4 shrink-0" />

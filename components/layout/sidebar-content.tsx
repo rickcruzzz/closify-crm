@@ -18,13 +18,15 @@ export function SidebarContent({
 }) {
   return (
     <div className="flex h-full flex-col gap-4 p-3">
-      <Link href="/dashboard" className="px-1.5 py-2">
+      <Link href="/dashboard" className="px-2.5 py-2">
         <Logo size="sm" />
       </Link>
       <WorkspaceSwitcher workspaces={workspaces} activeId={activeWorkspaceId} />
-      <div className="flex-1">
-        <SidebarNav onNavigate={onNavigate} />
-      </div>
+      {/* Sem `flex-1`, de propósito: o rodapé de conta vem logo depois do
+          último item, não empurrado pro fim físico da tela — ver
+          app/(dashboard)/layout.tsx pro porquê disso não deixar mais o
+          sidebar rolar embora com o conteúdo. */}
+      <SidebarNav onNavigate={onNavigate} />
       {/* Segundo acesso a "Sair", além do avatar no topbar — quem não repara
           no canto superior direito encontra aqui, no rodapé fixo, mesmo
           padrão do Linear/Notion. Preenche o vão vazio que sobrava abaixo da

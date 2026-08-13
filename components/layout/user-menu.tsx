@@ -43,11 +43,11 @@ export function UserMenu({
   return (
     <DropdownMenu>
       {variant === 'expanded' ? (
-        <DropdownMenuTrigger className="hover:bg-muted flex w-full items-center gap-2 rounded-lg border border-transparent px-2 py-2 text-left text-sm transition-colors outline-none">
+        <DropdownMenuTrigger className="hover:bg-muted flex w-full min-w-0 items-center gap-2 rounded-lg border border-transparent px-2.5 py-2 text-left text-sm transition-colors outline-none">
           <Avatar className="size-7 shrink-0">
             <AvatarFallback className="text-xs font-medium">{currentUser.initials}</AvatarFallback>
           </Avatar>
-          <div className="flex min-w-0 flex-1 flex-col">
+          <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
             <span className="truncate font-medium">{currentUser.name}</span>
             <span className="text-muted-foreground truncate text-xs">{currentUser.email}</span>
           </div>
