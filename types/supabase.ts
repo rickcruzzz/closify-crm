@@ -48,7 +48,7 @@ export type DadosDaEmpresa = {
 }
 export type SubscriptionStatus = 'trialing' | 'active' | 'past_due' | 'canceled'
 export type WorkspaceInviteStatus = 'pending' | 'accepted' | 'expired'
-export type IntegrationProvider = 'google_calendar' | 'gmail' | 'whatsapp'
+export type IntegrationProvider = 'google_calendar' | 'gmail'
 export type IntegrationStatus = 'connected' | 'error' | 'disconnected'
 
 export type Database = {
@@ -473,23 +473,6 @@ export type Database = {
           connected_by?: string | null
           created_at?: string
           updated_at?: string
-        }
-        Relationships: []
-      }
-      // Dedupe de mensagem recebida do webhook do WhatsApp — mesmo desenho de
-      // asaas_webhook_events. Só a service_role escreve (RLS ligada, sem policy).
-      whatsapp_webhook_events: {
-        Row: {
-          event_id: string
-          processed_at: string
-        }
-        Insert: {
-          event_id: string
-          processed_at?: string
-        }
-        Update: {
-          event_id?: string
-          processed_at?: string
         }
         Relationships: []
       }

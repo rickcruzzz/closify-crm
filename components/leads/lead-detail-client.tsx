@@ -15,13 +15,12 @@ import { DeleteLeadDialog } from '@/components/leads/delete-lead-dialog'
 import { ActivityTimeline } from '@/components/leads/activity-timeline'
 import { ActivityFormDialog } from '@/components/leads/activity-form-dialog'
 import { SendEmailDialog } from '@/components/leads/send-email-dialog'
-import { SendWhatsAppTemplateDialog } from '@/components/leads/send-whatsapp-template-dialog'
 import { EmptyState } from '@/components/ui/empty-state'
 import { TaskItem } from '@/components/tasks/task-item'
 import { TaskFormDialog, type TarefaEmEdicao } from '@/components/tasks/task-form-dialog'
 import { createActivity, deleteLead, updateLead } from '@/lib/leads/actions'
 import { criarTarefa, concluirTarefa, excluirTarefa, atualizarTarefa } from '@/lib/tasks/actions'
-import { enviarEmailViaGmail, enviarMensagemWhatsapp } from '@/lib/integrations/workflow-actions'
+import { enviarEmailViaGmail } from '@/lib/integrations/workflow-actions'
 import { linkDoWhatsApp } from '@/lib/leads/whatsapp'
 import type { TaskRow } from '@/lib/tasks/types'
 import type { LeadRow, WorkspaceMember } from '@/lib/leads/queries'
@@ -30,7 +29,6 @@ import type { LeadFormValues } from '@/lib/validations/lead'
 import type { TaskFormValues } from '@/lib/validations/task'
 import type { ActivityFormValues } from '@/lib/validations/activity'
 import type { EmailMessageFormValues } from '@/lib/validations/email'
-import type { WhatsAppTemplateFormValues } from '@/lib/validations/whatsapp-template'
 
 const currencyFormatter = new Intl.NumberFormat('pt-BR', {
   style: 'currency',
@@ -114,16 +112,6 @@ export function LeadDetailClient({
     router.refresh()
   }
 
-  async function handleSendWhatsAppTemplate(values: WhatsAppTemplateFormValues) {
-    const result = await enviarMensagemWhatsapp(lead.id, values)
-    if ('error' in result) {
-      toast.error(result.error)
-      return
-    }
-    toast.success('Mensagem enviada.')
-    router.refresh()
-  }
-
   async function handleCreateActivity(values: ActivityFormValues) {
     const result = await createActivity(lead.id, values)
     if (result?.error) {
@@ -201,11 +189,6 @@ export function LeadDetailClient({
                 }
               />
             )}
-            {/* Modelo aprovado, via Cloud API — soma ao link acima, não
-                substitui: o link abre a conversa no aparelho da pessoa sem
-                depender de integração nenhuma; isto aqui manda mensagem
-                iniciando contato pelo número comercial conectado. */}
-            {whatsapp && <SendWhatsAppTemplateDialog onSend={handleSendWhatsAppTemplate} />}
             {/* Só aparece com e-mail cadastrado — sem endereço, não há para
                 onde mandar. Se o Gmail não estiver conectado, o erro vem do
                 servidor ao tentar enviar, com o caminho pra Configurações. */}

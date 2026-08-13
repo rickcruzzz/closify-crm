@@ -4,7 +4,7 @@ Documento de continuidade. É lido no começo de toda sessão (referenciado no
 [CLAUDE.md](../CLAUDE.md)) para que uma conversa nova — ou outra conta — comece
 sabendo o que já foi feito, o que foi decidido e onde estão as armadilhas.
 
-**Atualizado em:** 13/08/2026 (gate de segurança no deploy)
+**Atualizado em:** 13/08/2026 (landing pro tráfego pago, WhatsApp Cloud API removida)
 
 > Mantenha este arquivo curto. O detalhe de _por que_ cada coisa é assim mora
 > nas mensagens de commit e nos comentários do código, que são a memória real
@@ -80,10 +80,11 @@ a `service_role key` de cada lado, conferido com o mesmo tamanho (258.596
 bytes) nos dois. Ver `Pendente do dono` abaixo para o que falta para o corte
 final.
 
-**Integrações oficiais entregues em 12/08** (migration 0034): WhatsApp
-Business Platform (Cloud API), Google Calendar e Gmail, conectáveis em
-**Configurações → Integrações**. Ver seção própria abaixo — grande o
-suficiente para não caber neste resumo.
+**Integrações oficiais entregues em 12/08** (migration 0034): Google Calendar
+e Gmail, conectáveis em **Configurações → Integrações**. Ver seção própria
+abaixo — grande o suficiente para não caber neste resumo. (A mesma migration
+também trouxe WhatsApp Business Cloud API — removida em 13/08, decisão de
+produto de não usar; ver seção própria.)
 
 Ambiente local: rode `node --env-file=.env.local scripts/verificar-ambiente.mjs`.
 Ele confere as 9 conexões e diz o que falta.
@@ -107,12 +108,14 @@ resolve isso: liga no clique real (delegação de evento em `document`,
 qualquer `<a>` interno), desliga quando a rota muda de verdade — não é
 temporizador fingindo progresso.
 
-## Integrações — WhatsApp, Google Calendar, Gmail (12/08)
+## Integrações — Google Calendar, Gmail (12/08)
 
 Pedido: reduzir o "esqueci de responder" ligando o funil a canais reais —
-sem virar CRM inchado. Uma tabela para as três (`integration_connections`,
-migration `0034`), token cifrado (AES-256-GCM, `lib/integrations/crypto.ts`),
-`state` do OAuth assinado por HMAC contra CSRF (`lib/integrations/state.ts`).
+sem virar CRM inchado. Uma tabela pros provedores (`integration_connections`,
+migration `0034`, desenhada pra três — Google Calendar, Gmail e WhatsApp —
+mas hoje só dois em uso, ver abaixo), token cifrado (AES-256-GCM,
+`lib/integrations/crypto.ts`), `state` do OAuth assinado por HMAC contra CSRF
+(`lib/integrations/state.ts`).
 
 **Encontrado e corrigido durante a auditoria**: `revoke select (coluna) ...
 from authenticated` **sozinho não bloqueia nada** — testado contra o banco
@@ -131,23 +134,22 @@ os dois), renovação automática de access_token perto de expirar. Workflow:
 botão "Adicionar ao Google Calendar" na próxima ação do negócio (Kanban),
 "Enviar e-mail" no painel do lead — os dois registram atividade na timeline.
 
-**WhatsApp Cloud API**: Embedded Signup da Meta (popup do SDK, não redirect
-de página inteira — `code` do login e `phone_number_id`/`waba_id` de um
-evento `message` da Meta precisam ser combinados no client antes de chamar a
-Server Action). Só modelo aprovado para iniciar conversa, nunca texto livre —
-regra da própria plataforma. Webhook (`/api/webhooks/whatsapp`) recebe
-resposta, registra atividade e cria tarefa "Responder no WhatsApp" se não
-houver nenhuma aberta pro lead — o "esqueci de responder" batendo na porta de
-volta. Casamento de lead por telefone é pelos últimos 8 dígitos (limitação
-aceita: DDDs diferentes com mesmo final colidiriam, raro).
+**WhatsApp Cloud API removida em 13/08** — decisão de produto, não vamos
+usar. Existia (Embedded Signup da Meta, webhook em `/api/webhooks/whatsapp`,
+mensagem por modelo aprovado, tarefa automática "Responder no WhatsApp")
+desde a 12/08, mas nunca teve nenhuma conexão real em produção (conferido
+antes de remover: zero linha em `integration_connections` com
+`provider = 'whatsapp'`). Removido código, rota de webhook, tabela de dedupe
+(`whatsapp_webhook_events`, migration `0043`) e as variáveis `META_APP_ID`/
+`META_APP_SECRET`/`META_WHATSAPP_CONFIG_ID`/`META_WEBHOOK_VERIFY_TOKEN`/
+`NEXT_PUBLIC_META_APP_ID`/`NEXT_PUBLIC_META_WHATSAPP_CONFIG_ID`. O valor
+`'whatsapp'` continua existindo no enum `integration_provider` do banco —
+Postgres não tem `ALTER TYPE ... DROP VALUE`, e recriar o enum pra tirar um
+valor que nenhum código mais insere não valia a complexidade.
 
-O link `wa.me` **continua existindo** — decisão travada abaixo atualizada,
-não removida. A Cloud API soma (modelo + webhook), o link resolve o caso
-simples (abrir a conversa) sem depender de nada.
-
-**Limitação conhecida**: o token do WhatsApp (Embedded Signup) não tem
-`refresh_token` no sentido do OAuth do Google — é um token de sistema de
-~60 dias. Sem caminho de renovação automática, reconexão manual periódica.
+O link `wa.me` **continua existindo** — é um mecanismo totalmente separado,
+sem token/OAuth nenhum (`lib/leads/whatsapp.ts`, botão "Chamar no WhatsApp"
+no painel do lead, link de suporte no rodapé). Não fazia parte da remoção.
 
 **Pendências de configuração manual** (mesmo padrão do Asaas/Resend — eu não
 tenho acesso a nenhum destes painéis):
@@ -156,17 +158,8 @@ tenho acesso a nenhum destes painéis):
    o redirect URI `https://www.velofunil.com.br/api/integrations/google/callback`
    e ativar a Calendar API + Gmail API. Copiar Client ID/Secret para
    `GOOGLE_OAUTH_CLIENT_ID`/`GOOGLE_OAUTH_CLIENT_SECRET`.
-2. **Meta App** (business.facebook.com → Meta for Developers): app tipo
-   Business, produto WhatsApp, Embedded Signup configurado (gera
-   `META_WHATSAPP_CONFIG_ID`), `META_APP_ID`/`META_APP_SECRET`, e no painel do
-   produto WhatsApp o webhook `https://www.velofunil.com.br/api/webhooks/whatsapp`
-   com um `META_WEBHOOK_VERIFY_TOKEN` à escolha.
-3. Gerar `INTEGRATIONS_ENCRYPTION_KEY` (32 bytes hex — `openssl rand -hex 32`)
+2. Gerar `INTEGRATIONS_ENCRYPTION_KEY` (32 bytes hex — `openssl rand -hex 32`)
    e colar local + Vercel.
-4. Variáveis públicas (`NEXT_PUBLIC_META_APP_ID`,
-   `NEXT_PUBLIC_META_WHATSAPP_CONFIG_ID`) são o mesmo App ID/Config ID de
-   cima — só precisam existir também com o prefixo `NEXT_PUBLIC_` porque o SDK
-   do Facebook roda no browser.
 
 Sem essas variáveis, os cards de integração aparecem normalmente em
 "Não conectado" — nada quebra, só o botão "Conectar" falha ao tentar.
@@ -234,8 +227,9 @@ Sem essas variáveis, os cards de integração aparecem normalmente em
       (usuário `resend`, não `rezende`), Site URL/Redirect URLs corrigidos,
       reset de senha testado ponta a ponta com sucesso.
 - [x] **MEI baixado.** Confirmado pelo dono nos canais oficiais (gov.br +
-      Meta Business Manager) — CNPJ ativo, Meta Business verificado. É o que
-      abriu a trava do WhatsApp Cloud API acima.
+      Meta Business Manager) — CNPJ ativo, Meta Business verificado. Tinha
+      aberto a trava do WhatsApp Cloud API, removida em 13/08 (decisão de
+      produto, sem relação com o MEI em si).
 - [ ] **Cobrança da Fani Mayara** (`fanimayara67@gmail.com`): usuária real
       (logou em 11/08, 1 lead), plano `free`, começou o checkout e nunca pagou.
       Tem 2 cobranças de R$ 49 em aberto que vão virar aviso de vencimento.
@@ -295,7 +289,7 @@ Sem essas variáveis, os cards de integração aparecem normalmente em
 | **Google Sheets por API está fora**         | Exige `GOOGLE_CLIENT_ID`/`SECRET` e verificação do app pelo Google (semanas). A importação de planilha já cobre a dor                                          |
 | **`read-excel-file`, não `xlsx` nem `exceljs`** | O `xlsx` do npm está parado em 0.18.5 com CVE-2023-30533 e CVE-2024-22363, sem correção publicada lá; o `exceljs` está sem release há anos                |
 | **Lead precisa de e-mail OU telefone**      | A planilha do público-alvo é lista de WhatsApp. Com `email not null` ela importava zero linhas (migration 0025)                                               |
-| **WhatsApp: link `wa.me` E Cloud API, não Cloud API sozinha** | Resolvido em 12/08 (CNPJ ativo, Meta Business verificado) — Cloud API implementada, mas o link `wa.me` continua: é o atalho sem depender de token/modelo aprovado, e a API soma (modelo + webhook), não substitui |
+| **WhatsApp: só o link `wa.me`, sem Cloud API**| A Cloud API foi implementada em 12/08 e removida em 13/08 (decisão de produto, nunca teve conexão real em produção) — o link `wa.me` nunca dependeu dela e continua existindo |
 | **Meta Lead Ads ainda adiado**              | Puxar lead da página de um cliente exige OAuth dele + App Review (semanas) + verificação de negócio — degrau acima do que o CNPJ ativo resolve sozinho. Guardar o padrão certo: webhook **mais** job de reconciliação, porque o Meta só guarda 90 dias |
 | **IA / lead scoring fora**                  | Com 50 leads é ruído caro. O funil já pontua sozinho: negócio sem próxima ação e tarefa vencida são o sinal |
 | **GA4 fora**                                | Ferramenta de site, não de app logado — mediria pageview, não ativação, e traria banner de cookie por LGPD. A necessidade é real; a ferramenta é que estava errada |

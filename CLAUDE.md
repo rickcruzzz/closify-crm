@@ -32,7 +32,7 @@ porquê de cada decisão e são a memória real daqui.
   já afirmou os dois, conferido no `package.json` em 12/08/2026. Não existe
   nada medindo ativação: quantos que criam conta chegam ao primeiro lead é uma
   pergunta que hoje ninguém responde
-- **Automação futura:** n8n, WhatsApp Business API, Notion API, Linear API
+- **Automação futura:** n8n, Notion API, Linear API
 
 > **Importante:** este projeto usa **Asaas**, não Stripe, para pagamentos —
 > mesmo que existam agente/skill de Stripe configurados neste repo

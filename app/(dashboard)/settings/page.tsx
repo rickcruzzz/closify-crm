@@ -45,7 +45,6 @@ const MENSAGEM_DE_ERRO_DA_INTEGRACAO: Record<string, string> = {
 const NOME_DA_INTEGRACAO: Record<string, string> = {
   google_calendar: 'Google Calendar',
   gmail: 'Gmail',
-  whatsapp: 'WhatsApp',
 }
 
 export default async function SettingsPage({
@@ -84,13 +83,13 @@ export default async function SettingsPage({
   const [integrationConnections, usoDasIntegracoes] =
     aba === 'integracoes'
       ? await Promise.all([getIntegrationConnections(workspaceId), getUsoDasIntegracoes(workspaceId)])
-      : [[], { google_calendar: 0, gmail: 0, whatsapp: 0 }]
+      : [[], { google_calendar: 0, gmail: 0 }]
 
   const descricao: Record<AbaDeConfiguracoes, string> = {
     empresa: 'Dados da sua empresa, usados no sistema e nas comunicações.',
     equipe: 'Quem tem acesso a esta empresa e com qual permissão.',
     plano: 'Seu plano atual e o que cada um inclui.',
-    integracoes: 'Conecte WhatsApp, Google Calendar e Gmail ao fluxo do funil.',
+    integracoes: 'Conecte Google Calendar e Gmail ao fluxo do funil.',
   }
 
   const mensagemDeErro = params.erro ? MENSAGEM_DE_ERRO_DA_INTEGRACAO[params.erro] : null

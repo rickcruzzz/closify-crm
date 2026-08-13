@@ -6,10 +6,7 @@ import { createClient } from '@/lib/supabase/server'
 import { resolverWorkspaceAtivo } from '@/lib/workspace/ativo'
 import { obterAccessTokenValido } from '@/lib/integrations/token'
 import { criarEventoDeCalendario, enviarEmailGmail } from '@/lib/integrations/google'
-import { enviarMensagemModelo } from '@/lib/integrations/whatsapp'
 import { emailMessageSchema } from '@/lib/validations/email'
-import { whatsappTemplateSchema } from '@/lib/validations/whatsapp-template'
-import { linkDoWhatsApp } from '@/lib/leads/whatsapp'
 
 type Sessao = {
   supabase: Awaited<ReturnType<typeof createClient>>
@@ -178,74 +175,5 @@ export async function enviarEmailViaGmail(leadId: string, values: unknown) {
   } catch (err) {
     console.error('enviarEmailViaGmail falhou', err)
     return { error: 'Não foi possível enviar o e-mail. Tente novamente.' }
-  }
-}
-
-/**
- * Envia mensagem por modelo aprovado, pelo WhatsApp conectado da empresa.
- *
- * Só modelo, nunca texto livre — é a regra da própria plataforma para abrir
- * contato fora de uma conversa já em andamento (janela de 24h). O produto
- * não cria nem valida modelos: usa o que já está aprovado na conta Meta do
- * cliente, e o nome/idioma vêm do formulário.
- */
-export async function enviarMensagemWhatsapp(leadId: string, values: unknown) {
-  const parsed = whatsappTemplateSchema.safeParse(values)
-  if (!parsed.success) {
-    return { error: parsed.error.issues[0]?.message ?? 'Dados inválidos.' }
-  }
-
-  const sessao = await abrirSessao()
-  if ('error' in sessao) return sessao
-
-  const erroDePlano = await exigirProVigente(sessao)
-  if (erroDePlano) return erroDePlano
-
-  const { data: lead } = await sessao.supabase
-    .from('leads')
-    .select('id, phone')
-    .eq('id', leadId)
-    .eq('workspace_id', sessao.workspaceId)
-    .maybeSingle()
-
-  if (!lead) return { error: 'Lead não encontrado.' }
-
-  // Reusa a mesma validação de telefone brasileiro do link `wa.me`, em vez
-  // de duplicar a regra de DDD/nono dígito — só extrai os dígitos da URL que
-  // ela já validou.
-  const linkValidado = linkDoWhatsApp(lead.phone)
-  if (!linkValidado) return { error: 'Este lead não tem telefone válido para WhatsApp.' }
-  const numero = linkValidado.replace('https://wa.me/', '')
-
-  const token = await obterAccessTokenValido(sessao.workspaceId, 'whatsapp')
-  if ('error' in token || !token.externalId) {
-    return { error: 'Conecte o WhatsApp em Configurações → Integrações.' }
-  }
-
-  try {
-    await enviarMensagemModelo(token.externalId, token.accessToken, {
-      destinatario: numero,
-      nomeDoModelo: parsed.data.nomeDoModelo,
-      idiomaDoModelo: parsed.data.idioma,
-      parametros: parsed.data.parametros?.split('\n').map((linha) => linha.trim()).filter(Boolean),
-    })
-
-    const { error: erroAtividade } = await sessao.supabase.from('activities').insert({
-      workspace_id: sessao.workspaceId,
-      lead_id: lead.id,
-      author_id: sessao.userId,
-      type: 'nota',
-      description: `Modelo do WhatsApp enviado: ${parsed.data.nomeDoModelo}`,
-      integration_provider: 'whatsapp',
-    })
-    if (erroAtividade) {
-      console.error('enviarMensagemWhatsapp: atividade não registrada', erroAtividade)
-    }
-
-    revalidatePath(`/leads/${leadId}`)
-    return { success: true }
-  } catch (err) {
-    console.error('enviarMensagemWhatsapp falhou', err)
-    return { error: 'Não foi possível enviar a mensagem. Confira se o modelo existe e está aprovado.' }
   }
 }

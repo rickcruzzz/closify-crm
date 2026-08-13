@@ -7,7 +7,6 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { getCurrentUserAndWorkspace } from '@/lib/supabase/workspace'
 import { decifrar } from '@/lib/integrations/crypto'
 import { revogarToken as revogarTokenGoogle, testarCalendario, testarGmail } from '@/lib/integrations/google'
-import { testarNumero } from '@/lib/integrations/whatsapp'
 import { obterAccessTokenValido } from '@/lib/integrations/token'
 import type { IntegrationProvider } from '@/types/supabase'
 
@@ -56,9 +55,7 @@ export async function desconectarIntegracao(provider: IntegrationProvider) {
     .eq('provider', provider)
     .maybeSingle()
 
-  // A Meta não tem um endpoint de revogação de token de sistema equivalente
-  // ao `/revoke` do Google — só apaga a linha local. Documentado no plano.
-  if (linha?.access_token_enc && (provider === 'google_calendar' || provider === 'gmail')) {
+  if (linha?.access_token_enc) {
     try {
       await revogarTokenGoogle(decifrar(linha.access_token_enc))
     } catch (err) {
@@ -115,21 +112,10 @@ export async function testarConexaoIntegracao(provider: IntegrationProvider) {
     return { error: resultado.error }
   }
 
-  let ok: boolean
-  if (provider === 'google_calendar') {
-    ok = await testarCalendario(resultado.accessToken)
-  } else if (provider === 'gmail') {
-    ok = await testarGmail(resultado.accessToken)
-  } else {
-    const admin = createAdminClient()
-    const { data: linha } = await admin
-      .from('integration_connections')
-      .select('external_id')
-      .eq('workspace_id', workspaceId)
-      .eq('provider', 'whatsapp')
-      .maybeSingle()
-    ok = !!linha?.external_id && (await testarNumero(linha.external_id, resultado.accessToken))
-  }
+  const ok =
+    provider === 'google_calendar'
+      ? await testarCalendario(resultado.accessToken)
+      : await testarGmail(resultado.accessToken)
 
   const admin = createAdminClient()
   await admin

@@ -11,15 +11,12 @@ type ResultadoToken = { accessToken: string; externalId: string | null } | { err
  *
  * Um lugar só decide "esse token ainda serve?" — usado tanto por
  * `testarConexaoIntegracao` quanto pelas ações de workflow (agendar no
- * Calendar, enviar e-mail pelo Gmail, enviar modelo no WhatsApp). Duplicar
- * essa lógica em cada chamador é como cada um acaba divergindo um dia sem
- * ninguém notar.
+ * Calendar, enviar e-mail pelo Gmail). Duplicar essa lógica em cada chamador
+ * é como cada um acaba divergindo um dia sem ninguém notar.
  *
- * Também devolve `external_id` (phone_number_id do WhatsApp) — antes disso,
- * `enviarMensagemWhatsapp` fazia uma SEGUNDA consulta separada só pra pegar
- * essa coluna da mesma linha que esta função já tinha acabado de ler. Toda
- * vez que alguém clicava "Enviar" no modelo, pagava duas idas ao banco pra
- * uma linha só — a lentidão percebida ao interagir com o modal.
+ * Também devolve `external_id` (ex.: calendar id do Google) — poupa quem
+ * chama de fazer uma segunda consulta só pra pegar essa coluna da mesma
+ * linha que esta função já leu.
  */
 export async function obterAccessTokenValido(
   workspaceId: string,

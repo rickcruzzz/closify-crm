@@ -2,13 +2,12 @@
 
 import * as React from 'react'
 import { toast } from 'sonner'
-import { CalendarDays, Loader2, Mail, MessageCircle, Plug, Trash2, type LucideIcon } from 'lucide-react'
+import { CalendarDays, Loader2, Mail, Plug, Trash2, type LucideIcon } from 'lucide-react'
 
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { desconectarIntegracao, testarConexaoIntegracao } from '@/lib/integrations/actions'
-import { WhatsAppConnectButton } from '@/components/settings/whatsapp-connect-button'
 import type { IntegrationProvider, IntegrationStatus } from '@/types/supabase'
 
 const META: Record<
@@ -38,14 +37,6 @@ const META: Record<
     conectarHref: '/api/integrations/google/connect?provider=gmail',
     usoSingular: 'e-mail enviado',
     usoPlural: 'e-mails enviados',
-  },
-  whatsapp: {
-    titulo: 'WhatsApp',
-    descricao: 'Mensagem por modelo aprovado, com resposta registrada no histórico.',
-    icone: MessageCircle,
-    conectarHref: null,
-    usoSingular: 'mensagem trocada',
-    usoPlural: 'mensagens trocadas',
   },
 }
 
@@ -155,8 +146,6 @@ export function IntegrationCard({
             <Plug className="size-4" />
             Conectar {info.titulo}
           </Button>
-        ) : provider === 'whatsapp' ? (
-          <WhatsAppConnectButton />
         ) : (
           <p className="text-muted-foreground text-xs">Em breve.</p>
         )}

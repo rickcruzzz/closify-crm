@@ -62,11 +62,10 @@ export async function getUsoDasIntegracoes(
     return count ?? 0
   }
 
-  const [googleCalendar, gmail, whatsapp] = await Promise.all([
+  const [googleCalendar, gmail] = await Promise.all([
     contar('google_calendar'),
     contar('gmail'),
-    contar('whatsapp'),
   ])
 
-  return { google_calendar: googleCalendar, gmail, whatsapp }
+  return { google_calendar: googleCalendar, gmail }
 }
