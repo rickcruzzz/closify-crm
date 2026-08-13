@@ -177,12 +177,20 @@ Sem essas variáveis, os cards de integração aparecem normalmente em
       e `.github/workflows/deploy-com-auditoria.yml` foram criados — o
       workflow builda, roda a auditoria (chave vazada, headers de
       segurança, stack trace em erro de API) contra um deployment de
-      PREVIEW, e só promove pra produção se passar. Sem acesso ao painel,
-      faltam dois passos manuais pra isso valer de verdade:
-      1. Gerar `VERCEL_TOKEN` (Vercel → Settings → Tokens) e pegar
+      PREVIEW, e só promove pra produção se passar. **O workflow existe só
+      no disco, não no repositório**: o token OAuth usado aqui não tem o
+      escopo `workflow` do GitHub, e o push do arquivo foi recusado
+      ("refusing to allow an OAuth App to create or update workflow...
+      without workflow scope"). Faltam três passos manuais pra isso valer
+      de verdade:
+      1. Adicionar `.github/workflows/deploy-com-auditoria.yml` ao
+         repositório — pelo painel do GitHub (Add file → upload, colando o
+         conteúdo que já existe no disco) ou com `git push` de uma máquina
+         cujo token/PAT tenha o escopo `workflow`.
+      2. Gerar `VERCEL_TOKEN` (Vercel → Settings → Tokens) e pegar
          `VERCEL_ORG_ID`/`VERCEL_PROJECT_ID` (`vercel link` local mostra os
          dois) — colar como Secrets do repositório no GitHub.
-      2. **Desligar o deploy automático nativo da Vercel pra `main`**
+      3. **Desligar o deploy automático nativo da Vercel pra `main`**
          (Project Settings → Git) — sem isso, a Vercel continua deployando
          em paralelo ao Actions, e o gate não impede nada.
       Até isso ser feito, o workflow existe mas não está protegendo nada:
