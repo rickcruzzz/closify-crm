@@ -3,7 +3,7 @@
 import * as React from 'react'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
-import { CheckCircle2 } from 'lucide-react'
+import { CheckCircle2, Loader2 } from 'lucide-react'
 
 import { PageHeader } from '@/components/layout/page-header'
 import { Button } from '@/components/ui/button'
@@ -38,6 +38,7 @@ export function HojeClient({
   const router = useRouter()
   const [tasks, setTasks] = React.useState(tasksIniciais)
   const [emEdicao, setEmEdicao] = React.useState<TarefaEmEdicao | null>(null)
+  const [trocandoEscopo, startTransitionEscopo] = React.useTransition()
 
   // O servidor manda a lista nova depois de cada revalidação; sem isto o
   // estado local ficaria preso na primeira renderização e a tarefa criada
@@ -69,7 +70,9 @@ export function HojeClient({
   )
 
   function trocarEscopo(valor: string | null) {
-    router.push(valor === 'equipe' ? '/hoje?escopo=equipe' : '/hoje')
+    startTransitionEscopo(() => {
+      router.push(valor === 'equipe' ? '/hoje?escopo=equipe' : '/hoje')
+    })
   }
 
   async function concluir(taskId: string) {
@@ -130,17 +133,22 @@ export function HojeClient({
         description="O que precisa da sua atenção, por prazo."
         className="mb-0"
         actions={
-          <Select value={escopo} onValueChange={trocarEscopo}>
-            <SelectTrigger className="w-40">
-              <SelectValue>
-                {(v) => (v === 'equipe' ? 'Da equipe' : 'Minhas')}
-              </SelectValue>
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="minhas">Minhas</SelectItem>
-              <SelectItem value="equipe">Da equipe</SelectItem>
-            </SelectContent>
-          </Select>
+          <div className="flex items-center gap-2">
+            <Select value={escopo} onValueChange={trocarEscopo} disabled={trocandoEscopo}>
+              <SelectTrigger className="w-40">
+                <SelectValue>
+                  {(v) => (v === 'equipe' ? 'Da equipe' : 'Minhas')}
+                </SelectValue>
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="minhas">Minhas</SelectItem>
+                <SelectItem value="equipe">Da equipe</SelectItem>
+              </SelectContent>
+            </Select>
+            {trocandoEscopo && (
+              <Loader2 aria-hidden className="text-muted-foreground size-4 animate-spin" />
+            )}
+          </div>
         }
       />
 

@@ -36,6 +36,7 @@ export function WorkspaceSwitcher({
   const router = useRouter()
   const [enviando, setEnviando] = React.useState(false)
   const [atualizando, startTransition] = React.useTransition()
+  const [navegando, startTransitionNavegacao] = React.useTransition()
   const trocando = enviando || atualizando
   const active = workspaces.find((w) => w.id === activeId) ?? workspaces[0]
 
@@ -67,6 +68,16 @@ export function WorkspaceSwitcher({
     // preenchida com os dados da outra empresa.
     startTransition(() => {
       router.refresh()
+    })
+  }
+
+  // Mesmo motivo do spinner de `trocar`: sem `useTransition` aqui, o clique
+  // em "Nova empresa"/"upgrade" não mostra nada até a navegação terminar — e
+  // Select/DropdownMenuItem não são `<a>`, então a barra de progresso global
+  // (que só liga em clique de link) nunca cobre esses dois.
+  function navegarPara(destino: string) {
+    startTransitionNavegacao(() => {
+      router.push(destino)
     })
   }
 
@@ -125,16 +136,29 @@ export function WorkspaceSwitcher({
             então tomar o erro — melhor dizer o motivo aqui e mandar direto
             para a comparação de planos. */}
         {podeCriarEmpresa ? (
-          <DropdownMenuItem className="gap-2" onClick={() => router.push('/onboarding')}>
-            <Plus className="size-4" />
+          <DropdownMenuItem
+            className="gap-2"
+            disabled={navegando}
+            onClick={() => navegarPara('/onboarding')}
+          >
+            {navegando ? (
+              <Loader2 aria-hidden className="size-4 animate-spin" />
+            ) : (
+              <Plus className="size-4" />
+            )}
             Nova empresa
           </DropdownMenuItem>
         ) : (
           <DropdownMenuItem
             className="gap-2"
-            onClick={() => router.push('/settings/billing')}
+            disabled={navegando}
+            onClick={() => navegarPara('/settings/billing')}
           >
-            <Zap className="size-4" />
+            {navegando ? (
+              <Loader2 aria-hidden className="size-4 animate-spin" />
+            ) : (
+              <Zap className="size-4" />
+            )}
             <span className="flex flex-col">
               <span>Nova empresa</span>
               <span className="text-muted-foreground text-xs">
