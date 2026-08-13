@@ -6,6 +6,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { getResend } from '@/lib/resend/client'
 import { renderPagamentoConfirmadoEmail } from '@/lib/emails/pagamento-confirmado'
 import { renderPagamentoAtrasadoEmail } from '@/lib/emails/pagamento-atrasado'
+import { enviarConversaoDeCompra } from '@/lib/analytics/meta-conversions'
 import { PRO_PLAN_PRICE } from '@/lib/plans'
 import { appUrl } from '@/lib/app-url'
 
@@ -124,6 +125,7 @@ export async function POST(request: Request) {
   // ela não tinha como saber quando voltar a olhar.
   if (status === 'active' && matched === true) {
     await enviarEmailDoWebhook(supabase, subscriptionId, renderPagamentoConfirmadoEmail)
+    await enviarConversaoParaMeta(supabase, subscriptionId, eventId)
   } else if (status === 'past_due' && matched === true) {
     // Mesma lógica do e-mail de confirmação, sentido contrário: cartão
     // recusado/boleto-Pix vencido é a categoria de churn mais barata de
@@ -138,7 +140,43 @@ export async function POST(request: Request) {
 }
 
 /**
- * Busca workspace/dono da assinatura e manda o e-mail correspondente.
+ * Busca o workspace e o e-mail do dono a partir da assinatura do Asaas.
+ *
+ * `created_by` é quem abriu a empresa e, pela regra do checkout, o único
+ * que pode assinar — é para ele que a cobrança vai. Compartilhado entre
+ * `enviarEmailDoWebhook` e `enviarConversaoParaMeta` pra não repetir as
+ * mesmas três idas ao banco (subscriptions → workspaces → auth.admin) duas
+ * vezes na mesma chamada de webhook.
+ */
+async function buscarAssinante(
+  supabase: ReturnType<typeof createAdminClient>,
+  subscriptionId: string,
+): Promise<{ workspaceName: string; email: string } | null> {
+  const { data: assinatura } = await supabase
+    .from('subscriptions')
+    .select('workspace_id')
+    .eq('asaas_subscription_id', subscriptionId)
+    .maybeSingle()
+
+  if (!assinatura) return null
+
+  const { data: workspace } = await supabase
+    .from('workspaces')
+    .select('name, created_by')
+    .eq('id', assinatura.workspace_id)
+    .maybeSingle()
+
+  if (!workspace?.created_by) return null
+
+  const { data: dono } = await supabase.auth.admin.getUserById(workspace.created_by)
+  const email = dono?.user?.email
+  if (!email) return null
+
+  return { workspaceName: workspace.name, email }
+}
+
+/**
+ * Manda o e-mail correspondente ao status novo.
  *
  * Engole qualquer falha de propósito. O e-mail é aviso, não é o efeito: o
  * status já foi aplicado na transação anterior. Deixar uma exceção escapar
@@ -159,37 +197,18 @@ async function enviarEmailDoWebhook(
   },
 ) {
   try {
-    const { data: assinatura } = await supabase
-      .from('subscriptions')
-      .select('workspace_id')
-      .eq('asaas_subscription_id', subscriptionId)
-      .maybeSingle()
-
-    if (!assinatura) return
-
-    const { data: workspace } = await supabase
-      .from('workspaces')
-      .select('name, created_by')
-      .eq('id', assinatura.workspace_id)
-      .maybeSingle()
-
-    // `created_by` é quem abriu a empresa e, pela regra do checkout, o único
-    // que pode assinar — é para ele que a cobrança vai.
-    if (!workspace?.created_by) return
-
-    const { data: dono } = await supabase.auth.admin.getUserById(workspace.created_by)
-    const destinatario = dono?.user?.email
-    if (!destinatario) return
+    const assinante = await buscarAssinante(supabase, subscriptionId)
+    if (!assinante) return
 
     const { subject, html } = render({
-      workspaceName: workspace.name,
+      workspaceName: assinante.workspaceName,
       valor: PRO_PLAN_PRICE,
       appUrl: appUrl(),
     })
 
     const { error } = await getResend().emails.send({
       from: 'Velo Funil <suporte@velofunil.com.br>',
-      to: destinatario,
+      to: assinante.email,
       subject,
       html,
     })
@@ -199,5 +218,30 @@ async function enviarEmailDoWebhook(
     }
   } catch (err) {
     console.error('Webhook Asaas: erro ao enviar e-mail', err)
+  }
+}
+
+/**
+ * Avisa o Meta que um pagamento de verdade aconteceu — Conversions API,
+ * server-side, sem depender do navegador de quem pagou (o checkout roda na
+ * página hospedada do Asaas). Mesma idempotência do e-mail: `eventId` só
+ * chega aqui uma vez por causa do dedupe em `asaas_webhook_events`.
+ */
+async function enviarConversaoParaMeta(
+  supabase: ReturnType<typeof createAdminClient>,
+  subscriptionId: string,
+  eventId: string,
+) {
+  try {
+    const assinante = await buscarAssinante(supabase, subscriptionId)
+    if (!assinante) return
+
+    await enviarConversaoDeCompra({
+      email: assinante.email,
+      valor: PRO_PLAN_PRICE,
+      eventId,
+    })
+  } catch (err) {
+    console.error('Webhook Asaas: erro ao enviar conversão pro Meta', err)
   }
 }
