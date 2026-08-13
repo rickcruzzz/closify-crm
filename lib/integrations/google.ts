@@ -223,12 +223,27 @@ export async function enviarEmailGmail(
   return res.json() as Promise<{ id: string }>
 }
 
+// Não usa `GET /gmail/v1/users/me/profile`: esse endpoint exige escopo de
+// leitura (`gmail.readonly`/`gmail.modify`/`gmail.metadata`), que a conexão
+// nunca pede — só `gmail.send` (menor privilégio, ver `ESCOPO_POR_PROVIDER`).
+// Testar com um endpoint que a própria integração não tem permissão de
+// chamar sempre devolve 403 e marca a conexão como quebrada mesmo saudável.
+// `tokeninfo` valida o token sem exigir escopo nenhum de API específica, e
+// confirmar que `scope` inclui `gmail.send` garante que não é só um token
+// válido de OUTRA finalidade.
 export async function testarGmail(accessToken: string): Promise<boolean> {
-  const res = await fetch(
-    'https://gmail.googleapis.com/gmail/v1/users/me/profile',
-    { headers: { Authorization: `Bearer ${accessToken}` } },
-  )
-  return res.ok
+  // Header, não query string — token de acesso não deve viajar em URL (fica
+  // em log de acesso). Confirmado contra o endpoint real que ele aceita
+  // Authorization: Bearer (erro muda de "token ausente" pra "token
+  // inválido" quando testado com um token qualquer via header).
+  const res = await fetch('https://oauth2.googleapis.com/tokeninfo', {
+    headers: { Authorization: `Bearer ${accessToken}` },
+  })
+  if (!res.ok) return false
+  const info = (await res.json()) as { scope?: string }
+  // Comparação exata contra a lista de escopos, não substring — evita casar
+  // por acidente com um escopo diferente que só contenha o mesmo texto.
+  return (info.scope ?? '').split(/\s+/).includes(escopoGoogle('gmail'))
 }
 
 /** Providers Google válidos — subconjunto de IntegrationProvider (exclui 'whatsapp'). */
