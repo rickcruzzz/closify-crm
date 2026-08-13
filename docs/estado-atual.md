@@ -4,7 +4,7 @@ Documento de continuidade. É lido no começo de toda sessão (referenciado no
 [CLAUDE.md](../CLAUDE.md)) para que uma conversa nova — ou outra conta — comece
 sabendo o que já foi feito, o que foi decidido e onde estão as armadilhas.
 
-**Atualizado em:** 12/08/2026 (lag de navegação)
+**Atualizado em:** 13/08/2026 (gate de segurança no deploy)
 
 > Mantenha este arquivo curto. O detalhe de _por que_ cada coisa é assim mora
 > nas mensagens de commit e nos comentários do código, que são a memória real
@@ -173,6 +173,30 @@ Sem essas variáveis, os cards de integração aparecem normalmente em
 
 ## Pendente do dono (não é código)
 
+- [ ] **Gate de segurança no deploy (13/08).** `tests/e2e/security-audit.spec.ts`
+      e `.github/workflows/deploy-com-auditoria.yml` foram criados — o
+      workflow builda, roda a auditoria (chave vazada, headers de
+      segurança, stack trace em erro de API) contra um deployment de
+      PREVIEW, e só promove pra produção se passar. Sem acesso ao painel,
+      faltam dois passos manuais pra isso valer de verdade:
+      1. Gerar `VERCEL_TOKEN` (Vercel → Settings → Tokens) e pegar
+         `VERCEL_ORG_ID`/`VERCEL_PROJECT_ID` (`vercel link` local mostra os
+         dois) — colar como Secrets do repositório no GitHub.
+      2. **Desligar o deploy automático nativo da Vercel pra `main`**
+         (Project Settings → Git) — sem isso, a Vercel continua deployando
+         em paralelo ao Actions, e o gate não impede nada.
+      Até isso ser feito, o workflow existe mas não está protegendo nada:
+      a Vercel ainda promove sozinha a cada push.
+- [ ] **CSP em Report-Only, nunca virou bloqueio.** Medido em 13/08 contra
+      produção: 1 violação por página (um `eval` num chunk de dependência —
+      zod/@base-ui/lucide, padrão de polyfill). Antes de trocar o header
+      pra `Content-Security-Policy` (modo bloqueio de verdade, em
+      `next.config.mjs`) falta decidir entre aceitar `'unsafe-eval'`
+      (enfraquece bastante a diretiva) ou isolar qual dependência causa
+      isso. Sem isso, um XSS futuro (nenhum encontrado até agora) não
+      teria barreira nenhuma — e o cookie de sessão do Supabase é legível
+      via `document.cookie` por design do próprio `@supabase/ssr`, então a
+      CSP é a única defesa que falta pra fechar essa combinação.
 - [x] **Cutover para o projeto São Paulo (`tmyeunithjqkbwvezyyn`).** Feito:
       env vars trocadas local + Vercel (confirmado pelo header CSP em
       produção apontando pro projeto novo), SMTP customizado corrigido

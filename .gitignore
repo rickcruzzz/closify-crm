@@ -38,6 +38,10 @@ yarn-error.log*
 # playwright mcp snapshots
 .playwright-mcp/
 
+# playwright test (tests/e2e) — resultado local, não é artefato do repo
+/test-results/
+/playwright-report/
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts
