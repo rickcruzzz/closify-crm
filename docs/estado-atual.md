@@ -178,7 +178,7 @@ Sem essas variáveis, os cards de integração aparecem normalmente em
       landing/cadastro/login/termos/privacidade, nunca no CRM logado) pra
       viabilizar tráfego pago. Funciona local (`.env.local`), mas
       `NEXT_PUBLIC_*` é inlined no BUILD — sem colar o mesmo valor
-      (`987545847222328`) nas env vars da Vercel e rodar um novo deploy, o
+      (`1566349361566072`) nas env vars da Vercel e rodar um novo deploy, o
       pixel não aparece em produção. **Risco de compliance em aberto,
       registrado, não escondido**: é rastreamento de terceiro (cookie
       `_fbp`) sob a LGPD, mesma razão pela qual o GA4 foi descartado do
@@ -254,6 +254,14 @@ Sem essas variáveis, os cards de integração aparecem normalmente em
       `recuperacao-de-senha.html` no painel. Feito e verificado com envio real:
       o link sai como `.../redefinir-senha?token_hash=…`.
 - [x] Cancelar as assinaturas de teste no Asaas. Feito — eram 3, não 2.
+- [x] **Meta Ads MCP conectado (13/08).** Conta de anúncio `27108979755418323`
+      (BRL, `ACTIVE`, com método de pagamento) é a do Velo Funil — confirmada
+      pelo dono entre as duas contas que a autenticação trouxe (a outra é
+      `Rickdaskin Ads`, negócio de terceiro). Serve pra gerenciar campanha
+      pelo Claude Code direto, mas isso não substitui a pendência acima: o
+      Pixel (`NEXT_PUBLIC_META_PIXEL_ID`) ainda precisa ir pra env var da
+      Vercel, e o Pix real de R$ 49 ainda precisa ser pago antes de ligar
+      qualquer campanha de verdade.
 
 ## Fila técnica, na ordem
 
