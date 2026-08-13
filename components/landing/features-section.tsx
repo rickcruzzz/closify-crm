@@ -152,7 +152,7 @@ export function FeaturesSection() {
                   <CardContent
                     className={cn(
                       'flex flex-col gap-3',
-                      ultimo && 'sm:flex-row sm:items-center sm:gap-4',
+                      ultimo && 'sm:flex-row sm:items-center sm:justify-center sm:gap-4',
                     )}
                   >
                     <div className="flex items-center gap-3">
@@ -168,7 +168,7 @@ export function FeaturesSection() {
                         {String(i + 1).padStart(2, '0')}
                       </span>
                     </div>
-                    <div className={cn(ultimo && 'sm:flex sm:flex-col sm:gap-1')}>
+                    <div className={cn(ultimo && 'sm:flex sm:max-w-md sm:flex-col sm:gap-1')}>
                       <h3 className="font-semibold">{feature.title}</h3>
                       <p className="text-muted-foreground text-sm">{feature.description}</p>
                     </div>
