@@ -169,7 +169,7 @@ export function FeaturesSection() {
                       </span>
                     </div>
                     <div className={cn(ultimo && 'sm:flex sm:max-w-md sm:flex-col sm:gap-1')}>
-                      <h3 className="font-semibold">{feature.title}</h3>
+                      <h3 className="text-base font-semibold">{feature.title}</h3>
                       <p className="text-muted-foreground text-sm">{feature.description}</p>
                     </div>
                   </CardContent>
