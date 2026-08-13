@@ -173,6 +173,29 @@ Sem essas variáveis, os cards de integração aparecem normalmente em
 
 ## Pendente do dono (não é código)
 
+- [ ] **`NEXT_PUBLIC_META_PIXEL_ID` na Vercel (13/08).** Meta Pixel ligado
+      (`components/analytics/meta-pixel.tsx`, só em páginas públicas —
+      landing/cadastro/login/termos/privacidade, nunca no CRM logado) pra
+      viabilizar tráfego pago. Funciona local (`.env.local`), mas
+      `NEXT_PUBLIC_*` é inlined no BUILD — sem colar o mesmo valor
+      (`987545847222328`) nas env vars da Vercel e rodar um novo deploy, o
+      pixel não aparece em produção. **Risco de compliance em aberto,
+      registrado, não escondido**: é rastreamento de terceiro (cookie
+      `_fbp`) sob a LGPD, mesma razão pela qual o GA4 foi descartado do
+      projeto — hoje não existe banner de consentimento de cookies no
+      site. Ligado por pedido explícito.
+- [ ] **Auditoria de prontidão pra tráfego pago (13/08).** Verificado
+      contra o banco de produção: 10 workspaces, zero em `plan = 'pro'` —
+      nenhum pagamento (Pix, boleto ou cartão) jamais completou o ciclo
+      inteiro até `active`. `Fani RRH Consultoria` está `past_due` desde
+      04/08, nunca resolvido. **Recomendação: pagar um Pix real de R$49
+      pelo checkout de produção ANTES de gastar em anúncio** — mandar
+      tráfego pago pra um checkout nunca provado arrisca queimar o
+      anúncio e a venda junto. E-mail de cobrança falhou (`past_due`) foi
+      construído nesta sessão (`lib/emails/pagamento-atrasado.ts`) —
+      ajudará a recuperar cartão recusado no futuro, mas não resolve o
+      caso da Fani, que já está parada há dias e pode merecer contato
+      direto.
 - [ ] **Gate de segurança no deploy (13/08).** `tests/e2e/security-audit.spec.ts`
       e `.github/workflows/deploy-com-auditoria.yml` foram criados — o
       workflow builda, roda a auditoria (chave vazada, headers de

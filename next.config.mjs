@@ -28,15 +28,21 @@ const csp = [
   "default-src 'self'",
   // `unsafe-inline` é inevitável enquanto as páginas forem estáticas: o Next
   // embute o payload de hidratação em script inline. Mesmo assim a diretiva
-  // vale, porque bloqueia script vindo de origem externa.
-  "script-src 'self' 'unsafe-inline'",
+  // vale, porque bloqueia script vindo de origem externa. `connect.facebook.net`
+  // é o loader do Meta Pixel (components/analytics/meta-pixel.tsx) — só nas
+  // páginas públicas, mas a CSP é do site inteiro, não dá pra restringir por rota.
+  "script-src 'self' 'unsafe-inline' https://connect.facebook.net",
   // O next-themes escreve `style` inline no elemento raiz antes da hidratação
   // para evitar flash de tema; sem `unsafe-inline` a página perde formatação.
   "style-src 'self' 'unsafe-inline'",
-  "img-src 'self' data: blob:",
+  // `www.facebook.com` é o beacon de rastreamento do Pixel (`/tr?id=...`),
+  // carregado como `<img>` no `<noscript>` de quem desativa JS.
+  "img-src 'self' data: blob: https://www.facebook.com",
   "font-src 'self'",
-  // Supabase por HTTPS e por WebSocket (realtime).
-  `connect-src 'self' ${process.env.NEXT_PUBLIC_SUPABASE_URL ?? ''} ${(process.env.NEXT_PUBLIC_SUPABASE_URL ?? '').replace('https://', 'wss://')}`,
+  // Supabase por HTTPS e por WebSocket (realtime), e o Meta Pixel manda o
+  // evento de rastreamento por fetch/beacon pra www.facebook.com quando JS
+  // está ativo (o `<img>` do noscript acima cobre só quem desativou).
+  `connect-src 'self' ${process.env.NEXT_PUBLIC_SUPABASE_URL ?? ''} ${(process.env.NEXT_PUBLIC_SUPABASE_URL ?? '').replace('https://', 'wss://')} https://www.facebook.com`,
   "form-action 'self'",
   // Redundante com X-Frame-Options, mas é a diretiva moderna e vale manter.
   "frame-ancestors 'none'",

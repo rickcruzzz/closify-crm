@@ -5,6 +5,7 @@ import { NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getResend } from '@/lib/resend/client'
 import { renderPagamentoConfirmadoEmail } from '@/lib/emails/pagamento-confirmado'
+import { renderPagamentoAtrasadoEmail } from '@/lib/emails/pagamento-atrasado'
 import { PRO_PLAN_PRICE } from '@/lib/plans'
 import { appUrl } from '@/lib/app-url'
 
@@ -122,7 +123,13 @@ export async function POST(request: Request) {
   // razão social do MEI e não a marca. Como a liberação do Pro é assíncrona,
   // ela não tinha como saber quando voltar a olhar.
   if (status === 'active' && matched === true) {
-    await avisarPagamentoConfirmado(supabase, subscriptionId)
+    await enviarEmailDoWebhook(supabase, subscriptionId, renderPagamentoConfirmadoEmail)
+  } else if (status === 'past_due' && matched === true) {
+    // Mesma lógica do e-mail de confirmação, sentido contrário: cartão
+    // recusado/boleto-Pix vencido é a categoria de churn mais barata de
+    // recuperar em qualquer SaaS, e hoje só existia um selo na tela de
+    // Configurações → Plano — que ninguém vê se não entrar no produto.
+    await enviarEmailDoWebhook(supabase, subscriptionId, renderPagamentoAtrasadoEmail)
   }
 
   // Assinatura que não é nossa (ou já removida): não é erro. Responde 200 pro
@@ -131,20 +138,25 @@ export async function POST(request: Request) {
 }
 
 /**
- * Manda o e-mail de "Pro ativado".
+ * Busca workspace/dono da assinatura e manda o e-mail correspondente.
  *
- * Engole qualquer falha de propósito. O e-mail é aviso, não é o efeito: o Pro
- * já foi liberado na transação anterior. Deixar uma exceção escapar aqui faria
- * o webhook responder 500, o Asaas reenviar o evento, e o dedupe por `event_id`
- * — que já gravou este evento — devolver 200 sem reprocessar nada. Ou seja: um
- * Resend fora do ar viraria pagamento sem confirmação e sem retentativa útil.
+ * Engole qualquer falha de propósito. O e-mail é aviso, não é o efeito: o
+ * status já foi aplicado na transação anterior. Deixar uma exceção escapar
+ * aqui faria o webhook responder 500, o Asaas reenviar o evento, e o dedupe
+ * por `event_id` — que já gravou este evento — devolver 200 sem reprocessar
+ * nada. Ou seja: um Resend fora do ar viraria mudança de status sem aviso e
+ * sem retentativa útil.
  *
  * A idempotência do envio vem de graça do dedupe: um `event_id` só chega aqui
  * uma vez, então não há risco de mandar o mesmo e-mail duas vezes.
  */
-async function avisarPagamentoConfirmado(
+async function enviarEmailDoWebhook(
   supabase: ReturnType<typeof createAdminClient>,
   subscriptionId: string,
+  render: (params: { workspaceName: string; valor: number; appUrl: string }) => {
+    subject: string
+    html: string
+  },
 ) {
   try {
     const { data: assinatura } = await supabase
@@ -169,7 +181,7 @@ async function avisarPagamentoConfirmado(
     const destinatario = dono?.user?.email
     if (!destinatario) return
 
-    const { subject, html } = renderPagamentoConfirmadoEmail({
+    const { subject, html } = render({
       workspaceName: workspace.name,
       valor: PRO_PLAN_PRICE,
       appUrl: appUrl(),
@@ -183,9 +195,9 @@ async function avisarPagamentoConfirmado(
     })
 
     if (error) {
-      console.error('Webhook Asaas: falha ao enviar e-mail de pagamento', error)
+      console.error('Webhook Asaas: falha ao enviar e-mail', error)
     }
   } catch (err) {
-    console.error('Webhook Asaas: erro ao avisar pagamento confirmado', err)
+    console.error('Webhook Asaas: erro ao enviar e-mail', err)
   }
 }

@@ -64,6 +64,11 @@ export type Database = {
           plan: WorkspacePlan
           created_by: string | null
           created_at: string
+          // De onde a empresa veio, se veio de campanha rastreada — ver
+          // 0041_atribuicao_de_cadastro.sql. Nullable: maioria não vem de nenhuma.
+          utm_source: string | null
+          utm_medium: string | null
+          utm_campaign: string | null
         } & DadosDaEmpresa
         Insert: {
           id?: string
@@ -71,6 +76,9 @@ export type Database = {
           plan?: WorkspacePlan
           created_by?: string | null
           created_at?: string
+          utm_source?: string | null
+          utm_medium?: string | null
+          utm_campaign?: string | null
         } & Partial<DadosDaEmpresa>
         Update: {
           id?: string
@@ -78,6 +86,9 @@ export type Database = {
           plan?: WorkspacePlan
           created_by?: string | null
           created_at?: string
+          utm_source?: string | null
+          utm_medium?: string | null
+          utm_campaign?: string | null
         } & Partial<DadosDaEmpresa>
         Relationships: []
       }

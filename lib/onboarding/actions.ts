@@ -4,7 +4,12 @@ import { revalidatePath } from 'next/cache'
 import { z } from 'zod'
 
 import { createClient } from '@/lib/supabase/server'
-import { lerConvitePendente, lerPlanoDesejado, limparIntencao } from '@/lib/auth/intencao'
+import {
+  lerAtribuicaoUtm,
+  lerConvitePendente,
+  lerPlanoDesejado,
+  limparIntencao,
+} from '@/lib/auth/intencao'
 import { registrar } from '@/lib/onboarding/eventos'
 import { passoDoOnboardingSchema } from '@/lib/validations/onboarding'
 import { FREE_WORKSPACE_LIMIT } from '@/lib/plans'
@@ -191,6 +196,31 @@ export async function finalizarOnboarding(values: unknown) {
     // primeira exibição no dashboard.
   })
   if ('error' in fechou) return fechou
+
+  // De onde essa empresa veio, se veio de campanha rastreada. Update comum
+  // (não a RPC), porque `utm_*` não está na lista de colunas protegidas por
+  // `proteger_colunas_do_workspace` (0027) — só plan/id/created_by/created_at
+  // são travadas contra edição direta. Engole erro de propósito: não é
+  // motivo pra travar a criação da empresa por causa de metadado de marketing.
+  if (workspaceId) {
+    const atribuicao = await lerAtribuicaoUtm()
+    if (atribuicao) {
+      const { error: erroAtribuicao } = await sessao.supabase
+        .from('workspaces')
+        .update({
+          utm_source: atribuicao.source ?? null,
+          utm_medium: atribuicao.medium ?? null,
+          utm_campaign: atribuicao.campaign ?? null,
+        })
+        .eq('id', workspaceId)
+
+      if (erroAtribuicao) {
+        console.error('Falha ao gravar atribuição de UTM', erroAtribuicao)
+      } else {
+        await limparIntencao(['utm'])
+      }
+    }
+  }
 
   registrar('onboarding_company_completed', { workspaceId: workspaceId ?? undefined })
   registrar('onboarding_completed', {

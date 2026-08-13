@@ -6,6 +6,8 @@ import { cn } from '@/lib/utils'
 import { ThemeProvider } from '@/components/theme-provider'
 import { Toaster } from '@/components/ui/sonner'
 import { Analytics } from '@/components/analytics'
+import { MetaPixel } from '@/components/analytics/meta-pixel'
+import { UtmCapture } from '@/components/landing/utm-capture'
 import { NavigationProgress } from '@/components/layout/navigation-progress'
 
 const geistSans = localFont({
@@ -96,6 +98,8 @@ export default function RootLayout({
               envio — o pacote manda o caminho REAL junto do padrão da rota, e
               `/convite/<token>` carrega uma credencial de acesso. */}
           <Analytics />
+          <MetaPixel />
+          <UtmCapture />
         </ThemeProvider>
       </body>
     </html>
