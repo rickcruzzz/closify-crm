@@ -4,7 +4,7 @@ import * as React from 'react'
 import Link from 'next/link'
 import { useRouter, useSearchParams, usePathname } from 'next/navigation'
 import { toast } from 'sonner'
-import { MoreHorizontal, Plus, Search, SearchX, Upload, Users } from 'lucide-react'
+import { Loader2, MoreHorizontal, Plus, Search, SearchX, Upload, Users } from 'lucide-react'
 
 import { PageHeader } from '@/components/layout/page-header'
 import { Button } from '@/components/ui/button'
@@ -63,6 +63,7 @@ export function LeadsPageClient({
   const router = useRouter()
   const pathname = usePathname()
   const searchParams = useSearchParams()
+  const [trocandoFiltro, startTransition] = React.useTransition()
 
   const [search, setSearch] = React.useState(initialSearch)
   const [formOpen, setFormOpen] = React.useState(false)
@@ -91,7 +92,14 @@ export function LeadsPageClient({
     } else {
       params.delete('cursor')
     }
-    router.push(`${pathname}?${params.toString()}`)
+    // `useTransition` em vez de `router.push` cru: sem isso, trocar o filtro
+    // de status não dava sinal nenhum até a lista nova chegar — nem a barra
+    // de progresso global cobre isso, porque ela só liga em clique de link
+    // (`<a>`), e o Select não é um. `trocandoFiltro` desabilita o Select e
+    // mostra um spinner visível no mesmo instante do clique.
+    startTransition(() => {
+      router.push(`${pathname}?${params.toString()}`)
+    })
   }
 
   function handleSearchSubmit(e: React.FormEvent) {
@@ -220,8 +228,9 @@ export function LeadsPageClient({
           <Select
             value={initialStatus}
             onValueChange={(value) => updateFilters({ status: value })}
+            disabled={trocandoFiltro}
           >
-            <SelectTrigger className="w-full lg:w-56">
+            <SelectTrigger className="relative w-full lg:w-56">
               <SelectValue placeholder="Filtrar por status">
                 {(value) =>
                   value === 'todos'
@@ -229,6 +238,12 @@ export function LeadsPageClient({
                     : leadStatusLabels[value as LeadStatus]
                 }
               </SelectValue>
+              {trocandoFiltro && (
+                <Loader2
+                  aria-hidden
+                  className="text-muted-foreground pointer-events-none absolute top-1/2 right-8 size-3.5 -translate-y-1/2 animate-spin"
+                />
+              )}
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="todos">Todos os status</SelectItem>
