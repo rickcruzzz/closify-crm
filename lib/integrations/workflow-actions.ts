@@ -34,6 +34,26 @@ async function abrirSessao(): Promise<Sessao | { error: string }> {
 }
 
 /**
+ * Confere se o Pro ainda vale ANTES de gastar a ida ao Google/Meta.
+ *
+ * A migration 0037 só gateou conectar/reconectar (`insert`/`update` em
+ * `integration_connections`) — quem já tinha conectado enquanto Pro continua
+ * usando pra sempre, porque `obterAccessTokenValido` lê e renova o token com
+ * service role (ignora RLS de propósito, já que o segredo só existe no
+ * servidor). Sem esta checagem aqui, "integração é Pro" vira mentira depois
+ * do primeiro vencimento.
+ */
+async function exigirProVigente(sessao: Sessao): Promise<{ error: string } | null> {
+  const { data: podeUsar } = await sessao.supabase.rpc('pro_vigente', {
+    target_workspace_id: sessao.workspaceId,
+  })
+  if (!podeUsar) {
+    return { error: 'Seu Pro venceu. Reative o plano para continuar usando integrações.' }
+  }
+  return null
+}
+
+/**
  * Cria um evento no Google Calendar a partir de uma tarefa já existente.
  *
  * Reusa data/hora/título da tarefa em vez de abrir um formulário novo: a
@@ -44,6 +64,9 @@ async function abrirSessao(): Promise<Sessao | { error: string }> {
 export async function agendarReuniaoNoGoogleCalendar(taskId: string) {
   const sessao = await abrirSessao()
   if ('error' in sessao) return sessao
+
+  const erroDePlano = await exigirProVigente(sessao)
+  if (erroDePlano) return erroDePlano
 
   const { data: task } = await sessao.supabase
     .from('tasks')
@@ -113,6 +136,9 @@ export async function enviarEmailViaGmail(leadId: string, values: unknown) {
   const sessao = await abrirSessao()
   if ('error' in sessao) return sessao
 
+  const erroDePlano = await exigirProVigente(sessao)
+  if (erroDePlano) return erroDePlano
+
   const { data: lead } = await sessao.supabase
     .from('leads')
     .select('id, email')
@@ -171,6 +197,9 @@ export async function enviarMensagemWhatsapp(leadId: string, values: unknown) {
 
   const sessao = await abrirSessao()
   if ('error' in sessao) return sessao
+
+  const erroDePlano = await exigirProVigente(sessao)
+  if (erroDePlano) return erroDePlano
 
   const { data: lead } = await sessao.supabase
     .from('leads')

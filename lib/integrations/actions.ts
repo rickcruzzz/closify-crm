@@ -93,10 +93,20 @@ export async function desconectarIntegracao(provider: IntegrationProvider) {
 export async function testarConexaoIntegracao(provider: IntegrationProvider) {
   const { workspaceId } = await getCurrentUserAndWorkspace()
 
+  let supabase
   try {
-    await exigirAdmin(workspaceId)
+    supabase = await exigirAdmin(workspaceId)
   } catch {
     return { error: 'Apenas administradores podem gerenciar integrações.' }
+  }
+
+  // Mesma razão de workflow-actions.ts: `obterAccessTokenValido` roda com
+  // service role e renovaria o token mesmo com o Pro vencido, sem isto.
+  const { data: podeUsar } = await supabase.rpc('pro_vigente', {
+    target_workspace_id: workspaceId,
+  })
+  if (!podeUsar) {
+    return { error: 'Seu Pro venceu. Reative o plano para continuar usando integrações.' }
   }
 
   const resultado = await obterAccessTokenValido(workspaceId, provider)
