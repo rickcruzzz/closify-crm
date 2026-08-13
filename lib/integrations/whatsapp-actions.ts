@@ -39,6 +39,16 @@ export async function conectarWhatsapp(code: string, phoneNumberId: string, waba
     return { error: 'Apenas administradores podem conectar integrações.' }
   }
 
+  // Mensagem clara antes de gastar a ida à Meta — a policy de
+  // `integration_connections` (migration 0037) já bloqueia o upsert no Free,
+  // isto só evita um erro genérico de permissão no lugar de explicar o motivo.
+  const { data: podeConectar } = await supabase.rpc('pro_vigente', {
+    target_workspace_id: workspaceId,
+  })
+  if (!podeConectar) {
+    return { error: 'Conecte o plano Pro para usar integrações.' }
+  }
+
   if (!code || !phoneNumberId || !wabaId) {
     return { error: 'A Meta não devolveu os dados esperados. Tente conectar de novo.' }
   }

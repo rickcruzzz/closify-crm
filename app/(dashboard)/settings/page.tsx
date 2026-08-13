@@ -39,6 +39,7 @@ const MENSAGEM_DE_ERRO_DA_INTEGRACAO: Record<string, string> = {
   parametros_ausentes: 'O Google não devolveu os dados esperados. Tente conectar de novo.',
   state_invalido: 'O link de conexão expirou ou é inválido. Tente conectar de novo.',
   falha_ao_conectar: 'Não foi possível concluir a conexão. Tente de novo em instantes.',
+  plano_free: 'Conecte o plano Pro para usar integrações.',
 }
 
 const NOME_DA_INTEGRACAO: Record<string, string> = {

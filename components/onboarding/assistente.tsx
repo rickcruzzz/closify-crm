@@ -44,9 +44,17 @@ const PERGUNTAS: OnboardingEtapa[] = ETAPAS.filter((e) => e !== 'processando')
 export function AssistenteDeOnboarding({
   etapaInicial,
   respostasIniciais,
+  atalhoPro = false,
 }: {
   etapaInicial: OnboardingEtapa
   respostasIniciais: RespostasSalvas
+  /**
+   * Quem clicou "Assinar Pro" na landing já decidiu — as perguntas de
+   * segmento/modelo de venda/tamanho de equipe são só personalização, não
+   * bloqueio. Aqui elas saem do caminho: nome da empresa e direto pro
+   * pagamento. Continuam disponíveis depois via checklist de ativação.
+   */
+  atalhoPro?: boolean
 }) {
   const router = useRouter()
   const [etapa, setEtapa] = React.useState<OnboardingEtapa>(etapaInicial)
@@ -54,7 +62,8 @@ export function AssistenteDeOnboarding({
   const [ocupado, setOcupado] = React.useState(false)
   const [erro, setErro] = React.useState<string | null>(null)
 
-  const indice = PERGUNTAS.indexOf(etapa)
+  const perguntas = atalhoPro ? (['empresa'] as OnboardingEtapa[]) : PERGUNTAS
+  const indice = perguntas.indexOf(etapa)
   const naProcessando = etapa === 'processando'
 
   /**
@@ -78,8 +87,14 @@ export function AssistenteDeOnboarding({
       return
     }
 
-    const seguinte = proximaEtapa(etapa)
     setOcupado(false)
+
+    if (atalhoPro && etapa === 'empresa') {
+      setEtapa('processando')
+      return
+    }
+
+    const seguinte = proximaEtapa(etapa)
     if (seguinte) setEtapa(seguinte)
   }
 
@@ -133,14 +148,15 @@ export function AssistenteDeOnboarding({
         // processamento: assim a pessoa vê o que respondeu e tenta de novo,
         // sem perder nada. `jaProcessou` reabre para a nova tentativa.
         jaProcessou.current = false
-        setEtapa('equipe')
+        setEtapa(atalhoPro ? 'empresa' : 'equipe')
         return
       }
 
       // Sem `?tour=1`: o tour abre pelo estado, não por parâmetro de URL.
-      router.push('/dashboard')
+      // `destino` já resolve pro checkout quando a pessoa veio querendo o Pro.
+      router.push('destino' in resultado ? resultado.destino : '/dashboard')
     })()
-  }, [naProcessando, respostas, router])
+  }, [naProcessando, respostas, router, atalhoPro])
 
   return (
     <Card>
@@ -149,14 +165,14 @@ export function AssistenteDeOnboarding({
           <div className="mb-3 flex flex-col gap-2">
             <div className="text-muted-foreground flex items-center justify-between text-xs">
               <span>
-                Passo {indice + 1} de {PERGUNTAS.length}
+                Passo {indice + 1} de {perguntas.length}
               </span>
-              <span>cerca de 2 minutos</span>
+              <span>{atalhoPro ? 'menos de 1 minuto' : 'cerca de 2 minutos'}</span>
             </div>
             {/* Barra segmentada em vez de percentual: a pessoa vê quantas
                 perguntas faltam, que é a informação que ela quer. */}
             <div className="flex gap-1" aria-hidden>
-              {PERGUNTAS.map((p, i) => (
+              {perguntas.map((p, i) => (
                 <span
                   key={p}
                   className={cn(

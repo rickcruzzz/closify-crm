@@ -60,6 +60,18 @@ export async function GET(request: NextRequest) {
     return NextResponse.redirect(`${destinoDeErro}somente_admin`)
   }
 
+  // O callback grava com service role (o `state` assinado já prova quem
+  // pediu), então RLS não protege este fluxo — a checagem de plano tem que
+  // estar aqui, antes de assinar o `state`. Só quem passa por este GET
+  // consegue um `state` válido; barrar aqui fecha o caminho por inteiro.
+  const { data: podeConectar } = await supabase.rpc('pro_vigente', {
+    target_workspace_id: workspaceId,
+  })
+
+  if (!podeConectar) {
+    return NextResponse.redirect(`${destinoDeErro}plano_free`)
+  }
+
   const state = assinarEstado({ workspaceId, provider, userId: user.id, nonce: randomUUID() })
   return NextResponse.redirect(montarUrlDeAutorizacao(provider, state))
 }

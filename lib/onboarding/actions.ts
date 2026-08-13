@@ -4,7 +4,7 @@ import { revalidatePath } from 'next/cache'
 import { z } from 'zod'
 
 import { createClient } from '@/lib/supabase/server'
-import { lerConvitePendente, limparIntencao } from '@/lib/auth/intencao'
+import { lerConvitePendente, lerPlanoDesejado, limparIntencao } from '@/lib/auth/intencao'
 import { registrar } from '@/lib/onboarding/eventos'
 import { passoDoOnboardingSchema } from '@/lib/validations/onboarding'
 import { FREE_WORKSPACE_LIMIT } from '@/lib/plans'
@@ -203,7 +203,18 @@ export async function finalizarOnboarding(values: unknown) {
   // A empresa pode ter acabado de nascer: toda tela do dashboard depende dela.
   revalidatePath('/', 'layout')
 
-  return { success: true, workspaceId }
+  // A empresa acabou de nascer; se a pessoa veio da landing querendo o Pro,
+  // este é o momento de levá-la ao pagamento — sem isto ela cai no dashboard
+  // em Free e tem que descobrir Configurações → Cobrança sozinha. A intenção
+  // é consumida aqui: deixá-la no cookie faria toda criação de empresa
+  // futura desviar para o checkout.
+  const plano = await lerPlanoDesejado()
+  if (plano === 'pro') {
+    await limparIntencao(['plano'])
+    return { success: true, workspaceId, destino: '/settings/billing?assinar=1' }
+  }
+
+  return { success: true, workspaceId, destino: '/dashboard' }
 }
 
 /**

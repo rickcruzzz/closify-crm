@@ -60,6 +60,9 @@ export function HeroSection() {
               Ver funcionalidades
             </Link>
           </div>
+          <p className="text-muted-foreground animate-in fade-in slide-in-from-bottom-5 ease-entrada text-sm duration-[850ms]">
+            A partir de R$0 — Pro por R$49/mês quando o funil crescer
+          </p>
         </div>
 
         <div className="animate-in fade-in slide-in-from-bottom-5 ease-entrada duration-[900ms]">

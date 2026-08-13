@@ -1,5 +1,8 @@
 # PRD: Velo Funil
 
+> Iniciativa de conversão Free→Pro (copy da landing, limites, checkout) tem
+> PRD próprio: [prd-conversao-pro.md](prd-conversao-pro.md).
+
 ## 1. Contexto e Problema
 
 Pequenas empresas de serviço no Brasil — agências, consultorias, clínicas, imobiliárias pequenas e

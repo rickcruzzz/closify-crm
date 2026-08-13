@@ -28,7 +28,7 @@ const plans: Plan[] = [
   {
     name: 'Free',
     price: 'R$0',
-    description: 'Para começar a organizar seu funil sem custo.',
+    description: 'Pra sempre — sem cartão, sem prazo pra decidir.',
     // Números vêm das constantes, não escritos à mão: a landing anunciava "Até
     // 2 colaboradores" sem citar o limite de empresa, e um texto fixo aqui
     // volta a divergir do produto na primeira mudança de plano.
@@ -47,13 +47,13 @@ const plans: Plan[] = [
     name: 'Pro',
     price: 'R$49',
     period: '/mês',
-    description: 'Para times que já venderam a planilha e querem escalar.',
+    description:
+      'Menos de R$2 por dia — um cliente perdido por esquecimento custa mais que isso no ano inteiro.',
     features: [
       'Várias empresas no mesmo login',
       'Colaboradores ilimitados',
       'Leads ilimitados',
-      'Pipeline Kanban',
-      'Dashboard de métricas',
+      'WhatsApp, Google Calendar e Gmail conectados',
       'Suporte prioritário',
     ],
     cta: 'Assinar Pro',
@@ -84,10 +84,10 @@ export function PricingSection() {
             Planos
           </span>
           <h2 className="text-3xl font-semibold tracking-[-0.02em] md:text-4xl">
-            Planos para cada fase do seu negócio
+            Pare de perder venda por esquecimento
           </h2>
           <p className="text-muted-foreground text-lg text-balance">
-            Comece grátis e faça upgrade quando o funil crescer.
+            Grátis pra sempre até {FREE_LEAD_LIMIT} leads. Sem cartão, sem contrato.
           </p>
         </RevealOnScroll>
 

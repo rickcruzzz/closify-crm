@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation'
 
 import { createClient } from '@/lib/supabase/server'
 import { lerEstadoDoOnboarding } from '@/lib/onboarding/estado'
+import { lerPlanoDesejado } from '@/lib/auth/intencao'
 import {
   AssistenteDeOnboarding,
   type RespostasSalvas,
@@ -67,7 +68,17 @@ export default async function OnboardingPage() {
   const etapaInicial: OnboardingEtapa =
     !estado.etapa || estado.etapa === 'processando' ? 'empresa' : estado.etapa
 
+  // Quem já decidiu pagar não precisa das outras 3 perguntas antes de ver a
+  // tela de cobrança — só o nome da empresa, o mínimo pra criar o workspace.
+  // O resto do onboarding (segmento, modelo de venda, tamanho de equipe)
+  // continua disponível depois, pelo checklist de ativação.
+  const atalhoPro = (await lerPlanoDesejado()) === 'pro'
+
   return (
-    <AssistenteDeOnboarding etapaInicial={etapaInicial} respostasIniciais={respostas} />
+    <AssistenteDeOnboarding
+      etapaInicial={etapaInicial}
+      respostasIniciais={respostas}
+      atalhoPro={atalhoPro}
+    />
   )
 }

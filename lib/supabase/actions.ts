@@ -7,22 +7,13 @@ import { createClient } from '@/lib/supabase/server'
 import {
   loginSchema,
   signUpSchema,
-  onboardingSchema,
   forgotPasswordSchema,
   definirSenhaSchema,
   perfilSchema,
 } from '@/lib/validations/auth'
 import { appUrl } from '@/lib/app-url'
 import { excedeuLimite, limparTentativas } from '@/lib/rate-limit'
-import { canAddWorkspace } from '@/lib/limits'
-import { FREE_WORKSPACE_LIMIT } from '@/lib/plans'
-import {
-  guardarIntencao,
-  lerConvitePendente,
-  lerEmailPendente,
-  lerPlanoDesejado,
-  limparIntencao,
-} from '@/lib/auth/intencao'
+import { guardarIntencao, lerConvitePendente, lerEmailPendente } from '@/lib/auth/intencao'
 
 export async function signIn(values: unknown) {
   const parsed = loginSchema.safeParse(values)
@@ -257,99 +248,6 @@ export async function signOut() {
   const supabase = await createClient()
   await supabase.auth.signOut()
   redirect('/login')
-}
-
-export async function createWorkspace(values: unknown) {
-  const parsed = onboardingSchema.safeParse(values)
-  if (!parsed.success) {
-    return { error: 'Dados inválidos.' }
-  }
-
-  const supabase = await createClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-
-  if (!user) {
-    redirect('/login')
-  }
-
-  // Quem foi convidado não deveria estar criando empresa nenhuma. Antes, o
-  // token do convite se perdia no caminho para o cadastro e a pessoa terminava
-  // aqui, criando a PRÓPRIA empresa — virava uma conta paralela em vez de
-  // colaborador, e o convite ficava `pending` para sempre.
-  //
-  // Mandar de volta ao convite em vez de só bloquear: a pessoa não errou nada,
-  // ela só foi parar na tela errada. E impedir a empresa órfã importa além da
-  // confusão — `getActiveWorkspaceId` escolhe sempre o workspace MAIS ANTIGO,
-  // então a empresa criada por engano viraria a padrão, e depois de aceitar o
-  // convite ela cairia justamente na empresa errada.
-  const convitePendente = await lerConvitePendente()
-  if (convitePendente) {
-    // Confere se o convite AINDA está de pé antes de desviar. Sem isto, quem
-    // já aceitou entraria num vaivém: tentaria criar uma empresa própria mais
-    // tarde, seria mandado de volta ao convite, e lá leria "convite inválido"
-    // — porque o convite já foi usado.
-    //
-    // Aqui, numa Server Action, o cookie PODE ser apagado. Na página do
-    // convite não pode: mexer em cookie durante a renderização de um Server
-    // Component é proibido pelo Next, e foi exatamente o que quebrou a tela
-    // com "Algo deu errado" logo depois de um aceite bem-sucedido — o convite
-    // era aceito e a exceção estourava em seguida.
-    const { data: convite } = await supabase.rpc('get_invite_by_token', {
-      invite_token: convitePendente,
-    })
-
-    if (convite?.[0]?.status === 'pending') {
-      redirect(`/convite/${convitePendente}`)
-    }
-
-    await limparIntencao(['convite'])
-  }
-
-  // Sem este teto, o limite de 2 colaboradores não segurava nada: bastava
-  // criar uma empresa nova para cada dupla e ter equipe ilimitada de graça.
-  // A RPC repete a checagem no banco — esta aqui existe para dar mensagem
-  // clara antes de chegar lá.
-  const limite = await canAddWorkspace(user.id)
-  if (!limite.allowed) {
-    return { error: limite.reason }
-  }
-
-  // create_workspace_with_admin roda os dois inserts (workspace + membro
-  // admin) numa única transação — sem isso, uma falha no segundo insert
-  // deixava um workspace órfão sem membro, e o retry do usuário acumulava
-  // workspaces órfãos a cada tentativa.
-  const { error: rpcError } = await supabase.rpc('create_workspace_with_admin', {
-    workspace_name: parsed.data.workspaceName,
-  })
-
-  if (rpcError) {
-    console.error('create_workspace_with_admin falhou', rpcError)
-    // A RPC repete a checagem de limite e levanta essa exceção de propósito —
-    // é mensagem segura de mostrar, ao contrário do texto cru do Postgres.
-    if (rpcError.message.includes('O plano Free inclui')) {
-      return {
-        error: `O plano Free inclui ${FREE_WORKSPACE_LIMIT} empresa. Faça upgrade para o Pro para gerenciar várias.`,
-      }
-    }
-    return { error: 'Não foi possível criar o workspace.' }
-  }
-
-  // A empresa acabou de nascer; se a pessoa veio da landing querendo o Pro,
-  // este é o momento de levá-la ao pagamento. Antes ela caía no dashboard em
-  // Free e tinha que descobrir Configurações → Cobrança sozinha — o clique em
-  // "Assinar Pro" morria seis telas antes de qualquer campo de pagamento.
-  //
-  // A intenção é consumida aqui: deixá-la no cookie faria toda criação de
-  // empresa futura desviar para o checkout.
-  const plano = await lerPlanoDesejado()
-  if (plano === 'pro') {
-    await limparIntencao(['plano'])
-    redirect('/settings/billing?assinar=1')
-  }
-
-  redirect('/dashboard')
 }
 
 /**
