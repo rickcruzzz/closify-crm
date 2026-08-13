@@ -40,6 +40,13 @@ export function UserMenu({
 }) {
   const [, startTransition] = useTransition()
 
+  // Sem nome de exibição cadastrado, `currentUser.name` cai pro e-mail
+  // (app/(dashboard)/layout.tsx) — nome e e-mail viram a MESMA string, e
+  // mostrar as duas linhas repete a informação: uma cortada num ponto (negrito,
+  // mais larga por caractere), outra cortada noutro (peso normal), parecendo
+  // erro de truncamento em vez de conteúdo duplicado, que é o que realmente é.
+  const temNomeProprio = currentUser.name !== currentUser.email
+
   return (
     <DropdownMenu>
       {variant === 'expanded' ? (
@@ -48,8 +55,14 @@ export function UserMenu({
             <AvatarFallback className="text-xs font-medium">{currentUser.initials}</AvatarFallback>
           </Avatar>
           <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
-            <span className="truncate font-medium">{currentUser.name}</span>
-            <span className="text-muted-foreground truncate text-xs">{currentUser.email}</span>
+            {temNomeProprio ? (
+              <>
+                <span className="truncate font-medium">{currentUser.name}</span>
+                <span className="text-muted-foreground truncate text-xs">{currentUser.email}</span>
+              </>
+            ) : (
+              <span className="truncate font-medium">{currentUser.email}</span>
+            )}
           </div>
           <ChevronsUpDown className="text-muted-foreground size-4 shrink-0" />
         </DropdownMenuTrigger>
@@ -63,8 +76,14 @@ export function UserMenu({
       <DropdownMenuContent align={variant === 'expanded' ? 'start' : 'end'} className="w-56">
         <DropdownMenuGroup>
           <DropdownMenuLabel className="flex flex-col gap-0.5 px-1.5 py-1.5">
-            <span className="text-foreground text-sm font-medium">{currentUser.name}</span>
-            <span className="text-muted-foreground text-xs font-normal">{currentUser.email}</span>
+            {temNomeProprio ? (
+              <>
+                <span className="text-foreground truncate text-sm font-medium">{currentUser.name}</span>
+                <span className="text-muted-foreground truncate text-xs font-normal">{currentUser.email}</span>
+              </>
+            ) : (
+              <span className="text-foreground truncate text-sm font-medium">{currentUser.email}</span>
+            )}
           </DropdownMenuLabel>
         </DropdownMenuGroup>
         <DropdownMenuSeparator />
