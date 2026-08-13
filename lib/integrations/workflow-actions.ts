@@ -3,7 +3,6 @@
 import { revalidatePath } from 'next/cache'
 
 import { createClient } from '@/lib/supabase/server'
-import { createAdminClient } from '@/lib/supabase/admin'
 import { resolverWorkspaceAtivo } from '@/lib/workspace/ativo'
 import { obterAccessTokenValido } from '@/lib/integrations/token'
 import { criarEventoDeCalendario, enviarEmailGmail } from '@/lib/integrations/google'
@@ -188,24 +187,12 @@ export async function enviarMensagemWhatsapp(leadId: string, values: unknown) {
   const numero = linkValidado.replace('https://wa.me/', '')
 
   const token = await obterAccessTokenValido(sessao.workspaceId, 'whatsapp')
-  if ('error' in token) {
-    return { error: 'Conecte o WhatsApp em Configurações → Integrações.' }
-  }
-
-  const admin = createAdminClient()
-  const { data: conexao } = await admin
-    .from('integration_connections')
-    .select('external_id')
-    .eq('workspace_id', sessao.workspaceId)
-    .eq('provider', 'whatsapp')
-    .maybeSingle()
-
-  if (!conexao?.external_id) {
+  if ('error' in token || !token.externalId) {
     return { error: 'Conecte o WhatsApp em Configurações → Integrações.' }
   }
 
   try {
-    await enviarMensagemModelo(conexao.external_id, token.accessToken, {
+    await enviarMensagemModelo(token.externalId, token.accessToken, {
       destinatario: numero,
       nomeDoModelo: parsed.data.nomeDoModelo,
       idiomaDoModelo: parsed.data.idioma,

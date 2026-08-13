@@ -70,7 +70,6 @@ export function LeadDetailClient({
   const [deleteOpen, setDeleteOpen] = React.useState(false)
   const [activityFormOpen, setActivityFormOpen] = React.useState(false)
   const [emailFormOpen, setEmailFormOpen] = React.useState(false)
-  const [whatsappTemplateOpen, setWhatsappTemplateOpen] = React.useState(false)
   const [taskFormOpen, setTaskFormOpen] = React.useState(false)
   const [tarefaEmEdicao, setTarefaEmEdicao] = React.useState<TarefaEmEdicao | null>(null)
 
@@ -206,12 +205,7 @@ export function LeadDetailClient({
                 substitui: o link abre a conversa no aparelho da pessoa sem
                 depender de integração nenhuma; isto aqui manda mensagem
                 iniciando contato pelo número comercial conectado. */}
-            {whatsapp && (
-              <Button variant="outline" onClick={() => setWhatsappTemplateOpen(true)}>
-                <MessageCircle className="size-4" />
-                Enviar modelo
-              </Button>
-            )}
+            {whatsapp && <SendWhatsAppTemplateDialog onSend={handleSendWhatsAppTemplate} />}
             {/* Só aparece com e-mail cadastrado — sem endereço, não há para
                 onde mandar. Se o Gmail não estiver conectado, o erro vem do
                 servidor ao tentar enviar, com o caminho pra Configurações. */}
@@ -385,14 +379,6 @@ export function LeadDetailClient({
           onOpenChange={setEmailFormOpen}
           destinatario={lead.email}
           onSend={handleSendEmail}
-        />
-      )}
-
-      {whatsapp && (
-        <SendWhatsAppTemplateDialog
-          open={whatsappTemplateOpen}
-          onOpenChange={setWhatsappTemplateOpen}
-          onSend={handleSendWhatsAppTemplate}
         />
       )}
 

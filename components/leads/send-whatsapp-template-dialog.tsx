@@ -3,7 +3,7 @@
 import * as React from 'react'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useForm } from 'react-hook-form'
-import { Loader2 } from 'lucide-react'
+import { Loader2, MessageCircle } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
 import {
@@ -13,6 +13,7 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
+  DialogTrigger,
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -23,15 +24,20 @@ import {
   type WhatsAppTemplateFormValues,
 } from '@/lib/validations/whatsapp-template'
 
+// Gatilho e conteúdo no mesmo componente, de propósito — mesmo ajuste do
+// `mobile-sidebar.tsx` (fad03be): sem `DialogTrigger` registrando o botão
+// como referência do diálogo, o listener de "clicar fora fecha" do base-ui
+// não reconhece o clique que ABRIU como interno, e fecha no mesmo instante
+// — exige um segundo clique pra ficar aberto de vez. Antes o botão vivia no
+// componente pai (`lead-detail-client.tsx`), ~200 linhas longe do
+// `<Dialog>`, com `open`/`onOpenChange` controlados de fora — impossível de
+// registrar como trigger de verdade estando em árvores React separadas.
 export function SendWhatsAppTemplateDialog({
-  open,
-  onOpenChange,
   onSend,
 }: {
-  open: boolean
-  onOpenChange: (open: boolean) => void
   onSend: (values: WhatsAppTemplateFormValues) => void | Promise<void>
 }) {
+  const [open, setOpen] = React.useState(false)
   const [isSubmitting, setIsSubmitting] = React.useState(false)
 
   const {
@@ -52,14 +58,18 @@ export function SendWhatsAppTemplateDialog({
     setIsSubmitting(true)
     try {
       await onSend(values)
-      onOpenChange(false)
+      setOpen(false)
     } finally {
       setIsSubmitting(false)
     }
   }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger render={<Button variant="outline" />}>
+        <MessageCircle className="size-4" />
+        Enviar modelo
+      </DialogTrigger>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>Enviar modelo do WhatsApp</DialogTitle>
