@@ -180,11 +180,13 @@ export async function criarEventoDeCalendario(
 }
 
 export async function testarCalendario(accessToken: string): Promise<boolean> {
-  const res = await fetch(
-    'https://www.googleapis.com/calendar/v3/calendars/primary?fields=id',
-    { headers: { Authorization: `Bearer ${accessToken}` } },
-  )
-  return res.ok
+  // `calendars.get` (o endpoint usado antes aqui) exige calendar.readonly/
+  // calendar/calendar.calendars — a lista oficial de escopos aceitos por
+  // esse método não inclui `calendar.events`, que é o único que a conexão
+  // pede (menor privilégio). Mesma causa raiz do bug já corrigido em
+  // `testarGmail`: testar com endpoint que a conexão não tem permissão de
+  // chamar sempre devolve 403 e marca conexão saudável como quebrada.
+  return testarEscopoConcedido(accessToken, escopoGoogle('google_calendar'))
 }
 
 // Monta o e-mail no formato RFC 2822 exigido pelo `raw` da API do Gmail —
@@ -223,15 +225,18 @@ export async function enviarEmailGmail(
   return res.json() as Promise<{ id: string }>
 }
 
-// Não usa `GET /gmail/v1/users/me/profile`: esse endpoint exige escopo de
-// leitura (`gmail.readonly`/`gmail.modify`/`gmail.metadata`), que a conexão
-// nunca pede — só `gmail.send` (menor privilégio, ver `ESCOPO_POR_PROVIDER`).
-// Testar com um endpoint que a própria integração não tem permissão de
-// chamar sempre devolve 403 e marca a conexão como quebrada mesmo saudável.
-// `tokeninfo` valida o token sem exigir escopo nenhum de API específica, e
-// confirmar que `scope` inclui `gmail.send` garante que não é só um token
-// válido de OUTRA finalidade.
-export async function testarGmail(accessToken: string): Promise<boolean> {
+// Testar CADA integração batendo na API real dela (Gmail, Calendar) exigia
+// endpoint próprio — e tanto `GET /gmail/v1/users/me/profile` quanto
+// `GET /calendar/v3/calendars/primary` pedem escopo de LEITURA que a conexão
+// nunca tem (ela só pede o escopo mínimo de escrita — `gmail.send` ou
+// `calendar.events`, ver `ESCOPO_POR_PROVIDER`). Testar com endpoint que a
+// própria integração não tem permissão de chamar sempre devolve 403 e marca
+// conexão saudável como quebrada — dois bugs iguais, achados em sequência.
+//
+// `tokeninfo` valida o token sem exigir escopo nenhum de API específica —
+// serve pros dois provedores. Confirmar que `scope` inclui o escopo exigido
+// garante que não é só um token válido de OUTRA finalidade.
+async function testarEscopoConcedido(accessToken: string, escopoExigido: string): Promise<boolean> {
   // Header, não query string — token de acesso não deve viajar em URL (fica
   // em log de acesso). Confirmado contra o endpoint real que ele aceita
   // Authorization: Bearer (erro muda de "token ausente" pra "token
@@ -243,7 +248,11 @@ export async function testarGmail(accessToken: string): Promise<boolean> {
   const info = (await res.json()) as { scope?: string }
   // Comparação exata contra a lista de escopos, não substring — evita casar
   // por acidente com um escopo diferente que só contenha o mesmo texto.
-  return (info.scope ?? '').split(/\s+/).includes(escopoGoogle('gmail'))
+  return (info.scope ?? '').split(/\s+/).includes(escopoExigido)
+}
+
+export async function testarGmail(accessToken: string): Promise<boolean> {
+  return testarEscopoConcedido(accessToken, escopoGoogle('gmail'))
 }
 
 /** Providers Google válidos — subconjunto de IntegrationProvider (exclui 'whatsapp'). */
