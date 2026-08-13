@@ -9,7 +9,9 @@ import {
   lerConvitePendente,
   lerPlanoDesejado,
   limparIntencao,
+  type AtribuicaoUtm,
 } from '@/lib/auth/intencao'
+import { enviarConversaoDeRegistro } from '@/lib/analytics/meta-conversions'
 import { registrar } from '@/lib/onboarding/eventos'
 import { passoDoOnboardingSchema } from '@/lib/validations/onboarding'
 import { FREE_WORKSPACE_LIMIT } from '@/lib/plans'
@@ -202,8 +204,9 @@ export async function finalizarOnboarding(values: unknown) {
   // `proteger_colunas_do_workspace` (0027) — só plan/id/created_by/created_at
   // são travadas contra edição direta. Engole erro de propósito: não é
   // motivo pra travar a criação da empresa por causa de metadado de marketing.
+  let atribuicao: AtribuicaoUtm | null = null
   if (workspaceId) {
-    const atribuicao = await lerAtribuicaoUtm()
+    atribuicao = await lerAtribuicaoUtm()
     if (atribuicao) {
       const { error: erroAtribuicao } = await sessao.supabase
         .from('workspaces')
@@ -211,6 +214,8 @@ export async function finalizarOnboarding(values: unknown) {
           utm_source: atribuicao.source ?? null,
           utm_medium: atribuicao.medium ?? null,
           utm_campaign: atribuicao.campaign ?? null,
+          fbc: atribuicao.fbc ?? null,
+          fbp: atribuicao.fbp ?? null,
         })
         .eq('id', workspaceId)
 
@@ -220,6 +225,28 @@ export async function finalizarOnboarding(values: unknown) {
         await limparIntencao(['utm'])
       }
     }
+  }
+
+  // "CompleteRegistration" pro Meta — evento intermediário entre o clique no
+  // anúncio e o eventual Purchase (que só existe se a pessoa virar Pro,
+  // podendo levar dias por Pix/boleto). Dispara pra TODA conta, Free ou não
+  // — o sinal que importa aqui é "chegou até nascer a empresa", não plano.
+  // Engole erro de propósito, mesmo motivo do e-mail: telemetria não pode
+  // travar a criação da conta.
+  try {
+    const {
+      data: { user },
+    } = await sessao.supabase.auth.getUser()
+    if (user?.email) {
+      await enviarConversaoDeRegistro({
+        email: user.email,
+        eventId: crypto.randomUUID(),
+        fbc: atribuicao?.fbc,
+        fbp: atribuicao?.fbp,
+      })
+    }
+  } catch (err) {
+    console.error('Falha ao enviar CompleteRegistration pro Meta', err)
   }
 
   registrar('onboarding_company_completed', { workspaceId: workspaceId ?? undefined })

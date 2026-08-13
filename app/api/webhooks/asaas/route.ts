@@ -151,7 +151,12 @@ export async function POST(request: Request) {
 async function buscarAssinante(
   supabase: ReturnType<typeof createAdminClient>,
   subscriptionId: string,
-): Promise<{ workspaceName: string; email: string } | null> {
+): Promise<{
+  workspaceName: string
+  email: string
+  fbc: string | null
+  fbp: string | null
+} | null> {
   const { data: assinatura } = await supabase
     .from('subscriptions')
     .select('workspace_id')
@@ -162,7 +167,7 @@ async function buscarAssinante(
 
   const { data: workspace } = await supabase
     .from('workspaces')
-    .select('name, created_by')
+    .select('name, created_by, fbc, fbp')
     .eq('id', assinatura.workspace_id)
     .maybeSingle()
 
@@ -172,7 +177,7 @@ async function buscarAssinante(
   const email = dono?.user?.email
   if (!email) return null
 
-  return { workspaceName: workspace.name, email }
+  return { workspaceName: workspace.name, email, fbc: workspace.fbc, fbp: workspace.fbp }
 }
 
 /**
@@ -240,6 +245,8 @@ async function enviarConversaoParaMeta(
       email: assinante.email,
       valor: PRO_PLAN_PRICE,
       eventId,
+      fbc: assinante.fbc,
+      fbp: assinante.fbp,
     })
   } catch (err) {
     console.error('Webhook Asaas: erro ao enviar conversão pro Meta', err)

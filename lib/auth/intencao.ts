@@ -66,6 +66,10 @@ export type AtribuicaoUtm = {
   source?: string
   medium?: string
   campaign?: string
+  /** Id de clique do Meta, derivado do `fbclid` da URL — âncora de atribuição. */
+  fbc?: string
+  /** Cookie `_fbp` do próprio Pixel — âncora de identidade do navegador. */
+  fbp?: string
 }
 
 export async function guardarIntencao(intencao: {
@@ -98,7 +102,10 @@ export async function guardarIntencao(intencao: {
  * (Meta/Google usam o mesmo padrão).
  */
 export async function guardarAtribuicaoUtm(utm: AtribuicaoUtm) {
-  if (!utm.source && !utm.medium && !utm.campaign) return
+  // `fbc` sozinho é comum: clique em anúncio do Meta que não levou `utm_*`
+  // na URL de destino (o link do anúncio nem sempre carrega UTM) ainda
+  // carrega `fbclid` — vale capturar mesmo sem os três UTMs.
+  if (!utm.source && !utm.medium && !utm.campaign && !utm.fbc && !utm.fbp) return
 
   const jar = await cookies()
   if (jar.get(COOKIE_UTM)) return

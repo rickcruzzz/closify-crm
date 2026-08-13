@@ -69,6 +69,9 @@ export type Database = {
           utm_source: string | null
           utm_medium: string | null
           utm_campaign: string | null
+          // Âncoras de match da Conversions API do Meta — ver 0042_fbc_fbp.sql.
+          fbc: string | null
+          fbp: string | null
         } & DadosDaEmpresa
         Insert: {
           id?: string
@@ -79,6 +82,8 @@ export type Database = {
           utm_source?: string | null
           utm_medium?: string | null
           utm_campaign?: string | null
+          fbc?: string | null
+          fbp?: string | null
         } & Partial<DadosDaEmpresa>
         Update: {
           id?: string
@@ -89,6 +94,8 @@ export type Database = {
           utm_source?: string | null
           utm_medium?: string | null
           utm_campaign?: string | null
+          fbc?: string | null
+          fbp?: string | null
         } & Partial<DadosDaEmpresa>
         Relationships: []
       }
