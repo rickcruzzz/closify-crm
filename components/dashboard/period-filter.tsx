@@ -102,10 +102,21 @@ export function PeriodFilter({
           <CalendarRange className="size-4" />
           {personalizado ? `${formatarCurto(desdeAtivo)} – ${formatarCurto(ateAtivo)}` : 'Período personalizado'}
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="start" className="w-72 p-3">
+        {/* `min-w` em vez de `w` fixo: nunca fica mais estreito que o
+            necessário pros dois campos de data, mas pode crescer. `max-w`
+            com `calc(100vw...)` é o teto de segurança — não importa quanto o
+            cálculo de "espaço disponível" do popup decidir (a coluna
+            principal do layout tem overflow-y-auto, e por regra da própria
+            especificação CSS isso faz o eixo X também virar não-visible,
+            então o popup pode calcular a largura livre com base na coluna,
+            não na tela inteira), o popup nunca estoura o viewport. */}
+        <DropdownMenuContent
+          align="start"
+          className="w-72 min-w-72 max-w-[calc(100vw-2rem)] p-3"
+        >
           <form onSubmit={aplicarPersonalizado} className="flex flex-col gap-3">
-            <div className="flex gap-2">
-              <div className="flex flex-1 flex-col gap-1.5">
+            <div className="flex flex-col gap-2 min-[420px]:flex-row">
+              <div className="flex min-w-0 flex-1 flex-col gap-1.5">
                 <Label htmlFor="periodo-desde">De</Label>
                 <Input
                   id="periodo-desde"
@@ -115,7 +126,7 @@ export function PeriodFilter({
                   onChange={(e) => setDesde(e.target.value)}
                 />
               </div>
-              <div className="flex flex-1 flex-col gap-1.5">
+              <div className="flex min-w-0 flex-1 flex-col gap-1.5">
                 <Label htmlFor="periodo-ate">Até</Label>
                 <Input
                   id="periodo-ate"

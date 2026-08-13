@@ -60,7 +60,13 @@ export default async function DashboardLayout({
           precisar de `position: sticky`. */}
       <div className="flex h-dvh overflow-hidden">
         <Sidebar workspaces={workspaces} activeWorkspaceId={workspaceId} currentUser={currentUser} />
-        <div className="flex min-w-0 flex-1 flex-col overflow-y-auto">
+        {/* `overflow-x-hidden` explícito ao lado do `overflow-y-auto`: pela
+            própria especificação CSS, `overflow-y` diferente de `visible`
+            faz o navegador tratar `overflow-x` como `auto` mesmo sem pedir —
+            e isso criaria barra de rolagem horizontal por 1px de sombra/foco
+            que passasse da borda. Deixar explícito também documenta a
+            decisão em vez de depender do cálculo automático do navegador. */}
+        <div className="flex min-w-0 flex-1 flex-col overflow-x-hidden overflow-y-auto">
           <Topbar workspaces={workspaces} activeWorkspaceId={workspaceId} currentUser={currentUser} />
           <main id="conteudo" className="flex-1 p-4 md:p-6">
           {/* Largura máxima no conteúdo, não no `main`: o `main` continua
