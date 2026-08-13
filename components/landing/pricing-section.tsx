@@ -16,6 +16,12 @@ type Plan = {
   name: string
   price: string
   period?: string
+  // Frase curta embaixo do preço — usada só no Pro pra deixar explícito que
+  // R$49 é da EMPRESA, não por pessoa. Todo concorrente mapeado na pesquisa
+  // de mercado (RD Station, Agendor, Ploomes, PipeRun, Pipedrive, Kommo)
+  // cobra por usuário; é a vantagem estrutural mais forte que o produto tem
+  // e a lista de benefícios sozinha não deixa isso óbvio.
+  precoLegenda?: string
   description: string
   features: string[]
   cta: string
@@ -47,13 +53,14 @@ const plans: Plan[] = [
     name: 'Pro',
     price: 'R$49',
     period: '/mês',
+    precoLegenda: 'Da empresa inteira — nunca por vendedor a mais.',
     description:
       'Menos de R$2 por dia — um cliente perdido por esquecimento custa mais que isso no ano inteiro.',
     features: [
       'Várias empresas no mesmo login',
       'Colaboradores ilimitados',
       'Leads ilimitados',
-      'WhatsApp, Google Calendar e Gmail conectados',
+      'Google Calendar e Gmail conectados',
       'Suporte prioritário',
     ],
     cta: 'Assinar Pro',
@@ -116,6 +123,9 @@ export function PricingSection() {
                       <span className="text-muted-foreground text-sm">{plan.period}</span>
                     )}
                   </div>
+                  {plan.precoLegenda && (
+                    <p className="text-muted-foreground text-xs">{plan.precoLegenda}</p>
+                  )}
                   <p className="text-muted-foreground text-sm">{plan.description}</p>
                 </CardHeader>
                 <CardContent className="flex flex-col gap-4">

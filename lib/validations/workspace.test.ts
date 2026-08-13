@@ -104,7 +104,7 @@ describe('uuidSchema', () => {
 })
 
 describe('limites do plano Free', () => {
-  it('mantém 1 empresa, 2 colaboradores e 25 leads', () => {
+  it('mantém 1 empresa, 2 colaboradores e 300 leads', () => {
     // O limite de workspaces não existia: o teto de colaboradores era por
     // empresa, então bastava criar uma empresa nova para cada dupla e ter
     // equipe ilimitada de graça. Um usuário de produção já tinha 4 workspaces
@@ -115,6 +115,6 @@ describe('limites do plano Free', () => {
     // tem o texto embutido e a Server Action casa por substring.
     expect(FREE_WORKSPACE_LIMIT).toBe(1)
     expect(FREE_MEMBER_LIMIT).toBe(2)
-    expect(FREE_LEAD_LIMIT).toBe(25)
+    expect(FREE_LEAD_LIMIT).toBe(300)
   })
 })
