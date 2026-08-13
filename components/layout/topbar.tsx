@@ -14,7 +14,11 @@ export function Topbar({
 }) {
   return (
     <header className="bg-background/80 sticky top-0 z-40 flex h-14 shrink-0 items-center gap-3 border-b px-4 backdrop-blur-sm">
-      <MobileSidebar workspaces={workspaces} activeWorkspaceId={activeWorkspaceId} />
+      <MobileSidebar
+        workspaces={workspaces}
+        activeWorkspaceId={activeWorkspaceId}
+        currentUser={currentUser}
+      />
       <div className="flex-1" />
       <ThemeToggle />
       <UserMenu currentUser={currentUser} />

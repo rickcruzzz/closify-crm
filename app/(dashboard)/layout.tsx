@@ -51,7 +51,7 @@ export default async function DashboardLayout({
     // tooltip, então a landing não carrega o JS do provider à toa.
     <TooltipProvider delay={200}>
       <div className="flex min-h-dvh">
-        <Sidebar workspaces={workspaces} activeWorkspaceId={workspaceId} />
+        <Sidebar workspaces={workspaces} activeWorkspaceId={workspaceId} currentUser={currentUser} />
         <div className="flex min-w-0 flex-1 flex-col">
           <Topbar workspaces={workspaces} activeWorkspaceId={workspaceId} currentUser={currentUser} />
           <main id="conteudo" className="flex-1 p-4 md:p-6">

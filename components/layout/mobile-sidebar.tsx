@@ -7,9 +7,17 @@ import { Button } from '@/components/ui/button'
 import { Sheet, SheetContent, SheetTitle, SheetTrigger } from '@/components/ui/sheet'
 import { SidebarContent } from '@/components/layout/sidebar-content'
 import type { WorkspaceSummary } from '@/components/layout/workspace-switcher'
+import type { CurrentUser } from '@/components/layout/user-menu'
 
-export function MobileSidebar({ workspaces, activeWorkspaceId }: { workspaces: WorkspaceSummary[]
-  activeWorkspaceId: string }) {
+export function MobileSidebar({
+  workspaces,
+  activeWorkspaceId,
+  currentUser,
+}: {
+  workspaces: WorkspaceSummary[]
+  activeWorkspaceId: string
+  currentUser: CurrentUser
+}) {
   const [open, setOpen] = React.useState(false)
 
   return (
@@ -23,7 +31,12 @@ export function MobileSidebar({ workspaces, activeWorkspaceId }: { workspaces: W
       />
       <SheetContent side="left" className="w-64 p-0">
         <SheetTitle className="sr-only">Menu de navegação</SheetTitle>
-        <SidebarContent workspaces={workspaces} activeWorkspaceId={activeWorkspaceId} onNavigate={() => setOpen(false)} />
+        <SidebarContent
+          workspaces={workspaces}
+          activeWorkspaceId={activeWorkspaceId}
+          currentUser={currentUser}
+          onNavigate={() => setOpen(false)}
+        />
       </SheetContent>
     </Sheet>
   )

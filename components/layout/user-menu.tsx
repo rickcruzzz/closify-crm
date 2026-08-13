@@ -2,7 +2,7 @@
 
 import { useTransition } from 'react'
 import Link from 'next/link'
-import { LogOut, Settings, User } from 'lucide-react'
+import { ChevronsUpDown, LogOut, Settings, User } from 'lucide-react'
 
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import {
@@ -22,17 +22,45 @@ export type CurrentUser = {
   initials: string
 }
 
-export function UserMenu({ currentUser }: { currentUser: CurrentUser }) {
+/**
+ * `compact`: só o avatar redondo — usado no topbar, onde a barra é estreita
+ * e o nome/e-mail já não cabem.
+ *
+ * `expanded`: avatar + nome + e-mail + seta, no mesmo estilo do
+ * `WorkspaceSwitcher` logo acima dele no sidebar — usado no rodapé fixo,
+ * onde tem largura de sobra e a informação vale mostrar sem precisar abrir
+ * o menu primeiro.
+ */
+export function UserMenu({
+  currentUser,
+  variant = 'compact',
+}: {
+  currentUser: CurrentUser
+  variant?: 'compact' | 'expanded'
+}) {
   const [, startTransition] = useTransition()
 
   return (
     <DropdownMenu>
-      <DropdownMenuTrigger className="rounded-full outline-none">
-        <Avatar className="size-8">
-          <AvatarFallback className="text-xs font-medium">{currentUser.initials}</AvatarFallback>
-        </Avatar>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-56">
+      {variant === 'expanded' ? (
+        <DropdownMenuTrigger className="hover:bg-muted flex w-full items-center gap-2 rounded-lg border border-transparent px-2 py-2 text-left text-sm transition-colors outline-none">
+          <Avatar className="size-7 shrink-0">
+            <AvatarFallback className="text-xs font-medium">{currentUser.initials}</AvatarFallback>
+          </Avatar>
+          <div className="flex min-w-0 flex-1 flex-col">
+            <span className="truncate font-medium">{currentUser.name}</span>
+            <span className="text-muted-foreground truncate text-xs">{currentUser.email}</span>
+          </div>
+          <ChevronsUpDown className="text-muted-foreground size-4 shrink-0" />
+        </DropdownMenuTrigger>
+      ) : (
+        <DropdownMenuTrigger className="rounded-full outline-none">
+          <Avatar className="size-8">
+            <AvatarFallback className="text-xs font-medium">{currentUser.initials}</AvatarFallback>
+          </Avatar>
+        </DropdownMenuTrigger>
+      )}
+      <DropdownMenuContent align={variant === 'expanded' ? 'start' : 'end'} className="w-56">
         <DropdownMenuGroup>
           <DropdownMenuLabel className="flex flex-col gap-0.5 px-1.5 py-1.5">
             <span className="text-foreground text-sm font-medium">{currentUser.name}</span>
