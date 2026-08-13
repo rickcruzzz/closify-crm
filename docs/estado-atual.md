@@ -419,10 +419,17 @@ dois templates usam `{{ .RedirectTo }}?token_hash=...`, que só carrega a
 página; a verificação (`verifyOtp`) espera um clique explícito. Ver
 `supabase/email-templates/README.md`.
 
-**O nome do recebedor na fatura do Asaas não é editável.** O campo
-`availableCompanyNames` da API traz só a razão social vinda da Receita — para
-MEI sem nome fantasia registrado, há uma opção só. Mudar exige cadastrar o nome
-fantasia no Portal do Empreendedor, e isso exige CNPJ ativo.
+**O nome do recebedor na fatura do Asaas não é editável, e para MEI não tem
+mais saída por nome fantasia.** O campo `availableCompanyNames` da API traz só
+a razão social vinda da Receita — para MEI, é o nome pessoal do empresário
+individual, sem opção alternativa. **Correção 13/08/2026**: esta entrada dizia
+antes que cadastrar nome fantasia no Portal do Empreendedor resolveria — errado,
+o dono trouxe a fonte oficial (gov.br, resposta de 21/11/2023): nome fantasia
+foi **descontinuado da base do CNPJ para MEI desde 15/11/2023**. Não é
+limitação do Asaas nem trocaria com outro processador (Stripe incluído) — é
+dado da Receita Federal. Única saída real é formalizar como ME/LTDA (sair do
+MEI), decisão de negócio fora do código. O que já mitiga: a descrição da
+cobrança (commit `b8b9ec0`) mostra "Velo Funil" antes do nome do recebedor.
 
 ## Como verificar as coisas aqui
 
