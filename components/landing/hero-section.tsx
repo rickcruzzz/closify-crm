@@ -5,6 +5,7 @@ import { buttonVariants } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { PipelinePreviewCard } from '@/components/landing/pipeline-preview-card'
 import { SegmentBadge } from '@/components/landing/segment-badge'
+import { ScrollLink } from '@/components/landing/scroll-link'
 
 export function HeroSection() {
   return (
@@ -46,15 +47,15 @@ export function HeroSection() {
               Começar grátis
               <ArrowRight className="size-4" />
             </Link>
-            <Link
+            <ScrollLink
               href="#funcionalidades"
               className={cn(
                 buttonVariants({ variant: 'outline', size: 'lg' }),
-                'min-h-11',
+                'min-h-11 active:translate-y-0',
               )}
             >
               Ver funcionalidades
-            </Link>
+            </ScrollLink>
           </div>
           <p className="text-muted-foreground animate-in fade-in slide-in-from-bottom-5 ease-entrada text-sm duration-[850ms]">
             A partir de R$0, sem cartão — Pro por R$49/mês, da empresa inteira

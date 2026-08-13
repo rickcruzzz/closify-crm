@@ -40,7 +40,7 @@ export function ProximaAcao({ task }: { task: ProximaAcaoRow | undefined }) {
     return (
       <span className="text-muted-foreground flex items-center gap-1 text-xs font-medium whitespace-nowrap">
         <CircleAlert aria-hidden className="size-3" />
-        Sem próxima ação
+        Ver ação
       </span>
     )
   }

@@ -67,7 +67,7 @@ export default function RootLayout({
   return (
     <html
       lang="pt-BR"
-      className={cn('font-sans', geistSans.variable)}
+      className={cn('scroll-smooth font-sans', geistSans.variable)}
       suppressHydrationWarning
     >
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>

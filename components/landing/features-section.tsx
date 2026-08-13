@@ -130,35 +130,53 @@ export function FeaturesSection() {
             perfeitas, sem borda dupla entre células nem canto quebrado. É o
             truque que dá o acabamento de grade contínua. */}
         <div className="bg-border ring-border grid grid-cols-1 gap-px overflow-hidden rounded-xl ring-1 sm:grid-cols-2 lg:grid-cols-3">
-          {features.map((feature, i) => (
-            <RevealOnScroll key={feature.title} delay={feature.delay}>
-              <Card
-                className={cn(
-                  'bg-card h-full rounded-none border-0 shadow-none ring-0',
-                  'transition-colors duration-200',
-                  feature.accent.hover,
-                )}
-              >
-                <CardContent className="flex flex-col gap-3">
-                  <div className="flex items-center gap-3">
-                    <div
-                      className={cn(
-                        'flex size-10 shrink-0 items-center justify-center rounded-lg',
-                        feature.accent.bg,
-                      )}
-                    >
-                      <feature.icon className={cn('size-5', feature.accent.text)} />
+          {features.map((feature, i) => {
+            // Sete não é múltiplo de 2 nem de 3: sobra sempre um card sozinho
+            // na última linha do grid. Sem span, a célula vazia ao lado pinta
+            // a cor de fundo do grid (o truque de `bg-border`+`gap-px` logo
+            // acima) e vira um retângulo escuro sem nada dentro. O último
+            // card ocupa a linha inteira nos dois breakpoints em vez disso —
+            // resolve sem depender de quantos cards existirem no futuro.
+            const ultimo = i === features.length - 1
+
+            return (
+              <RevealOnScroll key={feature.title} delay={feature.delay}>
+                <Card
+                  className={cn(
+                    'bg-card h-full rounded-none border-0 shadow-none ring-0',
+                    'transition-colors duration-200',
+                    feature.accent.hover,
+                    ultimo && 'sm:col-span-2 lg:col-span-3',
+                  )}
+                >
+                  <CardContent
+                    className={cn(
+                      'flex flex-col gap-3',
+                      ultimo && 'sm:flex-row sm:items-center sm:gap-4',
+                    )}
+                  >
+                    <div className="flex items-center gap-3">
+                      <div
+                        className={cn(
+                          'flex size-10 shrink-0 items-center justify-center rounded-lg',
+                          feature.accent.bg,
+                        )}
+                      >
+                        <feature.icon className={cn('size-5', feature.accent.text)} />
+                      </div>
+                      <span className="text-muted-foreground font-mono text-xs tracking-wide">
+                        {String(i + 1).padStart(2, '0')}
+                      </span>
                     </div>
-                    <span className="text-muted-foreground font-mono text-xs tracking-wide">
-                      {String(i + 1).padStart(2, '0')}
-                    </span>
-                  </div>
-                  <h3 className="font-semibold">{feature.title}</h3>
-                  <p className="text-muted-foreground text-sm">{feature.description}</p>
-                </CardContent>
-              </Card>
-            </RevealOnScroll>
-          ))}
+                    <div className={cn(ultimo && 'sm:flex sm:flex-col sm:gap-1')}>
+                      <h3 className="font-semibold">{feature.title}</h3>
+                      <p className="text-muted-foreground text-sm">{feature.description}</p>
+                    </div>
+                  </CardContent>
+                </Card>
+              </RevealOnScroll>
+            )
+          })}
         </div>
       </div>
     </section>

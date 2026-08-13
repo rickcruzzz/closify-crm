@@ -15,6 +15,7 @@ import {
 } from '@/components/ui/sheet'
 import { ThemeToggle } from '@/components/theme-toggle'
 import { Logo } from '@/components/branding/logo'
+import { ScrollLink } from '@/components/landing/scroll-link'
 import { cn } from '@/lib/utils'
 
 const navLinks = [
@@ -22,7 +23,7 @@ const navLinks = [
   { label: 'Como funciona', href: '#como-funciona' },
   { label: 'Planos', href: '#planos' },
   { label: 'Dúvidas', href: '#faq' },
-]
+] as const
 
 export function PublicNavbar() {
   const [menuAberto, setMenuAberto] = React.useState(false)
@@ -40,13 +41,13 @@ export function PublicNavbar() {
 
         <nav className="hidden items-center gap-6 md:flex">
           {navLinks.map((link) => (
-            <Link
+            <ScrollLink
               key={link.href}
               href={link.href}
-              className="text-muted-foreground hover:text-foreground flex min-h-11 items-center text-sm font-medium transition-colors"
+              className="text-muted-foreground hover:text-foreground flex min-h-11 items-center text-sm font-medium"
             >
               {link.label}
-            </Link>
+            </ScrollLink>
           ))}
         </nav>
 
