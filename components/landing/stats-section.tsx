@@ -24,7 +24,7 @@ const stats = [
   },
   {
     value: 'RLS',
-    label: 'dados isolados por empresa',
+    label: 'dados isolados por empresa, no Brasil',
     accent: 'text-violet-500 dark:text-violet-400',
     delay: 260,
   },

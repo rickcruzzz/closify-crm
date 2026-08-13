@@ -1,10 +1,10 @@
 import Link from 'next/link'
 import { ArrowRight } from 'lucide-react'
 
-import { Badge } from '@/components/ui/badge'
 import { buttonVariants } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { PipelinePreviewCard } from '@/components/landing/pipeline-preview-card'
+import { SegmentBadge } from '@/components/landing/segment-badge'
 
 export function HeroSection() {
   return (
@@ -15,12 +15,7 @@ export function HeroSection() {
       />
       <div className="mx-auto grid max-w-6xl items-center gap-12 lg:grid-cols-2 lg:gap-8">
         <div className="flex flex-col items-center gap-6 text-center lg:items-start lg:text-left">
-          <Badge
-            variant="secondary"
-            className="animate-in fade-in slide-in-from-bottom-2 ease-entrada font-mono text-xs tracking-wide uppercase duration-[650ms]"
-          >
-            Feito para PMEs de serviço
-          </Badge>
+          <SegmentBadge className="animate-in fade-in slide-in-from-bottom-2 ease-entrada font-mono text-xs tracking-wide uppercase duration-[650ms]" />
           {/* Tracking fica mais negativo quanto maior o texto — é o que separa
               um título "de template" de um desenhado. Ver também o h2 das
               demais seções, em -0.02em. */}
@@ -44,6 +39,7 @@ export function HeroSection() {
               alinhamento passa a ser vertical. */}
           <div className="animate-in fade-in slide-in-from-bottom-5 ease-entrada mt-2 flex flex-col items-stretch gap-3 duration-[850ms] sm:flex-row sm:items-center">
             <Link
+              id="hero-cta"
               href="/cadastro"
               className={cn(buttonVariants({ size: 'lg' }), 'min-h-11 gap-2')}
             >
@@ -61,7 +57,7 @@ export function HeroSection() {
             </Link>
           </div>
           <p className="text-muted-foreground animate-in fade-in slide-in-from-bottom-5 ease-entrada text-sm duration-[850ms]">
-            A partir de R$0 — Pro por R$49/mês quando o funil crescer
+            A partir de R$0, sem cartão — Pro por R$49/mês, da empresa inteira
           </p>
         </div>
 

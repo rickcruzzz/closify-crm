@@ -22,6 +22,7 @@ export function CtaSection() {
             hoje mesmo.
           </p>
           <Link
+            id="final-cta"
             href="/cadastro"
             className={cn(
               buttonVariants({ size: 'lg' }),

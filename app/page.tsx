@@ -9,6 +9,7 @@ import { PricingSection } from '@/components/landing/pricing-section'
 import { FaqSection } from '@/components/landing/faq-section'
 import { CtaSection } from '@/components/landing/cta-section'
 import { PublicFooter } from '@/components/landing/public-footer'
+import { MobileStickyCta } from '@/components/landing/mobile-sticky-cta'
 
 // A landing usa o title default (sem o template "| Velo Funil"), já que
 // aqui o nome do produto é o próprio título.
@@ -46,6 +47,7 @@ export default function Home() {
         <CtaSection />
       </main>
       <PublicFooter />
+      <MobileStickyCta />
     </div>
   )
 }
