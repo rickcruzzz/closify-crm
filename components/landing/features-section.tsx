@@ -142,13 +142,16 @@ export function FeaturesSection() {
             const ultimo = i === features.length - 1
 
             return (
-              <RevealOnScroll key={feature.title} delay={feature.delay}>
+              <RevealOnScroll
+                key={feature.title}
+                delay={feature.delay}
+                className={cn(ultimo && 'sm:col-span-2 lg:col-span-3')}
+              >
                 <Card
                   className={cn(
                     'bg-card h-full rounded-none border-0 shadow-none ring-0',
                     'transition-colors duration-200',
                     feature.accent.hover,
-                    ultimo && 'sm:col-span-2 lg:col-span-3',
                   )}
                 >
                   <CardContent
