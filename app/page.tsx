@@ -24,6 +24,12 @@ export const metadata: Metadata = {
     title: 'Velo Funil: pipeline de vendas em Kanban para PMEs',
     description:
       'Organize leads e negócios num funil visual, acompanhe métricas e substitua a planilha em um dia. Plano gratuito para começar.',
+    // Next.js não mescla `openGraph` entre layout e página — definir aqui
+    // sobrescreve o do layout raiz por inteiro, e sem `siteName` a home
+    // ficava sem `og:site_name`. É provavelmente o que o verificador de
+    // marca do Google compara com o nome cadastrado no consent screen
+    // ("Velo Funil"), daí o aviso de nome não bater.
+    siteName: 'Velo Funil',
   },
 }
 
