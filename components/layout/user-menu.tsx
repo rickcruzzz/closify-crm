@@ -2,7 +2,7 @@
 
 import { useTransition } from 'react'
 import Link from 'next/link'
-import { ChevronsUpDown, LogOut, Settings, User } from 'lucide-react'
+import { ChevronsUpDown, LogOut, Settings, User, Users } from 'lucide-react'
 
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import {
@@ -93,16 +93,32 @@ export function UserMenu({
 
             Destinos separados pelo dono do dado: `/perfil` é da pessoa (nome,
             e-mail, senha), `/settings` é da empresa (workspace, colaboradores,
-            plano). Antes os dois apontavam para cá porque não existia página de
-            perfil — o menu oferecia dois caminhos e entregava um. */}
-        <DropdownMenuItem className="gap-2" render={<Link href="/perfil" />}>
-          <User className="size-4" />
-          Meu perfil
-        </DropdownMenuItem>
-        <DropdownMenuItem className="gap-2" render={<Link href="/settings" />}>
-          <Settings className="size-4" />
-          Configurações
-        </DropdownMenuItem>
+            plano, integrações) — `?aba=equipe` pula direto pra aba de
+            colaboradores em vez de cair na aba padrão.
+
+            O rótulo "Configurações" precisa ficar DENTRO do `DropdownMenuGroup`
+            (não como irmão): `DropdownMenuLabel` é o `Menu.GroupLabel` do Base
+            UI, que exige um `Menu.Group` ancestral pra amarrar o
+            `aria-labelledby` — fora dele, o Base UI lança em runtime
+            ("Base UI error #31") e o boundary de erro da rota engole a árvore
+            inteira. */}
+        <DropdownMenuGroup>
+          <DropdownMenuLabel className="text-muted-foreground px-1.5 pt-1 pb-0.5 text-xs font-medium">
+            Configurações
+          </DropdownMenuLabel>
+          <DropdownMenuItem className="gap-2" render={<Link href="/settings?aba=equipe" />}>
+            <Users className="size-4" />
+            Equipe
+          </DropdownMenuItem>
+          <DropdownMenuItem className="gap-2" render={<Link href="/perfil" />}>
+            <User className="size-4" />
+            Perfil
+          </DropdownMenuItem>
+          <DropdownMenuItem className="gap-2" render={<Link href="/settings" />}>
+            <Settings className="size-4" />
+            Configurações
+          </DropdownMenuItem>
+        </DropdownMenuGroup>
         <DropdownMenuSeparator />
         <DropdownMenuItem
           variant="destructive"
