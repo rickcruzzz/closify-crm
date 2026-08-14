@@ -51,8 +51,13 @@ export function UserMenu({
     <DropdownMenu>
       {variant === 'expanded' ? (
         <DropdownMenuTrigger className="hover:bg-muted flex w-full min-w-0 items-center gap-2 rounded-lg border border-transparent px-2.5 py-2 text-left text-sm transition-colors outline-none">
-          <Avatar className="size-7 shrink-0">
-            <AvatarFallback className="text-xs font-medium">{currentUser.initials}</AvatarFallback>
+          {/* `rounded-md`, não o círculo padrão do Avatar: mesmo raio do ícone
+              do WorkspaceSwitcher logo acima (components/layout/workspace-switcher.tsx),
+              pra as duas linhas do rodapé do sidebar terem a mesma linguagem visual. */}
+          <Avatar className="size-7 shrink-0 rounded-md after:rounded-md">
+            <AvatarFallback className="rounded-md text-xs font-medium">
+              {currentUser.initials}
+            </AvatarFallback>
           </Avatar>
           <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
             {temNomeProprio ? (
