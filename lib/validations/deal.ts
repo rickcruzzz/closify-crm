@@ -3,7 +3,17 @@ import { z } from 'zod'
 export const dealSchema = z.object({
   title: z.string().min(2, 'Informe o título do negócio.'),
   leadId: z.uuid('Selecione um lead.'),
-  value: z.coerce.number().min(0, 'O valor não pode ser negativo.'),
+  // Sem teto, um dígito a mais (ou o teclado mashing puro) vira negócio de
+  // R$4,2 bilhões — visto em produção (workspace real, dois negócios com
+  // exatamente esse valor), o suficiente pra fazer "Valor do Pipeline" no
+  // Dashboard mostrar "R$ 8,5 bi" pra um funil de 4 negócios reais.
+  // R$100 milhões cobre o maior contrato plausível pra PME de serviço
+  // (o público do produto) sem inventar regra que a pessoa não entenderia —
+  // mesmo raciocínio já aplicado ao ano de `dueDate` logo abaixo.
+  value: z.coerce
+    .number()
+    .min(0, 'O valor não pode ser negativo.')
+    .max(100_000_000, 'Valor muito alto — confira se não sobrou um dígito a mais.'),
   stage: z.enum(
     [
       'novo',

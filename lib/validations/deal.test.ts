@@ -57,6 +57,24 @@ describe('dealSchema — demais campos', () => {
     expect(r.success).toBe(false)
   })
 
+  /**
+   * Regressão do pipeline bilionário.
+   *
+   * Sem teto, um negócio com valor 4232342343.24 (visto em produção) somava
+   * direto no Dashboard e virava "Valor do Pipeline: R$ 8,5 bi" pra um
+   * workspace com 4 negócios reais — parecia bug de cálculo, mas a soma
+   * estava certa; faltava validação impedindo o valor absurdo de entrar.
+   */
+  it('recusa valor acima de R$100 milhões', () => {
+    const r = dealSchema.safeParse({ ...base, value: 4_232_342_343.24, dueDate: '2026-09-15' })
+    expect(r.success).toBe(false)
+  })
+
+  it('aceita valor no limite de R$100 milhões', () => {
+    const r = dealSchema.safeParse({ ...base, value: 100_000_000, dueDate: '2026-09-15' })
+    expect(r.success).toBe(true)
+  })
+
   it('recusa etapa fora do enum', () => {
     const r = dealSchema.safeParse({
       ...base,
