@@ -4,7 +4,7 @@ Documento de continuidade. É lido no começo de toda sessão (referenciado no
 [CLAUDE.md](../CLAUDE.md)) para que uma conversa nova — ou outra conta — comece
 sabendo o que já foi feito, o que foi decidido e onde estão as armadilhas.
 
-**Atualizado em:** 13/08/2026 (landing pro tráfego pago, WhatsApp Cloud API removida)
+**Atualizado em:** 13/08/2026 (primeiro Pix real recebido e reconciliado, job de reconciliação automática)
 
 > Mantenha este arquivo curto. O detalhe de _por que_ cada coisa é assim mora
 > nas mensagens de commit e nos comentários do código, que são a memória real
@@ -12,11 +12,27 @@ sabendo o que já foi feito, o que foi decidido e onde estão as armadilhas.
 
 ## Onde o produto está
 
-Em produção em <https://www.velofunil.com.br>, funcional, **sem clientes
-pagantes ainda** — conferido na API do Asaas: zero cobranças recebidas, nunca.
-O fluxo de dinheiro foi auditado ponta a ponta e funciona: pagamento
-confirmado libera o Pro, retry do Asaas é deduplicado, cancelamento rebaixa,
-requisição sem token toma 401. O que ninguém provou é um Pix real.
+Em produção em <https://www.velofunil.com.br>, funcional, com o **primeiro
+Pix real confirmado** (workspace "Orne", R$49, 13/08). O fluxo de dinheiro foi
+auditado ponta a ponta e funciona: pagamento confirmado libera o Pro, retry do
+Asaas é deduplicado, cancelamento rebaixa, requisição sem token toma 401.
+
+Esse mesmo pagamento expôs um buraco real: o webhook do Asaas não chegou a
+tempo (o domínio estava fora do ar por causa da migração de DNS pro
+Cloudflare, ver seção própria abaixo) e o Asaas **não reenvia webhook que
+falhou por conta própria** — o pagamento ficaria preso pra sempre até alguém
+notar. Corrigido em duas partes: (1) reenviei o webhook real pra produção,
+aplicando o efeito completo (status, e-mail, evento Meta) exatamente como o
+Asaas teria feito; (2) criei `GET /api/cron/reconciliar-assinaturas`
+(`vercel.json`, roda 1x/dia via Vercel Cron, protegida por `CRON_SECRET`),
+que varre assinaturas com status suspeito no banco, confere o status real via
+API do Asaas e corrige sozinha — rede de segurança pra qualquer falha futura
+de entrega de webhook, não só DNS. A lógica de aplicar o status (dedupe, RPC,
+e-mail, Meta) foi extraída pra `lib/asaas/aplicar-evento.ts` e é reusada pelos
+dois caminhos (webhook e cron), pra não divergir. Testado ponta a ponta com
+assinatura descartável real no Asaas (`receiveInCash`, sem cobrança de
+verdade): detectou divergência, corrigiu, gravou dedupe, e uma segunda
+chamada não reprocessou.
 
 Importação de planilha (`.xlsx` e `.csv`) entregue em 11/08, com mapeamento de
 coluna, etapa lida do arquivo e criação de negócio junto do lead.
@@ -166,6 +182,11 @@ Sem essas variáveis, os cards de integração aparecem normalmente em
 
 ## Pendente do dono (não é código)
 
+- [ ] **`CRON_SECRET` na Vercel (13/08).** Gerado e colado no `.env.local`,
+      mas falta colar o mesmo valor nas env vars da Vercel (Production) —
+      sem isso, o Vercel Cron chama `/api/cron/reconciliar-assinaturas` e
+      toma 401 todo dia, silenciosamente (a rota não avisa ninguém, só
+      responde o erro). Ver `.env.example` pra onde gerar.
 - [ ] **`NEXT_PUBLIC_META_PIXEL_ID` na Vercel (13/08).** Meta Pixel ligado
       (`components/analytics/meta-pixel.tsx`, só em páginas públicas —
       landing/cadastro/login/termos/privacidade, nunca no CRM logado) pra
@@ -233,8 +254,10 @@ Sem essas variáveis, os cards de integração aparecem normalmente em
 - [ ] **Cobrança da Fani Mayara** (`fanimayara67@gmail.com`): usuária real
       (logou em 11/08, 1 lead), plano `free`, começou o checkout e nunca pagou.
       Tem 2 cobranças de R$ 49 em aberto que vão virar aviso de vencimento.
-- [ ] **Pagar um Pix real de R$ 49** pelo próprio checkout. Último elo sem
-      prova.
+- [x] **Pix real de R$ 49 recebido.** Workspace "Orne", 13/08, confirmado no
+      Asaas — mas o webhook não chegou (site fora do ar por DNS, ver acima) e
+      ficou preso até reconciliação manual. Motivou o job de reconciliação
+      automática (ver "Onde o produto está").
 - [ ] **Vercel Pro + Supabase Pro** no primeiro cliente pagante. Vercel por
       regra (Hobby proíbe uso comercial); Supabase por **backup** — o Free não
       faz nenhum, e perder dado de cliente pago é problema jurídico.

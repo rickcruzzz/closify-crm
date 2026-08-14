@@ -3,12 +3,7 @@ import { timingSafeEqual } from 'node:crypto'
 import { NextResponse } from 'next/server'
 
 import { createAdminClient } from '@/lib/supabase/admin'
-import { getResend } from '@/lib/resend/client'
-import { renderPagamentoConfirmadoEmail } from '@/lib/emails/pagamento-confirmado'
-import { renderPagamentoAtrasadoEmail } from '@/lib/emails/pagamento-atrasado'
-import { enviarConversaoDeCompra } from '@/lib/analytics/meta-conversions'
-import { PRO_PLAN_PRICE } from '@/lib/plans'
-import { appUrl } from '@/lib/app-url'
+import { aplicarEventoAsaas, type StatusAssinatura } from '@/lib/asaas/aplicar-evento'
 
 // `timingSafeEqual` vem de `node:crypto` e o client admin usa a service role
 // key: nada disso pode rodar no runtime Edge. O padrão do Next 14 para route
@@ -68,7 +63,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ received: true })
   }
 
-  let status: 'active' | 'past_due' | 'canceled' | null = null
+  let status: StatusAssinatura | null = null
   if (ACTIVE_EVENTS.has(event)) status = 'active'
   else if (PAST_DUE_EVENTS.has(event)) status = 'past_due'
   else if (CANCELED_EVENTS.has(event)) status = 'canceled'
@@ -78,177 +73,26 @@ export async function POST(request: Request) {
   }
 
   const supabase = createAdminClient()
-
-  // Idempotência: sem isso, reenviar um PAYMENT_CONFIRMED legítimo (retry do
-  // Asaas ou replay por quem tivesse o token) reativava plan='pro' depois de
-  // um cancelamento. O insert com PK no id do evento é a trava — se já
-  // existe, o evento já foi processado e não repetimos o efeito.
   const eventId = body.id ?? `${event}:${body.payment?.id ?? subscriptionId}`
 
-  const { error: dedupeError } = await supabase
-    .from('asaas_webhook_events')
-    .insert({ event_id: eventId, event_type: event })
-
-  if (dedupeError) {
-    // 23505 = unique_violation: evento repetido. Responde 200 pra Asaas parar
-    // de reenviar; qualquer outro erro é falha real de infra.
-    if (dedupeError.code === '23505') {
-      return NextResponse.json({ received: true, duplicate: true })
-    }
-    console.error('Webhook Asaas: falha ao registrar evento', dedupeError)
-    return NextResponse.json({ error: 'internal_error' }, { status: 500 })
-  }
-
-  // Atualizar `subscriptions.status` e `workspaces.plan` em dois round-trips
-  // deixava a porta aberta pra segunda escrita falhar e o plano ficar errado
-  // em silêncio — e, como o evento já estava registrado acima, nenhum retry
-  // do Asaas consertava. A RPC faz as duas na mesma transação.
-  const { data: matched, error } = await supabase.rpc('apply_asaas_subscription_status', {
-    p_asaas_subscription_id: subscriptionId,
-    p_status: status,
+  const resultado = await aplicarEventoAsaas({
+    supabase,
+    status,
+    subscriptionId,
+    eventId,
+    eventType: event,
+    origem: 'webhook',
   })
 
-  if (error) {
-    // O registro de dedupe já foi gravado, então um retry cairia no 23505 e
-    // responderia 200 sem nunca processar o evento. Apagar a marca devolve o
-    // evento pra fila: o próximo retry do Asaas reprocessa de verdade.
-    await supabase.from('asaas_webhook_events').delete().eq('event_id', eventId)
-
-    console.error('Webhook Asaas: falha ao aplicar status da assinatura', error)
+  if (!resultado.ok) {
     return NextResponse.json({ error: 'internal_error' }, { status: 500 })
   }
 
-  // Pagamento confirmado é o único momento em que o produto tinha algo a dizer
-  // e ficava calado. A pessoa pagava — muitas vezes por Pix, fora do horário
-  // comercial — e a única confirmação era a fatura do próprio Asaas, que traz a
-  // razão social do MEI e não a marca. Como a liberação do Pro é assíncrona,
-  // ela não tinha como saber quando voltar a olhar.
-  if (status === 'active' && matched === true) {
-    await enviarEmailDoWebhook(supabase, subscriptionId, renderPagamentoConfirmadoEmail)
-    await enviarConversaoParaMeta(supabase, subscriptionId, eventId)
-  } else if (status === 'past_due' && matched === true) {
-    // Mesma lógica do e-mail de confirmação, sentido contrário: cartão
-    // recusado/boleto-Pix vencido é a categoria de churn mais barata de
-    // recuperar em qualquer SaaS, e hoje só existia um selo na tela de
-    // Configurações → Plano — que ninguém vê se não entrar no produto.
-    await enviarEmailDoWebhook(supabase, subscriptionId, renderPagamentoAtrasadoEmail)
+  if (resultado.duplicate) {
+    return NextResponse.json({ received: true, duplicate: true })
   }
 
   // Assinatura que não é nossa (ou já removida): não é erro. Responde 200 pro
   // Asaas parar de reenviar.
-  return NextResponse.json({ received: true, matched: matched === true })
-}
-
-/**
- * Busca o workspace e o e-mail do dono a partir da assinatura do Asaas.
- *
- * `created_by` é quem abriu a empresa e, pela regra do checkout, o único
- * que pode assinar — é para ele que a cobrança vai. Compartilhado entre
- * `enviarEmailDoWebhook` e `enviarConversaoParaMeta` pra não repetir as
- * mesmas três idas ao banco (subscriptions → workspaces → auth.admin) duas
- * vezes na mesma chamada de webhook.
- */
-async function buscarAssinante(
-  supabase: ReturnType<typeof createAdminClient>,
-  subscriptionId: string,
-): Promise<{
-  workspaceName: string
-  email: string
-  fbc: string | null
-  fbp: string | null
-} | null> {
-  const { data: assinatura } = await supabase
-    .from('subscriptions')
-    .select('workspace_id')
-    .eq('asaas_subscription_id', subscriptionId)
-    .maybeSingle()
-
-  if (!assinatura) return null
-
-  const { data: workspace } = await supabase
-    .from('workspaces')
-    .select('name, created_by, fbc, fbp')
-    .eq('id', assinatura.workspace_id)
-    .maybeSingle()
-
-  if (!workspace?.created_by) return null
-
-  const { data: dono } = await supabase.auth.admin.getUserById(workspace.created_by)
-  const email = dono?.user?.email
-  if (!email) return null
-
-  return { workspaceName: workspace.name, email, fbc: workspace.fbc, fbp: workspace.fbp }
-}
-
-/**
- * Manda o e-mail correspondente ao status novo.
- *
- * Engole qualquer falha de propósito. O e-mail é aviso, não é o efeito: o
- * status já foi aplicado na transação anterior. Deixar uma exceção escapar
- * aqui faria o webhook responder 500, o Asaas reenviar o evento, e o dedupe
- * por `event_id` — que já gravou este evento — devolver 200 sem reprocessar
- * nada. Ou seja: um Resend fora do ar viraria mudança de status sem aviso e
- * sem retentativa útil.
- *
- * A idempotência do envio vem de graça do dedupe: um `event_id` só chega aqui
- * uma vez, então não há risco de mandar o mesmo e-mail duas vezes.
- */
-async function enviarEmailDoWebhook(
-  supabase: ReturnType<typeof createAdminClient>,
-  subscriptionId: string,
-  render: (params: { workspaceName: string; valor: number; appUrl: string }) => {
-    subject: string
-    html: string
-  },
-) {
-  try {
-    const assinante = await buscarAssinante(supabase, subscriptionId)
-    if (!assinante) return
-
-    const { subject, html } = render({
-      workspaceName: assinante.workspaceName,
-      valor: PRO_PLAN_PRICE,
-      appUrl: appUrl(),
-    })
-
-    const { error } = await getResend().emails.send({
-      from: 'Velo Funil <suporte@velofunil.com.br>',
-      to: assinante.email,
-      subject,
-      html,
-    })
-
-    if (error) {
-      console.error('Webhook Asaas: falha ao enviar e-mail', error)
-    }
-  } catch (err) {
-    console.error('Webhook Asaas: erro ao enviar e-mail', err)
-  }
-}
-
-/**
- * Avisa o Meta que um pagamento de verdade aconteceu — Conversions API,
- * server-side, sem depender do navegador de quem pagou (o checkout roda na
- * página hospedada do Asaas). Mesma idempotência do e-mail: `eventId` só
- * chega aqui uma vez por causa do dedupe em `asaas_webhook_events`.
- */
-async function enviarConversaoParaMeta(
-  supabase: ReturnType<typeof createAdminClient>,
-  subscriptionId: string,
-  eventId: string,
-) {
-  try {
-    const assinante = await buscarAssinante(supabase, subscriptionId)
-    if (!assinante) return
-
-    await enviarConversaoDeCompra({
-      email: assinante.email,
-      valor: PRO_PLAN_PRICE,
-      eventId,
-      fbc: assinante.fbc,
-      fbp: assinante.fbp,
-    })
-  } catch (err) {
-    console.error('Webhook Asaas: erro ao enviar conversão pro Meta', err)
-  }
+  return NextResponse.json({ received: true, matched: resultado.matched })
 }
