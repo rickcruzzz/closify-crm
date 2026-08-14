@@ -22,16 +22,17 @@ export function SidebarContent({
         <Logo size="sm" />
       </Link>
       <WorkspaceSwitcher workspaces={workspaces} activeId={activeWorkspaceId} />
-      {/* Sem `flex-1`, de propósito: o rodapé de conta vem logo depois do
-          último item, não empurrado pro fim físico da tela — ver
-          app/(dashboard)/layout.tsx pro porquê disso não deixar mais o
-          sidebar rolar embora com o conteúdo. */}
       <SidebarNav onNavigate={onNavigate} />
-      {/* Segundo acesso a "Sair", além do avatar no topbar — quem não repara
-          no canto superior direito encontra aqui, no rodapé fixo, mesmo
-          padrão do Linear/Notion. Preenche o vão vazio que sobrava abaixo da
-          navegação em telas com poucos itens de menu. */}
-      <div className="border-sidebar-border border-t pt-3">
+      {/* `mt-auto`: empurra o rodapé de conta pro fim físico do sidebar, não
+          logo depois do último item do menu — em telas com poucos itens
+          (a maioria) sobrava um vão vazio grande entre o menu e o rodapé.
+          Seguro fazer isso porque app/(dashboard)/layout.tsx já trava a
+          altura do sidebar em `h-dvh` no container PAI — o `<aside>` nunca
+          estica além da tela independente de como o espaço é distribuído
+          aqui dentro. Segundo acesso a "Sair", além do avatar no topbar —
+          quem não repara no canto superior direito encontra aqui, no
+          rodapé fixo, mesmo padrão do Linear/Notion. */}
+      <div className="border-sidebar-border mt-auto border-t pt-3">
         <UserMenu currentUser={currentUser} variant="expanded" />
       </div>
     </div>
