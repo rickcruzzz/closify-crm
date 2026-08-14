@@ -84,6 +84,13 @@ export async function guardarIntencao(intencao: {
   }
   if (intencao.plano) {
     jar.set(COOKIE_PLANO, intencao.plano, { ...BASE, maxAge: VALIDADE_SEGUNDOS })
+  } else if (intencao.plano === null) {
+    // `signUp` sempre manda `plano: ... ?? null` — nunca omite o campo.
+    // Sem este `else if`, uma tentativa de "Assinar Pro" que falhou depois
+    // (senha fraca, e-mail já existe) deixava o cookie gravado, e um
+    // cadastro Free seguinte no mesmo navegador herdava a intenção Pro e
+    // caía no checkout sem ninguém ter pedido isso agora.
+    jar.delete(COOKIE_PLANO)
   }
   if (intencao.email) {
     // Vida mais curta: serve só para a tela seguinte dizer para onde o e-mail

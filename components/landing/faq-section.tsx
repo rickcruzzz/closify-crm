@@ -59,10 +59,10 @@ export function FaqSection() {
             fechado. Numa página cujo problema era lentidão, é a escolha certa.
             A seta anima só `transform` — animar altura causaria reflow por
             frame. */}
-        <RevealOnScroll delay={130}>
-          <div className="bg-border ring-border grid gap-px overflow-hidden rounded-xl ring-1">
-            {faqs.map((faq) => (
-              <details key={faq.q} name="faq" className="bg-card group">
+        <div className="bg-border ring-border grid gap-px overflow-hidden rounded-xl ring-1">
+          {faqs.map((faq, i) => (
+            <RevealOnScroll key={faq.q} delay={i * 100}>
+              <details name="faq" className="bg-card group">
                 <summary className="focus-visible:ring-ring pointer:hover:bg-accent/40 flex cursor-pointer list-none items-center justify-between gap-4 px-5 py-4 text-left font-medium transition-colors outline-none focus-visible:ring-2 focus-visible:ring-inset [&::-webkit-details-marker]:hidden">
                   {faq.q}
                   <ChevronDown
@@ -74,9 +74,9 @@ export function FaqSection() {
                   {faq.a}
                 </p>
               </details>
-            ))}
-          </div>
-        </RevealOnScroll>
+            </RevealOnScroll>
+          ))}
+        </div>
 
         <p className="text-muted-foreground mt-8 text-center text-sm">
           Ficou outra dúvida?{' '}

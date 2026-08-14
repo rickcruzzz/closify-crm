@@ -214,4 +214,14 @@
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
   }
+
+  /* Spinner de carregamento comunica estado ("isto está processando"), não
+     é enfeite — a regra acima zera a animação junto com todo o resto, e o
+     ícone gira uma vez em 0,01ms e para: parece travado exatamente pra
+     quem mais precisaria do sinal. "Reduzir movimento" deveria tirar
+     parallax/autoplay/deslize, não um indicador funcional pequeno. */
+  .animate-spin {
+    animation-duration: 1s !important;
+    animation-iteration-count: infinite !important;
+  }
 }

@@ -38,6 +38,7 @@ export function BemVindoClient({
   const router = useRouter()
   const [isSubmitting, setIsSubmitting] = React.useState(false)
   const [pulando, setPulando] = React.useState(false)
+  const [navegando, setNavegando] = React.useState(false)
   const [formError, setFormError] = React.useState<string | null>(null)
   // A senha só aparece quando a pessoa pede: abrir a tela já com dois campos
   // de senha contradiz a promessa do "entrar com Google", que é justamente
@@ -81,7 +82,7 @@ export function BemVindoClient({
     router.push('/dashboard')
   }
 
-  const ocupado = isSubmitting || pulando
+  const ocupado = isSubmitting || pulando || navegando
 
   return (
     <Card>
@@ -189,14 +190,28 @@ export function BemVindoClient({
           variant={mostrandoSenha ? 'ghost' : 'default'}
           className="w-full"
           disabled={ocupado}
-          onClick={() => router.push('/onboarding')}
+          onClick={() => {
+            // `router.push` não retorna promise que resolva ao terminar a
+            // navegação — o estado fica ligado até este componente
+            // desmontar (a troca de tela), que é exatamente a janela em
+            // que `/onboarding` (Server Component com 3 idas ao banco,
+            // sem Suspense próprio) ainda não tem nada pra mostrar.
+            setNavegando(true)
+            router.push('/onboarding')
+          }}
         >
-          {retomando
-            ? 'Continuar de onde parei'
-            : podeDefinirSenha && mostrandoSenha
-              ? 'Continuar sem senha'
-              : 'Começar configuração'}
-          <ArrowRight className="size-4" />
+          {navegando ? (
+            <Loader2 className="size-4 animate-spin" />
+          ) : (
+            <>
+              {retomando
+                ? 'Continuar de onde parei'
+                : podeDefinirSenha && mostrandoSenha
+                  ? 'Continuar sem senha'
+                  : 'Começar configuração'}
+              <ArrowRight className="size-4" />
+            </>
+          )}
         </Button>
 
         {/* Pular é oferta de verdade, não armadilha: não bloqueia nada, guarda
