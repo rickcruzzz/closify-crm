@@ -48,6 +48,12 @@ export function readAsaasApiKey(): string {
 export async function asaasFetch<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(`${ASAAS_BASE_URL}${path}`, {
     ...init,
+    // Depois do spread, não antes: sem isso, o `fetch()` do Next 14 usa
+    // `force-cache` por padrão mesmo em página dinâmica — status de
+    // pagamento nunca pode vir de cache, ou a tela de cobrança mostra
+    // fatura pendente que já foi paga. Fixo em `no-store` de propósito,
+    // pra nenhum call site conseguir reintroduzir cache sem querer.
+    cache: 'no-store',
     headers: {
       'Content-Type': 'application/json',
       access_token: readAsaasApiKey(),

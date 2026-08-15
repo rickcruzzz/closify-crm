@@ -1,3 +1,4 @@
+import * as React from 'react'
 import { useDroppable } from '@dnd-kit/core'
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable'
 
@@ -18,7 +19,10 @@ function formatBRL(value: number) {
   })
 }
 
-export function KanbanColumn({
+// `React.memo`: mesma razão de `DealCard` — sem isso, o board inteiro
+// (6 colunas) refazia o trabalho de renderizar toda coluna a cada tick de
+// arrasto, mesmo colunas sem nenhum negócio envolvido no drag.
+export const KanbanColumn = React.memo(function KanbanColumn({
   stage,
   deals,
   leadsById,
@@ -107,4 +111,4 @@ export function KanbanColumn({
       </ScrollArea>
     </div>
   )
-}
+})

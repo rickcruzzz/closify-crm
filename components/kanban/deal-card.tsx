@@ -32,7 +32,12 @@ function initials(name: string) {
     .join('')
 }
 
-export function DealCard({
+// `React.memo`: `handleDragOver` (kanban-board.tsx) só troca o objeto do
+// card ATIVO a cada tick de arrasto — `prev.map` mantém a mesma referência
+// pros demais. Sem memo, mover um card re-renderizava todo o board inteiro
+// (todas as colunas, todos os cards) a cada cruzamento de coluna; boards
+// com dezenas/centenas de negócios sentiam isso como travamento.
+export const DealCard = React.memo(function DealCard({
   deal,
   lead,
   proximaAcao,
@@ -104,4 +109,4 @@ export function DealCard({
       </Card>
     </div>
   )
-}
+})

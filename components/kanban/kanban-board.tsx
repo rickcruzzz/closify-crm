@@ -219,6 +219,16 @@ export function KanbanBoard({
     })
   }, [deals, leadsById, ownerFilter, search, soParados, agora])
 
+  // Uma passagem só, em vez de `filteredDeals.filter(...)` repetido inline
+  // por coluna (6 varreduras completas do array a cada render do board).
+  const dealsPorEtapa = React.useMemo(() => {
+    const grupos = new Map<DealStage, DealRow[]>(dealStages.map((stage) => [stage, []]))
+    for (const deal of filteredDeals) {
+      grupos.get(deal.stage)?.push(deal)
+    }
+    return grupos
+  }, [filteredDeals])
+
   return (
     <>
       <div className="mb-4 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
@@ -302,7 +312,7 @@ export function KanbanBoard({
             <KanbanColumn
               key={stage}
               stage={stage}
-              deals={filteredDeals.filter((deal) => deal.stage === stage)}
+              deals={dealsPorEtapa.get(stage) ?? []}
               leadsById={leadsById}
               proximaAcaoPorNegocio={proximaAcaoPorNegocio}
               totalNaEtapa={totalPorEtapa[stage] ?? 0}

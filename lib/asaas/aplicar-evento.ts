@@ -1,5 +1,7 @@
 import 'server-only'
 
+import { revalidatePath } from 'next/cache'
+
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getResend } from '@/lib/resend/client'
 import { renderPagamentoConfirmadoEmail } from '@/lib/emails/pagamento-confirmado'
@@ -70,6 +72,17 @@ export async function aplicarEventoAsaas(params: {
     await supabase.from('asaas_webhook_events').delete().eq('event_id', eventId)
     console.error(`[${origem}] Asaas: falha ao aplicar status da assinatura`, error)
     return { ok: false }
+  }
+
+  // Sem isso, quem confirma pagamento pelo webhook (o caminho normal —
+  // ninguém está com a aba de Cobrança aberta esperando) via a tela
+  // continuar mostrando fatura pendente até o cache do Next expirar
+  // sozinho. `createCheckout`/`cancelSubscription` (lib/asaas/actions.ts)
+  // já revalidam quando a MUDANÇA parte da própria pessoa; isto cobre o
+  // caminho assíncrono — webhook em tempo real e o cron de reconciliação,
+  // que também passa por esta função.
+  if (matched === true) {
+    revalidatePath('/settings/billing')
   }
 
   // Pagamento confirmado é o único momento em que o produto tinha algo a
