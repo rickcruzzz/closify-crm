@@ -16,15 +16,15 @@ import { MobileStickyCta } from '@/components/landing/mobile-sticky-cta'
 export const metadata: Metadata = {
   title: 'Velo Funil: pare de perder venda por esquecimento',
   description:
-    'Organize contatos e negócios num funil visual, acompanhe métricas e substitua a planilha em um dia. Plano gratuito para começar.',
+    'Velo Funil é um CRM para pequenos negócios organizarem clientes e vendas num quadro visual, sem planilha. Plano gratuito para começar.',
   alternates: { canonical: '/' },
   // Sem repetir aqui, o preview de link herdaria o openGraph genérico do
   // layout raiz em vez do texto de conversão da landing.
   openGraph: {
     title: 'Velo Funil: pare de perder venda por esquecimento',
     description:
-      'Organize contatos e negócios num funil visual, acompanhe métricas e substitua a planilha em um dia. Plano gratuito para começar.',
-    // Next.js não mescla `openGraph` entre layout e página — definir aqui
+      'Velo Funil é um CRM para pequenos negócios organizarem clientes e vendas num quadro visual, sem planilha. Plano gratuito para começar.',
+    // Next.js não mescla `openGraph` entre layout e página, definir aqui
     // sobrescreve o do layout raiz por inteiro, e sem `siteName` a home
     // ficava sem `og:site_name`. É provavelmente o que o verificador de
     // marca do Google compara com o nome cadastrado no consent screen
@@ -48,7 +48,7 @@ export default function Home() {
         <FeaturesSection />
         <PricingSection />
         {/* A FAQ fica entre preço e CTA final de propósito: é onde a objeção
-            aparece — a pessoa acabou de ver quanto custa e ainda não decidiu. */}
+            aparece, a pessoa acabou de ver quanto custa e ainda não decidiu. */}
         <FaqSection />
         <CtaSection />
       </main>
