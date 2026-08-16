@@ -27,8 +27,16 @@ type Props = React.ComponentPropsWithoutRef<'a'> & { href: `#${string}` }
  * Aceita e compõe um `onClick` externo de propósito — necessário pro menu
  * mobile, onde o alvo real é a prop `render` de um `SheetClose` (base-ui),
  * que injeta o próprio `onClick` (fechar o menu) no elemento passado.
+ *
+ * `forwardRef`: o mesmo `SheetClose`/Base UI também injeta um `ref` no
+ * elemento passado via `render` (usa pra gerenciar foco ao fechar o
+ * diálogo) — sem encaminhar pro `<a>` real, o React avisa "Function
+ * components cannot be given refs" e o foco não volta pra onde devia.
  */
-export function ScrollLink({ href, className, onClick, children, ...props }: Props) {
+export const ScrollLink = React.forwardRef<HTMLAnchorElement, Props>(function ScrollLink(
+  { href, className, onClick, children, ...props },
+  ref,
+) {
   const [pressionado, setPressionado] = React.useState(false)
 
   function aoClicar(evento: React.MouseEvent<HTMLAnchorElement>) {
@@ -49,6 +57,7 @@ export function ScrollLink({ href, className, onClick, children, ...props }: Pro
 
   return (
     <a
+      ref={ref}
       href={href}
       onClick={aoClicar}
       className={cn(
@@ -61,4 +70,4 @@ export function ScrollLink({ href, className, onClick, children, ...props }: Pro
       {children}
     </a>
   )
-}
+})

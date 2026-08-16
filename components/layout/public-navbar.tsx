@@ -16,6 +16,7 @@ import {
 import { ThemeToggle } from '@/components/theme-toggle'
 import { Logo } from '@/components/branding/logo'
 import { ScrollLink } from '@/components/landing/scroll-link'
+import { NavCtaLink } from '@/components/landing/nav-cta-link'
 import { cn } from '@/lib/utils'
 
 const navLinks = [
@@ -54,22 +55,22 @@ export function PublicNavbar() {
         <div className="flex items-center gap-2">
           <ThemeToggle />
 
-          <Link
+          <NavCtaLink
             href="/login"
             className={cn(buttonVariants({ variant: 'ghost' }), 'hidden sm:inline-flex')}
           >
             Entrar
-          </Link>
+          </NavCtaLink>
 
           {/* 48px de alvo de toque no celular, 32 no desktop. Os links do
               menu lateral já estavam em `min-h-12`; o cabeçalho ficava em 44 e
               destoava. O `h-16` do container não muda, então nada é empurrado. */}
-          <Link
+          <NavCtaLink
             href="/cadastro"
             className={cn(buttonVariants(), 'min-h-12 md:min-h-8')}
           >
             Começar grátis
-          </Link>
+          </NavCtaLink>
 
           {/* Abaixo de `md` os links da seção sumiam e o "Entrar" ficava oculto
               — quem já é cliente não tinha como acessar a conta pelo celular, e
@@ -112,7 +113,7 @@ export function PublicNavbar() {
                   <SheetClose
                     key={link.href}
                     render={
-                      <Link
+                      <ScrollLink
                         href={link.href}
                         // `min-h-12` são os 48px de alvo de toque. `px-2` e não
                         // `px-3`: o realce de hover ainda ultrapassa o texto,
@@ -128,7 +129,7 @@ export function PublicNavbar() {
                 <div className="border-border/60 mt-3 flex flex-col gap-2 border-t pt-3">
                   <SheetClose
                     render={
-                      <Link
+                      <NavCtaLink
                         href="/login"
                         className={cn(
                           buttonVariants({ variant: 'outline' }),
@@ -141,7 +142,7 @@ export function PublicNavbar() {
                   </SheetClose>
                   <SheetClose
                     render={
-                      <Link
+                      <NavCtaLink
                         href="/cadastro"
                         className={cn(buttonVariants(), 'min-h-11 w-full')}
                       />
