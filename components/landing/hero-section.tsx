@@ -17,7 +17,10 @@ export function HeroSection() {
       <div className="mx-auto grid max-w-6xl items-center gap-12 lg:grid-cols-2 lg:gap-8">
         <div className="flex flex-col items-center gap-6 text-center lg:items-start lg:text-left">
           <SegmentBadge className="animate-in fade-in slide-in-from-bottom-2 ease-entrada font-mono text-xs tracking-wide uppercase duration-[650ms]" />
-          {/* Tracking fica mais negativo quanto maior o texto — é o que separa
+          <p className="text-muted-foreground animate-in fade-in slide-in-from-bottom-2 ease-entrada text-sm font-medium duration-[650ms]">
+            Velo Funil: CRM para pequenos negócios organizarem clientes e vendas
+          </p>
+          {/* Tracking fica mais negativo quanto maior o texto, é o que separa
               um título "de template" de um desenhado. Ver também o h2 das
               demais seções, em -0.02em. */}
           <h1 className="animate-in fade-in slide-in-from-bottom-3 ease-entrada text-4xl font-semibold tracking-[-0.03em] text-balance duration-[750ms] md:text-6xl">
@@ -25,10 +28,10 @@ export function HeroSection() {
           </h1>
           <p className="text-muted-foreground animate-in fade-in slide-in-from-bottom-4 ease-entrada max-w-2xl text-lg text-balance duration-[800ms]">
             Todo cliente que você esquece de responder é um cliente que você perde. O
-            Velo Funil mostra, numa tela só, com quem você precisa falar hoje — sem
+            Velo Funil mostra, numa tela só, com quem você precisa falar hoje, sem
             post-it, sem aba de planilha escondida, sem depender da sua memória.
           </p>
-          {/* `items-stretch` é o padrão do flex — e é por ser padrão que
+          {/* `items-stretch` é o padrão do flex, e é por ser padrão que
               ninguém percebe quando some. É ele que dá aos dois botões a mesma
               largura no celular: o container encolhe até o filho mais largo, e
               os dois esticam nele.
@@ -58,7 +61,9 @@ export function HeroSection() {
             </ScrollLink>
           </div>
           <p className="text-muted-foreground animate-in fade-in slide-in-from-bottom-5 ease-entrada text-sm duration-[850ms]">
-            A partir de R$0, sem cartão. Pro por R$49/mês, da empresa inteira.
+            Comece grátis e gerencie contatos ilimitados. Por apenas R$ 49/mês, toda a sua equipe trabalha em um só lugar.
+
+
           </p>
         </div>
 
