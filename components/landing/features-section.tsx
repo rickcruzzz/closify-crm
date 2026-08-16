@@ -24,9 +24,9 @@ type Feature = {
 
 const features: Feature[] = [
   {
-    title: 'Pipeline visual Kanban',
+    title: 'Funil visual, arrasta e solta',
     description:
-      'Arraste negócios entre etapas e acompanhe o funil de vendas em tempo real.',
+      'Veja cada cliente em potencial numa etapa da venda e arraste o card conforme a conversa avança — sem montar tabela, sem fórmula.',
     icon: KanbanSquare,
     accent: {
       text: 'text-blue-500 dark:text-blue-400',
@@ -36,8 +36,9 @@ const features: Feature[] = [
     delay: 0,
   },
   {
-    title: 'Gestão de leads',
-    description: 'Cadastre, busque e filtre leads com timeline completa de atividades.',
+    title: 'Todos os seus contatos num só lugar',
+    description:
+      'Cadastre, busque e filtre seus clientes em potencial, com o histórico completo de ligações, e-mails e conversas de cada um.',
     icon: ListChecks,
     accent: {
       text: 'text-violet-500 dark:text-violet-400',
@@ -62,9 +63,9 @@ const features: Feature[] = [
     delay: 260,
   },
   {
-    title: 'Dashboard de métricas',
+    title: 'Painel de resultados',
     description:
-      'Cards e gráfico de funil para acompanhar conversão e valor do pipeline.',
+      'Gráficos simples pra ver quanto você tem em negociação e quantos clientes viraram venda, sem montar fórmula nenhuma.',
     icon: BarChart3,
     accent: {
       text: 'text-emerald-500 dark:text-emerald-400',
@@ -75,8 +76,9 @@ const features: Feature[] = [
     delay: 0,
   },
   {
-    title: 'Multi-empresa',
-    description: 'Gerencie vários workspaces e alterne entre eles sem perder contexto.',
+    title: 'Várias empresas, um login só',
+    description:
+      'Gerencie mais de uma empresa com a mesma conta e troque entre elas sem perder nada de vista.',
     icon: Building2,
     accent: {
       text: 'text-orange-500 dark:text-orange-400',
@@ -97,9 +99,9 @@ const features: Feature[] = [
     delay: 260,
   },
   {
-    title: 'Permissões por papel',
+    title: 'Controle por colaborador',
     description:
-      'Controle o que cada colaborador pode ver e fazer, com papéis Admin e Membro.',
+      'Escolha o que cada pessoa da equipe pode ver e fazer — dono da empresa vê tudo, colaborador vê só o que precisa.',
     icon: ShieldCheck,
     accent: {
       text: 'text-red-500 dark:text-red-400',

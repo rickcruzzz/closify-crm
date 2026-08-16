@@ -41,9 +41,9 @@ const plans: Plan[] = [
     features: [
       `${FREE_WORKSPACE_LIMIT} empresa`,
       `Até ${FREE_MEMBER_LIMIT} colaboradores`,
-      `Até ${FREE_LEAD_LIMIT} leads`,
-      'Pipeline Kanban',
-      'Dashboard de métricas',
+      `Até ${FREE_LEAD_LIMIT} contatos`,
+      'Funil visual, arrasta e solta',
+      'Painel de resultados',
     ],
     cta: 'Começar grátis',
     href: '/cadastro',
@@ -59,7 +59,7 @@ const plans: Plan[] = [
     features: [
       'Várias empresas no mesmo login',
       'Colaboradores ilimitados',
-      'Leads ilimitados',
+      'Contatos ilimitados',
       'Google Calendar e Gmail conectados',
       'Suporte prioritário',
     ],
@@ -93,10 +93,10 @@ export function PricingSection() {
             <span aria-hidden className="bg-primary h-px w-4" />
           </span>
           <h2 className="text-3xl font-semibold tracking-[-0.02em] md:text-4xl">
-            Pare de perder venda por esquecimento
+            Comece de graça. Pague quando fizer sentido crescer.
           </h2>
           <p className="text-muted-foreground text-lg text-balance">
-            Grátis pra sempre até {FREE_LEAD_LIMIT} leads. Sem cartão, sem contrato.
+            Grátis pra sempre até {FREE_LEAD_LIMIT} contatos. Sem cartão, sem contrato.
           </p>
         </RevealOnScroll>
 

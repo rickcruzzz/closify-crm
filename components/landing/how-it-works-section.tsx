@@ -20,7 +20,7 @@ const passos = [
   {
     numero: '01',
     titulo: 'Traga sua planilha',
-    descricao: `Exporte a planilha como .csv e importe de uma vez. Contatos repetidos são ignorados sozinhos. Se preferir, cadastre um a um. No plano grátis cabem ${FREE_LEAD_LIMIT} leads.`,
+    descricao: `Exporte a planilha como .csv e importe de uma vez. Contatos repetidos são ignorados sozinhos. Se preferir, cadastre um a um. No plano grátis cabem ${FREE_LEAD_LIMIT} contatos.`,
     icone: FileSpreadsheet,
     accent: 'text-blue-500 dark:text-blue-400',
     fundo: 'bg-blue-500/10 dark:bg-blue-400/10',
@@ -38,7 +38,7 @@ const passos = [
     numero: '03',
     titulo: 'Veja onde está o dinheiro',
     descricao:
-      'O painel mostra quanto você tem em negociação, a taxa de conversão e quais negócios estão perto do prazo, sem montar fórmula nenhuma.',
+      'O painel mostra quanto você tem em negociação, quantos clientes viraram venda e quais negócios estão perto do prazo, sem montar fórmula nenhuma.',
     icone: TrendingUp,
     accent: 'text-emerald-500 dark:text-emerald-400',
     fundo: 'bg-emerald-500/10 dark:bg-emerald-400/10',
@@ -96,7 +96,7 @@ export function HowItWorksSection() {
 
         <RevealOnScroll delay={490}>
           <p className="text-muted-foreground mt-6 flex items-center justify-center gap-1.5 text-center text-sm">
-            Leva menos de dois minutos do cadastro ao primeiro lead
+            Leva menos de dois minutos do cadastro ao primeiro contato
             <ArrowRight aria-hidden className="size-4" />
           </p>
         </RevealOnScroll>

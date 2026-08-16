@@ -21,12 +21,12 @@ export function HeroSection() {
               um título "de template" de um desenhado. Ver também o h2 das
               demais seções, em -0.02em. */}
           <h1 className="animate-in fade-in slide-in-from-bottom-3 ease-entrada text-4xl font-semibold tracking-[-0.03em] text-balance duration-[750ms] md:text-6xl">
-            Simples como planilha, premium como software líder.
+            Pare de perder venda por esquecimento.
           </h1>
           <p className="text-muted-foreground animate-in fade-in slide-in-from-bottom-4 ease-entrada max-w-2xl text-lg text-balance duration-[800ms]">
-            Lead esquecido na planilha é venda perdida. O Velo Funil organiza seu funil
-            visualmente e mostra onde está o dinheiro, pronto para agências, clínicas,
-            consultorias e imobiliárias que estão começando.
+            Todo cliente que você esquece de responder é um cliente que você perde. O
+            Velo Funil mostra, numa tela só, com quem você precisa falar hoje — sem
+            post-it, sem aba de planilha escondida, sem depender da sua memória.
           </p>
           {/* `items-stretch` é o padrão do flex — e é por ser padrão que
               ninguém percebe quando some. É ele que dá aos dois botões a mesma
@@ -48,13 +48,13 @@ export function HeroSection() {
               <ArrowRight className="size-4" />
             </Link>
             <ScrollLink
-              href="#funcionalidades"
+              href="#como-funciona"
               className={cn(
                 buttonVariants({ variant: 'outline', size: 'lg' }),
                 'min-h-11 active:translate-y-0',
               )}
             >
-              Ver funcionalidades
+              Ver como funciona
             </ScrollLink>
           </div>
           <p className="text-muted-foreground animate-in fade-in slide-in-from-bottom-5 ease-entrada text-sm duration-[850ms]">

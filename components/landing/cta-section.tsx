@@ -18,8 +18,8 @@ export function CtaSection() {
             Pronto para largar a planilha?
           </h2>
           <p className="text-muted-foreground max-w-xl text-lg">
-            Crie seu workspace grátis em menos de um minuto e organize seu funil de vendas
-            hoje mesmo.
+            Crie a conta da sua empresa, de graça, em menos de um minuto, e organize seu
+            funil de vendas hoje mesmo.
           </p>
           <Link
             id="final-cta"

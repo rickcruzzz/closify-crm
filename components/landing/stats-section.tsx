@@ -18,13 +18,13 @@ const stats = [
   },
   {
     value: '2 min',
-    label: 'do cadastro ao primeiro lead',
+    label: 'do cadastro ao primeiro contato',
     accent: 'text-blue-500 dark:text-blue-400',
     delay: 130,
   },
   {
-    value: 'RLS',
-    label: 'dados isolados por empresa, no Brasil',
+    value: '100%',
+    label: 'dados só da sua empresa, nunca de outra',
     accent: 'text-violet-500 dark:text-violet-400',
     delay: 260,
   },

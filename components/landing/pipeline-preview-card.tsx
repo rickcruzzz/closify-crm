@@ -26,7 +26,7 @@ export function PipelinePreviewCard() {
           <span className="size-2.5 rounded-full bg-emerald-500/70" />
         </div>
         <span className="text-muted-foreground font-mono text-xs">
-          pipeline / workspace: acme-corp
+          funil de vendas · Acme Corp
         </span>
       </div>
 
@@ -56,7 +56,7 @@ export function PipelinePreviewCard() {
       </div>
 
       <div className="border-border/50 flex items-center justify-between border-t px-4 py-3">
-        <span className="text-muted-foreground font-mono text-xs">total pipeline</span>
+        <span className="text-muted-foreground font-mono text-xs">total no funil</span>
         <span className="text-sm font-semibold">{formatCompactBRL(totalValue)}</span>
       </div>
     </div>

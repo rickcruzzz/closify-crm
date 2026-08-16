@@ -82,7 +82,7 @@ export function KanbanPreview() {
           <span className="size-2.5 rounded-full bg-emerald-500/70" />
         </span>
         <span className="text-muted-foreground font-mono text-xs">
-          pipeline / acme-corp
+          funil de vendas · Acme Corp
         </span>
       </div>
 

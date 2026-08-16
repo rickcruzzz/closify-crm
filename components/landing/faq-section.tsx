@@ -11,27 +11,27 @@ import { FREE_LEAD_LIMIT, FREE_MEMBER_LIMIT, PRO_PLAN_PRICE } from '@/lib/plans'
 const faqs = [
   {
     q: 'O plano grátis é grátis mesmo?',
-    a: `É. Sem cartão de crédito, sem prazo para expirar. O plano Free cobre 1 empresa, com até ${FREE_MEMBER_LIMIT} colaboradores e ${FREE_LEAD_LIMIT} leads. Se a sua equipe crescer ou você precisar separar mais de uma empresa, aí sim faz sentido o Pro.`,
+    a: `É. Sem cartão de crédito, sem prazo para expirar. O plano Free cobre 1 empresa, com até ${FREE_MEMBER_LIMIT} colaboradores e ${FREE_LEAD_LIMIT} contatos. Se a sua equipe crescer ou você precisar separar mais de uma empresa, aí sim faz sentido o Pro.`,
   },
   {
     q: 'Preciso instalar alguma coisa?',
     a: 'Não. O Velo Funil roda inteiro no navegador, no computador ou no celular. Você cria a conta e já começa a usar.',
   },
   {
-    q: 'Consigo trazer os leads da minha planilha?',
+    q: 'Consigo trazer os contatos da minha planilha?',
     a: 'Sim. Exporte sua planilha como .csv com as colunas Nome, Telefone, E-mail e Valor e importe direto na tela de Leads. Contatos repetidos são ignorados automaticamente, e você também pode cadastrar um por um, se preferir.',
   },
   {
     q: 'Meus dados ficam separados dos de outras empresas?',
-    a: 'Ficam. O isolamento é feito no próprio banco de dados, com Row Level Security por workspace: uma consulta de uma empresa não alcança a linha de outra, nem por engano nem de propósito.',
+    a: 'Ficam. Cada empresa só enxerga os próprios dados — é uma regra de segurança configurada no banco, não uma tela que a gente esquece de checar. Nem por engano, nem por querer, os dados de uma empresa aparecem para outra.',
   },
   {
     q: 'Quais são as formas de pagamento?',
-    a: `Pix, boleto e cartão de crédito, com cobrança recorrente processada pelo Asaas. O plano Pro custa R$ ${PRO_PLAN_PRICE} por mês, por workspace.`,
+    a: `Pix, boleto e cartão de crédito, com cobrança recorrente processada pelo Asaas. O plano Pro custa R$ ${PRO_PLAN_PRICE} por mês, por empresa.`,
   },
   {
     q: 'Posso cancelar quando quiser?',
-    a: 'Pode, sem multa e sem falar com ninguém. Ao cancelar, o workspace volta para o plano Free e seus dados continuam lá.',
+    a: 'Pode, sem multa e sem falar com ninguém. Ao cancelar, a conta da sua empresa volta para o plano Free e seus dados continuam lá.',
   },
 ]
 

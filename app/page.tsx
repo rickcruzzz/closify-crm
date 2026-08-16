@@ -14,16 +14,16 @@ import { MobileStickyCta } from '@/components/landing/mobile-sticky-cta'
 // A landing usa o title default (sem o template "| Velo Funil"), já que
 // aqui o nome do produto é o próprio título.
 export const metadata: Metadata = {
-  title: 'Velo Funil: pipeline de vendas em Kanban para PMEs',
+  title: 'Velo Funil: pare de perder venda por esquecimento',
   description:
-    'Organize leads e negócios num funil visual, acompanhe métricas e substitua a planilha em um dia. Plano gratuito para começar.',
+    'Organize contatos e negócios num funil visual, acompanhe métricas e substitua a planilha em um dia. Plano gratuito para começar.',
   alternates: { canonical: '/' },
   // Sem repetir aqui, o preview de link herdaria o openGraph genérico do
   // layout raiz em vez do texto de conversão da landing.
   openGraph: {
-    title: 'Velo Funil: pipeline de vendas em Kanban para PMEs',
+    title: 'Velo Funil: pare de perder venda por esquecimento',
     description:
-      'Organize leads e negócios num funil visual, acompanhe métricas e substitua a planilha em um dia. Plano gratuito para começar.',
+      'Organize contatos e negócios num funil visual, acompanhe métricas e substitua a planilha em um dia. Plano gratuito para começar.',
     // Next.js não mescla `openGraph` entre layout e página — definir aqui
     // sobrescreve o do layout raiz por inteiro, e sem `siteName` a home
     // ficava sem `og:site_name`. É provavelmente o que o verificador de
