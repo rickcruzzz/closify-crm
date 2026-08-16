@@ -66,10 +66,15 @@ export function LeadDetailClient({
   const router = useRouter()
   const [formOpen, setFormOpen] = React.useState(false)
   const [deleteOpen, setDeleteOpen] = React.useState(false)
+  const [excluindoLead, setExcluindoLead] = React.useState(false)
   const [activityFormOpen, setActivityFormOpen] = React.useState(false)
   const [emailFormOpen, setEmailFormOpen] = React.useState(false)
   const [taskFormOpen, setTaskFormOpen] = React.useState(false)
   const [tarefaEmEdicao, setTarefaEmEdicao] = React.useState<TarefaEmEdicao | null>(null)
+  // Set porque a lista pode ter várias tarefas — travar UMA não deve travar
+  // as outras. Cobre concluir e excluir com o mesmo controle, seguindo o
+  // padrão `excluindo`/`agendandoNoCalendario` de `deal-detail-sheet.tsx`.
+  const [tarefasPendentes, setTarefasPendentes] = React.useState<Set<string>>(new Set())
 
   // Um relógio só para a lista, nascido no cliente: o servidor da Vercel roda
   // em UTC e calcularia "atrasada" com três horas de erro.
@@ -89,12 +94,16 @@ export function LeadDetailClient({
     }
     toast.success('Lead atualizado com sucesso.')
     setFormOpen(false)
-    router.refresh()
+    // Sem router.refresh(): updateLead já revalida '/leads/${lead.id}' —
+    // a rota atual — e o Next aplica o RSC atualizado sozinho.
   }
 
   async function handleDelete() {
+    if (excluindoLead) return
+    setExcluindoLead(true)
     const result = await deleteLead(lead.id)
     if (result?.error) {
+      setExcluindoLead(false)
       toast.error(result.error)
       return
     }
@@ -109,7 +118,7 @@ export function LeadDetailClient({
       return
     }
     toast.success('E-mail enviado.')
-    router.refresh()
+    // Sem router.refresh(): enviarEmailViaGmail já revalida '/leads/${lead.id}'.
   }
 
   async function handleCreateActivity(values: ActivityFormValues) {
@@ -119,7 +128,7 @@ export function LeadDetailClient({
       return
     }
     toast.success('Atividade registrada.')
-    router.refresh()
+    // Sem router.refresh(): createActivity já revalida '/leads/${lead.id}'.
   }
 
   async function salvarTarefa(values: TaskFormValues) {
@@ -134,12 +143,30 @@ export function LeadDetailClient({
 
     toast.success(tarefaEmEdicao ? 'Tarefa atualizada.' : 'Tarefa criada.')
     setTarefaEmEdicao(null)
-    router.refresh()
+    // Sem router.refresh(): a tarefa aqui sempre carrega leadId = lead.id,
+    // então revalidarTelasDeTarefa já revalida '/leads/${lead.id}'.
+  }
+
+  function marcarPendente(taskId: string) {
+    setTarefasPendentes((atual) => new Set(atual).add(taskId))
+  }
+
+  function desmarcarPendente(taskId: string) {
+    setTarefasPendentes((atual) => {
+      const proximo = new Set(atual)
+      proximo.delete(taskId)
+      return proximo
+    })
   }
 
   async function concluir(taskId: string) {
+    if (tarefasPendentes.has(taskId)) return
+    marcarPendente(taskId)
+
     const resultado = await concluirTarefa(taskId)
+
     if ('error' in resultado) {
+      desmarcarPendente(taskId)
       toast.error(resultado.error)
       return
     }
@@ -147,17 +174,34 @@ export function LeadDetailClient({
     // ao lado, e as duas listas precisam mudar juntas. Deixar a tarefa sumir
     // antes da atividade aparecer mostraria um estado que nunca existiu.
     toast.success('Tarefa concluída.')
-    router.refresh()
+    // Sem router.refresh(): concluirTarefa já revalida '/leads/${lead.id}'
+    // sempre que a tarefa concluída pertence a este lead — o caso de toda
+    // tarefa listada aqui.
+    //
+    // E não desmarca `pendente` aqui de propósito: entre a Server Action
+    // resolver e o RSC revalidado chegar (que vai marcar `done_at` e travar
+    // o checkbox por conta própria), existe uma janela real onde um segundo
+    // clique reabriria o envio — medido com clique duplo real, 908ms de
+    // intervalo, disparando a action duas vezes. Ficar travado até a
+    // revalidação chegar é seguro; travar para sempre em caso de erro não
+    // seria, por isso só desmarca no erro.
   }
 
   async function excluir(taskId: string) {
+    if (tarefasPendentes.has(taskId)) return
+    marcarPendente(taskId)
+
     const resultado = await excluirTarefa(taskId)
+
     if ('error' in resultado) {
+      desmarcarPendente(taskId)
       toast.error(resultado.error)
       return
     }
     toast.success('Tarefa excluída.')
-    router.refresh()
+    // Sem router.refresh(): idem. Mesma razão do `concluir` acima para não
+    // desmarcar `pendente` no sucesso — a linha vai sumir da lista quando o
+    // RSC revalidado chegar; até lá, travada é o comportamento seguro.
   }
 
   return (
@@ -294,6 +338,7 @@ export function LeadDetailClient({
                         agora !== null &&
                         new Date(task.due_at).getTime() < agora.getTime()
                       }
+                      pendente={tarefasPendentes.has(task.id)}
                       onConcluir={concluir}
                       onEditar={(t) => {
                         setTarefaEmEdicao({
@@ -347,6 +392,7 @@ export function LeadDetailClient({
         open={deleteOpen}
         onOpenChange={setDeleteOpen}
         lead={lead}
+        pending={excluindoLead}
         onConfirm={handleDelete}
       />
 

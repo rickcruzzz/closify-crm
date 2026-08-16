@@ -70,6 +70,7 @@ export function LeadsPageClient({
   const [editingLead, setEditingLead] = React.useState<LeadRow | undefined>()
   const [deleteOpen, setDeleteOpen] = React.useState(false)
   const [deletingLead, setDeletingLead] = React.useState<LeadRow | undefined>()
+  const [excluindoLeadId, setExcluindoLeadId] = React.useState<string | null>(null)
   const [importOpen, setImportOpen] = React.useState(false)
 
   function updateFilters(next: {
@@ -134,7 +135,8 @@ export function LeadsPageClient({
     }
     toast.success(id ? 'Lead atualizado com sucesso.' : 'Lead criado com sucesso.')
     setFormOpen(false)
-    router.refresh()
+    // Sem router.refresh(): create/updateLead já revalidam '/leads' — a
+    // rota atual.
   }
 
   function openDeleteDialog(lead: LeadRow) {
@@ -143,14 +145,18 @@ export function LeadsPageClient({
   }
 
   async function handleDelete(id: string) {
+    if (excluindoLeadId) return
+    setExcluindoLeadId(id)
     const result = await deleteLead(id)
+    setExcluindoLeadId(null)
+
     if (result?.error) {
       toast.error(result.error)
       return
     }
     toast.success('Lead excluído.')
     setDeleteOpen(false)
-    router.refresh()
+    // Sem router.refresh(): deleteLead já revalida '/leads'.
   }
 
   // Extraído para ser reaproveitado pela tabela (desktop) e pela lista de
@@ -391,6 +397,7 @@ export function LeadsPageClient({
         open={deleteOpen}
         onOpenChange={setDeleteOpen}
         lead={deletingLead}
+        pending={excluindoLeadId !== null}
         onConfirm={handleDelete}
       />
     </div>

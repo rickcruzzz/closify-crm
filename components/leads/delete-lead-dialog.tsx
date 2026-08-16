@@ -1,5 +1,7 @@
 'use client'
 
+import { Loader2 } from 'lucide-react'
+
 import {
   AlertDialog,
   AlertDialogAction,
@@ -16,11 +18,15 @@ export function DeleteLeadDialog({
   open,
   onOpenChange,
   lead,
+  pending = false,
   onConfirm,
 }: {
   open: boolean
   onOpenChange: (open: boolean) => void
   lead?: LeadRow
+  /** true enquanto `deleteLead` está em voo — trava os dois botões para o
+   * clique duplo não disparar a exclusão duas vezes. */
+  pending?: boolean
   onConfirm: (id: string) => void
 }) {
   return (
@@ -33,11 +39,13 @@ export function DeleteLeadDialog({
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel>Cancelar</AlertDialogCancel>
+          <AlertDialogCancel disabled={pending}>Cancelar</AlertDialogCancel>
           <AlertDialogAction
             variant="destructive"
-            onClick={() => lead && onConfirm(lead.id)}
+            disabled={pending}
+            onClick={() => lead && !pending && onConfirm(lead.id)}
           >
+            {pending && <Loader2 className="size-4 animate-spin" />}
             Excluir
           </AlertDialogAction>
         </AlertDialogFooter>

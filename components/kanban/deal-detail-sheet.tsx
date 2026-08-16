@@ -1,7 +1,6 @@
 'use client'
 
 import * as React from 'react'
-import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 import { AlarmClock, CalendarPlus, Loader2, Plus, Trash2 } from 'lucide-react'
 
@@ -87,11 +86,11 @@ export function DealDetailSheet({
   /** Avisa o board para tirar o card sem esperar o refresh do servidor. */
   onDeleted: (dealId: string) => void
 }) {
-  const router = useRouter()
   const [confirmando, setConfirmando] = React.useState(false)
   const [excluindo, setExcluindo] = React.useState(false)
   const [agendando, setAgendando] = React.useState(false)
   const [agendandoNoCalendario, setAgendandoNoCalendario] = React.useState(false)
+  const [concluindo, setConcluindo] = React.useState(false)
 
   // Relógio do cliente: o servidor roda em UTC e erraria a virada do dia.
   const [agora, setAgora] = React.useState<Date | null>(null)
@@ -111,7 +110,9 @@ export function DealDetailSheet({
     }
 
     toast.success('Próxima ação agendada.')
-    router.refresh()
+    // Sem router.refresh(): criarTarefa já revalida '/kanban' — a rota
+    // atual —, e o Next aplica o RSC atualizado sozinho na resposta da
+    // própria Server Action.
   }
 
   async function adicionarAoCalendario() {
@@ -126,21 +127,28 @@ export function DealDetailSheet({
     }
 
     toast.success('Evento criado no Google Calendar.')
-    router.refresh()
+    // Idem: a action já revalida '/kanban'.
   }
 
   async function concluir() {
-    if (!proximaAcao) return
-
+    if (!proximaAcao || concluindo) return
+    setConcluindo(true)
     const resultado = await concluirTarefa(proximaAcao.id)
 
     if ('error' in resultado) {
+      setConcluindo(false)
       toast.error(resultado.error)
       return
     }
 
     toast.success('Tarefa concluída.')
-    router.refresh()
+    // Idem: concluirTarefa já revalida '/kanban'.
+    // Não limpa `concluindo` aqui de propósito: entre a Server Action
+    // resolver e o RSC revalidado chegar (o que vai trocar/esconder este
+    // botão), existe uma janela real onde um segundo clique reabriria o
+    // envio — medido com clique duplo real, que disparou a action duas
+    // vezes. Deixar travado até a revalidação chegar é seguro; travar para
+    // sempre em caso de erro não seria, por isso só limpa no erro.
   }
 
   async function handleExcluir() {
@@ -285,7 +293,13 @@ export function DealDetailSheet({
                         )}
                         Google Calendar
                       </Button>
-                      <Button variant="outline" size="sm" onClick={concluir}>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        disabled={concluindo}
+                        onClick={concluir}
+                      >
+                        {concluindo && <Loader2 className="size-4 animate-spin" />}
                         Concluir
                       </Button>
                     </div>

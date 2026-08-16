@@ -37,6 +37,22 @@ import type { ProximaAcaoRow } from '@/lib/tasks/types'
 import { DealDetailSheet } from '@/components/kanban/deal-detail-sheet'
 import { DealFormDialog } from '@/components/kanban/deal-form-dialog'
 
+// Comparação rasa: DealRow (lib/deals/queries.ts) só tem campos primitivos.
+function dealsIguais(a: DealRow, b: DealRow) {
+  return (
+    a.id === b.id &&
+    a.title === b.title &&
+    a.lead_id === b.lead_id &&
+    a.value === b.value &&
+    a.stage === b.stage &&
+    a.due_date === b.due_date &&
+    a.created_at === b.created_at &&
+    a.stage_changed_at === b.stage_changed_at &&
+    a.owner_id === b.owner_id &&
+    a.owner_name === b.owner_name
+  )
+}
+
 export function KanbanBoard({
   initialDeals,
   totalPorEtapa,
@@ -85,8 +101,26 @@ export function KanbanBoard({
     setAgora(new Date())
   }, [])
 
+  // Merge seletivo, não substituição: `initialDeals` chega como um array
+  // NOVO (o servidor recria todo DealRow) toda vez que '/kanban' revalida —
+  // inclusive por um updateDealStage que o próprio board acabou de disparar.
+  // Trocar a referência de TODO negócio aqui derrubaria o React.memo de
+  // DealCard/KanbanColumn e causaria um segundo re-render do board inteiro,
+  // agora alguns instantes depois de soltar o card. Preservando a referência
+  // de quem não mudou, só quem foi de fato alterado (por esta aba ou por
+  // outra) perde a memoização.
   React.useEffect(() => {
-    setDeals(initialDeals)
+    setDeals((atual) => {
+      const porId = new Map(atual.map((deal) => [deal.id, deal]))
+      let mudou = atual.length !== initialDeals.length
+      const proximo = initialDeals.map((novo) => {
+        const anterior = porId.get(novo.id)
+        if (anterior && dealsIguais(anterior, novo)) return anterior
+        mudou = true
+        return novo
+      })
+      return mudou ? proximo : atual
+    })
   }, [initialDeals])
 
   const leadsById = React.useMemo(

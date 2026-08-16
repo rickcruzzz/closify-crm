@@ -34,6 +34,7 @@ export function TaskItem({
   task,
   agora,
   atrasada,
+  pendente = false,
   onConcluir,
   onEditar,
   onExcluir,
@@ -42,6 +43,9 @@ export function TaskItem({
   /** O instante vem de fora para que a lista inteira use o mesmo relógio. */
   agora: Date
   atrasada: boolean
+  /** true enquanto concluir/excluir esta tarefa está em voo — trava a linha
+   * para o clique duplo não disparar a Server Action duas vezes. */
+  pendente?: boolean
   onConcluir: (taskId: string) => void
   onEditar?: (task: TaskRow) => void
   onExcluir?: (taskId: string) => void
@@ -53,9 +57,9 @@ export function TaskItem({
     <li className="hover:bg-accent/40 flex items-center gap-3 rounded-lg px-2 py-2 transition-colors">
       <Checkbox
         checked={concluida}
-        disabled={concluida}
+        disabled={concluida || pendente}
         onCheckedChange={() => {
-          if (!concluida) onConcluir(task.id)
+          if (!concluida && !pendente) onConcluir(task.id)
         }}
         aria-label={`Concluir: ${task.title}`}
       />
@@ -107,10 +111,16 @@ export function TaskItem({
           />
           <DropdownMenuContent align="end">
             {onEditar && (
-              <DropdownMenuItem onClick={() => onEditar(task)}>Editar</DropdownMenuItem>
+              <DropdownMenuItem disabled={pendente} onClick={() => onEditar(task)}>
+                Editar
+              </DropdownMenuItem>
             )}
             {onExcluir && (
-              <DropdownMenuItem variant="destructive" onClick={() => onExcluir(task.id)}>
+              <DropdownMenuItem
+                variant="destructive"
+                disabled={pendente}
+                onClick={() => onExcluir(task.id)}
+              >
                 Excluir
               </DropdownMenuItem>
             )}
