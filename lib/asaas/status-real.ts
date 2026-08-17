@@ -7,6 +7,7 @@ type AsaasPayment = {
   id: string
   status: string
   dateCreated: string
+  billingType?: string
 }
 
 const STATUS_ATIVO = new Set(['RECEIVED', 'CONFIRMED', 'RECEIVED_IN_CASH'])
@@ -24,6 +25,12 @@ const STATUS_CANCELADO = new Set([
 export type PagamentoMaisRecente = {
   id: string
   statusMapeado: StatusAssinatura | null
+  /**
+   * Como foi pago (CREDIT_CARD, BOLETO, PIX). Decide a graça depois do
+   * vencimento, ver `dias_de_graca` na migration 0044. Este caminho é o que
+   * preenche o tipo em assinatura anterior à 0044, que nasceu sem ele.
+   */
+  billingType: string | null
 }
 
 /**
@@ -59,7 +66,7 @@ export async function buscarPagamentoMaisRecente(
     else if (STATUS_ATRASADO.has(maisRecente.status)) statusMapeado = 'past_due'
     else if (STATUS_CANCELADO.has(maisRecente.status)) statusMapeado = 'canceled'
 
-    return { id: maisRecente.id, statusMapeado }
+    return { id: maisRecente.id, statusMapeado, billingType: maisRecente.billingType ?? null }
   } catch (err) {
     if (err instanceof AsaasApiError) {
       console.error(

@@ -354,6 +354,11 @@ export type Database = {
           asaas_subscription_id: string | null
           status: SubscriptionStatus
           current_period_end: string | null
+          // Como foi o último pagamento (CREDIT_CARD, BOLETO, PIX). Decide a
+          // graça depois do vencimento, ver `dias_de_graca` na migration 0044.
+          ultimo_billing_type: string | null
+          // Trava de idempotência do aviso de vencimento (migration 0044).
+          aviso_vencimento_enviado_em: string | null
           created_at: string
         }
         Insert: {
@@ -363,6 +368,8 @@ export type Database = {
           asaas_subscription_id?: string | null
           status?: SubscriptionStatus
           current_period_end?: string | null
+          ultimo_billing_type?: string | null
+          aviso_vencimento_enviado_em?: string | null
           created_at?: string
         }
         Update: {
@@ -372,6 +379,8 @@ export type Database = {
           asaas_subscription_id?: string | null
           status?: SubscriptionStatus
           current_period_end?: string | null
+          ultimo_billing_type?: string | null
+          aviso_vencimento_enviado_em?: string | null
           created_at?: string
         }
         Relationships: []

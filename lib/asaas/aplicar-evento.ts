@@ -34,9 +34,21 @@ export async function aplicarEventoAsaas(params: {
   subscriptionId: string
   eventId: string
   eventType: string
+  /**
+   * Como a pessoa pagou (CREDIT_CARD, BOLETO, PIX), quando se sabe.
+   *
+   * Decide a tolerância depois do vencimento: cartão recusado corta em 24h,
+   * boleto e Pix mantêm 3 dias porque podem estar compensando com o dinheiro
+   * já fora da conta (`dias_de_graca`, migration 0044).
+   *
+   * `null` é legítimo: nem todo evento traz pagamento (cancelamento de
+   * assinatura, por exemplo). A RPC preserva o tipo já gravado nesse caso, em
+   * vez de apagá-lo, senão a graça mudaria de 1 para 3 dias na hora errada.
+   */
+  billingType?: string | null
   origem: string
 }): Promise<ResultadoAplicacao> {
-  const { supabase, status, subscriptionId, eventId, eventType, origem } = params
+  const { supabase, status, subscriptionId, eventId, eventType, billingType, origem } = params
 
   // Idempotência: sem isso, reenviar um PAYMENT_CONFIRMED legítimo (retry do
   // Asaas, replay manual ou nova passada do job de reconciliação sobre o
@@ -62,6 +74,7 @@ export async function aplicarEventoAsaas(params: {
   const { data: matched, error } = await supabase.rpc('apply_asaas_subscription_status', {
     p_asaas_subscription_id: subscriptionId,
     p_status: status,
+    p_billing_type: billingType ?? undefined,
   })
 
   if (error) {
@@ -106,8 +119,11 @@ export async function aplicarEventoAsaas(params: {
  * `enviarEmailDoWebhook` e `enviarConversaoParaMeta` pra não repetir as
  * mesmas três idas ao banco (subscriptions → workspaces → auth.admin) duas
  * vezes na mesma chamada.
+ *
+ * Exportado porque o job diário (`app/api/cron/reconciliar-assinaturas`)
+ * precisa exatamente da mesma busca para mandar o aviso de vencimento.
  */
-async function buscarAssinante(
+export async function buscarAssinante(
   supabase: ReturnType<typeof createAdminClient>,
   subscriptionId: string,
 ): Promise<{

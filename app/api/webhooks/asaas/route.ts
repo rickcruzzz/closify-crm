@@ -23,7 +23,12 @@ const CANCELED_EVENTS = new Set([
 type AsaasWebhookPayload = {
   id?: string
   event?: string
-  payment?: { id?: string; subscription?: string }
+  // `billingType` é como a pessoa pagou (CREDIT_CARD, BOLETO, PIX). Só se
+  // sabe aqui: o checkout cria a assinatura com `UNDEFINED` de propósito
+  // (lib/asaas/actions.ts) e quem escolhe é o cliente, na tela do Asaas.
+  // É o que decide a graça depois do vencimento, ver `dias_de_graca` na
+  // migration 0044.
+  payment?: { id?: string; subscription?: string; billingType?: string }
   subscription?: { id?: string }
 }
 
@@ -81,6 +86,7 @@ export async function POST(request: Request) {
     subscriptionId,
     eventId,
     eventType: event,
+    billingType: body.payment?.billingType ?? null,
     origem: 'webhook',
   })
 
