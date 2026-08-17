@@ -16,4 +16,26 @@ export default defineConfig({
     baseURL,
     trace: 'retain-on-failure',
   },
+  projects: [
+    {
+      // O que o CI roda antes de promover deploy. Só rota pública, sem
+      // sessão, sem criar nada.
+      name: 'security',
+      testMatch: /security-audit\.spec\.ts/,
+    },
+    {
+      // O funil inteiro. Fica FORA do CI de propósito: cria conta real e
+      // cobrança real de R$49 no Asaas de produção (ninguém paga, o teste
+      // cancela no fim). Rodar isso a cada push encheria o Asaas de cliente
+      // e cobrança de teste. Chamado à mão por `npm run test:funil`.
+      name: 'funil',
+      testMatch: /funil-completo\.spec\.ts/,
+      // Um worker só: os passos dependem uns dos outros e compartilham a
+      // mesma conta descartável.
+      fullyParallel: false,
+      // Retry aqui seria pior que a falha: cada tentativa cria outro cliente
+      // e outra cobrança no Asaas.
+      retries: 0,
+    },
+  ],
 })
