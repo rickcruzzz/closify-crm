@@ -7,12 +7,12 @@ import { PublicFooter } from '@/components/landing/public-footer'
 /**
  * Layout das páginas legais. Sem navbar de produto de propósito: quem chega
  * aqui veio ler um documento, não converter. Largura curta (`max-w-3xl`)
- * porque linha longa de texto corrido cansa — o alvo é 65-75 caracteres.
+ * porque linha longa de texto corrido cansa, o alvo é 65-75 caracteres.
  */
 export default function LegalLayout({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex min-h-dvh flex-col">
-      {/* O logo já leva para a home, mas não se lê como "voltar" — quem entrou
+      {/* O logo já leva para a home, mas não se lê como "voltar", quem entrou
           para consultar um documento precisa de uma saída explícita. Fica no
           layout para valer nas duas páginas de uma vez. */}
       <header className="border-border/50 border-b px-4 py-4 md:px-6">

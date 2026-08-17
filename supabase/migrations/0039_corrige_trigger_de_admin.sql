@@ -1,24 +1,24 @@
--- Velo Funil — corrige regressão introduzida pela própria 0038.
+-- Velo Funil, corrige regressão introduzida pela própria 0038.
 --
 -- Revisão cruzada com o agente sql-pro achou dois problemas reais na trigger
 -- `impedir_workspace_sem_admin` (0038), o primeiro grave:
 --
 -- 1. CRÍTICO: `excluir_minha_conta()` (0017, LGPD art. 18 VI) apaga o
---    workspace inteiro quando o titular é o único membro — `delete from
+--    workspace inteiro quando o titular é o único membro, `delete from
 --    workspaces` dispara cascade em `workspace_members`, e a trigger nova
 --    via essa linha como "o admin está saindo", não achava outro admin
 --    (era o único) e recusava o DELETE com exceção, que sobe e desfaz a
 --    transação inteira. Quebrava a exclusão de conta para o caso mais comum
 --    do banco: quem nunca convidou ninguém.
 -- 2. ALTO: a trigger é `for each row`, e cada linha vê o snapshot do INÍCIO
---    da instrução — um único UPDATE/DELETE em lote (ex.: PATCH no PostgREST
+--    da instrução, um único UPDATE/DELETE em lote (ex.: PATCH no PostgREST
 --    filtrando `role=eq.admin` de um workspace com 2+ admins) rebaixa todos
 --    de uma vez, e cada linha, avaliada isoladamente, ainda enxerga as
 --    outras como admin. Zera os admins do workspace sem precisar de
---    corrida entre transações — só de uma instrução multi-linha.
+--    corrida entre transações, só de uma instrução multi-linha.
 
 -- ============================================================================
--- Fix 1 — não bloquear quando o workspace inteiro está sendo desmontado
+-- Fix 1, não bloquear quando o workspace inteiro está sendo desmontado
 -- ============================================================================
 create or replace function public.impedir_workspace_sem_admin()
 returns trigger
@@ -37,7 +37,7 @@ begin
   -- O cascade de `delete from workspaces` (excluir_minha_conta, 0017) apaga
   -- a linha de `workspaces` ANTES de disparar o cascade em
   -- `workspace_members`, na mesma transação. Se o workspace já não existe
-  -- mais, não faz sentido exigir admin nele — ele está sendo desmontado
+  -- mais, não faz sentido exigir admin nele, ele está sendo desmontado
   -- inteiro, não abandonado.
   if not exists (select 1 from public.workspaces where id = old.workspace_id) then
     return coalesce(new, old);
@@ -70,7 +70,7 @@ end;
 $$;
 
 -- ============================================================================
--- Fix 2 — trava de nível de instrução, pra pegar UPDATE/DELETE em lote
+-- Fix 2, trava de nível de instrução, pra pegar UPDATE/DELETE em lote
 -- ============================================================================
 --
 -- Trigger de LINHA não resolve isto: dentro da MESMA instrução, travar a
@@ -110,7 +110,7 @@ create trigger impedir_workspace_sem_admin_apos_update
   execute function public.impedir_workspace_sem_admin_apos_update();
 
 -- DELETE em lote usa a MESMA função (só o nome da transition table muda na
--- declaração da trigger) — Postgres não deixa reusar `old table` entre
+-- declaração da trigger), Postgres não deixa reusar `old table` entre
 -- triggers UPDATE e DELETE na mesma declaração, por isso duas triggers
 -- separadas apontando pra mesma function.
 create trigger impedir_workspace_sem_admin_apos_delete
@@ -120,10 +120,10 @@ create trigger impedir_workspace_sem_admin_apos_delete
   execute function public.impedir_workspace_sem_admin_apos_update();
 
 -- ============================================================================
--- Fix 3 (menor, UX) — mensagem específica para conta sem e-mail confirmado
+-- Fix 3 (menor, UX), mensagem específica para conta sem e-mail confirmado
 -- ============================================================================
 --
--- A 0038 restaurou `is distinct from` (fecha o fail-open de verdade — sem
+-- A 0038 restaurou `is distinct from` (fecha o fail-open de verdade, sem
 -- e-mail, a comparação já recusa o convite), mas perdeu a mensagem
 -- específica que a 0012 tinha para esse caso. Sem risco de segurança, só
 -- clareza: hoje a pessoa vê "convite pra outro e-mail" quando o problema real
@@ -188,12 +188,12 @@ end;
 $$;
 
 -- ============================================================================
--- Fix 4 (menor, performance) — pular a checagem de referência quando o
+-- Fix 4 (menor, performance), pular a checagem de referência quando o
 -- vínculo não mudou
 -- ============================================================================
 --
 -- `deals` já tem `tocar_datas_do_negocio` (0033) rodando em todo UPDATE,
--- inclusive o arrasto de card no Kanban — o UPDATE mais frequente do
+-- inclusive o arrasto de card no Kanban, o UPDATE mais frequente do
 -- produto. Sem esta guarda, cada arrasto pagava também um EXISTS contra
 -- `leads` mesmo quando `lead_id` não mudou nada.
 create or replace function public.checar_referencia_de_tarefa()

@@ -5,7 +5,7 @@ import type { ProximaAcaoRow, TaskRow } from '@/lib/tasks/types'
  * Teto de tarefas lidas de uma vez pela tela /hoje.
  *
  * Não é paginação: quem tem mais de 500 tarefas abertas atribuídas a si não
- * tem uma lista, tem um problema — e cortar aqui evita que a tela cresça sem
+ * tem uma lista, tem um problema, e cortar aqui evita que a tela cresça sem
  * limite. O teto do banco é 5.000 por empresa (0029); este é por leitura.
  */
 const MAX_TAREFAS = 500
@@ -26,7 +26,7 @@ type LinhaCrua = {
  *
  * Duas consultas fixas, não uma por linha. E os nomes de membro saem da RPC
  * `get_workspace_member_names`, que é a mesma usada pelos leads e pelo
- * dashboard — `auth.users` não é legível pela RLS do app, então não dá para
+ * dashboard, `auth.users` não é legível pela RLS do app, então não dá para
  * fazer join com ela.
  */
 async function enriquecer(
@@ -69,7 +69,7 @@ async function enriquecer(
 /**
  * As tarefas abertas da tela /hoje.
  *
- * `assigneeId` nulo traz as da empresa inteira — é o filtro "da equipe". O
+ * `assigneeId` nulo traz as da empresa inteira, é o filtro "da equipe". O
  * padrão da tela é "minhas", porque admin que abre e vê 40 tarefas de outra
  * pessoa não sabe o que fazer com elas.
  */
@@ -94,7 +94,7 @@ export async function getTasksAbertas(
   const { data, error } = await query
 
   // Erro silencioso aqui devolveria uma tela vazia idêntica à de quem não tem
-  // tarefa nenhuma — e a pessoa acharia que o sistema perdeu o trabalho dela.
+  // tarefa nenhuma, e a pessoa acharia que o sistema perdeu o trabalho dela.
   if (error) {
     console.error('getTasksAbertas falhou', error)
     return []
@@ -135,7 +135,7 @@ export async function getTasksDoLead(
  * uma consulta por card ali multiplicaria o problema em vez de custar uma
  * leitura a mais.
  *
- * Vem ordenada por prazo crescente e o primeiro de cada negócio vence — o
+ * Vem ordenada por prazo crescente e o primeiro de cada negócio vence, o
  * `Map` só grava quem chega primeiro. O índice parcial
  * `tasks_proxima_acao_do_negocio_idx` é exatamente esta consulta.
  */
@@ -145,7 +145,7 @@ export async function getProximaAcaoPorNegocio(
   const supabase = await createClient()
 
   // Cinco colunas, não as oito de `TaskRow`. Medido em produção com 100
-  // negócios: 198 B por negócio contra 315 B — e a consulta de negócios que
+  // negócios: 198 B por negócio contra 315 B, e a consulta de negócios que
   // já existia custa 292 B, então o `select` cheio mais que DOBRARIA o peso
   // da rota mais pesada do produto. `done_at` e `lead_id` sairiam sempre
   // iguais (o filtro garante), e o card não mostra responsável.

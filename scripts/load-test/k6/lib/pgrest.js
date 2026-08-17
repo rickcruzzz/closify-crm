@@ -1,4 +1,4 @@
-// Helpers pra Trilha C — PostgREST/RPC direto com JWT de usuário real. É a
+// Helpers pra Trilha C, PostgREST/RPC direto com JWT de usuário real. É a
 // camada certa pros 5 riscos de corrida e pros achados de query: são bugs de
 // banco (RLS, trigger, falta de lock), reproduzíveis inteiramente aqui, sem
 // precisar simular o roteamento de Server Action do Next.
@@ -28,7 +28,7 @@ export function pgPost(path, token, body, params = {}) {
   })
 }
 
-/** HEAD com Prefer: count=exact — equivalente a .select('id',{count:'exact',head:true}) do supabase-js. */
+/** HEAD com Prefer: count=exact, equivalente a .select('id',{count:'exact',head:true}) do supabase-js. */
 export function pgHeadCount(path, token, params = {}) {
   return http.request('HEAD', `${SUPABASE_URL}/rest/v1${path}`, null, {
     headers: headersFor(token, { Prefer: 'count=exact', ...params.headers }),

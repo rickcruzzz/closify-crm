@@ -1,4 +1,4 @@
--- Closify CRM — schema core + RLS multi-tenant
+-- Closify CRM, schema core + RLS multi-tenant
 -- Aplicar no SQL Editor do Supabase Studio, na ordem em que aparece neste arquivo.
 
 -- ============================================================================
@@ -218,6 +218,6 @@ create policy "activities_delete" on public.activities
 
 -- subscriptions: só select client-facing (admin vê o próprio plano).
 -- insert/update são feitos só via service_role key (webhook do Asaas),
--- que ignora RLS — não expor policy de escrita pro client aqui.
+-- que ignora RLS, não expor policy de escrita pro client aqui.
 create policy "subscriptions_select" on public.subscriptions
   for select using ((select public.is_workspace_member(workspace_id)));

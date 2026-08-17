@@ -1,5 +1,5 @@
 -- getDashboardMetrics somava deals.value em JS depois de trazer todas as
--- linhas de deals abertos — funciona, mas com um workspace de milhares de
+-- linhas de deals abertos, funciona, mas com um workspace de milhares de
 -- deals isso transfere N linhas pela rede só para calcular 1 número que o
 -- Postgres soma nativamente. RPC faz a soma no banco, retorna só o total.
 

@@ -1,6 +1,6 @@
-// Trilha B — login real (POST no GoTrue REST, mesmo endpoint que
+// Trilha B, login real (POST no GoTrue REST, mesmo endpoint que
 // supabase.auth.signInWithPassword chama por baixo) seguido do carregamento
-// da home autenticada. Cada iteração sorteia um usuário DISTINTO — o rate
+// da home autenticada. Cada iteração sorteia um usuário DISTINTO, o rate
 // limit de login do app (lib/rate-limit.ts, 8 tentativas/15min por e-mail) é
 // checado dentro da Server Action signIn, que este cenário não usa
 // diretamente, mas reusar o mesmo usuário em loop fechado não é
@@ -24,7 +24,7 @@ const storageKey = `sb-${projectRef}-auth-token`
 const MAX_CHUNK_SIZE = 3180
 
 // Mesmo algoritmo de auth/mint-tokens.mjs, reimplementado com k6/encoding
-// porque este cenário loga em runtime (não usa tokens.json pré-mintado) —
+// porque este cenário loga em runtime (não usa tokens.json pré-mintado),
 // ver o comentário longo em mint-tokens.mjs para a fonte do algoritmo.
 function buildCookieHeader(session) {
   const encoded = 'base64-' + encoding.b64encode(JSON.stringify(session), 'rawurl')

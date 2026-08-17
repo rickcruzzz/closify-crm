@@ -1,4 +1,4 @@
--- Velo Funil — exclusão de conta pelo próprio titular (M20)
+-- Velo Funil, exclusão de conta pelo próprio titular (M20)
 -- Aplicar no SQL Editor do Supabase Studio.
 --
 -- A LGPD (art. 18, VI) dá ao titular o direito de eliminação dos dados. Até
@@ -9,7 +9,7 @@
 -- Por que uma RPC e não um `delete` direto do client:
 --
 -- 1. `workspaces` tem RLS habilitado e NENHUMA policy de DELETE. Sem policy, o
---    Postgres nega a operação em silêncio — o client receberia sucesso com
+--    Postgres nega a operação em silêncio, o client receberia sucesso com
 --    zero linhas afetadas e a pessoa acharia que a conta foi apagada.
 -- 2. A decisão de quais workspaces morrem junto é uma regra de negócio: só os
 --    que ficariam sem nenhum membro. Workspace compartilhado com outras
@@ -50,7 +50,7 @@ begin
 
   -- Workspaces onde esta pessoa é o ÚNICO membro morrem junto: ninguém mais
   -- poderia acessá-los, e manter workspace órfão só acumula dado pessoal de
-  -- lead sem controlador — o oposto do que o pedido de eliminação quer.
+  -- lead sem controlador, o oposto do que o pedido de eliminação quer.
   --
   -- Onde há outros membros, o workspace sobrevive e só o vínculo é removido.
   for v_workspace in

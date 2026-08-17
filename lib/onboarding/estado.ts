@@ -48,8 +48,8 @@ export const lerEstadoDoOnboarding = cache(async (): Promise<EstadoDoOnboarding>
     .maybeSingle()
 
   // Falha de leitura vira `not_started`, e isso mandaria a pessoa ao
-  // onboarding de novo. Preferível ao contrário — dar por concluído o que não
-  // se conseguiu ler esconderia o assistente de quem precisa dele — mas o erro
+  // onboarding de novo. Preferível ao contrário, dar por concluído o que não
+  // se conseguiu ler esconderia o assistente de quem precisa dele, mas o erro
   // precisa aparecer no log para não virar mistério.
   if (error) {
     console.error('lerEstadoDoOnboarding falhou', error)
@@ -73,9 +73,9 @@ export function precisaDeOnboarding(estado: EstadoDoOnboarding): boolean {
 
 /**
  * Quem nunca configurou nada precisa passar pelas boas-vindas antes do
- * produto — mesma regra que vivia no middleware. `in_progress` e `skipped`
+ * produto, mesma regra que vivia no middleware. `in_progress` e `skipped`
  * NÃO desviam: pular foi decisão da pessoa, e quem está no meio já está na
- * tela certa. Falha de leitura (`erro`) também não desvia — um erro
+ * tela certa. Falha de leitura (`erro`) também não desvia, um erro
  * transitório do banco não pode empurrar para as boas-vindas quem está
  * trabalhando.
  */
@@ -89,13 +89,13 @@ export function precisaDeBoasVindas(estado: EstadoDoOnboarding): boolean {
  * Quem aceita convite não tem empresa para configurar: ela já está montada,
  * com nome, segmento e pipeline. Sem esta marca, a pessoa cairia nas
  * boas-vindas e atravessaria quatro perguntas sobre uma empresa que não é dela
- * — e o assistente terminaria sem alterar nada, porque colaborador não é admin
+ *, e o assistente terminaria sem alterar nada, porque colaborador não é admin
  * e a RLS recusa a escrita.
  *
  * `merge-duplicates` e não `insert`: quem aceita um SEGUNDO convite já tem
  * linha, e um insert cru estouraria por chave duplicada.
  *
- * Não é Server Action de propósito — precisa ser chamável tanto de uma action
+ * Não é Server Action de propósito, precisa ser chamável tanto de uma action
  * quanto da página que aceita o convite sozinha.
  */
 export async function concluirOnboardingPorConvite(

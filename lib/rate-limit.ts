@@ -19,7 +19,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
  * - `reenviar-confirmacao`: mesma ameaça do reset, e o mesmo número. Quem não
  *   recebeu o e-mail de cadastro tenta de novo uma ou duas vezes; cinco por
  *   hora cobre isso com folga e não serve de canhão. O limite do próprio
- *   Supabase existe, mas é global por projeto — barrar aqui, por endereço,
+ *   Supabase existe, mas é global por projeto, barrar aqui, por endereço,
  *   impede que uma pessoa insistindo consuma a cota de todo mundo.
  */
 const LIMITES = {
@@ -40,7 +40,7 @@ export type AcaoLimitada = keyof typeof LIMITES
  * antiga e passariam as duas.
  *
  * Em caso de falha do banco, **libera a ação**. Um limitador indisponível não
- * pode virar uma tranca no login de todo mundo — a proteção é contra abuso,
+ * pode virar uma tranca no login de todo mundo, a proteção é contra abuso,
  * não uma barreira de autenticação, e o guard real continua sendo a senha.
  */
 export async function excedeuLimite(

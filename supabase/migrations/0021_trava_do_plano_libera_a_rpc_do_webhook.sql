@@ -10,14 +10,14 @@
 --   CONTEXT: SQL statement "update public.workspaces set plan = ..."
 --            PL/pgSQL function public.apply_asaas_subscription_status(...)
 --
--- Ou seja: o cliente pagaria e continuaria no Free — o mesmo defeito que a
+-- Ou seja: o cliente pagaria e continuaria no Free, o mesmo defeito que a
 -- 0019 pretendia proteger, por outro caminho.
 --
 -- A correção troca "quem é o papel?" por "estou dentro da RPC autorizada?",
 -- usando uma variável de sessão que só a própria RPC define. Não é
 -- contornável de fora: `set_config` com `is_local = true` some no fim da
 -- transação, e quem chamasse a variável pela API pública estaria numa
--- transação sem a RPC — teria que executar `set_config` manualmente, o que o
+-- transação sem a RPC, teria que executar `set_config` manualmente, o que o
 -- PostgREST não expõe.
 
 create or replace function public.proteger_colunas_do_workspace()

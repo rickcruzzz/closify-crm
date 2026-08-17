@@ -66,7 +66,7 @@ describe('estadoDeMovimento', () => {
   })
 
   // O recorte que impede o aviso de virar ruído: sem ele, TODO negócio ganho
-  // apareceria parado há meses — e as etapas fechadas são as que mais acumulam
+  // apareceria parado há meses, e as etapas fechadas são as que mais acumulam
   // linha. A pessoa aprenderia a ignorar o sinal.
   it('negócio fechado nunca está parado, por mais antigo que seja', () => {
     for (const stage of ['fechado_ganho', 'fechado_perdido'] as const) {

@@ -88,13 +88,13 @@ export function MembersCard({
 
   // Usa a constante compartilhada em vez de repetir o número: com o `2`
   // escrito à mão aqui, mudar o limite do plano faria a tela dizer uma coisa e
-  // o servidor aplicar outra — o tipo de divergência que faz o usuário achar
+  // o servidor aplicar outra, o tipo de divergência que faz o usuário achar
   // que o limite "não funciona".
   const totalOccupied = members.length + invites.length
   const atLimit = plan === 'free' && totalOccupied >= FREE_MEMBER_LIMIT
 
   // Workspace nunca fica com zero membros (quem cria já entra como admin), então
-  // o estado vazio real é "só eu, sem convite pendente" — comum em conta nova.
+  // o estado vazio real é "só eu, sem convite pendente", comum em conta nova.
   const isAlone = members.length <= 1 && invites.length === 0
 
   async function onInvite(values: InviteMemberValues) {
@@ -285,7 +285,7 @@ export function MembersCard({
               <Label htmlFor="role">Papel</Label>
               {/* `Controller` em vez de `watch` + `setValue`: sem registrar o
                   campo, `role` podia não chegar ao resolver, e o zod reprovava
-                  num campo que a tela não exibia erro nenhum — o clique em
+                  num campo que a tela não exibia erro nenhum, o clique em
                   "Enviar convite" não fazia nada, sem toast e sem fechar o
                   diálogo. Mesmo modo de falha do bug do reset de senha. */}
               <Controller

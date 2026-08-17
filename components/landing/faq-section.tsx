@@ -6,7 +6,7 @@ import { FREE_LEAD_LIMIT, FREE_MEMBER_LIMIT, PRO_PLAN_PRICE } from '@/lib/plans'
 
 // Respostas honestas sobre o produto COMO ELE É HOJE. Nada aqui promete
 // funcionalidade que não existe. A resposta sobre planilha ficou desatualizada
-// quando a importação por CSV foi construída — negar um recurso que existe é
+// quando a importação por CSV foi construída, negar um recurso que existe é
 // tão danoso quanto prometer um que não existe.
 const faqs = [
   {
@@ -23,7 +23,7 @@ const faqs = [
   },
   {
     q: 'Meus dados ficam separados dos de outras empresas?',
-    a: 'Ficam. Cada empresa só enxerga os próprios dados — é uma regra de segurança configurada no banco, não uma tela que a gente esquece de checar. Nem por engano, nem por querer, os dados de uma empresa aparecem para outra.',
+    a: 'Ficam. Cada empresa só enxerga os próprios dados, é uma regra de segurança configurada no banco, não uma tela que a gente esquece de checar. Nem por engano, nem por querer, os dados de uma empresa aparecem para outra.',
   },
   {
     q: 'Quais são as formas de pagamento?',
@@ -57,7 +57,7 @@ export function FaqSection() {
             JavaScript, zero custo de hidratação, e o navegador já entrega
             teclado, leitor de tela e busca com Ctrl+F dentro do conteúdo
             fechado. Numa página cujo problema era lentidão, é a escolha certa.
-            A seta anima só `transform` — animar altura causaria reflow por
+            A seta anima só `transform`, animar altura causaria reflow por
             frame. */}
         <div className="bg-border ring-border grid gap-px overflow-hidden rounded-xl ring-1">
           {faqs.map((faq, i) => (

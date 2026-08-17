@@ -34,7 +34,7 @@ type Passo = {
  * Cinco passos, e todos falam de tela que EXISTE.
  *
  * Tarefas entra porque foi entregue na 0029. Se não existisse, o passo sairia
- * do tour em vez de virar navegação para uma tela que não está lá — tour que
+ * do tour em vez de virar navegação para uma tela que não está lá, tour que
  * promete o que o produto não tem é o pior primeiro contato possível.
  */
 const PASSOS: Passo[] = [
@@ -60,13 +60,13 @@ const PASSOS: Passo[] = [
     icone: CalendarCheck,
     titulo: 'Não perca os próximos passos',
     texto:
-      'Em Hoje ficam as tarefas por prazo. E o card de um negócio sem próxima ação avisa — é o que costuma morrer calado no funil.',
+      'Em Hoje ficam as tarefas por prazo. E o card de um negócio sem próxima ação avisa, é o que costuma morrer calado no funil.',
   },
   {
     icone: PartyPopper,
     titulo: 'Tudo pronto',
     texto:
-      'Seu ambiente está configurado. Comece cadastrando o primeiro lead — o checklist no Dashboard guia o resto.',
+      'Seu ambiente está configurado. Comece cadastrando o primeiro lead, o checklist no Dashboard guia o resto.',
   },
 ]
 
@@ -76,7 +76,7 @@ const PASSOS: Passo[] = [
  * Balão apontando para item de menu quebra no celular: abaixo de `lg` a barra
  * lateral está escondida atrás do botão de menu, e a seta apontaria para um
  * elemento invisível. O diálogo funciona igual nos dois tamanhos, e o produto
- * já usa `Dialog` em toda parte — nenhuma dependência nova.
+ * já usa `Dialog` em toda parte, nenhuma dependência nova.
  */
 export function TourDeBoasVindas({ aberto }: { aberto: boolean }) {
   const router = useRouter()

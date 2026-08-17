@@ -1,15 +1,15 @@
-// Trilha C — checkout (lib/asaas/actions.ts:createCheckout), com um limite
+// Trilha C, checkout (lib/asaas/actions.ts:createCheckout), com um limite
 // honesto: a escrita final (`upsert` em subscriptions) só existe via
 // createAdminClient() porque a tabela não tem policy de insert/update pro
-// client (migration 0003, de propósito — "subscriptions só deve ser escrito
+// client (migration 0003, de propósito, "subscriptions só deve ser escrito
 // por webhook/service role"). O pedido original foi explícito: nenhum
 // cenário que simula cliente final usa service_role. Então este cenário mede
 // só o que É de fato alcançável como usuário real:
 //   1. as leituras da Server Action (RPC is_workspace_admin, select
 //      workspace, select subscription existente) via PostgREST com JWT real;
-//   2. a cadeia de 3 chamadas HTTP síncronas ao Asaas — aqui, ao stub — que é
+//   2. a cadeia de 3 chamadas HTTP síncronas ao Asaas, aqui, ao stub, que é
 //      onde a Server Action fica presa esperando rede externa.
-// Não mede o upsert em si. Isso é uma lacuna documentada, não escondida —
+// Não mede o upsert em si. Isso é uma lacuna documentada, não escondida,
 // ver docs/load-test/plano-de-teste.md.
 //
 // Baixa concorrência de propósito: ninguém faz checkout em massa ao mesmo
@@ -74,5 +74,5 @@ export default function () {
   })
   check(payment, { 'payment 200': (r) => r.status === 200 })
 
-  sleep(thinkTime(2, 5)) // checkout tem think time maior — pessoa lendo o formulário de CPF/CNPJ
+  sleep(thinkTime(2, 5)) // checkout tem think time maior, pessoa lendo o formulário de CPF/CNPJ
 }

@@ -8,7 +8,7 @@ import { createClient } from '@/lib/supabase/server'
  *
  * A tela mostrava apenas `workspaces.plan` (Free ou Pro) e nunca lia a tabela
  * `subscriptions`. Quem tinha assinatura criada com pagamento pendente via
- * "Free" e um botão de assinar de novo — sem aviso, sem link para pagar a
+ * "Free" e um botão de assinar de novo, sem aviso, sem link para pagar a
  * fatura que já existia, e sem forma de cancelar.
  */
 

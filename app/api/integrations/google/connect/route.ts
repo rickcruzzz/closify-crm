@@ -15,7 +15,7 @@ import { appUrl } from '@/lib/app-url'
  * Início do fluxo OAuth do Google, para Calendar ou Gmail.
  *
  * Não é Server Action de propósito: `signInWithOAuth`/redirect externo
- * precisa de um GET de verdade que o navegador possa seguir — o mesmo motivo
+ * precisa de um GET de verdade que o navegador possa seguir, o mesmo motivo
  * que já fez `lib/supabase/google-auth.ts` disparar do lado do cliente para
  * o login. Aqui o servidor decide tudo antes do redirect (workspace, admin,
  * escopo), então não precisa rodar no browser.
@@ -61,7 +61,7 @@ export async function GET(request: NextRequest) {
   }
 
   // O callback grava com service role (o `state` assinado já prova quem
-  // pediu), então RLS não protege este fluxo — a checagem de plano tem que
+  // pediu), então RLS não protege este fluxo, a checagem de plano tem que
   // estar aqui, antes de assinar o `state`. Só quem passa por este GET
   // consegue um `state` válido; barrar aqui fecha o caminho por inteiro.
   const { data: podeConectar } = await supabase.rpc('pro_vigente', {

@@ -13,7 +13,7 @@ import { FREE_LEAD_LIMIT } from '@/lib/plans'
  * precisa ver o caminho: trago meus contatos, arrasto, acompanho.
  *
  * O passo 1 é a importação de CSV. Ela existia desde antes e não aparecia em
- * lugar nenhum da landing — era a resposta para "vou ter que digitar tudo de
+ * lugar nenhum da landing, era a resposta para "vou ter que digitar tudo de
  * novo?", a objeção que mais trava a troca da planilha.
  */
 const passos = [
@@ -88,7 +88,7 @@ export function HowItWorksSection() {
         </ol>
 
         {/* A tela de verdade, logo abaixo dos passos. A landing vendia
-            "pipeline visual Kanban" sem nunca mostrar um — quem nunca usou CRM
+            "pipeline visual Kanban" sem nunca mostrar um, quem nunca usou CRM
             não tem como imaginar o formato a partir do texto. */}
         <RevealOnScroll delay={400} className="mt-10">
           <KanbanPreview />

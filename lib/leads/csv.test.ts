@@ -105,7 +105,7 @@ describe('parseValorBRL', () => {
   })
 
   // Defeito corrigido: "abc" virava R$ 0,00 em silêncio, o que é pior do que
-  // recusar a linha — num CRM de vendas o valor errado contamina o dashboard.
+  // recusar a linha, num CRM de vendas o valor errado contamina o dashboard.
   it('recusa texto sem dígito em vez de virar zero', () => {
     expect(parseValorBRL('abc')).toBeNull()
     expect(parseValorBRL('a combinar')).toBeNull()

@@ -17,12 +17,12 @@ export type ResultadoAplicacao =
   | { ok: false }
 
 /**
- * Aplica um status de assinatura vindo do Asaas — dedupe, RPC atômica
+ * Aplica um status de assinatura vindo do Asaas, dedupe, RPC atômica
  * (status + plano) e os side effects que dependem dela (e-mail, conversão
  * pro Meta). Extraído do handler do webhook (`app/api/webhooks/asaas/route.ts`)
  * pra ser reusado pelo job de reconciliação (`app/api/cron/reconciliar-assinaturas/route.ts`),
  * que descobre o `status`/`subscriptionId` consultando a API do Asaas
- * direto em vez de receber um payload de webhook — o efeito, uma vez que se
+ * direto em vez de receber um payload de webhook, o efeito, uma vez que se
  * sabe o status, é o mesmo dos dois caminhos.
  *
  * `origem` só entra no log, pra diferenciar no Vercel se a correção veio do
@@ -41,7 +41,7 @@ export async function aplicarEventoAsaas(params: {
   // Idempotência: sem isso, reenviar um PAYMENT_CONFIRMED legítimo (retry do
   // Asaas, replay manual ou nova passada do job de reconciliação sobre o
   // mesmo pagamento) reativava plan='pro' depois de um cancelamento. O
-  // insert com PK no id do evento é a trava — se já existe, o evento já foi
+  // insert com PK no id do evento é a trava, se já existe, o evento já foi
   // processado e não repetimos o efeito.
   const { error: dedupeError } = await supabase
     .from('asaas_webhook_events')
@@ -74,19 +74,19 @@ export async function aplicarEventoAsaas(params: {
     return { ok: false }
   }
 
-  // Sem isso, quem confirma pagamento pelo webhook (o caminho normal —
+  // Sem isso, quem confirma pagamento pelo webhook (o caminho normal,
   // ninguém está com a aba de Cobrança aberta esperando) via a tela
   // continuar mostrando fatura pendente até o cache do Next expirar
   // sozinho. `createCheckout`/`cancelSubscription` (lib/asaas/actions.ts)
   // já revalidam quando a MUDANÇA parte da própria pessoa; isto cobre o
-  // caminho assíncrono — webhook em tempo real e o cron de reconciliação,
+  // caminho assíncrono, webhook em tempo real e o cron de reconciliação,
   // que também passa por esta função.
   if (matched === true) {
     revalidatePath('/settings/billing')
   }
 
   // Pagamento confirmado é o único momento em que o produto tinha algo a
-  // dizer e ficava calado — liberação do Pro é assíncrona, sem aviso não dá
+  // dizer e ficava calado, liberação do Pro é assíncrona, sem aviso não dá
   // pra saber quando voltar a olhar.
   if (status === 'active' && matched === true) {
     await enviarEmailDoWebhook(supabase, subscriptionId, renderPagamentoConfirmadoEmail)
@@ -102,7 +102,7 @@ export async function aplicarEventoAsaas(params: {
  * Busca o workspace e o e-mail do dono a partir da assinatura do Asaas.
  *
  * `created_by` é quem abriu a empresa e, pela regra do checkout, o único
- * que pode assinar — é para ele que a cobrança vai. Compartilhado entre
+ * que pode assinar, é para ele que a cobrança vai. Compartilhado entre
  * `enviarEmailDoWebhook` e `enviarConversaoParaMeta` pra não repetir as
  * mesmas três idas ao banco (subscriptions → workspaces → auth.admin) duas
  * vezes na mesma chamada.
@@ -145,7 +145,7 @@ async function buscarAssinante(
  * Engole qualquer falha de propósito. O e-mail é aviso, não é o efeito: o
  * status já foi aplicado na transação anterior. Deixar uma exceção escapar
  * aqui faria o webhook responder 500, o Asaas reenviar o evento, e o dedupe
- * por `event_id` — que já gravou este evento — devolver sucesso sem
+ * por `event_id`, que já gravou este evento, devolver sucesso sem
  * reprocessar nada.
  *
  * A idempotência do envio vem de graça do dedupe: um `event_id` só chega
@@ -185,7 +185,7 @@ async function enviarEmailDoWebhook(
 }
 
 /**
- * Avisa o Meta que um pagamento de verdade aconteceu — Conversions API,
+ * Avisa o Meta que um pagamento de verdade aconteceu, Conversions API,
  * server-side, sem depender do navegador de quem pagou (o checkout roda na
  * página hospedada do Asaas). Mesma idempotência do e-mail: `eventId` só
  * chega aqui uma vez por causa do dedupe em `asaas_webhook_events`.

@@ -8,7 +8,7 @@ import { buttonVariants } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 
 /**
- * Barra fixa no rodapé, só no mobile — maioria do clique de anúncio do Meta
+ * Barra fixa no rodapé, só no mobile, maioria do clique de anúncio do Meta
  * chega por celular, e o CTA da navbar sticky perde força numa tela pequena
  * assim que a pessoa rola pra ler o resto da página.
  *

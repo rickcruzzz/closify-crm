@@ -3,7 +3,7 @@
 -- como máquina de spam) e aceite de convite (adivinhação de token).
 --
 -- Sem Upstash nem Vercel KV: uma tabela no Postgres resolve neste volume, não
--- adiciona serviço externo ao stack, e sobrevive a restart de função — coisa
+-- adiciona serviço externo ao stack, e sobrevive a restart de função, coisa
 -- que um contador em memória não faz, porque cada instância serverless teria
 -- o seu.
 
@@ -71,7 +71,7 @@ $$;
 
 -- Chamada só por Server Action via service_role. Exposta a `anon` ou
 -- `authenticated`, qualquer um poderia inflar o contador de outra pessoa e
--- deixá-la trancada para fora — negação de serviço contra usuário legítimo.
+-- deixá-la trancada para fora, negação de serviço contra usuário legítimo.
 revoke all on function public.registrar_tentativa(text, integer, integer) from public;
 revoke execute on function public.registrar_tentativa(text, integer, integer) from anon;
 revoke execute on function public.registrar_tentativa(text, integer, integer) from authenticated;

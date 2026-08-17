@@ -11,7 +11,7 @@ import {
  * Regressão do convite que não enviava.
  *
  * O `Select` de papel usava `watch` + `setValue` sem registrar o campo no
- * formulário. Quando `role` não chegava ao resolver, o zod reprovava — e como
+ * formulário. Quando `role` não chegava ao resolver, o zod reprovava, e como
  * a tela não renderizava erro para esse campo, o clique em "Enviar convite"
  * não fazia absolutamente nada: sem toast, sem fechar o diálogo, sem pista.
  *
@@ -43,7 +43,7 @@ describe('inviteMemberSchema', () => {
   /**
    * O índice único de convites pendentes é `(workspace_id, email)` sobre o
    * texto cru. Sem normalizar na escrita, `ana@x.com` e `Ana@X.com` viravam
-   * dois convites para a mesma pessoa — e cada um consome uma vaga do limite
+   * dois convites para a mesma pessoa, e cada um consome uma vaga do limite
    * de membros, porque `canAddMember` soma convites pendentes aos membros
    * ativos. No Free isso esgotava o plano com um convidado só.
    */
@@ -111,7 +111,7 @@ describe('limites do plano Free', () => {
     // quando isto foi detectado.
     //
     // Se algum destes números mudar, a mensagem da RPC
-    // `create_workspace_with_admin` (migration 0018) precisa mudar junto — ela
+    // `create_workspace_with_admin` (migration 0018) precisa mudar junto, ela
     // tem o texto embutido e a Server Action casa por substring.
     expect(FREE_WORKSPACE_LIMIT).toBe(1)
     expect(FREE_MEMBER_LIMIT).toBe(2)

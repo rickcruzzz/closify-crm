@@ -43,7 +43,7 @@ export function TaskItem({
   /** O instante vem de fora para que a lista inteira use o mesmo relógio. */
   agora: Date
   atrasada: boolean
-  /** true enquanto concluir/excluir esta tarefa está em voo — trava a linha
+  /** true enquanto concluir/excluir esta tarefa está em voo, trava a linha
    * para o clique duplo não disparar a Server Action duas vezes. */
   pendente?: boolean
   onConcluir: (taskId: string) => void

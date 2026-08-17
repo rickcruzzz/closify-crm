@@ -78,7 +78,7 @@ export function DealDetailSheet({
   proximaAcao: ProximaAcaoRow | undefined
   members: WorkspaceMember[]
   currentUserId: string
-  /** Se dá pra oferecer "mandar pro Google Calendar" — vem de Integrações. */
+  /** Se dá pra oferecer "mandar pro Google Calendar", vem de Integrações. */
   calendarConectado: boolean
   open: boolean
   onOpenChange: (open: boolean) => void
@@ -110,8 +110,8 @@ export function DealDetailSheet({
     }
 
     toast.success('Próxima ação agendada.')
-    // Sem router.refresh(): criarTarefa já revalida '/kanban' — a rota
-    // atual —, e o Next aplica o RSC atualizado sozinho na resposta da
+    // Sem router.refresh(): criarTarefa já revalida '/kanban', a rota
+    // atual,, e o Next aplica o RSC atualizado sozinho na resposta da
     // própria Server Action.
   }
 
@@ -146,7 +146,7 @@ export function DealDetailSheet({
     // Não limpa `concluindo` aqui de propósito: entre a Server Action
     // resolver e o RSC revalidado chegar (o que vai trocar/esconder este
     // botão), existe uma janela real onde um segundo clique reabriria o
-    // envio — medido com clique duplo real, que disparou a action duas
+    // envio, medido com clique duplo real, que disparou a action duas
     // vezes. Deixar travado até a revalidação chegar é seguro; travar para
     // sempre em caso de erro não seria, por isso só limpa no erro.
   }
@@ -242,7 +242,7 @@ export function DealDetailSheet({
 
               {/* Há quanto tempo o negócio não muda de etapa. Fica aqui e não
                   no card: lá já mora a próxima ação, e duas datas competindo
-                  fazem a pessoa não saber qual obedecer — a mesma razão pela
+                  fazem a pessoa não saber qual obedecer, a mesma razão pela
                   qual o prazo saiu de lá. */}
               <div>
                 <span className="text-muted-foreground text-xs">Movimento</span>
@@ -277,7 +277,7 @@ export function DealDetailSheet({
                     </div>
                     <div className="flex shrink-0 flex-wrap gap-2">
                       {/* Ícone sozinho, antes, dependia só do `title` (tooltip)
-                          pra alguém entender o que o botão faz — igual ao
+                          pra alguém entender o que o botão faz, igual ao
                           Gmail (`lead-detail-client.tsx`) já é ícone + texto,
                           este passa a ser também. */}
                       <Button
@@ -319,7 +319,7 @@ export function DealDetailSheet({
                         Agendar
                       </Button>
                     </div>
-                    {/* Só quando o Calendar está conectado — sem isso a dica
+                    {/* Só quando o Calendar está conectado, sem isso a dica
                         prometeria um botão que ainda não vai aparecer depois
                         de agendar. Prepara quem tá vendo pela primeira vez:
                         quando o botão de verdade surgir (depois de agendar),

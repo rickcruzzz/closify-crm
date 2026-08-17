@@ -50,7 +50,7 @@ const TIPOS: { valor: ActivityType; rotulo: string }[] = [
  * Editar e excluir uma atividade da timeline.
  *
  * Isolado num componente cliente para a `ActivityTimeline` continuar sendo
- * Server Component — só este menu precisa de estado, e transformar a lista
+ * Server Component, só este menu precisa de estado, e transformar a lista
  * inteira em cliente mandaria todo o histórico para o bundle.
  *
  * Quem não é autor nem admin não vê o menu. A action recusa de qualquer forma;

@@ -5,7 +5,7 @@
 --    Pior, a checagem de e-mail usava `<>` contra uma subquery que devolve
 --    NULL quando auth.uid() é nulo (ou quando o usuário não tem e-mail, caso
 --    possível com OAuth e "allow users without email"). `'x' <> NULL` é NULL,
---    não true — o `if` não disparava e a checagem falhava EM ABERTO. Trocado
+--    não true, o `if` não disparava e a checagem falhava EM ABERTO. Trocado
 --    por `is distinct from`, mais guarda explícita de sessão.
 -- 2) get_invite_by_token e accept_workspace_invite ficaram com
 --    `search_path = public` enquanto a 0006 endureceu todo o resto do schema
@@ -14,7 +14,7 @@
 --    Retornam só booleanos sobre o próprio chamador, mas não há motivo para
 --    anon poder executá-los.
 --    ATENÇÃO: os `revoke ... from public` abaixo foram testados contra o banco
---    real e NÃO surtem efeito — o Supabase concede EXECUTE explicitamente a
+--    real e NÃO surtem efeito, o Supabase concede EXECUTE explicitamente a
 --    `anon` via default privileges, e revogar de PUBLIC não remove grant de
 --    role. A correção que funciona está na 0013.
 -- 4) Webhook do Asaas não tinha idempotência: reenviar um PAYMENT_CONFIRMED

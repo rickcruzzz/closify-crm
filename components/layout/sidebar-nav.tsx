@@ -18,10 +18,10 @@ export function SidebarNav({ onNavigate }: { onNavigate?: () => void }) {
         const mesmaRota = pathname === rotaDoItem || pathname.startsWith(`${rotaDoItem}/`)
 
         // "Configurações" e "Integrações" apontam pras duas pro mesmo
-        // `/settings` — o que diferencia qual fica destacada é a aba na URL,
+        // `/settings`, o que diferencia qual fica destacada é a aba na URL,
         // não a rota. "Integrações" acende só na própria aba; Configurações
         // acende em QUALQUER outra aba (empresa/equipe/plano), que não têm
-        // entrada própria no menu — por isso não é uma comparação direta de
+        // entrada própria no menu, por isso não é uma comparação direta de
         // igualdade, e sim "não é a aba de alguém mais".
         //
         // O `if` precisa ser sobre a rota DESTE item, não sobre a página
@@ -48,7 +48,7 @@ export function SidebarNav({ onNavigate }: { onNavigate?: () => void }) {
               // proporção (-4px / +4px): a pill fica 8px mais larga (mais
               // respiro do fundo colorido em volta do ícone), mas o ícone
               // continua exatamente na mesma posição horizontal do item
-              // inativo — padding e margin se cancelam.
+              // inativo, padding e margin se cancelam.
               active
                 ? '-mx-1 bg-primary px-3.5 text-primary-foreground'
                 : 'text-muted-foreground hover:bg-muted hover:text-foreground px-2.5',

@@ -12,7 +12,7 @@ export class GoogleApiError extends Error {
   }
 }
 
-// Um escopo por conexão, nunca os dois juntos — quem conecta só Calendar não
+// Um escopo por conexão, nunca os dois juntos, quem conecta só Calendar não
 // autoriza envio de e-mail, e vice-versa. Menor privilégio: a pessoa concede
 // exatamente o que a tela pediu, visível na própria tela de consentimento do
 // Google.
@@ -37,7 +37,7 @@ function clientSecret(): string {
   return secret
 }
 
-// Mesmo redirect URI para as duas integrações — o `provider` viaja dentro do
+// Mesmo redirect URI para as duas integrações, o `provider` viaja dentro do
 // `state` assinado (lib/integrations/state.ts), não na URL. Um único redirect
 // URI cadastrado no Google Cloud Console é mais simples de manter do que um
 // por escopo.
@@ -56,7 +56,7 @@ export function montarUrlDeAutorizacao(
     scope: `openid email ${escopoGoogle(provider)}`,
     access_type: 'offline',
     // `prompt=consent` força o Google a emitir refresh_token de novo mesmo
-    // que a pessoa já tenha autorizado este app antes — sem isso, reconectar
+    // que a pessoa já tenha autorizado este app antes, sem isso, reconectar
     // depois de desconectar devolveria só um access_token de curta duração,
     // sem jeito de renovar sozinho.
     prompt: 'consent',
@@ -109,7 +109,7 @@ export async function renovarAccessToken(refreshToken: string): Promise<TokenRes
     throw new GoogleApiError(res.status, '/token (refresh)', await res.text())
   }
 
-  // A renovação não devolve `refresh_token` de novo — o original continua
+  // A renovação não devolve `refresh_token` de novo, o original continua
   // válido. Quem chama deve preservar o refresh_token já gravado.
   return res.json() as Promise<TokenResponse>
 }
@@ -118,7 +118,7 @@ export async function renovarAccessToken(refreshToken: string): Promise<TokenRes
  * Revoga o token no Google, na desconexão.
  *
  * Engole erro de propósito: quem chama sempre apaga a linha local depois,
- * mesmo que a revogação remota falhe (token já expirado, rede fora) — não
+ * mesmo que a revogação remota falhe (token já expirado, rede fora), não
  * pode deixar uma integração "meio desconectada" por causa de um problema do
  * lado do Google.
  */
@@ -181,7 +181,7 @@ export async function criarEventoDeCalendario(
 
 export async function testarCalendario(accessToken: string): Promise<boolean> {
   // `calendars.get` (o endpoint usado antes aqui) exige calendar.readonly/
-  // calendar/calendar.calendars — a lista oficial de escopos aceitos por
+  // calendar/calendar.calendars, a lista oficial de escopos aceitos por
   // esse método não inclui `calendar.events`, que é o único que a conexão
   // pede (menor privilégio). Mesma causa raiz do bug já corrigido em
   // `testarGmail`: testar com endpoint que a conexão não tem permissão de
@@ -189,7 +189,7 @@ export async function testarCalendario(accessToken: string): Promise<boolean> {
   return testarEscopoConcedido(accessToken, escopoGoogle('google_calendar'))
 }
 
-// Monta o e-mail no formato RFC 2822 exigido pelo `raw` da API do Gmail —
+// Monta o e-mail no formato RFC 2822 exigido pelo `raw` da API do Gmail,
 // texto simples, sem anexo, sem HTML: o produto não vira um cliente de
 // e-mail completo (fora de escopo, decisão do plano).
 function montarMimeSimples(destinatario: string, assunto: string, corpo: string): string {
@@ -226,18 +226,18 @@ export async function enviarEmailGmail(
 }
 
 // Testar CADA integração batendo na API real dela (Gmail, Calendar) exigia
-// endpoint próprio — e tanto `GET /gmail/v1/users/me/profile` quanto
+// endpoint próprio, e tanto `GET /gmail/v1/users/me/profile` quanto
 // `GET /calendar/v3/calendars/primary` pedem escopo de LEITURA que a conexão
-// nunca tem (ela só pede o escopo mínimo de escrita — `gmail.send` ou
+// nunca tem (ela só pede o escopo mínimo de escrita, `gmail.send` ou
 // `calendar.events`, ver `ESCOPO_POR_PROVIDER`). Testar com endpoint que a
 // própria integração não tem permissão de chamar sempre devolve 403 e marca
-// conexão saudável como quebrada — dois bugs iguais, achados em sequência.
+// conexão saudável como quebrada, dois bugs iguais, achados em sequência.
 //
-// `tokeninfo` valida o token sem exigir escopo nenhum de API específica —
+// `tokeninfo` valida o token sem exigir escopo nenhum de API específica,
 // serve pros dois provedores. Confirmar que `scope` inclui o escopo exigido
 // garante que não é só um token válido de OUTRA finalidade.
 async function testarEscopoConcedido(accessToken: string, escopoExigido: string): Promise<boolean> {
-  // Header, não query string — token de acesso não deve viajar em URL (fica
+  // Header, não query string, token de acesso não deve viajar em URL (fica
   // em log de acesso). Confirmado contra o endpoint real que ele aceita
   // Authorization: Bearer (erro muda de "token ausente" pra "token
   // inválido" quando testado com um token qualquer via header).
@@ -246,7 +246,7 @@ async function testarEscopoConcedido(accessToken: string, escopoExigido: string)
   })
   if (!res.ok) return false
   const info = (await res.json()) as { scope?: string }
-  // Comparação exata contra a lista de escopos, não substring — evita casar
+  // Comparação exata contra a lista de escopos, não substring, evita casar
   // por acidente com um escopo diferente que só contenha o mesmo texto.
   return (info.scope ?? '').split(/\s+/).includes(escopoExigido)
 }
@@ -255,7 +255,7 @@ export async function testarGmail(accessToken: string): Promise<boolean> {
   return testarEscopoConcedido(accessToken, escopoGoogle('gmail'))
 }
 
-/** Providers Google válidos — subconjunto de IntegrationProvider (exclui 'whatsapp'). */
+/** Providers Google válidos, subconjunto de IntegrationProvider (exclui 'whatsapp'). */
 export function ehProviderGoogle(
   provider: IntegrationProvider,
 ): provider is 'google_calendar' | 'gmail' {

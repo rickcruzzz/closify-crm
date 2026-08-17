@@ -1,6 +1,6 @@
 -- createWorkspace fazia 2 inserts separados (workspaces, depois
 -- workspace_members) sem transação. Se o segundo insert falhasse (timeout,
--- erro de rede, RLS), sobrava um workspace órfão sem membro — e o usuário,
+-- erro de rede, RLS), sobrava um workspace órfão sem membro, e o usuário,
 -- ao tentar de novo pelo onboarding, criava outro workspace, acumulando
 -- lixo por usuário a cada falha transitória. Em produção, com volume,
 -- isso não é hipotético.

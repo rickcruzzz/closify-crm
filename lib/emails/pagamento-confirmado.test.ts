@@ -43,7 +43,7 @@ describe('renderPagamentoConfirmadoEmail', () => {
       ...base,
       workspaceName: 'Silva & Cia',
     })
-    expect(subject).toBe('Seu plano Pro está ativo — Velo Funil')
+    expect(subject).toBe('Seu plano Pro está ativo, Velo Funil')
     expect(subject).not.toContain('&amp;')
   })
 

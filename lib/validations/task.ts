@@ -14,7 +14,7 @@ export const taskSchema = z
     type: z.enum(['ligacao', 'email', 'reuniao', 'nota'], { error: 'Selecione um tipo.' }),
 
     // Chega da tela como texto do <input type="datetime-local">, que não tem
-    // fuso. `coerce.date` interpreta no fuso do navegador — que é o fuso de
+    // fuso. `coerce.date` interpreta no fuso do navegador, que é o fuso de
     // quem digitou, e é exatamente o que se quer aqui: "amanhã 9h" é 9h de
     // quem marcou, não 9h em UTC.
     dueAt: z.coerce
@@ -28,7 +28,7 @@ export const taskSchema = z
     dealId: z.uuid().nullish(),
   })
   // Espelha o check `tasks_alvo_minimo` da migration 0029. O banco é quem
-  // manda — esta validação existe para a mensagem chegar boa na tela em vez de
+  // manda, esta validação existe para a mensagem chegar boa na tela em vez de
   // virar "Não foi possível salvar" vindo de um erro de constraint.
   .refine((v) => Boolean(v.leadId) || Boolean(v.dealId), {
     error: 'A tarefa precisa estar ligada a um lead ou a um negócio.',

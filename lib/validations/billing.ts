@@ -12,7 +12,7 @@ export const checkoutSchema = z.object({
     })
     // Confere o dígito verificador aqui, antes de qualquer chamada de rede.
     // Sem isso, um número digitado errado só era recusado lá no Asaas, e a
-    // pessoa via "Não foi possível iniciar a assinatura" — mensagem que não
+    // pessoa via "Não foi possível iniciar a assinatura", mensagem que não
     // diz o que corrigir e faz parecer defeito do sistema.
     .refine(validarCpfCnpj, {
       message: 'Documento inválido. Confira os números digitados.',

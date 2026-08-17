@@ -33,7 +33,7 @@ async function abrirSessao(): Promise<Sessao | { error: string }> {
  * Não há checagem de admin aqui de propósito: quem decide é a política
  * `workspaces_update`, que exige `is_workspace_admin(id)`. Um `if` no
  * TypeScript seria uma segunda fonte de verdade a manter em dia, e esta é uma
- * Server Action — endpoint HTTP que dá para chamar sem passar pela tela.
+ * Server Action, endpoint HTTP que dá para chamar sem passar pela tela.
  *
  * Membro comum recebe 0 linha afetada, e a mensagem abaixo explica por quê.
  */
@@ -152,7 +152,7 @@ export async function removerLogo() {
     return { error: 'Não foi possível remover a imagem. Só o administrador pode fazer isso.' }
   }
 
-  // A referência sai primeiro. Se o arquivo resistir, sobra um órfão — melhor
+  // A referência sai primeiro. Se o arquivo resistir, sobra um órfão, melhor
   // do que a tela apontar para um arquivo que não existe mais.
   if (caminho) {
     await sessao.supabase.storage.from(LOGO_BUCKET).remove([caminho])
@@ -175,7 +175,7 @@ async function caminhoAtual(sessao: Sessao): Promise<string | null> {
 /**
  * URL temporária para exibir a logo.
  *
- * O bucket é privado — não existe URL fixa. Uma hora é o bastante para a
+ * O bucket é privado, não existe URL fixa. Uma hora é o bastante para a
  * sessão de quem está mexendo nas configurações, e curto o bastante para um
  * link vazado não valer nada amanhã.
  */

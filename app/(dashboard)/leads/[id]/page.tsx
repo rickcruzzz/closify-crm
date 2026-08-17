@@ -12,7 +12,7 @@ export default async function LeadDetailPage({ params }: { params: Promise<{ id:
   const supabase = await createClient()
 
   // Quem pode corrigir atividade: o autor dela ou um admin. A action refaz
-  // essa checagem no servidor — aqui é só para não exibir um menu de ações
+  // essa checagem no servidor, aqui é só para não exibir um menu de ações
   // que resultaria em erro.
   const [result, members, tasks, { data: isAdmin }] = await Promise.all([
     getLeadById(workspaceId, id),

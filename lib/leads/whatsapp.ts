@@ -5,7 +5,7 @@ import { apenasDigitos } from '@/lib/leads/planilha'
  *
  * Por que link e não a Cloud API: a API oficial exige conta Meta Business
  * verificada, que exige CNPJ ativo, mais aprovação de template e custo por
- * mensagem. O link resolve o que a pessoa quer — abrir a conversa — sem
+ * mensagem. O link resolve o que a pessoa quer, abrir a conversa, sem
  * nenhuma dessas dependências.
  *
  * Devolve `null` quando o número não tem cara de telefone brasileiro. É
@@ -35,7 +35,7 @@ export function linkDoWhatsApp(telefone: string | null | undefined): string | nu
   }
 
   // Qualquer outro tamanho é ramal, número truncado, ou telefone de fora do
-  // Brasil — que este produto não atende. Sem palpite.
+  // Brasil, que este produto não atende. Sem palpite.
   return null
 }
 
@@ -49,7 +49,7 @@ function montar(numeroComDdi: string): string | null {
   // O primeiro dígito depois do DDD é o que separa telefone brasileiro de
   // número estrangeiro do mesmo tamanho. Sem esta checagem, "+1 415 555 2671"
   // (EUA, 11 dígitos sem o DDI) ganhava um "55" na frente e virava um número
-  // brasileiro que não existe — o teste pegou exatamente isso.
+  // brasileiro que não existe, o teste pegou exatamente isso.
   const primeiro = numeroComDdi[4]
 
   // 13 dígitos = celular: todo celular do país recebeu o nono dígito, que é

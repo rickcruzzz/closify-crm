@@ -1,4 +1,4 @@
--- Velo Funil — limite de empresas no plano Free (M21)
+-- Velo Funil, limite de empresas no plano Free (M21)
 -- Aplicar no SQL Editor do Supabase Studio.
 --
 -- O plano Free limitava 2 colaboradores e 50 leads, mas ambos POR WORKSPACE, e

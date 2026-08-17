@@ -94,7 +94,7 @@ describe('renderEmail', () => {
 
   /**
    * O editor do painel do Supabase engasga com linhas muito longas e rejeita o
-   * comentário condicional aninhado — o sintoma é o botão "Save" simplesmente
+   * comentário condicional aninhado, o sintoma é o botão "Save" simplesmente
    * não responder, sem mensagem de erro. Estes testes fixam o formato que
    * comprovadamente cola e salva.
    */
@@ -136,7 +136,7 @@ describe('renderEmail', () => {
     expect(html).toContain(CONTROLADOR.nomeFantasia)
   })
 
-  // Os links do rodapé (mailto e site) existem sempre — o que precisa sumir
+  // Os links do rodapé (mailto e site) existem sempre, o que precisa sumir
   // sem `action` é o bloco do botão, identificável pelo VML do Outlook.
   it('omite o botão quando não há ação', () => {
     expect(renderEmail(base)).not.toContain('v:roundrect')
@@ -150,7 +150,7 @@ describe('renderEmail', () => {
    * Alarme de sincronização: os arquivos em `supabase/email-templates/` são
    * cópias estáticas deste layout, coladas à mão no painel do Supabase. Quando
    * este snapshot quebrar, os `.html` de lá precisam ser regerados e colados de
-   * novo — senão o que está em produção diverge em silêncio do que está no
+   * novo, senão o que está em produção diverge em silêncio do que está no
    * repositório.
    */
   it('mantém a estrutura estável (regenerar supabase/email-templates se falhar)', () => {

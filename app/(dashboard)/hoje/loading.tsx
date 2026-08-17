@@ -6,7 +6,7 @@ import { Skeleton } from '@/components/ui/skeleton'
  * O esqueleto de `/hoje`, no formato da tela real.
  *
  * Dois grupos com quatro linhas, que é o que a maioria vê ao abrir: algumas
- * atrasadas e as de hoje. Esqueleto genérico — três retângulos iguais — faz a
+ * atrasadas e as de hoje. Esqueleto genérico, três retângulos iguais, faz a
  * tela pular quando o conteúdo chega, e o pulo custa mais atenção do que a
  * espera que ele tentava disfarçar.
  *

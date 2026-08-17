@@ -8,7 +8,7 @@ import type { ModeloVenda, OnboardingEtapa, TamanhoEquipe } from '@/types/supaba
  * Lista aberta de propósito: o schema aceita qualquer texto de até 40
  * caracteres (o teto do banco), e esta constante só alimenta os botões da
  * tela. Acrescentar "Petshop" amanhã é uma linha aqui, sem migration e sem
- * mexer em nada que já foi respondido — que é justamente o que o pedido
+ * mexer em nada que já foi respondido, que é justamente o que o pedido
  * exigia.
  *
  * Um `enum` no banco faria o oposto: cada segmento novo viraria migration, e

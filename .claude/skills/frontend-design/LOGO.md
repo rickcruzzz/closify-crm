@@ -1,6 +1,6 @@
 ---
 title: ckm:logo-design
-description: Logo design with 55 styles, 30 color palettes, and AI generation — from concept to production-ready vector assets.
+description: Logo design with 55 styles, 30 color palettes, and AI generation, from concept to production-ready vector assets.
 section: marketing
 category: skills
 ---
@@ -9,7 +9,7 @@ category: skills
 
 # Logo Design
 
-> Create distinctive, scalable logos with AI generation, 55 curated styles, and 30 color palettes — from concept to production-ready SVG.
+> Create distinctive, scalable logos with AI generation, 55 curated styles, and 30 color palettes, from concept to production-ready SVG.
 
 ## What This Skill Does
 

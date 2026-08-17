@@ -17,7 +17,7 @@ const META: Record<
     descricao: string
     icone: LucideIcon
     conectarHref: string | null
-    /** Como nomear o uso pro cliente — singular e plural, linguagem dele, não termo técnico. */
+    /** Como nomear o uso pro cliente, singular e plural, linguagem dele, não termo técnico. */
     usoSingular: string
     usoPlural: string
   }
@@ -41,7 +41,7 @@ const META: Record<
 }
 
 /**
- * Um card por integração — mesmo componente pros três provedores.
+ * Um card por integração, mesmo componente pros três provedores.
  *
  * `isAdmin` vem do servidor (a página já verificou); aqui só decide o que
  * mostrar, a régua de verdade é a RLS + a checagem repetida nas próprias
@@ -103,7 +103,7 @@ export function IntegrationCard({
       <CardContent className="flex flex-col gap-3">
         {accountLabel && <p className="text-muted-foreground text-sm">{accountLabel}</p>}
 
-        {/* Só mostra uso pra quem já conectou — card desconectado não tem
+        {/* Só mostra uso pra quem já conectou, card desconectado não tem
             número nenhum pra exibir, e "0" ali só soaria vazio. */}
         {conectado && (
           <p className="text-muted-foreground text-xs">

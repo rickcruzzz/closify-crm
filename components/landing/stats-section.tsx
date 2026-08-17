@@ -3,7 +3,7 @@ import { cn } from '@/lib/utils'
 
 // NÃO coloque métrica de resultado aqui ("+47% de conversão", "1.200+ times",
 // "3.2x mais leads"). Esta seção já teve exatamente esses números, copiados de
-// uma landing concorrente, enquanto o produto tinha zero clientes pagantes —
+// uma landing concorrente, enquanto o produto tinha zero clientes pagantes,
 // eram afirmações falsas numa página que vende assinatura.
 //
 // A régua é simples: só entra aqui o que dá para provar hoje. Cada item abaixo

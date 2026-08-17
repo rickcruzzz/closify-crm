@@ -1,12 +1,12 @@
 // SharedArray carrega o JSON UMA vez e compartilha read-only entre todos os
-// VUs (k6 roda cada VU numa goroutine com sua própria cópia de heap JS — sem
+// VUs (k6 roda cada VU numa goroutine com sua própria cópia de heap JS, sem
 // SharedArray, 1000 VUs replicariam ~1000 cópias do manifesto de tokens).
 import { SharedArray } from 'k6/data'
 
 export const tokens = new SharedArray('tokens', function () {
   const data = JSON.parse(open('../../auth/tokens.json'))
   if (data.length === 0) {
-    throw new Error('tokens.json vazio — rode auth/mint-tokens.mjs antes de qualquer cenário k6')
+    throw new Error('tokens.json vazio, rode auth/mint-tokens.mjs antes de qualquer cenário k6')
   }
   return data
 })
@@ -23,7 +23,7 @@ export function tokensOfGroup(group) {
   return tokens.filter((t) => t.group === group)
 }
 
-/** Dois tokens DIFERENTES do mesmo workspace — usado pelos cenários race*. */
+/** Dois tokens DIFERENTES do mesmo workspace, usado pelos cenários race*. */
 export function twoTokensSameWorkspace() {
   const byWorkspace = new Map()
   for (const t of tokens) {
@@ -36,7 +36,7 @@ export function twoTokensSameWorkspace() {
   return null
 }
 
-/** Um workspace do grupo "estresse" — usado pelos cenários c2/c5 (achado #1). */
+/** Um workspace do grupo "estresse", usado pelos cenários c2/c5 (achado #1). */
 export function estresseTenant() {
   const candidatos = tenants.filter((t) => t.group === 'estresse')
   if (candidatos.length === 0) return null

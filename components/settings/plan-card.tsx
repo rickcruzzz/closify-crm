@@ -22,7 +22,7 @@ import {
  * Card de plano em Configurações.
  *
  * Antes trazia apenas o badge Free e um botão `outline` "Ver cobrança", que
- * levava a mais uma tela antes de qualquer possibilidade de assinar — quem
+ * levava a mais uma tela antes de qualquer possibilidade de assinar, quem
  * queria pagar precisava descobrir o caminho sozinho. Os limites também eram
  * texto fixo ("até 2 colaboradores e 50 leads"), já desatualizado em relação
  * ao limite de empresa.
@@ -81,7 +81,7 @@ export function PlanCard({ plan, isAdmin }: { plan: 'free' | 'pro'; isAdmin: boo
             </div>
 
             <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-              {/* Só admin assina — `createCheckout` recusa os demais, e mostrar
+              {/* Só admin assina, `createCheckout` recusa os demais, e mostrar
                   o botão a quem não pode usar só produz um caminho morto. */}
               {isAdmin ? (
                 <SubscribeButton className="w-full sm:w-fit" />

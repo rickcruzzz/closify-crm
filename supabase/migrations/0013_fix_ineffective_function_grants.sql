@@ -22,11 +22,11 @@
 --    - is_workspace_member / is_workspace_admin / is_workspace_creator: são
 --      chamadas DENTRO das policies de RLS, e policy roda com as permissões
 --      de quem consulta. Revogar de anon arriscaria quebrar avaliação de RLS
---      em algum caminho anônimo para ganhar nada — elas já retornam false
+--      em algum caminho anônimo para ganhar nada, elas já retornam false
 --      sem sessão.
 
 -- 3) DRIFT DE SCHEMA: a 0009 nunca foi aplicada no banco. Verificado chamando
---    a RPC como service role — get_open_pipeline_value não existe, enquanto
+--    a RPC como service role, get_open_pipeline_value não existe, enquanto
 --    todas as outras (0001, 0004, 0005, 0007, 0008, 0010, 0011) existem.
 --    Consequência visível: getDashboardMetrics faz
 --    `pipelineValueResult.data ?? 0`, então o erro da RPC ausente é engolido
@@ -85,7 +85,7 @@ revoke execute on function public.get_open_pipeline_value(uuid) from anon;
 
 -- NOTA: `alter default privileges in schema public revoke execute on functions
 -- from anon` evitaria a regressão em funções futuras, mas foi deixado de fora
--- de propósito — muda um default global e a falha vira silenciosa (função nova
+-- de propósito, muda um default global e a falha vira silenciosa (função nova
 -- simplesmente não responde a anon, sem erro óbvio). Enquanto isso, toda RPC
 -- nova precisa de `revoke execute ... from anon` explícito, e o guard interno
 -- de auth continua sendo a defesa principal.

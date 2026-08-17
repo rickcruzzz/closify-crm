@@ -26,7 +26,7 @@ const FORMATOS = 'image/png,image/jpeg,image/webp'
  * tela ou celular não arrasta arquivo. Arrastar é atalho, não caminho único.
  *
  * O que chega aqui já passou pela validação de bytes no servidor
- * (`lib/storage/logo.ts`) — extensão e `Content-Type` são escolhidos por quem
+ * (`lib/storage/logo.ts`), extensão e `Content-Type` são escolhidos por quem
  * envia. A checagem de tamanho daqui é só para não gastar a internet de quem
  * está no celular mandando 8 MB para receber um "não".
  */
@@ -119,7 +119,7 @@ export function LogoUpload({
     <>
       <div
         // A área inteira aceita o arquivo solto, e o `onDragOver` precisa do
-        // `preventDefault` — sem ele o navegador abre a imagem numa aba nova e
+        // `preventDefault`, sem ele o navegador abre a imagem numa aba nova e
         // a pessoa perde o formulário preenchido.
         onDragOver={(e) => {
           if (!podeMexer) return

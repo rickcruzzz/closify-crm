@@ -10,7 +10,7 @@ import type { createClient } from '@/lib/supabase/server'
  * Antes não existia: cada tela resolvia "o workspace mais antigo" por conta
  * própria, em quatro lugares diferentes, e o seletor de empresa da barra
  * lateral só trocava um estado local do React. Quem participava de duas
- * empresas via as duas na lista, clicava na segunda, o rótulo mudava — e todos
+ * empresas via as duas na lista, clicava na segunda, o rótulo mudava, e todos
  * os dados continuavam sendo da primeira. Para quem foi convidado como
  * colaborador tendo empresa própria, isso significava não conseguir acessar a
  * empresa que o convidou, nunca.
@@ -30,7 +30,7 @@ const BASE = {
   sameSite: 'lax' as const,
   path: '/',
   // Em `localhost` o navegador recusa cookie `secure`, e o seletor pararia de
-  // funcionar só no ambiente de desenvolvimento — o pior lugar para um bug
+  // funcionar só no ambiente de desenvolvimento, o pior lugar para um bug
   // aparecer.
   secure: process.env.NODE_ENV === 'production',
 }
@@ -41,8 +41,8 @@ const BASE = {
  * A escolha guardada só vale se a pessoa REALMENTE participa dela. O cookie é
  * enviado pelo navegador e portanto editável por quem quiser: sem esta
  * conferência, alguém apontaria para o UUID de outra empresa. A RLS bloquearia
- * a leitura de qualquer forma — o efeito seria uma tela vazia, não um
- * vazamento —, mas cair no padrão é melhor do que exibir um dashboard sem
+ * a leitura de qualquer forma, o efeito seria uma tela vazia, não um
+ * vazamento,, mas cair no padrão é melhor do que exibir um dashboard sem
  * nada e sem explicação.
  *
  * Sem escolha guardada, mantém o comportamento antigo: a empresa mais antiga.
@@ -69,7 +69,7 @@ export async function resolverWorkspaceAtivo(
 
 /**
  * Mesma regra de `resolverWorkspaceAtivo`, mas recebendo os vínculos já
- * carregados por quem chama — usada em `getCurrentUserAndWorkspace`, que já
+ * carregados por quem chama, usada em `getCurrentUserAndWorkspace`, que já
  * busca `workspace_members` para montar a lista do seletor. Sem isto, a
  * mesma tabela era lida duas vezes na mesma navegação.
  */
@@ -94,7 +94,7 @@ export async function workspaceEscolhidoNoCookie(): Promise<string | undefined> 
 /**
  * Guarda a empresa escolhida.
  *
- * Não confere participação aqui de propósito — quem chama é a Server Action de
+ * Não confere participação aqui de propósito, quem chama é a Server Action de
  * troca, que já conferiu. Repetir a consulta a cada gravação seria uma ida ao
  * banco a mais sem ganhar nada, já que `resolverWorkspaceAtivo` reconfere na
  * leitura seguinte.

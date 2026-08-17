@@ -1,6 +1,6 @@
-// Trilha A — HTTP anônimo, sem sessão. Mede o custo puro de Next.js servindo
+// Trilha A, HTTP anônimo, sem sessão. Mede o custo puro de Next.js servindo
 // HTML sob carga, fora do matcher do middleware (landing/login ficam de fora
-// dele de propósito — ver middleware.ts, regressão de ~275ms de TTFB medida
+// dele de propósito, ver middleware.ts, regressão de ~275ms de TTFB medida
 // quando o matcher cobria `/`).
 import http from 'k6/http'
 import { check, sleep } from 'k6'

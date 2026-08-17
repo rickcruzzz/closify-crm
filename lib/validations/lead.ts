@@ -24,13 +24,13 @@ const campoDestino = z.enum(['name', 'email', 'phone', 'company', 'value', 'stat
 /**
  * O que a tela de importação manda para o servidor.
  *
- * Só a FORMA é validada aqui — que veio matriz de texto e um mapeamento de
+ * Só a FORMA é validada aqui, que veio matriz de texto e um mapeamento de
  * coluna. O conteúdo de cada linha é reinterpretado no servidor por
  * `interpretarPlanilha`, porque esta Server Action é um endpoint HTTP: dá para
  * chamá-la sem passar pela tela, mandando qualquer coisa.
  *
  * O teto de células existe antes de qualquer trabalho. Sem ele, uma matriz de
- * dezenas de milhares de colunas seguraria a função à toa — o limite de linhas
+ * dezenas de milhares de colunas seguraria a função à toa, o limite de linhas
  * sozinho não impede isso, porque a largura também é livre.
  */
 const MAX_COLUNAS = 60
@@ -52,7 +52,7 @@ export const planilhaSchema = z.object({
    *
    * O padrão é `ignorar` de propósito: quem não escolheu nada não pode ter a
    * base sobrescrita. Reimportar atualizando é o que dá a sensação de planilha
-   * conectada — a pessoa corrige o arquivo, sobe de novo e o CRM acompanha —
+   * conectada, a pessoa corrige o arquivo, sobe de novo e o CRM acompanha,
    * sem manter a planilha viva como fonte da verdade.
    */
   duplicados: z.enum(['ignorar', 'atualizar']).default('ignorar'),

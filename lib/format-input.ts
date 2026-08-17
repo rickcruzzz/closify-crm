@@ -46,7 +46,7 @@ export function numeroParaMoeda(valor: number): string {
 /**
  * Telefone brasileiro: "(11) 91234-5678" para celular, "(11) 1234-5678" para
  * fixo. A diferença é o nono dígito, então o formato só se define quando a
- * pessoa passa de 10 dígitos — antes disso o fixo é o palpite correto.
+ * pessoa passa de 10 dígitos, antes disso o fixo é o palpite correto.
  */
 export function formatarTelefoneBR(entrada: string): string {
   const d = entrada.replace(/\D/g, '').slice(0, 11)

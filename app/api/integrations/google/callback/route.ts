@@ -6,7 +6,7 @@ import { trocarCodigoPorToken, obterEmailDaConta } from '@/lib/integrations/goog
 import { cifrar } from '@/lib/integrations/crypto'
 import { appUrl } from '@/lib/app-url'
 
-// `cifrar`/`createAdminClient` usam `node:crypto`/service role — nunca no
+// `cifrar`/`createAdminClient` usam `node:crypto`/service role, nunca no
 // runtime Edge. Mesmo motivo do webhook do Asaas.
 export const runtime = 'nodejs'
 
@@ -15,9 +15,9 @@ export const runtime = 'nodejs'
  *
  * Usa `createAdminClient()` (service role) para gravar, não o client da
  * sessão: o `state` já provou quem pediu a conexão (assinado no `/connect`,
- * checado com `verificarEstado` — HMAC + validade de 10 minutos), então não
+ * checado com `verificarEstado`, HMAC + validade de 10 minutos), então não
  * precisa da sessão do navegador para autorizar a escrita. É a mesma lógica
- * do webhook do Asaas — que roda sem sessão nenhuma e se autentica por outro
+ * do webhook do Asaas, que roda sem sessão nenhuma e se autentica por outro
  * segredo, não por cookie.
  */
 export async function GET(request: NextRequest) {
@@ -25,7 +25,7 @@ export async function GET(request: NextRequest) {
 
   const erroDoGoogle = request.nextUrl.searchParams.get('error')
   if (erroDoGoogle) {
-    // Consentimento negado ou popup fechado — não é falha do produto.
+    // Consentimento negado ou popup fechado, não é falha do produto.
     return NextResponse.redirect(`${destino}&erro=cancelado`)
   }
 

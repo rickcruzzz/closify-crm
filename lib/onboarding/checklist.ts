@@ -9,7 +9,7 @@ export type ItemDoChecklist = {
 }
 
 /**
- * O que o checklist precisa saber. Só contagens e dois campos da empresa —
+ * O que o checklist precisa saber. Só contagens e dois campos da empresa,
  * nada aqui exige carregar lead, negócio ou tarefa de verdade.
  */
 export type SinaisDeAtivacao = {
@@ -24,12 +24,12 @@ export type SinaisDeAtivacao = {
  *
  * **Derivado, não marcado à mão.** Um `boolean` gravado quando a pessoa cria o
  * primeiro lead continuaria dizendo "feito" depois que ela apagasse esse lead
- * — o checklist mentiria sobre o próprio produto, que é pior do que não
+ *, o checklist mentiria sobre o próprio produto, que é pior do que não
  * existir. Contar custa três `count` e nunca discorda da tela.
  *
  * "Pipeline configurado" vem de graça: as 6 etapas existem desde a criação da
  * empresa. Está na lista porque some do caminho da pessoa a dúvida "preciso
- * montar meu funil antes?" — a resposta é não, e mostrar isso feito responde
+ * montar meu funil antes?", a resposta é não, e mostrar isso feito responde
  * sem texto.
  */
 export function montarChecklist(sinais: SinaisDeAtivacao): ItemDoChecklist[] {
@@ -76,7 +76,7 @@ export function contarConcluidos(itens: ItemDoChecklist[]): number {
   return itens.filter((i) => i.concluido).length
 }
 
-/** Some quando tudo estiver feito — checklist cumprido não é mais ajuda, é ruído. */
+/** Some quando tudo estiver feito, checklist cumprido não é mais ajuda, é ruído. */
 export function checklistCumprido(itens: ItemDoChecklist[]): boolean {
   return itens.every((i) => i.concluido)
 }

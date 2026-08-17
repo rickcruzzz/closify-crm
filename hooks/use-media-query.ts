@@ -5,7 +5,7 @@ import * as React from 'react'
 /**
  * Lê uma media query no cliente. Começa em `false` no primeiro render para
  * casar com o HTML do servidor (que não conhece a viewport) e só então
- * sincroniza — assim não há mismatch de hidratação.
+ * sincroniza, assim não há mismatch de hidratação.
  */
 export function useMediaQuery(query: string) {
   const [matches, setMatches] = React.useState(false)

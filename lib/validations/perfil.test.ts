@@ -6,7 +6,7 @@ import { activitySchema } from './activity'
 /**
  * O nome do perfil vai para `user_metadata.name`, que é de onde a RPC
  * `get_workspace_member_names` lê o nome exibido na lista de colaboradores e
- * como autor de cada atividade — um valor ruim aqui suja a timeline inteira.
+ * como autor de cada atividade, um valor ruim aqui suja a timeline inteira.
  */
 describe('perfilSchema', () => {
   it('aceita nome comum', () => {

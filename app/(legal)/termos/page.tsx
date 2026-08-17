@@ -64,7 +64,7 @@ export default function TermosPage() {
         <LegalP>
           Você é responsável por manter a confidencialidade da sua senha e por tudo que
           acontecer na sua conta. Avise imediatamente em caso de suspeita de acesso não
-          autorizado. Cada pessoa da equipe deve ter a própria conta — o acesso é
+          autorizado. Cada pessoa da equipe deve ter a própria conta, o acesso é
           pessoal e intransferível.
         </LegalP>
       </LegalSection>
@@ -190,8 +190,8 @@ export default function TermosPage() {
 
       <LegalSection titulo="11. Alterações destes Termos">
         <LegalP>
-          Podemos atualizar estes Termos. Mudanças relevantes — especialmente de preço ou
-          de escopo do serviço — serão comunicadas por e-mail com pelo menos 30 dias de
+          Podemos atualizar estes Termos. Mudanças relevantes, especialmente de preço ou
+          de escopo do serviço, serão comunicadas por e-mail com pelo menos 30 dias de
           antecedência. Continuar usando a plataforma após a vigência significa aceitar a
           nova versão.
         </LegalP>

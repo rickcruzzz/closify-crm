@@ -24,13 +24,13 @@ export type UpcomingDeal = {
   owner_name: string | null
 }
 
-/** ISO. `desde`/`ate` filtram por `created_at` — quando o lead/negócio nasceu. */
+/** ISO. `desde`/`ate` filtram por `created_at`, quando o lead/negócio nasceu. */
 export type PeriodoDoDashboard = { desde: string; ate: string }
 
 const CLOSED_STAGES: DealStage[] = ['fechado_ganho', 'fechado_perdido']
 
 // Dashboard agrega no servidor via count/sum em vez de buscar todas as
-// linhas e somar em memória — com um workspace grande (milhares de deals),
+// linhas e somar em memória, com um workspace grande (milhares de deals),
 // trazer tudo pra somar em JS desperdiça banda e memória para um número que
 // o Postgres já calcula de forma mais barata. Os 4 counts (leads, deals
 // abertos/fechados/ganhos) saem numa única RPC em vez de 4 queries
@@ -71,7 +71,7 @@ export async function getDashboardMetrics(
 /**
  * Contagem por etapa, agrupada no BANCO.
  *
- * A versão anterior trazia uma linha por negócio e contava em memória — e o
+ * A versão anterior trazia uma linha por negócio e contava em memória, e o
  * PostgREST corta em 1.000 linhas sem devolver erro. Medido em produção: com
  * 1.100 negócios o gráfico mostrava 1.000, calado. Não era lentidão, era
  * número errado na tela do cliente.

@@ -6,7 +6,7 @@
 // com `strict-dynamic`. Foi tentada e medida: como as páginas públicas são
 // estáticas (HTML gerado no build), não existe requisição para carimbar o
 // nonce, e `strict-dynamic` faz o navegador ignorar qualquer fallback. O
-// resultado foram 28 a 32 violações por página — todos os chunks do próprio
+// resultado foram 28 a 32 violações por página, todos os chunks do próprio
 // Next. Ativar aquela política derrubaria o app inteiro.
 //
 // Usar nonce exigiria tornar cada página dinâmica, o que anularia o ganho de
@@ -14,11 +14,11 @@
 // nonce adiciona sobre esta aqui é defesa contra XSS inline, e o app não
 // injeta HTML de terceiros em lugar nenhum.
 //
-// Esta política entrega o que dá para entregar sem regressão, e — diferente da
-// versão com nonce — pode virar bloqueio de verdade depois, trocando o header
+// Esta política entrega o que dá para entregar sem regressão, e, diferente da
+// versão com nonce, pode virar bloqueio de verdade depois, trocando o header
 // para `Content-Security-Policy`.
 //
-// Estado medido com esta política: 1 violação por página, sempre a mesma —
+// Estado medido com esta política: 1 violação por página, sempre a mesma,
 // `eval` num chunk de dependência (o bundle onde ela aparece carrega zod,
 // @base-ui/react e lucide), padrão típico de polyfill de `globalThis` em
 // código empacotado. Antes de trocar para modo bloqueio é preciso decidir
@@ -29,7 +29,7 @@ const csp = [
   // `unsafe-inline` é inevitável enquanto as páginas forem estáticas: o Next
   // embute o payload de hidratação em script inline. Mesmo assim a diretiva
   // vale, porque bloqueia script vindo de origem externa. `connect.facebook.net`
-  // é o loader do Meta Pixel (components/analytics/meta-pixel.tsx) — só nas
+  // é o loader do Meta Pixel (components/analytics/meta-pixel.tsx), só nas
   // páginas públicas, mas a CSP é do site inteiro, não dá pra restringir por rota.
   "script-src 'self' 'unsafe-inline' https://connect.facebook.net",
   // O next-themes escreve `style` inline no elemento raiz antes da hidratação
@@ -71,10 +71,10 @@ const securityHeaders = [
 const nextConfig = {
   poweredByHeader: false,
   // Cache do Router do lado do cliente, explícito. O padrão para rota
-  // dinâmica mudou entre versões do Next — sem isto, voltar para uma tela do
+  // dinâmica mudou entre versões do Next, sem isto, voltar para uma tela do
   // dashboard recém-visitada (ex: Kanban → Leads → Kanban) refaz a busca no
   // servidor mesmo sem nada ter mudado. 30s cobre o vaivém comum entre telas
-  // do produto; passado isso, busca de novo — dado de CRM muda o tempo todo.
+  // do produto; passado isso, busca de novo, dado de CRM muda o tempo todo.
   experimental: {
     staleTimes: { dynamic: 30, static: 180 },
   },

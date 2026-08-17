@@ -45,7 +45,7 @@ export default function DashboardError({
           Não foi possível carregar esta tela
         </h2>
         <p className="text-muted-foreground max-w-sm text-pretty">
-          O erro foi registrado. Tente de novo — se continuar, use o menu ao lado para ir
+          O erro foi registrado. Tente de novo, se continuar, use o menu ao lado para ir
           para outra seção.
         </p>
       </div>

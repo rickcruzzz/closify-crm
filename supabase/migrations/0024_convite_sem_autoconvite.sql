@@ -8,21 +8,21 @@
 -- O prejuízo é o limite do plano. `canAddMember` conta membros ativos MAIS
 -- convites pendentes, então no Free (limite 2) o admin já é 1 membro e o
 -- autoconvite vira o segundo: a pessoa fica impedida de convidar alguém de
--- verdade. E o convite nunca serve para nada — `accept_workspace_invite`
+-- verdade. E o convite nunca serve para nada, `accept_workspace_invite`
 -- termina em `on conflict (workspace_id, user_id) do nothing`, então aceitar
 -- não produz efeito algum. Convidar quem já é membro tem o mesmo resultado.
 --
 -- Por que trigger e não só checagem na Server Action: a política
 -- `workspace_invites_insert_admin` libera INSERT direto para qualquer admin,
 -- e Server Action é endpoint HTTP como outro qualquer. Quem chama o PostgREST
--- com a chave pública pularia a validação inteira — mesma lição do limite de
+-- com a chave pública pularia a validação inteira, mesma lição do limite de
 -- leads (0023) e da coluna `plan` (0022).
 --
 -- A normalização do e-mail entra aqui junto porque é o que faz o índice único
 -- `workspace_invites_pending_email_idx` funcionar de verdade: ele é
 -- `(workspace_id, email)` sobre o texto cru, então `ana@x.com` e `Ana@X.com`
 -- passavam como convites distintos, cada um consumindo uma vaga. Normalizando
--- na escrita, o índice que já existe passa a pegar o caso — sem precisar de
+-- na escrita, o índice que já existe passa a pegar o caso, sem precisar de
 -- índice novo nem de migração de dados.
 
 create or replace function public.validar_convite_de_workspace()

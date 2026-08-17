@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it } from 'vitest'
 
 import { cifrar, decifrar } from './crypto'
 
-// Chave de 32 bytes fixa, só para teste — nunca a de produção.
+// Chave de 32 bytes fixa, só para teste, nunca a de produção.
 const CHAVE_DE_TESTE = 'a'.repeat(64)
 
 describe('cifrar/decifrar', () => {
@@ -33,7 +33,7 @@ describe('cifrar/decifrar', () => {
 
   it('recusa decifrar payload adulterado', () => {
     const cifrado = cifrar('segredo')
-    // Troca o último caractere hex — payload continua com formato válido,
+    // Troca o último caractere hex, payload continua com formato válido,
     // mas o conteúdo (e portanto a tag de autenticação) não bate mais.
     const adulterado = cifrado.slice(0, -1) + (cifrado.endsWith('0') ? '1' : '0')
     expect(() => decifrar(adulterado)).toThrow()

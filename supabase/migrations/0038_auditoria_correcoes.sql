@@ -1,8 +1,8 @@
--- Velo Funil — correções da auditoria de 13/08/2026 (docs/prd-conversao-pro.md
+-- Velo Funil, correções da auditoria de 13/08/2026 (docs/prd-conversao-pro.md
 -- não cobre isto; ver histórico de conversa). Cinco achados, dois graves.
 
 -- ============================================================================
--- FALHA 1 (segurança) — accept_workspace_invite perdeu o fail-open fix da 0012
+-- FALHA 1 (segurança), accept_workspace_invite perdeu o fail-open fix da 0012
 -- ============================================================================
 --
 -- A 0028 reescreveu a função inteira pra trocar a checagem de plano por
@@ -10,11 +10,11 @@
 -- dois endurecimentos que a 0012 já tinha aplicado:
 --
 -- 1. `v_invite.email <> (select email from auth.users where id = auth.uid())`
---    — em SQL, `x <> NULL` avalia pra NULL, e `if NULL then` nunca dispara.
+--   , em SQL, `x <> NULL` avalia pra NULL, e `if NULL then` nunca dispara.
 --    Se a conta que aceita tiver `auth.users.email` NULL, a checagem de
 --    e-mail é pulada em silêncio: qualquer convite pendente cujo token seja
 --    descoberto é aceitável, mesmo endereçado a outro e-mail.
--- 2. `search_path = public` em vez de `search_path = ''` — reverte o
+-- 2. `search_path = public` em vez de `search_path = ''`, reverte o
 --    endurecimento que a 0006/0012 aplicaram no schema inteiro.
 --
 -- Volta a usar `is distinct from` (nunca avalia pra NULL) + guarda explícita
@@ -54,7 +54,7 @@ begin
   select email into v_user_email from auth.users where id = auth.uid();
 
   -- `is distinct from` nunca avalia pra NULL: se `v_user_email` for NULL, a
-  -- comparação vira `true` (são distintos) e o convite é recusado — o oposto
+  -- comparação vira `true` (são distintos) e o convite é recusado, o oposto
   -- do `<>`, que pulava a checagem inteira nesse caso.
   if lower(v_invite.email) is distinct from lower(v_user_email) then
     raise exception 'Este convite foi enviado para outro e-mail.';
@@ -79,11 +79,11 @@ end;
 $$;
 
 -- ============================================================================
--- FALHA 2 (billing) — create_workspace_with_admin lê a coluna, não a validade
+-- FALHA 2 (billing), create_workspace_with_admin lê a coluna, não a validade
 -- ============================================================================
 --
 -- A 0027 introduziu `pro_vigente()` exatamente porque `workspaces.plan` é só
--- o último valor gravado pelo webhook e não sabe que o período pago venceu —
+-- o último valor gravado pelo webhook e não sabe que o período pago venceu,
 -- e corrigiu o limite de leads e (na 0028) o aceite de convite, mas esta RPC,
 -- que é a PORTA DE ENTRADA do limite de 1 empresa no Free, nunca foi
 -- atualizada. Admin com Pro vencido, coluna ainda não sincronizada, criava
@@ -109,7 +109,7 @@ begin
   where user_id = current_user_id
     and role = 'admin';
 
-  -- Troca de `w.plan = 'pro'` para `pro_vigente(w.id)` — a única mudança
+  -- Troca de `w.plan = 'pro'` para `pro_vigente(w.id)`, a única mudança
   -- desta função.
   select exists (
     select 1
@@ -136,12 +136,12 @@ end;
 $$;
 
 -- ============================================================================
--- Achado 4 — admin único pode zerar os admins do próprio workspace
+-- Achado 4, admin único pode zerar os admins do próprio workspace
 -- ============================================================================
 --
 -- `updateMemberRole`/`removeMember` (lib/workspace/actions.ts) checam em
 -- TypeScript que sobra pelo menos 1 admin, mas a policy de
--- `workspace_members` (0003) só exige `is_workspace_admin` de quem executa —
+-- `workspace_members` (0003) só exige `is_workspace_admin` de quem executa,
 -- não que a operação não zere os admins. Contornando a Server Action via
 -- supabase-js, um admin único rebaixa/remove a própria linha e trava a
 -- empresa sem ninguém que possa gerenciar.
@@ -156,7 +156,7 @@ declare
   v_ficaria_sem_admin boolean;
 begin
   -- Só interessa quando a linha afetada JÁ ERA admin. `new` não existe de
-  -- verdade num trigger de DELETE — por isso `tg_op` decide o ramo ANTES de
+  -- verdade num trigger de DELETE, por isso `tg_op` decide o ramo ANTES de
   -- qualquer referência a `new.role`, em vez de depender de short-circuit
   -- numa expressão booleana só.
   if old.role <> 'admin' then
@@ -195,19 +195,19 @@ create trigger impedir_workspace_sem_admin
   execute function public.impedir_workspace_sem_admin();
 
 -- ============================================================================
--- Achado 5 — task/deal podem referenciar lead/negócio de outro workspace
+-- Achado 5, task/deal podem referenciar lead/negócio de outro workspace
 -- ============================================================================
 --
 -- `conferirAlvo` (lib/tasks/actions.ts) e `createDeal` (lib/deals/actions.ts)
 -- checam em TypeScript que `lead_id`/`deal_id` referenciado é do mesmo
--- workspace da linha sendo criada — a policy de `tasks`/`deals` (0003/0029)
+-- workspace da linha sendo criada, a policy de `tasks`/`deals` (0003/0029)
 -- só olha o `workspace_id` da própria linha, não o dos relacionamentos.
 -- Contornando a Server Action, dá pra criar task/deal no próprio workspace
--- apontando pra lead de outro (sabendo o UUID) — não vaza dado, mas cria
+-- apontando pra lead de outro (sabendo o UUID), não vaza dado, mas cria
 -- referência cruzada inconsistente.
 -- Duas funções, não uma compartilhada por `tg_table_name`: `deals` não tem
 -- coluna `deal_id`, e acesso a campo INEXISTENTE num RECORD estoura em tempo
--- de execução mesmo dentro de um `and` cujo lado esquerdo já seria `false` —
+-- de execução mesmo dentro de um `and` cujo lado esquerdo já seria `false`,
 -- diferente de um valor NULL, que o `and` de fato blinda. Confirmado testando
 -- contra produção: a versão com uma função só quebrava todo insert em `deals`.
 create or replace function public.checar_referencia_de_tarefa()

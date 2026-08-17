@@ -7,7 +7,7 @@ import type { SinaisDeAtivacao } from '@/lib/onboarding/checklist'
  *
  * `head: true` com `count: 'exact'` pede ao PostgREST só o número, sem trazer
  * linha nenhuma. Buscar os leads para chamar `.length` traria o workspace
- * inteiro só para descobrir se ele é maior que zero — e este código roda em
+ * inteiro só para descobrir se ele é maior que zero, e este código roda em
  * toda abertura do Dashboard.
  */
 export async function lerSinaisDeAtivacao(workspaceId: string): Promise<SinaisDeAtivacao> {

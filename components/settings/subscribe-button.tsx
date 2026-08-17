@@ -67,7 +67,7 @@ export function SubscribeButton({
     // A aba é aberta ANTES da chamada, ainda dentro do gesto do clique.
     // Depois do `await`, o navegador não trata mais `window.open` como
     // resposta direta a uma ação da pessoa e o bloqueador de pop-up mata a
-    // janela — que é justamente o link de pagamento.
+    // janela, que é justamente o link de pagamento.
     const abaDaFatura = window.open('', '_blank')
 
     const result = await createCheckout(values)
@@ -146,7 +146,7 @@ export function SubscribeButton({
             </div>
 
             {/* Diz de antemão o que aparece na fatura. Em MEI o recebedor é a
-                razão social da Receita, não o nome fantasia — quem não sabe
+                razão social da Receita, não o nome fantasia, quem não sabe
                 disso estranha ver um nome de pessoa física na cobrança e
                 desiste de pagar, achando que errou de site. */}
             <p className="text-muted-foreground text-xs">

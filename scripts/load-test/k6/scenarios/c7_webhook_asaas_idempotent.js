@@ -1,8 +1,8 @@
-// Trilha C — bate direto no /api/webhooks/asaas real (é seguro: o handler
+// Trilha C, bate direto no /api/webhooks/asaas real (é seguro: o handler
 // nunca chama a Asaas de volta, confirmado lendo app/api/webhooks/asaas/route.ts
-// por inteiro — token validado, insert de dedupe, RPC transacional, no máximo
+// por inteiro, token validado, insert de dedupe, RPC transacional, no máximo
 // 3 queries por evento). subscription_id sintético não bate com nenhuma
-// assinatura real semeada — a resposta esperada é 200 { matched: false },
+// assinatura real semeada, a resposta esperada é 200 { matched: false },
 // que já exercita o caminho inteiro (token → parse → dedupe → RPC).
 //
 // Exige ASAAS_WEBHOOK_TOKEN via -e (o mesmo valor de scripts/load-test/.env.staging).

@@ -6,7 +6,7 @@ import { renderConviteEmail } from '@/lib/emails/convite'
  * O caso de injeção abaixo é a razão de existir deste arquivo.
  *
  * O nome do workspace é texto livre, escolhido pelo admin, e vai interpolado
- * no HTML de um e-mail entregue a quem ainda nem tem conta — num domínio com
+ * no HTML de um e-mail entregue a quem ainda nem tem conta, num domínio com
  * SPF e DKIM válidos, que é exatamente o que dá credibilidade a um phishing.
  * O escape existia solto em `lib/workspace/actions.ts`; ao movê-lo para
  * `lib/emails/layout.ts`, este teste é o que garante que a proteção veio junto

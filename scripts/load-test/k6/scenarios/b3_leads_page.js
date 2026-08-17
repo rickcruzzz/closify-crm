@@ -1,4 +1,4 @@
-// Trilha B — cookie real batendo em /leads (primeira página, paginação
+// Trilha B, cookie real batendo em /leads (primeira página, paginação
 // cursor). Cenário "listar leads paginados" do pedido original.
 import http from 'k6/http'
 import { check, sleep } from 'k6'

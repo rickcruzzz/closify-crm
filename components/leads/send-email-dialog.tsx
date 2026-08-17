@@ -31,7 +31,7 @@ export function SendEmailDialog({
 }: {
   open: boolean
   onOpenChange: (open: boolean) => void
-  /** Só para mostrar pra quem vai — o e-mail de verdade sai do lead no servidor. */
+  /** Só para mostrar pra quem vai, o e-mail de verdade sai do lead no servidor. */
   destinatario: string
   onSend: (values: EmailMessageFormValues) => void | Promise<void>
 }) {

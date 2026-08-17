@@ -21,7 +21,7 @@ export type TamanhoEquipe = 'so_eu' | '2_5' | '6_20' | '21_mais'
  * Os campos de empresa acrescentados em 0030.
  *
  * Separados num tipo próprio porque `Row`, `Insert` e `Update` repetiriam os
- * 18 três vezes — e a terceira cópia é onde um campo some sem ninguém notar.
+ * 18 três vezes, e a terceira cópia é onde um campo some sem ninguém notar.
  * Todos anuláveis: o banco não exige nenhum deles.
  */
 export type DadosDaEmpresa = {
@@ -30,7 +30,7 @@ export type DadosDaEmpresa = {
   tamanho_equipe: TamanhoEquipe | null
   logo_url: string | null
   nome_fantasia: string | null
-  /** Só dígitos — o banco recusa máscara (`^[0-9]{14}$`). */
+  /** Só dígitos, o banco recusa máscara (`^[0-9]{14}$`). */
   cnpj: string | null
   descricao: string | null
   email_comercial: string | null
@@ -43,7 +43,7 @@ export type DadosDaEmpresa = {
   complemento: string | null
   bairro: string | null
   cidade: string | null
-  /** UF em maiúscula — o banco recusa minúscula (`^[A-Z]{2}$`). */
+  /** UF em maiúscula, o banco recusa minúscula (`^[A-Z]{2}$`). */
   estado: string | null
 }
 export type SubscriptionStatus = 'trialing' | 'active' | 'past_due' | 'canceled'
@@ -64,12 +64,12 @@ export type Database = {
           plan: WorkspacePlan
           created_by: string | null
           created_at: string
-          // De onde a empresa veio, se veio de campanha rastreada — ver
+          // De onde a empresa veio, se veio de campanha rastreada, ver
           // 0041_atribuicao_de_cadastro.sql. Nullable: maioria não vem de nenhuma.
           utm_source: string | null
           utm_medium: string | null
           utm_campaign: string | null
-          // Âncoras de match da Conversions API do Meta — ver 0042_fbc_fbp.sql.
+          // Âncoras de match da Conversions API do Meta, ver 0042_fbc_fbp.sql.
           fbc: string | null
           fbp: string | null
         } & DadosDaEmpresa
@@ -99,7 +99,7 @@ export type Database = {
         } & Partial<DadosDaEmpresa>
         Relationships: []
       }
-      // Estado do onboarding, por PESSOA e não por empresa — quem é convidado
+      // Estado do onboarding, por PESSOA e não por empresa, quem é convidado
       // para uma empresa que já existe tem o próprio onboarding a fazer. É a
       // única tabela do projeto cuja RLS é `user_id = auth.uid()`; ver
       // 0030_onboarding.sql.
@@ -204,7 +204,7 @@ export type Database = {
         Relationships: []
       }
       // `updated_at` e `stage_changed_at` (0033) são escritos por trigger, e a
-      // trigger sobrescreve o que vier do app — por isso ficam fora de `Insert`
+      // trigger sobrescreve o que vier do app, por isso ficam fora de `Insert`
       // e de `Update`. Mandá-los pelo PostgREST não adianta.
       deals: {
         Row: {
@@ -254,7 +254,7 @@ export type Database = {
           type: ActivityType
           description: string
           // Preenchido só quando a atividade nasceu de uma integração
-          // automática (Calendar/Gmail/WhatsApp) — null pra lançamento manual.
+          // automática (Calendar/Gmail/WhatsApp), null pra lançamento manual.
           integration_provider: IntegrationProvider | null
           created_at: string
         }
@@ -280,10 +280,10 @@ export type Database = {
         }
         Relationships: []
       }
-      // Tarefas com prazo — o que ainda vai acontecer. Separada de `activities`
+      // Tarefas com prazo, o que ainda vai acontecer. Separada de `activities`
       // de propósito: atividade é log do que aconteceu, tarefa muda de estado.
       // `lead_id` e `deal_id` são os dois opcionais, mas o check
-      // `tasks_alvo_minimo` exige pelo menos um — ver 0029_tarefas.sql.
+      // `tasks_alvo_minimo` exige pelo menos um, ver 0029_tarefas.sql.
       tasks: {
         Row: {
           id: string
@@ -327,7 +327,7 @@ export type Database = {
         Relationships: []
       }
       // Dedupe de webhook do Asaas. Só a service_role escreve aqui (RLS ligada
-      // e sem policy) — ver 0012_security_audit_fixes.sql.
+      // e sem policy), ver 0012_security_audit_fixes.sql.
       asaas_webhook_events: {
         Row: {
           event_id: string
@@ -419,7 +419,7 @@ export type Database = {
           },
         ]
       }
-      // Tokens cifrados no app antes de gravar aqui — ver lib/integrations/crypto.ts.
+      // Tokens cifrados no app antes de gravar aqui, ver lib/integrations/crypto.ts.
       // access_token_enc/refresh_token_enc não são legíveis por `authenticated`
       // (revoke por coluna na 0034), mesmo com RLS de select liberado na linha.
       integration_connections: {
@@ -502,7 +502,7 @@ export type Database = {
       // Idempotente, ao contrário da de cima: se a pessoa já é membro de
       // alguma empresa, devolve a MAIS ANTIGA (mesma regra de
       // `resolverWorkspaceAtivo`) e só atualiza os campos informados. Chamar
-      // três vezes deixa uma empresa só — provado em produção.
+      // três vezes deixa uma empresa só, provado em produção.
       garantir_workspace_do_onboarding: {
         Args: {
           p_nome: string
@@ -537,7 +537,7 @@ export type Database = {
       }
       // Agrupa no banco: no máximo 6 linhas, qualquer que seja o tamanho do
       // funil. A versão anterior lia uma linha por negócio e batia no teto de
-      // 1.000 do PostgREST — ver 0032.
+      // 1.000 do PostgREST, ver 0032.
       get_funnel_counts: {
         Args: { target_workspace_id: string; desde?: string | null; ate?: string | null }
         Returns: { stage: DealStage; total: number }[]
@@ -582,10 +582,10 @@ export type Database = {
           workspace_name: string
         }[]
       }
-      // Só o webhook do Asaas chama, via service role — `revoke` na 0014 tira
+      // Só o webhook do Asaas chama, via service role, `revoke` na 0014 tira
       // de anon e authenticated. Devolve false quando nenhuma assinatura casa
       // com o id, o que não é erro.
-      // Limitador de tentativas. Só Server Action chama, via service role —
+      // Limitador de tentativas. Só Server Action chama, via service role,
       // `revoke` na 0015 tira de anon e authenticated. Devolve true quando a
       // ação deve ser bloqueada.
       registrar_tentativa: {

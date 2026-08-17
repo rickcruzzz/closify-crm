@@ -16,7 +16,7 @@ export default async function HojePage({
   const { user, workspaceId } = await getCurrentUserAndWorkspace()
 
   // "Minhas" é o padrão de propósito. Admin que abre a tela e vê 40 tarefas de
-  // outras pessoas não tem o que fazer com elas — a tela existe para responder
+  // outras pessoas não tem o que fazer com elas, a tela existe para responder
   // "o que EU faço agora", e a visão da equipe é o caso secundário.
   const escopo = params.escopo === 'equipe' ? 'equipe' : 'minhas'
 

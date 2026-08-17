@@ -2,7 +2,7 @@ import { defineConfig } from '@playwright/test'
 
 // `BASE_URL` recebe a URL do preview no CI (gerada pelo passo `vercel
 // deploy` antes de promover pra produção). Sem ela, testa contra o `npm run
-// dev` local — mesmo padrão de variável que o resto do projeto usa
+// dev` local, mesmo padrão de variável que o resto do projeto usa
 // (`node --env-file=.env.local`), só que aqui é o Playwright que a lê.
 const baseURL = process.env.BASE_URL ?? 'http://localhost:3000'
 

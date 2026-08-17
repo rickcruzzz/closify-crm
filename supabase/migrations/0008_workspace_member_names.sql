@@ -1,5 +1,5 @@
 -- leads.owner_id e activities.author_id referenciam auth.users, mas
--- auth.users não é exposto via PostgREST (fora do schema public) — o client
+-- auth.users não é exposto via PostgREST (fora do schema public), o client
 -- não pode fazer join direto pra mostrar nome do responsável/autor na UI.
 -- Função security definer expõe só o necessário (id + nome), restrita a
 -- membros do próprio workspace, sem vazar e-mail ou outros dados de auth.users.
@@ -29,7 +29,7 @@ $$;
 revoke all on function public.get_workspace_member_names(uuid, uuid[]) from public;
 grant execute on function public.get_workspace_member_names(uuid, uuid[]) to authenticated;
 
--- A busca de leads usa ilike '%termo%' (name/company) — sem índice trigram,
+-- A busca de leads usa ilike '%termo%' (name/company), sem índice trigram,
 -- isso é sempre Seq Scan por mais índice B-tree que exista em workspace_id,
 -- porque LIKE com wildcard nos dois lados não usa B-tree. Com volume real
 -- (milhares de leads por workspace), isso vira o ponto mais lento da tela.
@@ -38,7 +38,7 @@ create extension if not exists pg_trgm;
 create index leads_name_trgm_idx on public.leads using gin (name gin_trgm_ops);
 create index leads_company_trgm_idx on public.leads using gin (company gin_trgm_ops);
 
--- Cursor de paginação ordena por (created_at desc, id desc) — índice
+-- Cursor de paginação ordena por (created_at desc, id desc), índice
 -- composto cobre esse order by direto, sem sort adicional em memória.
 create index leads_workspace_created_id_idx
   on public.leads (workspace_id, created_at desc, id desc);

@@ -1,15 +1,15 @@
--- Velo Funil — integrações oficiais: WhatsApp Cloud API, Google Calendar, Gmail
+-- Velo Funil, integrações oficiais: WhatsApp Cloud API, Google Calendar, Gmail
 --
 -- Uma tabela para as três, porque a forma é a mesma: workspace conecta,
 -- guarda token cifrado, desconecta. RLS: select para quem é membro (a
--- equipe vê o status da conexão), insert/update/delete só para admin —
+-- equipe vê o status da conexão), insert/update/delete só para admin,
 -- mesma régua de workspaces_update.
 --
 -- Colunas de token ficam fora do alcance de `authenticated` mesmo com
 -- select liberado na linha: REVOKE por coluna, defesa a mais além da
 -- disciplina de nunca fazer `select('*')` nelas no app. Só a service role
 -- (Server Actions/route handlers de integração) lê o token de verdade, e
--- mesmo assim ele é cifrado — INTEGRATIONS_ENCRYPTION_KEY só existe no
+-- mesmo assim ele é cifrado, INTEGRATIONS_ENCRYPTION_KEY só existe no
 -- servidor.
 
 create type public.integration_provider as enum ('google_calendar', 'gmail', 'whatsapp');
@@ -21,7 +21,7 @@ create table public.integration_connections (
   provider public.integration_provider not null,
   status public.integration_status not null default 'disconnected',
 
-  -- E-mail da conta Google, ou número do WhatsApp formatado — o que a tela
+  -- E-mail da conta Google, ou número do WhatsApp formatado, o que a tela
   -- mostra pra pessoa saber QUAL conta está conectada.
   account_label text,
   -- Calendar id do Google, ou phone_number_id da Meta.
@@ -61,15 +61,15 @@ create policy "integration_connections_delete" on public.integration_connections
   for delete using ((select public.is_workspace_admin(workspace_id)));
 
 -- Defesa a mais: uma mudança futura na tela de configurações que vire um
--- `select('*')` descuidado não vaza o cifrado à toa — a coluna nem chega na
+-- `select('*')` descuidado não vaza o cifrado à toa, a coluna nem chega na
 -- resposta do PostgREST.
 --
--- `revoke select (coluna) ... from authenticated` SOZINHO não funciona —
+-- `revoke select (coluna) ... from authenticated` SOZINHO não funciona,
 -- testado contra o banco real: o Supabase já concede `select` na TABELA
 -- INTEIRA para `authenticated` por default privilege (mesma armadilha que a
 -- 0013 documentou para EXECUTE de função). Revogar uma coluna não subtrai de
 -- um grant mais amplo já concedido. A correção que funciona é revogar
--- `select` da tabela inteira e conceder de volta só nas colunas seguras —
+-- `select` da tabela inteira e conceder de volta só nas colunas seguras,
 -- assim o grant específico é o único que existe, e as colunas de token
 -- simplesmente não aparecem nele.
 revoke select on public.integration_connections from authenticated, anon;
@@ -87,7 +87,7 @@ create trigger integration_connections_updated_at
 
 -- Dedupe de mensagem recebida do webhook do WhatsApp. Mesmo desenho de
 -- `asaas_webhook_events` (0012): só a service role escreve, RLS ligada e
--- sem policy nenhuma — nenhum client alcança.
+-- sem policy nenhuma, nenhum client alcança.
 create table public.whatsapp_webhook_events (
   event_id text primary key,
   processed_at timestamptz not null default now()

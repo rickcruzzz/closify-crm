@@ -7,7 +7,7 @@ export type NavItem = {
   /**
    * Só para itens que apontam pra `/settings`: qual aba conta como "ativo"
    * pra este item. `undefined` cobre as abas que não têm entrada própria no
-   * menu (empresa/equipe/plano) — sem isso, "Configurações" e "Integrações"
+   * menu (empresa/equipe/plano), sem isso, "Configurações" e "Integrações"
    * ficariam os dois marcados ativos ao mesmo tempo, ou nenhum dos dois.
    */
   aba?: string
@@ -22,7 +22,7 @@ export const navItems: NavItem[] = [
   { title: 'Leads', href: '/leads', icon: Users },
   { title: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
   { title: 'Configurações', href: '/settings', icon: Settings },
-  // Aponta pra mesma página de Configurações, só que já na aba certa — evita
+  // Aponta pra mesma página de Configurações, só que já na aba certa, evita
   // duplicar a tela de integrações num lugar novo. Fica logo abaixo de
   // Configurações de propósito: é a aba mais nova, e a mais provável de
   // alguém procurar direto sem passar pelas outras três primeiro.

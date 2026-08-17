@@ -25,7 +25,7 @@ const CORES: Record<NivelSenha, { barra: string; texto: string }> = {
  * do que uma senha escolhida por ela e medida aqui na tela.
  *
  * O que sobra é o que importa: mostrar a força enquanto digita, e recusar
- * senha derivada do e-mail — regra que vive nos schemas de validação, não
+ * senha derivada do e-mail, regra que vive nos schemas de validação, não
  * aqui, porque precisa valer também para quem chama a Server Action direto.
  */
 export function PasswordField({

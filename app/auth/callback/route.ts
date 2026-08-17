@@ -5,7 +5,7 @@ import { createClient } from '@/lib/supabase/server'
 export async function GET(request: NextRequest) {
   const { searchParams, origin } = new URL(request.url)
   const code = searchParams.get('code')
-  // next carrega o destino pós-login quando o link não é de signup comum —
+  // next carrega o destino pós-login quando o link não é de signup comum,
   // usado pelo fluxo de recuperação de senha pra cair em /redefinir-senha
   // em vez do /dashboard padrão. Allowlist fixa pra não virar open redirect
   // (nunca repassa o valor da query direto pro Location).
@@ -14,7 +14,7 @@ export async function GET(request: NextRequest) {
 
   // Links de auth que voltam SEM `code` trazem a sessão em `#access_token=`,
   // um fragmento que nunca chega ao servidor. Nada aqui consegue lê-lo, então
-  // a única saída correta é repassar para uma página cliente — o redirect
+  // a única saída correta é repassar para uma página cliente, o redirect
   // preserva o fragmento e o browser faz o resto.
   //
   // Sem isto, a pessoa caía em `/login` com uma sessão válida jogada fora na
@@ -39,7 +39,7 @@ export async function GET(request: NextRequest) {
       }
 
       // Sem workspace, a pessoa acabou de criar a conta. Antes ela caía em
-      // `/dashboard`, que só então a mandava para `/onboarding` — um salto
+      // `/dashboard`, que só então a mandava para `/onboarding`, um salto
       // seco, sem nenhum sinal de que a conta tinha sido criada. Conferimos
       // aqui e mandamos direto para a tela certa.
       const userId = data.user?.id

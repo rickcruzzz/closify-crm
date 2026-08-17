@@ -1,10 +1,10 @@
-// Stub HTTP puro (node:http, sem dependências) da API do Asaas — só os 4
+// Stub HTTP puro (node:http, sem dependências) da API do Asaas, só os 4
 // endpoints que lib/asaas/actions.ts realmente chama (confirmado lendo o
 // arquivo, não suposto): POST /customers, PUT /customers/:id,
 // POST /subscriptions, DELETE /subscriptions/:id, GET /payments.
 //
 // Existe porque o teste de carga não pode gerar tráfego real contra a API de
-// pagamento de produção — nem em staging: ASAAS_API_KEY continua sendo a
+// pagamento de produção, nem em staging: ASAAS_API_KEY continua sendo a
 // chave real (não existe "Asaas de staging" nesta conta). Apontar
 // ASAAS_API_URL pra este servidor local intercepta as 3-4 chamadas HTTP
 // síncronas que createCheckout/cancelSubscription fazem, sem tocar o Asaas de
@@ -19,7 +19,7 @@ import { createServer } from 'node:http'
 import { randomUUID } from 'node:crypto'
 
 const PORT = Number(process.env.ASAAS_STUB_PORT ?? 4040)
-// Asaas real não responde instantâneo — simula pra não fingir que a cadeia
+// Asaas real não responde instantâneo, simula pra não fingir que a cadeia
 // síncrona de createCheckout (2-3 chamadas) é mais rápida do que é.
 const LATENCY_MS = Number(process.env.ASAAS_STUB_LATENCY_MS ?? 150)
 
@@ -88,7 +88,7 @@ const server = createServer(async (req, res) => {
 
   if (pathname.startsWith('/fake-invoice/')) {
     res.writeHead(200, { 'Content-Type': 'text/plain' })
-    return res.end('Fatura falsa do stub — só existe pra createCheckout ter URL válida.')
+    return res.end('Fatura falsa do stub, só existe pra createCheckout ter URL válida.')
   }
 
   json(res, 404, { error: `Stub não implementa ${req.method} ${pathname}` })

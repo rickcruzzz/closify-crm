@@ -1,6 +1,6 @@
 import { z } from 'zod'
 
-/** Tira máscara. O banco guarda só dígitos — ele recusa o resto. */
+/** Tira máscara. O banco guarda só dígitos, ele recusa o resto. */
 export function somenteDigitos(valor: string): string {
   return valor.replace(/\D/g, '')
 }
@@ -10,7 +10,7 @@ export function somenteDigitos(valor: string): string {
  *
  * Checar só "tem 14 dígitos" aceita `11111111111111`, que é o que sai quando
  * alguém quer pular o campo. Como o CNPJ aqui é OPCIONAL, quem não tem deixa
- * em branco — então preencher errado é engano de digitação, e vale avisar.
+ * em branco, então preencher errado é engano de digitação, e vale avisar.
  */
 export function cnpjValido(valor: string): boolean {
   const n = somenteDigitos(valor)
@@ -39,7 +39,7 @@ export function cnpjValido(valor: string): boolean {
 /**
  * As 27 unidades federativas, com nome.
  *
- * Exportada porque a tela mostra o NOME e guarda a SIGLA — o banco tem
+ * Exportada porque a tela mostra o NOME e guarda a SIGLA, o banco tem
  * `check (estado ~ '^[A-Z]{2}$')`. Duas listas, uma aqui e outra no
  * componente, é a primeira a ficar desatualizada.
  */
@@ -78,7 +78,7 @@ const UFS = UNIDADES_FEDERATIVAS.map((u) => u.sigla)
 /**
  * Campo opcional de texto: vazio vira `null`, não string vazia.
  *
- * Sem isto, apagar o campo na tela gravaria `''`, e `''` não é ausência — a
+ * Sem isto, apagar o campo na tela gravaria `''`, e `''` não é ausência, a
  * tela mostraria um campo "preenchido" com nada dentro, e o `coalesce` do
  * banco trataria como valor.
  */

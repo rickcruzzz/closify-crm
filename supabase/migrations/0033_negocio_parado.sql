@@ -1,4 +1,4 @@
--- Velo Funil — saber que um negócio parou de andar
+-- Velo Funil, saber que um negócio parou de andar
 --
 -- `deals` guarda `created_at` e mais nada sobre o tempo. Não há como responder
 -- "este negócio está há quanto tempo na mesma etapa?", que é a pergunta que
@@ -6,12 +6,12 @@
 --
 -- Duas colunas, e a distinção entre elas é o ponto:
 --
---   updated_at        qualquer alteração — corrigir um valor, trocar o
+--   updated_at        qualquer alteração, corrigir um valor, trocar o
 --                     responsável, ajustar o título
 --   stage_changed_at  só quando a ETAPA muda
 --
 -- Parado é sobre a segunda. Um negócio cujo valor foi corrigido ontem, mas que
--- está em "Proposta enviada" há três semanas, está parado — e usar
+-- está em "Proposta enviada" há três semanas, está parado, e usar
 -- `updated_at` para isso o marcaria como ativo, escondendo justamente o caso
 -- que interessa.
 
@@ -28,7 +28,7 @@ set updated_at = created_at,
 where updated_at > created_at;
 
 -- ============================================================================
--- Trigger — o relógio não pode depender de quem escreve lembrar dele
+-- Trigger, o relógio não pode depender de quem escreve lembrar dele
 -- ============================================================================
 --
 -- `stage_changed_at` só se move quando a etapa muda de verdade. Arrastar um
@@ -69,7 +69,7 @@ create trigger tocar_datas_do_negocio
 -- ============================================================================
 --
 -- Parcial nas etapas ABERTAS: negócio fechado não para, ele acabou. Marcar
--- "parado há 90 dias" um negócio ganho seria ruído puro — e as etapas
+-- "parado há 90 dias" um negócio ganho seria ruído puro, e as etapas
 -- fechadas são justamente as que mais acumulam linha.
 
 create index if not exists deals_parados_idx

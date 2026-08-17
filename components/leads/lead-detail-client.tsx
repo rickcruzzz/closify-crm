@@ -71,7 +71,7 @@ export function LeadDetailClient({
   const [emailFormOpen, setEmailFormOpen] = React.useState(false)
   const [taskFormOpen, setTaskFormOpen] = React.useState(false)
   const [tarefaEmEdicao, setTarefaEmEdicao] = React.useState<TarefaEmEdicao | null>(null)
-  // Set porque a lista pode ter várias tarefas — travar UMA não deve travar
+  // Set porque a lista pode ter várias tarefas, travar UMA não deve travar
   // as outras. Cobre concluir e excluir com o mesmo controle, seguindo o
   // padrão `excluindo`/`agendandoNoCalendario` de `deal-detail-sheet.tsx`.
   const [tarefasPendentes, setTarefasPendentes] = React.useState<Set<string>>(new Set())
@@ -94,8 +94,8 @@ export function LeadDetailClient({
     }
     toast.success('Lead atualizado com sucesso.')
     setFormOpen(false)
-    // Sem router.refresh(): updateLead já revalida '/leads/${lead.id}' —
-    // a rota atual — e o Next aplica o RSC atualizado sozinho.
+    // Sem router.refresh(): updateLead já revalida '/leads/${lead.id}',
+    // a rota atual, e o Next aplica o RSC atualizado sozinho.
   }
 
   async function handleDelete() {
@@ -175,13 +175,13 @@ export function LeadDetailClient({
     // antes da atividade aparecer mostraria um estado que nunca existiu.
     toast.success('Tarefa concluída.')
     // Sem router.refresh(): concluirTarefa já revalida '/leads/${lead.id}'
-    // sempre que a tarefa concluída pertence a este lead — o caso de toda
+    // sempre que a tarefa concluída pertence a este lead, o caso de toda
     // tarefa listada aqui.
     //
     // E não desmarca `pendente` aqui de propósito: entre a Server Action
     // resolver e o RSC revalidado chegar (que vai marcar `done_at` e travar
     // o checkbox por conta própria), existe uma janela real onde um segundo
-    // clique reabriria o envio — medido com clique duplo real, 908ms de
+    // clique reabriria o envio, medido com clique duplo real, 908ms de
     // intervalo, disparando a action duas vezes. Ficar travado até a
     // revalidação chegar é seguro; travar para sempre em caso de erro não
     // seria, por isso só desmarca no erro.
@@ -200,7 +200,7 @@ export function LeadDetailClient({
     }
     toast.success('Tarefa excluída.')
     // Sem router.refresh(): idem. Mesma razão do `concluir` acima para não
-    // desmarcar `pendente` no sucesso — a linha vai sumir da lista quando o
+    // desmarcar `pendente` no sucesso, a linha vai sumir da lista quando o
     // RSC revalidado chegar; até lá, travada é o comportamento seguro.
   }
 
@@ -233,7 +233,7 @@ export function LeadDetailClient({
                 }
               />
             )}
-            {/* Só aparece com e-mail cadastrado — sem endereço, não há para
+            {/* Só aparece com e-mail cadastrado, sem endereço, não há para
                 onde mandar. Se o Gmail não estiver conectado, o erro vem do
                 servidor ao tentar enviar, com o caminho pra Configurações. */}
             {lead.email && (

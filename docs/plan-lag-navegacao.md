@@ -1,12 +1,12 @@
 # Investigação e correção definitiva do lag na navegação
 
 > Prompt colado pelo usuário em 13/08/2026, salvo aqui como registro antes de
-> qualquer investigação começar. **Ainda não investigado, nem corrigido** —
+> qualquer investigação começar. **Ainda não investigado, nem corrigido**,
 > arquivo existe só para persistir o pedido. Aguardando autorização explícita
 > para iniciar a Fase 1.
 >
 > O texto original corta no meio da Fase 7 (terminava em "Navegar", sem
-> fechar a frase) — reproduzido abaixo exatamente como recebido, sem
+> fechar a frase), reproduzido abaixo exatamente como recebido, sem
 > completar nem adivinhar o que viria depois.
 
 ## Objetivo principal
@@ -53,7 +53,7 @@ O objetivo é encontrar e corrigir a **causa raiz**.
 
 ---
 
-## Fase 1 — Auditoria antes de alterar código
+## Fase 1, Auditoria antes de alterar código
 
 Antes de modificar qualquer arquivo, analise a arquitetura atual.
 
@@ -91,7 +91,7 @@ absolutamente necessário para diagnóstico.
 
 ---
 
-## Fase 2 — Identificar a causa exata do duplo clique
+## Fase 2, Identificar a causa exata do duplo clique
 
 Investigue especificamente o primeiro clique.
 
@@ -130,7 +130,7 @@ Esses são problemas diferentes e devem ser tratados de maneira diferente.
 
 ---
 
-## Fase 3 — Medir o problema
+## Fase 3, Medir o problema
 
 Não faça otimização baseada em suposição.
 
@@ -167,7 +167,7 @@ necessária.
 
 ---
 
-## Fase 4 — Investigação do React / frontend
+## Fase 4, Investigação do React / frontend
 
 Verifique se a navegação está causando:
 
@@ -193,7 +193,7 @@ Use otimização apenas onde houver evidência de que ela resolve o gargalo.
 
 ---
 
-## Fase 5 — Investigação das rotas
+## Fase 5, Investigação das rotas
 
 Analise profundamente o sistema de navegação.
 
@@ -232,7 +232,7 @@ exija a verificação antes da navegação.
 
 ---
 
-## Fase 6 — Investigação do Supabase
+## Fase 6, Investigação do Supabase
 
 Analise todas as queries executadas durante a navegação.
 
@@ -275,7 +275,7 @@ Não remova filtros de `company_id`, tenant ou equivalentes.
 
 ---
 
-## Fase 7 — Autenticação e permissões
+## Fase 7, Autenticação e permissões
 
 Investigue:
 
@@ -308,4 +308,4 @@ Buscar plano
 Navegar
 ```
 
-> **[texto original cortado aqui pelo usuário — fim do que foi colado]**
+> **[texto original cortado aqui pelo usuário, fim do que foi colado]**

@@ -9,7 +9,7 @@ import { cookies } from 'next/headers'
  * Existe porque o link do e-mail de confirmação **não carrega parâmetro
  * nenhum**: ele é gerado pelo Supabase a partir do template, e o único destino
  * possível é o `emailRedirectTo` fixo. Tudo que a pessoa escolheu antes de
- * abrir a caixa de entrada — o convite que ela clicou, o plano que ela quis —
+ * abrir a caixa de entrada, o convite que ela clicou, o plano que ela quis,
  * morre ali, a menos que atravesse por fora da URL.
  *
  * Dois defeitos reais vieram dessa travessia perdida:
@@ -40,7 +40,7 @@ const COOKIE_EMAIL = 'vf_email_pendente'
  * De qual campanha a pessoa veio, se veio de tráfego pago/rastreado.
  *
  * JSON compacto (chaves de 1 letra) num cookie só, em vez de três, porque os
- * três sempre nascem e morrem juntos — não tem caso de usar um sem os outros.
+ * três sempre nascem e morrem juntos, não tem caso de usar um sem os outros.
  */
 const COOKIE_UTM = 'vf_utm'
 
@@ -54,7 +54,7 @@ const BASE = {
   httpOnly: true,
   sameSite: 'lax' as const,
   path: '/',
-  // `secure` só em produção — em `localhost` o navegador recusaria o cookie e
+  // `secure` só em produção, em `localhost` o navegador recusaria o cookie e
   // o fluxo inteiro quebraria só no ambiente de desenvolvimento, que é o pior
   // lugar para um bug aparecer.
   secure: process.env.NODE_ENV === 'production',
@@ -66,9 +66,9 @@ export type AtribuicaoUtm = {
   source?: string
   medium?: string
   campaign?: string
-  /** Id de clique do Meta, derivado do `fbclid` da URL — âncora de atribuição. */
+  /** Id de clique do Meta, derivado do `fbclid` da URL, âncora de atribuição. */
   fbc?: string
-  /** Cookie `_fbp` do próprio Pixel — âncora de identidade do navegador. */
+  /** Cookie `_fbp` do próprio Pixel, âncora de identidade do navegador. */
   fbp?: string
 }
 
@@ -85,7 +85,7 @@ export async function guardarIntencao(intencao: {
   if (intencao.plano) {
     jar.set(COOKIE_PLANO, intencao.plano, { ...BASE, maxAge: VALIDADE_SEGUNDOS })
   } else if (intencao.plano === null) {
-    // `signUp` sempre manda `plano: ... ?? null` — nunca omite o campo.
+    // `signUp` sempre manda `plano: ... ?? null`, nunca omite o campo.
     // Sem este `else if`, uma tentativa de "Assinar Pro" que falhou depois
     // (senha fraca, e-mail já existe) deixava o cookie gravado, e um
     // cadastro Free seguinte no mesmo navegador herdava a intenção Pro e
@@ -100,18 +100,18 @@ export async function guardarIntencao(intencao: {
 }
 
 /**
- * Guarda a campanha que trouxe a pessoa — só na PRIMEIRA vez.
+ * Guarda a campanha que trouxe a pessoa, só na PRIMEIRA vez.
  *
  * Atribuição de primeiro toque: se a pessoa vier de um anúncio, saia, e volte
  * três dias depois direto pelo nome do produto, sobrescrever aqui apagaria a
- * campanha que trouxe a visita original — que é a que gastou dinheiro pra
+ * campanha que trouxe a visita original, que é a que gastou dinheiro pra
  * trazer ela. `maxAge` de 30 dias é a janela usual de atribuição de campanha
  * (Meta/Google usam o mesmo padrão).
  */
 export async function guardarAtribuicaoUtm(utm: AtribuicaoUtm) {
   // `fbc` sozinho é comum: clique em anúncio do Meta que não levou `utm_*`
   // na URL de destino (o link do anúncio nem sempre carrega UTM) ainda
-  // carrega `fbclid` — vale capturar mesmo sem os três UTMs.
+  // carrega `fbclid`, vale capturar mesmo sem os três UTMs.
   if (!utm.source && !utm.medium && !utm.campaign && !utm.fbc && !utm.fbp) return
 
   const jar = await cookies()

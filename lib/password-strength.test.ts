@@ -15,7 +15,7 @@ describe('avaliarSenha', () => {
 
   // Defeito corrigido: o detector de sequência derrubava para "fraca" qualquer
   // senha contendo "12345" em QUALQUER posição. "Kmtbvn123456" (12 caracteres,
-  // três classes) recebia nota pior que "Xyzqwr12" (8 caracteres) — a senha
+  // três classes) recebia nota pior que "Xyzqwr12" (8 caracteres), a senha
   // melhor levava a nota pior. Agora a checagem é por proporção.
   it('não pune senha longa só por conter uma sequência curta', () => {
     expect(avaliarSenha('Kmtbvn123456').nivel).not.toBe('fraca')

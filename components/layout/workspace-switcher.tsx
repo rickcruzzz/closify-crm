@@ -47,9 +47,9 @@ export function WorkspaceSwitcher({
    * e os dados continuavam da outra empresa, porque cada página é um Server
    * Component e não enxerga estado de React. Quem foi convidado como
    * colaborador tendo empresa própria não conseguia abrir a empresa que o
-   * convidou — o clique não fazia nada de verdade.
+   * convidou, o clique não fazia nada de verdade.
    *
-   * `router.refresh()` não é um Promise que espera os dados novos — ele só
+   * `router.refresh()` não é um Promise que espera os dados novos, ele só
    * inicia a busca. Por isso vai dentro de `startTransition`: o spinner some
    * quando o React aplica o RSC payload novo, não quando o `refresh` é
    * disparado. Antes o spinner parava um instante depois do clique e a tela
@@ -72,7 +72,7 @@ export function WorkspaceSwitcher({
   }
 
   // Mesmo motivo do spinner de `trocar`: sem `useTransition` aqui, o clique
-  // em "Nova empresa"/"upgrade" não mostra nada até a navegação terminar — e
+  // em "Nova empresa"/"upgrade" não mostra nada até a navegação terminar, e
   // Select/DropdownMenuItem não são `<a>`, então a barra de progresso global
   // (que só liga em clique de link) nunca cobre esses dois.
   function navegarPara(destino: string) {
@@ -83,7 +83,7 @@ export function WorkspaceSwitcher({
 
   // Espelha `canAddWorkspace` no servidor: uma empresa Pro libera multi-empresa,
   // e quem já passou do limite antes da regra existir continua enxergando as
-  // que criou — só não cria mais. Isto é conveniência de interface; quem
+  // que criou, só não cria mais. Isto é conveniência de interface; quem
   // decide de verdade é a RPC no banco.
   const temPro = workspaces.some((w) => w.plan === 'pro')
   const podeCriarEmpresa = temPro || workspaces.length < FREE_WORKSPACE_LIMIT
@@ -133,7 +133,7 @@ export function WorkspaceSwitcher({
         <DropdownMenuSeparator />
         {/* No Free o limite é de uma empresa. Mostrar "Nova empresa" para quem
             não pode criar leva a pessoa a preencher o formulário inteiro e só
-            então tomar o erro — melhor dizer o motivo aqui e mandar direto
+            então tomar o erro, melhor dizer o motivo aqui e mandar direto
             para a comparação de planos. */}
         {podeCriarEmpresa ? (
           <DropdownMenuItem

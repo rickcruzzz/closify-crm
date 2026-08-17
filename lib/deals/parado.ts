@@ -8,7 +8,7 @@ import type { DealStage } from '@/lib/deals/types'
  * para um "vou pensar" virar esquecimento, e curto o bastante para o aviso
  * ainda valer alguma coisa.
  *
- * Quando houver histórico de etapa, isto vira média por etapa — uma proposta
+ * Quando houver histórico de etapa, isto vira média por etapa, uma proposta
  * enviada e um lead novo não têm o mesmo ritmo.
  */
 export const DIAS_PARA_PARADO = 14
@@ -46,7 +46,7 @@ export type EstadoDeMovimento = {
  * Um negócio está parado se está aberto e não muda de etapa há tempo demais.
  *
  * "Aberto" importa: sem esse recorte, todo negócio ganho apareceria como
- * parado há meses — e as etapas fechadas são justamente as que mais acumulam
+ * parado há meses, e as etapas fechadas são justamente as que mais acumulam
  * linha, então o aviso viraria ruído puro e a pessoa aprenderia a ignorá-lo.
  */
 export function estadoDeMovimento(
@@ -66,7 +66,7 @@ export function estadoDeMovimento(
  * Rótulo para a tela, trocando de unidade conforme o número cresce.
  *
  * "Parado há 47 dias" obriga a pessoa a fazer a conta; "há 1 mês" ela sente. A
- * troca acontece cedo de propósito — a partir de 30 dias já é mês, não 8
+ * troca acontece cedo de propósito, a partir de 30 dias já é mês, não 8
  * semanas.
  */
 export function rotuloDeParado(dias: number): string {

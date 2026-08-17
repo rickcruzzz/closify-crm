@@ -7,10 +7,10 @@ visual em Kanban, feito para substituir a planilha em um dia. PRD completo em
 
 **O produto está em produção** em <https://www.velofunil.com.br>, com auth,
 Kanban, leads, dashboard, multi-empresa, billing pelo Asaas e e-mails
-transacionais funcionando. Não é greenfield — não recrie nada do zero.
+transacionais funcionando. Não é greenfield, não recrie nada do zero.
 
-O estado atual do projeto — o que está pendente, as decisões que não devem ser
-refeitas e as armadilhas já pagas — vem importado logo abaixo. É `@` e não link
+O estado atual do projeto, o que está pendente, as decisões que não devem ser
+refeitas e as armadilhas já pagas, vem importado logo abaixo. É `@` e não link
 markdown de propósito: o `@` embute o conteúdo do arquivo neste, e link
 dependeria de alguém decidir abrir.
 
@@ -26,15 +26,15 @@ porquê de cada decisão e são a memória real daqui.
 - **Backend:** Next.js API Routes + Server Actions, runtime Node.js
 - **Dados/Auth:** Supabase (PostgreSQL + RLS + Auth + Storage)
 - **E-mail:** Resend (recuperação de senha, convites, onboarding, notificações)
-- **Pagamento:** Asaas — clientes, assinaturas recorrentes, webhooks, Pix/boleto/cartão
+- **Pagamento:** Asaas, clientes, assinaturas recorrentes, webhooks, Pix/boleto/cartão
 - **Deploy:** Vercel
-- **Analytics:** Vercel Analytics. **PostHog não está instalado** — esta linha
+- **Analytics:** Vercel Analytics. **PostHog não está instalado**, esta linha
   já afirmou os dois, conferido no `package.json` em 12/08/2026. Não existe
   nada medindo ativação: quantos que criam conta chegam ao primeiro lead é uma
   pergunta que hoje ninguém responde
 - **Automação futura:** n8n, Notion API, Linear API
 
-> **Importante:** este projeto usa **Asaas**, não Stripe, para pagamentos —
+> **Importante:** este projeto usa **Asaas**, não Stripe, para pagamentos,
 > mesmo que existam agente/skill de Stripe configurados neste repo
 > (`.claude/agents/payment-integration.md`, `.claude/skills/stripe-integration`),
 > eles não se aplicam à parte de billing do Velo Funil.
@@ -89,14 +89,14 @@ Convenções:
 ## Processo de Desenvolvimento
 
 Os milestones **auth → kanban → leads → dashboard → multi-empresa/permissões →
-billing (Asaas)** estão entregues e em produção. O que resta são integrações —
+billing (Asaas)** estão entregues e em produção. O que resta são integrações,
 a próxima é importação de Excel/planilha.
 
 ### Verificar contra produção, não supor
 
 O padrão daqui: nada é dado como funcionando sem prova. Script descartável em
 Node lendo o ambiente (`node --env-file=.env.local`), exercitando o caminho
-real — webhook, API do Supabase, envio de e-mail — e limpando o que criou num
+real, webhook, API do Supabase, envio de e-mail, e limpando o que criou num
 `finally`. Vários defeitos desta base só apareceram assim, e pelo menos dois
 alarmes falsos foram descartados pelo mesmo método.
 
@@ -106,6 +106,6 @@ escrita indevida**. Se passar, a regra não existe.
 
 ### Antes de encerrar qualquer mudança
 
-`npx tsc --noEmit`, `npm run lint`, `npm test` e `npm run build` — os quatro
+`npx tsc --noEmit`, `npm run lint`, `npm test` e `npm run build`, os quatro
 limpos. Testes cobrem lógica pura em `lib/**` (schemas, parsers, formatadores);
 cada caso documenta o defeito que o motivou, e é assim que devem continuar.

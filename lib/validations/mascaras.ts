@@ -4,7 +4,7 @@ import { somenteDigitos } from '@/lib/validations/empresa'
  * Máscaras de digitação.
  *
  * Elas são da TELA, não do dado. O banco guarda dígito puro e recusa máscara
- * — `workspaces.cnpj` tem `check (cnpj ~ '^[0-9]{14}$')`. Quem desmonta é o
+ *, `workspaces.cnpj` tem `check (cnpj ~ '^[0-9]{14}$')`. Quem desmonta é o
  * Zod, com `somenteDigitos`, antes de salvar.
  *
  * Todas cortam o excesso em vez de recusar: colar um CNPJ com texto em volta
@@ -53,7 +53,7 @@ export type Mascara = (valor: string) => string
  * Onde o cursor deve ficar depois de a máscara reescrever o campo.
  *
  * Máscara ingênua devolve só o texto novo, e o navegador joga o cursor para o
- * fim — corrigir um dígito no meio de um CNPJ vira impossível, porque a cada
+ * fim, corrigir um dígito no meio de um CNPJ vira impossível, porque a cada
  * tecla o cursor foge.
  *
  * A conta é feita em DÍGITOS, não em caracteres: conta quantos dígitos existem

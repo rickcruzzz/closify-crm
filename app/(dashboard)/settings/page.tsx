@@ -25,8 +25,8 @@ const ABAS_VALIDAS: AbaDeConfiguracoes[] = ['empresa', 'equipe', 'plano', 'integ
 /**
  * Configurações em três abas, na mesma rota.
  *
- * Antes eram quatro cards empilhados — empresa com dezoito campos, membros,
- * plano e excluir conta —, e chegar ao plano exigia rolar por todo o cadastro
+ * Antes eram quatro cards empilhados, empresa com dezoito campos, membros,
+ * plano e excluir conta,, e chegar ao plano exigia rolar por todo o cadastro
  * da empresa.
  *
  * A aba vive em `?aba=`, não em estado de cliente: recarregar mantém o lugar,
@@ -35,7 +35,7 @@ const ABAS_VALIDAS: AbaDeConfiguracoes[] = ['empresa', 'equipe', 'plano', 'integ
 const MENSAGEM_DE_ERRO_DA_INTEGRACAO: Record<string, string> = {
   provider_invalido: 'Integração desconhecida.',
   somente_admin: 'Apenas administradores podem conectar integrações.',
-  cancelado: 'Conexão cancelada — nada foi alterado.',
+  cancelado: 'Conexão cancelada, nada foi alterado.',
   parametros_ausentes: 'O Google não devolveu os dados esperados. Tente conectar de novo.',
   state_invalido: 'O link de conexão expirou ou é inválido. Tente conectar de novo.',
   falha_ao_conectar: 'Não foi possível concluir a conexão. Tente de novo em instantes.',
@@ -56,7 +56,7 @@ export default async function SettingsPage({
   const { user, workspaceId } = await getCurrentUserAndWorkspace()
 
   // Único lugar que ainda sincroniza `workspaces.plan` com a validade real da
-  // assinatura — saiu do caminho quente (`getCurrentUserAndWorkspace`, que
+  // assinatura, saiu do caminho quente (`getCurrentUserAndWorkspace`, que
   // roda em toda navegação) porque era uma ESCRITA a cada tela. Aqui é onde a
   // pessoa de fato olha o próprio plano, e o rótulo "Free/Pro" merece estar em
   // dia. Os LIMITES não dependem disto: consultam `pro_vigente()` direto no
@@ -74,7 +74,7 @@ export default async function SettingsPage({
   const isAdmin = currentMember?.role === 'admin'
 
   // Mesma regra da RPC `excluir_minha_conta`: workspace com um único membro
-  // morre junto da conta. Listado no diálogo para a pessoa ver o que perde —
+  // morre junto da conta. Listado no diálogo para a pessoa ver o que perde,
   // ela costuma pensar só na própria conta e esquecer dos dados dos clientes
   // que estão lá dentro.
   const workspacesQueSeraoApagados =

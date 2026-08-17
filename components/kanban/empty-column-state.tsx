@@ -1,7 +1,7 @@
 import { Inbox, SearchX } from 'lucide-react'
 
 // Estado por coluna: 6 colunas na tela ao mesmo tempo, então fica compacto de
-// propósito — sem título/descrição/CTA, que poluiriam o board vazio.
+// propósito, sem título/descrição/CTA, que poluiriam o board vazio.
 export function EmptyColumnState({ filtered = false }: { filtered?: boolean }) {
   const Icon = filtered ? SearchX : Inbox
 

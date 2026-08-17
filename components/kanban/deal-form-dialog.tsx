@@ -273,7 +273,7 @@ export function DealFormDialog({
                 type="date"
                 // O seletor nativo aceita qualquer ano quando digitado pelo
                 // teclado. `min`/`max` fazem o próprio navegador barrar antes
-                // do submit — o zod cobre o resto, para quem contornar a UI.
+                // do submit, o zod cobre o resto, para quem contornar a UI.
                 min="2000-01-01"
                 max="2100-12-31"
                 aria-invalid={!!errors.dueDate}

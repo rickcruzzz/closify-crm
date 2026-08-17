@@ -19,12 +19,12 @@ export const CSV_MAX_LINHAS = 1000
  *
  * `File.text()` decodifica SEMPRE em UTF-8, e o Excel em português salva
  * "CSV (separado por vírgulas)" em Windows-1252. Medido: "José Antônio"
- * chegava como "Jos� Ant�nio" — ou seja, todo lead com acento
+ * chegava como "Jos� Ant�nio", ou seja, todo lead com acento
  * entrava no banco com o nome quebrado, calado, na planilha mais comum do
  * mercado brasileiro.
  *
  * A ordem importa. BOM primeiro, porque é declaração explícita. Depois UTF-8
- * com `fatal: true`, que ERRA em vez de trocar o byte inválido por U+FFFD —
+ * com `fatal: true`, que ERRA em vez de trocar o byte inválido por U+FFFD,
  * é exatamente esse silêncio que escondia o defeito. Só então Windows-1252,
  * que aceita qualquer byte e nunca falha, e por isso não pode vir antes.
  */
@@ -66,7 +66,7 @@ export function detectarSeparador(cabecalho: string): string {
 
 /**
  * Percorre caractere a caractere porque `split('\n')` quebra em campo com
- * aspas contendo quebra de linha — endereço colado da planilha faz isso.
+ * aspas contendo quebra de linha, endereço colado da planilha faz isso.
  */
 export function tokenizar(texto: string, separador: string): string[][] {
   const linhas: string[][] = []
@@ -131,13 +131,13 @@ export function lerCsv(texto: string): string[][] {
 
 /**
  * Aceita "1.234,56" (pt-BR), "1234.56" (en) e "R$ 1.234,56". Devolve `null`
- * quando sobra algo que não é número — melhor recusar a linha do que gravar
+ * quando sobra algo que não é número, melhor recusar a linha do que gravar
  * um valor errado num CRM de vendas.
  */
 export function parseValorBRL(bruto: string): number | null {
   const original = bruto.trim()
   // Célula em branco é 0 (lead sem valor estimado é caso normal); célula com
-  // conteúdo que não tem dígito nenhum é erro, não zero — antes "abc" virava
+  // conteúdo que não tem dígito nenhum é erro, não zero, antes "abc" virava
   // R$ 0,00 em silêncio, que é pior do que recusar a linha.
   if (!original) return 0
 
@@ -159,7 +159,7 @@ export function parseValorBRL(bruto: string): number | null {
   } else if (ultimoPonto >= 0) {
     // Só ponto é ambíguo: "1.200" numa planilha brasileira é mil e duzentos,
     // enquanto "1234.56" é decimal exportado em inglês. O tamanho do último
-    // grupo desempata — três dígitos é separador de milhar.
+    // grupo desempata, três dígitos é separador de milhar.
     const grupoFinal = limpo.slice(ultimoPonto + 1)
     normalizado =
       grupoFinal.length === 3

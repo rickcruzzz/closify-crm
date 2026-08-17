@@ -13,7 +13,7 @@ import type { IntegrationProvider } from '@/types/supabase'
 /**
  * Confere admin pela RPC, não por leitura direta de `workspace_members`.
  *
- * Mesmo padrão de `lib/asaas/actions.ts` — a RPC já existe, já é testada, e
+ * Mesmo padrão de `lib/asaas/actions.ts`, a RPC já existe, já é testada, e
  * evita reimplementar a regra "admin = role admin no workspace" em mais um
  * lugar.
  */
@@ -32,7 +32,7 @@ async function exigirAdmin(workspaceId: string) {
  * Desconecta uma integração.
  *
  * Lê o token com a service role (as colunas de token não são legíveis por
- * `authenticated` — revoke da migration 0034) só para tentar revogar do lado
+ * `authenticated`, revoke da migration 0034) só para tentar revogar do lado
  * do provedor. O DELETE em si roda com o client da sessão, respeitando RLS:
  * a régua de "quem pode desconectar" já está na policy, não precisa
  * duplicá-la aqui.
@@ -59,7 +59,7 @@ export async function desconectarIntegracao(provider: IntegrationProvider) {
     try {
       await revogarTokenGoogle(decifrar(linha.access_token_enc))
     } catch (err) {
-      // Não bloqueia a desconexão local — ver comentário em revogarToken().
+      // Não bloqueia a desconexão local, ver comentário em revogarToken().
       console.error('Falha ao revogar token remoto na desconexão', err)
     }
   }
@@ -82,7 +82,7 @@ export async function desconectarIntegracao(provider: IntegrationProvider) {
 /**
  * Testa a conexão com uma ida real e barata ao provedor.
  *
- * Renova o access_token primeiro se ele está expirado ou perto de expirar —
+ * Renova o access_token primeiro se ele está expirado ou perto de expirar,
  * sem isso, todo teste feito mais de uma hora depois de conectar (validade
  * típica de access_token do Google) devolveria "erro" mesmo com a integração
  * saudável, só porque o token expirou entre uma chamada e outra.

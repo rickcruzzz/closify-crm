@@ -30,7 +30,7 @@ export function SettingsTabs({ ativa }: { ativa: AbaDeConfiguracoes }) {
     <div
       role="tablist"
       aria-label="Seções das configurações"
-      // A borda percorre a largura toda e a aba ativa a interrompe — é o que
+      // A borda percorre a largura toda e a aba ativa a interrompe, é o que
       // liga visualmente a aba ao conteúdo abaixo dela.
       className="border-border/60 -mb-px flex gap-1 overflow-x-auto border-b"
     >

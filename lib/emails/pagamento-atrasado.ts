@@ -6,7 +6,7 @@ import { escapeHtml, paragraph, rawParagraph, renderEmail } from '@/lib/emails/l
  * Mesmo silêncio que o pagamento-confirmado.ts resolveu, só que no sentido
  * contrário: hoje, quando o Asaas manda PAYMENT_OVERDUE (cartão recusado,
  * boleto ou Pix vencido), o banco marca `past_due` certinho e a tela de
- * Configurações → Plano mostra o selo — mas só quem entra no produto e olha
+ * Configurações → Plano mostra o selo, mas só quem entra no produto e olha
  * aquela tela vê isso. Ninguém é avisado ativamente, e cartão recusado é a
  * categoria de churn mais barata de recuperar em qualquer SaaS justamente
  * porque um e-mail resolve a maioria dos casos (venceu sem querer, cartão
@@ -24,7 +24,7 @@ export function renderPagamentoAtrasadoEmail(params: {
   })
 
   return {
-    subject: 'Seu pagamento não foi confirmado — Velo Funil',
+    subject: 'Seu pagamento não foi confirmado, Velo Funil',
     html: renderEmail({
       preheader: `Não conseguimos confirmar o pagamento de ${valor}. Atualize antes de perder o Pro.`,
       title: 'Pagamento não confirmado',

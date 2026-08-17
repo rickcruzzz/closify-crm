@@ -4,7 +4,7 @@
 --
 -- 1) As duas escritas do webhook (`subscriptions.status` e `workspaces.plan`)
 --    eram round-trips separados e NÃO atômicos. Se a segunda falhasse, a
---    assinatura ficava `active` com o workspace em `free` — e o evento já
+--    assinatura ficava `active` com o workspace em `free`, e o evento já
 --    estava marcado como processado na tabela de dedupe, então nenhum retry
 --    do Asaas consertava. O plano ficava errado em silêncio.
 --
@@ -78,7 +78,7 @@ revoke execute on function public.apply_asaas_subscription_status(text, public.s
 -- ============================================================================
 
 -- A janela de retry do Asaas é de dias, não de meses. Guardar 90 dias cobre
--- com folga; o resto é lixo que só faz a tabela crescer. Não é auditoria —
+-- com folga; o resto é lixo que só faz a tabela crescer. Não é auditoria,
 -- o histórico de cobrança verdadeiro vive no Asaas.
 create or replace function public.purge_old_asaas_webhook_events()
 returns integer
@@ -102,5 +102,5 @@ revoke execute on function public.purge_old_asaas_webhook_events() from authenti
 
 -- Agendamento fica de fora de propósito: exige a extensão pg_cron habilitada
 -- no projeto. Enquanto não estiver, chamar manualmente pelo SQL Editor
--- resolve — o volume é de poucas linhas por assinatura por mês.
+-- resolve, o volume é de poucas linhas por assinatura por mês.
 --   select public.purge_old_asaas_webhook_events();

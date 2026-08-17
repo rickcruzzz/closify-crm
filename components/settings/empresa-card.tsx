@@ -125,8 +125,8 @@ export function EmpresaCard({
 
     if (!encontrado) return
 
-    // Só campo VAZIO. Sobrescrever o que a pessoa digitou — um complemento, um
-    // nome de rua corrigido à mão — é pior do que não preencher.
+    // Só campo VAZIO. Sobrescrever o que a pessoa digitou, um complemento, um
+    // nome de rua corrigido à mão, é pior do que não preencher.
     const preencherSeVazio = (campo: 'endereco' | 'bairro' | 'cidade' | 'estado', v: string) => {
       if (!v) return
       const atual = getValues(campo)
@@ -160,7 +160,7 @@ export function EmpresaCard({
   }
 
   // Fechar a aba com alteração pendente. Navegação interna do Next NÃO dispara
-  // este evento — é limitação conhecida, não descuido.
+  // este evento, é limitação conhecida, não descuido.
   React.useEffect(() => {
     if (!isDirty) return
 
@@ -307,12 +307,12 @@ export function EmpresaCard({
           <CardTitle className="text-base">Endereço</CardTitle>
         </CardHeader>
         {/*
-          Ordem pensada pra fechar em pares — 7 campos é ímpar, e num grid de
+          Ordem pensada pra fechar em pares, 7 campos é ímpar, e num grid de
           2 colunas alguém sempre sobra sozinho na última linha. Deixar
           "Estado" sobrando no FIM lia como formulário quebrado (vão vazio
           bem antes do fim do card). A resposta é decidir de propósito QUEM
           fica de fora do par: Endereço, que costuma ser o valor mais longo
-          do formulário, vira largura cheia — e os dois pares mais padrão de
+          do formulário, vira largura cheia, e os dois pares mais padrão de
           endereço brasileiro (Número/Complemento, Cidade/Estado) continuam
           juntos. CEP e Bairro, os dois que sobraram, ficam juntos no topo;
           CEP lidera por ser quem dispara a busca automática.
@@ -406,7 +406,7 @@ export function EmpresaCard({
         <div className="bg-background/95 border-border/60 sticky bottom-0 -mx-4 flex flex-wrap items-center justify-between gap-3 border-t px-4 py-3 backdrop-blur-sm md:-mx-6 md:px-6">
           <span
             // `aria-live` porque o aviso aparece sem a pessoa ter navegado até
-            // ele — quem usa leitor de tela precisa ser informado.
+            // ele, quem usa leitor de tela precisa ser informado.
             aria-live="polite"
             className="text-muted-foreground flex items-center gap-1.5 text-xs"
           >
@@ -454,7 +454,7 @@ function Campo({
   id: string
   rotulo: string
   erro?: string
-  /** Texto curto ao lado do rótulo — "Opcional", contador, "Buscando…". */
+  /** Texto curto ao lado do rótulo, "Opcional", contador, "Buscando…". */
   ajuda?: string
   obrigatorio?: boolean
   largura?: 'meia' | 'cheia'
@@ -463,7 +463,7 @@ function Campo({
   return (
     <div className={cn('flex flex-col gap-1.5', largura === 'cheia' && 'sm:col-span-2')}>
       {/* Rótulo e auxiliar na MESMA linha, encostados: o "Opcional" jogado na
-          outra ponta do campo perde a associação com o rótulo — a pessoa lê
+          outra ponta do campo perde a associação com o rótulo, a pessoa lê
           duas informações soltas em vez de uma. */}
       <div className="flex items-baseline gap-2">
         <Label htmlFor={id}>

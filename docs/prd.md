@@ -5,8 +5,8 @@
 
 ## 1. Contexto e Problema
 
-Pequenas empresas de serviço no Brasil — agências, consultorias, clínicas, imobiliárias pequenas e
-software houses — perdem negócios porque gerenciam vendas em planilhas, WhatsApp pessoal ou anotações
+Pequenas empresas de serviço no Brasil, agências, consultorias, clínicas, imobiliárias pequenas e
+software houses, perdem negócios porque gerenciam vendas em planilhas, WhatsApp pessoal ou anotações
 soltas. 62% das PMEs B2B ainda controlam o funil de vendas em planilha ou papel, e apenas 21% usam um
 CRM SaaS dedicado. Quando a equipe cresce, os dados ficam espalhados sem controle de acesso, e leads
 esfriam por falta de follow-up organizado.
@@ -83,13 +83,13 @@ Timeline cronológica vinculada a cada lead.
 
 **Tarefas e Próxima Ação**
 Tarefa com prazo, responsável e conclusão, presa a um lead ou a um negócio.
-Tela **Hoje** — primeira do menu — agrupa em Atrasadas, Hoje, Próximos 7 dias e
+Tela **Hoje**, primeira do menu, agrupa em Atrasadas, Hoje, Próximos 7 dias e
 Depois, com filtro entre "minhas" e "da equipe".
 
 No card do Kanban a próxima ação ocupa o lugar do prazo do negócio: prazo é
 previsão de fechamento, próxima ação é o que dá para cumprir hoje, e duas datas
 no mesmo card fazem a pessoa não saber qual obedecer. Sem tarefa aberta o card
-diz **"Sem próxima ação"** — negócio sem próximo passo é o que morre calado no
+diz **"Sem próxima ação"**, negócio sem próximo passo é o que morre calado no
 funil, e é a informação mais valiosa que o card pode dar.
 
 Concluir uma tarefa grava a atividade correspondente na timeline do lead. Sem
@@ -103,11 +103,11 @@ regra de negócio.
 **Onboarding e ativação**
 Quem cria conta passa por boas-vindas, responde 4 perguntas curtas (empresa,
 segmento, modelo de venda, tamanho da equipe) e cai num Dashboard com checklist
-de ativação. O assistente **retoma de onde parou** — o estado vive em
+de ativação. O assistente **retoma de onde parou**, o estado vive em
 `onboarding_state`, uma linha por pessoa, não por empresa.
 
 Pular é oferta de verdade: não bloqueia nada, guarda o que já foi respondido e
-não volta a aparecer a cada login. Quem entra por convite não vê o assistente —
+não volta a aparecer a cada login. Quem entra por convite não vê o assistente,
 a empresa dele já está montada.
 
 O checklist tem 5 itens e é **derivado** do estado real do workspace, não
@@ -115,7 +115,7 @@ gravado: apagar o único lead reabre o item. Um booleano salvo continuaria
 dizendo "feito" e o produto mentiria sobre si mesmo.
 
 O segmento é guardado e personaliza texto. **As 6 etapas do funil continuam
-fixas** — elas são um enum do Postgres usado por `deals` e `leads` em 22
+fixas**, elas são um enum do Postgres usado por `deals` e `leads` em 22
 arquivos, e torná-las editáveis é um projeto próprio.
 
 **Dados da empresa**
@@ -126,7 +126,7 @@ preenchido.
 
 A logo vive num bucket **privado** do Supabase Storage, isolado por empresa, e
 é exibida por URL assinada. O tipo do arquivo é conferido pelos bytes iniciais,
-não pela extensão nem pelo `Content-Type` — os dois são escolhidos por quem
+não pela extensão nem pelo `Content-Type`, os dois são escolhidos por quem
 envia.
 
 **Negócio parado**
@@ -136,17 +136,17 @@ etapa há três semanas conta como parado; usar a data de edição esconderia
 exatamente esse caso.
 
 Aparece como filtro "Parados" no Pipeline, com contagem, e só quando existe
-algum — num funil saudável o botão fica escondido. O card não mostra:
+algum, num funil saudável o botão fica escondido. O card não mostra:
 lá já mora a próxima ação, e duas datas competindo fazem a pessoa não saber
 qual obedecer.
 
-Catorze dias é o limite. É escolha, não medição — quando houver histórico de
+Catorze dias é o limite. É escolha, não medição, quando houver histórico de
 mudança de etapa, vira média por etapa.
 
 **WhatsApp por link**
 Lead com telefone válido ganha "Chamar no WhatsApp", abrindo `wa.me`. A Cloud
 API oficial exige Meta Business verificado, que exige CNPJ ativo, mais aprovação
-de template e custo por mensagem — o link resolve o que a pessoa quer, que é
+de template e custo por mensagem, o link resolve o que a pessoa quer, que é
 abrir a conversa, sem nenhuma dessas dependências.
 
 **Dashboard de Métricas**
@@ -160,7 +160,7 @@ Workspaces separados por empresa ou cliente. Convite de colaboradores por e-mail
 ### Monetização (Asaas)
 
 Plano Free: 1 empresa, até 2 colaboradores e 50 leads.
-Multi-empresa é recurso do Pro — sem esse limite, o teto de colaboradores não
+Multi-empresa é recurso do Pro, sem esse limite, o teto de colaboradores não
 segura nada: bastava criar uma empresa nova para cada dupla.
 Plano Pro: colaboradores e leads ilimitados por R$49/mês.
 Cliente e assinatura criados via API do Asaas, com cobrança recorrente e webhook para ativação automática.

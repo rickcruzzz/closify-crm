@@ -10,7 +10,7 @@ export type IntegrationConnectionRow = {
 }
 
 /**
- * Lê só as colunas seguras — as de token nem estariam visíveis mesmo que
+ * Lê só as colunas seguras, as de token nem estariam visíveis mesmo que
  * pedidas (revoke por coluna na migration 0034), mas a lista explícita aqui
  * é o que documenta a intenção: esta tela nunca precisa do token em si,
  * só do status.
@@ -39,11 +39,11 @@ const JANELA_DE_USO_EM_DIAS = 30
 /**
  * Quantas atividades cada integração gerou nos últimos 30 dias.
  *
- * Conta por `integration_provider`, não por `type` — `type` (email/reunião)
+ * Conta por `integration_provider`, não por `type`, `type` (email/reunião)
  * também é escolha manual no formulário de atividade, então contar só por
  * ele misturaria "enviei pelo Gmail conectado" com "registrei que liguei
  * fora do sistema". `count: 'exact', head: true` só traz o número, sem
- * buscar linha nenhuma — mesmo espírito de agregação no banco que o
+ * buscar linha nenhuma, mesmo espírito de agregação no banco que o
  * dashboard já usa.
  */
 export async function getUsoDasIntegracoes(

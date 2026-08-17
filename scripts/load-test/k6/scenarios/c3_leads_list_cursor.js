@@ -1,4 +1,4 @@
-// Trilha C — getLeadsPage: paginação cursor real (created_at+id, PAGE_SIZE=25,
+// Trilha C, getLeadsPage: paginação cursor real (created_at+id, PAGE_SIZE=25,
 // busca 26 pra detectar hasMore). Baseline "isso já está bem feito", pra
 // contrastar com c4 (busca) e c5 (kanban sem paginação).
 import { check, sleep } from 'k6'

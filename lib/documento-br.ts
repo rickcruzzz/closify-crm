@@ -2,7 +2,7 @@
  * CPF e CNPJ: formatação e validação de dígito verificador.
  *
  * Sem a validação local, um CPF digitado errado só falhava lá no Asaas, e a
- * pessoa recebia "Não foi possível iniciar a assinatura no Asaas" — mensagem
+ * pessoa recebia "Não foi possível iniciar a assinatura no Asaas", mensagem
  * que não diz o que corrigir e faz parecer problema do sistema, não do dado.
  *
  * O dígito verificador é matemática pura: dá para reprovar na hora, antes de
@@ -31,7 +31,7 @@ export function formatarCpfCnpj(entrada: string): string {
 
 function digitosIguais(valor: string): boolean {
   // 111.111.111-11 passa na conta do dígito verificador, mas não é CPF de
-  // ninguém — a Receita trata como inválido e o Asaas também recusa.
+  // ninguém, a Receita trata como inválido e o Asaas também recusa.
   return /^(\d)\1+$/.test(valor)
 }
 

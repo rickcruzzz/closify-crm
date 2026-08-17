@@ -1,4 +1,4 @@
--- Velo Funil — o teto de 1.000 linhas do PostgREST deixa de mentir
+-- Velo Funil, o teto de 1.000 linhas do PostgREST deixa de mentir
 --
 -- Medido em produção em 12/08 com 1.100 negócios num workspace: o app recebe
 -- 1.000 linhas e NENHUM erro. Três consultas do produto liam tabela inteira
@@ -6,22 +6,22 @@
 -- silêncio:
 --
 --   getFunnelCounts             gráfico de funil com número menor que o real
---   getBoardDeals               CARDS SOMEM do Kanban — ordena por data, então
+--   getBoardDeals               CARDS SOMEM do Kanban, ordena por data, então
 --                               os negócios mais antigos desaparecem da tela
 --   getWorkspaceLeadsForSelect  leads somem do seletor de novo negócio; ordena
 --                               por nome, então some quem vem depois no alfabeto
 --
 -- Não é lentidão: é dado sumindo da tela do cliente. Hoje o banco tem 14
--- negócios, então ninguém é afetado — esta migration existe para que continue
+-- negócios, então ninguém é afetado, esta migration existe para que continue
 -- assim quando não estiver.
 
 -- ============================================================================
--- 1. Contagem do funil — no banco, não em JavaScript
+-- 1. Contagem do funil, no banco, não em JavaScript
 -- ============================================================================
 --
 -- A versão anterior trazia UMA LINHA POR NEGÓCIO só para contar em memória.
 -- Com 5.000 negócios seriam 5.000 linhas na rede a cada abertura do dashboard,
--- para produzir seis números — e, passando de 1.000, seis números errados.
+-- para produzir seis números, e, passando de 1.000, seis números errados.
 --
 -- `security invoker`: a RLS de `deals` continua valendo. Uma função `definer`
 -- aqui veria o funil de todo mundo, e bastaria um `workspace_id` de outra
@@ -44,7 +44,7 @@ revoke all on function public.get_funnel_counts(uuid) from public;
 grant execute on function public.get_funnel_counts(uuid) to authenticated;
 
 -- ============================================================================
--- 2. Board do Kanban — teto POR ETAPA, não global
+-- 2. Board do Kanban, teto POR ETAPA, não global
 -- ============================================================================
 --
 -- Um `.limit(1000)` global não resolveria: as etapas fechadas acumulam para

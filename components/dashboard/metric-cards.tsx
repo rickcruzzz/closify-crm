@@ -19,7 +19,7 @@ type MetricCardConfig = {
 }
 
 // Sem histórico de métricas por período no schema ainda, não há como
-// calcular variação real (ex: "+18% vs mês anterior") — mostrar um número
+// calcular variação real (ex: "+18% vs mês anterior"), mostrar um número
 // inventado ao lado de dados reais seria mais enganoso do que não mostrar
 // nada. Fica pendente até existir uma tabela de snapshots mensais.
 const cards: MetricCardConfig[] = [
@@ -61,7 +61,7 @@ const cards: MetricCardConfig[] = [
     },
     format: (metrics) => `${metrics.conversionRate.toFixed(0)}%`,
     // Não existe tela própria de detalhamento de conversão (ganho/perdido
-    // por período) ainda — o Kanban já mostra as colunas Fechado Ganho e
+    // por período) ainda, o Kanban já mostra as colunas Fechado Ganho e
     // Fechado Perdido lado a lado, que é o dado por trás do percentual.
     // Reaproveita em vez de construir uma tela nova só pra isso.
     href: '/kanban',
@@ -72,7 +72,7 @@ const cards: MetricCardConfig[] = [
 export function MetricCards({ metrics }: { metrics: DashboardMetrics }) {
   // Workspace sem nenhum lead: quatro zeros não informam nada e ainda dão a
   // impressão de sistema quebrado. Um convite à ação ocupa o mesmo espaço e
-  // diz o que fazer. Basta o primeiro lead para os cartões voltarem — e eles
+  // diz o que fazer. Basta o primeiro lead para os cartões voltarem, e eles
   // voltam com número de verdade, não com zero.
   if (metrics.totalLeads === 0 && metrics.openDeals === 0) {
     return (

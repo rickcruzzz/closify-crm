@@ -12,7 +12,7 @@ export const metadata: Metadata = {
 }
 
 /**
- * A porta de entrada de quem acabou de criar conta — por e-mail ou pelo Google.
+ * A porta de entrada de quem acabou de criar conta, por e-mail ou pelo Google.
  *
  * Antes só recebia quem entrava pelo Google, e quem se cadastrava por e-mail
  * caía direto na tela de "crie sua empresa", sem nunca ler o que o produto faz.
@@ -39,7 +39,7 @@ export default async function BemVindoPage() {
   // Convite pendente tem precedência sobre tudo: quem foi convidado não vai
   // configurar empresa nenhuma, vai entrar na de quem convidou. Sem este
   // desvio a pessoa atravessaria o assistente inteiro para terminar numa
-  // empresa paralela — o defeito que o commit 3779d72 corrigiu, voltando por
+  // empresa paralela, o defeito que o commit 3779d72 corrigiu, voltando por
   // outra porta.
   const convitePendente = await lerConvitePendente()
   if (convitePendente) {
@@ -49,7 +49,7 @@ export default async function BemVindoPage() {
     if (convite?.[0]?.status === 'pending') {
       redirect(`/convite/${convitePendente}`)
     }
-    // Convite já usado: o cookie fica. Apagá-lo aqui é proibido — mexer em
+    // Convite já usado: o cookie fica. Apagá-lo aqui é proibido, mexer em
     // cookie durante a renderização de um Server Component foi exatamente o
     // que quebrou a tela do convite com "Algo deu errado". Quem limpa é a
     // Server Action, em `finalizarOnboarding`.

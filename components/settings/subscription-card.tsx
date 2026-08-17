@@ -34,7 +34,7 @@ function formatarData(iso: string) {
  * Estado da assinatura na tela de Cobrança.
  *
  * Antes a tela mostrava apenas o plano (Free/Pro). Quem criava a assinatura e
- * não pagava via "Free" com um botão de assinar de novo — sem aviso de fatura
+ * não pagava via "Free" com um botão de assinar de novo, sem aviso de fatura
  * em aberto, sem link para pagá-la e sem forma de cancelar. Era o caso das
  * assinaturas que a auditoria encontrou: `ACTIVE` no Asaas, pagamento
  * `PENDING`, nada disso visível aqui.

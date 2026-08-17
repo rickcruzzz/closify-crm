@@ -18,7 +18,7 @@ type Sessao = {
 /**
  * O preâmbulo que toda action daqui repete: sessão viva e empresa ativa.
  *
- * Server Action é endpoint HTTP — dá para chamá-la sem passar pela tela. Nada
+ * Server Action é endpoint HTTP, dá para chamá-la sem passar pela tela. Nada
  * abaixo pode assumir que veio da interface.
  */
 async function abrirSessao(): Promise<Sessao | { error: string }> {
@@ -39,7 +39,7 @@ async function abrirSessao(): Promise<Sessao | { error: string }> {
 /**
  * Confere que o lead e o negócio informados são da empresa ativa.
  *
- * A RLS de `tasks` só olha `workspace_id` — ela aceitaria uma tarefa da minha
+ * A RLS de `tasks` só olha `workspace_id`, ela aceitaria uma tarefa da minha
  * empresa apontando para o `lead_id` de outra. Isso não vaza dado (a leitura
  * do lead continua barrada), mas criaria linha órfã com referência cruzada, e
  * o `join` da tela mostraria "Sem cliente" sem ninguém entender por quê.
@@ -112,7 +112,7 @@ export async function criarTarefa(values: unknown) {
 
   if (error) {
     // A trigger do teto (0029) recusa com 42501. Sem tratar aqui, a mensagem
-    // do Postgres morreria no log e a tela diria "Não foi possível salvar" —
+    // do Postgres morreria no log e a tela diria "Não foi possível salvar",
     // o mesmo defeito que a importação de planilha já pagou uma vez.
     if (error.code === '42501') {
       return { error: error.message }
@@ -172,7 +172,7 @@ export async function atualizarTarefa(taskId: unknown, values: unknown) {
  * lista nenhuma. Sem este espelho, o histórico teria buraco justamente no que
  * foi feito por follow-up.
  *
- * Só grava se a tarefa tiver lead — atividade é sempre de um lead (0001). E o
+ * Só grava se a tarefa tiver lead, atividade é sempre de um lead (0001). E o
  * `.is('done_at', null)` faz o clique repetido não gerar duas atividades: o
  * segundo update não casa com nenhuma linha.
  */
@@ -214,7 +214,7 @@ export async function concluirTarefa(taskId: unknown) {
     })
 
     // A tarefa já está concluída neste ponto. Falhar aqui não pode desfazer
-    // isso nem virar erro na tela — perder a linha da timeline é ruim, mostrar
+    // isso nem virar erro na tela, perder a linha da timeline é ruim, mostrar
     // a tarefa de volta como aberta é pior.
     if (erroAtividade) {
       console.error('concluirTarefa: atividade não registrada', erroAtividade)
@@ -226,7 +226,7 @@ export async function concluirTarefa(taskId: unknown) {
 }
 
 /**
- * Reabre a tarefa. Não apaga a atividade que a conclusão gerou — a ligação
+ * Reabre a tarefa. Não apaga a atividade que a conclusão gerou, a ligação
  * aconteceu de verdade, e reabrir o compromisso não desfaz o passado.
  */
 export async function reabrirTarefa(taskId: unknown) {

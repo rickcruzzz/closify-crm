@@ -38,7 +38,7 @@ export function AcceptInviteCard({
   // O token viaja junto para o cadastro e para o login.
   //
   // Sem ele, a pessoa convidada cadastrava, confirmava o e-mail, caía em
-  // `/onboarding` e criava a PRÓPRIA empresa — entrava como conta separada em
+  // `/onboarding` e criava a PRÓPRIA empresa, entrava como conta separada em
   // vez de colaborador, e o convite ficava `pending` para sempre no painel de
   // quem convidou. O e-mail também vai, para o formulário já vir preenchido:
   // a RPC de aceite recusa endereço diferente do convidado, e descobrir isso

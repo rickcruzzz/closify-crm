@@ -67,7 +67,7 @@ export function KanbanBoard({
    * Quantos negócios cada etapa tem no banco.
    *
    * O board carrega no máximo 200 por etapa (0032). Sem este número a coluna
-   * não teria como avisar que há mais — e cortar calado é justamente o defeito
+   * não teria como avisar que há mais, e cortar calado é justamente o defeito
    * que o teto explícito veio substituir.
    */
   totalPorEtapa: Record<DealStage, number>
@@ -102,7 +102,7 @@ export function KanbanBoard({
   }, [])
 
   // Merge seletivo, não substituição: `initialDeals` chega como um array
-  // NOVO (o servidor recria todo DealRow) toda vez que '/kanban' revalida —
+  // NOVO (o servidor recria todo DealRow) toda vez que '/kanban' revalida,
   // inclusive por um updateDealStage que o próprio board acabou de disparar.
   // Trocar a referência de TODO negócio aqui derrubaria o React.memo de
   // DealCard/KanbanColumn e causaria um segundo re-render do board inteiro,
@@ -176,7 +176,7 @@ export function KanbanBoard({
 
     if (!finalStage || finalStage === startStage) return
 
-    // Update otimista já aplicado no dragOver — se a Server Action falhar,
+    // Update otimista já aplicado no dragOver, se a Server Action falhar,
     // desfaz para o estado anterior em vez de deixar a UI mentir sobre o
     // que está persistido no banco.
     const result = await updateDealStage(dealId, finalStage)
@@ -306,7 +306,7 @@ export function KanbanBoard({
           </Select>
 
           {/* Só aparece quando há negócio parado de verdade. Um botão que
-              nunca acende ocupa espaço e ensina a pessoa a ignorá-lo — e num
+              nunca acende ocupa espaço e ensina a pessoa a ignorá-lo, e num
               funil saudável ele deve mesmo ficar escondido. */}
           {quantosParados > 0 && (
             <Button

@@ -1,11 +1,11 @@
-// Trilha C — reproduz a cadeia de createLead (lib/leads/actions.ts:52) como
+// Trilha C, reproduz a cadeia de createLead (lib/leads/actions.ts:52) como
 // chamadas PostgREST separadas: membership check → checagem de plano →
 // contagem de leads (canAddLead) → insert. Medir cada perna isolada é MELHOR
 // que medir a Server Action ponta a ponta pra diagnóstico: a soma mostra o
 // total (create_lead_chain_duration) e cada tag em http_req_duration mostra
-// qual perna pesa mais — achado #5 da auditoria (até 5 queries seriais).
+// qual perna pesa mais, achado #5 da auditoria (até 5 queries seriais).
 //
-// Usa só tokens de workspace Pro (sem teto de 50 leads) — testar o limite do
+// Usa só tokens de workspace Pro (sem teto de 50 leads), testar o limite do
 // Free sob carga sustentada é o papel de race3/race4, não deste cenário de
 // throughput geral.
 import { check, sleep } from 'k6'
@@ -35,7 +35,7 @@ const proTokens = tokens.filter((t) => t.plan === 'pro')
 
 export default function () {
   if (proTokens.length === 0) {
-    console.error('Nenhum token de workspace Pro em tokens.json — c6 precisa de ao menos um.')
+    console.error('Nenhum token de workspace Pro em tokens.json, c6 precisa de ao menos um.')
     return
   }
   const token = proTokens[Math.floor(Math.random() * proTokens.length)]

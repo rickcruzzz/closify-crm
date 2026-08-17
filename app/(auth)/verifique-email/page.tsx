@@ -7,7 +7,7 @@ import { lerEmailPendente } from '@/lib/auth/intencao'
  *
  * Era um beco sem saída: não dizia para onde o e-mail tinha ido e não oferecia
  * nada além de "Entrar". E-mail que cai no spam, ou endereço digitado errado,
- * significava cadastro perdido sem recurso — e tentar de novo esbarra no
+ * significava cadastro perdido sem recurso, e tentar de novo esbarra no
  * "e-mail já existe" do Supabase.
  *
  * O endereço vem do cookie gravado pela `signUp`, não da URL: em querystring

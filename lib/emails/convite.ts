@@ -8,7 +8,7 @@ import { escapeHtml, paragraph, rawParagraph, renderEmail } from '@/lib/emails/l
  * é esta mensagem. Antes era um `<p>` com link azul de navegador.
  *
  * O segundo parágrafo existe porque quem recebe pode não fazer ideia do que é
- * o produto — o convite chega sem contexto, às vezes de um colega que só
+ * o produto, o convite chega sem contexto, às vezes de um colega que só
  * avisou "te mandei lá".
  */
 export function renderConviteEmail(params: {
@@ -32,7 +32,7 @@ export function renderConviteEmail(params: {
           `Você foi convidado para colaborar no workspace <strong style="color:#171717;font-weight:600;">${nome}</strong> no Velo Funil.`,
         ),
         paragraph(
-          'O Velo Funil é o CRM onde o time acompanha leads e negócios num funil compartilhado — sem planilha e sem treinamento.',
+          'O Velo Funil é o CRM onde o time acompanha leads e negócios num funil compartilhado, sem planilha e sem treinamento.',
         ),
       ].join('\n'),
       action: { label: 'Aceitar convite', url: params.inviteUrl },

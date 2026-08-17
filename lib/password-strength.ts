@@ -4,7 +4,7 @@
  * Não é medidor de entropia real (isso exigiria dicionário de senhas
  * vazadas, que é a proteção que fica pendente no painel do Supabase). O
  * objetivo aqui é dar retorno imediato enquanto a pessoa digita, para que ela
- * escolha melhor — não bloquear.
+ * escolha melhor, não bloquear.
  */
 export type NivelSenha = 'fraca' | 'media' | 'forte'
 
@@ -36,7 +36,7 @@ export function avaliarSenha(senha: string): ForcaSenha {
   // A checagem é por PROPORÇÃO, não por simples ocorrência. Antes bastava a
   // senha conter "12345" em qualquer posição para virar fraca, e isso punia
   // senha boa: "Kmtbvn123456" (12 caracteres, três classes) caía para fraca
-  // enquanto "Xyzqwr12" (8 caracteres) passava como média — nota pior para a
+  // enquanto "Xyzqwr12" (8 caracteres) passava como média, nota pior para a
   // senha melhor. Agora só derruba quando o padrão previsível domina a senha,
   // que é quando ele de fato entrega o segredo.
   const padraoObvio = /12345|abcde|qwert|senha|password/i.exec(senha)
@@ -80,16 +80,16 @@ export function avaliarSenha(senha: string): ForcaSenha {
  * Três formas do mesmo caso são reconhecidas, tomando "fulano@gmail.com" como
  * exemplo:
  *
- * 1. a senha igual ao e-mail inteiro — "fulano@gmail.com"
- * 2. a senha igual à parte antes do arroba — "fulano"
- * 3. a senha CONTENDO essa parte — "Fulano#2026"
+ * 1. a senha igual ao e-mail inteiro, "fulano@gmail.com"
+ * 2. a senha igual à parte antes do arroba, "fulano"
+ * 3. a senha CONTENDO essa parte, "Fulano#2026"
  *
  * A terceira é a que mais aparece na prática e a que mais gera dúvida de quem
  * lê o código: uma senha longa parece forte, mas se ela embute o nome de
  * usuário do endereço, é derivada dele.
  *
  * O corte de 4 caracteres evita falso positivo em endereço curto: com
- * "ana@empresa.com", qualquer senha contendo "ana" seria recusada — inclusive
+ * "ana@empresa.com", qualquer senha contendo "ana" seria recusada, inclusive
  * "planejamento", que não tem nada a ver com o endereço.
  */
 export function senhaDerivadaDoEmail(senha: string, email: string | undefined | null): boolean {

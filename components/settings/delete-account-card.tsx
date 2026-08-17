@@ -26,7 +26,7 @@ import { Label } from '@/components/ui/label'
 import { deleteAccount } from '@/lib/workspace/actions'
 
 /**
- * Exclusão de conta — LGPD, art. 18, VI.
+ * Exclusão de conta, LGPD, art. 18, VI.
  *
  * A confirmação exige digitar EXCLUIR em vez de um "tem certeza?": a ação é
  * irreversível e apaga leads e negócios junto, então o custo de um clique

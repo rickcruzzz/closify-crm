@@ -2,7 +2,7 @@
  * Camada de cima da importação: matriz de células + mapeamento → leads.
  *
  * Separada de `lib/leads/csv.ts` porque a planilha em Excel chega já como
- * matriz — o `.xlsx` é lido no navegador — e precisa passar exatamente pela
+ * matriz, o `.xlsx` é lido no navegador, e precisa passar exatamente pela
  * mesma validação do CSV. Um caminho só de validação evita o modo de falha
  * clássico: o formato novo aceitar dado que o antigo recusava.
  *
@@ -35,7 +35,7 @@ export type Mapeamento = Partial<Record<CampoDestino, number>>
 
 /**
  * Cabeçalhos que o mercado usa de verdade. A lista veio de exportação de
- * planilha do Excel, do Google Sheets e do que os concorrentes documentam —
+ * planilha do Excel, do Google Sheets e do que os concorrentes documentam,
  * não de suposição.
  */
 const APELIDOS: Record<CampoDestino, string[]> = {
@@ -62,7 +62,7 @@ export function normalizarTexto(texto: string): string {
  * Chuta o mapeamento a partir do cabeçalho.
  *
  * É só um chute: a tela mostra o resultado e a pessoa corrige. Antes disso o
- * cabeçalho desconhecido abortava o arquivo inteiro — "Razão Social" em vez de
+ * cabeçalho desconhecido abortava o arquivo inteiro, "Razão Social" em vez de
  * "Empresa" e nenhuma linha entrava, sem explicação útil.
  *
  * Casa por igualdade primeiro e só depois por conter, porque "nome" está
@@ -109,7 +109,7 @@ const ETAPAS: Record<LeadStatus, string[]> = {
 }
 
 /**
- * Devolve `null` quando não reconhece — quem chama decide cair em 'novo' e
+ * Devolve `null` quando não reconhece, quem chama decide cair em 'novo' e
  * avisar. Adivinhar a etapa errada move o negócio para "Fechado Ganho" sem
  * ninguém ter vendido nada, e isso mente no dashboard.
  */
@@ -133,7 +133,7 @@ export function normalizarEtapa(bruto: string): LeadStatus | null {
  *
  * Serve de chave de deduplicação quando não há e-mail: "(11) 90000-0000",
  * "11900000000" e "+55 11 90000-0000" são a mesma pessoa, e sem normalizar
- * cada variação viraria um lead diferente — o jeito mais rápido de sujar um
+ * cada variação viraria um lead diferente, o jeito mais rápido de sujar um
  * pipeline recém-importado.
  */
 export function apenasDigitos(bruto: string): string {
@@ -150,7 +150,7 @@ export function apenasDigitos(bruto: string): string {
 export function chaveDeContato(email: string | null, phone: string | null): string | null {
   if (email) return `e:${email.toLowerCase()}`
   const digitos = phone ? apenasDigitos(phone) : ''
-  // Menos de 8 dígitos não é telefone, é resto de célula — não serve de chave.
+  // Menos de 8 dígitos não é telefone, é resto de célula, não serve de chave.
   return digitos.length >= 8 ? `t:${digitos}` : null
 }
 
@@ -170,7 +170,7 @@ export type LinhaPlanilha = {
    * Existe por causa da reimportação: célula em branco não pode apagar dado que
    * já está no CRM. Sem isso, subir de novo uma planilha onde a coluna Empresa
    * está vazia limparia a empresa de todo mundo, e um Valor em branco viraria
-   * R$ 0,00 por cima do valor real — perda silenciosa, do tipo que só aparece
+   * R$ 0,00 por cima do valor real, perda silenciosa, do tipo que só aparece
    * no fechamento do mês.
    */
   preenchidos: CampoDestino[]
@@ -249,7 +249,7 @@ export function interpretarPlanilha(
 
     const chave = chaveDeContato(email || null, phone || null)
     if (!chave) {
-      erros.push(`Linha ${numeroDaLinha}: sem e-mail nem telefone — não há como contatar.`)
+      erros.push(`Linha ${numeroDaLinha}: sem e-mail nem telefone, não há como contatar.`)
       return
     }
 
@@ -275,7 +275,7 @@ export function interpretarPlanilha(
         status = reconhecida
       } else {
         erros.push(
-          `Linha ${numeroDaLinha}: etapa "${etapaBruta}" não reconhecida —` +
+          `Linha ${numeroDaLinha}: etapa "${etapaBruta}" não reconhecida,` +
             ` entrou como "${leadStatusLabels.novo}".`,
         )
       }
@@ -315,7 +315,7 @@ export function contarAvisosDeArquivo(erros: string[]): number {
  * O primeiro valor não-vazio de uma coluna, entre as linhas de corpo.
  *
  * Existe pra tela mostrar "Telefone → Coluna 2 · ex: (11) 98888-7777" ao
- * lado de cada campo mapeado — a diferença entre escolher uma coluna às
+ * lado de cada campo mapeado, a diferença entre escolher uma coluna às
  * cegas (só pelo número ou por um cabeçalho que pode nem existir) e escolher
  * vendo o dado real por trás dela. `null` quando a coluna está vazia em toda
  * linha de corpo, ou o índice não existe.

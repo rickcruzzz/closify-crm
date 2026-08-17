@@ -4,7 +4,7 @@ import { cancelSubscriptionSchema, checkoutSchema } from './billing'
 
 /**
  * O checkout é o ponto onde dinheiro entra. Um documento inválido aqui só era
- * recusado lá no Asaas, devolvendo "Não foi possível iniciar a assinatura" —
+ * recusado lá no Asaas, devolvendo "Não foi possível iniciar a assinatura",
  * mensagem que não diz o que corrigir e faz parecer defeito do sistema.
  */
 

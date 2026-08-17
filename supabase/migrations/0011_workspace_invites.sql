@@ -1,4 +1,4 @@
--- Closify CRM — convites de colaboradores (M13)
+-- Closify CRM, convites de colaboradores (M13)
 -- Aplicar no SQL Editor do Supabase Studio.
 
 -- ============================================================================
@@ -44,12 +44,12 @@ create policy "workspace_invites_insert_admin" on public.workspace_invites
 create policy "workspace_invites_delete_admin" on public.workspace_invites
   for delete using ((select public.is_workspace_admin(workspace_id)));
 
--- Sem policy de select público aqui — "using (true)" deixaria qualquer
+-- Sem policy de select público aqui, "using (true)" deixaria qualquer
 -- usuário autenticado listar/enumerar a tabela inteira de convites (e-mails
 -- de outros workspaces), já que RLS não sabe qual token o client já filtrou
 -- no .eq(), só decide se a QUERY em geral pode ver a LINHA. A leitura por
 -- token vira RPC security definer abaixo, que recebe o token como argumento
--- e só retorna a linha exata — sem exposição de tabela.
+-- e só retorna a linha exata, sem exposição de tabela.
 
 -- ============================================================================
 -- RPC: buscar convite por token (só os campos que a tela de aceite precisa)
@@ -78,7 +78,7 @@ revoke all on function public.get_invite_by_token(uuid) from public;
 grant execute on function public.get_invite_by_token(uuid) to anon, authenticated;
 
 -- ============================================================================
--- RPC: aceitar convite (transação atômica — insere membro + marca convite)
+-- RPC: aceitar convite (transação atômica, insere membro + marca convite)
 -- ============================================================================
 
 create or replace function public.accept_workspace_invite(invite_token uuid)

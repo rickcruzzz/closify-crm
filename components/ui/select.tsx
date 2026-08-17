@@ -42,11 +42,11 @@ function SelectTrigger({
       data-size={size}
       className={cn(
         // `data-[size=default]` precisa bater com a altura de `Input`/`Button`
-        // (`md:h-10`) — ficou em `md:h-8` quando os outros dois foram
+        // (`md:h-10`), ficou em `md:h-8` quando os outros dois foram
         // corrigidos, e o Select passou a renderizar 8px mais baixo que os
         // campos de texto ao lado dele no desktop (Segmento, Estado). O
         // `data-[size=sm]` fica como está, de propósito: é o mesmo padrão de
-        // `icon-sm` no Button — variante compacta pra lista densa, não
+        // `icon-sm` no Button, variante compacta pra lista densa, não
         // deveria acompanhar o tamanho padrão.
         "border-input focus-visible:border-ring focus-visible:ring-ring/50 aria-invalid:border-destructive aria-invalid:ring-destructive/20 data-placeholder:text-muted-foreground dark:bg-input/30 dark:hover:bg-input/50 dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40 flex w-fit items-center justify-between gap-1.5 rounded-lg border bg-transparent py-2 pr-2 pl-2.5 text-sm whitespace-nowrap transition-colors outline-none select-none focus-visible:ring-3 disabled:cursor-not-allowed disabled:opacity-50 aria-invalid:ring-3 data-[size=default]:h-11 data-[size=sm]:h-9 data-[size=sm]:rounded-[min(var(--radius-md),10px)] *:data-[slot=select-value]:line-clamp-1 *:data-[slot=select-value]:flex *:data-[slot=select-value]:items-center *:data-[slot=select-value]:gap-1.5 md:data-[size=default]:h-10 md:data-[size=sm]:h-7 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
         className,

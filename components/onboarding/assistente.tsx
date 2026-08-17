@@ -49,7 +49,7 @@ export function AssistenteDeOnboarding({
   etapaInicial: OnboardingEtapa
   respostasIniciais: RespostasSalvas
   /**
-   * Quem clicou "Assinar Pro" na landing já decidiu — as perguntas de
+   * Quem clicou "Assinar Pro" na landing já decidiu, as perguntas de
    * segmento/modelo de venda/tamanho de equipe são só personalização, não
    * bloqueio. Aqui elas saem do caminho: nome da empresa e direto pro
    * pagamento. Continuam disponíveis depois via checklist de ativação.
@@ -120,7 +120,7 @@ export function AssistenteDeOnboarding({
   }
 
   // O processamento roda uma vez, quando a etapa vira `processando`. Sem a
-  // guarda de `ocupado`, o React em modo estrito chamaria duas vezes — a RPC é
+  // guarda de `ocupado`, o React em modo estrito chamaria duas vezes, a RPC é
   // idempotente e aguentaria, mas gastaria duas escritas por nada.
   const jaProcessou = React.useRef(false)
 
@@ -287,13 +287,13 @@ const SUBTITULOS: Record<OnboardingEtapa, string> = {
   segmento: 'Usamos para deixar os exemplos e os textos com a sua cara.',
   venda: 'Ajuda a entender o que é uma oportunidade no seu negócio.',
   // Antes perguntava "quantas pessoas vão usar o Velo Funil", que soa como
-  // promessa de vaga — e o Free trava em 2 pessoas de verdade
+  // promessa de vaga, e o Free trava em 2 pessoas de verdade
   // (accept_workspace_invite). Quem respondia "6 a 20" só descobria o teto
   // semanas depois, ao tentar convidar a 3ª pessoa, sem ligação nenhuma com
   // o que respondeu aqui. Isto é só perfil do negócio; o aviso do teto
   // fecha essa lacuna de expectativa antes dela virar surpresa.
   equipe:
-    'É só pra personalizar sua experiência. No plano grátis, até 2 pessoas usam o sistema ao mesmo tempo — dá pra ampliar no Pro quando precisar.',
+    'É só pra personalizar sua experiência. No plano grátis, até 2 pessoas usam o sistema ao mesmo tempo, dá pra ampliar no Pro quando precisar.',
   processando: 'Leva alguns segundos.',
 }
 

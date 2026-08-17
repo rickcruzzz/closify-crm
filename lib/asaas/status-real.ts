@@ -28,12 +28,12 @@ export type PagamentoMaisRecente = {
 
 /**
  * Descobre o status real de uma assinatura no Asaas a partir do pagamento
- * mais recente — pro job de reconciliação (`app/api/cron/reconciliar-assinaturas`)
+ * mais recente, pro job de reconciliação (`app/api/cron/reconciliar-assinaturas`)
  * comparar contra `subscriptions.status` no nosso banco.
  *
  * O Asaas não expõe um "status da assinatura" que corresponda 1:1 ao nosso
  * enum; o webhook decide o status a partir do nome do EVENTO
- * (`PAYMENT_RECEIVED`, `PAYMENT_OVERDUE`...). Aqui não há evento, só a API —
+ * (`PAYMENT_RECEIVED`, `PAYMENT_OVERDUE`...). Aqui não há evento, só a API,
  * então a mesma tabela de equivalência é reaplicada em cima do vocabulário
  * de `payment.status`, que é o campo que a API de fato devolve.
  */

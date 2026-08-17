@@ -1,4 +1,4 @@
-// Trilha C — getBoardDeals: busca o board inteiro sem paginação, deliberado
+// Trilha C, getBoardDeals: busca o board inteiro sem paginação, deliberado
 // (dnd-kit precisa de tudo em memória, ver lib/deals/queries.ts:24-28).
 // Quantifica "cresce sem limite" contra os workspaces do grupo "estresse".
 import { check, sleep } from 'k6'
@@ -32,7 +32,7 @@ export default function () {
   check(deals, { '200': (r) => r.status === 200 })
   kanbanBoardFetchDuration.add(deals.timings.duration)
 
-  // getBoardDeals resolve nomes de owner em lote via RPC depois do select —
+  // getBoardDeals resolve nomes de owner em lote via RPC depois do select,
   // reproduz o segundo round-trip real, não só o maior.
   const owners = rpc(
     'get_workspace_member_names',

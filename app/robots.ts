@@ -8,7 +8,7 @@ export default function robots(): MetadataRoute.Robots {
       userAgent: '*',
       allow: '/',
       // Área logada, webhooks e links de convite não têm por que ser
-      // rastreados — e o link de convite carrega um token na URL.
+      // rastreados, e o link de convite carrega um token na URL.
       disallow: [
         '/dashboard',
         '/kanban',

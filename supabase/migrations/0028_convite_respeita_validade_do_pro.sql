@@ -8,12 +8,12 @@
 -- Depois da 0027 isso ficou incoerente com o resto do sistema. A coluna `plan`
 -- é o último valor gravado pelo webhook e não sabe que o período pago venceu;
 -- quem sabe é `pro_vigente()`. Um workspace com Pro vencido, cuja coluna ainda
--- não passou pela sincronização preguiçosa, aceitaria o terceiro membro — e a
+-- não passou pela sincronização preguiçosa, aceitaria o terceiro membro, e a
 -- trigger de leads, que já usa `pro_vigente`, recusaria o lead dele. Duas
 -- regras do mesmo plano respondendo coisas diferentes.
 --
 -- O `2` escrito à mão vai junto. Ele repete `FREE_MEMBER_LIMIT` de
--- lib/plans.ts, e não há como o Postgres ler a constante do TypeScript — mas
+-- lib/plans.ts, e não há como o Postgres ler a constante do TypeScript, mas
 -- dá para ao menos declará-la uma vez aqui, em vez de espalhar o número pelo
 -- corpo da função.
 --

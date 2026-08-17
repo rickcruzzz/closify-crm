@@ -50,7 +50,7 @@ export async function signUp(values: unknown) {
   }
 
   // Guarda ANTES de qualquer chamada de rede, porque todos os caminhos daqui
-  // para baixo terminam em `redirect()`, que lança — não haveria depois.
+  // para baixo terminam em `redirect()`, que lança, não haveria depois.
   //
   // O e-mail entra para a tela seguinte poder dizer para onde mandou e
   // oferecer reenvio. Convite e plano entram porque o link do e-mail de
@@ -70,7 +70,7 @@ export async function signUp(values: unknown) {
       data: { name: parsed.data.name },
       // `/confirmar`, não `/auth/callback`: o template de e-mail (colado no
       // painel do Supabase) monta o link como `{{ .RedirectTo }}?token_hash=
-      // {{ .TokenHash }}&type=signup` — a verificação roda no clique, dentro
+      // {{ .TokenHash }}&type=signup`, a verificação roda no clique, dentro
       // de `/confirmar`, não automaticamente num GET do Supabase. Isso evita
       // que scanner de link de provedor de e-mail consuma o token de uso
       // único antes da pessoa clicar (era exatamente o defeito de antes:
@@ -103,14 +103,14 @@ export async function signUp(values: unknown) {
   }
 
   // Com "Confirm email" ativo, e-mail já cadastrado e confirmado não retorna
-  // erro (proteção anti-enumeration do Supabase) — vem como sucesso com
+  // erro (proteção anti-enumeration do Supabase), vem como sucesso com
   // identities: [] vazio. Redireciona igual ao caso de sucesso real, sem
   // diferenciar mensagem, pra não vazar quais e-mails já têm conta.
   if (data.user && data.user.identities?.length === 0) {
     redirect('/verifique-email')
   }
 
-  // Com confirmação de e-mail ativa, signUp não retorna sessão — o usuário só
+  // Com confirmação de e-mail ativa, signUp não retorna sessão, o usuário só
   // ganha sessão real depois de clicar o link, que cai em /auth/callback.
   if (!data.session) {
     redirect('/verifique-email')
@@ -126,7 +126,7 @@ export async function requestPasswordReset(values: unknown) {
   }
 
   // Limita por e-mail: o alvo do abuso é a caixa de entrada de quem recebe.
-  // Ao estourar, sai pelo MESMO retorno de sucesso do caminho normal — uma
+  // Ao estourar, sai pelo MESMO retorno de sucesso do caminho normal, uma
   // mensagem de "muitas tentativas" diria que aquele endereço tem conta, que
   // é exatamente o que o anti-enumeration abaixo evita.
   if (await excedeuLimite('reset-password', parsed.data.email)) {
@@ -137,12 +137,12 @@ export async function requestPasswordReset(values: unknown) {
   // Aponta direto para a tela, não para `/auth/callback`.
   //
   // O template de e-mail (colado no painel do Supabase) monta o link como
-  // `{{ .RedirectTo }}?token_hash={{ .TokenHash }}&type=recovery` — a
+  // `{{ .RedirectTo }}?token_hash={{ .TokenHash }}&type=recovery`, a
   // verificação (`verifyOtp`) só roda no submit do formulário de nova senha,
   // dentro de `/redefinir-senha`, nunca num GET automático. Sem isso, um
   // scanner de link do provedor de e-mail consumia o token de uso único antes
   // do clique real da pessoa, que caía em "link expirado" sem nunca ter tido
-  // chance — era exatamente o defeito de `.ConfirmationURL`, que verifica no
+  // chance, era exatamente o defeito de `.ConfirmationURL`, que verifica no
   // próprio GET. `/redefinir-senha` também sabe ler o formato antigo em
   // `#access_token=` para e-mails já enviados.
   const { error } = await supabase.auth.resetPasswordForEmail(parsed.data.email, {
@@ -174,18 +174,18 @@ export async function requestPasswordReset(values: unknown) {
  * em `#access_token=`, um fragmento de URL, que nunca é enviado ao servidor.
  * A página lê o fragmento e chama `setSession()` no browser. Uma Server Action
  * só enxerga essa sessão depois que o cookie escrito pelo cliente volta numa
- * requisição nova — uma travessia a mais entre "a pessoa clicou em salvar" e
+ * requisição nova, uma travessia a mais entre "a pessoa clicou em salvar" e
  * "a senha mudou de fato", e a única etapa da cadeia que não dá para observar
  * de fora.
  *
  * O sintoma disso é exatamente o que foi relatado: a pessoa redefine a senha e
- * a antiga continua entrando. Não porque a antiga sobreviveu — o Supabase
- * invalida a senha na hora, verificado contra produção —, mas porque a troca
+ * a antiga continua entrando. Não porque a antiga sobreviveu, o Supabase
+ * invalida a senha na hora, verificado contra produção,, mas porque a troca
  * nunca chegou a acontecer. Nos logs de autenticação apareciam vários
  * `POST /recover` e nenhum `PUT /user`.
  *
  * Fazendo o `updateUser` no cliente, ele roda no mesmo lugar onde a sessão de
- * recuperação acabou de ser criada. Não há travessia, e o erro — se houver —
+ * recuperação acabou de ser criada. Não há travessia, e o erro, se houver,
  * chega direto na tela com o código real.
  */
 export async function limparTentativasDeLogin(email: string) {
@@ -200,7 +200,7 @@ export async function limparTentativasDeLogin(email: string) {
  *
  * Diferente de `updatePassword`, que roda no fluxo de recuperação: aqui a
  * pessoa já está autenticada e está ADICIONANDO um método de acesso, não
- * trocando um existente. Por isso não invalida outras sessões — não há
+ * trocando um existente. Por isso não invalida outras sessões, não há
  * suspeita de conta comprometida neste caminho.
  */
 export async function definirSenhaInicial(values: unknown) {
@@ -253,8 +253,8 @@ export async function signOut() {
 /**
  * Para onde mandar quem acabou de confirmar o e-mail, quando veio de convite.
  *
- * A tela `/confirmar` é Client Component — ela verifica o token no navegador,
- * porque a sessão de recuperação vive lá — e cookie `httpOnly` não é legível
+ * A tela `/confirmar` é Client Component, ela verifica o token no navegador,
+ * porque a sessão de recuperação vive lá, e cookie `httpOnly` não é legível
  * por script. Daí esta ponte mínima: devolve o caminho ou `null`, sem expor o
  * token para o JavaScript da página.
  */
@@ -268,7 +268,7 @@ export async function destinoDoConvite(): Promise<string | null> {
  *
  * `/verifique-email` era beco sem saída: não dizia para onde o e-mail tinha
  * ido e não tinha como tentar de novo. E-mail que cai no spam, ou endereço
- * digitado errado, significava cadastro perdido sem recurso — a pessoa teria
+ * digitado errado, significava cadastro perdido sem recurso, a pessoa teria
  * que criar outra conta, e aí o Supabase devolve "e-mail já existe".
  *
  * O destinatário sai do cookie gravado no `signUp`, nunca de parâmetro do
@@ -283,7 +283,7 @@ export async function reenviarConfirmacao() {
   }
 
   // Mesmo limitador do login e da recuperação de senha, por e-mail e não por
-  // IP — o alvo é o endereço, e IP atrás de NAT é compartilhado.
+  // IP, o alvo é o endereço, e IP atrás de NAT é compartilhado.
   if (await excedeuLimite('reenviar-confirmacao', email)) {
     return { error: 'Aguarde alguns minutos antes de pedir outro e-mail.' }
   }
@@ -311,7 +311,7 @@ export async function reenviarConfirmacao() {
  *
  * Grava em `user_metadata.name`, que é de onde a RPC
  * `get_workspace_member_names` lê o nome mostrado na lista de colaboradores e
- * como autor das atividades — mudar aqui reflete em todo lugar que exibe
+ * como autor das atividades, mudar aqui reflete em todo lugar que exibe
  * "quem fez o quê", sem tabela de perfil separada.
  */
 export async function updateProfile(values: unknown) {

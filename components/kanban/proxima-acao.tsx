@@ -24,7 +24,7 @@ const iconePorTipo: Record<ActivityType, typeof Phone> = {
  * painel de detalhe.
  *
  * Sem tarefa aberta, avisa. Negócio sem próximo passo é o que morre calado no
- * funil, e essa é a informação mais valiosa que o card pode dar — mais até do
+ * funil, e essa é a informação mais valiosa que o card pode dar, mais até do
  * que uma data.
  */
 export function ProximaAcao({ task }: { task: ProximaAcaoRow | undefined }) {

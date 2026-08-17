@@ -42,7 +42,7 @@ import {
 import { importarPlanilha, type ResultadoImportacao } from '@/lib/leads/actions'
 
 // Valor entre aspas de propósito: o separador do modelo é vírgula e o decimal
-// brasileiro também — sem aspas, "2500,00" viraria duas colunas.
+// brasileiro também, sem aspas, "2500,00" viraria duas colunas.
 const MODELO =
   'Nome,Telefone,E-mail,Empresa,Valor,Etapa\n' +
   'Maria Silva,(11) 90000-0000,maria@empresa.com.br,Acme Serviços,"2500,00",Proposta enviada\n' +
@@ -69,7 +69,7 @@ export function ImportLeadsDialog({
   const [lendo, setLendo] = React.useState(false)
   const [enviando, setEnviando] = React.useState(false)
   const [resultado, setResultado] = React.useState<ResultadoImportacao | null>(null)
-  // Quantas linhas do topo do arquivo NÃO são dado nem cabeçalho — planilha
+  // Quantas linhas do topo do arquivo NÃO são dado nem cabeçalho, planilha
   // de ERP costuma ter linha de título, linha em branco, ou logo antes da
   // linha real de colunas. 0 é o caso comum (cabeçalho já na linha 1).
   const [pularLinhas, setPularLinhas] = React.useState(0)
@@ -113,7 +113,7 @@ export function ImportLeadsDialog({
       let lida: string[][]
       if (ehExcel) {
         // Carregado sob demanda: `.xlsx` é um ZIP com XML dentro e a biblioteca
-        // que lê isso pesa ~1 MB. Quem importa CSV — ou nem importa — não paga
+        // que lê isso pesa ~1 MB. Quem importa CSV, ou nem importa, não paga
         // por ela no bundle.
         //
         // `/browser` e não a raiz: o pacote não expõe export raiz, e a versão
@@ -126,7 +126,7 @@ export function ImportLeadsDialog({
         const { readSheet } = await import('read-excel-file/browser')
         // `readSheet` e não o export padrão: na versão 9 o padrão devolve
         // TODAS as abas da pasta de trabalho. Importar sempre a primeira é
-        // previsível — a pessoa sabe qual aba deixou na frente.
+        // previsível, a pessoa sabe qual aba deixou na frente.
         const linhas = await readSheet(new Blob([bytes]), 1)
         lida = linhas.map((linha) =>
           linha.map((celula) => (celula === null || celula === undefined ? '' : String(celula))),
@@ -172,7 +172,7 @@ export function ImportLeadsDialog({
     })
   }
 
-  // A matriz "de verdade" começa depois das linhas puladas — linha de
+  // A matriz "de verdade" começa depois das linhas puladas, linha de
   // título, linha em branco, o que a planilha de ERP tiver antes do
   // cabeçalho real. Tudo daqui pra baixo (prévia, envio) usa ESTA matriz, não
   // a crua: é o que faz "pular N linhas" corrigir a importação inteira sem
@@ -184,7 +184,7 @@ export function ImportLeadsDialog({
   const cabecalho = React.useMemo(() => matrizEfetiva[0] ?? [], [matrizEfetiva])
   const corpo = React.useMemo(() => matrizEfetiva.slice(1), [matrizEfetiva])
 
-  // Recalculada sempre que a linha de cabeçalho muda — não é a `mapeamento`
+  // Recalculada sempre que a linha de cabeçalho muda, não é a `mapeamento`
   // que o usuário pode ter ajustado à mão, só serve pra saber se a linha
   // ATUAL tem cara de cabeçalho reconhecível. Se não tiver nenhum campo
   // aqui, é sinal forte de que a linha de cabeçalho real é outra.
@@ -197,13 +197,13 @@ export function ImportLeadsDialog({
     const limitado = Math.max(0, Math.min(novo, Math.max(0, matriz.length - 2)))
     setPularLinhas(limitado)
     // A pessoa não deveria precisar remapear tudo de novo só porque a linha
-    // de cabeçalho mudou — se a nova linha tiver título reconhecível, o
+    // de cabeçalho mudou, se a nova linha tiver título reconhecível, o
     // mapeamento automático já resolve.
     setMapeamento(sugerirMapeamento(matriz.slice(limitado)[0] ?? []))
   }
 
   // A mesma função que o servidor roda, só que aqui para mostrar a prévia. O
-  // servidor NÃO confia nisto — ele reinterpreta a matriz do zero.
+  // servidor NÃO confia nisto, ele reinterpreta a matriz do zero.
   const previa = React.useMemo(
     () => interpretarPlanilha(matrizEfetiva, mapeamento, CSV_MAX_LINHAS),
     [matrizEfetiva, mapeamento],
@@ -306,7 +306,7 @@ export function ImportLeadsDialog({
                               i === pularLinhas && 'text-foreground font-medium',
                             )}
                           >
-                            {celula || '—'}
+                            {celula || '-'}
                           </td>
                         ))}
                       </tr>
@@ -379,7 +379,7 @@ export function ImportLeadsDialog({
                           ))}
                         </SelectContent>
                       </Select>
-                      {/* Amostra do dado real por trás da coluna escolhida — é o
+                      {/* Amostra do dado real por trás da coluna escolhida, é o
                           que transforma "escolher por número e torcer" em
                           "escolher e confirmar visualmente" antes de importar. */}
                       {indiceSelecionado !== undefined && (
@@ -425,7 +425,7 @@ export function ImportLeadsDialog({
             {previa.linhas.length > 0 && (
               <div className="border-border rounded-lg border p-3">
                 <p className="mb-2 text-xs font-medium">
-                  Prévia — {previa.linhas.length} linha(s) prontas
+                  Prévia, {previa.linhas.length} linha(s) prontas
                 </p>
                 <ul className="text-muted-foreground flex flex-col gap-1 text-xs">
                   {previa.linhas.slice(0, 3).map((linha) => (
@@ -500,7 +500,7 @@ export function ImportLeadsDialog({
                   <li>{resultado.duplicados} já estavam cadastrados e foram ignorados.</li>
                 )}
                 {resultado.ignorados > 0 && (
-                  <li>{resultado.ignorados} linha(s) com erro — veja a lista abaixo.</li>
+                  <li>{resultado.ignorados} linha(s) com erro, veja a lista abaixo.</li>
                 )}
                 {resultado.foraDoLimite > 0 && (
                   <li className="text-foreground">

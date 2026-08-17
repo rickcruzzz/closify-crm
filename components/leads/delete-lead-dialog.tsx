@@ -24,7 +24,7 @@ export function DeleteLeadDialog({
   open: boolean
   onOpenChange: (open: boolean) => void
   lead?: LeadRow
-  /** true enquanto `deleteLead` está em voo — trava os dois botões para o
+  /** true enquanto `deleteLead` está em voo, trava os dois botões para o
    * clique duplo não disparar a exclusão duas vezes. */
   pending?: boolean
   onConfirm: (id: string) => void

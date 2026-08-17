@@ -15,7 +15,7 @@ describe('validarCpf', () => {
   })
 
   it('recusa sequência de dígitos iguais', () => {
-    // Passa na conta do dígito verificador, mas não é CPF de ninguém — a
+    // Passa na conta do dígito verificador, mas não é CPF de ninguém, a
     // Receita e o Asaas recusam.
     expect(validarCpf('111.111.111-11')).toBe(false)
     expect(validarCpf('00000000000')).toBe(false)

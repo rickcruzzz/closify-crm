@@ -1,10 +1,10 @@
 /**
- * Eventos de ativação — preparados, não instalados.
+ * Eventos de ativação, preparados, não instalados.
  *
  * O projeto tem `@vercel/analytics`, que mede PAGEVIEW. Nenhuma das perguntas
  * que importam aqui é responder quantas visitas a tela teve: o que interessa é
  * quantos que criam conta chegam ao primeiro lead. Isso é evento de produto, e
- * hoje não existe ferramenta para isso — o CLAUDE.md chegou a afirmar um
+ * hoje não existe ferramenta para isso, o CLAUDE.md chegou a afirmar um
  * PostHog que não está no `package.json`.
  *
  * Em vez de instalar uma plataforma externa só por causa desta entrega, os
@@ -30,7 +30,7 @@ export type EventoDeAtivacao =
  *
  * Nome de lead, e-mail e telefone não entram aqui: no dia em que estes eventos
  * forem para uma ferramenta de terceiro, o que já estiver sendo passado vai
- * junto — e revisar isso depois, com os pontos de chamada espalhados, é como
+ * junto, e revisar isso depois, com os pontos de chamada espalhados, é como
  * a informação vaza. Só id de workspace e escolhas do próprio onboarding.
  */
 export type PropriedadesDoEvento = {

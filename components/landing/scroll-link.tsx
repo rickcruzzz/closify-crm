@@ -5,7 +5,7 @@ import * as React from 'react'
 import { cn } from '@/lib/utils'
 
 /**
- * Tempo de espera entre o clique e o início da rolagem — dá espaço pro
+ * Tempo de espera entre o clique e o início da rolagem, dá espaço pro
  * `scale-95` ser percebido antes da tela se mover. Curto o bastante pra não
  * parecer travado, longo o bastante pra registrar como intencional.
  */
@@ -16,7 +16,7 @@ type Props = React.ComponentPropsWithoutRef<'a'> & { href: `#${string}` }
 /**
  * Link de âncora pra mesma página, com feedback de clique antes de rolar.
  *
- * Sem isto, `href="#secao"` pula instantâneo — sem `scroll-behavior: smooth`
+ * Sem isto, `href="#secao"` pula instantâneo, sem `scroll-behavior: smooth`
  * em lugar nenhum do CSS e sem nenhum sinal de que o clique foi recebido,
  * numa página que se vende como acabamento premium.
  *
@@ -24,13 +24,13 @@ type Props = React.ComponentPropsWithoutRef<'a'> & { href: `#${string}` }
  * dura só o tempo físico do botão pressionado, que costuma ser mais curto que
  * o delay e cortaria a animação pela metade antes da rolagem começar.
  *
- * Aceita e compõe um `onClick` externo de propósito — necessário pro menu
+ * Aceita e compõe um `onClick` externo de propósito, necessário pro menu
  * mobile, onde o alvo real é a prop `render` de um `SheetClose` (base-ui),
  * que injeta o próprio `onClick` (fechar o menu) no elemento passado.
  *
  * `forwardRef`: o mesmo `SheetClose`/Base UI também injeta um `ref` no
  * elemento passado via `render` (usa pra gerenciar foco ao fechar o
- * diálogo) — sem encaminhar pro `<a>` real, o React avisa "Function
+ * diálogo), sem encaminhar pro `<a>` real, o React avisa "Function
  * components cannot be given refs" e o foco não volta pra onde devia.
  */
 export const ScrollLink = React.forwardRef<HTMLAnchorElement, Props>(function ScrollLink(

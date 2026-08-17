@@ -1,4 +1,4 @@
--- Velo Funil — onboarding: estado por pessoa, dados da empresa, criação idempotente
+-- Velo Funil, onboarding: estado por pessoa, dados da empresa, criação idempotente
 --
 -- Quem cria conta hoje atravessa uma tela ("Nome da empresa") e cai no
 -- dashboard sem contexto. Esta migration é a base do onboarding: onde a pessoa
@@ -6,7 +6,7 @@
 -- Configurações passa a editar.
 
 -- ============================================================================
--- 1. Estado do onboarding — da PESSOA, não da empresa
+-- 1. Estado do onboarding, da PESSOA, não da empresa
 -- ============================================================================
 --
 -- Tabela própria em vez de colunas em `workspaces` porque o dono do dado é
@@ -21,7 +21,7 @@ create table public.onboarding_state (
     constraint onboarding_status_valido
       check (status in ('not_started', 'in_progress', 'skipped', 'completed')),
 
-  -- Onde parou. Nulo para quem não começou ou já terminou — é o que permite
+  -- Onde parou. Nulo para quem não começou ou já terminou, é o que permite
   -- voltar exatamente ao passo certo depois de fechar o navegador.
   etapa text
     constraint onboarding_etapa_valida
@@ -36,7 +36,7 @@ create table public.onboarding_state (
   -- `jsonb` e não uma coluna por pergunta: o pedido é que novas perguntas
   -- entrem sem mexer na arquitetura, e coluna por pergunta obrigaria uma
   -- migration a cada uma. O teto de tamanho existe porque isto é escrito pelo
-  -- PostgREST com a chave pública — sem ele, dá para encher o banco com um
+  -- PostgREST com a chave pública, sem ele, dá para encher o banco com um
   -- único update.
   respostas jsonb not null default '{}'::jsonb
     constraint onboarding_respostas_no_teto
@@ -47,7 +47,7 @@ create table public.onboarding_state (
 );
 
 -- ============================================================================
--- 2. RLS de DONO — a primeira do projeto que não é por workspace
+-- 2. RLS de DONO, a primeira do projeto que não é por workspace
 -- ============================================================================
 --
 -- Todas as outras tabelas usam `is_workspace_member`. Aqui a linha pertence à
@@ -96,7 +96,7 @@ create trigger onboarding_state_updated_at
 --
 -- Os tetos de tamanho não são capricho de schema. `workspaces` é escrita pelo
 -- PostgREST com a chave pública, e a política `workspaces_update` autoriza o
--- admin a gravar — sem teto, um admin (ou quem pegasse a sessão dele) enche o
+-- admin a gravar, sem teto, um admin (ou quem pegasse a sessão dele) enche o
 -- banco com um campo de texto.
 
 alter table public.workspaces
@@ -149,7 +149,7 @@ alter table public.workspaces
 -- A trigger `proteger_colunas_do_workspace` (0027) NÃO precisa mudar: ela
 -- guarda `plan`, `id`, `created_by` e `created_at`, e nenhuma coluna acima
 -- entra nessa lista. As novas ficam sob `workspaces_update`, que já exige
--- `is_workspace_admin(id)` — ou seja, membro comum não edita dados da empresa,
+-- `is_workspace_admin(id)`, ou seja, membro comum não edita dados da empresa,
 -- e isso passa a valer sem uma linha a mais.
 
 -- ============================================================================
@@ -165,7 +165,7 @@ alter table public.workspaces
 -- confirmação. Daí esta função.
 --
 -- `security invoker` de propósito, ao contrário da 0007. A criação continua
--- delegada à RPC definer que já existe — é ela que precisa do privilégio para
+-- delegada à RPC definer que já existe, é ela que precisa do privilégio para
 -- inserir em `workspace_members`. O UPDATE aqui passa pela RLS normal, então
 -- quem decide se um membro comum pode reescrever os dados da empresa é a
 -- política `workspaces_update`, não um `if` meu. Menos lugar onde eu preciso
@@ -208,7 +208,7 @@ begin
   -- branco não pode apagar o que já foi respondido. Sem isso, voltar um passo
   -- e avançar de novo limparia o segmento.
   --
-  -- Se quem chama não for admin, a RLS recusa e o update atinge zero linha —
+  -- Se quem chama não for admin, a RLS recusa e o update atinge zero linha,
   -- silenciosamente, que é o comportamento certo: o colaborador entra na
   -- empresa que já existe sem reescrever nada dela.
   update public.workspaces set
@@ -226,7 +226,7 @@ revoke all on function public.garantir_workspace_do_onboarding(text, text, text,
 grant execute on function public.garantir_workspace_do_onboarding(text, text, text, text) to authenticated;
 
 -- ============================================================================
--- 5. Backfill — ninguém que já usa pode acordar vendo onboarding
+-- 5. Backfill, ninguém que já usa pode acordar vendo onboarding
 -- ============================================================================
 --
 -- Medido antes de escrever: 14 contas, 10 com empresa, 4 sem.
@@ -240,7 +240,7 @@ grant execute on function public.garantir_workspace_do_onboarding(text, text, te
 -- quer.
 --
 -- Quem se cadastrar depois desta migration não ganha linha aqui. O app trata
--- linha ausente como `not_started` — assim a leitura de toda página não paga
+-- linha ausente como `not_started`, assim a leitura de toda página não paga
 -- uma escrita, e a linha nasce no primeiro passo respondido.
 
 insert into public.onboarding_state (user_id, status, tour_status)

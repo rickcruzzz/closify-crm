@@ -1,6 +1,6 @@
 import { createHmac, timingSafeEqual } from 'node:crypto'
 
-// Lógica pura (assina/verifica uma string), sem rede — mesmo critério de
+// Lógica pura (assina/verifica uma string), sem rede, mesmo critério de
 // crypto.ts pra não levar `server-only` e continuar testável no Vitest.
 
 export type EstadoOAuth = {
@@ -28,7 +28,7 @@ function segredo(): string {
  * Sem isso, o callback do Google/Meta é um CSRF clássico: qualquer site
  * conseguiria forçar o navegador de uma vítima a completar uma "conexão" que
  * o atacante controla. A assinatura garante que o `state` que volta no
- * callback é exatamente o que este servidor emitiu — não algo forjado.
+ * callback é exatamente o que este servidor emitiu, não algo forjado.
  */
 export function assinarEstado(dados: Omit<EstadoOAuth, 'criadoEm'>): string {
   const payload: EstadoOAuth = { ...dados, criadoEm: Date.now() }
@@ -40,13 +40,13 @@ export function assinarEstado(dados: Omit<EstadoOAuth, 'criadoEm'>): string {
 /**
  * Verifica e decodifica o `state` recebido no callback.
  *
- * `timingSafeEqual` na comparação — mesma razão do `isValidToken` do webhook
+ * `timingSafeEqual` na comparação, mesma razão do `isValidToken` do webhook
  * do Asaas: comparação ingênua de string (`===`) vaza quantos bytes batem
  * por diferença de tempo de resposta.
  *
  * Devolve `null` (nunca lança) para qualquer coisa fora do esperado: formato
  * errado, assinatura que não bate, ou state emitido há mais de 10 minutos.
- * Quem chama decide o que fazer com `null` — normalmente, recusar a conexão
+ * Quem chama decide o que fazer com `null`, normalmente, recusar a conexão
  * e pedir para tentar de novo.
  */
 export function verificarEstado(token: string): EstadoOAuth | null {

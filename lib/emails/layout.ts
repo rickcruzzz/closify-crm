@@ -6,12 +6,12 @@ import { CONTROLADOR } from '@/lib/legal'
  * Serve aos dois caminhos de envio: os e-mails disparados pelo código (convite
  * de colaborador, via Resend) e os templates do Supabase Auth (confirmação de
  * cadastro, recuperação de senha, magic link), que são gerados a partir daqui e
- * colados no painel — ver `supabase/email-templates/README.md`.
+ * colados no painel, ver `supabase/email-templates/README.md`.
  *
  * **Sem `server-only` de propósito.** É geração de string pura, sem rede e sem
  * `next/*`, então cabe no critério que `vitest.config.mts` declara para
  * `lib/**`. Marcar `server-only` quebraria a importação no Vitest e a regra de
- * escape abaixo perderia seus testes — que é justamente o que não pode
+ * escape abaixo perderia seus testes, que é justamente o que não pode
  * acontecer.
  *
  * ## HTML de e-mail não é HTML de web
@@ -21,12 +21,12 @@ import { CONTROLADOR } from '@/lib/legal'
  * não são: tables aninhadas, CSS inline em cada elemento, atributos de
  * apresentação (`bgcolor`, `width`) ao lado do `style`, e um bloco VML para o
  * botão. `<style>` no `<head>` é descartado por vários clientes, então só
- * carrega a media query — o layout precisa ficar legível sem ela.
+ * carrega a media query, o layout precisa ficar legível sem ela.
  */
 
 /** Cor da marca. É `--primary` (`oklch(0.5 0.13 195)`) convertido para sRGB. */
 const MARCA = '#00787A'
-/** Tom escuro da marca, para a borda do botão — dá volume sem sombra. */
+/** Tom escuro da marca, para a borda do botão, dá volume sem sombra. */
 const MARCA_ESCURA = '#006669'
 const TEXTO = '#171717'
 const TEXTO_SECUNDARIO = '#525252'
@@ -37,7 +37,7 @@ const FUNDO_CARD = '#FFFFFF'
 
 /**
  * Sem webfont. O app usa Geist, mas webfont em e-mail só funciona no Apple
- * Mail — e um fallback inconsistente entre clientes fica pior do que uma
+ * Mail, e um fallback inconsistente entre clientes fica pior do que uma
  * stack de sistema consistente. O Outlook cai em Segoe UI, próxima do Geist
  * em largura.
  */
@@ -50,7 +50,7 @@ const FONTE =
  * Nome de workspace é texto livre digitado pelo admin e vai dentro de um
  * e-mail entregue a quem ainda nem tem conta. Sem escape, um admin consegue
  * injetar link e markup e usar o remetente legítimo do Velo Funil para
- * phishing — o destinatário vê um domínio verificado, com SPF e DKIM válidos.
+ * phishing, o destinatário vê um domínio verificado, com SPF e DKIM válidos.
  *
  * Esta função vivia em `lib/workspace/actions.ts`; migrou para cá porque a
  * regra pertence ao módulo de e-mail, não a uma action específica.
@@ -65,14 +65,14 @@ export function escapeHtml(value: string): string {
 }
 
 /**
- * Escapa valores destinados a atributos HTML — e **só** o necessário para
+ * Escapa valores destinados a atributos HTML, e **só** o necessário para
  * fechar injeção de atributo.
  *
  * Diferente de `escapeHtml`, não toca em `&`, `{` nem `}`. Isso é deliberado e
  * crítico: os templates do Supabase usam `href="{{ .ConfirmationURL }}"`, em
  * sintaxe Go template. Codificar as chaves impediria a substituição da
  * variável, e codificar `&` para `&amp;` corromperia a query string dos tokens
- * de autenticação. Nos dois casos o resultado é o mesmo — link morto em todos
+ * de autenticação. Nos dois casos o resultado é o mesmo, link morto em todos
  * os e-mails de autenticação, o defeito mais caro que este arquivo pode ter.
  *
  * Fechar `"`, `<` e `>` já basta para impedir que um valor escape do atributo.
@@ -90,7 +90,7 @@ export function paragraph(text: string): string {
 
 /**
  * Parágrafo a partir de HTML já confiável, para quando se quer `<strong>`
- * intencional no meio da frase. **Não escapa** — quem chama é responsável por
+ * intencional no meio da frase. **Não escapa**, quem chama é responsável por
  * passar dados de usuário já tratados com `escapeHtml`.
  */
 export function rawParagraph(html: string): string {
@@ -113,7 +113,7 @@ export type EmailLayoutOptions = {
   /** Título principal, dentro do card. */
   title: string
   /**
-   * Corpo em HTML já confiável — monte com `paragraph()` (que escapa) ou
+   * Corpo em HTML já confiável, monte com `paragraph()` (que escapa) ou
    * `rawParagraph()` (que não escapa).
    */
   bodyHtml: string
@@ -126,7 +126,7 @@ export type EmailLayoutOptions = {
    * O editor do painel é um CodeMirror que engasga com linhas muito longas e
    * rejeita o comentário condicional aninhado (`<!--[if !mso]><!-- -->`), o
    * truque usado para esconder do Outlook a versão não-VML do botão. O
-   * sintoma é o botão "Save" não responder — sem mensagem de erro.
+   * sintoma é o botão "Save" não responder, sem mensagem de erro.
    *
    * Com esta opção o botão perde só o VML, ou seja, os cantos arredondados no
    * Outlook desktop: o `bgcolor` da célula continua valendo, então ele segue
@@ -148,10 +148,10 @@ export type EmailLayoutOptions = {
  *
  * O quadrado colorido com a letra `V` é a leitura secundária do `LogoMark` de
  * `components/branding/logo.tsx` (as três camadas convergentes formam um funil
- * e um V). SVG inline não é opção — Gmail, Outlook e Yahoo removem.
+ * e um V). SVG inline não é opção, Gmail, Outlook e Yahoo removem.
  *
  * O `border-radius` do quadrado é ignorado pelo Outlook, onde ele fica reto.
- * Aceitável: um VML por 36px de canto não compensa. No botão, sim — ver
+ * Aceitável: um VML por 36px de canto não compensa. No botão, sim, ver
  * abaixo.
  */
 function lockup(): string {
@@ -166,7 +166,7 @@ function lockup(): string {
  *
  * A cor de fundo vai no `<td>`, não no `<a>`: alguns clientes descartam
  * `background-color` em âncoras. O `color:#ffffff` fica no `<a>` e é
- * obrigatório — texto sem cor declarada herda do cliente e some no modo
+ * obrigatório, texto sem cor declarada herda do cliente e some no modo
  * escuro.
  *
  * O bloco `<!--[if mso]>` existe porque, sem ele, o Outlook desktop ignora
@@ -207,8 +207,8 @@ ${simples}
  * Rodapé montado a partir de `CONTROLADOR` (`lib/legal.ts`).
  *
  * Sem literal duplicada: aqueles dados já são centralizados por motivo
- * jurídico — documento que contradiz o sistema vira prova contra o controlador
- * — e o rodapé passa a acompanhar automaticamente qualquer mudança de razão
+ * jurídico, documento que contradiz o sistema vira prova contra o controlador
+ *, e o rodapé passa a acompanhar automaticamente qualquer mudança de razão
  * social ou CNPJ.
  */
 function rodape(): string {
@@ -240,7 +240,7 @@ export function renderEmail(options: EmailLayoutOptions): string {
    * prévia da caixa de entrada com o começo do conteúdo visível, e o que se lê
    * na lista vira "Velo Funil V Confirme seu...".
    *
-   * Eram 60 repetições, o que produzia uma única linha de 1.200 caracteres —
+   * Eram 60 repetições, o que produzia uma única linha de 1.200 caracteres,
    * o bastante para travar o editor do painel do Supabase. 12 já empurram a
    * prévia para além do limite que o Gmail exibe.
    */

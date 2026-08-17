@@ -1,7 +1,7 @@
--- Velo Funil — logo da empresa no Supabase Storage
+-- Velo Funil, logo da empresa no Supabase Storage
 --
 -- O projeto nunca usou Storage: nenhuma linha de código o toca. Isto abre uma
--- superfície de segurança nova, e a regra é a mesma das tabelas — arquivo de
+-- superfície de segurança nova, e a regra é a mesma das tabelas, arquivo de
 -- uma empresa não pode ser lido nem sobrescrito por outra.
 --
 -- (Existe um bucket `vvv` neste projeto, privado, com um arquivo, criado à mão
@@ -12,7 +12,7 @@
 -- ============================================================================
 --
 -- PRIVADO de propósito. Bucket público serve o arquivo a quem souber a URL, e
--- a URL contém o id do workspace — que aparece em resposta de API para
+-- a URL contém o id do workspace, que aparece em resposta de API para
 -- qualquer membro. Bastaria alguém colecionar ids para baixar a marca de todo
 -- mundo. A exibição passa a usar URL assinada, com validade curta.
 --
@@ -37,7 +37,7 @@ on conflict (id) do nothing;
 --
 -- O caminho é `{workspace_id}/{uuid}.{ext}`, e a política precisa do primeiro
 -- segmento como uuid. `(storage.foldername(name))[1]::uuid` direto estoura
--- quando o caminho não tem esse formato — e quem escolhe o caminho é quem
+-- quando o caminho não tem esse formato, e quem escolhe o caminho é quem
 -- envia o arquivo, então o formato torto é a regra, não a exceção.
 --
 -- Esta função devolve `null` nesse caso, e `is_workspace_member(null)` é
@@ -67,7 +67,7 @@ end;
 $$;
 
 -- ============================================================================
--- 3. Políticas — ler é de membro, escrever é de admin
+-- 3. Políticas, ler é de membro, escrever é de admin
 -- ============================================================================
 --
 -- Mesma divisão que `workspaces_update` já faz: o colaborador vê a marca da
@@ -90,7 +90,7 @@ create policy "logos_insert" on storage.objects
   );
 
 -- `using` e `with check` juntos no update: sem o `with check`, um admin podia
--- RENOMEAR o próprio arquivo para dentro da pasta de outra empresa — a
+-- RENOMEAR o próprio arquivo para dentro da pasta de outra empresa, a
 -- checagem de `using` olha a linha ANTES da mudança e aprovaria.
 drop policy if exists "logos_update" on storage.objects;
 create policy "logos_update" on storage.objects

@@ -15,7 +15,7 @@ export type WorkspaceDoUsuario = { id: string; name: string; plan: WorkspacePlan
 //
 // Também devolve `workspaces`: o `DashboardLayout` precisa da lista com nome e
 // plano para o seletor da barra lateral, e antes buscava `workspace_members` +
-// `workspaces` de novo, por conta própria — a mesma tabela lida duas vezes na
+// `workspaces` de novo, por conta própria, a mesma tabela lida duas vezes na
 // mesma navegação. Agora é uma consulta só, aqui.
 export const getCurrentUserAndWorkspace = cache(async () => {
   const supabase = await createClient()

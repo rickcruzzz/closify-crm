@@ -24,12 +24,12 @@ export function SidebarContent({
       <WorkspaceSwitcher workspaces={workspaces} activeId={activeWorkspaceId} />
       <SidebarNav onNavigate={onNavigate} />
       {/* `mt-auto`: empurra o rodapé de conta pro fim físico do sidebar, não
-          logo depois do último item do menu — em telas com poucos itens
+          logo depois do último item do menu, em telas com poucos itens
           (a maioria) sobrava um vão vazio grande entre o menu e o rodapé.
           Seguro fazer isso porque app/(dashboard)/layout.tsx já trava a
-          altura do sidebar em `h-dvh` no container PAI — o `<aside>` nunca
+          altura do sidebar em `h-dvh` no container PAI, o `<aside>` nunca
           estica além da tela independente de como o espaço é distribuído
-          aqui dentro. Segundo acesso a "Sair", além do avatar no topbar —
+          aqui dentro. Segundo acesso a "Sair", além do avatar no topbar,
           quem não repara no canto superior direito encontra aqui, no
           rodapé fixo, mesmo padrão do Linear/Notion. */}
       <div className="border-sidebar-border mt-auto border-t pt-3">

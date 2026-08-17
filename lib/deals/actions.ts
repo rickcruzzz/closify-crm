@@ -53,7 +53,7 @@ export async function createDeal(values: unknown) {
   }
 
   // lead_id não é validado pela RLS de deals (a policy só confere
-  // workspace_id da linha) — sem checar aqui, seria possível vincular um
+  // workspace_id da linha), sem checar aqui, seria possível vincular um
   // deal a um lead de outro workspace, só sabendo o UUID.
   const { data: lead } = await supabase
     .from('leads')
@@ -87,7 +87,7 @@ export async function createDeal(values: unknown) {
 }
 
 export async function updateDealStage(dealId: string, stage: DealStage) {
-  // Server Actions são endpoints HTTP expostos — o tipo DealStage só é
+  // Server Actions são endpoints HTTP expostos, o tipo DealStage só é
   // garantido em tempo de compilação para chamadas feitas pelo próprio
   // client gerado pelo Next. Uma requisição forjada direto ao endpoint
   // pode mandar qualquer string; sem essa checagem, o insert falharia só
@@ -122,7 +122,7 @@ export async function updateDealStage(dealId: string, stage: DealStage) {
 /**
  * Exclui um negócio do workspace ativo.
  *
- * Faltava: até aqui um negócio criado por engano só podia mudar de etapa —
+ * Faltava: até aqui um negócio criado por engano só podia mudar de etapa,
  * ficava no funil para sempre, inflando o valor do pipeline no dashboard.
  *
  * `.eq('workspace_id')` junto do `.eq('id')` não é redundância com a RLS: a

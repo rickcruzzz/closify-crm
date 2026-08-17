@@ -9,12 +9,12 @@ type ResultadoToken = { accessToken: string; externalId: string | null } | { err
  * Devolve um access_token utilizável, renovando primeiro se estiver a menos
  * de 2 minutos de expirar.
  *
- * Um lugar só decide "esse token ainda serve?" — usado tanto por
+ * Um lugar só decide "esse token ainda serve?", usado tanto por
  * `testarConexaoIntegracao` quanto pelas ações de workflow (agendar no
  * Calendar, enviar e-mail pelo Gmail). Duplicar essa lógica em cada chamador
  * é como cada um acaba divergindo um dia sem ninguém notar.
  *
- * Também devolve `external_id` (ex.: calendar id do Google) — poupa quem
+ * Também devolve `external_id` (ex.: calendar id do Google), poupa quem
  * chama de fazer uma segunda consulta só pra pegar essa coluna da mesma
  * linha que esta função já leu.
  */

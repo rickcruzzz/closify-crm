@@ -26,7 +26,7 @@ const APP_DESCRIPTION =
   'CRM com pipeline de vendas em Kanban para PMEs de serviço no Brasil. Simples como planilha, premium como software líder.'
 
 export const metadata: Metadata = {
-  // metadataBase resolve URLs relativas de OG/Twitter para absolutas — sem
+  // metadataBase resolve URLs relativas de OG/Twitter para absolutas, sem
   // ele o Next avisa em build e os previews de link quebram.
   metadataBase: new URL(appUrl()),
   title: {
@@ -95,7 +95,7 @@ export default function RootLayout({
           <Toaster />
           {/* Vercel Analytics: pageview e Web Vitals, sem cookie e sem
               identificar visitante. O wrapper local higieniza a URL antes do
-              envio — o pacote manda o caminho REAL junto do padrão da rota, e
+              envio, o pacote manda o caminho REAL junto do padrão da rota, e
               `/convite/<token>` carrega uma credencial de acesso. */}
           <Analytics />
           <MetaPixel />

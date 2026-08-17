@@ -16,7 +16,7 @@ import { rotuloDoPreset, type PresetDePeriodo } from '@/lib/dashboard/periodo'
 
 const PRESETS: PresetDePeriodo[] = ['7d', '30d', 'mes', 'ano']
 
-// `YYYY-MM-DD` direto pra `DD/MM/YYYY` sem passar por `Date` — `new
+// `YYYY-MM-DD` direto pra `DD/MM/YYYY` sem passar por `Date`, `new
 // Date('2026-01-01')` é meia-noite UTC, e formatar isso no navegador de
 // alguém num fuso negativo (Brasil) pode voltar um dia. String pura não tem
 // esse risco.
@@ -104,7 +104,7 @@ export function PeriodFilter({
         </DropdownMenuTrigger>
         {/* `min-w` em vez de `w` fixo: nunca fica mais estreito que o
             necessário pros dois campos de data, mas pode crescer. `max-w`
-            com `calc(100vw...)` é o teto de segurança — não importa quanto o
+            com `calc(100vw...)` é o teto de segurança, não importa quanto o
             cálculo de "espaço disponível" do popup decidir (a coluna
             principal do layout tem overflow-y-auto, e por regra da própria
             especificação CSS isso faz o eixo X também virar não-visible,

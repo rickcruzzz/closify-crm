@@ -20,7 +20,7 @@ export async function createClient() {
               cookieStore.set(name, value, options),
             )
           } catch {
-            // setAll chamado de um Server Component sem middleware de refresh —
+            // setAll chamado de um Server Component sem middleware de refresh,
             // ignorável se a sessão for refrescada no middleware.
           }
         },

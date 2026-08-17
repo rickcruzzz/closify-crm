@@ -4,7 +4,7 @@ import type { TaskBucket, TaskRow } from '@/lib/tasks/types'
  * O fuso do usuário do Velo Funil, não o do servidor.
  *
  * A Vercel roda em UTC. `new Date().toISOString().slice(0, 10)` numa função de
- * servidor devolve o dia UTC — que às 21h de São Paulo já é o dia SEGUINTE.
+ * servidor devolve o dia UTC, que às 21h de São Paulo já é o dia SEGUINTE.
  * Sem isto, toda tarefa marcada para hoje à noite apareceria no grupo "Depois",
  * que é o pior lugar possível para ela.
  */
@@ -21,7 +21,7 @@ const formatador = new Intl.DateTimeFormat('en-US', {
  * O dia do calendário em São Paulo, como `YYYY-MM-DD`.
  *
  * Via `formatToParts` e não `format`, porque o formato de saída de `format`
- * depende dos dados de locale do runtime — e o Node do servidor e o navegador
+ * depende dos dados de locale do runtime, e o Node do servidor e o navegador
  * do usuário não são o mesmo runtime. As partes vêm nomeadas e não dependem
  * de ordem nenhuma.
  */
@@ -74,7 +74,7 @@ export function classificar(task: TaskRow, agora: Date): TaskBucket {
  * menos.
  *
  * Tarefa concluída não pertence a grupo nenhum e é descartada aqui também,
- * apesar de a consulta já filtrar — esta função é a única regra escrita sobre
+ * apesar de a consulta já filtrar, esta função é a única regra escrita sobre
  * o assunto, e quem chamar com a lista errada merece o resultado certo.
  */
 export function agruparPorPrazo(

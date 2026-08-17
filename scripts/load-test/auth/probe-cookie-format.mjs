@@ -1,7 +1,7 @@
 // Preflight OBRIGATÓRIO antes de qualquer carga da Trilha B: confirma que o
 // cookie montado por mint-tokens.mjs é aceito de verdade pela app rodando
 // localmente (next build && next start). Se isto falhar, os cenários b1-b4
-// vão medir "sempre redirecionado pro /login", não o custo real das páginas —
+// vão medir "sempre redirecionado pro /login", não o custo real das páginas,
 // um resultado tecnicamente coletado e completamente inútil.
 //
 // Uso (com a app já rodando em outro terminal):
@@ -20,7 +20,7 @@ try {
 }
 
 if (tokens.length === 0) {
-  console.error('tokens.json está vazio — mint-tokens.mjs não logou ninguém.')
+  console.error('tokens.json está vazio, mint-tokens.mjs não logou ninguém.')
   process.exit(1)
 }
 

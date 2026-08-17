@@ -1,4 +1,4 @@
--- Velo Funil — teto de leads do Free: 25 → 300.
+-- Velo Funil, teto de leads do Free: 25 → 300.
 --
 -- Pesquisa de mercado (13/08/2026, agente market-researcher, 2 rodadas)
 -- comparou o Free contra 11 concorrentes brasileiros de ticket baixo:
@@ -6,11 +6,11 @@
 -- sempre; Agendor dá 1.500 negócios; Bitrix24 e RD Station dão
 -- contato/negócio ILIMITADO no free. O teto de 25 (baixado de 50→25 na
 -- migration 0037, sem dado de mercado na época) era, de longe, o mais
--- apertado do mercado mapeado — desvantagem competitiva visível pra
+-- apertado do mercado mapeado, desvantagem competitiva visível pra
 -- qualquer dono de PME comparando lado a lado.
 --
 -- 300 é o topo da faixa recomendada pela pesquisa ("~200-300, aproximando
--- do mais restrito sem igualar os mais generosos") — continua abaixo do
+-- do mais restrito sem igualar os mais generosos"), continua abaixo do
 -- Zoho Bigin, longe dos ilimitados, então o Free segue mais limitado que
 -- o mercado, só deixa de ser o pior por larga margem. A pressão de
 -- conversão do Free passa a vir majoritariamente das integrações

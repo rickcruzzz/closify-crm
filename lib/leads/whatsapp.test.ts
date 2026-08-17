@@ -17,7 +17,7 @@ describe('linkDoWhatsApp', () => {
   })
 
   // "0 21 11 98888-7777" é o formato de discagem com operadora. O 0 e o
-  // código sobram — mas o 0 na frente é o único que dá para descartar sem
+  // código sobram, mas o 0 na frente é o único que dá para descartar sem
   // adivinhar, então o resto vira tamanho inválido e não vira link errado.
   it('descarta o 0 de operadora à esquerda', () => {
     expect(linkDoWhatsApp('011988887777')).toBe('https://wa.me/5511988887777')

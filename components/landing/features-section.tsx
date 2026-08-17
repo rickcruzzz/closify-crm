@@ -26,7 +26,7 @@ const features: Feature[] = [
   {
     title: 'Funil visual, arrasta e solta',
     description:
-      'Veja cada cliente em potencial numa etapa da venda e arraste o card conforme a conversa avança — sem montar tabela, sem fórmula.',
+      'Veja cada cliente em potencial numa etapa da venda e arraste o card conforme a conversa avança, sem montar tabela, sem fórmula.',
     icon: KanbanSquare,
     accent: {
       text: 'text-blue-500 dark:text-blue-400',
@@ -48,7 +48,7 @@ const features: Feature[] = [
     delay: 130,
   },
   {
-    // A importação existia desde antes e não aparecia na landing — é a
+    // A importação existia desde antes e não aparecia na landing, é a
     // resposta para "vou ter que digitar tudo de novo?", a objeção que mais
     // trava a troca da planilha.
     title: 'Importação de planilha',
@@ -101,7 +101,7 @@ const features: Feature[] = [
   {
     title: 'Controle por colaborador',
     description:
-      'Escolha o que cada pessoa da equipe pode ver e fazer — dono da empresa vê tudo, colaborador vê só o que precisa.',
+      'Escolha o que cada pessoa da equipe pode ver e fazer, dono da empresa vê tudo, colaborador vê só o que precisa.',
     icon: ShieldCheck,
     accent: {
       text: 'text-red-500 dark:text-red-400',
@@ -139,7 +139,7 @@ export function FeaturesSection() {
             // na última linha do grid. Sem span, a célula vazia ao lado pinta
             // a cor de fundo do grid (o truque de `bg-border`+`gap-px` logo
             // acima) e vira um retângulo escuro sem nada dentro. O último
-            // card ocupa a linha inteira nos dois breakpoints em vez disso —
+            // card ocupa a linha inteira nos dois breakpoints em vez disso,
             // resolve sem depender de quantos cards existirem no futuro.
             const ultimo = i === features.length - 1
 

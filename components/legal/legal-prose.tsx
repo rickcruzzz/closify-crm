@@ -62,7 +62,7 @@ export function LegalList({ children }: { children: React.ReactNode }) {
 
 /**
  * Saída no fim do documento. Quem terminou de ler um texto longo está no fim
- * da página, não no topo — obrigar a rolar tudo de volta para achar o link do
+ * da página, não no topo, obrigar a rolar tudo de volta para achar o link do
  * cabeçalho é atrito à toa.
  */
 export function LegalBackLink() {

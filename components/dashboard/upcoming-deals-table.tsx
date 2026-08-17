@@ -18,12 +18,12 @@ import {
 import { Badge } from '@/components/ui/badge'
 import { formatBRL } from '@/lib/deals/metrics'
 
-// Devolve `null` sempre que não há prazo confiável para mostrar — quem chama
+// Devolve `null` sempre que não há prazo confiável para mostrar, quem chama
 // exibe "Sem prazo". Antes a função aceitava qualquer string e calculava em
 // cima do que `new Date()` devolvesse, o que produzia dois defeitos visíveis:
 //
 // 1) String vazia ou fora do formato vira `Invalid Date`, e todo o cálculo
-//    vira `NaN` — a célula mostrava "vence em NaN dias".
+//    vira `NaN`, a célula mostrava "vence em NaN dias".
 // 2) Ano de dois dígitos ou zerado ("0026-08-09") é remapeado por
 //    `new Date(ano, ...)` para 1900+ano, e a diferença virava dezenas de
 //    milhares de dias: o famoso "atrasado há 46.000 dias".
@@ -42,7 +42,7 @@ function dueDateInfo(dueDate: string | null | undefined) {
 
   // Constrói em horário local de propósito: `due_date` é `date` no Postgres
   // (sem fuso), e `new Date('2026-08-09')` seria interpretado como meia-noite
-  // UTC — em UTC-3 isso desloca a comparação contra a meia-noite local.
+  // UTC, em UTC-3 isso desloca a comparação contra a meia-noite local.
   const due = new Date(ano, mes - 1, dia)
 
   const dataReal =

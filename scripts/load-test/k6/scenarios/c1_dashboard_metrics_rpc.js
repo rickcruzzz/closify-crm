@@ -1,4 +1,4 @@
-// Trilha C — o padrão BOM do dashboard: get_dashboard_counts e
+// Trilha C, o padrão BOM do dashboard: get_dashboard_counts e
 // get_open_pipeline_value agregam no Postgres (RPC), não trazem linha por
 // linha pro client. Baseline de comparação para c2 (achado #1).
 import { check, sleep } from 'k6'

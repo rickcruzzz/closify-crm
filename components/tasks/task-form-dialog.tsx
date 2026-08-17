@@ -41,7 +41,7 @@ function paraCampoLocal(data: Date): string {
   return local.toISOString().slice(0, 16)
 }
 
-/** Amanhã às 9h — o padrão que quase todo follow-up de venda quer. */
+/** Amanhã às 9h, o padrão que quase todo follow-up de venda quer. */
 function sugestaoDePrazo(): string {
   const amanha = new Date()
   amanha.setDate(amanha.getDate() + 1)
@@ -72,7 +72,7 @@ export function TaskFormDialog({
   onSubmit: (values: TaskFormValues) => void | Promise<void>
   members: WorkspaceMember[]
   currentUserId: string
-  /** A tarefa nasce presa a um lead ou a um negócio — o banco exige um dos dois. */
+  /** A tarefa nasce presa a um lead ou a um negócio, o banco exige um dos dois. */
   leadId?: string | null
   dealId?: string | null
   /** Presente: o diálogo edita em vez de criar. */
@@ -224,7 +224,7 @@ export function TaskFormDialog({
 
           {/* O erro do refine `tasks_alvo_minimo` pousa em `leadId`. Ele só
               aparece se a tarefa chegar sem lead e sem negócio, o que a tela
-              não deixa acontecer — mas se acontecer, a pessoa precisa ler o
+              não deixa acontecer, mas se acontecer, a pessoa precisa ler o
               motivo em vez de ver o botão não fazer nada. */}
           {errors.leadId && (
             <p role="alert" className="text-destructive text-xs">

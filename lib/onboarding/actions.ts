@@ -73,7 +73,7 @@ export async function iniciarOnboarding() {
  * Salva um passo e devolve onde a pessoa deve estar agora.
  *
  * Cada passo grava ANTES de avançar. É o que faz a retomada funcionar: fechou
- * o navegador no meio, volta na etapa certa em vez de recomeçar — e o §15 do
+ * o navegador no meio, volta na etapa certa em vez de recomeçar, e o §15 do
  * pedido é justamente esse.
  *
  * A empresa só é tocada na etapa final, não a cada passo. A RPC é idempotente
@@ -92,7 +92,7 @@ export async function salvarPasso(values: unknown) {
   const { etapa, nomeEmpresa, segmento, modeloVenda, tamanhoEquipe } = parsed.data
 
   // As respostas ficam no `jsonb` até a etapa de processamento. Se a pessoa
-  // desistir no meio, nada foi escrito na empresa — e uma empresa com nome
+  // desistir no meio, nada foi escrito na empresa, e uma empresa com nome
   // preenchido e mais nada seria pior do que empresa nenhuma.
   const { error: erroResposta } = await sessao.supabase.from('onboarding_state').upsert(
     {
@@ -130,7 +130,7 @@ const finalizarSchema = z.object({
  * A etapa de processamento: garante a empresa e fecha o onboarding.
  *
  * Trabalho real, sem espera artificial. Se a RPC responder em 300 ms, a tela
- * avança em 300 ms — o pedido é explícito quanto a isso, e barra de progresso
+ * avança em 300 ms, o pedido é explícito quanto a isso, e barra de progresso
  * fingida é o tipo de coisa que faz um produto parecer amador na segunda vez
  * que a pessoa vê.
  */
@@ -146,7 +146,7 @@ export async function finalizarOnboarding(values: unknown) {
   // Quem chegou por convite NÃO cria empresa própria.
   //
   // Esta guarda existe em `createWorkspace` desde o commit 3779d72, e o
-  // onboarding é um caminho novo até a mesma criação — sem repeti-la aqui, o
+  // onboarding é um caminho novo até a mesma criação, sem repeti-la aqui, o
   // defeito voltaria por outra porta: a pessoa convidada terminaria o
   // assistente com uma empresa só dela, o convite ficaria `pending` para
   // sempre, e como o workspace ativo é o MAIS ANTIGO ela cairia na empresa
@@ -201,7 +201,7 @@ export async function finalizarOnboarding(values: unknown) {
 
   // De onde essa empresa veio, se veio de campanha rastreada. Update comum
   // (não a RPC), porque `utm_*` não está na lista de colunas protegidas por
-  // `proteger_colunas_do_workspace` (0027) — só plan/id/created_by/created_at
+  // `proteger_colunas_do_workspace` (0027), só plan/id/created_by/created_at
   // são travadas contra edição direta. Engole erro de propósito: não é
   // motivo pra travar a criação da empresa por causa de metadado de marketing.
   let atribuicao: AtribuicaoUtm | null = null
@@ -227,10 +227,10 @@ export async function finalizarOnboarding(values: unknown) {
     }
   }
 
-  // "CompleteRegistration" pro Meta — evento intermediário entre o clique no
+  // "CompleteRegistration" pro Meta, evento intermediário entre o clique no
   // anúncio e o eventual Purchase (que só existe se a pessoa virar Pro,
   // podendo levar dias por Pix/boleto). Dispara pra TODA conta, Free ou não
-  // — o sinal que importa aqui é "chegou até nascer a empresa", não plano.
+  //, o sinal que importa aqui é "chegou até nascer a empresa", não plano.
   // Engole erro de propósito, mesmo motivo do e-mail: telemetria não pode
   // travar a criação da conta.
   try {
@@ -261,7 +261,7 @@ export async function finalizarOnboarding(values: unknown) {
   revalidatePath('/', 'layout')
 
   // A empresa acabou de nascer; se a pessoa veio da landing querendo o Pro,
-  // este é o momento de levá-la ao pagamento — sem isto ela cai no dashboard
+  // este é o momento de levá-la ao pagamento, sem isto ela cai no dashboard
   // em Free e tem que descobrir Configurações → Cobrança sozinha. A intenção
   // é consumida aqui: deixá-la no cookie faria toda criação de empresa
   // futura desviar para o checkout.
@@ -279,7 +279,7 @@ export async function finalizarOnboarding(values: unknown) {
  *
  * Não bloqueia nada e não apaga progresso: quem respondeu duas etapas e pulou
  * mantém as respostas no `jsonb`. E `skipped` nunca volta a mostrar a tela de
- * boas-vindas — o pedido é explícito em não repetir isso a cada login.
+ * boas-vindas, o pedido é explícito em não repetir isso a cada login.
  */
 export async function pularOnboarding() {
   const sessao = await abrirSessao()

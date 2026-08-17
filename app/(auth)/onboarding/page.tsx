@@ -18,7 +18,7 @@ export const metadata: Metadata = {
 /**
  * O assistente de 4 perguntas.
  *
- * A tela antiga — só "nome da empresa" — virou o passo 1 daqui. As respostas
+ * A tela antiga, só "nome da empresa", virou o passo 1 daqui. As respostas
  * ficam no `jsonb` de `onboarding_state` até a etapa de processamento; a
  * empresa só é criada no fim, pela RPC idempotente. Quem desiste no meio não
  * deixa uma empresa com o nome preenchido e mais nada dentro.
@@ -49,7 +49,7 @@ export default async function OnboardingPage() {
     .eq('user_id', user.id)
     .maybeSingle()
 
-  // O `jsonb` é escrito pela própria pessoa e pode conter qualquer coisa —
+  // O `jsonb` é escrito pela própria pessoa e pode conter qualquer coisa,
   // é uma tabela alcançável pelo PostgREST com a chave pública. Ler campo a
   // campo, conferindo o tipo, em vez de confiar no formato.
   const cru = (linha?.respostas ?? {}) as Record<string, unknown>
@@ -69,7 +69,7 @@ export default async function OnboardingPage() {
     !estado.etapa || estado.etapa === 'processando' ? 'empresa' : estado.etapa
 
   // Quem já decidiu pagar não precisa das outras 3 perguntas antes de ver a
-  // tela de cobrança — só o nome da empresa, o mínimo pra criar o workspace.
+  // tela de cobrança, só o nome da empresa, o mínimo pra criar o workspace.
   // O resto do onboarding (segmento, modelo de venda, tamanho de equipe)
   // continua disponível depois, pelo checklist de ativação.
   const atalhoPro = (await lerPlanoDesejado()) === 'pro'

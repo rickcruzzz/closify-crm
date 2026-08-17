@@ -1,5 +1,5 @@
-// Trilha B — cookie real batendo em /kanban. getBoardDeals carrega o board
-// inteiro sem paginação (deliberado, dnd-kit precisa de tudo em memória) —
+// Trilha B, cookie real batendo em /kanban. getBoardDeals carrega o board
+// inteiro sem paginação (deliberado, dnd-kit precisa de tudo em memória),
 // contra os workspaces do grupo "estresse" isso é o pior caso plausível.
 import http from 'k6/http'
 import { check, sleep } from 'k6'
@@ -17,7 +17,7 @@ export const options = {
 
 export default function () {
   // metade das iterações contra um workspace normal, metade contra um do
-  // grupo "estresse" (3-8 mil deals) — mistura o caso comum com o pior caso.
+  // grupo "estresse" (3-8 mil deals), mistura o caso comum com o pior caso.
   const useEstresse = Math.random() < 0.5
   const estresse = useEstresse ? estresseTenant() : null
   const token = estresse ? estresse.token : randomToken()

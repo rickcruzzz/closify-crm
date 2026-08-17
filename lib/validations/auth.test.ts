@@ -11,7 +11,7 @@ import {
  * Estes testes existem por causa de um bug real: `resetPasswordSchema` ganhou
  * `confirmPassword` e a tela de redefinição não foi atualizada. O resolver
  * falhava num campo que a página não renderizava, o erro não tinha onde
- * aparecer e o submit nunca disparava — o botão "Salvar nova senha" ficou
+ * aparecer e o submit nunca disparava, o botão "Salvar nova senha" ficou
  * inerte, sem mensagem, trancando fora da conta quem esquecia a senha.
  *
  * O caso `senhas diferentes apontam o erro para confirmPassword` é o guarda:
@@ -69,7 +69,7 @@ describe('resetPasswordSchema', () => {
   })
 
   // Regressão direta do bug: sem `confirmPassword` o parse falha. Se este
-  // teste passar a falhar, é sinal de que o schema mudou — e a tela precisa
+  // teste passar a falhar, é sinal de que o schema mudou, e a tela precisa
   // mudar junto.
   it('exige confirmPassword; a tela precisa renderizar esse campo', () => {
     const r = resetPasswordSchema.safeParse({ password: 'NovaSenha#2026' })

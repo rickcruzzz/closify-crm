@@ -1,14 +1,14 @@
 // Sem `server-only` de propósito, mesmo critério de lib/emails/layout.ts:
 // é lógica pura (cifra/decifra uma string, sem rede, sem `next/*`), e
 // `server-only` quebraria a importação no Vitest. A garantia de nunca correr
-// no browser não vem deste import — vem de quem chama: só Server Actions e
+// no browser não vem deste import, vem de quem chama: só Server Actions e
 // route handlers de integração leem `INTEGRATIONS_ENCRYPTION_KEY`, e essa
 // variável não tem prefixo `NEXT_PUBLIC_`, então nem chegaria cifrada no
 // bundle do client por engano.
 import { createCipheriv, createDecipheriv, randomBytes } from 'node:crypto'
 
 const ALGORITMO = 'aes-256-gcm'
-// 12 bytes é o tamanho de IV recomendado para GCM — o padrão da própria
+// 12 bytes é o tamanho de IV recomendado para GCM, o padrão da própria
 // documentação do Node, e o que evita o modo "IV maior" que muda a
 // derivação interna do GHASH.
 const TAMANHO_IV = 12
@@ -30,12 +30,12 @@ function chave(): Buffer {
  * Cifra um token antes de gravar em `integration_connections`.
  *
  * O resultado vai para uma coluna `bytea`. PostgREST lê e aceita bytea em
- * JSON no formato hexadecimal do próprio Postgres (`\x...`) — é o que
+ * JSON no formato hexadecimal do próprio Postgres (`\x...`), é o que
  * `to_json(bytea)` já produz na leitura, então usar o mesmo formato na
  * escrita evita qualquer conversão a mais entre app e banco.
  *
  * Layout do payload: IV (12 bytes) + tag de autenticação (16 bytes) +
- * texto cifrado, concatenados — um valor só, sem precisar de coluna extra
+ * texto cifrado, concatenados, um valor só, sem precisar de coluna extra
  * para IV/tag.
  */
 export function cifrar(textoPlano: string): string {
@@ -50,7 +50,7 @@ export function cifrar(textoPlano: string): string {
 /**
  * Decifra um valor lido de `access_token_enc`/`refresh_token_enc`.
  *
- * Só roda em Server Action ou route handler com a service role — a coluna
+ * Só roda em Server Action ou route handler com a service role, a coluna
  * nem chega ao client `authenticated` (revoke por coluna na migration 0034).
  * `setAuthTag` faz a verificação de integridade: um payload adulterado (ou
  * cifrado com outra chave) estoura aqui, não devolve lixo em silêncio.

@@ -1,5 +1,5 @@
 // Config compartilhada por todo cenário k6. Falha alto e cedo se faltar
-// variável — melhor um erro claro no início do que métricas de "erro 100%"
+// variável, melhor um erro claro no início do que métricas de "erro 100%"
 // no meio de uma execução de 20 minutos.
 export const BASE_URL = __ENV.BASE_URL || 'http://localhost:3000'
 export const SUPABASE_URL = __ENV.SUPABASE_URL
@@ -12,7 +12,7 @@ if (!SUPABASE_ANON_KEY) {
   throw new Error('SUPABASE_ANON_KEY não definido. Passe com -e SUPABASE_ANON_KEY=...')
 }
 
-// Perfis de carga — ver docs/load-test/plano-de-teste.md pra rationale de
+// Perfis de carga, ver docs/load-test/plano-de-teste.md pra rationale de
 // cada estágio. `smoke` é o default deliberado: rodar qualquer cenário sem
 // passar -e PROFILE não deve acidentalmente lançar 1000 VUs.
 const PROFILES = {
@@ -60,7 +60,7 @@ export function currentProfile() {
   return profile
 }
 
-// Think time realista — sem isso um VU dispara requisições em loop fechado,
+// Think time realista, sem isso um VU dispara requisições em loop fechado,
 // que não é comportamento humano e infla artificialmente o throughput
 // medido. 1-3s cobre "ler a tela antes de clicar em algo".
 export function thinkTime(min = 1, max = 3) {

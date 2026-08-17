@@ -1,5 +1,5 @@
 // Semeia o projeto Supabase de STAGING com workspaces/usuários/leads/deals
-// sintéticos pro teste de carga. Nunca aponta pra produção — falha alto se
+// sintéticos pro teste de carga. Nunca aponta pra produção, falha alto se
 // a URL não vier de scripts/load-test/.env.staging.
 //
 // Uso:
@@ -7,7 +7,7 @@
 //   node --env-file=scripts/load-test/.env.staging scripts/load-test/seed/seed.mjs --scale=full
 //
 // IDs são gerados no cliente (randomUUID) pra não precisar de round-trip de
-// select após cada insert — mesmo padrão que o próprio schema usa
+// select após cada insert, mesmo padrão que o próprio schema usa
 // (gen_random_uuid() como default), só que decidido aqui em vez de no banco.
 import { randomUUID, randomBytes } from 'node:crypto'
 import { writeFileSync, mkdirSync } from 'node:fs'

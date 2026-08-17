@@ -5,7 +5,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 /**
  * O esqueleto de `/perfil`.
  *
- * A tela espera duas idas ao Supabase — a sessão e as identidades, que dizem
+ * A tela espera duas idas ao Supabase, a sessão e as identidades, que dizem
  * se a pessoa entrou por e-mail ou pelo Google. Sem isto, o clique em "Meu
  * perfil" fica sem resposta visível até as duas voltarem.
  *

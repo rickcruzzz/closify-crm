@@ -5,7 +5,7 @@ import { escapeHtml, paragraph, rawParagraph, renderEmail } from '@/lib/emails/l
  *
  * Existia um silêncio no momento mais importante do produto: a pessoa pagava e
  * não recebia nada do Velo Funil. O único contato era a fatura do próprio
- * Asaas, que traz a razão social do MEI e não a marca — quem paga por Pix, à
+ * Asaas, que traz a razão social do MEI e não a marca, quem paga por Pix, à
  * noite, ficava sem nenhuma confirmação de que o acesso tinha sido liberado.
  *
  * Isso importa mais aqui do que em qualquer outro e-mail porque o Pro é
@@ -29,7 +29,7 @@ export function renderPagamentoConfirmadoEmail(params: {
      * HTML. Escapar faria "Silva & Cia" virar "Silva &amp; Cia" na lista da
      * caixa de entrada.
      */
-    subject: 'Seu plano Pro está ativo — Velo Funil',
+    subject: 'Seu plano Pro está ativo, Velo Funil',
     html: renderEmail({
       preheader: `Pagamento de ${valor} confirmado. O Pro já está liberado.`,
       title: 'Pagamento confirmado',

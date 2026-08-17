@@ -10,7 +10,7 @@ import { stageAccent } from '@/lib/deals/stage-colors'
  * Prévia do pipeline real, para a landing.
  *
  * A página vendia "pipeline visual Kanban" sem mostrar um. O único visual era
- * um resumo em barras — informativo, mas não parecido com a tela que a pessoa
+ * um resumo em barras, informativo, mas não parecido com a tela que a pessoa
  * vai usar, e a dúvida "como isso se parece de verdade?" ficava sem resposta
  * até depois do cadastro.
  *
@@ -19,24 +19,24 @@ import { stageAccent } from '@/lib/deals/stage-colors'
  * componente real: `DealCard` depende de `useSortable`, que arrastaria o
  * dnd-kit inteiro para o bundle da landing por um bloco que ninguém arrasta.
  *
- * As três primeiras etapas bastam — as seis não caberiam legíveis, e o que se
+ * As três primeiras etapas bastam, as seis não caberiam legíveis, e o que se
  * quer comunicar é o formato, não o funil completo.
  */
 const ETAPAS_VISIVEIS: DealStage[] = ['novo', 'contato_realizado', 'proposta_enviada']
 
 /**
- * Os títulos do mock seguem "Serviço — Empresa"; a empresa sai daí em vez de
+ * Os títulos do mock seguem "Serviço, Empresa"; a empresa sai daí em vez de
  * uma tabela de leads fictícios só para isto. Se o formato mudar, o card
- * simplesmente não mostra a linha da empresa — nada quebra.
+ * simplesmente não mostra a linha da empresa, nada quebra.
  */
 function empresaDoTitulo(titulo: string) {
-  const partes = titulo.split('—')
+  const partes = titulo.split(',')
   return partes.length > 1 ? partes[partes.length - 1]!.trim() : ''
 }
 
 /** Só o serviço, sem a empresa que já aparece na linha de baixo. */
 function servicoDoTitulo(titulo: string) {
-  return titulo.split('—')[0]!.trim()
+  return titulo.split(',')[0]!.trim()
 }
 
 function formatarBRL(valor: number) {
@@ -71,7 +71,7 @@ export function KanbanPreview() {
     <div
       // `aria-hidden`: é ilustração do produto, não conteúdo. Um leitor de tela
       // anunciando 6 cards de negócios fictícios atrapalharia mais do que
-      // ajudaria — o que a seção comunica já está no texto ao lado.
+      // ajudaria, o que a seção comunica já está no texto ao lado.
       aria-hidden
       className="border-border/50 bg-card overflow-hidden rounded-2xl border shadow-2xl"
     >

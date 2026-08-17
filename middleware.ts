@@ -7,7 +7,7 @@ export async function middleware(request: NextRequest) {
 }
 
 // Lista explícita em vez de "tudo menos assets". O matcher antigo cobria `/`,
-// então toda visita à landing — que é estática — pagava um `auth.getUser()`
+// então toda visita à landing, que é estática, pagava um `auth.getUser()`
 // contra o Supabase antes de sair o primeiro byte de HTML: ~275ms de TTFB
 // medidos em produção, por nada.
 //
@@ -33,7 +33,7 @@ export const config = {
     '/convite/:path*',
     // Mesmo motivo: a sessão de recuperação vem do `/auth/callback` e precisa
     // do refresh de cookie do `updateSession` enquanto a pessoa escolhe a nova
-    // senha. Continua FORA de `isProtectedPath` de propósito — mandar para
+    // senha. Continua FORA de `isProtectedPath` de propósito, mandar para
     // `/login` quem chega com a sessão de recovery quebraria o próprio fluxo.
     '/redefinir-senha',
   ],

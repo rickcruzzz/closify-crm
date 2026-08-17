@@ -6,14 +6,14 @@
 --
 -- Motivo: o banco de produção acumulou workspaces de depuração e contas de
 -- teste durante o desenvolvimento. Nada disso é dado de cliente, mas apagar é
--- irreversível — daí a separação por nível em vez de um `delete` só.
+-- irreversível, daí a separação por nível em vez de um `delete` só.
 --
 -- Todas as tabelas filhas (leads, deals, activities, workspace_members,
 -- workspace_invites, subscriptions) têm `on delete cascade` para
 -- `workspaces`, então remover o workspace leva o resto junto.
 
 -- ============================================================================
--- NÍVEL 1 — risco zero: workspaces órfãos, sem nenhum membro e sem nenhum dado
+-- NÍVEL 1, risco zero: workspaces órfãos, sem nenhum membro e sem nenhum dado
 -- ============================================================================
 --
 -- Sobraram de tentativas de depurar a criação de workspace. Não têm membro
@@ -36,7 +36,7 @@ order by w.created_at;
 -- where not exists (select 1 from public.workspace_members m where m.workspace_id = w.id);
 
 -- ============================================================================
--- NÍVEL 2 — contas sintéticas de teste (@closify.dev)
+-- NÍVEL 2, contas sintéticas de teste (@closify.dev)
 -- ============================================================================
 --
 -- Workspaces cujos únicos membros usam e-mail @closify.dev, criado por mim
@@ -66,7 +66,7 @@ order by w.name;
 -- delete from auth.users where email like '%@closify.dev';
 
 -- ============================================================================
--- NÍVEL 3 — NÃO APAGUE SEM DECIDIR: contas com e-mail de pessoa real
+-- NÍVEL 3, NÃO APAGUE SEM DECIDIR: contas com e-mail de pessoa real
 -- ============================================================================
 --
 -- Estes têm e-mail de gente de verdade (inclusive o seu). Alguns têm nome de
@@ -85,7 +85,7 @@ where u.email not like '%@closify.dev'
 order by u.email, w.created_at;
 
 -- ============================================================================
--- ITEM SEPARADO — "Agência Nova Era" tem Pro vitalício de graça
+-- ITEM SEPARADO, "Agência Nova Era" tem Pro vitalício de graça
 -- ============================================================================
 --
 -- Veio do `0002_seed.sql`, que rodou em produção: o workspace nasceu com
@@ -116,7 +116,7 @@ where w.plan = 'pro';
 --   and asaas_subscription_id is null;
 
 -- ============================================================================
--- PREVENÇÃO — impedir que o seed volte a rodar em produção
+-- PREVENÇÃO, impedir que o seed volte a rodar em produção
 -- ============================================================================
 --
 -- A causa raiz é o `0002_seed.sql` ter sido aplicado no banco de produção.

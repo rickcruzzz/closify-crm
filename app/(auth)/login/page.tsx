@@ -89,7 +89,7 @@ export default function LoginPage() {
 
         {/* A mensagem é a mesma para senha errada e para e-mail sem conta, de
             propósito: distinguir as duas permitiria testar uma lista de
-            endereços e descobrir quem tem conta no Velo Funil — insumo direto
+            endereços e descobrir quem tem conta no Velo Funil, insumo direto
             para phishing dirigido.
 
             Mas a dúvida de quem errou é legítima ("não tenho conta ou errei a

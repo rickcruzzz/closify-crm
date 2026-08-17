@@ -1,6 +1,6 @@
-// Race #1 — kanban: updateDealStage (lib/deals/actions.ts:96) faz um UPDATE
+// Race #1, kanban: updateDealStage (lib/deals/actions.ts:96) faz um UPDATE
 // incondicional (sem WHERE stage=esperado, sem coluna de versão, sem lock).
-// Diferente de race2-5, aqui NÃO existe um teto sendo violado — é
+// Diferente de race2-5, aqui NÃO existe um teto sendo violado, é
 // demonstração de ausência de controle de concorrência: N VUs escrevem
 // estágios diferentes no MESMO deal ao mesmo tempo, e quem o Postgres
 // serializar por último vence, silenciosamente, sem avisar quem perdeu (sem
@@ -16,7 +16,7 @@ export const options = {
   scenarios: {
     race1: {
       // per-vu-iterations com iterations:1 garante exatamente 1 escrita por
-      // VU, todas largando juntas — shared-iterations não garante 1:1 (um VU
+      // VU, todas largando juntas, shared-iterations não garante 1:1 (um VU
       // rápido pode consumir 2 iterações e deixar outro com 0).
       executor: 'per-vu-iterations',
       vus: CONCORRENCIA,
@@ -40,7 +40,7 @@ export function setup() {
   const res = pgGet(`/deals?workspace_id=eq.${token.workspaceId}&select=id&limit=1`, token)
   const deals = res.json()
   if (!deals || deals.length === 0) {
-    throw new Error('Nenhum deal encontrado no workspace sorteado — o seed rodou?')
+    throw new Error('Nenhum deal encontrado no workspace sorteado, o seed rodou?')
   }
   console.log(`race1: alvo deal ${deals[0].id} no workspace ${token.workspaceId}`)
   return { token, dealId: deals[0].id }
@@ -56,11 +56,11 @@ export default function (data) {
 export function teardown(data) {
   const res = pgGet(`/deals?id=eq.${data.dealId}&select=stage`, data.token)
   const final = res.json()[0]
-  console.log(`\n=== RACE1 — resultado ===`)
+  console.log(`\n=== RACE1, resultado ===`)
   console.log(`  deal        : ${data.dealId}`)
   console.log(`  estágio final: ${final ? final.stage : '(não encontrado)'}`)
   console.log(
     `  ${CONCORRENCIA} VUs escreveram estágios diferentes simultaneamente; um deles venceu`,
   )
-  console.log(`  sem erro, sem lock — confirma last-write-wins silencioso (achado #4a).`)
+  console.log(`  sem erro, sem lock, confirma last-write-wins silencioso (achado #4a).`)
 }

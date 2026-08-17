@@ -27,7 +27,7 @@ export default async function DashboardPage({
   const params = await searchParams
   const { workspaceId } = await getCurrentUserAndWorkspace()
 
-  // `new Date()` aqui é só o instante "agora" pra ancorar o cálculo — quem
+  // `new Date()` aqui é só o instante "agora" pra ancorar o cálculo, quem
   // decide o que é "hoje" de verdade é `resolverPeriodo` via `diaEmSaoPaulo`,
   // não o relógio UTC do servidor.
   const periodo = resolverPeriodo(
@@ -38,7 +38,7 @@ export default async function DashboardPage({
   )
 
   // `getUpcomingDeals` fica de fora do período de propósito: é sobre prazo
-  // FUTURO (due_date), não sobre quando o negócio nasceu — filtrar isso por
+  // FUTURO (due_date), não sobre quando o negócio nasceu, filtrar isso por
   // "criado nos últimos 7 dias" misturaria dois conceitos diferentes.
   const [metrics, funnelData, upcomingDeals, sinais, estado] = await Promise.all([
     getDashboardMetrics(workspaceId, periodo),
@@ -59,7 +59,7 @@ export default async function DashboardPage({
   // O tour abre pelo ESTADO, não por parâmetro de URL.
   //
   // A primeira versão dependia de `?tour=1`, posto pela finalização do
-  // assistente — e quem entra por CONVITE nunca passa por lá, então nunca
+  // assistente, e quem entra por CONVITE nunca passa por lá, então nunca
   // veria o tour, apesar de ser tão novo no produto quanto qualquer um.
   //
   // Chegar aqui já exige empresa: `getCurrentUserAndWorkspace` desvia para o
@@ -69,7 +69,7 @@ export default async function DashboardPage({
 
   // O dashboard mostra os três painéis sempre, inclusive em workspace novo.
   // Antes o guia de primeiros passos entrava aqui e escondia funil e prazos
-  // até existir dado — o que deixava a tela do recém-chegado sem a forma do
+  // até existir dado, o que deixava a tela do recém-chegado sem a forma do
   // produto e mudava o layout debaixo dele assim que o primeiro negócio
   // entrava. Cada painel já tem estado vazio próprio, e o guia mudou para o
   // Pipeline, onde a ação de fato acontece.

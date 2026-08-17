@@ -14,7 +14,7 @@ type Sessao = {
   workspaceId: string
 }
 
-// Mesmo preâmbulo de lib/tasks/actions.ts — Server Action é endpoint HTTP,
+// Mesmo preâmbulo de lib/tasks/actions.ts, Server Action é endpoint HTTP,
 // nada aqui pode assumir sessão vinda da tela.
 async function abrirSessao(): Promise<Sessao | { error: string }> {
   const supabase = await createClient()
@@ -34,7 +34,7 @@ async function abrirSessao(): Promise<Sessao | { error: string }> {
  * Confere se o Pro ainda vale ANTES de gastar a ida ao Google/Meta.
  *
  * A migration 0037 só gateou conectar/reconectar (`insert`/`update` em
- * `integration_connections`) — quem já tinha conectado enquanto Pro continua
+ * `integration_connections`), quem já tinha conectado enquanto Pro continua
  * usando pra sempre, porque `obterAccessTokenValido` lê e renova o token com
  * service role (ignora RLS de propósito, já que o segredo só existe no
  * servidor). Sem esta checagem aqui, "integração é Pro" vira mentira depois
@@ -54,7 +54,7 @@ async function exigirProVigente(sessao: Sessao): Promise<{ error: string } | nul
  * Cria um evento no Google Calendar a partir de uma tarefa já existente.
  *
  * Reusa data/hora/título da tarefa em vez de abrir um formulário novo: a
- * pessoa já decidiu quando é o compromisso ao agendar a próxima ação — pedir
+ * pessoa já decidiu quando é o compromisso ao agendar a próxima ação, pedir
  * de novo aqui seria o mesmo dado duas vezes. Duração fixa de 30 minutos,
  * ajustável depois no próprio Google Calendar se precisar de mais tempo.
  */
@@ -90,7 +90,7 @@ export async function agendarReuniaoNoGoogleCalendar(taskId: string) {
       timezone: 'America/Sao_Paulo',
     })
 
-    // Registra na timeline do lead — mesmo espírito de `concluirTarefa`: o
+    // Registra na timeline do lead, mesmo espírito de `concluirTarefa`: o
     // evento criado é o tipo de coisa que precisa aparecer no histórico, não
     // só existir na agenda do Google.
     if (task.lead_id) {
@@ -120,7 +120,7 @@ export async function agendarReuniaoNoGoogleCalendar(taskId: string) {
 /**
  * Envia um e-mail pelo Gmail conectado da empresa e registra a atividade.
  *
- * Texto simples, sem anexo — o produto não vira um cliente de e-mail
+ * Texto simples, sem anexo, o produto não vira um cliente de e-mail
  * completo (decisão do plano de integrações). Recusa se o lead não tiver
  * e-mail cadastrado, em vez de mandar para um destinatário vazio.
  */

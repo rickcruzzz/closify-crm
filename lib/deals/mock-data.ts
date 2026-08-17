@@ -3,7 +3,7 @@ import type { Deal } from './types'
 export const mockDeals: Deal[] = [
   {
     id: 'deal-1',
-    title: 'Plano anual — Agência Nova Era',
+    title: 'Plano anual, Agência Nova Era',
     leadId: 'lead-1',
     value: 4500,
     stage: 'novo',
@@ -13,7 +13,7 @@ export const mockDeals: Deal[] = [
   },
   {
     id: 'deal-2',
-    title: 'Consultoria de marca — Clínica Vida Plena',
+    title: 'Consultoria de marca, Clínica Vida Plena',
     leadId: 'lead-7',
     value: 5100,
     stage: 'novo',
@@ -23,7 +23,7 @@ export const mockDeals: Deal[] = [
   },
   {
     id: 'deal-3',
-    title: 'Pacote trimestral — Construforte Engenharia',
+    title: 'Pacote trimestral, Construforte Engenharia',
     leadId: 'lead-11',
     value: 22000,
     stage: 'novo',
@@ -33,7 +33,7 @@ export const mockDeals: Deal[] = [
   },
   {
     id: 'deal-4',
-    title: 'Gestão de agenda — Clínica Bem Estar',
+    title: 'Gestão de agenda, Clínica Bem Estar',
     leadId: 'lead-2',
     value: 2800,
     stage: 'contato_realizado',
@@ -43,7 +43,7 @@ export const mockDeals: Deal[] = [
   },
   {
     id: 'deal-5',
-    title: 'Captação de leads — Imóveis Max',
+    title: 'Captação de leads, Imóveis Max',
     leadId: 'lead-8',
     value: 15000,
     stage: 'contato_realizado',
@@ -53,7 +53,7 @@ export const mockDeals: Deal[] = [
   },
   {
     id: 'deal-6',
-    title: 'Reforma de identidade — Prime Consultoria',
+    title: 'Reforma de identidade, Prime Consultoria',
     leadId: 'lead-13',
     value: 3600,
     stage: 'proposta_enviada',
@@ -63,7 +63,7 @@ export const mockDeals: Deal[] = [
   },
   {
     id: 'deal-7',
-    title: 'Expansão de portfólio — Imobiliária Horizonte',
+    title: 'Expansão de portfólio, Imobiliária Horizonte',
     leadId: 'lead-3',
     value: 12500,
     stage: 'proposta_enviada',
@@ -73,7 +73,7 @@ export const mockDeals: Deal[] = [
   },
   {
     id: 'deal-8',
-    title: 'Automação de atendimento — Agência Pulso',
+    title: 'Automação de atendimento, Agência Pulso',
     leadId: 'lead-9',
     value: 7400,
     stage: 'proposta_enviada',
@@ -83,7 +83,7 @@ export const mockDeals: Deal[] = [
   },
   {
     id: 'deal-9',
-    title: 'Migração de sistema — TechSoft Sistemas',
+    title: 'Migração de sistema, TechSoft Sistemas',
     leadId: 'lead-4',
     value: 9200,
     stage: 'negociacao',
@@ -93,7 +93,7 @@ export const mockDeals: Deal[] = [
   },
   {
     id: 'deal-10',
-    title: 'Licenciamento anual — Softline Tecnologia',
+    title: 'Licenciamento anual, Softline Tecnologia',
     leadId: 'lead-10',
     value: 9800,
     stage: 'negociacao',
@@ -103,7 +103,7 @@ export const mockDeals: Deal[] = [
   },
   {
     id: 'deal-11',
-    title: 'Plano premium — ConsultMais Consultoria',
+    title: 'Plano premium, ConsultMais Consultoria',
     leadId: 'lead-5',
     value: 6300,
     stage: 'fechado_ganho',
@@ -113,7 +113,7 @@ export const mockDeals: Deal[] = [
   },
   {
     id: 'deal-12',
-    title: 'Renovação de contrato — Clínica Saúde Total',
+    title: 'Renovação de contrato, Clínica Saúde Total',
     leadId: 'lead-12',
     value: 4900,
     stage: 'fechado_ganho',
@@ -123,7 +123,7 @@ export const mockDeals: Deal[] = [
   },
   {
     id: 'deal-13',
-    title: 'Consultoria pontual — Grupo Alfa Serviços',
+    title: 'Consultoria pontual, Grupo Alfa Serviços',
     leadId: 'lead-6',
     value: 3200,
     stage: 'fechado_perdido',
@@ -133,7 +133,7 @@ export const mockDeals: Deal[] = [
   },
   {
     id: 'deal-14',
-    title: 'Plano básico — Prime Consultoria',
+    title: 'Plano básico, Prime Consultoria',
     leadId: 'lead-13',
     value: 3600,
     stage: 'fechado_perdido',

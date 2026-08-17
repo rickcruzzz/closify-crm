@@ -22,7 +22,7 @@ export type LeadsPage = {
   nextCursor: string | null
 }
 
-// .or() do PostgREST recebe uma string de filtro crua — sem escapar, valores
+// .or() do PostgREST recebe uma string de filtro crua, sem escapar, valores
 // vindos do usuário podem injetar operadores extras (ex: ",workspace_id.neq.x")
 // e alterar a query lógica além do campo pretendido. Remove os caracteres que
 // têm significado sintático no mini-DSL de filtro (, ( ) . * %) antes de
@@ -44,7 +44,7 @@ function parseCursor(cursor: string): { createdAt: string; id: string } | null {
 
 // Paginação cursor-based (created_at + id como tiebreaker) em vez de OFFSET:
 // OFFSET obriga o Postgres a escanear e descartar todas as linhas anteriores
-// a cada página — custo cresce linearmente com a página. Cursor usa o índice
+// a cada página, custo cresce linearmente com a página. Cursor usa o índice
 // existente e tem custo constante independente de quantas páginas já foram
 // vistas, o que importa quando um workspace acumula milhares de leads.
 export async function getLeadsPage(
@@ -164,7 +164,7 @@ export async function getWorkspaceMembers(workspaceId: string): Promise<Workspac
 }
 
 // auth.users não é acessível via PostgREST diretamente (fica fora do schema
-// public exposto) — usa user_metadata.name já sincronizado no signUp, com
+// public exposto), usa user_metadata.name já sincronizado no signUp, com
 // fallback ao invés de uma query extra. Nomes vêm de uma RPC porque o client
 // anon não pode selecionar auth.users, mesmo indiretamente via join.
 async function getMemberNames(

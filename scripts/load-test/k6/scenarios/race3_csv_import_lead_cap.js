@@ -1,6 +1,6 @@
-// Race #3 — teto de leads sob IMPORTAÇÃO EM LOTE: o trigger
+// Race #3, teto de leads sob IMPORTAÇÃO EM LOTE: o trigger
 // checar_limite_de_leads (migration 0023) é `before insert for each row`, e
-// DENTRO de uma única instrução/transação ele é seguro — cada linha vê o
+// DENTRO de uma única instrução/transação ele é seguro, cada linha vê o
 // count já incluindo as linhas anteriores do mesmo lote. A brecha é ENTRE
 // duas transações concorrentes: o próprio comentário do código
 // (lib/leads/actions.ts:243-247) documenta que duas importações simultâneas
@@ -8,7 +8,7 @@
 // acham que cabe, estourando o teto.
 //
 // Fixture isolado num workspace Free NOVO, pré-carregado com 45/50 leads:
-// 2 lotes concorrentes de 5 linhas cada — se o teto (50) segurar de verdade
+// 2 lotes concorrentes de 5 linhas cada, se o teto (50) segurar de verdade
 // entre transações, só um lote deveria passar inteiro.
 import { check } from 'k6'
 import { pgGet, pgPost } from '../lib/pgrest.js'
@@ -79,7 +79,7 @@ export function teardown(data) {
   const res = pgGet(`/leads?workspace_id=eq.${data.workspaceId}&select=id`, data.token)
   const total = res.json().length
 
-  console.log(`\n=== RACE3 — resultado ===`)
+  console.log(`\n=== RACE3, resultado ===`)
   console.log(`  workspace   : ${data.workspaceId}`)
   console.log(`  leads finais: ${total} (teto Free: ${FREE_LEAD_LIMIT})`)
 
@@ -87,7 +87,7 @@ export function teardown(data) {
     raceViolations.add(1)
     console.log(`  VIOLADO: overshoot de ${total - FREE_LEAD_LIMIT} leads acima do teto, entre lotes concorrentes.`)
   } else {
-    console.log(`  Não violado nesta execução (probabilística — rodar de novo pode variar).`)
+    console.log(`  Não violado nesta execução (probabilística, rodar de novo pode variar).`)
   }
 
   adminDeleteUser(data.userId)

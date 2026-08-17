@@ -1,6 +1,6 @@
 export const LOGO_BUCKET = 'logos'
 
-/** 2 MB — o mesmo teto declarado no bucket (0031). */
+/** 2 MB, o mesmo teto declarado no bucket (0031). */
 export const LOGO_TAMANHO_MAXIMO = 2 * 1024 * 1024
 
 export type FormatoDeLogo = 'png' | 'jpeg' | 'webp'
@@ -23,7 +23,7 @@ const TIPO_MIME: Record<FormatoDeLogo, string> = {
  *
  * Os dois são escolhidos por quem envia. Renomear `payload.svg` para
  * `logo.png` e declarar `image/png` é trivial, e o `allowed_mime_types` do
- * bucket compara justamente com o que o cliente declarou — ele filtra engano,
+ * bucket compara justamente com o que o cliente declarou, ele filtra engano,
  * não intenção.
  *
  * Assinaturas:
@@ -52,7 +52,7 @@ export type LogoRecusada = { erro: string }
 export type LogoAceita = { formato: FormatoDeLogo; tipoMime: string; extensao: string }
 
 /**
- * Decide se o arquivo pode ser aceito. Lógica pura — sem rede, sem Supabase.
+ * Decide se o arquivo pode ser aceito. Lógica pura, sem rede, sem Supabase.
  *
  * A mensagem de recusa diz o que fazer, não o que aconteceu: quem tenta subir
  * um SVG precisa saber quais formatos servem, e não que "a assinatura do
@@ -81,7 +81,7 @@ export function validarLogo(bytes: Uint8Array): LogoAceita | LogoRecusada {
  * O caminho dentro do bucket: `{workspace_id}/{aleatório}.{ext}`.
  *
  * O primeiro segmento é o que as políticas da 0031 leem para decidir de quem é
- * o arquivo — mudar este formato quebra a RLS do Storage em silêncio, porque
+ * o arquivo, mudar este formato quebra a RLS do Storage em silêncio, porque
  * `workspace_do_caminho` passaria a devolver `null` e tudo seria recusado.
  *
  * Nome aleatório e não fixo: um nome previsível faria o navegador e o CDN

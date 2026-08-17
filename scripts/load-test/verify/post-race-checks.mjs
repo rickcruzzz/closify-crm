@@ -1,10 +1,10 @@
 // Os 5 cenários race*.js já verificam e limpam o próprio fixture sozinhos,
-// em teardown() — é lá que mora o veredito real de cada corrida ("VIOLADO"
+// em teardown(), é lá que mora o veredito real de cada corrida ("VIOLADO"
 // ou não), impresso no stdout do k6. Este script é só a rede de segurança:
 // se um `k6 run` for interrompido (Ctrl+C, crash, timeout) antes do
 // teardown rodar, o fixture (workspace + usuários com e-mail
 // race{2,3,4,5}.*@velofunil-loadtest.local) fica órfão no staging. Varre e
-// limpa isso — "nunca deixar dado de teste pra trás" vale mesmo quando o
+// limpa isso, "nunca deixar dado de teste pra trás" vale mesmo quando o
 // teste morre no meio.
 //
 // Uso: node --env-file=scripts/load-test/.env.staging scripts/load-test/verify/post-race-checks.mjs
@@ -42,12 +42,12 @@ async function main() {
 
   for (const ws of workspaces) {
     const { error } = await admin.from('workspaces').delete().eq('id', ws.id)
-    console.log(`  workspace "${ws.name}" (${ws.id}): ${error ? 'FALHOU — ' + error.message : 'removido'}`)
+    console.log(`  workspace "${ws.name}" (${ws.id}): ${error ? 'FALHOU, ' + error.message : 'removido'}`)
   }
 
   for (const u of orfaos) {
     const { error } = await admin.auth.admin.deleteUser(u.id)
-    console.log(`  usuário ${u.email}: ${error ? 'FALHOU — ' + error.message : 'removido'}`)
+    console.log(`  usuário ${u.email}: ${error ? 'FALHOU, ' + error.message : 'removido'}`)
   }
 
   console.log('\nVarredura concluída.')

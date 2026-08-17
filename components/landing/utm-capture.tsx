@@ -5,7 +5,7 @@ import { useSearchParams } from 'next/navigation'
 
 import { capturarUtm } from '@/lib/auth/utm-actions'
 
-/** `fb.<subdomain_index>.<criado_em_ms>.<fbclid>` — formato exigido pela Meta. */
+/** `fb.<subdomain_index>.<criado_em_ms>.<fbclid>`, formato exigido pela Meta. */
 function montarFbc(fbclid: string): string {
   return `fb.1.${Date.now()}.${fbclid}`
 }
@@ -16,16 +16,16 @@ function lerCookie(nome: string): string | undefined {
 }
 
 /**
- * Sem UI — só olha a URL do primeiro carregamento atrás de `utm_*`/`fbclid`
+ * Sem UI, só olha a URL do primeiro carregamento atrás de `utm_*`/`fbclid`
  * e manda pro cookie de atribuição (lib/auth/intencao.ts), que persiste pra
  * dentro do workspace quando a conta é criada. Cookie próprio, primeira
- * parte (first-party), sem rede pra terceiro — não é o mesmo tipo de
+ * parte (first-party), sem rede pra terceiro, não é o mesmo tipo de
  * rastreamento do Meta Pixel, é o produto lembrando de onde a própria
  * visita veio.
  *
  * `_fbp` é lido com um pequeno atraso de propósito: o Pixel
  * (components/analytics/meta-pixel.tsx) carrega com `strategy="afterInteractive"`
- * e escreve esse cookie sozinho — na primeira visita da sessão inteira, ele
+ * e escreve esse cookie sozinho, na primeira visita da sessão inteira, ele
  * pode ainda não ter tido tempo de rodar no exato instante deste efeito.
  * Não é garantia (best-effort, documentado como tal), só reduz a chance de
  * perder a âncora mais forte de match por pura corrida.
@@ -65,7 +65,7 @@ function CapturaInterna() {
 
 export function UtmCapture() {
   // `useSearchParams` exige fronteira de Suspense própria em página estática
-  // — sem isso o build reclama que a rota inteira precisaria virar dinâmica.
+  //, sem isso o build reclama que a rota inteira precisaria virar dinâmica.
   return (
     <React.Suspense fallback={null}>
       <CapturaInterna />

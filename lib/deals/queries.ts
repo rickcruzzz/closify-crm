@@ -9,7 +9,7 @@ export type DealRow = {
   stage: DealStage
   due_date: string | null
   created_at: string
-  /** Quando a etapa mudou pela última vez — base de "parado" (0033). */
+  /** Quando a etapa mudou pela última vez, base de "parado" (0033). */
   stage_changed_at: string
   owner_id: string | null
   owner_name: string | null
@@ -28,7 +28,7 @@ export type DealLeadRow = {
  * O board com o que foi cortado, explicitamente.
  *
  * Quantos negócios cada etapa TEM, ao lado de quantos vieram. A tela usa a
- * diferença para avisar — sem isso o corte seria tão silencioso quanto o teto
+ * diferença para avisar, sem isso o corte seria tão silencioso quanto o teto
  * do PostgREST que ele veio substituir, só que decidido por nós.
  */
 export type BoardDoKanban = {
@@ -50,7 +50,7 @@ const CARDS_POR_ETAPA = 200
  * O board do Kanban, com teto por etapa.
  *
  * A versão anterior lia a tabela inteira sem limite. O PostgREST corta em
- * 1.000 linhas e NÃO devolve erro — como a ordem era por data decrescente, os
+ * 1.000 linhas e NÃO devolve erro, como a ordem era por data decrescente, os
  * negócios mais antigos simplesmente sumiam do quadro. Card desaparecendo sem
  * aviso é a pior forma de falhar: parece dado perdido.
  *
@@ -78,7 +78,7 @@ export async function getBoardDeals(workspaceId: string): Promise<BoardDoKanban>
   const totalPorEtapa = {} as Record<DealStage, number>
 
   const deals: DealRow[] = data.map((linha) => {
-    // `total_na_etapa` vem repetido em toda linha da mesma etapa — é uma
+    // `total_na_etapa` vem repetido em toda linha da mesma etapa, é uma
     // janela, não uma agregação separada. Sai do card e vai para o cabeçalho
     // da coluna, então é lido aqui e não segue adiante.
     totalPorEtapa[linha.stage] = Number(linha.total_na_etapa)
@@ -113,7 +113,7 @@ const LEADS_NO_SELETOR = 500
  * Os leads que o formulário de negócio oferece.
  *
  * Ordenava por NOME e sem limite. Passando de 1.000 leads o PostgREST cortava
- * calado, e sumia justamente quem vinha depois no alfabeto — a pessoa não
+ * calado, e sumia justamente quem vinha depois no alfabeto, a pessoa não
  * conseguia criar negócio para um cliente que existia e aparecia na lista de
  * Leads.
  *

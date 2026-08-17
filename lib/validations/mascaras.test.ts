@@ -72,10 +72,10 @@ describe('formatarTelefone', () => {
 
 describe('cursorDepoisDaMascara', () => {
   // O defeito que esta função existe para impedir: sem ela o cursor vai para o
-  // fim a cada tecla, e corrigir um dígito no meio de um CNPJ é impossível —
+  // fim a cada tecla, e corrigir um dígito no meio de um CNPJ é impossível,
   // a cada caractere digitado o cursor foge da mão.
   it('mantém a posição ao corrigir um dígito no meio', () => {
-    // Cursor depois de "12.345.6" — 6 dígitos à esquerda.
+    // Cursor depois de "12.345.6", 6 dígitos à esquerda.
     const posicao = cursorDepoisDaMascara('12.345.6', 8, '12.345.6')
     expect(posicao).toBe(8)
   })

@@ -43,7 +43,7 @@ export async function getWorkspaceSettingsData(workspaceId: string) {
 }
 
 /**
- * Workspaces onde o usuário é o ÚNICO membro — os que somem junto se ele
+ * Workspaces onde o usuário é o ÚNICO membro, os que somem junto se ele
  * excluir a conta.
  *
  * Espelha a regra da RPC `excluir_minha_conta`. Fica aqui em vez de dentro da

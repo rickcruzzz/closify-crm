@@ -25,7 +25,7 @@ Skip any tool not available in the environment; do not fail the review if a tool
 Scale the review approach to the size of the change:
 
 - **Under 20 files**: read each changed file in full before forming any opinion
-- **20 to 100 files**: read the diff first (`git diff HEAD~1`), then identify and deep-read high-risk files — auth, payment, config, migration, and files touching shared utilities
+- **20 to 100 files**: read the diff first (`git diff HEAD~1`), then identify and deep-read high-risk files, auth, payment, config, migration, and files touching shared utilities
 - **Over 100 files**: ask the user to narrow the scope to a specific module or risk area before proceeding
 
 ## Review Checklist
@@ -54,21 +54,21 @@ Identify database queries inside loops (N+1 pattern). Check that large collectio
 
 ### TypeScript
 
-- Flag every use of `any` — require a typed alternative or an explicit suppression comment explaining why
+- Flag every use of `any`, require a typed alternative or an explicit suppression comment explaining why
 - Confirm `strict: true` is present in tsconfig; report if absent
 - Verify Promises are awaited or explicitly handled; search for floating Promise chains
 - Check that null/undefined are handled before property access (no implicit `?.` omissions in critical paths)
 
 ### Python
 
-- Flag mutable default arguments (`def fn(items=[])`) — these cause shared-state bugs
-- Flag bare `except:` clauses — require at least `except Exception`
+- Flag mutable default arguments (`def fn(items=[])`), these cause shared-state bugs
+- Flag bare `except:` clauses, require at least `except Exception`
 - Require type hints on all public function signatures
 - Flag `eval()` and `exec()` on any user-supplied input
 
 ### Rust
 
-- Flag `.unwrap()` and `.expect()` outside of test modules — require `?` propagation or explicit match
+- Flag `.unwrap()` and `.expect()` outside of test modules, require `?` propagation or explicit match
 - Require `// SAFETY:` comments on every `unsafe` block explaining the invariant being upheld
 - Flag missing lifetime annotations on public API functions that return references
 
@@ -76,31 +76,31 @@ Identify database queries inside loops (N+1 pattern). Check that large collectio
 
 - Flag every error return that is discarded with `_` in non-trivial paths
 - Check for goroutines launched without a cancellation path (missing `ctx` propagation)
-- Flag `defer` inside loops — defer does not run until the surrounding function returns
+- Flag `defer` inside loops, defer does not run until the surrounding function returns
 
 ### SQL
 
 - Flag any `UPDATE` or `DELETE` statement missing a `WHERE` clause
-- Identify N+1 query patterns — a query inside a loop that could be a single JOIN or batch query
+- Identify N+1 query patterns, a query inside a loop that could be a single JOIN or batch query
 - Check foreign key columns referenced in `JOIN` or `WHERE` clauses have an index
 
 ## Output Format
 
 Every finding must follow this structure:
 
-**[CRITICAL] `file:line` — short description**
+**[CRITICAL] `file:line`, short description**
 Risk: what can go wrong if this is not fixed
 Fix: concrete code change or approach to resolve it
 
-**[HIGH] `file:line` — short description**
+**[HIGH] `file:line`, short description**
 Risk: ...
 Fix: ...
 
-**[MEDIUM] `file:line` — short description**
+**[MEDIUM] `file:line`, short description**
 Risk: ...
 Fix: ...
 
-**[LOW / SUGGESTION] `file:line` — short description**
+**[LOW / SUGGESTION] `file:line`, short description**
 Risk: ...
 Fix: ...
 

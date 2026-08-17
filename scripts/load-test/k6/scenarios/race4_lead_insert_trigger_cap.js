@@ -1,4 +1,4 @@
-// Race #4 — versão mínima do mesmo achado do race3, sem lote: dois INSERTs
+// Race #4, versão mínima do mesmo achado do race3, sem lote: dois INSERTs
 // de UMA linha cada, duas transações totalmente separadas, workspace Free
 // exatamente em 49/50. O comentário da migration 0023 descreve isto
 // literalmente: sob READ COMMITTED, as duas transações podem ler
@@ -65,15 +65,15 @@ export function teardown(data) {
   const res = pgGet(`/leads?workspace_id=eq.${data.workspaceId}&select=id`, data.token)
   const total = res.json().length
 
-  console.log(`\n=== RACE4 — resultado ===`)
+  console.log(`\n=== RACE4, resultado ===`)
   console.log(`  workspace   : ${data.workspaceId}`)
   console.log(`  leads finais: ${total} (teto Free: ${FREE_LEAD_LIMIT})`)
 
   if (total > FREE_LEAD_LIMIT) {
     raceViolations.add(1)
-    console.log(`  VIOLADO: ${total}/${FREE_LEAD_LIMIT} — os dois inserts de 1 linha passaram juntos.`)
+    console.log(`  VIOLADO: ${total}/${FREE_LEAD_LIMIT}, os dois inserts de 1 linha passaram juntos.`)
   } else {
-    console.log(`  Não violado nesta execução (probabilística — rodar de novo pode variar).`)
+    console.log(`  Não violado nesta execução (probabilística, rodar de novo pode variar).`)
   }
 
   adminDeleteUser(data.userId)

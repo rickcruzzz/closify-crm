@@ -8,7 +8,7 @@
  *
  * Uso: node --env-file=.env.local scripts/verificar-ambiente.mjs
  *
- * Não escreve nada em lugar nenhum — só lê. Pode rodar à vontade.
+ * Não escreve nada em lugar nenhum, só lê. Pode rodar à vontade.
  */
 
 const resultados = []
@@ -68,13 +68,13 @@ if (ASAAS) {
     headers: { access_token: ASAAS },
   })
   if (!r.ok) {
-    falha('Asaas API', `HTTP ${r.status} — chave inválida ou revogada`)
+    falha('Asaas API', `HTTP ${r.status}, chave inválida ou revogada`)
   } else {
     const j = await r.json()
     const w = j.data?.[0]
     ok('Asaas API', `HTTP ${r.status}`)
     if (!w) {
-      falha('Asaas webhook', 'nenhum webhook cadastrado — pagamento não libera o Pro')
+      falha('Asaas webhook', 'nenhum webhook cadastrado, pagamento não libera o Pro')
     } else {
       const problemas = []
       if (!w.url?.includes('velofunil.com.br')) problemas.push(`URL aponta para ${w.url}`)
@@ -94,7 +94,7 @@ if (RESEND) {
     headers: { Authorization: `Bearer ${RESEND}` },
   })
   if (!r.ok) {
-    falha('Resend', `HTTP ${r.status} — chave inválida`)
+    falha('Resend', `HTTP ${r.status}, chave inválida`)
   } else {
     const j = await r.json()
     const d = (j.data ?? []).find((x) => x.name === 'velofunil.com.br')
@@ -103,7 +103,7 @@ if (RESEND) {
       // API responde 200 e todo envio falha depois, por domínio não verificado.
       falha(
         'Resend',
-        `chave válida, mas sem o domínio velofunil.com.br (${j.data?.length ?? 0} domínio(s)) — todo envio falharia`,
+        `chave válida, mas sem o domínio velofunil.com.br (${j.data?.length ?? 0} domínio(s)), todo envio falharia`,
       )
     } else {
       d.status === 'verified'

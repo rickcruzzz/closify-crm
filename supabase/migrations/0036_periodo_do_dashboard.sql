@@ -1,10 +1,10 @@
 -- Filtro de período no Dashboard (7 dias / 30 dias / mês / ano / livre).
--- Filtra por `created_at` — quando o lead/negócio nasceu —, de forma
+-- Filtra por `created_at`, quando o lead/negócio nasceu,, de forma
 -- consistente nas três RPCs. `desde`/`ate` opcionais (default null = sem
 -- filtro, comportamento idêntico a antes) para não quebrar quem já chama
 -- sem eles.
 --
--- `create or replace function` só substitui quando a assinatura é IDÊNTICA —
+-- `create or replace function` só substitui quando a assinatura é IDÊNTICA,
 -- acrescentar parâmetros cria um OVERLOAD novo em vez de substituir, e
 -- deixaria as duas versões (1 e 3 argumentos) coexistindo, arriscando
 -- "could not choose the best candidate function" no PostgREST. Por isso o

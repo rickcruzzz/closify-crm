@@ -3,13 +3,13 @@ name: Deploy com auditoria
 # Substitui o deploy automático nativo da Vercel: aqui o build vira um
 # preview primeiro, a auditoria de segurança roda contra ELE, e só então
 # esse mesmo deployment é promovido pra produção. Se a auditoria falhar, o
-# workflow para antes do passo de promoção — o domínio de produção continua
+# workflow para antes do passo de promoção, o domínio de produção continua
 # apontando pro deployment anterior, que já passou.
 #
 # Pré-requisito manual (o dono precisa fazer, sem acesso ao painel daqui):
 # gerar VERCEL_TOKEN, VERCEL_ORG_ID e VERCEL_PROJECT_ID e colar como Secrets
 # do repositório, e desligar o deploy automático da Vercel pra `main`
-# (Project Settings → Git) — sem isso, a Vercel deploya em paralelo e este
+# (Project Settings → Git), sem isso, a Vercel deploya em paralelo e este
 # gate não impede nada de verdade. Ver docs/estado-atual.md.
 
 on:
@@ -85,7 +85,7 @@ jobs:
   promover-producao:
     needs: build-e-testar
     runs-on: ubuntu-latest
-    # Só chega aqui se `build-e-testar` passou inteiro — inclusive a
+    # Só chega aqui se `build-e-testar` passou inteiro, inclusive a
     # auditoria de segurança. É este `needs` que faz o gate valer.
     steps:
       - name: Instalar Vercel CLI

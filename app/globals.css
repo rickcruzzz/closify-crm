@@ -45,7 +45,7 @@
 }
 
 /* Acento de marca do Velo Funil: cyan-teal (hue 195) sobre a base cinza.
-   Só --primary e --ring carregam cor — o resto da paleta segue acromático de
+   Só --primary e --ring carregam cor, o resto da paleta segue acromático de
    propósito, para o acento marcar CTA, logo e foco sem tingir a interface
    inteira.
 
@@ -57,7 +57,7 @@
      claro   texto sobre botão 5.14 · primary sobre fundo 5.27
      escuro  texto sobre botão 8.46 · primary sobre fundo 8.66
 
-   Mexer no L/C exige refazer a conta — AA pede 4.5 para texto e 3.0 para
+   Mexer no L/C exige refazer a conta, AA pede 4.5 para texto e 3.0 para
    elemento de UI (o ring de foco). */
 :root {
   --background: oklch(1 0 0);
@@ -154,7 +154,7 @@
    Substitui o `blur-3xl` que estava em hero/pricing/cta. `filter: blur(64px)`
    numa área de ~670x380px é o item mais caro de GPU da página, e como a cor
    deriva de `--primary` as três superfícies eram re-rasterizadas juntas a cada
-   troca de tema — era o "trava ao mudar de cor". Gradiente radial é composto
+   troca de tema, era o "trava ao mudar de cor". Gradiente radial é composto
    direto, sem passo de filtro. */
 @utility glow-radial {
   background-image: radial-gradient(
@@ -169,19 +169,19 @@
    `easeOutQuad`. Escolhida contra a alternativa óbvia: curvas do tipo
    `cubic-bezier(0.16, 1, 0.3, 1)` põem metade do movimento nos primeiros 15%
    do tempo, então o elemento chega quase no lugar num piscar e gasta o resto
-   percorrendo os últimos pixels — parece RÁPIDA por mais longa que seja a
+   percorrendo os últimos pixels, parece RÁPIDA por mais longa que seja a
    duração. Esta distribui: aos 20% do tempo, 25% do caminho.
 
    Existe como variável porque duas coisas diferentes animam a entrada: o hero,
    que usa `animate-in` do tw-animate-css no carregamento, e o RevealOnScroll,
    que usa transição no scroll. Com a curva copiada nos dois, a primeira dobra
-   e o resto da página teriam ritmos diferentes — e ninguém saberia dizer por
+   e o resto da página teriam ritmos diferentes, e ninguém saberia dizer por
    que o site "parece" inconsistente. */
    Uso: `ease-(--ease-entrada)` nas classes, e `var(--ease-entrada)` no estilo
    inline do RevealOnScroll.
 
    NÃO virou uma classe própria com `animation-timing-function`. Tentei, e
-   funcionava — mas por sorte de ordem: o `animate-in` do tw-animate-css usa a
+   funcionava, mas por sorte de ordem: o `animate-in` do tw-animate-css usa a
    forma ABREVIADA `animation: enter ... var(--tw-ease, ease) ...`, e a
    abreviada redefine o timing function. A classe só vencia porque caía depois
    no arquivo gerado. Bastava a ordem dos imports mudar para a curva sumir sem
@@ -216,7 +216,7 @@
   }
 
   /* Spinner de carregamento comunica estado ("isto está processando"), não
-     é enfeite — a regra acima zera a animação junto com todo o resto, e o
+     é enfeite, a regra acima zera a animação junto com todo o resto, e o
      ícone gira uma vez em 0,01ms e para: parece travado exatamente pra
      quem mais precisaria do sinal. "Reduzir movimento" deveria tirar
      parallax/autoplay/deslize, não um indicador funcional pequeno. */

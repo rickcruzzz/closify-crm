@@ -19,7 +19,7 @@ function formatBRL(value: number) {
   })
 }
 
-// `React.memo`: mesma razão de `DealCard` — sem isso, o board inteiro
+// `React.memo`: mesma razão de `DealCard`, sem isso, o board inteiro
 // (6 colunas) refazia o trabalho de renderizar toda coluna a cada tick de
 // arrasto, mesmo colunas sem nenhum negócio envolvido no drag.
 export const KanbanColumn = React.memo(function KanbanColumn({
@@ -57,7 +57,7 @@ export const KanbanColumn = React.memo(function KanbanColumn({
         <div className="flex items-center gap-2">
           <span className="text-sm font-medium">{dealStageLabels[stage]}</span>
           {/* Quando a etapa tem mais do que o board carrega, o número mostra os
-              dois. Cortar em silêncio é o defeito que a 0032 veio consertar —
+              dois. Cortar em silêncio é o defeito que a 0032 veio consertar,
               repeti-lo aqui, com um número nosso em vez do teto do PostgREST,
               não seria melhor. */}
           <Badge variant="secondary" title={cortou ? `${totalNaEtapa} no total` : undefined}>
@@ -72,7 +72,7 @@ export const KanbanColumn = React.memo(function KanbanColumn({
       {/* `dvh` em vez de `vh`: no iOS/Android a barra de URL entra e sai do
           viewport e `100vh` deixa o fim da coluna abaixo da dobra. O desconto
           é maior abaixo de `lg` porque a barra de filtros empilha em três
-          linhas — o mesmo breakpoint usado em `kanban-board`.
+          linhas, o mesmo breakpoint usado em `kanban-board`.
 
           Com o board vazio a coluna encolhe: o guia de primeiros passos ocupa
           espaço acima, e manter altura cheia jogaria colunas vazias para baixo

@@ -8,7 +8,7 @@ import { Badge } from '@/components/ui/badge'
 const TEXTO_PADRAO = 'Feito para prestadores de serviço'
 
 /**
- * Mesmos valores de `SEGMENTOS` em lib/validations/onboarding.ts — reaproveita
+ * Mesmos valores de `SEGMENTOS` em lib/validations/onboarding.ts, reaproveita
  * a taxonomia que o produto já usa, em vez de inventar uma nova pro anúncio.
  */
 const ROTULOS_POR_SEGMENTO: Record<string, string> = {
@@ -24,7 +24,7 @@ const ROTULOS_POR_SEGMENTO: Record<string, string> = {
  * Message match: quem clica num anúncio segmentado por nicho ("CRM pra
  * clínica", "CRM pra imobiliária") espera ver essa palavra confirmada na
  * primeira dobra. `?segmento=` na URL do anúncio troca o badge sem mudar mais
- * nada na página — sem parâmetro reconhecido, cai no texto genérico de hoje.
+ * nada na página, sem parâmetro reconhecido, cai no texto genérico de hoje.
  *
  * Client component + Suspense própria, mesmo padrão de
  * components/landing/utm-capture.tsx: mantém a rota estática (SSG), o texto

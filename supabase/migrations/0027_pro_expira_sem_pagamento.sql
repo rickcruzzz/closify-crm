@@ -1,7 +1,7 @@
 -- O Pro passa a ter prazo. Antes não tinha, e isso era um furo de receita.
 --
 -- Como era: `PAYMENT_OVERDUE` marcava a assinatura como `past_due`, e a 0020
--- tratava `past_due` como acesso mantido — de propósito, para não derrubar o
+-- tratava `past_due` como acesso mantido, de propósito, para não derrubar o
 -- cliente na primeira falha de cobrança. A intenção estava certa. O que faltava
 -- era o outro lado: **nada encerrava essa carência**.
 --
@@ -26,7 +26,7 @@
 
 -- Tempo que o banco leva para confirmar boleto ou Pix.
 --
--- NÃO é carência comercial — é o intervalo entre a pessoa pagar e o Asaas
+-- NÃO é carência comercial, é o intervalo entre a pessoa pagar e o Asaas
 -- avisar. Sem isso, quem paga o boleto no último dia do período seria cortado
 -- no dia seguinte, com o dinheiro já saído da conta dele, e abriria chamado de
 -- suporte tendo razão. Para cortar exatamente no dia 30, troque para 0.
@@ -78,7 +78,7 @@ grant execute on function public.pro_vigente(uuid) to authenticated, service_rol
  *
  * Novidade: em pagamento confirmado, grava `current_period_end`. O ciclo é
  * MONTHLY fixo (lib/asaas/actions.ts), então a data sai de `now()` e não do
- * payload — payload de webhook é entrada externa, e derivar a validade do
+ * payload, payload de webhook é entrada externa, e derivar a validade do
  * acesso a partir dele deixaria alguém com o token estender o próprio plano.
  *
  * O `plan` deixa de sair direto do status e passa a sair de `pro_vigente`. São
@@ -129,7 +129,7 @@ $function$;
 -- 3. O limite de leads passa a olhar a validade, não a coluna
 -- ============================================================================
 
--- Mantém o `for update` da 0026 — a corrida continua existindo — e troca a
+-- Mantém o `for update` da 0026, a corrida continua existindo, e troca a
 -- leitura de `workspaces.plan` por `pro_vigente`. É esta linha que fecha o furo
 -- de receita: mesmo que a coluna `plan` esteja desatualizada dizendo 'pro', o
 -- inadimplente não passa do teto do Free.
@@ -222,7 +222,7 @@ $$;
  * chama isto ao carregar o workspace: se o período venceu enquanto ninguém
  * mexia, a tela já mostra Free e o botão de upgrade aparece.
  *
- * Nunca promove. Promover é do webhook, contra pagamento confirmado — a regra
+ * Nunca promove. Promover é do webhook, contra pagamento confirmado, a regra
  * que a 0019 até a 0022 levaram quatro tentativas para acertar.
  */
 create or replace function public.sincronizar_plano_do_workspace(target_workspace_id uuid)

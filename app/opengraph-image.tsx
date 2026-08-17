@@ -6,7 +6,7 @@ export const size = { width: 1200, height: 630 }
 export const contentType = 'image/png'
 
 // ImageResponse usa Satori, que só aceita um subconjunto de CSS via style
-// inline — sem Tailwind, sem var(). Cores replicam o tema escuro do app
+// inline, sem Tailwind, sem var(). Cores replicam o tema escuro do app
 // (oklch convertido para hex, já que Satori não resolve oklch):
 //   #00bfc0 = --primary  do .dark → oklch(0.72 0.14 195)
 //   #031010 = --primary-foreground do .dark → oklch(0.16 0.02 195)

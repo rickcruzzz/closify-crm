@@ -33,7 +33,7 @@ function isValidToken(received: string | null): boolean {
 
   const a = Buffer.from(received)
   const b = Buffer.from(expected)
-  // timingSafeEqual exige buffers do mesmo tamanho — comparar tamanho antes
+  // timingSafeEqual exige buffers do mesmo tamanho, comparar tamanho antes
   // não vaza mais informação do que o próprio token já expõe (comprimento
   // não é segredo), mas evita lançar exceção quando tamanhos divergem.
   if (a.length !== b.length) return false
@@ -57,7 +57,7 @@ export async function POST(request: Request) {
   const subscriptionId = body.subscription?.id ?? body.payment?.subscription
 
   // Evento sem assinatura vinculada (ex: cobrança avulsa) ou tipo que ainda
-  // não mapeamos — não é erro, só não há o que atualizar. Responde 200 pra
+  // não mapeamos, não é erro, só não há o que atualizar. Responde 200 pra
   // Asaas não ficar reenviando o mesmo evento em retry.
   if (!event || !subscriptionId) {
     return NextResponse.json({ received: true })

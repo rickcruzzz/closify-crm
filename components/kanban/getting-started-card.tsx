@@ -15,8 +15,8 @@ import {
 // a forma do produto, e o layout mudava debaixo dele assim que o primeiro
 // negócio entrava.
 //
-// Aqui no Pipeline ele fica no lugar onde a ação acontece — a pessoa lê o que
-// fazer na mesma tela em que vai fazer — e some sozinho quando existe negócio.
+// Aqui no Pipeline ele fica no lugar onde a ação acontece, a pessoa lê o que
+// fazer na mesma tela em que vai fazer, e some sozinho quando existe negócio.
 type Step = {
   icon: LucideIcon
   title: string

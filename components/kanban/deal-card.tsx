@@ -33,7 +33,7 @@ function initials(name: string) {
 }
 
 // `React.memo`: `handleDragOver` (kanban-board.tsx) só troca o objeto do
-// card ATIVO a cada tick de arrasto — `prev.map` mantém a mesma referência
+// card ATIVO a cada tick de arrasto, `prev.map` mantém a mesma referência
 // pros demais. Sem memo, mover um card re-renderizava todo o board inteiro
 // (todas as colunas, todos os cards) a cada cruzamento de coluna; boards
 // com dezenas/centenas de negócios sentiam isso como travamento.
@@ -76,7 +76,7 @@ export const DealCard = React.memo(function DealCard({
           <div className="flex flex-col items-start">
             {/* O card inteiro é o alvo de drag (dnd-kit ocupa Enter/Espaço
                 para pegar e soltar), então abrir o detalhe precisa do próprio
-                alvo focável — senão a ação fica inacessível por teclado. */}
+                alvo focável, senão a ação fica inacessível por teclado. */}
             <button
               type="button"
               className="focus-visible:ring-ring/50 -my-1 flex min-h-6 max-w-full items-center rounded-sm py-1 text-left text-sm outline-none hover:underline focus-visible:ring-3"

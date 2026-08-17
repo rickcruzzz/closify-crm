@@ -46,7 +46,7 @@ export function FunnelChart({ data }: { data: FunnelStageCount[] }) {
 
   // O eixo Y do Recharts só aceita largura fixa em px. Com 130px sobrava
   // menos de metade da tela para as barras em 375px, então o eixo encolhe no
-  // mobile — os rótulos truncam, mas o gráfico volta a ser legível.
+  // mobile, os rótulos truncam, mas o gráfico volta a ser legível.
   const isCompact = useMediaQuery('(max-width: 639px)')
 
   return (

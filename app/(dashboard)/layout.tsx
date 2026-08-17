@@ -53,7 +53,7 @@ export default async function DashboardLayout({
       {/* `h-dvh overflow-hidden` no lugar de `min-h-dvh`: sem isso, flexbox
           estica o `<aside>` do sidebar pra bater com a altura do CONTEÚDO
           (align-items: stretch é o padrão), e em página comprida (Configurações)
-          o sidebar ficava mais alto que a tela — rolar a página rolava ele
+          o sidebar ficava mais alto que a tela, rolar a página rolava ele
           junto, incluindo o rodapé de conta, pra fora de vista. Travando o
           container em UM viewport e movendo o scroll pra dentro da coluna
           principal, o sidebar nunca mais estica além da tela: fica fixo sem
@@ -62,7 +62,7 @@ export default async function DashboardLayout({
         <Sidebar workspaces={workspaces} activeWorkspaceId={workspaceId} currentUser={currentUser} />
         {/* `overflow-x-hidden` explícito ao lado do `overflow-y-auto`: pela
             própria especificação CSS, `overflow-y` diferente de `visible`
-            faz o navegador tratar `overflow-x` como `auto` mesmo sem pedir —
+            faz o navegador tratar `overflow-x` como `auto` mesmo sem pedir,
             e isso criaria barra de rolagem horizontal por 1px de sombra/foco
             que passasse da borda. Deixar explícito também documenta a
             decisão em vez de depender do cálculo automático do navegador. */}
@@ -74,7 +74,7 @@ export default async function DashboardLayout({
               1160px é a faixa em que um formulário de duas colunas ainda se lê
               sem o olho atravessar o monitor inteiro.
 
-              O Kanban rola na horizontal por conta própria e é a exceção — ele
+              O Kanban rola na horizontal por conta própria e é a exceção, ele
               passa por cima com `max-w-none`. */}
           <div className="mx-auto w-full max-w-[1160px]">
             {children}

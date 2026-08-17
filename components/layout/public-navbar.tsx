@@ -73,7 +73,7 @@ export function PublicNavbar() {
           </NavCtaLink>
 
           {/* Abaixo de `md` os links da seção sumiam e o "Entrar" ficava oculto
-              — quem já é cliente não tinha como acessar a conta pelo celular, e
+             , quem já é cliente não tinha como acessar a conta pelo celular, e
               quem chegava não conseguia navegar até planos ou dúvidas. */}
           <Sheet open={menuAberto} onOpenChange={setMenuAberto}>
             <SheetTrigger
@@ -98,11 +98,11 @@ export function PublicNavbar() {
               {/* O padding horizontal vive AQUI, no container, e não em cada
                   filho.
 
-                  O `SheetContent` não tem padding nenhum — conferido na classe
+                  O `SheetContent` não tem padding nenhum, conferido na classe
                   base de components/ui/sheet.tsx. O que sustentava o conteúdo
                   era margem peça a peça, e cada uma escolheu um valor: o
                   cabeçalho em 16px (`p-4`), os links em 12px, e os botões em
-                  ZERO — colados na borda direita do drawer, que é a borda da
+                  ZERO, colados na borda direita do drawer, que é a borda da
                   tela.
 
                   No container porque o que for acrescentado aqui amanhã já

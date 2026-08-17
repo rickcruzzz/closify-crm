@@ -1,7 +1,7 @@
--- Velo Funil — aperta o Free e vira as integrações em valor exclusivo do Pro.
+-- Velo Funil, aperta o Free e vira as integrações em valor exclusivo do Pro.
 --
 -- Contexto (docs/prd-conversao-pro.md): zero cliente pagante até agora, e o
--- Free de hoje libera TUDO — inclusive as integrações mais caras de construir
+-- Free de hoje libera TUDO, inclusive as integrações mais caras de construir
 -- desta base (Google Calendar, Gmail, WhatsApp Cloud API), sem nenhuma
 -- checagem de plano em lib/integrations/*. É o maior motivo real pra pagar
 -- que faltava.
@@ -10,7 +10,7 @@
 -- 1. Teto de leads do Free: 50 → 25
 -- ============================================================================
 
--- Mesma função da 0027 (já usa `pro_vigente`, não a coluna — ver armadilha
+-- Mesma função da 0027 (já usa `pro_vigente`, não a coluna, ver armadilha
 -- documentada em docs/estado-atual.md), só troca a constante.
 create or replace function public.checar_limite_de_leads()
 returns trigger
@@ -46,11 +46,11 @@ $$;
 -- ============================================================================
 
 -- A checagem em Server Action (lib/integrations/actions.ts) só dá mensagem
--- boa antes de tentar — quem chamasse o PostgREST direto contornava. A regra
+-- boa antes de tentar, quem chamasse o PostgREST direto contornava. A regra
 -- de verdade mora na policy, mesma lição paga em 0019/0023/0024: "regra que
 -- só vive na Server Action não é regra".
 --
--- `pro_vigente`, não a coluna `plan` — mesma razão da 0027: Pro vencido não
+-- `pro_vigente`, não a coluna `plan`, mesma razão da 0027: Pro vencido não
 -- pode continuar reconectando/renovando token só porque a coluna ainda diz
 -- 'pro' e ninguém rodou a sincronização preguiçosa ainda.
 drop policy "integration_connections_insert" on public.integration_connections;

@@ -7,7 +7,7 @@ describe('resolverPeriodo', () => {
   // acidentalmente sensível à borda da meia-noite.
   const agora = new Date('2026-08-13T15:00:00Z')
 
-  it('sem preset nem datas devolve undefined — sem filtro, todo o histórico', () => {
+  it('sem preset nem datas devolve undefined, sem filtro, todo o histórico', () => {
     expect(resolverPeriodo(agora, null, null, null)).toBeUndefined()
   })
 
@@ -38,7 +38,7 @@ describe('resolverPeriodo', () => {
   })
 
   // Virada de mês é o caso que quebra contas ingênuas de "dia - N" sem
-  // normalizar mês/ano — subtrairDias usa Date.UTC, que já rola isso sozinho.
+  // normalizar mês/ano, subtrairDias usa Date.UTC, que já rola isso sozinho.
   it('7d atravessa virada de mês corretamente', () => {
     const inicioDeSetembro = new Date('2026-09-03T15:00:00Z')
     const periodo = resolverPeriodo(inicioDeSetembro, '7d', null, null)

@@ -2,11 +2,11 @@
 --
 -- 1) UPDATE policies sem WITH CHECK permitiam mover uma linha para outro
 --    workspace_id (a policy USING só valida a linha antes do update).
--- 2) subscriptions não deveria aceitar insert/update vindo do client —
+-- 2) subscriptions não deveria aceitar insert/update vindo do client,
 --    billing só deve ser escrito por webhook/service role (Asaas).
 -- 3) Chamadas a is_workspace_member/is_workspace_admin sem envolver em
 --    (select ...) fazem a função rodar por linha em vez de ser cacheada
---    pelo planner — recriamos todas as policies já com o wrap correto.
+--    pelo planner, recriamos todas as policies já com o wrap correto.
 
 -- ============================================================================
 -- workspaces

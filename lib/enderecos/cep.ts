@@ -14,7 +14,7 @@ export type EnderecoDoCep = {
  * conveniência de digitação, e passar pelo nosso servidor só acrescentaria uma
  * viagem e um ponto de falha.
  *
- * **Falha em silêncio, sempre.** Devolve `null` em qualquer problema — rede
+ * **Falha em silêncio, sempre.** Devolve `null` em qualquer problema, rede
  * caída, CEP inexistente, resposta estranha, tempo esgotado. Os campos de
  * endereço continuam editáveis à mão, e ninguém fica travado esperando um
  * serviço de terceiro que não controlamos. Busca é conveniência; se ela fosse
@@ -44,7 +44,7 @@ export async function buscarEnderecoPorCep(
 
     const dados = (await resposta.json()) as Record<string, unknown>
 
-    // CEP inexistente devolve HTTP 200 com `{ "erro": true }` — checar só o
+    // CEP inexistente devolve HTTP 200 com `{ "erro": true }`, checar só o
     // status deixaria passar.
     if (dados.erro) return null
 

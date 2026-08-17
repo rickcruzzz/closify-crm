@@ -4,16 +4,16 @@ export const dealSchema = z.object({
   title: z.string().min(2, 'Informe o título do negócio.'),
   leadId: z.uuid('Selecione um lead.'),
   // Sem teto, um dígito a mais (ou o teclado mashing puro) vira negócio de
-  // R$4,2 bilhões — visto em produção (workspace real, dois negócios com
+  // R$4,2 bilhões, visto em produção (workspace real, dois negócios com
   // exatamente esse valor), o suficiente pra fazer "Valor do Pipeline" no
   // Dashboard mostrar "R$ 8,5 bi" pra um funil de 4 negócios reais.
   // R$100 milhões cobre o maior contrato plausível pra PME de serviço
-  // (o público do produto) sem inventar regra que a pessoa não entenderia —
+  // (o público do produto) sem inventar regra que a pessoa não entenderia,
   // mesmo raciocínio já aplicado ao ano de `dueDate` logo abaixo.
   value: z.coerce
     .number()
     .min(0, 'O valor não pode ser negativo.')
-    .max(100_000_000, 'Valor muito alto — confira se não sobrou um dígito a mais.'),
+    .max(100_000_000, 'Valor muito alto, confira se não sobrou um dígito a mais.'),
   stage: z.enum(
     [
       'novo',
@@ -26,7 +26,7 @@ export const dealSchema = z.object({
     { error: 'Selecione uma etapa.' },
   ),
   ownerId: z.uuid('Selecione um responsável.'),
-  // Um `<input type="date">` aceita qualquer ano, inclusive 0111 — digitar o
+  // Um `<input type="date">` aceita qualquer ano, inclusive 0111, digitar o
   // ano com o teclado é fácil de errar, e o campo não reclama. Isso encheu o
   // banco de prazos como 0111-11-11 e 2000-11-11, que a tela exibia como
   // "atrasado há 699.346 dias".

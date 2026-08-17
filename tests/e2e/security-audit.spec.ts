@@ -1,28 +1,28 @@
 import { test, expect, type Page } from '@playwright/test'
 
 /**
- * Auditoria de segurança das páginas públicas — roda no CI antes de
+ * Auditoria de segurança das páginas públicas, roda no CI antes de
  * promover um deploy pra produção (ver .github/workflows/deploy-com-auditoria.yml).
  *
  * Só cobre rotas SEM sessão: o CI não tem credencial de teste, e criar uma
  * conta descartável a cada rodada de deploy geraria lixo de teste em
- * produção — o padrão do projeto (docs/estado-atual.md) é limpar sempre o
+ * produção, o padrão do projeto (docs/estado-atual.md) é limpar sempre o
  * que se cria, e a forma mais simples de cumprir isso aqui é não criar nada.
  *
- * IMPORTANTE — rodar contra build de produção, não `next dev`: em modo dev
+ * IMPORTANTE, rodar contra build de produção, não `next dev`: em modo dev
  * o bundler não faz tree-shaking agressivo de `import type`, e o arquivo
  * inteiro de `types/supabase.ts` (comentários incluídos) pode entrar no
  * bundle de alguma rota. Um desses comentários contém a palavra
- * "service_role" em português, sem ser segredo nenhum — dispara falso
+ * "service_role" em português, sem ser segredo nenhum, dispara falso
  * positivo só em dev. Confirmado batendo direto no chunk minificado de
  * produção (`curl` + `grep`): zero ocorrências lá. Rodar com
  * `npm run build && npm start` (ou contra uma URL já deployada) antes de
- * confiar no resultado local — é isso que o CI faz.
+ * confiar no resultado local, é isso que o CI faz.
  */
 const ROTAS_PUBLICAS = ['/', '/login', '/cadastro', '/esqueci-senha', '/termos', '/privacidade']
 
 // Cada padrão é uma classe de segredo real deste projeto (ver lib/asaas,
-// lib/resend, lib/integrations, .env.local) — não são exemplos genéricos de
+// lib/resend, lib/integrations, .env.local), não são exemplos genéricos de
 // tutorial. Se aparecer no HTML/JS que vai pro navegador, vazou.
 const PADROES_DE_SEGREDO: { nome: string; regex: RegExp }[] = [
   { nome: 'Supabase service_role', regex: /service_role/i },
@@ -37,7 +37,7 @@ const PADROES_DE_SEGREDO: { nome: string; regex: RegExp }[] = [
   },
 ]
 
-// Regressão de configuração, não vazamento de dado — mas é o tipo de coisa
+// Regressão de configuração, não vazamento de dado, mas é o tipo de coisa
 // que alguém remove sem querer mexendo em next.config.mjs, e só um teste
 // automático pega antes de virar produção.
 const HEADERS_OBRIGATORIOS = [
@@ -72,7 +72,7 @@ async function coletarRespostasDeMesmaOrigem(page: Page, baseURL: string) {
         corpos[indice].corpo = texto
       })
       .catch(() => {
-        // Resposta binária ou já consumida — não é o alvo desta varredura.
+        // Resposta binária ou já consumida, não é o alvo desta varredura.
       })
   })
 
@@ -124,7 +124,7 @@ for (const rota of ROTAS_PUBLICAS) {
     expect(faltando, `Headers ausentes em ${rota}: ${faltando.join(', ')}`).toHaveLength(0)
 
     // CSP em Report-Only é o estado aceito hoje (documentado em
-    // next.config.mjs) — registra no relatório do CI sem falhar o build.
+    // next.config.mjs), registra no relatório do CI sem falhar o build.
     // O objetivo é não deixar isso cair no esquecimento, não bloquear
     // deploy por causa de uma decisão já tomada conscientemente.
     const csp = headers['content-security-policy']
@@ -132,7 +132,7 @@ for (const rota of ROTAS_PUBLICAS) {
     if (!csp && cspReportOnly) {
       test.info().annotations.push({
         type: 'aviso',
-        description: `CSP ainda em Report-Only em ${rota} — não bloqueia XSS, só loga.`,
+        description: `CSP ainda em Report-Only em ${rota}, não bloqueia XSS, só loga.`,
       })
     }
     expect(csp || cspReportOnly, `Nenhuma CSP (nem Report-Only) em ${rota}`).toBeTruthy()

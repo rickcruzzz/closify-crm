@@ -25,7 +25,7 @@ export default async function KanbanPage() {
   ])
 
   // Só pra saber se dá pra oferecer "mandar pro Google Calendar" no painel
-  // do negócio — mesma função que a aba Integrações usa, uma consulta leve.
+  // do negócio, mesma função que a aba Integrações usa, uma consulta leve.
   const calendarConectado = integracoes.some(
     (c) => c.provider === 'google_calendar' && c.status === 'connected',
   )
@@ -41,7 +41,7 @@ export default async function KanbanPage() {
 
       {/* Board completamente vazio: mostra o guia acima dele. A condição é
           resolvida no servidor, sobre `deals`, não sobre o resultado do filtro
-          do board — quem filtrou até zerar a tela não é um usuário novo e não
+          do board, quem filtrou até zerar a tela não é um usuário novo e não
           deve receber tutorial. */}
       {board.deals.length === 0 && <GettingStartedCard />}
 

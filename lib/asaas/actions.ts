@@ -55,14 +55,14 @@ export async function createCheckout(values: unknown) {
   let subscriptionId = existingSubscription?.asaas_subscription_id ?? null
 
   // externalReference fica opaco pro Asaas (eles só devolvem de volta nos
-  // webhooks) — codifica workspace e usuário juntos aqui pra permitir
+  // webhooks), codifica workspace e usuário juntos aqui pra permitir
   // reconciliação/auditoria futura sem precisar de outra consulta.
   //
   // O formato JSON `{"workspaceId":"<uuid>","userId":"<uuid>"}` tem 106
   // caracteres e o Asaas rejeita acima de 100 com
   // `400 invalid_object: O identificador externo não deve ultrapassar 100
   // caracteres`. Estourava para todo usuário, sempre, porque UUID tem tamanho
-  // fixo — não era caso de borda.
+  // fixo, não era caso de borda.
   //
   // Dois UUIDs separados por `:` dão 73 caracteres e carregam a mesma
   // informação. Quem lê isso depois faz `split(':')`.
@@ -81,7 +81,7 @@ export async function createCheckout(values: unknown) {
       })
       customerId = customer.id
     } else {
-      // Cliente pode já existir de uma tentativa anterior — a Asaas exige
+      // Cliente pode já existir de uma tentativa anterior, a Asaas exige
       // CPF/CNPJ pra criar cobrança, então garante que está preenchido
       // mesmo num cliente reaproveitado (idempotente, sempre atualiza).
       await asaasFetch<AsaasCustomer>(`/customers/${customerId}`, {
@@ -101,7 +101,7 @@ export async function createCheckout(values: unknown) {
           nextDueDate: new Date().toISOString().slice(0, 10),
           // Aparece na fatura, no boleto e no extrato do cartão. É o único
           // texto de marca que controlamos nessa tela: o nome do recebedor vem
-          // do cadastro da conta Asaas e, em MEI, é a razão social da Receita —
+          // do cadastro da conta Asaas e, em MEI, é a razão social da Receita,
           // aqui, um CNPJ seguido do nome civil do titular. Trinta dias depois
           // da compra, ninguém reconhece aquilo, e é dessa não-identificação
           // que nasce a contestação.
@@ -112,9 +112,9 @@ export async function createCheckout(values: unknown) {
           // porque quem não reconheceu a cobrança precisa FALAR com alguém, e
           // não visitar um site.
           //
-          // Só vale para assinaturas novas — as já criadas mantêm a descrição
+          // Só vale para assinaturas novas, as já criadas mantêm a descrição
           // gravada no Asaas, que é a fonte da verdade da cobrança.
-          description: `Velo Funil — Plano Pro · CRM de vendas · Assinatura mensal · ${CONTROLADOR.email}`,
+          description: `Velo Funil, Plano Pro · CRM de vendas · Assinatura mensal · ${CONTROLADOR.email}`,
           externalReference,
         }),
       })
@@ -123,7 +123,7 @@ export async function createCheckout(values: unknown) {
   } catch (err) {
     // O status HTTP diz o que aconteceu sem precisar adivinhar: 401 é chave
     // de API errada ou desatualizada (segredo diferente do token do
-    // webhook — não confundir os dois na hora de depurar), 400 costuma ser
+    // webhook, não confundir os dois na hora de depurar), 400 costuma ser
     // campo inválido no corpo da requisição, 403 é permissão da conta Asaas.
     if (err instanceof AsaasApiError) {
       console.error(
@@ -137,7 +137,7 @@ export async function createCheckout(values: unknown) {
   }
 
   // subscriptions não tem policy de insert/update pro client (só o webhook,
-  // via service role, mexe no status de cobrança) — usa admin client aqui
+  // via service role, mexe no status de cobrança), usa admin client aqui
   // de propósito, é a única escrita legítima fora do webhook porque só
   // grava customer_id/subscription_id, nunca o status de pagamento em si.
   const admin = createAdminClient()
@@ -174,7 +174,7 @@ export async function createCheckout(values: unknown) {
   //
   // Com o redirect, a pessoa saía do produto e não voltava: pagava na página do
   // Asaas e ficava lá. A saída natural seria o `callback.successUrl` do Asaas,
-  // mas ele **não funciona** — testado contra a API em 11/08/2026: o
+  // mas ele **não funciona**, testado contra a API em 11/08/2026: o
   // `POST /subscriptions` aceita o campo com HTTP 200, não o devolve na
   // leitura, não propaga para a cobrança gerada, e o `PUT /payments` com
   // `callback` responde 500.
@@ -188,7 +188,7 @@ export async function createCheckout(values: unknown) {
  * Cancela a assinatura Pro do workspace.
  *
  * Ordem deliberada: cancela PRIMEIRO no Asaas, depois marca no banco. O Asaas
- * é quem de fato cobra — se a ordem fosse invertida e a chamada remota
+ * é quem de fato cobra, se a ordem fosse invertida e a chamada remota
  * falhasse, o app mostraria "cancelado" enquanto a fatura continuaria caindo
  * todo mês. Melhor a pessoa ver um erro e tentar de novo do que acreditar num
  * cancelamento que não aconteceu.
@@ -236,7 +236,7 @@ export async function cancelSubscription(values: unknown) {
         `cancelSubscription: Asaas respondeu ${err.status} em ${err.path}`,
         err.body.slice(0, 500),
       )
-      // 404 significa que a assinatura já não existe lá — seguir e acertar o
+      // 404 significa que a assinatura já não existe lá, seguir e acertar o
       // banco é o resultado correto, não um erro para a pessoa.
       if (err.status !== 404) {
         return {
@@ -250,7 +250,7 @@ export async function cancelSubscription(values: unknown) {
   }
 
   // `subscriptions` e `workspaces.plan` não têm policy de escrita para o
-  // client — o webhook é quem mexe nisso, via service role. Mesma justificativa
+  // client, o webhook é quem mexe nisso, via service role. Mesma justificativa
   // do upsert em `createCheckout`.
   const admin = createAdminClient()
 

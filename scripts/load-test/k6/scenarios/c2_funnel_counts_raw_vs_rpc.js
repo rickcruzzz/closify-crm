@@ -1,4 +1,4 @@
-// Trilha C — achado #1, a prova numérica direta. No MESMO workspace do grupo
+// Trilha C, achado #1, a prova numérica direta. No MESMO workspace do grupo
 // "estresse" (3-8 mil deals), mede lado a lado:
 //   - raw: select stage cru (o que getFunnelCounts faz, lib/dashboard/queries.ts:55)
 //   - rpc: get_dashboard_counts (o padrão que o resto do dashboard já usa)
@@ -13,7 +13,7 @@ import { funnelCountsRawDuration, funnelCountsRpcDuration } from '../lib/metrics
 export const options = {
   ...currentProfile(),
   thresholds: {
-    // sem threshold de latência no "raw" — é esperado que ele estoure,
+    // sem threshold de latência no "raw", é esperado que ele estoure,
     // é o próprio objetivo do cenário medir quanto.
     http_req_failed: ['rate<0.01'],
   },

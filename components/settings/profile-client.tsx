@@ -62,7 +62,7 @@ export function ProfileClient({
     }
     toast.success('Nome atualizado.')
     // A lista de colaboradores e a autoria das atividades leem esse nome no
-    // servidor — sem refresh a tela seguiria mostrando o valor antigo.
+    // servidor, sem refresh a tela seguiria mostrando o valor antigo.
     router.refresh()
   }
 
@@ -122,7 +122,7 @@ export function ProfileClient({
           <div className="flex flex-col gap-1.5">
             <Label>E-mail</Label>
             {/* Somente leitura: trocar o e-mail de login exige confirmação nos
-                dois endereços e mexe na identidade da conta — é fluxo próprio,
+                dois endereços e mexe na identidade da conta, é fluxo próprio,
                 não um campo editável solto. */}
             <div className="text-muted-foreground flex flex-wrap items-center gap-2 text-sm">
               <Mail aria-hidden className="size-4" />

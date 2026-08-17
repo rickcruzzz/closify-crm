@@ -2,14 +2,14 @@
 --
 -- `leads.email` nasceu `not null` na 0001. Parecia razoável até a importação
 -- de planilha encostar na realidade do público-alvo: a planilha de uma PME de
--- serviço no Brasil é lista de WhatsApp — nome e telefone, sem e-mail nenhum.
+-- serviço no Brasil é lista de WhatsApp, nome e telefone, sem e-mail nenhum.
 -- Com a coluna obrigatória, um arquivo desses importava ZERO linhas, e a tela
 -- só sabia dizer "e-mail ausente" trezentas vezes.
 --
 -- Não é afrouxar validação: a regra continua existindo, só mudou de forma. O
 -- que importa num CRM não é ter e-mail, é HAVER COMO FALAR com a pessoa. A
 -- constraint abaixo exige e-mail OU telefone, e recusa a linha que não tem
--- nem um nem outro — que é lixo de planilha, não lead.
+-- nem um nem outro, que é lixo de planilha, não lead.
 --
 -- `coalesce(..., '') <> ''` em vez de `is not null` de propósito: string vazia
 -- passa por `not null` e é exatamente o que uma célula em branco vira quando

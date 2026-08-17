@@ -1,4 +1,4 @@
-// Trilha C — achado #2: busca de leads usa ILIKE com wildcard à esquerda via
+// Trilha C, achado #2: busca de leads usa ILIKE com wildcard à esquerda via
 // PostgREST .or(), e não está confirmado se o índice trigram
 // (leads_name_trgm_idx) é de fato usado. Este cenário mede a latência sob
 // carga; diagnostics/explain-search.mjs confirma via EXPLAIN ANALYZE se o
@@ -20,7 +20,7 @@ const SELECT = 'id,name,email,phone,company,status,value,owner_id,created_at'
 const TERMOS = ['ana', 'silva', 'nexo', 'prisma', 'costa', 'vetor']
 
 export default function () {
-  // prioriza os workspaces "estresse" — busca em 50 leads não prova nada
+  // prioriza os workspaces "estresse", busca em 50 leads não prova nada
   // sobre uso de índice, busca em milhares prova.
   const picked = estresseTenant()
   const token = picked ? picked.token : randomToken()

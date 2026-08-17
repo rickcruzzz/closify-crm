@@ -1,4 +1,4 @@
-// Trilha B — cookie de sessão real batendo em /dashboard. Mede o custo real
+// Trilha B, cookie de sessão real batendo em /dashboard. Mede o custo real
 // do middleware (auth.getUser() sempre revalida contra o Auth server) mais as
 // 5-7 idas ao Postgres que getDashboardMetrics/getFunnelCounts/getUpcomingDeals
 // disparam por carregamento (achado #3 e #1 da auditoria).

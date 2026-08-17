@@ -4,7 +4,7 @@ import Script from 'next/script'
 import { usePathname } from 'next/navigation'
 
 /**
- * Meta Pixel — só nas páginas públicas.
+ * Meta Pixel, só nas páginas públicas.
  *
  * O CRM logado (`/dashboard`, `/kanban`, `/leads`, `/settings`, `/perfil`,
  * `/onboarding`, `/bem-vindo`) nunca carrega isto: quem já é cliente não é
@@ -13,7 +13,7 @@ import { usePathname } from 'next/navigation'
  * que mantém a superfície de rastreamento do tamanho do que se justifica.
  *
  * Nota de conformidade: este pixel grava cookie de terceiro (`_fbp`) e é
- * rastreamento de verdade sob a LGPD — a mesma razão pela qual o GA4 foi
+ * rastreamento de verdade sob a LGPD, a mesma razão pela qual o GA4 foi
  * descartado do projeto (ver docs/estado-atual.md, decisão travada). Hoje
  * não existe banner de consentimento de cookies no site. Ligado por pedido
  * explícito; registrado aqui e em docs/estado-atual.md como risco de

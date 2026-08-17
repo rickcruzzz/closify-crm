@@ -3,7 +3,7 @@
 // (leads_name_trgm_idx / leads_company_trgm_idx, migration 0008) ou faz scan
 // sequencial.
 //
-// PostgREST não expõe EXPLAIN — não é um SELECT, é um comando de meta consulta.
+// PostgREST não expõe EXPLAIN, não é um SELECT, é um comando de meta consulta.
 // Em vez de adicionar uma dependência nova só pra isto (driver `pg` com
 // conexão direta), usa o mesmo padrão que o resto do projeto já usa pra coisas
 // que a API não alcança: uma função SQL temporária, colada uma vez no SQL
@@ -49,7 +49,7 @@ if (!url || !serviceKey) {
 const admin = createClient(url, serviceKey, { auth: { persistSession: false } })
 
 if (process.argv.includes('--drop')) {
-  console.log('DROP é DDL — PostgREST não expõe isso, não dá pra automatizar por aqui.')
+  console.log('DROP é DDL, PostgREST não expõe isso, não dá pra automatizar por aqui.')
   console.log('Cole no SQL Editor do staging:\n')
   console.log('drop function if exists public._loadtest_explain(text);')
   process.exit(0)
@@ -73,7 +73,7 @@ async function explain(label, query) {
 }
 
 async function main() {
-  // Pega um workspace do grupo "estresse" — índice só importa em volume;
+  // Pega um workspace do grupo "estresse", índice só importa em volume;
   // em 50 leads qualquer plano é rápido o bastante pra mascarar o problema.
   const { data: tenants } = await admin
     .from('workspaces')
@@ -82,7 +82,7 @@ async function main() {
     .limit(1)
 
   if (!tenants || tenants.length === 0) {
-    console.error('Nenhum workspace "Loadtest estresse" encontrado — rode seed.mjs primeiro.')
+    console.error('Nenhum workspace "Loadtest estresse" encontrado, rode seed.mjs primeiro.')
     process.exit(1)
   }
   const workspaceId = tenants[0].id
@@ -93,7 +93,7 @@ async function main() {
   )
 
   await explain(
-    'ILIKE só com wildcard à direita (pra comparar — este SIM usa B-tree normal)',
+    'ILIKE só com wildcard à direita (pra comparar, este SIM usa B-tree normal)',
     `select id from public.leads where workspace_id = '${workspaceId}' and name ilike 'ana%'`,
   )
 }

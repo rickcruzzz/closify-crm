@@ -6,13 +6,13 @@ import { useEffect } from 'react'
  * Último recurso: erro no PRÓPRIO layout raiz.
  *
  * O `app/error.tsx` só cobre o que está DENTRO do layout. Se o layout raiz
- * falhar — provider de tema, carregamento de fonte, qualquer coisa antes das
- * páginas — não havia fallback nenhum e o visitante recebia a tela de erro
+ * falhar, provider de tema, carregamento de fonte, qualquer coisa antes das
+ * páginas, não havia fallback nenhum e o visitante recebia a tela de erro
  * crua do navegador.
  *
  * Por substituir o layout raiz, este arquivo precisa trazer as próprias tags
  * `html` e `body`. Também não pode depender de nada do app: sem componentes,
- * sem tokens de tema, sem Tailwind — se o layout quebrou, o CSS pode não ter
+ * sem tokens de tema, sem Tailwind, se o layout quebrou, o CSS pode não ter
  * carregado. Daí o estilo inline, que é feio de propósito e funciona sempre.
  */
 export default function GlobalError({

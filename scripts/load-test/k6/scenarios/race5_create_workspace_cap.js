@@ -1,6 +1,6 @@
-// Race #5 — teto de 1 workspace-como-admin no Free: create_workspace_with_admin
+// Race #5, teto de 1 workspace-como-admin no Free: create_workspace_with_admin
 // (migration 0018) conta workspaces onde o usuário é admin e insere workspace
-// + membership na mesma função/transação — atômico POR CHAMADA, mas sem lock
+// + membership na mesma função/transação, atômico POR CHAMADA, mas sem lock
 // entre chamadas concorrentes. Duas abas clicando "criar empresa" ao mesmo
 // tempo (ou um duplo-clique que o debounce do botão não pegou) podem, em
 // teoria, ler o mesmo count e ambas passarem.
@@ -40,7 +40,7 @@ export function teardown(data) {
   const res = pgGet(`/workspace_members?user_id=eq.${data.userId}&role=eq.admin&select=workspace_id`, data.token)
   const workspaceIds = res.json().map((m) => m.workspace_id)
 
-  console.log(`\n=== RACE5 — resultado ===`)
+  console.log(`\n=== RACE5, resultado ===`)
   console.log(`  usuário             : ${data.userId}`)
   console.log(`  workspaces como admin: ${workspaceIds.length} (teto Free: ${FREE_WORKSPACE_LIMIT})`)
 
@@ -48,7 +48,7 @@ export function teardown(data) {
     raceViolations.add(1)
     console.log(`  VIOLADO: ${workspaceIds.length} workspaces criados quando só 1 deveria ser permitido.`)
   } else {
-    console.log(`  Não violado nesta execução (probabilística — rodar de novo pode variar).`)
+    console.log(`  Não violado nesta execução (probabilística, rodar de novo pode variar).`)
   }
 
   for (const id of workspaceIds) adminDelete(`/workspaces?id=eq.${id}`)

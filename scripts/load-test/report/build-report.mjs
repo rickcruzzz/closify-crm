@@ -1,4 +1,4 @@
-// Monta docs/load-test/relatorio-<data>.md a partir do que REALMENTE rodou —
+// Monta docs/load-test/relatorio-<data>.md a partir do que REALMENTE rodou,
 // results/summary/*.json (via `k6 run --summary-export=...`) e
 // results/raw/*.log (stdout capturado, é onde moram os vereditos das
 // corridas, impressos em teardown()). Nenhum número aqui é inventado: cenário
@@ -77,7 +77,7 @@ function lerVeredictosDeCorrida() {
     return {
       arquivo,
       encontrado: !!bloco,
-      resumo: bloco ? bloco[0].trim() : '(veredito não encontrado no log — rodar com stdout capturado)',
+      resumo: bloco ? bloco[0].trim() : '(veredito não encontrado no log, rodar com stdout capturado)',
       violado: bloco ? /VIOLADO/.test(bloco[0]) : null,
     }
   })
@@ -89,14 +89,14 @@ function tabelaMarkdown(linhas) {
   const rows = linhas
     .map(
       (l) =>
-        `| ${l.cenario} | ${PERFIL_LABEL[l.perfil] ?? l.perfil} | — | ${fmt(l.p50)} | ${fmt(l.p95)} | ${fmt(l.p99)} | ${l.errorRatePct.toFixed(2)}% | ${l.reqPerSec ? l.reqPerSec.toFixed(1) : '—'} | ${l.status} |`,
+        `| ${l.cenario} | ${PERFIL_LABEL[l.perfil] ?? l.perfil} | - | ${fmt(l.p50)} | ${fmt(l.p95)} | ${fmt(l.p99)} | ${l.errorRatePct.toFixed(2)}% | ${l.reqPerSec ? l.reqPerSec.toFixed(1) : '-'} | ${l.status} |`,
     )
     .join('\n')
   return header + sep + rows
 }
 
 function fmt(v) {
-  return v == null ? '—' : `${Math.round(v)}ms`
+  return v == null ? '-' : `${Math.round(v)}ms`
 }
 
 function main() {
@@ -110,10 +110,10 @@ function main() {
   const data = new Date().toISOString().slice(0, 10)
   mkdirSync(DOCS_DIR, { recursive: true })
 
-  const md = `# Relatório de teste de carga — Velo Funil (${data})
+  const md = `# Relatório de teste de carga, Velo Funil (${data})
 
 Gerado por \`scripts/load-test/report/build-report.mjs\` a partir de execuções
-reais de k6. Cenário sem linha aqui não rodou — não foi extrapolado.
+reais de k6. Cenário sem linha aqui não rodou, não foi extrapolado.
 
 ## Cenários de latência/throughput
 
@@ -133,8 +133,8 @@ ${
 ## Limitações declaradas
 
 - Sem Vercel real: sem cold start serverless, sem CDN/edge, sem rede real
-  entre datacenter e Supabase — \`next start\` local é otimista.
-- Tier Free do Supabase tem teto próprio de infraestrutura — se apareceu
+  entre datacenter e Supabase, \`next start\` local é otimista.
+- Tier Free do Supabase tem teto próprio de infraestrutura, se apareceu
   antes do alvo de VUs, é rotulado acima como tal, não como falha de código.
 - Se a máquina local saturou antes da app (ver \`dropped_iterations\` no
   output bruto do k6 em \`results/raw/\`), o teto reportado é da máquina de

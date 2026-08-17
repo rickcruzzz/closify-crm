@@ -5,7 +5,7 @@
 --    JOIN/filtro por owner_id/author_id/created_by faz Seq Scan e o
 --    ON DELETE SET NULL dessas FKs varre a tabela toda.
 -- 2) search_path das funções security definer trocado de 'public' para ''
---    (empty search_path) — todas já referenciam public.<tabela> de forma
+--    (empty search_path), todas já referenciam public.<tabela> de forma
 --    qualificada, então não muda comportamento; só remove a dependência
 --    implícita do search_path da sessão, prevenindo schema hijacking caso
 --    alguém crie um objeto malicioso em outro schema do search_path.

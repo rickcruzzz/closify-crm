@@ -32,7 +32,7 @@ async function getActiveWorkspaceId(supabase: Awaited<ReturnType<typeof createCl
 }
 
 // owner_id não é validado pela RLS de leads (a policy só confere workspace_id
-// da linha) — sem checar aqui, qualquer membro autenticado poderia atribuir
+// da linha), sem checar aqui, qualquer membro autenticado poderia atribuir
 // um lead a um user_id de fora do workspace, só adivinhando/vazando o UUID.
 async function isWorkspaceMember(
   supabase: Awaited<ReturnType<typeof createClient>>,
@@ -147,7 +147,7 @@ export type ResultadoImportacao = {
  *
  * Antes isto era `.in('email', [...])` com os e-mails do arquivo. Medido
  * contra produção: `in` com 500 valores vira URL de 25 KB e o gateway devolve
- * 400 — e o código não olhava o erro, então `jaExistem` vinha nulo, o conjunto
+ * 400, e o código não olhava o erro, então `jaExistem` vinha nulo, o conjunto
  * de duplicados saía vazio e a planilha inteira era importada DE NOVO, calada.
  * Ler o workspace por páginas troca uma URL gigante por N requisições curtas.
  *
@@ -195,7 +195,7 @@ async function chavesJaCadastradas(
  * 1. Só campo MAPEADO entra. Sem isso, uma planilha sem coluna de Etapa
  *    devolveria o `novo` que `interpretarPlanilha` usa como padrão e jogaria
  *    o pipeline inteiro de volta para a primeira coluna do Kanban.
- * 2. Só campo PREENCHIDO entra. Célula em branco não apaga o que está no CRM —
+ * 2. Só campo PREENCHIDO entra. Célula em branco não apaga o que está no CRM,
  *    quem quer limpar um campo faz isso na tela do lead, não por omissão.
  */
 type MudancasDoLead = {
@@ -252,7 +252,7 @@ async function emBlocos<T, R>(itens: T[], tamanho: number, fn: (item: T) => Prom
  * Atualiza os contatos que a planilha traz e que já existem no workspace.
  *
  * É o que faz a reimportação parecer uma planilha conectada: a pessoa corrige
- * o arquivo, sobe de novo, e o CRM acompanha — sem que a planilha continue
+ * o arquivo, sobe de novo, e o CRM acompanha, sem que a planilha continue
  * sendo a fonte da verdade.
  *
  * O negócio no Kanban só é atualizado quando o lead tem EXATAMENTE UM. Com dois
@@ -283,7 +283,7 @@ async function atualizarRepetidos(
       .eq('workspace_id', workspaceId)
 
     if (error) {
-      avisos.push(`Linha ${linha.linha}: não foi possível atualizar — ${error.message}`)
+      avisos.push(`Linha ${linha.linha}: não foi possível atualizar, ${error.message}`)
       return null
     }
     return leadId
@@ -355,7 +355,7 @@ async function atualizarRepetidos(
 
   if (ambiguos > 0) {
     avisos.push(
-      `${ambiguos} contato(s) têm mais de um negócio no Kanban — os dados do contato foram` +
+      `${ambiguos} contato(s) têm mais de um negócio no Kanban, os dados do contato foram` +
         ' atualizados, mas nenhum negócio foi movido, para não mexer no negócio errado.',
     )
   }
@@ -366,7 +366,7 @@ async function atualizarRepetidos(
 /**
  * Importa leads e negócios de uma planilha (.xlsx ou .csv).
  *
- * O arquivo é lido e mapeado no navegador — o `.xlsx` porque é um ZIP com XML
+ * O arquivo é lido e mapeado no navegador, o `.xlsx` porque é um ZIP com XML
  * dentro, e o CSV porque a tela precisa mostrar a prévia antes de gravar. O
  * que chega aqui é a matriz de células e a escolha de colunas.
  *
@@ -376,7 +376,7 @@ async function atualizarRepetidos(
  * plano. O cliente só transporta.
  *
  * Cria um NEGÓCIO para cada lead importado. Sem isso o Kanban e o dashboard
- * continuavam vazios depois de importar 300 contatos — as duas telas leem
+ * continuavam vazios depois de importar 300 contatos, as duas telas leem
  * `deals`, e a importação antiga só escrevia em `leads`. A pessoa concluía que
  * a importação não tinha funcionado.
  */
@@ -492,7 +492,7 @@ export async function importarPlanilha(
         phone: linha.phone,
         company: linha.company,
         status: linha.status,
-        // Quem importou vira responsável — é membro do workspace por
+        // Quem importou vira responsável, é membro do workspace por
         // definição, então não precisa da checagem de `isWorkspaceMember` do
         // createLead.
         owner_id: user.id,
@@ -506,7 +506,7 @@ export async function importarPlanilha(
   if (error) {
     // 42501 é a trava de limite de plano no banco (migration 0023). Sem tratar
     // o código, a pessoa recebia "Não foi possível importar os leads" e não
-    // tinha como saber que era o teto do Free — a mensagem certa existia só
+    // tinha como saber que era o teto do Free, a mensagem certa existia só
     // dentro do Postgres.
     if (error.code === '42501') {
       return {
@@ -527,7 +527,7 @@ export async function importarPlanilha(
 
   // Fecha a janela entre contar e inserir: se duas importações correram junto,
   // a soma pode ter passado do teto do plano. Reconferimos DEPOIS da escrita e
-  // removemos o que sobrou, sempre os mais recentes — desfazer o excedente da
+  // removemos o que sobrou, sempre os mais recentes, desfazer o excedente da
   // própria chamada é melhor do que deixar o workspace acima do limite que ele
   // paga. Só entra no caminho caro quando o estouro de fato aconteceu.
   const restantes = await remainingLeadSlots(workspaceId)
@@ -568,7 +568,7 @@ export async function importarPlanilha(
           lead_id: registro.id,
           // O título do card é o nome da pessoa; com empresa, os dois, que é
           // como um vendedor procura no board.
-          title: origem?.company ? `${origem.name} — ${origem.company}` : (origem?.name ?? 'Negócio'),
+          title: origem?.company ? `${origem.name}, ${origem.company}` : (origem?.name ?? 'Negócio'),
           value: origem?.value ?? 0,
           stage: origem?.status ?? ('novo' as const),
           owner_id: user.id,
@@ -578,7 +578,7 @@ export async function importarPlanilha(
 
     if (erroDeals) {
       // O lead já entrou e é o dado que importa; o negócio é a projeção dele no
-      // Kanban. Falhar aqui não desfaz a importação — avisa, para a pessoa não
+      // Kanban. Falhar aqui não desfaz a importação, avisa, para a pessoa não
       // achar que o board quebrou.
       console.error('importarPlanilha: falha ao criar negócios', erroDeals)
       avisos.push(
@@ -625,7 +625,7 @@ export async function createActivity(leadId: string, values: unknown) {
     return { error: 'Workspace não encontrado.' }
   }
 
-  // Confere que o lead pertence ao workspace ativo antes de gravar —
+  // Confere que o lead pertence ao workspace ativo antes de gravar,
   // a RLS de activities.insert também confere isso, mas falhar aqui com
   // mensagem clara é melhor do que deixar a RLS rejeitar silenciosamente.
   const { data: lead } = await supabase
@@ -682,7 +682,7 @@ export async function deleteLead(leadId: string) {
  * Confere se a pessoa pode mexer numa atividade: precisa ser o autor dela ou
  * admin do workspace.
  *
- * A RLS de `activities` permite update/delete a qualquer membro do workspace —
+ * A RLS de `activities` permite update/delete a qualquer membro do workspace,
  * é o isolamento entre EMPRESAS, não entre pessoas da mesma empresa. Sem esta
  * checagem, um colaborador poderia reescrever o registro de ligação feito por
  * outro, e a timeline deixaria de ser prova do que aconteceu.

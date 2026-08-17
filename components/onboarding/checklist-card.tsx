@@ -14,7 +14,7 @@ import { contarConcluidos, proximoPasso, type ItemDoChecklist } from '@/lib/onbo
 /**
  * O checklist de ativação, no topo do Dashboard.
  *
- * Os itens chegam prontos do servidor, DERIVADOS do estado real do workspace —
+ * Os itens chegam prontos do servidor, DERIVADOS do estado real do workspace,
  * ver `lib/onboarding/checklist.ts`. Aqui só há apresentação: nada é marcado
  * à mão, então nada pode discordar da tela.
  *

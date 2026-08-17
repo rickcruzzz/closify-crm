@@ -39,7 +39,7 @@ export default async function BillingPage({
     .eq('workspace_id', workspaceId)
 
   // Estado real da cobrança, não só o plano. Sem isto, quem tinha assinatura
-  // criada com fatura em aberto via "Free" e um botão de assinar de novo —
+  // criada com fatura em aberto via "Free" e um botão de assinar de novo,
   // sem saber que já existia uma cobrança esperando pagamento.
   const assinatura = await getEstadoAssinatura(workspaceId)
 
@@ -48,7 +48,7 @@ export default async function BillingPage({
       <PageHeader title="Cobrança" description="Plano atual e comparação de recursos." />
 
       {/* Volta do Asaas depois de pagar. O Pro não é liberado aqui e sim pelo
-          webhook, que é assíncrono — Pix costuma levar segundos, boleto pode
+          webhook, que é assíncrono, Pix costuma levar segundos, boleto pode
           levar dias. Sem este aviso a pessoa voltaria, veria "Free" e concluiria
           que o pagamento não funcionou. */}
       {pago === '1' && plan !== 'pro' && (
@@ -95,7 +95,7 @@ export default async function BillingPage({
               ver a fatura em aberto. */}
           {assinatura && <SubscriptionCard estado={assinatura} isAdmin={isAdmin} />}
 
-          {/* Só oferece assinar quem não tem cobrança em andamento — senão a
+          {/* Só oferece assinar quem não tem cobrança em andamento, senão a
               pessoa criaria uma segunda assinatura sem perceber que a primeira
               está esperando pagamento. */}
           {plan === 'free' &&
@@ -118,7 +118,7 @@ export default async function BillingPage({
   )
 }
 
-// "Perto do limite" em 2/2 é falso: o limite não está perto, já acabou — e
+// "Perto do limite" em 2/2 é falso: o limite não está perto, já acabou, e
 // quem lê "perto" tenta adicionar mais um e toma o erro do banco sem entender
 // por quê. Os dois estados ficam separados, e o texto do cheio diz o que fazer
 // em vez de só constatar o problema.

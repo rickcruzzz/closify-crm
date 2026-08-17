@@ -5,7 +5,7 @@ export const memberRoleSchema = z.enum(['admin', 'membro'])
 export const inviteMemberSchema = z.object({
   // `trim` e `toLowerCase` antes da validação: o índice único de convites
   // pendentes é `(workspace_id, email)` sobre o texto cru, então `ana@x.com` e
-  // `Ana@X.com` criavam DOIS convites para a mesma pessoa — e cada um consome
+  // `Ana@X.com` criavam DOIS convites para a mesma pessoa, e cada um consome
   // uma vaga do limite de membros do plano, porque `canAddMember` soma
   // convites pendentes aos membros ativos.
   //

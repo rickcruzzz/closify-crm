@@ -4,7 +4,7 @@
  * Documento jurídico que contradiz o sistema é pior do que documento nenhum:
  * vira prova contra o controlador num processo administrativo da ANPD. Por
  * isso estes valores ficam centralizados e são referenciados pelas páginas,
- * em vez de repetidos em texto solto — quando um operador entra ou sai do
+ * em vez de repetidos em texto solto, quando um operador entra ou sai do
  * stack, muda aqui e as duas políticas acompanham.
  *
  * A lista de SUBOPERADORES abaixo foi levantada do código, não presumida:
@@ -18,7 +18,7 @@ export const CONTROLADOR = {
    * comercial da conta Asaas. Formato típico de MEI: o número do CNPJ seguido
    * do nome civil do titular.
    *
-   * Citada junto do nome fantasia nas páginas legais — o art. 9º, I pede
+   * Citada junto do nome fantasia nas páginas legais, o art. 9º, I pede
    * identificação clara do controlador, e é isto que consta no CNPJ.
    */
   razaoSocial: '64.543.748 ORLANDO HENRIQUE BASTOS DA CRUZ',
@@ -38,7 +38,7 @@ export const CONTROLADOR = {
   },
 } as const
 
-/** Prazo de resposta ao titular. Art. 19, II — 15 dias para pedido completo. */
+/** Prazo de resposta ao titular. Art. 19, II, 15 dias para pedido completo. */
 export const PRAZO_RESPOSTA_TITULAR_DIAS = 15
 
 export const ATUALIZADO_EM = '9 de agosto de 2026'

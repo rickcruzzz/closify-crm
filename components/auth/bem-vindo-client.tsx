@@ -103,7 +103,7 @@ export function BemVindoClient({
           ) : (
             <>
               Sua conta foi criada com <span className="text-foreground">{email}</span>.
-              Vamos preparar seu ambiente de vendas — leva cerca de 2 minutos.
+              Vamos preparar seu ambiente de vendas, leva cerca de 2 minutos.
             </>
           )}
         </CardDescription>
@@ -192,7 +192,7 @@ export function BemVindoClient({
           disabled={ocupado}
           onClick={() => {
             // `router.push` não retorna promise que resolva ao terminar a
-            // navegação — o estado fica ligado até este componente
+            // navegação, o estado fica ligado até este componente
             // desmontar (a troca de tela), que é exatamente a janela em
             // que `/onboarding` (Server Component com 3 idas ao banco,
             // sem Suspense próprio) ainda não tem nada pra mostrar.

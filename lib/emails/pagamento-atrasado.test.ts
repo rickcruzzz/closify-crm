@@ -41,7 +41,7 @@ describe('renderPagamentoAtrasadoEmail', () => {
       ...base,
       workspaceName: 'Silva & Cia',
     })
-    expect(subject).toBe('Seu pagamento não foi confirmado — Velo Funil')
+    expect(subject).toBe('Seu pagamento não foi confirmado, Velo Funil')
     expect(subject).not.toContain('&amp;')
   })
 
@@ -50,7 +50,7 @@ describe('renderPagamentoAtrasadoEmail', () => {
     expect(html).toContain(CONTROLADOR.nomeFantasia)
   })
 
-  // A pessoa precisa saber que o acesso Pro não caiu na hora — sem isso, quem
+  // A pessoa precisa saber que o acesso Pro não caiu na hora, sem isso, quem
   // recebe o aviso à noite acha que já perdeu o produto e desiste de resolver.
   it('avisa que o acesso continua até vencer de vez', () => {
     const { html } = renderPagamentoAtrasadoEmail(base)

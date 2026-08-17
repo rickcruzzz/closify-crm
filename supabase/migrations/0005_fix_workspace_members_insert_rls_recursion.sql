@@ -1,7 +1,7 @@
 -- workspace_members_insert (criada em 0004) tinha um EXISTS direto contra
 -- public.workspaces dentro do with check. Essa subquery roda como o usuário
 -- autenticado e está sujeita à RLS de workspaces_select (só enxerga
--- workspace onde já é membro) — no momento do bootstrap o usuário ainda não
+-- workspace onde já é membro), no momento do bootstrap o usuário ainda não
 -- é membro de lugar nenhum, então o EXISTS nunca encontrava a linha do
 -- workspace mesmo com created_by correto, e o insert falhava com 42501.
 --

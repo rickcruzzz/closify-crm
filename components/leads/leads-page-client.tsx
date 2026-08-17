@@ -94,7 +94,7 @@ export function LeadsPageClient({
       params.delete('cursor')
     }
     // `useTransition` em vez de `router.push` cru: sem isso, trocar o filtro
-    // de status não dava sinal nenhum até a lista nova chegar — nem a barra
+    // de status não dava sinal nenhum até a lista nova chegar, nem a barra
     // de progresso global cobre isso, porque ela só liga em clique de link
     // (`<a>`), e o Select não é um. `trocandoFiltro` desabilita o Select e
     // mostra um spinner visível no mesmo instante do clique.
@@ -135,7 +135,7 @@ export function LeadsPageClient({
     }
     toast.success(id ? 'Lead atualizado com sucesso.' : 'Lead criado com sucesso.')
     setFormOpen(false)
-    // Sem router.refresh(): create/updateLead já revalidam '/leads' — a
+    // Sem router.refresh(): create/updateLead já revalidam '/leads', a
     // rota atual.
   }
 

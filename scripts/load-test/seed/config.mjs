@@ -1,4 +1,4 @@
-// Espelha lib/plans.ts — precisa bater com os limites reais do plano Free
+// Espelha lib/plans.ts, precisa bater com os limites reais do plano Free
 // pros grupos "no teto" fazerem sentido (ver docs/load-test/plano-de-teste.md).
 export const FREE_LEAD_LIMIT = 50
 export const FREE_MEMBER_LIMIT = 2
@@ -6,7 +6,7 @@ export const FREE_MEMBER_LIMIT = 2
 export const PASSWORD_PREFIX = 'LoadTest#'
 export const EMAIL_DOMAIN = 'velofunil-loadtest.local'
 
-// Distribuição multi-tenant — não é 1000 usuários batendo no mesmo workspace.
+// Distribuição multi-tenant, não é 1000 usuários batendo no mesmo workspace.
 // "estresse" existe só pra provar getFunnelCounts/getBoardDeals na escala
 // onde o padrão "busca tudo e agrega em JS" (lib/dashboard/queries.ts:55)
 // vira gargalo mensurável.

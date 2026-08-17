@@ -33,7 +33,7 @@ function SignUpForm() {
 
   // De onde a pessoa chegou. `convite` vem da tela de convite; `plano=pro`, do
   // botão "Assinar Pro" da landing. Os dois seguem para a Server Action, que os
-  // guarda em cookie — o link do e-mail de confirmação não carrega parâmetro,
+  // guarda em cookie, o link do e-mail de confirmação não carrega parâmetro,
   // e sem o cookie a intenção morre na caixa de entrada.
   const convite = searchParams.get('convite') ?? undefined
   const plano = searchParams.get('plano') === 'pro' ? ('pro' as const) : undefined

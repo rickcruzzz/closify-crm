@@ -1,19 +1,19 @@
 // Faz login real (GoTrue REST) para cada usuário semeado e monta, em Node, o
-// MESMO cookie que @supabase/ssr escreveria no browser — pra Trilha B (k6
+// MESMO cookie que @supabase/ssr escreveria no browser, pra Trilha B (k6
 // batendo em páginas protegidas com cookie de sessão real).
 //
 // Não é aproximação: reproduz bit a bit o algoritmo lido em
-// node_modules/@supabase/ssr/src/{cookies,utils/{chunker,base64url}}.ts —
+// node_modules/@supabase/ssr/src/{cookies,utils/{chunker,base64url}}.ts,
 //   1. storageKey = `sb-${projectRef}-auth-token`, projectRef = primeiro
 //      label do hostname da URL do Supabase (SupabaseClient.ts:327).
-//   2. cookieEncoding é 'base64url' por padrão (o projeto não sobrescreve —
+//   2. cookieEncoding é 'base64url' por padrão (o projeto não sobrescreve,
 //      confirmado em lib/supabase/server.ts e middleware.ts).
-//   3. valor = 'base64-' + base64url(JSON.stringify(session)) — e
+//   3. valor = 'base64-' + base64url(JSON.stringify(session)), e
 //      `stringToBase64URL` do pacote é bit-a-bit igual a
 //      `Buffer.from(str).toString('base64url')` do Node (é o que o próprio
 //      teste do pacote assume, base64url.test.ts:24).
 //   4. se o valor codificado passar de 3180 chars (MAX_CHUNK_SIZE), quebra em
-//      `sb-<ref>-auth-token.0`, `.1`, ... — como o alfabeto base64url não tem
+//      `sb-<ref>-auth-token.0`, `.1`, ..., como o alfabeto base64url não tem
 //      caractere que precise de percent-encoding, o corte é uma fatia direta
 //      da string, sem o vaivém de encodeURIComponent/decodeURIComponent que
 //      o chunker faz para o caso genérico.

@@ -16,7 +16,7 @@ type Plan = {
   name: string
   price: string
   period?: string
-  // Frase curta embaixo do preço — usada só no Pro pra deixar explícito que
+  // Frase curta embaixo do preço, usada só no Pro pra deixar explícito que
   // R$49 é da EMPRESA, não por pessoa. Todo concorrente mapeado na pesquisa
   // de mercado (RD Station, Agendor, Ploomes, PipeRun, Pipedrive, Kommo)
   // cobra por usuário; é a vantagem estrutural mais forte que o produto tem

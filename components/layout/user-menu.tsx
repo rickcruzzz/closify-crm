@@ -23,11 +23,11 @@ export type CurrentUser = {
 }
 
 /**
- * `compact`: só o avatar redondo — usado no topbar, onde a barra é estreita
+ * `compact`: só o avatar redondo, usado no topbar, onde a barra é estreita
  * e o nome/e-mail já não cabem.
  *
  * `expanded`: avatar + nome + e-mail + seta, no mesmo estilo do
- * `WorkspaceSwitcher` logo acima dele no sidebar — usado no rodapé fixo,
+ * `WorkspaceSwitcher` logo acima dele no sidebar, usado no rodapé fixo,
  * onde tem largura de sobra e a informação vale mostrar sem precisar abrir
  * o menu primeiro.
  */
@@ -41,7 +41,7 @@ export function UserMenu({
   const [, startTransition] = useTransition()
 
   // Sem nome de exibição cadastrado, `currentUser.name` cai pro e-mail
-  // (app/(dashboard)/layout.tsx) — nome e e-mail viram a MESMA string, e
+  // (app/(dashboard)/layout.tsx), nome e e-mail viram a MESMA string, e
   // mostrar as duas linhas repete a informação: uma cortada num ponto (negrito,
   // mais larga por caractere), outra cortada noutro (peso normal), parecendo
   // erro de truncamento em vez de conteúdo duplicado, que é o que realmente é.
@@ -98,13 +98,13 @@ export function UserMenu({
 
             Destinos separados pelo dono do dado: `/perfil` é da pessoa (nome,
             e-mail, senha), `/settings` é da empresa (workspace, colaboradores,
-            plano, integrações) — `?aba=equipe` pula direto pra aba de
+            plano, integrações), `?aba=equipe` pula direto pra aba de
             colaboradores em vez de cair na aba padrão.
 
             O rótulo "Configurações" precisa ficar DENTRO do `DropdownMenuGroup`
             (não como irmão): `DropdownMenuLabel` é o `Menu.GroupLabel` do Base
             UI, que exige um `Menu.Group` ancestral pra amarrar o
-            `aria-labelledby` — fora dele, o Base UI lança em runtime
+            `aria-labelledby`, fora dele, o Base UI lança em runtime
             ("Base UI error #31") e o boundary de erro da rota engole a árvore
             inteira. */}
         <DropdownMenuGroup>

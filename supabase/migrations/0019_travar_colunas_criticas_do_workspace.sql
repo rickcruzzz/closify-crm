@@ -1,5 +1,5 @@
 -- ATENÇÃO: a checagem por `service_role` deste arquivo está incorreta e foi
--- substituída pela 0021 — `SECURITY DEFINER` troca o dono da execução, não o
+-- substituída pela 0021, `SECURITY DEFINER` troca o dono da execução, não o
 -- papel da sessão, então esta versão bloqueava o próprio webhook. Mantido
 -- como está por já ter sido aplicado; leia sempre junto com a 0021.
 --
@@ -15,12 +15,12 @@
 -- direto no PostgREST e ganhava o Pro de graça. Verificado contra produção:
 -- das 7 tentativas de escrita indevida, 6 (contra OUTRA empresa) já eram
 -- bloqueadas pela RLS; só o autoupgrade próprio passava. Não é vazamento de
--- dados entre empresas — é o cliente contra a própria receita do produto.
+-- dados entre empresas, é o cliente contra a própria receita do produto.
 --
 -- Por que trigger e não `WITH CHECK` na política: o `WITH CHECK` enxerga
 -- apenas a linha NOVA. Dá para exigir "plan = 'free'", o que quebraria todo
 -- workspace pago que tentasse trocar de nome, mas não dá para exprimir "plan
--- não pode ter MUDADO" — isso exige comparar OLD com NEW, e só o trigger tem
+-- não pode ter MUDADO", isso exige comparar OLD com NEW, e só o trigger tem
 -- as duas versões.
 --
 -- `plan` continua mudando normalmente pelo webhook do Asaas: aquele caminho
@@ -53,7 +53,7 @@ set search_path to ''
 as $$
 begin
   -- A service role (webhook do Asaas, scripts administrativos) precisa mudar o
-  -- plano — é justamente ela quem aplica o pagamento confirmado. Só o acesso
+  -- plano, é justamente ela quem aplica o pagamento confirmado. Só o acesso
   -- via API pública é restrito.
   if current_setting('role', true) = 'service_role'
      or (select auth.role()) = 'service_role' then

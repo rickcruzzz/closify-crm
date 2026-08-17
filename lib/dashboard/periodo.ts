@@ -10,7 +10,7 @@ export const rotuloDoPreset: Record<PresetDePeriodo, string> = {
   ano: 'Este ano',
 }
 
-// Brasil não tem mais horário de verão desde 2019 — mesma premissa que
+// Brasil não tem mais horário de verão desde 2019, mesma premissa que
 // lib/tasks/buckets.ts já usa pra distância entre dias. Offset fixo evita
 // puxar timezone de biblioteca externa só pra isso.
 const OFFSET_BRASIL = '-03:00'
@@ -30,16 +30,16 @@ function subtrairDias(diaYyyyMmDd: string, dias: number): string {
 
 /**
  * Resolve o período escolhido (preset ou datas livres) em `desde`/`ate`
- * prontos pra RPC — instantes absolutos com offset, não datas soltas, porque
+ * prontos pra RPC, instantes absolutos com offset, não datas soltas, porque
  * `ate: "2026-08-13"` seria interpretado como meia-noite do dia, excluindo
  * tudo criado depois disso no mesmo dia.
  *
- * `agora` vem de fora, não `new Date()` aqui dentro — mesmo motivo de
+ * `agora` vem de fora, não `new Date()` aqui dentro, mesmo motivo de
  * `lib/tasks/buckets.ts`: testável sem depender do relógio real, e o "hoje"
  * que importa é o de São Paulo, não o UTC do servidor da Vercel.
  *
  * `undefined` (sem período nenhum reconhecido) faz as queries caírem no
- * comportamento padrão: todo o histórico, sem filtro — mesmo que sempre foi.
+ * comportamento padrão: todo o histórico, sem filtro, mesmo que sempre foi.
  */
 export function resolverPeriodo(
   agora: Date,

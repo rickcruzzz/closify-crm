@@ -1,5 +1,5 @@
 -- workspace_members_insert exigia is_workspace_admin(workspace_id), mas no
--- fluxo de onboarding o usuário ainda não é membro de lugar nenhum — a
+-- fluxo de onboarding o usuário ainda não é membro de lugar nenhum, a
 -- policy nunca passava e travava a criação do primeiro admin do workspace.
 --
 -- Libera o insert quando quem insere já é admin do workspace (convite de

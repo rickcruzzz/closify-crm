@@ -11,7 +11,7 @@ export const FREE_MEMBER_LIMIT = 2
  * uma empresa nova para cada dupla e ter equipe ilimitada de graça. Um usuário
  * de produção já tinha 4 workspaces quando isto foi detectado.
  *
- * Multi-empresa é o que o PRD posiciona como diferencial do Pro — é o recurso
+ * Multi-empresa é o que o PRD posiciona como diferencial do Pro, é o recurso
  * certo para ficar atrás do pagamento.
  */
 export const FREE_WORKSPACE_LIMIT = 1

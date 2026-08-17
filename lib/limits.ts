@@ -55,7 +55,7 @@ export async function canAddMember(workspaceId: string): Promise<LimitCheck> {
 
   if (pro) return { allowed: true }
 
-  // Conta membros já ativos + convites pendentes — sem isso, dava pra
+  // Conta membros já ativos + convites pendentes, sem isso, dava pra
   // estourar o limite mandando vários convites de uma vez e todos aceitando
   // depois.
   const [{ count: memberCount }, { count: pendingInvites }] = await Promise.all([
@@ -87,7 +87,7 @@ export async function canAddMember(workspaceId: string): Promise<LimitCheck> {
  * se está contendo é justamente a criação de workspaces novos para escapar do
  * teto de colaboradores.
  *
- * A conta é feita sobre workspaces onde a pessoa é ADMIN — participar de uma
+ * A conta é feita sobre workspaces onde a pessoa é ADMIN, participar de uma
  * empresa a convite de outro não deve consumir a vaga dela, senão quem aceita
  * dois convites fica impedido de ter a própria empresa.
  *
@@ -111,7 +111,7 @@ export async function canAddWorkspace(userId: string): Promise<LimitCheck> {
   //
   // Pergunta por workspace em vez de ler a coluna `plan` em lote: a coluna é o
   // último valor gravado e não sabe que o período pago venceu. `pro_vigente`
-  // confere a validade. São poucas chamadas — o Free permite uma empresa, e
+  // confere a validade. São poucas chamadas, o Free permite uma empresa, e
   // quem tem várias é justamente quem paga.
   const validades = await Promise.all(
     ids.map((id) => supabase.rpc('pro_vigente', { target_workspace_id: id })),

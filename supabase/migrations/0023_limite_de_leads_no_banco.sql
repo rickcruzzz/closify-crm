@@ -1,8 +1,8 @@
 -- Move o limite de leads do plano Free para o banco.
 --
 -- `canAddLead` (lib/limits.ts) roda na Server Action, que é um endpoint HTTP
--- como qualquer outro. Quem chama o PostgREST direto com a chave pública — que
--- está no HTML por design — pula a checagem inteira. Verificado em produção:
+-- como qualquer outro. Quem chama o PostgREST direto com a chave pública, que
+-- está no HTML por design, pula a checagem inteira. Verificado em produção:
 -- 60 leads inseridos de uma vez num workspace Free, contra um limite de 50.
 --
 -- Não é vazamento nem upgrade grátis: o infrator ganha só linhas a mais na

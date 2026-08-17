@@ -8,7 +8,7 @@
 --   select set_config('velofunil.aplicando_pagamento','1',true);
 --   update workspaces set plan='pro' where id='<o seu>';
 --
--- e voltava a ganhar o Pro de graça. Confirmado em produção — o ataque passou
+-- e voltava a ganhar o Pro de graça. Confirmado em produção, o ataque passou
 -- e o workspace ficou 'pro' sem pagamento.
 --
 -- A trava passa a não depender de nada que o chamador controle. Qualquer
@@ -19,7 +19,7 @@
 -- `plan` vinda de qualquer sessão que não seja a service role, sem exceção. A
 -- RPC deixa de escrever em `workspaces` diretamente e passa a ser chamada
 -- apenas pelo webhook, que já usa a service role (`createAdminClient()` com a
--- `SUPABASE_SERVICE_ROLE_KEY`). Essa chave nunca chega ao navegador — vive só
+-- `SUPABASE_SERVICE_ROLE_KEY`). Essa chave nunca chega ao navegador, vive só
 -- nas variáveis de ambiente do servidor.
 --
 -- Consequência: `apply_asaas_subscription_status` continua existindo e

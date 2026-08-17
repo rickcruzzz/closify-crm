@@ -12,7 +12,7 @@
 --          but expression is of type text
 --
 -- O erro nunca apareceu em teste porque `plpgsql` só valida a expressão quando
--- a linha executa de fato — e, até agora, nenhum pagamento chegou a rodar este
+-- a linha executa de fato, e, até agora, nenhum pagamento chegou a rodar este
 -- caminho: o webhook estava cadastrado no domínio antigo e sem authToken, então
 -- todo evento parava com 401 antes de tocar o banco. Os dois defeitos se
 -- escondiam um atrás do outro.
@@ -23,7 +23,7 @@
 -- igual, e o cliente segue no Free tendo pago.
 --
 -- Além do cast, a condição passa a tratar 'past_due' como acesso mantido: uma
--- fatura atrasada não deve derrubar o cliente para o Free no mesmo instante —
+-- fatura atrasada não deve derrubar o cliente para o Free no mesmo instante,
 -- o Asaas ainda vai tentar cobrar, e derrubar o acesso na primeira falha de
 -- cobrança gera cancelamento que não precisava acontecer. Só 'canceled'
 -- rebaixa de fato.

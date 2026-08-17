@@ -72,7 +72,7 @@ export async function inviteMember(values: unknown) {
   // dá erro visível, mas gasta uma vaga do plano: `canAddMember` soma convites
   // pendentes aos membros ativos, então no Free (limite 2) o admin vira 1
   // membro + 1 convite e fica impedido de convidar alguém de verdade. E o
-  // convite nunca serve para nada — `accept_workspace_invite` termina em
+  // convite nunca serve para nada, `accept_workspace_invite` termina em
   // `on conflict do nothing`.
   //
   // A trava de fato é o trigger `validar_convite_de_workspace` (migration
@@ -149,7 +149,7 @@ export async function inviteMember(values: unknown) {
     }
   }
 
-  // O escape do nome do workspace acontece dentro de `renderConviteEmail` —
+  // O escape do nome do workspace acontece dentro de `renderConviteEmail`,
   // ver o comentário de `escapeHtml` em `lib/emails/layout.ts`, que explica por
   // que ele existe.
   const { subject, html } = renderConviteEmail({
@@ -210,7 +210,7 @@ export async function updateMemberRole(memberUserId: string, role: unknown) {
   if ('error' in admin) return admin
 
   // Rebaixar o último admin deixa o workspace sem ninguém que possa convidar,
-  // cobrar ou gerenciar membros — lockout que só se resolve no banco.
+  // cobrar ou gerenciar membros, lockout que só se resolve no banco.
   if (parsed.data === 'membro') {
     const { count } = await admin.supabase
       .from('workspace_members')
@@ -306,7 +306,7 @@ export async function acceptInvite(token: unknown) {
 
   // Mesma razão do aceite automático na página do convite: quem entra numa
   // empresa que já existe não tem empresa para configurar. Os dois caminhos
-  // levam ao mesmo estado — deixar só um marcado faria o assistente aparecer
+  // levam ao mesmo estado, deixar só um marcado faria o assistente aparecer
   // dependendo de por onde a pessoa aceitou.
   await concluirOnboardingPorConvite(supabase, user.id)
 
@@ -314,18 +314,18 @@ export async function acceptInvite(token: unknown) {
 }
 
 /**
- * Exclui a conta do usuário autenticado — LGPD, art. 18, VI.
+ * Exclui a conta do usuário autenticado, LGPD, art. 18, VI.
  *
  * Duas etapas, nesta ordem, e a ordem importa:
  *
  * 1. A RPC `excluir_minha_conta` apaga os dados de aplicação sob a sessão do
  *    próprio usuário. Ela roda como `security definer` porque `workspaces` tem
- *    RLS sem policy de DELETE — um `delete` direto do client seria negado em
+ *    RLS sem policy de DELETE, um `delete` direto do client seria negado em
  *    silêncio, devolvendo sucesso com zero linhas apagadas.
  * 2. Só então a linha em `auth.users` é removida com a service role, que é o
  *    único caminho para o schema `auth`.
  *
- * Se a etapa 2 falhar, sobra um login sem nenhum dado — inconveniente, mas
+ * Se a etapa 2 falhar, sobra um login sem nenhum dado, inconveniente, mas
  * recuperável. Se fosse ao contrário, os dados ficariam órfãos e sem dono, que
  * é exatamente o que o pedido de eliminação quer evitar.
  */
@@ -376,7 +376,7 @@ export async function deleteAccount() {
  * Troca a empresa que a pessoa está usando.
  *
  * O seletor da barra lateral era decorativo: `onClick` só mudava um estado do
- * React, e as páginas — que são Server Components e não enxergam esse estado —
+ * React, e as páginas, que são Server Components e não enxergam esse estado,
  * continuavam lendo sempre a empresa mais antiga. Quem participava de duas via
  * as duas na lista, clicava na segunda, o rótulo mudava, e todos os dados
  * continuavam da primeira. Para quem foi convidado como colaborador tendo
@@ -384,7 +384,7 @@ export async function deleteAccount() {
  * convidou.
  *
  * A escolha precisa virar cookie, e cookie só pode ser gravado em Server
- * Action ou Route Handler — daí esta função existir em vez de a página
+ * Action ou Route Handler, daí esta função existir em vez de a página
  * resolver sozinha.
  */
 export async function trocarEmpresa(workspaceId: unknown) {
@@ -402,8 +402,8 @@ export async function trocarEmpresa(workspaceId: unknown) {
   }
 
   // Confere a participação AQUI, e não só na leitura. A RLS já impediria a
-  // pessoa de ver dados de uma empresa alheia — o efeito seria tela vazia, não
-  // vazamento —, mas gravar um cookie apontando para onde ela não pertence
+  // pessoa de ver dados de uma empresa alheia, o efeito seria tela vazia, não
+  // vazamento,, mas gravar um cookie apontando para onde ela não pertence
   // deixaria o app num estado sem saída até o cookie expirar.
   const { data: vinculo } = await supabase
     .from('workspace_members')

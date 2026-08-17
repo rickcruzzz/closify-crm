@@ -16,7 +16,7 @@ if (!url || !serviceKey) {
 
 const tenantsPath = new URL('./tenants.json', import.meta.url)
 if (!existsSync(tenantsPath)) {
-  console.log('Nenhum tenants.json encontrado — nada para limpar.')
+  console.log('Nenhum tenants.json encontrado, nada para limpar.')
   process.exit(0)
 }
 
@@ -38,7 +38,7 @@ async function main() {
   console.log(`Limpando ${tenants.length} workspaces e seus usuários...`)
 
   // `on delete cascade` (workspace_members, leads, deals, activities) cuida
-  // do resto — só workspace e usuários precisam de delete explícito aqui.
+  // do resto, só workspace e usuários precisam de delete explícito aqui.
   await withConcurrency(tenants, 10, async (tenant, i) => {
     const { error } = await admin.from('workspaces').delete().eq('id', tenant.workspaceId)
     if (error) console.error(`  falha ao apagar workspace ${tenant.workspaceId}:`, error.message)
@@ -63,6 +63,6 @@ async function main() {
 
 main().catch((err) => {
   console.error('\nCLEANUP FALHOU (parcialmente executado):', err.message)
-  console.error('Rode de novo — deletes são idempotentes (erro em já-apagado é esperado).')
+  console.error('Rode de novo, deletes são idempotentes (erro em já-apagado é esperado).')
   process.exit(1)
 })

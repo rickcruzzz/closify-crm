@@ -76,7 +76,7 @@ export default function PrivacidadePage() {
             </strong>{' '}
             Aqui somos <em>operador</em> (art. 5º, VII): tratamos essas informações por
             sua conta e ordem. Quem decide o que coletar, por que e por quanto tempo é
-            você — e é você quem responde perante essas pessoas.
+            você, e é você quem responde perante essas pessoas.
           </li>
         </LegalList>
         <LegalP>
@@ -142,7 +142,7 @@ export default function PrivacidadePage() {
             <tr>
               <td className="px-4 py-2">Guardar registros de acesso</td>
               <td className="px-4 py-2">
-                Obrigação legal — Marco Civil da Internet, art. 15
+                Obrigação legal, Marco Civil da Internet, art. 15
               </td>
             </tr>
           </tbody>
@@ -228,7 +228,7 @@ export default function PrivacidadePage() {
           excluir sua conta a qualquer momento, em Configurações, sem precisar solicitar
           nem esperar. A remoção é imediata e definitiva: os workspaces em que você é o
           único membro são apagados junto, com os leads, negócios e atividades neles.
-          Workspaces compartilhados com outras pessoas continuam existindo — apenas o seu
+          Workspaces compartilhados com outras pessoas continuam existindo, apenas o seu
           vínculo é removido.
         </LegalP>
       </LegalSection>

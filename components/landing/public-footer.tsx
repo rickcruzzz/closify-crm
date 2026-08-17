@@ -36,7 +36,7 @@ export function PublicFooter() {
                 {link.label}
               </Link>
             ))}
-            {/* `wa.me` abre a conversa direto, no app instalado ou no web —
+            {/* `wa.me` abre a conversa direto, no app instalado ou no web,
                 melhor do que exibir o número solto, que obrigaria a pessoa a
                 copiar e colar. `rel=noopener` porque abre em outra aba. */}
             <a

@@ -24,7 +24,7 @@ export type TaskRow = {
  * Tipo separado porque o /kanban carrega todos os negócios abertos sem
  * paginar, e cada campo a mais é multiplicado pelo tamanho do funil. Medido em
  * produção com 100 negócios: `TaskRow` inteiro custa 315 B por negócio, esta
- * versão custa 198 B — 37% a menos, e a consulta de negócios que já existia
+ * versão custa 198 B, 37% a menos, e a consulta de negócios que já existia
  * custa 292 B. Sem o corte, a próxima ação mais que dobraria o peso da rota.
  */
 export type ProximaAcaoRow = {

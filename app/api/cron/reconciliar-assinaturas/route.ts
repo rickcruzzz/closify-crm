@@ -6,18 +6,18 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { aplicarEventoAsaas, type StatusAssinatura } from '@/lib/asaas/aplicar-evento'
 import { buscarPagamentoMaisRecente } from '@/lib/asaas/status-real'
 
-// `timingSafeEqual` e o client admin (service role) não rodam no Edge — ver
+// `timingSafeEqual` e o client admin (service role) não rodam no Edge, ver
 // mesmo comentário em app/api/webhooks/asaas/route.ts.
 export const runtime = 'nodejs'
 
 /**
  * Rede de segurança pro caso do webhook do Asaas falhar em entregar (DNS
- * fora do ar, deploy no meio, timeout — qualquer motivo: o Asaas não
+ * fora do ar, deploy no meio, timeout, qualquer motivo: o Asaas não
  * reenvia sozinho depois de uma falha). Roda 1x/dia via Vercel Cron
  * (`vercel.json`), varre assinaturas com status suspeito e corrige
  * comparando contra o status real no Asaas.
  *
- * Ver docs/estado-atual.md — mesmo padrão de webhook perdido que já
+ * Ver docs/estado-atual.md, mesmo padrão de webhook perdido que já
  * aconteceu (workspace "Orne", 13/08) e que ficava preso até alguém notar
  * na mão.
  */
@@ -39,7 +39,7 @@ function isValidCronSecret(authorizationHeader: string | null): boolean {
 
 // Mesmo nome de evento que o webhook usaria pra este status (ver
 // ACTIVE_EVENTS/PAST_DUE_EVENTS/CANCELED_EVENTS em
-// app/api/webhooks/asaas/route.ts) — de propósito, não um nome "de
+// app/api/webhooks/asaas/route.ts), de propósito, não um nome "de
 // reconciliação" à parte: o `eventId` monta em cima disso, e é isso que faz
 // o dedupe reconhecer quando o webhook real (ou uma correção manual
 // anterior) já processou o mesmo pagamento, evitando reenviar e-mail/Meta
@@ -82,7 +82,7 @@ export async function GET(request: Request) {
 
   for (const linha of suspeitas) {
     // `asaas_subscription_id` filtrado por `.not(... 'is', null)` acima, mas
-    // o tipo gerado continua nullable — o `!` aqui é seguro por causa do
+    // o tipo gerado continua nullable, o `!` aqui é seguro por causa do
     // filtro, não por suposição.
     const asaasSubscriptionId = linha.asaas_subscription_id!
 
@@ -99,7 +99,7 @@ export async function GET(request: Request) {
       status: pagamento.statusMapeado,
       subscriptionId: asaasSubscriptionId,
       // Mesmo formato de dedupe que o webhook usaria pra este pagamento
-      // (`evento:payment.id`) — se o webhook real ou uma correção manual já
+      // (`evento:payment.id`), se o webhook real ou uma correção manual já
       // processou esse pagamento específico, o dedupe barra aqui sozinho.
       eventId: `${eventType}:${pagamento.id}`,
       eventType,

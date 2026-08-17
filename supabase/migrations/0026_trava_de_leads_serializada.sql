@@ -2,7 +2,7 @@
 --
 -- A 0023 conta os leads do workspace e recusa a partir de 50. Sob READ
 -- COMMITTED, que é o padrão do Postgres, duas transações simultâneas leem a
--- MESMA contagem antes de qualquer commit — as duas veem 49, as duas passam, e
+-- MESMA contagem antes de qualquer commit, as duas veem 49, as duas passam, e
 -- o workspace termina com 51 leads num plano de 50. O cenário está escrito e
 -- reproduzido em scripts/load-test/k6/scenarios/race4_lead_insert_trigger_cap.js.
 --

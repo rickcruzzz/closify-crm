@@ -9,9 +9,9 @@ import { Analytics as VercelAnalytics } from '@vercel/analytics/next'
  * (`/convite/[token]`), e `path`, que é o caminho REAL, com o valor do
  * parâmetro dentro. O segundo é o problema:
  *
- * - `/convite/<token>` — o token de convite é credencial: quem o tem entra no
+ * - `/convite/<token>`, o token de convite é credencial: quem o tem entra no
  *   workspace. Mandar isso para um terceiro é vazar acesso, não telemetria.
- * - `/leads/<uuid>` — identificador de lead de cliente. Não abre porta, mas é
+ * - `/leads/<uuid>`, identificador de lead de cliente. Não abre porta, mas é
  *   dado de negócio de quem assina, e não há motivo para sair daqui.
  *
  * `beforeSend` roda no browser antes do envio: o que for devolvido é o que
@@ -32,7 +32,7 @@ export function Analytics() {
           const url = new URL(evento.url)
 
           // A query inteira vai fora, em toda rota. `/leads?search=` carrega o
-          // que a pessoa digitou — nome ou e-mail de cliente — e nenhum outro
+          // que a pessoa digitou, nome ou e-mail de cliente, e nenhum outro
           // parâmetro daqui (cursor, status) vale telemetria. Limpar sempre é
           // mais seguro que manter uma lista do que limpar: primeiro eu tratei
           // só as rotas com segmento dinâmico, e a busca escapava.

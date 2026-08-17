@@ -7,7 +7,7 @@ import { dealSchema } from './deal'
  *
  * O `<input type="date">` não reclama de ano digitado errado pelo teclado, e o
  * schema só exigia string não vazia. O banco acumulou prazos como `0111-11-11`
- * e `2007-11-11`, que a tela exibia como "atrasado há 9402 dias" — e, no pior
+ * e `2007-11-11`, que a tela exibia como "atrasado há 9402 dias", e, no pior
  * caso, "atrasado há 699.346 dias".
  */
 
@@ -19,13 +19,13 @@ const base = {
   ownerId: '22222222-2222-4222-8222-222222222222',
 }
 
-describe('dealSchema — prazo', () => {
+describe('dealSchema, prazo', () => {
   it('aceita data plausível', () => {
     expect(dealSchema.safeParse({ ...base, dueDate: '2026-09-15' }).success).toBe(true)
   })
 
   it('recusa ano de dois ou três dígitos', () => {
-    // `new Date(111, ...)` é remapeado para 2011 — a origem do atraso absurdo.
+    // `new Date(111, ...)` é remapeado para 2011, a origem do atraso absurdo.
     expect(dealSchema.safeParse({ ...base, dueDate: '0111-11-11' }).success).toBe(false)
   })
 
@@ -51,7 +51,7 @@ describe('dealSchema — prazo', () => {
   })
 })
 
-describe('dealSchema — demais campos', () => {
+describe('dealSchema, demais campos', () => {
   it('recusa valor negativo', () => {
     const r = dealSchema.safeParse({ ...base, value: -1, dueDate: '2026-09-15' })
     expect(r.success).toBe(false)
@@ -62,7 +62,7 @@ describe('dealSchema — demais campos', () => {
    *
    * Sem teto, um negócio com valor 4232342343.24 (visto em produção) somava
    * direto no Dashboard e virava "Valor do Pipeline: R$ 8,5 bi" pra um
-   * workspace com 4 negócios reais — parecia bug de cálculo, mas a soma
+   * workspace com 4 negócios reais, parecia bug de cálculo, mas a soma
    * estava certa; faltava validação impedindo o valor absurdo de entrar.
    */
   it('recusa valor acima de R$100 milhões', () => {

@@ -28,7 +28,7 @@ const ESPERA_REDUZIDA_MS = 300
 
 /**
  * 'token-pendente': novo formato do e-mail (`?token_hash=`), token ainda não
- * verificado — a verificação só dispara no submit do formulário, não no
+ * verificado, a verificação só dispara no submit do formulário, não no
  * carregamento da página (ver comentário no efeito abaixo).
  * 'sessao-pronta': sessão de recuperação já existe (formato antigo por
  * fragmento, já verificado pelo Supabase antes do redirect).
@@ -38,8 +38,8 @@ type EstadoDoLink = 'verificando' | 'sessao-pronta' | 'token-pendente' | 'invali
 /**
  * Traduz o erro do Supabase para uma frase que diz o que fazer.
  *
- * Antes, três causas diferentes — link velho, sessão ausente e senha recusada
- * pela política — caíam todas em "o link pode ter expirado". Quem tinha sessão
+ * Antes, três causas diferentes, link velho, sessão ausente e senha recusada
+ * pela política, caíam todas em "o link pode ter expirado". Quem tinha sessão
  * ausente pedia link novo para sempre, porque não era esse o problema.
  */
 function mensagemDoErro(codigo: string | undefined, mensagem: string): string {
@@ -86,18 +86,18 @@ function RedefinirSenhaPageInner() {
   /**
    * Dois formatos de link coexistem.
    *
-   * **Novo, em `?token_hash=`**: NÃO verifica nada aqui — só guarda o estado
+   * **Novo, em `?token_hash=`**: NÃO verifica nada aqui, só guarda o estado
    * `token-pendente` e deixa a verificação (`verifyOtp`) para o submit do
    * formulário, em `onSubmit`. Verificar já no carregamento da página teria o
    * mesmo problema do link antigo: qualquer requisição que visite a URL antes
-   * da pessoa — antivírus de provedor de e-mail, scanner de link corporativo,
-   * preview de webmail — consumiria o token de uso único primeiro, e a pessoa
+   * da pessoa, antivírus de provedor de e-mail, scanner de link corporativo,
+   * preview de webmail, consumiria o token de uso único primeiro, e a pessoa
    * cairia em "link expirado" sem nunca ter tido chance real. Isso já
    * acontecia aqui (era o `#error=otp_expired` tratado abaixo) e é a causa
    * raiz, não só um efeito colateral aceitável.
    *
    * **Antigo, em `#access_token=...`**: o Supabase já verificou o token antes
-   * de redirecionar — a troca de `setSession` acontece aqui, no browser, que é
+   * de redirecionar, a troca de `setSession` acontece aqui, no browser, que é
    * o único lugar onde o fragmento existe (nunca chega ao servidor). Mantido
    * para e-mails já enviados antes desta mudança.
    */
@@ -143,8 +143,8 @@ function RedefinirSenhaPageInner() {
   }, [])
 
   // O e-mail da sessão alimenta a validação que recusa "senha igual ao
-  // e-mail". A tela não pergunta o endereço — a pessoa já está identificada
-  // pelo link — então ele entra no formulário como valor escondido, assim que
+  // e-mail". A tela não pergunta o endereço, a pessoa já está identificada
+  // pelo link, então ele entra no formulário como valor escondido, assim que
   // a sessão de recuperação existe.
   React.useEffect(() => {
     if (estadoDoLink !== 'sessao-pronta') return
@@ -165,7 +165,7 @@ function RedefinirSenhaPageInner() {
     resolver: zodResolver(resetPasswordSchema),
     // `confirmPassword` precisa nascer aqui: o schema exige o campo, e sem ele
     // no defaultValues o resolver falhava com `undefined` num campo que a tela
-    // nem renderizava — o erro não tinha onde aparecer e o submit nunca
+    // nem renderizava, o erro não tinha onde aparecer e o submit nunca
     // disparava, deixando o botão "Salvar nova senha" inerte.
     defaultValues: { password: '', confirmPassword: '' },
   })
@@ -173,7 +173,7 @@ function RedefinirSenhaPageInner() {
   /**
    * A troca roda AQUI, no navegador, e não numa Server Action.
    *
-   * A sessão de recuperação nasce neste componente, no `setSession()` acima —
+   * A sessão de recuperação nasce neste componente, no `setSession()` acima,
    * o token vem em `#access_token=`, que nunca chega ao servidor. Uma Server
    * Action só a enxergaria depois que o cookie escrito pelo cliente voltasse
    * numa requisição nova, e essa travessia era a única etapa da cadeia que não
@@ -189,7 +189,7 @@ function RedefinirSenhaPageInner() {
 
     const supabase = createClient()
 
-    // Fluxo novo: a sessão de recuperação ainda não existe — o token só é
+    // Fluxo novo: a sessão de recuperação ainda não existe, o token só é
     // trocado por sessão agora, no submit, nunca no carregamento da página
     // (ver comentário no efeito acima sobre por que isso importa).
     if (estadoDoLink === 'token-pendente') {
@@ -230,7 +230,7 @@ function RedefinirSenhaPageInner() {
     const { error: signOutError } = await supabase.auth.signOut({ scope: 'others' })
 
     if (signOutError) {
-      // A senha JÁ mudou — não dá para desfazer, e seguir em silêncio faria a
+      // A senha JÁ mudou, não dá para desfazer, e seguir em silêncio faria a
       // pessoa acreditar que os outros aparelhos foram desconectados.
       console.error('signOut das outras sessões falhou após reset', signOutError)
       setFormError(
@@ -242,7 +242,7 @@ function RedefinirSenhaPageInner() {
 
     // Provou posse da conta: não deve carregar o bloqueio das tentativas de
     // login erradas que antecederam o reset. Falhar aqui não pode travar
-    // ninguém — a senha já está trocada e o acesso, garantido.
+    // ninguém, a senha já está trocada e o acesso, garantido.
     try {
       if (data.user?.email) await limparTentativasDeLogin(data.user.email)
     } catch (err) {
@@ -256,7 +256,7 @@ function RedefinirSenhaPageInner() {
   }
 
   // O redirect pro dashboard some por trás da animação de boas-vindas, mas
-  // continua acontecendo sozinho — a pessoa não precisa clicar em nada. Quem
+  // continua acontecendo sozinho, a pessoa não precisa clicar em nada. Quem
   // pediu `prefers-reduced-motion` não quer esperar a animação, só o
   // suficiente pra tela não parecer ter travado.
   React.useEffect(() => {
@@ -267,7 +267,7 @@ function RedefinirSenhaPageInner() {
 
     const timer = setTimeout(() => {
       // `refresh` antes de navegar: o cookie de sessão acabou de mudar e o
-      // dashboard é renderizado no servidor — sem isso ele poderia ser
+      // dashboard é renderizado no servidor, sem isso ele poderia ser
       // servido com o estado anterior.
       router.refresh()
       router.replace('/dashboard')
@@ -317,7 +317,7 @@ function RedefinirSenhaPageInner() {
 
   // Link já usado ou expirado. Antes isso caía em `/login` com o erro cru na
   // barra de endereços (`error_code=otp_expired`), sem nenhuma explicação e
-  // sem saída — a pessoa via só a tela de entrar e não entendia o motivo.
+  // sem saída, a pessoa via só a tela de entrar e não entendia o motivo.
   if (estadoDoLink === 'invalido') {
     return (
       <Card>
@@ -327,7 +327,7 @@ function RedefinirSenhaPageInner() {
           </div>
           <CardTitle className="text-xl">Link expirado</CardTitle>
           <CardDescription>
-            Este link de redefinição já foi usado ou passou da validade. Peça um novo —
+            Este link de redefinição já foi usado ou passou da validade. Peça um novo,
             ele vale por uma hora e só funciona uma vez.
           </CardDescription>
         </CardHeader>

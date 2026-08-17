@@ -6,14 +6,14 @@ import { useRouter } from 'next/navigation'
 
 import { cn } from '@/lib/utils'
 
-/** Mesmo valor do ScrollLink — consistência de toque na navbar inteira. */
+/** Mesmo valor do ScrollLink, consistência de toque na navbar inteira. */
 const DELAY_MS = 150
 
 type Props = React.ComponentPropsWithoutRef<typeof Link>
 
 /**
  * Link de navegação real (não âncora) com o mesmo feedback de clique do
- * ScrollLink — pra "Entrar"/"Começar grátis" não destoarem dos links de
+ * ScrollLink, pra "Entrar"/"Começar grátis" não destoarem dos links de
  * seção ao lado, na mesma navbar.
  *
  * Usa `next/link` por baixo (não `<a>` cru) pra manter o prefetch
@@ -23,7 +23,7 @@ type Props = React.ComponentPropsWithoutRef<typeof Link>
  *
  * `forwardRef`: usado dentro de `SheetClose` (Base UI) no menu mobile, que
  * injeta um `ref` no elemento passado via `render` pra gerenciar foco ao
- * fechar o diálogo — sem encaminhar pro `Link`, o React avisa "Function
+ * fechar o diálogo, sem encaminhar pro `Link`, o React avisa "Function
  * components cannot be given refs" e o foco não volta pra onde devia.
  */
 export const NavCtaLink = React.forwardRef<HTMLAnchorElement, Props>(function NavCtaLink(
@@ -46,7 +46,7 @@ export const NavCtaLink = React.forwardRef<HTMLAnchorElement, Props>(function Na
       router.push(href.toString())
     }, DELAY_MS)
     // Sem reset de `pressionado`: a navegação troca a página, o componente
-    // desmonta sozinho — resetar aqui não teria efeito útil.
+    // desmonta sozinho, resetar aqui não teria efeito útil.
   }
 
   return (
