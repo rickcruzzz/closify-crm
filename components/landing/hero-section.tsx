@@ -17,14 +17,25 @@ export function HeroSection() {
       <div className="mx-auto grid max-w-6xl items-center gap-12 lg:grid-cols-2 lg:gap-8">
         <div className="flex flex-col items-center gap-6 text-center lg:items-start lg:text-left">
           <SegmentBadge className="animate-in fade-in slide-in-from-bottom-2 ease-entrada font-mono text-xs tracking-wide uppercase duration-[650ms]" />
-          <p className="text-muted-foreground animate-in fade-in slide-in-from-bottom-2 ease-entrada text-sm font-medium duration-[650ms]">
-            Velo Funil: CRM para pequenos negócios organizarem clientes e vendas
-          </p>
-          {/* Tracking fica mais negativo quanto maior o texto, é o que separa
-              um título "de template" de um desenhado. Ver também o h2 das
-              demais seções, em -0.02em. */}
-          <h1 className="animate-in fade-in slide-in-from-bottom-3 ease-entrada text-4xl font-semibold tracking-[-0.03em] text-balance duration-[750ms] md:text-6xl">
-            Pare de perder venda por esquecimento.
+          {/* Nome e categoria moram DENTRO do h1, não num parágrafo acima
+              dele: o verificador de marca do Google compara o nome do app no
+              consent screen com o heading principal da home, e reprovava com
+              "sua página inicial não explica a finalidade do seu aplicativo"
+              enquanto o h1 era só a headline emocional. A headline continua
+              sendo o texto dominante, o nome entra como linha de apoio.
+
+              O espaçamento entre as duas linhas é do h1 (mb no primeiro span),
+              não do `gap-6` do flex pai: os dois viraram um filho só. */}
+          <h1 className="animate-in fade-in slide-in-from-bottom-3 ease-entrada duration-[750ms]">
+            <span className="text-muted-foreground mb-3 block text-sm font-medium">
+              Velo Funil, CRM para pequenos negócios
+            </span>
+            {/* Tracking fica mais negativo quanto maior o texto, é o que separa
+                um título "de template" de um desenhado. Ver também o h2 das
+                demais seções, em -0.02em. */}
+            <span className="block text-4xl font-semibold tracking-[-0.03em] text-balance md:text-6xl">
+              Pare de perder venda por esquecimento.
+            </span>
           </h1>
           <p className="text-muted-foreground animate-in fade-in slide-in-from-bottom-4 ease-entrada max-w-2xl text-lg text-balance duration-[800ms]">
             Todo cliente que você esquece de responder é um cliente que você perde. O

@@ -3,7 +3,7 @@ import { cn } from '@/lib/utils'
 // Três camadas que convergem para um ponto: lidas juntas formam a silhueta de
 // um funil e a letra V de Velo; lidas separadas são as etapas do pipeline
 // afunilando até o fechamento. Camadas soltas em vez de um funil sólido de
-// peça única porque o sólido lê como o ícone genérico de filtro — testado lado
+// peça única porque o sólido lê como o ícone genérico de filtro, testado lado
 // a lado antes de escolher.
 //
 // As larguras caem 18.8 → 10.2 → 2.2 e cada camada tem a base chanfrada no
@@ -47,10 +47,27 @@ export function Logo({
       </div>
       {/* Nome composto ganha hierarquia em vez de dois pesos iguais: "Velo" é
           a marca, "Funil" é a categoria. Sem o contraste de peso, o lockup lê
-          como duas palavras soltas. */}
+          como duas palavras soltas.
+
+          O par `sr-only` + `aria-hidden` não é detalhe de acessibilidade
+          opcional: quem lê a página por extração de texto enxergava "Velo" e
+          "Funil" como dois nós separados, porque o `<span>` do contraste
+          quebra a string no meio. O verificador de marca do Google, que
+          compara o nome do app no consent screen com o que acha na home,
+          reprovava com "o nome do aplicativo não corresponde ao nome na sua
+          página inicial" justamente por isso.
+
+          `aria-label` sozinho não resolve: conserta a árvore de
+          acessibilidade, mas um scanner que só varre o texto do DOM ignora
+          atributo ARIA. O nome contíguo precisa existir como texto de
+          verdade, daí o `sr-only`, que é o mesmo recurso já usado em
+          `components/ui/sheet.tsx` e no link de pular para o conteúdo. */}
       {showWordmark && (
         <span className="text-lg font-semibold tracking-tight">
-          Velo <span className="text-muted-foreground font-normal">Funil</span>
+          <span className="sr-only">Velo Funil</span>
+          <span aria-hidden>
+            Velo <span className="text-muted-foreground font-normal">Funil</span>
+          </span>
         </span>
       )}
     </div>
