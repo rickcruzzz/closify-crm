@@ -281,9 +281,17 @@ export function ImportLeadsDialog({
           </div>
         )}
 
+        {/* `min-w-0` no passo inteiro: o DialogContent é um `grid` de coluna
+            `auto`, e coluna `auto` cresce até caber o filho mais largo, aqui a
+            tabela de amostra do arquivo. O resultado, medido em 375px, é o
+            diálogo ficar corretamente com 343px enquanto os filhos ocupam 483
+            e vazam para fora dele, cortando os selects e o botão de importar.
+            Defeito que já existia antes desta rodada. Com o mínimo em zero a
+            coluna encolhe e o `overflow-x-auto` da tabela volta a fazer o que
+            promete: rolar só ela, não a caixa inteira. */}
         {passo === 'colunas' && (
-          <div className="flex flex-col gap-4">
-            <div className="border-border rounded-lg border p-3">
+          <div className="flex min-w-0 flex-col gap-4">
+            <div className="border-border min-w-0 rounded-lg border p-3">
               <p className="mb-2 text-xs font-medium">Primeiras linhas do arquivo</p>
               <div className="overflow-x-auto">
                 <table className="text-xs">
@@ -343,7 +351,28 @@ export function ImportLeadsDialog({
               )}
             </div>
 
-            <div className="flex flex-col gap-2">
+            {/* Os SETE controles do diálogo (os seis mapeamentos e o de
+                duplicados, logo abaixo) compartilham esta mesma grade, e é ela
+                que faz todos começarem na mesma coordenada.
+
+                Antes o de duplicados era `flex flex-col` dentro de uma caixa
+                com borda: rótulo em cima e select colado na borda, enquanto os
+                seis de cima tinham o select recuado. Dois desenhos para o mesmo
+                tipo de controle, e o degrau entre eles era o que saltava aos
+                olhos.
+
+                `5.5rem` cabe "Telefone", o rótulo mais largo, sem o vão de
+                ~50px que o `7rem` anterior deixava sobrando.
+
+                `minmax(0,1fr)` e não `1fr`: `1fr` é atalho para
+                `minmax(auto,1fr)`, e `auto` recusa encolher abaixo do
+                conteúdo. Como o SelectTrigger herda `whitespace-nowrap`, a
+                opção mais longa ("Atualizar com os dados da planilha") esticava
+                a coluna e o diálogo inteiro vazava da tela no celular: medido,
+                493px de select numa viewport de 375px, defeito que já existia
+                antes desta mudança. Com o mínimo em zero a coluna encolhe e o
+                texto trunca dentro dela. */}
+            <div className="flex flex-col gap-3">
               {CAMPOS.map(({ campo, rotulo }) => {
                 const indiceSelecionado = mapeamento[campo]
                 const amostra =
@@ -352,8 +381,16 @@ export function ImportLeadsDialog({
                     : null
 
                 return (
-                  <div key={campo} className="grid grid-cols-[7rem_1fr] items-start gap-3">
-                    <Label htmlFor={`col-${campo}`} className="pt-2 text-sm">
+                  <div
+                    key={campo}
+                    className="grid grid-cols-[5.5rem_minmax(0,1fr)] items-center gap-x-3 gap-y-1"
+                  >
+                    {/* `items-center` na grade em vez de `pt-2` no rótulo: o
+                        padding era número mágico para fingir alinhamento com o
+                        select e errava por uns 2px. A dica "ex:" saiu da coluna
+                        do select e virou uma segunda linha da grade, então ela
+                        não empurra mais o rótulo para fora do centro. */}
+                    <Label htmlFor={`col-${campo}`} className="text-sm">
                       {rotulo}
                     </Label>
                     <div className="flex min-w-0 flex-col gap-1">
@@ -391,35 +428,44 @@ export function ImportLeadsDialog({
                   </div>
                 )
               })}
-            </div>
 
-            <div className="border-border flex flex-col gap-1.5 rounded-lg border p-3">
-              <Label htmlFor="duplicados" className="text-sm">
-                Contatos que já estão no CRM
-              </Label>
-              <Select
-                value={duplicados}
-                onValueChange={(valor) => setDuplicados(valor as 'ignorar' | 'atualizar')}
-              >
-                <SelectTrigger id="duplicados" className="w-full">
-                  <SelectValue>
-                    {(valor) =>
-                      valor === 'atualizar'
-                        ? 'Atualizar com os dados da planilha'
-                        : 'Deixar como estão'
-                    }
-                  </SelectValue>
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="ignorar">Deixar como estão</SelectItem>
-                  <SelectItem value="atualizar">Atualizar com os dados da planilha</SelectItem>
-                </SelectContent>
-              </Select>
-              <p className="text-muted-foreground text-xs">
-                {duplicados === 'atualizar'
-                  ? 'Corrija a planilha e suba de novo: quem já existe recebe os dados novos. Célula em branco não apaga nada.'
-                  : 'Quem já existe é ignorado. Só entram os contatos novos.'}
-              </p>
+              {/* Mesma grade dos seis acima, e por isso alinhado com eles.
+                  "Contatos que já estão no CRM" não cabe numa coluna de
+                  5.5rem sem quebrar em quatro linhas, então o rótulo encurtou;
+                  o texto de apoio embaixo do select continua explicando o que
+                  a escolha faz. */}
+              <div className="grid grid-cols-[5.5rem_minmax(0,1fr)] items-center gap-x-3 gap-y-1">
+                <Label htmlFor="duplicados" className="text-sm leading-tight">
+                  Já no CRM
+                </Label>
+                <div className="flex min-w-0 flex-col gap-1">
+                  <Select
+                    value={duplicados}
+                    onValueChange={(valor) => setDuplicados(valor as 'ignorar' | 'atualizar')}
+                  >
+                    <SelectTrigger id="duplicados" className="w-full">
+                      <SelectValue>
+                        {(valor) =>
+                          valor === 'atualizar'
+                            ? 'Atualizar com os dados da planilha'
+                            : 'Deixar como estão'
+                        }
+                      </SelectValue>
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="ignorar">Deixar como estão</SelectItem>
+                      <SelectItem value="atualizar">
+                        Atualizar com os dados da planilha
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <span className="text-muted-foreground text-xs">
+                    {duplicados === 'atualizar'
+                      ? 'Quem já existe recebe os dados novos. Célula em branco não apaga nada.'
+                      : 'Quem já existe é ignorado. Só entram os contatos novos.'}
+                  </span>
+                </div>
+              </div>
             </div>
 
             {previa.linhas.length > 0 && (

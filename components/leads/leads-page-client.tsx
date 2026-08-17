@@ -73,37 +73,78 @@ export function LeadsPageClient({
   const [excluindoLeadId, setExcluindoLeadId] = React.useState<string | null>(null)
   const [importOpen, setImportOpen] = React.useState(false)
 
-  function updateFilters(next: {
-    search?: string
-    status?: string | null
-    cursor?: string | null
-  }) {
-    const params = new URLSearchParams(searchParams)
-    if (next.search !== undefined) {
-      if (next.search) params.set('search', next.search)
-      else params.delete('search')
-    }
-    if (next.status !== undefined) {
-      if (next.status && next.status !== 'todos') params.set('status', next.status)
-      else params.delete('status')
-    }
-    if (next.cursor !== undefined) {
-      if (next.cursor) params.set('cursor', next.cursor)
-      else params.delete('cursor')
-    } else {
-      params.delete('cursor')
-    }
-    // `useTransition` em vez de `router.push` cru: sem isso, trocar o filtro
-    // de status não dava sinal nenhum até a lista nova chegar, nem a barra
-    // de progresso global cobre isso, porque ela só liga em clique de link
-    // (`<a>`), e o Select não é um. `trocandoFiltro` desabilita o Select e
-    // mostra um spinner visível no mesmo instante do clique.
-    startTransition(() => {
-      router.push(`${pathname}?${params.toString()}`)
-    })
-  }
+  const updateFilters = React.useCallback(
+    (
+      next: {
+        search?: string
+        status?: string | null
+        cursor?: string | null
+      },
+      // Busca ao digitar usa `replace`: uma entrada de histórico por tecla
+      // faria o botão Voltar do navegador percorrer "c", "ca", "cam"… antes
+      // de sair da tela. Filtro de status e paginação continuam em `push`,
+      // porque ali voltar para o estado anterior é o que a pessoa espera.
+      modo: 'push' | 'replace' = 'push',
+    ) => {
+      const params = new URLSearchParams(searchParams)
+      if (next.search !== undefined) {
+        if (next.search) params.set('search', next.search)
+        else params.delete('search')
+      }
+      if (next.status !== undefined) {
+        if (next.status && next.status !== 'todos') params.set('status', next.status)
+        else params.delete('status')
+      }
+      if (next.cursor !== undefined) {
+        if (next.cursor) params.set('cursor', next.cursor)
+        else params.delete('cursor')
+      } else {
+        params.delete('cursor')
+      }
+      // `useTransition` em vez de navegação crua: sem isso, trocar o filtro
+      // de status não dava sinal nenhum até a lista nova chegar, nem a barra
+      // de progresso global cobre isso, porque ela só liga em clique de link
+      // (`<a>`), e o Select não é um. `trocandoFiltro` desabilita o Select e
+      // mostra um spinner visível no mesmo instante do clique, e agora cobre
+      // a busca ao digitar pelo mesmo motivo.
+      startTransition(() => {
+        const destino = `${pathname}?${params.toString()}`
+        if (modo === 'replace') router.replace(destino)
+        else router.push(destino)
+      })
+    },
+    [pathname, router, searchParams],
+  )
+
+  /**
+   * Filtra enquanto a pessoa digita.
+   *
+   * Antes, o campo só disparava no `submit` do formulário, e não havia botão
+   * de buscar: a lupa é decorativa. Quem digitava "camila" via a lista inteira
+   * continuar ali e concluía que a busca não funciona. Funcionava, mas só com
+   * Enter, que ninguém adivinha.
+   *
+   * 350ms é o que separa "filtrou sozinho" de "recarrega a cada tecla": abaixo
+   * disso cada letra vira uma ida ao servidor, acima disso a lista parece
+   * travada.
+   */
+  React.useEffect(() => {
+    // Nada a fazer se o que está no campo já é o que o servidor devolveu. É o
+    // que impede o disparo na primeira renderização (abrir a página com
+    // `?search=` na URL recarregaria a si mesma) e também o eco depois que a
+    // navegação volta com o termo novo.
+    if (search === initialSearch) return
+
+    const temporizador = setTimeout(() => {
+      updateFilters({ search }, 'replace')
+    }, 350)
+
+    return () => clearTimeout(temporizador)
+  }, [search, initialSearch, updateFilters])
 
   function handleSearchSubmit(e: React.FormEvent) {
+    // Enter continua valendo para quem tem o hábito: dispara na hora, sem
+    // esperar o debounce.
     e.preventDefault()
     updateFilters({ search })
   }
