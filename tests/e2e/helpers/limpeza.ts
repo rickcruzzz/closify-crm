@@ -65,15 +65,22 @@ export async function limpar(rastros: Rastros): Promise<ResultadoLimpeza> {
   }
 
   if (rastros.workspaceId) {
-    for (const tabela of ['subscriptions', 'workspace_members'] as const) {
-      await tentar(`${tabela} do workspace`, async () => {
-        const { error } = await supabase
-          .from(tabela)
-          .delete()
-          .eq('workspace_id', rastros.workspaceId!)
-        if (error) throw new Error(error.message)
-      })
-    }
+    // `workspace_members` NÃO entra aqui de propósito. Apagar a linha do único
+    // admin bate na trava do banco ("A empresa precisa de pelo menos um
+    // administrador"), que existe justamente para impedir empresa órfã. O
+    // apagar do workspace, logo abaixo, leva os membros junto por cascata, e a
+    // conferência de rastros confirma que não sobra nada.
+    //
+    // Tentar mesmo assim só gerava um "ATENÇÃO: a limpeza não terminou"
+    // falso, e alarme que grita sem motivo é o que faz o alarme de verdade
+    // ser ignorado depois.
+    await tentar('subscriptions do workspace', async () => {
+      const { error } = await supabase
+        .from('subscriptions')
+        .delete()
+        .eq('workspace_id', rastros.workspaceId!)
+      if (error) throw new Error(error.message)
+    })
   }
 
   if (rastros.userId) {

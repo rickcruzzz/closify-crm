@@ -1,4 +1,4 @@
-import { test, expect, type Page } from '@playwright/test'
+import { test, expect, type BrowserContext, type Page } from '@playwright/test'
 
 import { asaas, bancoAdmin, emailsEnviados, TOKEN_WEBHOOK, URL_BASE } from './helpers/ambiente'
 import { criarIdentidade, type IdentidadeDeTeste } from './helpers/identidade'
@@ -33,7 +33,31 @@ test.describe.configure({ mode: 'serial', timeout: 180_000 })
 const identidade: IdentidadeDeTeste = criarIdentidade()
 const rastros: Rastros = { eventIds: [] }
 
+/**
+ * UM navegador para o fluxo inteiro, em vez do `page` que o Playwright cria
+ * novo a cada teste.
+ *
+ * Não é preferência de estilo, é o que torna o teste verdadeiro. A intenção de
+ * compra atravessa o cadastro dentro de um cookie (`vf_plano`,
+ * lib/auth/intencao.ts), e contexto novo por teste começa com o pote de
+ * cookies vazio: o passo do onboarding via o assistente completo e parava em
+ * `/onboarding`, como se o atalho do Pro estivesse quebrado. Não estava, era o
+ * teste que trocava de navegador no meio da compra, coisa que nenhuma pessoa
+ * faz.
+ */
+let navegador: BrowserContext
+let pagina: Page
+
 test.describe('funil completo: landing → cadastro → Pro → e-mail', () => {
+  test.beforeAll(async ({ browser }) => {
+    navegador = await browser.newContext({ baseURL: URL_BASE })
+    pagina = await navegador.newPage()
+  })
+
+  test.afterAll(async () => {
+    await navegador?.close()
+  })
+
   test.afterAll(async () => {
     const { removidos, sobraram } = await limpar(rastros)
     console.log(`\n[limpeza] removido: ${removidos.join(' | ') || 'nada'}`)
@@ -61,41 +85,60 @@ test.describe('funil completo: landing → cadastro → Pro → e-mail', () => {
     }
   })
 
-  test('1. landing explica o produto e leva ao cadastro', async ({ page }) => {
+  test('1. "Assinar Pro" na landing leva ao cadastro carregando a intenção', async () => {
     const errosDeConsole: string[] = []
-    page.on('console', (msg) => {
+    pagina.on('console', (msg) => {
       if (msg.type() === 'error') errosDeConsole.push(msg.text())
     })
 
-    await page.goto('/')
+    await pagina.goto('/')
 
-    // O nome da marca precisa estar contíguo no h1: é o que o verificador de
-    // marca do Google procura, e o wordmark sozinho não serve porque o
-    // contraste de peso quebra a string em dois nós (ver components/branding/logo.tsx).
-    const h1 = page.locator('h1').first()
+    // O nome da marca precisa estar no h1: é o que o verificador de marca do
+    // Google procura, e o wordmark sozinho não serve porque o contraste de
+    // peso quebra a string em dois nós (ver components/branding/logo.tsx).
+    // Fica em `sr-only`, então `toContainText` precisa do texto do nó, não do
+    // que está pintado na tela.
+    const h1 = pagina.locator('h1').first()
     await expect(h1).toContainText('Velo Funil')
     await expect(h1).toContainText('Pare de perder venda por esquecimento')
 
-    const cta = page.getByRole('link', { name: /começar grátis/i }).first()
-    await expect(cta).toHaveAttribute('href', '/cadastro')
+    const assinar = pagina.getByRole('link', { name: /assinar pro/i }).first()
+    // `?plano=pro` é o elo que faz este clique valer alguma coisa: sem ele o
+    // botão levaria ao MESMO destino do Free e a intenção de compra morreria
+    // no cadastro. O parâmetro vira cookie no `signUp` e atravessa a ida ao
+    // e-mail de confirmação (lib/auth/intencao.ts).
+    await expect(assinar).toHaveAttribute('href', '/cadastro?plano=pro')
+
+    // `scrollIntoViewIfNeeded` antes do clique não é zelo: o card entra por
+    // `RevealOnScroll`, e clicar antes de ele liberar o elemento não navega.
+    // Custou um falso positivo até isto ser entendido.
+    await assinar.scrollIntoViewIfNeeded()
+    await assinar.click()
+    await expect(pagina).toHaveURL(/\/cadastro\?plano=pro/, { timeout: 30_000 })
 
     expect(errosDeConsole, `erros de console na landing:\n${errosDeConsole.join('\n')}`).toEqual([])
   })
 
-  test('2. cadastro cria a conta de verdade', async ({ page }) => {
-    await page.goto('/cadastro')
+  test('2. cadastro cria a conta de verdade', async () => {
+    // Entra pela URL com a intenção, como o passo 1 terminou: é o `plano=pro`
+    // daqui que o `signUp` transforma em cookie.
+    await pagina.goto('/cadastro?plano=pro')
 
-    await page.locator('#name').fill(identidade.nome)
-    await page.locator('#email').fill(identidade.email)
-    await page.locator('#password').fill(identidade.senha)
-    await page.locator('#confirmPassword').fill(identidade.senha)
-    await page.locator('#terms').click()
-    await page.getByRole('button', { name: 'Criar conta' }).click()
+    await pagina.locator('#name').fill(identidade.nome)
+    await pagina.locator('#email').fill(identidade.email)
+    await pagina.locator('#password').fill(identidade.senha)
+    await pagina.locator('#confirmPassword').fill(identidade.senha)
+    // Pelo PAPEL, não por `#terms`: o Checkbox do Base UI renderiza um
+    // `<button role="checkbox">` visível mais um `<input>` nativo escondido
+    // (`aria-hidden`, `tabindex="-1"`, fora da viewport) que carrega o id. O
+    // seletor por id pegava o input escondido e o clique nunca acontecia.
+    await pagina.getByRole('checkbox').first().click()
+    await pagina.getByRole('button', { name: 'Criar conta' }).click()
 
     // Com confirmação de e-mail ativa, `signUp` não devolve sessão
     // (lib/supabase/actions.ts): a pessoa cai numa tela pedindo para abrir o
     // e-mail. Confirmar que chegou até aí já prova que a conta foi criada.
-    await expect(page).toHaveURL(/verifique-email|confirmar/, { timeout: 30_000 })
+    await expect(pagina).toHaveURL(/verifique-email|confirmar/, { timeout: 30_000 })
 
     const supabase = bancoAdmin()
     const { data } = await supabase.auth.admin.listUsers()
@@ -111,27 +154,25 @@ test.describe('funil completo: landing → cadastro → Pro → e-mail', () => {
     expect(error, 'falha ao confirmar o e-mail pelo admin').toBeNull()
   })
 
-  test('3. login e onboarding criam a empresa', async ({ page }) => {
-    await entrar(page, identidade)
+  test('3. onboarding usa o atalho do Pro e leva direto ao checkout', async () => {
+    await entrar(pagina, identidade)
 
     // Quem acabou de criar conta cai nas boas-vindas e depois no assistente.
-    await page.goto('/onboarding')
+    await pagina.goto('/onboarding')
 
-    await page.locator('#nomeEmpresa').fill(identidade.empresa)
-    await page.getByRole('button', { name: 'Continuar' }).click()
+    await pagina.locator('#nomeEmpresa').fill(identidade.empresa)
+    await pagina.getByRole('button', { name: 'Continuar' }).click()
 
-    // Os três passos seguintes são botões de escolha que avançam sozinhos.
-    // "Pular por enquanto" existe na tela e é o caminho mais estável: o teste
-    // está provando que o fluxo termina, não qual segmento foi escolhido.
-    for (let i = 0; i < 3; i++) {
-      const pular = page.getByRole('button', { name: /pular por enquanto/i })
-      if (await pular.isVisible().catch(() => false)) {
-        await pular.click()
-      }
-    }
-
-    // Fim do assistente: o app leva para dentro do produto.
-    await expect(page).toHaveURL(/\/(kanban|dashboard|hoje|leads)/, { timeout: 60_000 })
+    // O ATALHO: quem clicou "Assinar Pro" já decidiu, então o assistente
+    // reduz de quatro perguntas para uma (components/onboarding/assistente.tsx,
+    // `atalhoPro`). Segmento, modelo de venda e tamanho de equipe são
+    // personalização, não bloqueio, e continuam no checklist de ativação.
+    //
+    // Se este `expect` falhar mostrando as outras perguntas, o cookie de
+    // intenção não atravessou a ida ao e-mail e a compra virou cadastro Free,
+    // que é exatamente o defeito que `lib/auth/intencao.ts` existe para
+    // impedir.
+    await expect(pagina).toHaveURL(/\/settings\/billing\?assinar=1/, { timeout: 60_000 })
 
     const supabase = bancoAdmin()
     const { data: vinculo } = await supabase
@@ -152,43 +193,87 @@ test.describe('funil completo: landing → cadastro → Pro → e-mail', () => {
     expect(workspace!.plan, 'empresa nova deveria nascer no Free').toBe('free')
   })
 
-  test('4. checkout gera cobrança real de R$49 no Asaas', async ({ page, context }) => {
-    await entrar(page, identidade)
-    await page.goto('/settings/billing')
+  test('4. checkout abre sozinho e gera cobrança real de R$49 no Asaas', async () => {
+    await entrar(pagina, identidade)
 
-    await expect(page.getByText('Free', { exact: true }).first()).toBeVisible()
+    // Chega pelo MESMO destino que o onboarding devolve, não por
+    // `/settings/billing` puro: é o `?assinar=1` que faz o diálogo abrir
+    // sozinho (`abrirDeInicio` em components/settings/subscribe-button.tsx).
+    await pagina.goto('/settings/billing?assinar=1')
 
-    await page.getByRole('button', { name: /assinar pro/i }).click()
-    await page.locator('#cpfCnpj').fill(identidade.cpf)
+    await expect(pagina.getByText('Free', { exact: true }).first()).toBeVisible()
+
+    // Sem clicar em nada: quem atravessou cadastro, e-mail de confirmação e
+    // criação de empresa não pode ter que procurar o botão de novo. É aqui
+    // que a compra se perdia antes.
+    const campoDocumento = pagina.locator('#cpfCnpj')
+    await expect(
+      campoDocumento,
+      'o diálogo de CPF/CNPJ deveria abrir sozinho com ?assinar=1',
+    ).toBeVisible({ timeout: 30_000 })
+
+    await campoDocumento.fill(identidade.cpf)
 
     // O botão abre a fatura em outra aba (window.open dentro do gesto do
     // clique, senão o bloqueador de pop-up mata). Espera a aba nova.
-    const novaAba = context.waitForEvent('page', { timeout: 60_000 })
-    await page.getByRole('button', { name: /continuar para pagamento/i }).click()
+    const novaAba = navegador.waitForEvent('page', { timeout: 60_000 })
+    await pagina.getByRole('button', { name: /continuar para pagamento/i }).click()
 
     const abaDaFatura = await novaAba
-    await abaDaFatura.waitForLoadState('domcontentloaded', { timeout: 60_000 })
-    const urlDaFatura = abaDaFatura.url()
-    expect(urlDaFatura, `a aba da fatura não foi para o Asaas: ${urlDaFatura}`).toContain('asaas')
+
+    // ANTES de qualquer asserção: a cobrança no Asaas já existe neste ponto, e
+    // um `expect` que falhe daqui pra frente aborta o teste sem que a limpeza
+    // saiba o que cancelar. Foi o que aconteceu numa execução: a asserção da
+    // aba falhou, o `afterAll` imprimiu "assinatura Asaas: (não criada)" e
+    // ficou uma cobrança de R$49 viva em produção, tendo que ser removida à
+    // mão. Registrar primeiro, afirmar depois.
+    const supabase = bancoAdmin()
+
+    // Espera a linha aparecer em vez de ler uma vez: `createCheckout` ainda
+    // está no ar quando o clique retorna (cria cliente e assinatura no Asaas,
+    // duas idas de rede, antes de gravar). Ler direto pega `null` e o teste
+    // aborta DEPOIS de a cobrança já existir, que é o pior momento possível.
+    let assinatura: {
+      asaas_customer_id: string | null
+      asaas_subscription_id: string | null
+      status: string
+    } | null = null
+
+    await expect
+      .poll(
+        async () => {
+          const { data } = await supabase
+            .from('subscriptions')
+            .select('asaas_customer_id, asaas_subscription_id, status')
+            .eq('workspace_id', rastros.workspaceId!)
+            .maybeSingle()
+          assinatura = data
+          return data?.asaas_subscription_id ?? null
+        },
+        {
+          timeout: 90_000,
+          intervals: [1_000, 2_000, 3_000],
+          message: 'checkout não gravou a assinatura no banco',
+        },
+      )
+      .not.toBeNull()
+
+    rastros.asaasCustomerId = assinatura!.asaas_customer_id ?? undefined
+    rastros.asaasSubscriptionId = assinatura!.asaas_subscription_id ?? undefined
+
+    // `window.open('', '_blank')` abre a aba VAZIA dentro do gesto do clique
+    // (senão o bloqueador de pop-up mata) e só depois aponta o `location.href`
+    // pro Asaas, quando a Server Action responde. Esperar só o
+    // `domcontentloaded` pega a aba ainda em `about:blank`.
+    await abaDaFatura.waitForURL(/asaas/, { timeout: 60_000 })
 
     // A fatura precisa mostrar o valor certo. Se o Asaas mudar o layout, o
     // teste falha aqui e não em produção, com o cliente na frente.
     await expect(abaDaFatura.locator('body')).toContainText(/49/, { timeout: 30_000 })
 
     // A aba de trás fica no produto avisando que a cobrança está a caminho.
-    await expect(page).toHaveURL(/pago=1/, { timeout: 30_000 })
+    await expect(pagina).toHaveURL(/pago=1/, { timeout: 30_000 })
 
-    // Guarda os ids reais para o webhook e para a limpeza.
-    const supabase = bancoAdmin()
-    const { data: assinatura } = await supabase
-      .from('subscriptions')
-      .select('asaas_customer_id, asaas_subscription_id, status')
-      .eq('workspace_id', rastros.workspaceId!)
-      .single()
-
-    expect(assinatura, 'checkout não gravou a assinatura no banco').toBeTruthy()
-    rastros.asaasCustomerId = assinatura!.asaas_customer_id
-    rastros.asaasSubscriptionId = assinatura!.asaas_subscription_id
     expect(assinatura!.status, 'antes de pagar o status não pode ser active').not.toBe('active')
 
     // Confere no Asaas que a assinatura existe mesmo, com o valor certo.
@@ -198,7 +283,7 @@ test.describe('funil completo: landing → cadastro → Pro → e-mail', () => {
     expect(noAsaas.value).toBe(49)
   })
 
-  test('5. pagamento confirmado libera o Pro e manda o e-mail', async ({ page }) => {
+  test('5. pagamento confirmado libera o Pro e manda o e-mail', async () => {
     // Aqui está a fronteira do que dá para automatizar: pagar exige uma
     // pessoa. O que segue é exatamente o que o Asaas manda depois que a
     // pessoa paga, com o token real, no endpoint real.
@@ -239,9 +324,9 @@ test.describe('funil completo: landing → cadastro → Pro → e-mail', () => {
     expect(vigente, 'pro_vigente() deveria ser true depois do pagamento').toBe(true)
 
     // Prova na tela: é o que o cliente vê.
-    await entrar(page, identidade)
-    await page.goto('/settings/billing')
-    await expect(page.getByText('Pro', { exact: true }).first()).toBeVisible({ timeout: 30_000 })
+    await entrar(pagina, identidade)
+    await pagina.goto('/settings/billing')
+    await expect(pagina.getByText('Pro', { exact: true }).first()).toBeVisible({ timeout: 30_000 })
   })
 
   test('6. o e-mail de confirmação sai e é entregue', async () => {
@@ -292,19 +377,42 @@ test.describe('funil completo: landing → cadastro → Pro → e-mail', () => {
     })
     expect(resposta.status).toBe(200)
 
-    // Um único e-mail, mesmo com o evento chegando duas vezes.
+    // Um único e-mail DE PAGAMENTO, mesmo com o evento chegando duas vezes.
+    //
+    // O filtro precisa do assunto, não só do destinatário: a conta também
+    // recebe o "Confirm your email address" que o Supabase dispara no
+    // cadastro, e contar os dois fazia o teste acusar dedupe quebrada quando
+    // ela estava funcionando. Falso positivo caro, porque a conclusão errada
+    // seria "o cliente recebe cobrança duplicada".
     const emails = await emailsEnviados()
-    const paraEstaConta = emails.filter((e) => e.to.includes(identidade.email))
+    const deCobranca = emails.filter(
+      (e) => e.to.includes(identidade.email) && /plano pro/i.test(e.subject),
+    )
     expect(
-      paraEstaConta.length,
-      `evento repetido gerou ${paraEstaConta.length} e-mails, deveria gerar 1`,
+      deCobranca.length,
+      `evento repetido gerou ${deCobranca.length} e-mails de pagamento, deveria gerar 1`,
     ).toBe(1)
   })
 })
 
-/** Entra no app. Cada teste roda em contexto novo, então a sessão não persiste. */
+/**
+ * Entra no app, se já não estiver dentro.
+ *
+ * O navegador é um só para o fluxo inteiro, então a sessão sobrevive de um
+ * passo para o outro. Sem a saída antecipada, o segundo passo que chamasse
+ * isto abriria `/login` já logado, seria redirecionado para dentro do produto,
+ * e os campos de e-mail e senha nunca apareceriam.
+ */
 async function entrar(page: Page, quem: IdentidadeDeTeste) {
   await page.goto('/login')
+
+  // Logado, o `/login` redireciona sozinho para dentro do produto.
+  const jaEntrou = await page
+    .waitForURL((url) => !url.pathname.startsWith('/login'), { timeout: 5_000 })
+    .then(() => true)
+    .catch(() => false)
+  if (jaEntrou) return
+
   await page.locator('#email').fill(quem.email)
   await page.locator('#password').fill(quem.senha)
   await page.getByRole('button', { name: 'Entrar' }).click()
