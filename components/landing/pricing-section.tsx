@@ -1,5 +1,15 @@
 import Link from 'next/link'
-import { Check } from 'lucide-react'
+import {
+  Building2,
+  CalendarDays,
+  Contact,
+  Filter,
+  Headset,
+  Infinity as InfinityIcon,
+  LayoutDashboard,
+  Users,
+  type LucideIcon,
+} from 'lucide-react'
 
 import { cn } from '@/lib/utils'
 import { Badge } from '@/components/ui/badge'
@@ -23,7 +33,15 @@ type Plan = {
   // e a lista de benefícios sozinha não deixa isso óbvio.
   precoLegenda?: string
   description: string
-  features: string[]
+  /**
+   * Cada benefício carrega o próprio ícone.
+   *
+   * Antes os dez usavam o mesmo `Check`, que confirma que o item existe mas
+   * não diz o que ele é: a lista virava uma coluna de marcas d'água iguais e
+   * o olho tinha que ler tudo para diferenciar os planos. Com ícone
+   * semântico, dá para bater o olho e entender.
+   */
+  features: { texto: string; icone: LucideIcon }[]
   cta: string
   href: string
   highlighted?: boolean
@@ -39,11 +57,11 @@ const plans: Plan[] = [
     // 2 colaboradores" sem citar o limite de empresa, e um texto fixo aqui
     // volta a divergir do produto na primeira mudança de plano.
     features: [
-      `${FREE_WORKSPACE_LIMIT} empresa`,
-      `Até ${FREE_MEMBER_LIMIT} colaboradores`,
-      `Até ${FREE_LEAD_LIMIT} contatos`,
-      'Funil visual, arrasta e solta',
-      'Painel de resultados',
+      { texto: `${FREE_WORKSPACE_LIMIT} empresa`, icone: Building2 },
+      { texto: `Até ${FREE_MEMBER_LIMIT} colaboradores`, icone: Users },
+      { texto: `Até ${FREE_LEAD_LIMIT} contatos`, icone: Contact },
+      { texto: 'Funil visual, arrasta e solta', icone: Filter },
+      { texto: 'Painel de resultados', icone: LayoutDashboard },
     ],
     cta: 'Começar grátis',
     href: '/cadastro',
@@ -57,11 +75,14 @@ const plans: Plan[] = [
     description:
       'Menos de R$2 por dia. Um cliente perdido por esquecimento custa mais que isso no ano inteiro.',
     features: [
-      'Várias empresas no mesmo login',
-      'Colaboradores ilimitados',
-      'Contatos ilimitados',
-      'Google Calendar e Gmail conectados',
-      'Suporte prioritário',
+      { texto: 'Várias empresas no mesmo login', icone: Building2 },
+      { texto: 'Colaboradores ilimitados', icone: Users },
+      // Os dois "ilimitados" seguidos ganhariam ícones repetidos do Free
+      // (Users e Contact) e a diferença entre os planos sumiria justamente na
+      // linha que mais importa. O símbolo de infinito carrega o benefício.
+      { texto: 'Contatos ilimitados', icone: InfinityIcon },
+      { texto: 'Google Calendar e Gmail conectados', icone: CalendarDays },
+      { texto: 'Suporte prioritário', icone: Headset },
     ],
     cta: 'Assinar Pro',
     // O `?plano=pro` é o que faz o clique valer alguma coisa. Sem ele, este
@@ -100,7 +121,13 @@ export function PricingSection() {
           </p>
         </RevealOnScroll>
 
-        <div className="mx-auto grid max-w-2xl grid-cols-1 gap-6 sm:grid-cols-2">
+        {/* `max-w-2xl` deixava os dois cards com 324px de largura num monitor
+            de 1440px, medido, enquanto o Hero da mesma página usa `max-w-6xl`
+            (1152px). O salto de escala entre as seções é o que fazia o bloco
+            de planos parecer encolhido. `max-w-3xl` mantém a leitura
+            confortável sem esticar o card a ponto de a lista de benefícios
+            virar uma linha solta e larga. */}
+        <div className="mx-auto grid max-w-3xl grid-cols-1 gap-6 sm:grid-cols-2">
           {plans.map((plan) => (
             <RevealOnScroll key={plan.name} delay={plan.delay}>
               <Card
@@ -130,15 +157,34 @@ export function PricingSection() {
                   )}
                   <p className="text-muted-foreground text-sm">{plan.description}</p>
                 </CardHeader>
-                <CardContent className="flex flex-col gap-4">
-                  <ul className="flex flex-col gap-2">
+                {/* `flex-1` no conteúdo e `mt-auto` no botão: o `h-full` do
+                    card já igualava a ALTURA dos dois, mas o conteúdo do Free
+                    é mais curto (o Pro tem legenda de preço e descrição mais
+                    longa), então sobrava um vão morto embaixo do botão do
+                    Free enquanto o do Pro encostava na base. Com o botão
+                    ancorado embaixo, os dois CTAs ficam na mesma linha e a
+                    diferença de conteúdo vira respiro no meio, que é onde ela
+                    não incomoda. */}
+                <CardContent className="flex flex-1 flex-col gap-4">
+                  {/* `gap-2.5` e `items-start` em vez de `items-center`: com
+                      ícone semântico o texto pode quebrar em duas linhas no
+                      celular, e centralizado o ícone descolaria da primeira
+                      linha. `mt-px` alinha o traço do ícone com a altura-x da
+                      fonte, que `items-start` sozinho não acerta.
+
+                      Cor herdada do texto (`text-muted-foreground`), não o
+                      verde que o Check usava: dez ícones coloridos viram
+                      enfeite e competem com o preço, que é o elemento que
+                      precisa ganhar a atenção no card. */}
+                  <ul className="flex flex-col gap-2.5">
                     {plan.features.map((feature) => (
-                      <li key={feature} className="flex items-center gap-2 text-sm">
-                        <Check
+                      <li key={feature.texto} className="flex items-start gap-2.5 text-sm">
+                        <feature.icone
                           aria-hidden
-                          className="size-4 shrink-0 text-emerald-500 dark:text-emerald-400"
+                          strokeWidth={2}
+                          className="text-muted-foreground mt-px size-4 shrink-0"
                         />
-                        {feature}
+                        {feature.texto}
                       </li>
                     ))}
                   </ul>
@@ -148,7 +194,7 @@ export function PricingSection() {
                       buttonVariants({
                         variant: plan.highlighted ? 'default' : 'outline',
                       }),
-                      'min-h-11 w-full',
+                      'mt-auto min-h-11 w-full',
                     )}
                   >
                     {plan.cta}

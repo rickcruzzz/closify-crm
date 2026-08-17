@@ -64,10 +64,20 @@ export function PublicNavbar() {
 
           {/* 48px de alvo de toque no celular, 32 no desktop. Os links do
               menu lateral já estavam em `min-h-12`; o cabeçalho ficava em 44 e
-              destoava. O `h-16` do container não muda, então nada é empurrado. */}
+              destoava. O `h-16` do container não muda, então nada é empurrado.
+
+              Escondido abaixo de 360px: era ele que estourava a viewport em
+              320px, medido, `scrollWidth` 330 contra 320 de tela, porque logo
+              + tema + este botão + o menu não cabem nos 288px úteis.
+
+              O corte é em 360 e não mais alto de propósito: 375 e 390 são
+              iPhone e Android correntes, e esconder o CTA do cabeçalho neles
+              custaria caminho de conversão em troca de nada, já que ali ele
+              cabe. Abaixo de 360 o mesmo "Começar grátis" continua no menu
+              lateral e no Hero, que fica logo abaixo. */}
           <NavCtaLink
             href="/cadastro"
-            className={cn(buttonVariants(), 'min-h-12 md:min-h-8')}
+            className={cn(buttonVariants(), 'hidden min-h-12 min-[360px]:inline-flex md:min-h-8')}
           >
             Começar grátis
           </NavCtaLink>

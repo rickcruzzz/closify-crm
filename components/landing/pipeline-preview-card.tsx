@@ -30,13 +30,27 @@ export function PipelinePreviewCard() {
         </span>
       </div>
 
-      <div className="flex flex-col gap-3 p-4">
+      {/* Respiro e tipografia um passo acima do que era (tudo `text-xs`, gap-3,
+          barra de 8px). Medido antes: o card tinha 276px de altura contra 532
+          da coluna de texto ao lado, e o grid do Hero centraliza, então
+          sobravam ~128px vazios acima e abaixo dele. É isso que se lê como
+          "espaço vazio à direita", não largura: em largura o card sempre
+          ocupou os 560px da coluna, sobra zero.
+
+          A correção é dar corpo ao conteúdo, não esticar o card: escala por
+          `transform` borraria o texto, e altura fixa deixaria o miolo boiando. */}
+      <div className="flex flex-col gap-4 p-5 md:gap-5 md:p-6">
         {stageSummary.map((s) => (
           <div key={s.stage} className="flex items-center gap-3">
-            <span className="text-muted-foreground w-28 shrink-0 truncate text-xs font-medium">
+            {/* `w-36`, não `w-28`: com a fonte em `text-sm` os rótulos mais
+                longos ("Contato Realizado", "Proposta Enviada") passavam de
+                112px e o `truncate` os cortava com reticências. Nome de etapa
+                cortado num mockup que existe para mostrar o produto é o pior
+                lugar possível para economizar largura. */}
+            <span className="text-muted-foreground w-36 shrink-0 truncate text-sm font-medium">
               {s.label}
             </span>
-            <div className="bg-muted h-2 flex-1 overflow-hidden rounded-full">
+            <div className="bg-muted h-2.5 flex-1 overflow-hidden rounded-full">
               <div
                 className="h-full rounded-full"
                 style={{
@@ -45,19 +59,19 @@ export function PipelinePreviewCard() {
                 }}
               />
             </div>
-            <span className="w-16 shrink-0 text-right text-xs font-medium whitespace-nowrap">
+            <span className="w-16 shrink-0 text-right text-sm font-medium whitespace-nowrap">
               {formatCompactBRL(s.value)}
             </span>
-            <span className="text-muted-foreground w-5 shrink-0 text-right text-xs">
+            <span className="text-muted-foreground w-5 shrink-0 text-right text-sm">
               {s.count}
             </span>
           </div>
         ))}
       </div>
 
-      <div className="border-border/50 flex items-center justify-between border-t px-4 py-3">
+      <div className="border-border/50 flex items-center justify-between border-t px-5 py-4 md:px-6">
         <span className="text-muted-foreground font-mono text-xs">total no funil</span>
-        <span className="text-sm font-semibold">{formatCompactBRL(totalValue)}</span>
+        <span className="text-base font-semibold">{formatCompactBRL(totalValue)}</span>
       </div>
     </div>
   )

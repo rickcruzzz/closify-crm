@@ -25,7 +25,18 @@ const buttonVariants = cva(
           'h-11 md:h-10 gap-1.5 px-2.5 has-data-[icon=inline-end]:pr-2 has-data-[icon=inline-start]:pl-2',
         xs: "h-6 gap-1 rounded-[min(var(--radius-md),10px)] px-2 text-xs in-data-[slot=button-group]:rounded-lg has-data-[icon=inline-end]:pr-1.5 has-data-[icon=inline-start]:pl-1.5 [&_svg:not([class*='size-'])]:size-3",
         sm: "h-7 gap-1 rounded-[min(var(--radius-md),12px)] px-2.5 text-[0.8rem] in-data-[slot=button-group]:rounded-lg has-data-[icon=inline-end]:pr-1.5 has-data-[icon=inline-start]:pl-1.5 [&_svg:not([class*='size-'])]:size-3.5",
-        lg: 'h-11 md:h-10 gap-1.5 px-2.5 has-data-[icon=inline-end]:pr-2 has-data-[icon=inline-start]:pl-2',
+        // `lg` era uma cópia exata de `default`, então pedir `size="lg"` não
+        // mudava nada: o CTA do Hero media 148x44px igual em 320px e em
+        // 1920px, medido nos dez breakpoints. Pior, o `md:h-10` de `default`
+        // ENCOLHE o botão no desktop (44px no celular, 40px no monitor), o
+        // inverso do que um CTA principal precisa.
+        //
+        // Agora `lg` cresce de fato e cresce na direção certa: 48px no
+        // celular, 52px acima de `md`. O padding lateral sai de 10px para 24
+        // e 28px, que é o que dá presença ao botão, mais do que a altura. A
+        // fonte sobe um passo (14 para 16px) só aqui, sem tocar em `default`,
+        // `sm` e `xs`, que servem o produto logado inteiro.
+        lg: 'h-12 gap-2 px-6 text-base md:h-13 md:px-7 has-data-[icon=inline-end]:pr-5 has-data-[icon=inline-start]:pl-5',
         icon: 'size-11 md:size-10',
         'icon-xs':
           "size-6 rounded-[min(var(--radius-md),10px)] in-data-[slot=button-group]:rounded-lg [&_svg:not([class*='size-'])]:size-3",
