@@ -36,7 +36,11 @@ export function PublicNavbar() {
     // sobra GPU.
     <header className="border-border/60 bg-background md:bg-background/80 sticky top-0 z-50 border-b md:backdrop-blur-md">
       <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4 md:px-6">
-        <Link href="/">
+        {/* `flex min-h-11 items-center`: o lockup do logo tem 32px de altura e
+            é um link (leva para a home), então no celular era um alvo de
+            toque 12px menor que o mínimo. O cabeçalho tem `h-16`, sobra
+            espaço, nada é empurrado. */}
+        <Link href="/" className="flex min-h-11 items-center">
           <Logo />
         </Link>
 

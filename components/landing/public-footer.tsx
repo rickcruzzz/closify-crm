@@ -57,20 +57,27 @@ export function PublicFooter() {
         {/* O número aparece por extenso, além do link: quem prefere ligar ou
             salvar o contato não deveria precisar abrir o WhatsApp para
             descobri-lo. */}
+        {/* `-my-3 inline-block py-3` nos dois: são links de contato em texto
+            de 12px e mediam 14px de altura, contra os 44 mínimos de alvo de
+            toque. Quem está no celular tentando falar com o suporte é
+            justamente quem não pode errar o clique. O padding cresce a área
+            tocável e a margem negativa cancela o efeito no layout, então a
+            linha continua com a mesma aparência. Mesmo padrão já usado no
+            link da FAQ. */}
         <p className="text-muted-foreground text-center text-xs">
           Central de suporte:{' '}
           <a
             href={`https://wa.me/${CONTROLADOR.whatsapp.numero}`}
             target="_blank"
             rel="noopener noreferrer"
-            className="hover:text-foreground underline underline-offset-4 transition-colors"
+            className="hover:text-foreground -my-3.5 inline-block py-3.5 underline underline-offset-4 transition-colors"
           >
             {CONTROLADOR.whatsapp.exibicao}
           </a>{' '}
           ·{' '}
           <a
             href={`mailto:${CONTROLADOR.email}`}
-            className="hover:text-foreground underline underline-offset-4 transition-colors"
+            className="hover:text-foreground -my-3.5 inline-block py-3.5 underline underline-offset-4 transition-colors"
           >
             {CONTROLADOR.email}
           </a>

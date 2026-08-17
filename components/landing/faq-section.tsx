@@ -82,7 +82,10 @@ export function FaqSection() {
           Ficou outra dúvida?{' '}
           <Link
             href="/cadastro"
-            className="text-foreground -my-2 inline-block py-2 underline underline-offset-4"
+            // `py-3`, não `py-2`: com a linha de 20px o alvo dava 36px, e o
+            // mínimo de toque é 44. A margem negativa cancela o efeito no
+            // layout, a frase continua com a mesma altura.
+            className="text-foreground -my-3 inline-block py-3 underline underline-offset-4"
           >
             Crie uma conta grátis
           </Link>{' '}
