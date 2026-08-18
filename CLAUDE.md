@@ -5,7 +5,9 @@ clínicas, imobiliárias pequenas, software houses), com pipeline de vendas
 visual em Kanban, feito para substituir a planilha em um dia. PRD completo em
 [docs/prd.md](docs/prd.md). Diagrama de classes do schema (tabelas, chaves,
 enums, gerado por inspeção real do catálogo Postgres, não suposto) em
-[docs/schema.md](docs/schema.md).
+[docs/schema.md](docs/schema.md). Estado real da esteira de testes (o que
+roda, o que é manual, o que falta pro CI existir de verdade) em
+[docs/testes.md](docs/testes.md).
 
 **O produto está em produção** em <https://www.velofunil.com.br>, com auth,
 Kanban, leads, dashboard, multi-empresa, billing pelo Asaas e e-mails
