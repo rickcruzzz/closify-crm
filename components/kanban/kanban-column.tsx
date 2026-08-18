@@ -51,10 +51,23 @@ export const KanbanColumn = React.memo(function KanbanColumn({
   const cortou = !filtered && totalNaEtapa > deals.length
 
   return (
-    <div className="w-72 shrink-0 snap-start">
-      <div className="mb-3 flex items-center justify-between">
+    // `bg-muted/30`: antes a coluna era só espaço vazio (medido, `border: 0px`
+    // e fundo transparente), então os cards flutuavam sem pertencer a lugar
+    // nenhum e não se lia onde uma etapa terminava e a outra começava.
+    <div className="bg-muted/30 flex w-72 shrink-0 snap-start flex-col rounded-xl">
+      {/* Duas linhas, tudo à esquerda, e não `justify-between` numa linha só.
+          O `justify-between` empurrava nome e valor para as pontas opostas de
+          uma coluna de 288px fixos, e como cada etapa tem nome de comprimento
+          diferente o valor parava num lugar diferente em cada coluna: medido,
+          o vão vazio ia de 49px em "Contato Realizado" a 138px em "Novo Lead",
+          quase três vezes. Nenhum elemento estava errado sozinho, o
+          alinhamento entre eles é que não existia. */}
+      <div className="border-border/60 flex flex-col gap-1 border-b px-3 py-2.5">
         <div className="flex items-center gap-2">
-          <span className="text-sm font-medium">{dealStageLabels[stage]}</span>
+          {/* `h2`, não `span`: a página tinha só `h1: Pipeline` e as seis
+              etapas não existiam na estrutura do documento, então quem navega
+              por leitor de tela não conseguia pular de etapa em etapa. */}
+          <h2 className="text-sm font-semibold">{dealStageLabels[stage]}</h2>
           {/* Quando a etapa tem mais do que o board carrega, o número mostra os
               dois. Cortar em silêncio é o defeito que a 0032 veio consertar,
               repeti-lo aqui, com um número nosso em vez do teto do PostgREST,
@@ -63,15 +76,21 @@ export const KanbanColumn = React.memo(function KanbanColumn({
             {cortou ? `${deals.length} de ${totalNaEtapa}` : deals.length}
           </Badge>
         </div>
-        {/* Abreviado acima de um milhão, valor cheio no `title`: com um
+        {/* Zero não aparece: cinco das seis colunas exibiam "R$ 0,00", que não
+            informa nada — a contagem ao lado do nome já diz que a etapa está
+            vazia — e competia com o único valor real da tela.
+
+            Abreviado acima de um milhão, valor cheio no `title`: com um
             negócio de dez dígitos na etapa, o total virava a coisa mais larga
-            do cabeçalho e empurrava o nome da etapa. */}
-        <span
-          className="text-muted-foreground text-xs font-medium"
-          title={total.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
-        >
-          {formatarValorDeNegocio(total)}
-        </span>
+            do cabeçalho. */}
+        {total > 0 && (
+          <span
+            className="text-muted-foreground text-xs font-medium"
+            title={total.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+          >
+            {formatarValorDeNegocio(total)}
+          </span>
+        )}
       </div>
 
       {/* `dvh` em vez de `vh`: no iOS/Android a barra de URL entra e sai do
@@ -84,7 +103,8 @@ export const KanbanColumn = React.memo(function KanbanColumn({
           da dobra sem nada dentro. */}
       <ScrollArea
         className={cn(
-          compact ? 'h-36' : 'h-[calc(100dvh-22rem)] min-h-64 lg:h-[calc(100dvh-18rem)]',
+          'px-2 pb-2',
+          compact ? 'h-36' : 'h-[calc(100dvh-24rem)] min-h-64 lg:h-[calc(100dvh-20rem)]',
         )}
       >
         <div
