@@ -346,6 +346,48 @@ export type Database = {
         }
         Relationships: []
       }
+      // Captura real dos erros que `app/(dashboard)/error.tsx` e
+      // `app/global-error.tsx` recebem, gravada por app/api/log-erro/route.ts.
+      // Mesmo padrão de asaas_webhook_events: RLS ligada, sem policy, só a
+      // service_role lê/escreve. workspace_id/user_id sem FK de propósito
+      // (erro pode acontecer antes de resolver sessão/workspace, ou depois
+      // que um dos dois já foi apagado), ver 0046_error_logs.sql.
+      error_logs: {
+        Row: {
+          id: string
+          message: string
+          digest: string | null
+          stack: string | null
+          url: string | null
+          origem: string
+          workspace_id: string | null
+          user_id: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          message: string
+          digest?: string | null
+          stack?: string | null
+          url?: string | null
+          origem: string
+          workspace_id?: string | null
+          user_id?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          message?: string
+          digest?: string | null
+          stack?: string | null
+          url?: string | null
+          origem?: string
+          workspace_id?: string | null
+          user_id?: string | null
+          created_at?: string
+        }
+        Relationships: []
+      }
       subscriptions: {
         Row: {
           id: string

@@ -4,6 +4,7 @@ import { useEffect } from 'react'
 import { AlertTriangle } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
+import { reportarErro } from '@/lib/erros/reportar'
 
 /**
  * Erro dentro da área logada.
@@ -29,6 +30,7 @@ export default function DashboardError({
     // ele, um relato de "deu erro na tela de leads" não tem como ser cruzado
     // com a stack real, que o Next não expõe ao browser em produção.
     console.error('Erro na área logada', { digest: error.digest, error })
+    reportarErro(error, 'dashboard')
   }, [error])
 
   return (

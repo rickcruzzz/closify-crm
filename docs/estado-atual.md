@@ -4,7 +4,7 @@ Documento de continuidade. É lido no começo de toda sessão (referenciado no
 [CLAUDE.md](../CLAUDE.md)) para que uma conversa nova, ou outra conta, comece
 sabendo o que já foi feito, o que foi decidido e onde estão as armadilhas.
 
-**Atualizado em:** 18/08/2026 (Calendário, filtro de período com range picker, exportação de relatório em PDF, busca de lead, senha exige confirmação para trocar)
+**Atualizado em:** 18/08/2026 (Calendário, filtro de período com range picker, exportação de relatório em PDF, busca de lead, senha exige confirmação para trocar, captura real de erro em produção)
 
 > Mantenha este arquivo curto. O detalhe de _por que_ cada coisa é assim mora
 > nas mensagens de commit e nos comentários do código, que são a memória real
@@ -325,14 +325,25 @@ Sem essas variáveis, os cards de integração aparecem normalmente em
    contra produção, e foi isso que deixou 2 cobranças de R$ 49 em aberto no nome
    de uma usuária real. O resto do projeto continua provando contra produção, a
    exceção é só onde o teste **cria cobrança no nome de outra pessoa**.
-4. **Monitoramento de erro.** Não existe nenhum: erro em produção morre em
-   `console.error` no log da Vercel, e a próxima tela de erro só aparece quando
-   um cliente reclamar.
-5. **Campos e pipelines customizáveis.** `deal_stage` é enum do Postgres; virar
+4. **Campos e pipelines customizáveis.** `deal_stage` é enum do Postgres; virar
    tabela é mudança grande. Só com cliente pagante pedindo.
 
 **Entregues em 12/08, saíram desta fila:** paginação do que não paginava
 (0032), e negócio parado (0033).
+
+**Entregue em 18/08:** captura real de erro (migration 0046, `error_logs`).
+Erro no boundary `app/(dashboard)/error.tsx`/`app/global-error.tsx` grava em
+`error_logs` (tabela de sistema, RLS ligada, zero policy — mesmo padrão de
+`asaas_webhook_events`), via `app/api/log-erro/route.ts` +
+`createAdminClient()`. Sem tela de leitura no produto: não existe conceito de
+"dono da plataforma" no RLS deste projeto (tudo gira em `is_workspace_member`/
+`is_workspace_admin`, relativo a workspace), então investigar um erro é
+consulta direta por SQL/MCP quando precisar, mesmo fluxo já usado para o
+resto do banco. Escopo cortado do pedido original de propósito: sem botão
+flutuante de "reportar problema", sem print automático de tela — print
+captura pixel, não estrutura, e pode incluir dado de cliente (nome, e-mail,
+valor de negócio) sem RLS pronta pra isolar isso por workspace. Fica
+registrado como próximo passo se a base provar valor.
 
 ## Decisões travadas, não refazer
 

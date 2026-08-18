@@ -2,6 +2,8 @@
 
 import { useEffect } from 'react'
 
+import { reportarErro } from '@/lib/erros/reportar'
+
 /**
  * Último recurso: erro no PRÓPRIO layout raiz.
  *
@@ -24,6 +26,7 @@ export default function GlobalError({
 }) {
   useEffect(() => {
     console.error('Erro no layout raiz', { digest: error.digest, error })
+    reportarErro(error, 'global')
   }, [error])
 
   return (
