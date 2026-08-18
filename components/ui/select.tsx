@@ -70,7 +70,12 @@ function SelectContent({
   sideOffset = 4,
   align = 'center',
   alignOffset = 0,
-  alignItemWithTrigger = true,
+  // `false`, não `true`: com `true` o Base UI posiciona o menu para deixar a
+  // opção JÁ ESCOLHIDA em cima do gatilho, e o menu acaba cobrindo o próprio
+  // campo e o rótulo dele. Medido, `cobreCampo: true` — quem abre a lista
+  // perde de vista o que estava preenchendo. Continua sendo prop, então uma
+  // tela que queira o comportamento antigo pode pedir.
+  alignItemWithTrigger = false,
   ...props
 }: SelectPrimitive.Popup.Props &
   Pick<
@@ -87,11 +92,19 @@ function SelectContent({
         alignItemWithTrigger={alignItemWithTrigger}
         className="isolate z-50"
       >
+        {/* A sombra é escrita à mão, e não `shadow-md`, porque `shadow-md`
+            resolve para preto a 10% de opacidade — medido, `rgba(0,0,0,0.1)`.
+            Sobre o fundo `oklch(0.205 0 0)` do tema escuro, que é quase preto,
+            preto a 10% não produz contraste nenhum: a sombra existe, está
+            aplicada, e é invisível. Sem ela nada separa o menu do que está
+            atrás, e a lista lê como um retângulo colado na página em vez de
+            uma camada flutuando sobre ela. Duas camadas de propósito: a longa
+            e difusa dá a distância, a curta assenta a borda. */}
         <SelectPrimitive.Popup
           data-slot="select-content"
           data-align-trigger={alignItemWithTrigger}
           className={cn(
-            'bg-popover text-popover-foreground ring-foreground/10 data-[side=bottom]:slide-in-from-top-2 data-[side=inline-end]:slide-in-from-left-2 data-[side=inline-start]:slide-in-from-right-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95 relative isolate z-50 max-h-(--available-height) w-(--anchor-width) min-w-36 origin-(--transform-origin) overflow-x-hidden overflow-y-auto rounded-lg shadow-md ring-1 duration-100 data-[align-trigger=true]:animate-none',
+            'bg-popover text-popover-foreground ring-foreground/10 data-[side=bottom]:slide-in-from-top-2 data-[side=inline-end]:slide-in-from-left-2 data-[side=inline-start]:slide-in-from-right-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95 relative isolate z-50 max-h-(--available-height) w-(--anchor-width) min-w-36 origin-(--transform-origin) overflow-x-hidden overflow-y-auto rounded-lg p-1.5 shadow-[0_16px_40px_-8px_rgb(0_0_0/0.75),0_4px_12px_-4px_rgb(0_0_0/0.5)] ring-1 duration-100 data-[align-trigger=true]:animate-none',
             className,
           )}
           {...props}
@@ -120,7 +133,7 @@ function SelectItem({ className, children, ...props }: SelectPrimitive.Item.Prop
     <SelectPrimitive.Item
       data-slot="select-item"
       className={cn(
-        "focus:bg-accent focus:text-accent-foreground not-data-[variant=destructive]:focus:**:text-accent-foreground relative flex w-full cursor-default items-center gap-1.5 rounded-md py-1 pr-8 pl-1.5 text-sm outline-hidden select-none data-disabled:pointer-events-none data-disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 *:[span]:last:flex *:[span]:last:items-center *:[span]:last:gap-2",
+        "focus:bg-accent focus:text-accent-foreground not-data-[variant=destructive]:focus:**:text-accent-foreground relative flex min-h-11 w-full cursor-default items-center gap-1.5 rounded-md py-1.5 pr-8 pl-2 text-sm outline-hidden select-none md:min-h-9 data-disabled:pointer-events-none data-disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 *:[span]:last:flex *:[span]:last:items-center *:[span]:last:gap-2",
         className,
       )}
       {...props}
