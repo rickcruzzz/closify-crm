@@ -49,9 +49,19 @@ histórico dedicado e rastreabilidade ficaram de fora. Prova rodada contra o
 banco de produção com workspace/conta/lead descartáveis (limpos no fim):
 grade de 42 dias, tarefa concluída aparecendo no intervalo, e busca de
 servidor da Semana ao navegar para fora do mês carregado, todos corretos.
-Playwright não estava disponível nesta sessão, então a parte puramente visual
-(cor dos chips, abertura do drawer) não foi verificada no navegador, só a
-lógica de dados.
+
+**Verificação visual com Playwright, mesmo dia.** A sessão anterior tinha
+registrado Playwright indisponível; nesta ficou disponível
+(`playwright.config.ts` já existe no repo, do teste de auditoria de
+segurança) e achou dois defeitos reais que a prova de dados não pegava:
+`useMediaQuery` devolve `false` no primeiro render sempre (evita mismatch de
+hidratação), e o `useState` do modo inicial do calendário lia esse falso
+positivo de mobile só uma vez, travando todo desktop no modo Agenda em vez
+de Mês. E `MonthGrid` já desenha cabeçalho de navegação próprio,
+`month-view.tsx` não desligava (`mostrarNavegacao={false}`), duplicando
+"Agosto de 2026" na tela por cima do cabeçalho que `calendario-client.tsx`
+já desenha. Os dois corrigidos e reconferidos com screenshot real dos três
+modos, drawer e mobile.
 
 Junto: Dashboard ganhou "Exportar relatório" em PDF (`html2canvas-pro` +
 `jspdf`); formulário de negócio trocou o `Select` de lead por um combobox com
