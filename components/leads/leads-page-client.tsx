@@ -171,6 +171,19 @@ export function LeadsPageClient({
   async function handleSave(values: LeadFormValues, id?: string) {
     const result = id ? await updateLead(id, values) : await createLead(values)
     if (result?.error) {
+      // Contato repetido vem com o id de quem já existe. Sem o atalho, a
+      // pessoa lê "já está cadastrado como João Silva" e ainda tem que sair
+      // procurando o João na lista, que é onde a maioria desiste e cadastra
+      // de novo com o e-mail trocado.
+      if ('leadExistenteId' in result && result.leadExistenteId) {
+        toast.error(result.error, {
+          action: {
+            label: 'Ver contato',
+            onClick: () => router.push(`/leads/${result.leadExistenteId}`),
+          },
+        })
+        return
+      }
       toast.error(result.error)
       return
     }
