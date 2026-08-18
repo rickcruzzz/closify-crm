@@ -69,6 +69,8 @@ export function DealDetailSheet({
   currentUserId,
   calendarConectado,
   open,
+  abrirAgendamento = false,
+  onAgendamentoAberto,
   onOpenChange,
   onStageChange,
   onDeleted,
@@ -81,6 +83,17 @@ export function DealDetailSheet({
   /** Se dá pra oferecer "mandar pro Google Calendar", vem de Integrações. */
   calendarConectado: boolean
   open: boolean
+  /**
+   * Abrir já com o agendamento na tela.
+   *
+   * Vem do aviso "Sem próximo passo" do card: quem clicou ali já disse o que
+   * quer fazer, e obrigar a achar o botão de agendar aqui dentro é o passo a
+   * mais que mantém 96% dos negócios abertos sem próxima ação.
+   */
+  abrirAgendamento?: boolean
+  /** Avisa o board para baixar a flag, senão reabrir o mesmo negócio pelo
+   *  card cairia no agendamento de novo sem ninguém pedir. */
+  onAgendamentoAberto?: () => void
   onOpenChange: (open: boolean) => void
   onStageChange: (dealId: string, stage: DealStage) => void
   /** Avisa o board para tirar o card sem esperar o refresh do servidor. */
@@ -89,6 +102,15 @@ export function DealDetailSheet({
   const [confirmando, setConfirmando] = React.useState(false)
   const [excluindo, setExcluindo] = React.useState(false)
   const [agendando, setAgendando] = React.useState(false)
+
+  // Abre o agendamento quando o painel foi chamado pelo aviso do card. Espera
+  // `open` para não disparar com o painel ainda fechado, e avisa o board para
+  // baixar a flag no mesmo passo.
+  React.useEffect(() => {
+    if (!open || !abrirAgendamento) return
+    setAgendando(true)
+    onAgendamentoAberto?.()
+  }, [open, abrirAgendamento, onAgendamentoAberto])
   const [agendandoNoCalendario, setAgendandoNoCalendario] = React.useState(false)
   const [concluindo, setConcluindo] = React.useState(false)
 

@@ -29,6 +29,7 @@ export const KanbanColumn = React.memo(function KanbanColumn({
   proximaAcaoPorNegocio,
   totalNaEtapa,
   onOpenDeal,
+  onAgendarDeal,
   filtered = false,
   compact = false,
 }: {
@@ -40,6 +41,8 @@ export const KanbanColumn = React.memo(function KanbanColumn({
   /** Quantos negócios esta etapa tem no banco, além dos que vieram. */
   totalNaEtapa: number
   onOpenDeal: (dealId: string) => void
+  /** Abre o negócio já no agendamento, vindo do aviso do card. */
+  onAgendarDeal: (dealId: string) => void
   filtered?: boolean
   /** Board inteiro sem nenhum negócio: encolhe a coluna. */
   compact?: boolean
@@ -103,6 +106,7 @@ export const KanbanColumn = React.memo(function KanbanColumn({
                   lead={deal.lead_id ? leadsById.get(deal.lead_id) : undefined}
                   proximaAcao={proximaAcaoPorNegocio.get(deal.id)}
                   onOpen={onOpenDeal}
+                  onAgendar={onAgendarDeal}
                 />
               ))
             )}

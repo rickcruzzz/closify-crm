@@ -88,6 +88,20 @@ export function KanbanBoard({
   const [deals, setDeals] = React.useState(initialDeals)
   const [activeId, setActiveId] = React.useState<string | null>(null)
   const [selectedDealId, setSelectedDealId] = React.useState<string | null>(null)
+  /**
+   * Abrir o painel já no agendamento, quando veio do aviso do card.
+   *
+   * Sem isto, clicar em "Sem próximo passo" abriria o painel e a pessoa ainda
+   * teria que achar o botão de agendar lá dentro. O aviso existe justamente
+   * porque ela não está agendando; cobrar mais um passo é pedir para o número
+   * continuar onde está (96% dos negócios abertos sem próxima ação).
+   */
+  const [abrirAgendamento, setAbrirAgendamento] = React.useState(false)
+
+  const abrirDealNoAgendamento = React.useCallback((dealId: string) => {
+    setSelectedDealId(dealId)
+    setAbrirAgendamento(true)
+  }, [])
   const [isFormOpen, setIsFormOpen] = React.useState(false)
   const [search, setSearch] = React.useState('')
   const [ownerFilter, setOwnerFilter] = React.useState('todos')
@@ -188,7 +202,37 @@ export function KanbanBoard({
       return
     }
 
-    toast.success(`Negócio movido para ${dealStageLabels[finalStage]}`)
+    avisarMovido(dealId, finalStage)
+  }
+
+  /**
+   * Confirma o movimento e, se o negócio ficou sem próximo passo, oferece
+   * agendar ali mesmo.
+   *
+   * Mover de etapa é exatamente o instante em que a pessoa sabe o que vem
+   * depois: acabou a ligação, mandou a proposta. Se a oferta não aparece
+   * agora, ela some, e o negócio entra na estatística de 96% sem próxima ação
+   * medida em produção.
+   *
+   * Toast com ação, não um diálogo que interrompe: quem está arrastando cinco
+   * cards seguidos não pode ser parado a cada um. Quem quiser, clica; quem não
+   * quiser, o aviso some sozinho.
+   */
+  function avisarMovido(dealId: string, stage: DealStage) {
+    const mensagem = `Negócio movido para ${dealStageLabels[stage]}`
+
+    if (proximaAcaoPorNegocio.has(dealId)) {
+      toast.success(mensagem)
+      return
+    }
+
+    toast.success(mensagem, {
+      description: 'Sem próximo passo marcado.',
+      action: {
+        label: 'Agendar',
+        onClick: () => abrirDealNoAgendamento(dealId),
+      },
+    })
   }
 
   async function handleStageChange(dealId: string, stage: DealStage) {
@@ -210,7 +254,7 @@ export function KanbanBoard({
       return
     }
 
-    toast.success(`Negócio movido para ${dealStageLabels[stage]}`)
+    avisarMovido(dealId, stage)
   }
 
   async function handleCreateDeal(values: DealFormValues) {
@@ -351,6 +395,7 @@ export function KanbanBoard({
               proximaAcaoPorNegocio={proximaAcaoPorNegocio}
               totalNaEtapa={totalPorEtapa[stage] ?? 0}
               onOpenDeal={setSelectedDealId}
+              onAgendarDeal={abrirDealNoAgendamento}
               filtered={hasActiveFilters}
               // `deals`, não `filteredDeals`: quem filtrou até zerar a tela
               // tem board com conteúdo, e a coluna deve manter a altura.
@@ -378,7 +423,16 @@ export function KanbanBoard({
         currentUserId={currentUserId}
         calendarConectado={calendarConectado}
         open={!!selectedDealId}
-        onOpenChange={(open) => !open && setSelectedDealId(null)}
+        abrirAgendamento={abrirAgendamento}
+        onAgendamentoAberto={() => setAbrirAgendamento(false)}
+        onOpenChange={(open) => {
+          if (!open) {
+            setSelectedDealId(null)
+            // Sem zerar aqui, reabrir o mesmo negócio pelo card
+            // cairia no agendamento de novo, sem ninguém ter pedido.
+            setAbrirAgendamento(false)
+          }
+        }}
         onStageChange={handleStageChange}
         // Tira o card na hora. A action já revalida no servidor, mas esperar o
         // round-trip deixaria o negócio visível no funil por um instante

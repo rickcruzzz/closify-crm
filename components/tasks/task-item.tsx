@@ -97,7 +97,9 @@ export function TaskItem({
         {/* Hora e rótulo relativo juntos: "hoje" sozinho não diz se é agora ou
             às 18h, e "14:30" sozinho não diz se é hoje ou semana que vem. */}
         {horaFormatada.format(new Date(task.due_at))}
-        <span className="block font-normal">{rotuloDePrazo(task.due_at, agora)}</span>
+        <span className="block font-normal">
+          {rotuloDePrazo(task.due_at, agora, task.done_at)}
+        </span>
       </span>
 
       {(onEditar || onExcluir) && (

@@ -1,11 +1,21 @@
 import { z } from 'zod'
 
 /**
- * Teto de data de tarefa. A faixa vai de 2000 a 2100 pela mesma razão do
- * `dealSchema`: cobre compromisso antigo importado e barra dedo escorregado no
- * ano, que geraria uma tarefa invisível em qualquer grupo da tela /hoje.
+ * Faixa aceita para o prazo da tarefa.
+ *
+ * O piso era `2000-01-01`, copiado do `dealSchema`, cuja justificativa é
+ * "cobre compromisso antigo importado". **Tarefa não é importada**: ela só
+ * nasce deste formulário, para ser feita. O piso largo deixou entrar em
+ * produção uma tarefa marcada para `2000-11-11`, criada em 2026, que a tela
+ * anunciava como "atrasada há 9411 dias".
+ *
+ * Agora o piso é relativo a hoje. Um ano para trás ainda aceita quem registra
+ * algo que esqueceu de lançar na semana passada, e recusa o dedo escorregado
+ * no ano, que é o caso real que aconteceu.
+ *
+ * O teto continua largo: agendar com muita antecedência é raro, mas legítimo.
  */
-const LIMITE_INFERIOR = new Date('2000-01-01T00:00:00.000Z')
+const UM_ANO_EM_MS = 365 * 24 * 60 * 60 * 1000
 const LIMITE_SUPERIOR = new Date('2100-01-01T00:00:00.000Z')
 
 export const taskSchema = z
@@ -19,8 +29,13 @@ export const taskSchema = z
     // quem marcou, não 9h em UTC.
     dueAt: z.coerce
       .date({ error: 'Informe a data e a hora.' })
-      .min(LIMITE_INFERIOR, 'Data fora do intervalo aceito.')
-      .max(LIMITE_SUPERIOR, 'Data fora do intervalo aceito.'),
+      .max(LIMITE_SUPERIOR, 'Data fora do intervalo aceito.')
+      // Comparado com o relógio de QUEM VALIDA, não com uma constante de
+      // módulo: constante seria calculada uma vez, quando o processo subiu, e
+      // num servidor de vida longa o piso iria envelhecendo junto.
+      .refine((data) => data.getTime() >= Date.now() - UM_ANO_EM_MS, {
+        error: 'Essa data já passou faz muito tempo. Confira o ano.',
+      }),
 
     assigneeId: z.uuid('Selecione um responsável.'),
 

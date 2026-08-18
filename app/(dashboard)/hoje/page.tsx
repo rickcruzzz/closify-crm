@@ -3,6 +3,7 @@ import type { Metadata } from 'next'
 import { getCurrentUserAndWorkspace } from '@/lib/supabase/workspace'
 import { getWorkspaceMembers } from '@/lib/leads/queries'
 import { getTasksAbertas } from '@/lib/tasks/queries'
+import { lerSinaisDeAtivacao } from '@/lib/onboarding/sinais'
 import { HojeClient } from '@/components/tasks/hoje-client'
 
 export const metadata: Metadata = { title: 'Hoje' }
@@ -20,9 +21,14 @@ export default async function HojePage({
   // "o que EU faço agora", e a visão da equipe é o caso secundário.
   const escopo = params.escopo === 'equipe' ? 'equipe' : 'minhas'
 
-  const [tasks, members] = await Promise.all([
+  // `lerSinaisDeAtivacao` reusado do checklist: são três `count` com
+  // `head: true`, sem trazer linha, e roda em paralelo com o resto. Serve para
+  // a tela vazia distinguir "você está em dia" de "você ainda não começou",
+  // que são coisas opostas e mostravam a mesma mensagem de parabéns.
+  const [tasks, members, sinais] = await Promise.all([
     getTasksAbertas(workspaceId, escopo === 'equipe' ? null : user.id),
     getWorkspaceMembers(workspaceId),
+    lerSinaisDeAtivacao(workspaceId),
   ])
 
   return (
@@ -31,6 +37,8 @@ export default async function HojePage({
       members={members}
       currentUserId={user.id}
       escopo={escopo}
+      temNegocio={sinais.negocios > 0}
+      temLead={sinais.leads > 0}
     />
   )
 }

@@ -42,12 +42,15 @@ export const DealCard = React.memo(function DealCard({
   lead,
   proximaAcao,
   onOpen,
+  onAgendar,
 }: {
   deal: DealRow
   lead: DealLeadRow | undefined
   /** A tarefa aberta mais próxima deste negócio. Ausente: não há nenhuma. */
   proximaAcao: ProximaAcaoRow | undefined
   onOpen: (dealId: string) => void
+  /** Abre o negócio já com o agendamento aberto, a partir do aviso do card. */
+  onAgendar: (dealId: string) => void
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
     useSortable({
@@ -103,7 +106,7 @@ export const DealCard = React.memo(function DealCard({
             <Avatar size="sm">
               <AvatarFallback>{initials(deal.owner_name ?? '?')}</AvatarFallback>
             </Avatar>
-            <ProximaAcao task={proximaAcao} />
+            <ProximaAcao task={proximaAcao} onAgendar={() => onAgendar(deal.id)} />
           </div>
         </CardContent>
       </Card>

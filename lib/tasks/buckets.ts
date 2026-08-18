@@ -107,9 +107,30 @@ export function agruparPorPrazo(
  *
  * Fala em dia de calendário, não em horas corridas: "amanhã" é o que a pessoa
  * entende, e "em 19 horas" obriga ela a fazer a conta.
+ *
+ * `doneAt` não é opcional por capricho: sem ele, tarefa CONCLUÍDA continuava
+ * anunciando o atraso do prazo original. Em produção havia uma marcada para
+ * `2000-11-11` (ano digitado errado) que, já concluída, exibia "atrasada há
+ * 9411 dias". Prazo de tarefa feita é história, não cobrança, e número absurdo
+ * na tela faz a pessoa duvidar do resto dos números.
  */
-export function rotuloDePrazo(dueAt: string, agora: Date): string {
+export function rotuloDePrazo(
+  dueAt: string,
+  agora: Date,
+  doneAt?: string | null,
+): string {
   const vencimento = new Date(dueAt)
+
+  if (doneAt) {
+    const conclusao = new Date(doneAt)
+    const dias = diasEntre(diaEmSaoPaulo(agora), diaEmSaoPaulo(conclusao))
+    if (dias === 0) return 'concluída hoje'
+    if (dias === -1) return 'concluída ontem'
+    // Só o passado importa aqui: `done_at` é gravado pelo servidor no
+    // instante da conclusão, nunca cai no futuro.
+    return `concluída há ${-dias} dias`
+  }
+
   const dias = diasEntre(diaEmSaoPaulo(agora), diaEmSaoPaulo(vencimento))
 
   if (vencimento.getTime() < agora.getTime()) {

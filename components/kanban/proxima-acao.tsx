@@ -27,7 +27,21 @@ const iconePorTipo: Record<ActivityType, typeof Phone> = {
  * funil, e essa é a informação mais valiosa que o card pode dar, mais até do
  * que uma data.
  */
-export function ProximaAcao({ task }: { task: ProximaAcaoRow | undefined }) {
+export function ProximaAcao({
+  task,
+  onAgendar,
+}: {
+  task: ProximaAcaoRow | undefined
+  /**
+   * Abre o agendamento direto do card.
+   *
+   * Sem isto, o aviso de "não tem próximo passo" era um `<span>` cinza escrito
+   * "Ver ação": não clicava, não abria nada e não dizia o que fazer. Medido em
+   * produção, 25 dos 26 negócios abertos estavam nesse estado, ou seja, 96% dos
+   * cards mostravam um aviso morto.
+   */
+  onAgendar?: () => void
+}) {
   // O relógio nasce no cliente: o servidor da Vercel roda em UTC, e "atrasada"
   // calculada lá erraria por três horas todo fim de tarde.
   const [agora, setAgora] = React.useState<Date | null>(null)
@@ -36,12 +50,62 @@ export function ProximaAcao({ task }: { task: ProximaAcaoRow | undefined }) {
     setAgora(new Date())
   }, [])
 
+  /**
+   * O clique deste botão precisa de listener NATIVO em fase de captura.
+   *
+   * Medido no navegador: o `onClick` do React neste botão nunca disparava. O
+   * dnd-kit registra `pointerdown` nativo no card inteiro (o card é o alvo de
+   * arrasto) e chama `preventDefault()`, o que impede o navegador de sintetizar
+   * o `click` no filho. Sem `click`, o React nunca chega a chamar o handler, e
+   * o clique acabava caindo no `onClick` do `<div>` pai: o painel abria, mas
+   * sem o agendamento, exatamente o passo que este aviso existe para poupar.
+   *
+   * `capture: true` no `pointerdown` roda ANTES do listener do dnd-kit e para
+   * a propagação ali, então o arrasto não começa e o `click` nasce normal.
+   */
+  const aviso = React.useRef<HTMLButtonElement>(null)
+
+  React.useEffect(() => {
+    const alvo = aviso.current
+    if (!alvo) return
+
+    const pegar = (event: Event) => event.stopPropagation()
+    const clicar = (event: Event) => {
+      event.stopPropagation()
+      onAgendar?.()
+    }
+
+    alvo.addEventListener('pointerdown', pegar, true)
+    alvo.addEventListener('click', clicar)
+    return () => {
+      alvo.removeEventListener('pointerdown', pegar, true)
+      alvo.removeEventListener('click', clicar)
+    }
+  }, [onAgendar])
+
   if (!task) {
+    // Botão de verdade, com `stopPropagation` e Enter/Espaço tratados à mão:
+    // o card inteiro é alvo de arrasto do dnd-kit, que ocupa essas teclas para
+    // pegar e soltar. Mesmo padrão do botão do título em `deal-card.tsx`, e é
+    // o que mantém a ação alcançável por teclado.
     return (
-      <span className="text-muted-foreground flex items-center gap-1 text-xs font-medium whitespace-nowrap">
+      <button
+        type="button"
+        // `text-destructive`, não cinza: negócio sem próximo passo é o que
+        // morre calado no funil. Se o aviso tem a mesma cor do resto do card,
+        // ele não avisa nada.
+        className="text-destructive focus-visible:ring-ring/50 -my-1 flex min-h-6 items-center gap-1 rounded-sm px-1 py-1 text-xs font-medium whitespace-nowrap outline-none hover:underline focus-visible:ring-3"
+        ref={aviso}
+        onKeyDown={(event) => {
+          if (event.key !== 'Enter' && event.key !== ' ') return
+          event.preventDefault()
+          event.stopPropagation()
+          onAgendar?.()
+        }}
+      >
         <CircleAlert aria-hidden className="size-3" />
-        Ver ação
-      </span>
+        Sem próximo passo
+      </button>
     )
   }
 

@@ -124,4 +124,25 @@ describe('rotuloDePrazo', () => {
     expect(rotuloDePrazo('2026-08-10T12:00:00.000Z', agora)).toBe('atrasada há 1 dia')
     expect(rotuloDePrazo('2026-08-08T12:00:00.000Z', agora)).toBe('atrasada há 3 dias')
   })
+
+  // Havia em produção uma tarefa marcada para 2000-11-11 (ano digitado
+  // errado). Depois de concluída, a tela continuava anunciando "atrasada há
+  // 9411 dias": o rótulo olhava só o prazo. Prazo de tarefa feita é história,
+  // não cobrança, e número absurdo faz duvidar do resto dos números.
+  it('não cobra atraso de tarefa já concluída', () => {
+    const prazoAntigo = '2000-11-11T11:00:00.000Z'
+    expect(rotuloDePrazo(prazoAntigo, agora)).toBe('atrasada há 9404 dias')
+    expect(rotuloDePrazo(prazoAntigo, agora, '2026-08-11T14:00:00.000Z')).toBe(
+      'concluída hoje',
+    )
+  })
+
+  it('conta a conclusão pelo dia em que ela aconteceu', () => {
+    const prazo = '2026-08-05T12:00:00.000Z'
+    expect(rotuloDePrazo(prazo, agora, '2026-08-11T13:00:00.000Z')).toBe('concluída hoje')
+    expect(rotuloDePrazo(prazo, agora, '2026-08-10T13:00:00.000Z')).toBe('concluída ontem')
+    expect(rotuloDePrazo(prazo, agora, '2026-08-08T13:00:00.000Z')).toBe(
+      'concluída há 3 dias',
+    )
+  })
 })

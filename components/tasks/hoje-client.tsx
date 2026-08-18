@@ -3,7 +3,7 @@
 import * as React from 'react'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
-import { CheckCircle2, Loader2 } from 'lucide-react'
+import { CheckCircle2, KanbanSquare, Loader2, Users } from 'lucide-react'
 
 import { PageHeader } from '@/components/layout/page-header'
 import { Button } from '@/components/ui/button'
@@ -29,11 +29,17 @@ export function HojeClient({
   members,
   currentUserId,
   escopo,
+  temNegocio,
+  temLead,
 }: {
   tasks: TaskRow[]
   members: WorkspaceMember[]
   currentUserId: string
   escopo: 'minhas' | 'equipe'
+  /** A empresa já tem negócio no funil? Decide o que a tela vazia diz. */
+  temNegocio: boolean
+  /** E já tem ao menos um contato? */
+  temLead: boolean
 }) {
   const router = useRouter()
   const [tasks, setTasks] = React.useState(tasksIniciais)
@@ -155,22 +161,46 @@ export function HojeClient({
       {total === 0 ? (
         <Card>
           <CardContent>
-            <EmptyState
-              icon={CheckCircle2}
-              title="Nada pendente"
-              description={
-                escopo === 'equipe'
-                  ? 'Ninguém da equipe tem tarefa em aberto. Crie uma a partir de um lead ou de um negócio.'
-                  : 'Você não tem tarefa em aberto. Abra um negócio no Pipeline e agende a próxima ação.'
-              }
-            >
-              <Button
-                variant="outline"
-                onClick={() => router.push('/kanban')}
+            {/* Três situações diferentes mostravam a MESMA tela de parabéns.
+                `/hoje` é a primeira tela depois do login, e um check verde
+                escrito "Nada pendente" para quem acabou de criar a conta lê
+                como "está tudo em dia": é a mensagem de quem terminou o
+                trabalho, dada a quem ainda não começou.
+
+                Medido no banco: 11 das 21 empresas nunca criaram um lead, e
+                96% dos negócios abertos não têm próxima ação. Quem chega aqui
+                precisa saber qual é o próximo passo, não ser parabenizado. */}
+            {!temLead ? (
+              <EmptyState
+                icon={Users}
+                title="Comece cadastrando um cliente"
+                description="Assim que você tiver um contato aqui, o Velo Funil passa a avisar com quem falar cada dia."
               >
-                Ir para o Pipeline
-              </Button>
-            </EmptyState>
+                <Button onClick={() => router.push('/leads')}>Cadastrar cliente</Button>
+              </EmptyState>
+            ) : !temNegocio ? (
+              <EmptyState
+                icon={KanbanSquare}
+                title="Coloque um cliente no funil"
+                description="Um negócio no funil é o que dá o que fazer: dele sai a próxima ação que aparece nesta tela."
+              >
+                <Button onClick={() => router.push('/kanban')}>Abrir o Pipeline</Button>
+              </EmptyState>
+            ) : (
+              <EmptyState
+                icon={CheckCircle2}
+                title={escopo === 'equipe' ? 'Ninguém tem tarefa em aberto' : 'Nada pendente'}
+                description={
+                  escopo === 'equipe'
+                    ? 'Nenhum negócio da equipe tem próxima ação marcada. Sem isso, é fácil um cliente ficar sem resposta.'
+                    : 'Nenhum negócio seu tem próxima ação marcada. Abra o Pipeline e agende o próximo passo de quem está parado.'
+                }
+              >
+                <Button variant="outline" onClick={() => router.push('/kanban')}>
+                  Ir para o Pipeline
+                </Button>
+              </EmptyState>
+            )}
           </CardContent>
         </Card>
       ) : (
