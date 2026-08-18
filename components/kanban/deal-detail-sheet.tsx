@@ -389,6 +389,7 @@ export function DealDetailSheet({
         currentUserId={currentUserId}
         dealId={deal?.id ?? null}
         leadId={deal?.lead_id ?? null}
+        stage={deal?.stage}
       />
 
       <Dialog open={confirmando} onOpenChange={setConfirmando}>

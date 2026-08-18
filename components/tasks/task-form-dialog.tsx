@@ -26,6 +26,12 @@ import {
 import type { ActivityType } from '@/lib/leads/types'
 import type { WorkspaceMember } from '@/lib/leads/queries'
 import { taskTypeLabels } from '@/lib/tasks/types'
+import {
+  taskTypesCriaveis,
+  tipoSugerido,
+  type TaskTypeCriavel,
+} from '@/lib/tasks/tipo-sugerido'
+import type { DealStage } from '@/lib/deals/types'
 import { taskSchema, type TaskFormInput, type TaskFormValues } from '@/lib/validations/task'
 
 /**
@@ -66,6 +72,7 @@ export function TaskFormDialog({
   leadId,
   dealId,
   tarefa,
+  stage,
 }: {
   open: boolean
   onOpenChange: (open: boolean) => void
@@ -77,6 +84,8 @@ export function TaskFormDialog({
   dealId?: string | null
   /** Presente: o diálogo edita em vez de criar. */
   tarefa?: TarefaEmEdicao | null
+  /** A etapa do negócio, quando há um: decide o tipo que já vem escolhido. */
+  stage?: DealStage
 }) {
   const [isSubmitting, setIsSubmitting] = React.useState(false)
 
@@ -95,13 +104,15 @@ export function TaskFormDialog({
 
     reset({
       title: tarefa?.title ?? '',
-      type: tarefa?.type ?? 'ligacao',
+      // Editar uma tarefa antiga preserva o tipo dela, inclusive `nota`, que
+      // não se cria mais mas existe em produção. Só a criação usa a sugestão.
+      type: tarefa?.type ?? tipoSugerido(stage),
       dueAt: tarefa ? paraCampoLocal(new Date(tarefa.due_at)) : sugestaoDePrazo(),
       assigneeId: tarefa?.assignee_id ?? currentUserId,
       leadId: leadId ?? null,
       dealId: dealId ?? null,
     })
-  }, [open, reset, tarefa, currentUserId, leadId, dealId])
+  }, [open, reset, tarefa, currentUserId, leadId, dealId, stage])
 
   async function submeter(values: TaskFormValues) {
     setIsSubmitting(true)
@@ -159,9 +170,16 @@ export function TaskFormDialog({
                       </SelectValue>
                     </SelectTrigger>
                     <SelectContent>
-                      {(Object.keys(taskTypeLabels) as ActivityType[]).map((tipo) => (
+                      {/* `nota` não entra na lista, mas se a tarefa em edição
+                          for uma das antigas com esse tipo, ele precisa
+                          aparecer: sem isso o seletor abriria vazio e salvar
+                          trocaria o tipo dela sem ninguém pedir. */}
+                      {(tarefa && !taskTypesCriaveis.includes(tarefa.type as TaskTypeCriavel)
+                        ? [tarefa.type, ...taskTypesCriaveis]
+                        : [...taskTypesCriaveis]
+                      ).map((tipo) => (
                         <SelectItem key={tipo} value={tipo}>
-                          {taskTypeLabels[tipo]}
+                          {taskTypeLabels[tipo as ActivityType]}
                         </SelectItem>
                       ))}
                     </SelectContent>

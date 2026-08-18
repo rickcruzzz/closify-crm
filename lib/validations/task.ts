@@ -21,6 +21,19 @@ const LIMITE_SUPERIOR = new Date('2100-01-01T00:00:00.000Z')
 export const taskSchema = z
   .object({
     title: z.string().trim().min(2, 'Descreva a tarefa.').max(200, 'Título longo demais.'),
+    /**
+     * `nota` continua sendo aceita, mas não é mais OFERECIDA.
+     *
+     * Tarefa é compromisso com hora marcada; nota é registro do que já
+     * aconteceu, e este schema exige `dueAt` — nota agendada para semana que
+     * vem faz `/hoje` cobrar ação de algo que não é ação. A lista veio inteira
+     * do `ActivityType` da timeline (onde nota cabe) e foi reusada sem filtrar.
+     *
+     * Recusar `nota` aqui quebraria a tarefa que JÁ existe em produção com esse
+     * tipo: editar o título dela passaria a falhar na validação, ou pior,
+     * salvaria trocando o tipo sem ninguém pedir. Quem restringe a criação é
+     * `taskTypesCriaveis`, que é o que o seletor do formulário oferece.
+     */
     type: z.enum(['ligacao', 'email', 'reuniao', 'nota'], { error: 'Selecione um tipo.' }),
 
     // Chega da tela como texto do <input type="datetime-local">, que não tem

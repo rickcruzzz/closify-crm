@@ -63,3 +63,4 @@ export const taskTypeLabels: Record<ActivityType, string> = {
   reuniao: 'Reunião',
   nota: 'Nota',
 }
+
