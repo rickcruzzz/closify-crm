@@ -65,11 +65,25 @@ function DialogContent({
           onde o corte era maior.
 
           O `-2rem` deixa a mesma folga lateral que o `max-w-[calc(100%-2rem)]`
-          já usava, para o diálogo não encostar na borda da tela. */}
+          já usava, para o diálogo não encostar na borda da tela.
+
+          `grid-cols-[minmax(0,1fr)]` conserta o corte LATERAL, irmão do de
+          cima e igualmente geral. A faixa implícita de um grid é
+          `minmax(auto, 1fr)`, e esse `auto` obedece ao CONTEÚDO mais largo,
+          não ao contêiner: medido a 291px de janela, com `clientWidth` de
+          259px, a coluna resolvia em 327px e todo filho herdava. O rodapé
+          chegava a 359px, somando as margens negativas `-mx-4`, e o botão de
+          confirmar ficava fora da tela — sem barra para alcançá-lo, porque um
+          `overflow-x` não desfaz uma coluna que o grid já decidiu larga.
+          Medido a 291px: 359px de `scrollWidth` antes, 259px depois, que é
+          exatamente a largura útil. Aparecia primeiro no diálogo de tarefa
+          porque ele é o que usa `sm:grid-cols-2` (vira coluna única no
+          estreito); os outros usam `grid-cols-2` fixo e escapavam por sorte do
+          conteúdo, não por estarem certos. */}
       <DialogPrimitive.Popup
         data-slot="dialog-content"
         className={cn(
-          'bg-popover text-popover-foreground ring-foreground/10 data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95 fixed top-1/2 left-1/2 z-50 grid max-h-[calc(100dvh-2rem)] w-full max-w-[calc(100%-2rem)] -translate-x-1/2 -translate-y-1/2 gap-4 overflow-y-auto rounded-xl p-4 text-sm ring-1 duration-100 outline-none sm:max-w-sm',
+          'bg-popover text-popover-foreground ring-foreground/10 data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95 fixed top-1/2 left-1/2 z-50 grid max-h-[calc(100dvh-2rem)] grid-cols-[minmax(0,1fr)] w-full max-w-[calc(100%-2rem)] -translate-x-1/2 -translate-y-1/2 gap-4 overflow-y-auto rounded-xl p-4 text-sm ring-1 duration-100 outline-none sm:max-w-sm',
           className,
         )}
         {...props}
