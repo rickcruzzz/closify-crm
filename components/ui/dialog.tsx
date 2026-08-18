@@ -47,10 +47,29 @@ function DialogContent({
   return (
     <DialogPortal>
       <DialogOverlay />
+      {/* `max-h-[calc(100dvh-2rem)] overflow-y-auto` conserta um defeito que
+          atingia os quinze diálogos do produto, não só um.
+
+          O popup é `fixed top-1/2 -translate-y-1/2`, ou seja, centralizado. Sem
+          teto de altura, conteúdo mais alto que a janela transborda METADE para
+          cima e metade para baixo, e a metade de cima fica INALCANÇÁVEL:
+          `position: fixed` não acompanha a rolagem da página, e sem
+          `overflow-y-auto` também não existe barra interna. Medido em produção
+          com o diálogo de importar CSV: em 1366x768 sumiam 79px em cada ponta,
+          em 390x844 sumiam 97px, e o corte simétrico é a assinatura do
+          centramento. Abaixo de ~890px de altura de janela já cortava, e 768px
+          é a tela mais comum do público.
+
+          `dvh` e não `vh` de propósito: no celular a barra do navegador entra e
+          sai, e `vh` mede a janela como se ela não existisse, justamente o caso
+          onde o corte era maior.
+
+          O `-2rem` deixa a mesma folga lateral que o `max-w-[calc(100%-2rem)]`
+          já usava, para o diálogo não encostar na borda da tela. */}
       <DialogPrimitive.Popup
         data-slot="dialog-content"
         className={cn(
-          'bg-popover text-popover-foreground ring-foreground/10 data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95 fixed top-1/2 left-1/2 z-50 grid w-full max-w-[calc(100%-2rem)] -translate-x-1/2 -translate-y-1/2 gap-4 rounded-xl p-4 text-sm ring-1 duration-100 outline-none sm:max-w-sm',
+          'bg-popover text-popover-foreground ring-foreground/10 data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95 fixed top-1/2 left-1/2 z-50 grid max-h-[calc(100dvh-2rem)] w-full max-w-[calc(100%-2rem)] -translate-x-1/2 -translate-y-1/2 gap-4 overflow-y-auto rounded-xl p-4 text-sm ring-1 duration-100 outline-none sm:max-w-sm',
           className,
         )}
         {...props}
