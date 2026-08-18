@@ -34,6 +34,10 @@ export function MonthView({
       ano={ano}
       mes={mes}
       onNavegarMes={onNavegarMes}
+      // O cabeçalho de navegação (mês + setas) já é desenhado por
+      // `calendario-client.tsx`, mesmo elemento reusado pelo modo Semana —
+      // dois cabeçalhos duplicados aqui, achado testando visualmente.
+      mostrarNavegacao={false}
       renderizarDia={(dia, numeroDoDia, ehDoMesCorrente) => {
         const tarefas = tarefasPorDia.get(dia) ?? []
         const visiveis = tarefas.slice(0, MAX_CHIPS_POR_DIA)

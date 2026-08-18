@@ -11,7 +11,6 @@ import { MonthView } from '@/components/calendario/month-view'
 import { WeekView } from '@/components/calendario/week-view'
 import { AgendaView } from '@/components/calendario/agenda-view'
 import { TaskFormDialog, type TarefaEmEdicao } from '@/components/tasks/task-form-dialog'
-import { useMediaQuery } from '@/hooks/use-media-query'
 import { agruparTarefasPorDia } from '@/lib/calendario/agrupar-por-dia'
 import { rotuloDoMes } from '@/lib/calendario/grade-do-mes'
 import { diasDaSemana } from '@/lib/calendario/semana'
@@ -47,11 +46,23 @@ export function CalendarioClient({
   ateCarregado: string
 }) {
   const router = useRouter()
-  const ehMobile = !useMediaQuery('(min-width: 640px)')
 
   // Agenda é o padrão mais seguro no mobile: leitura rápida, sem tentar
-  // encolher uma grade de mês pra caber numa tela estreita.
-  const [modo, setModo] = React.useState<Modo>(ehMobile ? 'agenda' : 'mes')
+  // encolher uma grade de mês pra caber numa tela estreita. `useMediaQuery`
+  // devolve `false` no primeiro render sempre (evita mismatch de hidratação),
+  // então `ehMobile` começa `true` mesmo no desktop — usar isso direto no
+  // `useState` travaria todo mundo em Agenda até o usuário trocar de aba na
+  // mão. O modo padrão só é decidido uma vez, DIRETO por `window.matchMedia`
+  // dentro de um efeito que roda só na montagem (nunca no servidor, então
+  // reflete a tela real de saída) — depois disso não mexe mais, pra não
+  // sobrescrever uma troca manual de modo que a pessoa já tenha feito.
+  const [modo, setModo] = React.useState<Modo>('agenda')
+  React.useEffect(() => {
+    if (!window.matchMedia('(min-width: 640px)').matches) return
+    setModo('mes')
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
   const [ano, setAno] = React.useState(anoInicial)
   const [mes, setMes] = React.useState(mesInicial)
   const [diaAncoraSemana, setDiaAncoraSemana] = React.useState(() => diaEmSaoPaulo(new Date()))
