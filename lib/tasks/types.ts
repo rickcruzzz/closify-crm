@@ -1,3 +1,5 @@
+import { Mail, Phone, StickyNote, Users } from 'lucide-react'
+
 import type { ActivityType } from '@/lib/leads/types'
 
 /**
@@ -62,5 +64,20 @@ export const taskTypeLabels: Record<ActivityType, string> = {
   email: 'E-mail',
   reuniao: 'Reunião',
   nota: 'Nota',
+}
+
+/**
+ * O ícone de cada tipo de tarefa, num lugar só.
+ *
+ * Estava duplicado, idêntico, em `task-item.tsx` e `proxima-acao.tsx` — os
+ * dois já tinham o mesmo `const iconePorTipo` copiado à mão. Extraído aqui
+ * antes de nascer uma terceira cópia no calendário; os dois arquivos antigos
+ * agora importam daqui.
+ */
+export const iconePorTipo: Record<ActivityType, typeof Phone> = {
+  ligacao: Phone,
+  email: Mail,
+  reuniao: Users,
+  nota: StickyNote,
 }
 

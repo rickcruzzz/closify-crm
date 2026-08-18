@@ -103,6 +103,38 @@ export async function getTasksAbertas(
   return enriquecer(workspaceId, data ?? [])
 }
 
+/**
+ * As tarefas com prazo dentro de um intervalo, para o Calendário.
+ *
+ * Diferente de `getTasksAbertas`: SEM `is('done_at', null)`, porque o
+ * calendário precisa mostrar o que já foi concluído no mês, não só o
+ * pendente — é a diferença entre "o que falta fazer" (tela /hoje) e "o que
+ * aconteceu e vai acontecer neste período" (calendário).
+ */
+export async function getTasksNoIntervalo(
+  workspaceId: string,
+  desde: string,
+  ate: string,
+): Promise<TaskRow[]> {
+  const supabase = await createClient()
+
+  const { data, error } = await supabase
+    .from('tasks')
+    .select('id, title, type, due_at, done_at, lead_id, deal_id, assignee_id')
+    .eq('workspace_id', workspaceId)
+    .gte('due_at', desde)
+    .lte('due_at', ate)
+    .order('due_at', { ascending: true })
+    .limit(MAX_TAREFAS)
+
+  if (error) {
+    console.error('getTasksNoIntervalo falhou', error)
+    return []
+  }
+
+  return enriquecer(workspaceId, data ?? [])
+}
+
 /** As tarefas de um lead, abertas e concluídas, para o bloco da página dele. */
 export async function getTasksDoLead(
   workspaceId: string,

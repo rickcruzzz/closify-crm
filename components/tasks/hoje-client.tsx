@@ -21,7 +21,12 @@ import { TaskFormDialog, type TarefaEmEdicao } from '@/components/tasks/task-for
 import type { WorkspaceMember } from '@/lib/leads/queries'
 import { agruparPorPrazo } from '@/lib/tasks/buckets'
 import { taskBucketLabels, taskBuckets, type TaskRow } from '@/lib/tasks/types'
-import { atualizarTarefa, concluirTarefa, excluirTarefa } from '@/lib/tasks/actions'
+import {
+  atualizarTarefa,
+  concluirTarefa,
+  excluirTarefa,
+  reabrirTarefa,
+} from '@/lib/tasks/actions'
 import type { TaskFormValues } from '@/lib/validations/task'
 
 export function HojeClient({
@@ -95,7 +100,25 @@ export function HojeClient({
       return
     }
 
-    toast.success('Tarefa concluída.')
+    // Checkbox pequeno, clique fácil de errar, e o item some da lista na
+    // hora: sem "Desfazer" aqui, o único jeito de reabrir era chamar
+    // `reabrirTarefa` direto pelo código, e a tela não deixava rastro de que
+    // ela existia. `reabrirTarefa` não apaga a atividade que a conclusão
+    // gerou (o comentário da própria função já documenta isso) — desfazer é
+    // reabrir o compromisso, não fingir que a ligação não aconteceu.
+    toast.success('Tarefa concluída.', {
+      action: {
+        label: 'Desfazer',
+        onClick: async () => {
+          const resultadoReabrir = await reabrirTarefa(taskId)
+          if ('error' in resultadoReabrir) {
+            toast.error(resultadoReabrir.error)
+            return
+          }
+          router.refresh()
+        },
+      },
+    })
     router.refresh()
   }
 

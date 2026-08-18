@@ -6,8 +6,11 @@ import { z } from 'zod'
 import { createClient } from '@/lib/supabase/server'
 import { resolverWorkspaceAtivo } from '@/lib/workspace/ativo'
 import { taskSchema } from '@/lib/validations/task'
+import { getTasksNoIntervalo } from '@/lib/tasks/queries'
+import type { TaskRow } from '@/lib/tasks/types'
 
 const idSchema = z.uuid('Tarefa inválida.')
+const diaSchema = z.iso.date('Data inválida.')
 
 type Sessao = {
   supabase: Awaited<ReturnType<typeof createClient>>
@@ -251,6 +254,32 @@ export async function reabrirTarefa(taskId: unknown) {
 
   revalidarTelasDeTarefa(data?.lead_id)
   return { success: true }
+}
+
+/**
+ * Busca tarefas de um intervalo fora dos 42 dias que `/calendario` carregou
+ * no primeiro render — usada quando o modo Semana navega para fora do mês
+ * carregado. Sem isso a Semana ficaria presa ao intervalo da carga inicial,
+ * mostrando dia vazio para toda semana fora do mês aberto.
+ */
+export async function buscarTarefasNoIntervalo(
+  desde: unknown,
+  ate: unknown,
+): Promise<{ tasks: TaskRow[] } | { error: string }> {
+  const desdeParsed = diaSchema.safeParse(desde)
+  const ateParsed = diaSchema.safeParse(ate)
+  if (!desdeParsed.success || !ateParsed.success) return { error: 'Intervalo inválido.' }
+
+  const sessao = await abrirSessao()
+  if ('error' in sessao) return sessao
+
+  const tasks = await getTasksNoIntervalo(
+    sessao.workspaceId,
+    `${desdeParsed.data}T00:00:00-03:00`,
+    `${ateParsed.data}T23:59:59-03:00`,
+  )
+
+  return { tasks }
 }
 
 export async function excluirTarefa(taskId: unknown) {

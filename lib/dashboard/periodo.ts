@@ -1,14 +1,38 @@
 import { diaEmSaoPaulo } from '@/lib/tasks/buckets'
 import type { PeriodoDoDashboard } from '@/lib/dashboard/queries'
 
-export type PresetDePeriodo = '7d' | '30d' | 'mes' | 'ano'
+export type PresetDePeriodo =
+  | 'hoje'
+  | 'ontem'
+  | '7d'
+  | '30d'
+  | 'mes'
+  | 'mes_passado'
+  | 'trimestre'
+  | 'ano'
 
 export const rotuloDoPreset: Record<PresetDePeriodo, string> = {
+  hoje: 'Hoje',
+  ontem: 'Ontem',
   '7d': 'Últimos 7 dias',
   '30d': 'Últimos 30 dias',
   mes: 'Este mês',
+  mes_passado: 'Mês passado',
+  trimestre: 'Este trimestre',
   ano: 'Este ano',
 }
+
+/** A ordem em que os presets aparecem no filtro, do mais curto ao mais largo. */
+export const ordemDosPresets: PresetDePeriodo[] = [
+  'hoje',
+  'ontem',
+  '7d',
+  '30d',
+  'mes',
+  'mes_passado',
+  'trimestre',
+  'ano',
+]
 
 // Brasil não tem mais horário de verão desde 2019, mesma premissa que
 // lib/tasks/buckets.ts já usa pra distância entre dias. Offset fixo evita
@@ -26,6 +50,17 @@ function fimDoDia(diaYyyyMmDd: string): string {
 function subtrairDias(diaYyyyMmDd: string, dias: number): string {
   const [ano, mes, dia] = diaYyyyMmDd.split('-').map(Number)
   return new Date(Date.UTC(ano!, mes! - 1, dia! - dias)).toISOString().slice(0, 10)
+}
+
+/**
+ * Último dia de um mês, dado ano e mês (1-indexado).
+ *
+ * `Date.UTC(ano, mes, 0)` é o dia zero do mês SEGUINTE, que o JS normaliza
+ * para o último dia do mês pedido — evita tabela de "30 ou 31" e o caso de
+ * fevereiro em ano bissexto.
+ */
+function ultimoDiaDoMes(ano: number, mes: number): number {
+  return new Date(Date.UTC(ano, mes, 0)).getUTCDate()
 }
 
 /**
@@ -54,6 +89,12 @@ export function resolverPeriodo(
   const hoje = diaEmSaoPaulo(agora)
 
   switch (preset as PresetDePeriodo | null) {
+    case 'hoje':
+      return { desde: inicioDoDia(hoje), ate: fimDoDia(hoje) }
+    case 'ontem': {
+      const ontem = subtrairDias(hoje, 1)
+      return { desde: inicioDoDia(ontem), ate: fimDoDia(ontem) }
+    }
     case '7d':
       return { desde: inicioDoDia(subtrairDias(hoje, 7)), ate: fimDoDia(hoje) }
     case '30d':
@@ -61,6 +102,29 @@ export function resolverPeriodo(
     case 'mes': {
       const [ano, mes] = hoje.split('-') as [string, string]
       return { desde: inicioDoDia(`${ano}-${mes}-01`), ate: fimDoDia(hoje) }
+    }
+    case 'mes_passado': {
+      const [anoAtual, mesAtual] = hoje.split('-').map(Number) as [number, number]
+      // Mês 0 (janeiro) volta pro ano anterior, dezembro — mesma normalização
+      // que `Date.UTC` já faz sozinho, sem `if` de virada de ano à mão.
+      const referencia = new Date(Date.UTC(anoAtual, mesAtual - 2, 1))
+      const ano = referencia.getUTCFullYear()
+      const mes = referencia.getUTCMonth() + 1
+      const ultimoDia = ultimoDiaDoMes(ano, mes)
+      const mesStr = String(mes).padStart(2, '0')
+      return {
+        desde: inicioDoDia(`${ano}-${mesStr}-01`),
+        ate: fimDoDia(`${ano}-${mesStr}-${String(ultimoDia).padStart(2, '0')}`),
+      }
+    }
+    case 'trimestre': {
+      const [ano, mes] = hoje.split('-').map(Number) as [number, number]
+      // Trimestre corrente, não "3 meses pra trás": alguém em fevereiro está
+      // no 1º trimestre inteiro (jan-mar), não num intervalo que começa em
+      // novembro. `Math.floor((mes-1)/3)*3+1` dá o mês inicial do trimestre.
+      const mesInicial = Math.floor((mes - 1) / 3) * 3 + 1
+      const mesInicialStr = String(mesInicial).padStart(2, '0')
+      return { desde: inicioDoDia(`${ano}-${mesInicialStr}-01`), ate: fimDoDia(hoje) }
     }
     case 'ano': {
       const [ano] = hoje.split('-') as [string]

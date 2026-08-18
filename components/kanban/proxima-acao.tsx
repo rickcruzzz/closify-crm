@@ -1,24 +1,16 @@
 'use client'
 
 import * as React from 'react'
-import { CircleAlert, CircleDashed, Mail, Phone, StickyNote, Users } from 'lucide-react'
+import { CircleAlert, CircleDashed } from 'lucide-react'
 
 import { cn } from '@/lib/utils'
-import type { ActivityType } from '@/lib/leads/types'
 import { rotuloDePrazo } from '@/lib/tasks/buckets'
-import type { ProximaAcaoRow } from '@/lib/tasks/types'
+import { iconePorTipo, type ProximaAcaoRow } from '@/lib/tasks/types'
 import {
   corDaUrgencia,
   urgenciaDaProximaAcao,
   urgenciaSemProximaAcao,
 } from '@/lib/kanban/urgencia'
-
-const iconePorTipo: Record<ActivityType, typeof Phone> = {
-  ligacao: Phone,
-  email: Mail,
-  reuniao: Users,
-  nota: StickyNote,
-}
 
 /**
  * A próxima ação de um negócio, no canto do card do Kanban.

@@ -1,4 +1,12 @@
-import { CalendarCheck, KanbanSquare, LayoutDashboard, Plug, Settings, Users } from 'lucide-react'
+import {
+  Calendar,
+  CalendarCheck,
+  KanbanSquare,
+  LayoutDashboard,
+  Plug,
+  Settings,
+  Users,
+} from 'lucide-react'
 
 export type NavItem = {
   title: string
@@ -21,6 +29,10 @@ export const navItems: NavItem[] = [
   { title: 'Pipeline', href: '/kanban', icon: KanbanSquare },
   { title: 'Leads', href: '/leads', icon: Users },
   { title: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
+  // Monitoramento por data (o que tenho hoje, atrasado, previsto), não
+  // conexão técnica com o Google — isso já vive em Integrações. Item
+  // principal, não escondido: é onde a pessoa responde "o que vem por aí".
+  { title: 'Calendário', href: '/calendario', icon: Calendar },
   { title: 'Configurações', href: '/settings', icon: Settings },
   // Aponta pra mesma página de Configurações, só que já na aba certa, evita
   // duplicar a tela de integrações num lugar novo. Fica logo abaixo de

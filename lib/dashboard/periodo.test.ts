@@ -56,4 +56,70 @@ describe('resolverPeriodo', () => {
   it('preset desconhecido cai no padrão sem filtro', () => {
     expect(resolverPeriodo(agora, 'bimestre', null, null)).toBeUndefined()
   })
+
+  it('hoje cobre só o dia corrente, do início ao fim', () => {
+    const periodo = resolverPeriodo(agora, 'hoje', null, null)
+    expect(periodo).toEqual({
+      desde: '2026-08-13T00:00:00-03:00',
+      ate: '2026-08-13T23:59:59.999-03:00',
+    })
+  })
+
+  it('ontem cobre só o dia anterior, não o intervalo entre ontem e hoje', () => {
+    const periodo = resolverPeriodo(agora, 'ontem', null, null)
+    expect(periodo).toEqual({
+      desde: '2026-08-12T00:00:00-03:00',
+      ate: '2026-08-12T23:59:59.999-03:00',
+    })
+  })
+
+  // 13/08 é uma quinta-feira; ontem cruzando virada de mês é o caso que
+  // quebraria uma conta ingênua de "dia - 1" sem normalizar mês.
+  it('ontem atravessa virada de mês corretamente', () => {
+    const primeiroDeSetembro = new Date('2026-09-01T15:00:00Z')
+    const periodo = resolverPeriodo(primeiroDeSetembro, 'ontem', null, null)
+    expect(periodo).toEqual({
+      desde: '2026-08-31T00:00:00-03:00',
+      ate: '2026-08-31T23:59:59.999-03:00',
+    })
+  })
+
+  it('mes_passado é o mês inteiro anterior, não os últimos 30 dias', () => {
+    const periodo = resolverPeriodo(agora, 'mes_passado', null, null)
+    expect(periodo).toEqual({
+      desde: '2026-07-01T00:00:00-03:00',
+      ate: '2026-07-31T23:59:59.999-03:00',
+    })
+  })
+
+  it('mes_passado em janeiro volta para dezembro do ano anterior', () => {
+    const emJaneiro = new Date('2026-01-15T15:00:00Z')
+    const periodo = resolverPeriodo(emJaneiro, 'mes_passado', null, null)
+    expect(periodo).toEqual({
+      desde: '2025-12-01T00:00:00-03:00',
+      ate: '2025-12-31T23:59:59.999-03:00',
+    })
+  })
+
+  it('mes_passado em março cai em fevereiro com o número certo de dias', () => {
+    const emMarco = new Date('2026-03-10T15:00:00Z')
+    const periodo = resolverPeriodo(emMarco, 'mes_passado', null, null)
+    // 2026 não é bissexto: fevereiro tem 28 dias.
+    expect(periodo?.ate).toBe('2026-02-28T23:59:59.999-03:00')
+  })
+
+  it('trimestre começa no 1º mês do trimestre corrente, não 3 meses atrás', () => {
+    // 13/08 está no 3º trimestre (jul-set): início é 1º de julho.
+    const periodo = resolverPeriodo(agora, 'trimestre', null, null)
+    expect(periodo).toEqual({
+      desde: '2026-07-01T00:00:00-03:00',
+      ate: '2026-08-13T23:59:59.999-03:00',
+    })
+  })
+
+  it('trimestre em fevereiro cobre o 1º trimestre inteiro, não retrocede pro ano anterior', () => {
+    const emFevereiro = new Date('2026-02-10T15:00:00Z')
+    const periodo = resolverPeriodo(emFevereiro, 'trimestre', null, null)
+    expect(periodo?.desde).toBe('2026-01-01T00:00:00-03:00')
+  })
 })

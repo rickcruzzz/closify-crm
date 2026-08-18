@@ -5,16 +5,21 @@ import { useRouter, usePathname, useSearchParams } from 'next/navigation'
 import { CalendarRange, Loader2, X } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { rotuloDoPreset, type PresetDePeriodo } from '@/lib/dashboard/periodo'
-
-const PRESETS: PresetDePeriodo[] = ['7d', '30d', 'mes', 'ano']
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetDescription,
+} from '@/components/ui/sheet'
+import { DateRangePicker } from '@/components/ui/date-range-picker'
+import { useMediaQuery } from '@/hooks/use-media-query'
+import { rotuloDoPreset, ordemDosPresets, type PresetDePeriodo } from '@/lib/dashboard/periodo'
 
 // `YYYY-MM-DD` direto pra `DD/MM/YYYY` sem passar por `Date`, `new
 // Date('2026-01-01')` é meia-noite UTC, e formatar isso no navegador de
@@ -38,9 +43,8 @@ export function PeriodFilter({
   const pathname = usePathname()
   const searchParams = useSearchParams()
   const [pending, startTransition] = React.useTransition()
-  const [popoverAberto, setPopoverAberto] = React.useState(false)
-  const [desde, setDesde] = React.useState(desdeAtivo ?? '')
-  const [ate, setAte] = React.useState(ateAtivo ?? '')
+  const [painelAberto, setPainelAberto] = React.useState(false)
+  const ehMobile = !useMediaQuery('(min-width: 640px)')
 
   const personalizado = !!(desdeAtivo && ateAtivo)
   const semFiltro = !presetAtivo && !personalizado
@@ -64,23 +68,35 @@ export function PeriodFilter({
     params.delete('periodo')
     params.delete('desde')
     params.delete('ate')
+    setPainelAberto(false)
     navegar(params)
   }
 
-  function aplicarPersonalizado(e: React.FormEvent) {
-    e.preventDefault()
-    if (!desde || !ate) return
+  function aplicarPersonalizado(desde: string, ate: string) {
     const params = new URLSearchParams(searchParams)
     params.delete('periodo')
     params.set('desde', desde)
     params.set('ate', ate)
-    setPopoverAberto(false)
+    setPainelAberto(false)
     navegar(params)
   }
 
+  const conteudoDoPicker = (
+    <DateRangePicker
+      desde={desdeAtivo}
+      ate={ateAtivo}
+      onAplicar={aplicarPersonalizado}
+      onLimpar={limpar}
+    />
+  )
+
+  const rotuloBotao = personalizado
+    ? `${formatarCurto(desdeAtivo)} – ${formatarCurto(ateAtivo)}`
+    : 'Personalizado'
+
   return (
     <div className="flex flex-wrap items-center gap-2">
-      {PRESETS.map((preset) => (
+      {ordemDosPresets.map((preset) => (
         <Button
           key={preset}
           type="button"
@@ -93,56 +109,49 @@ export function PeriodFilter({
         </Button>
       ))}
 
-      <DropdownMenu open={popoverAberto} onOpenChange={setPopoverAberto}>
-        <DropdownMenuTrigger
-          render={
-            <Button type="button" size="sm" variant={personalizado ? 'default' : 'outline'} disabled={pending} />
-          }
-        >
-          <CalendarRange className="size-4" />
-          {personalizado ? `${formatarCurto(desdeAtivo)} – ${formatarCurto(ateAtivo)}` : 'Período personalizado'}
-        </DropdownMenuTrigger>
-        {/* `min-w` em vez de `w` fixo: nunca fica mais estreito que o
-            necessário pros dois campos de data, mas pode crescer. `max-w`
-            com `calc(100vw...)` é o teto de segurança, não importa quanto o
-            cálculo de "espaço disponível" do popup decidir (a coluna
-            principal do layout tem overflow-y-auto, e por regra da própria
-            especificação CSS isso faz o eixo X também virar não-visible,
-            então o popup pode calcular a largura livre com base na coluna,
-            não na tela inteira), o popup nunca estoura o viewport. */}
-        <DropdownMenuContent
-          align="start"
-          className="w-72 min-w-72 max-w-[calc(100vw-2rem)] p-3"
-        >
-          <form onSubmit={aplicarPersonalizado} className="flex flex-col gap-3">
-            <div className="flex flex-col gap-2 min-[420px]:flex-row">
-              <div className="flex min-w-0 flex-1 flex-col gap-1.5">
-                <Label htmlFor="periodo-desde">De</Label>
-                <Input
-                  id="periodo-desde"
-                  type="date"
-                  value={desde}
-                  max={ate || undefined}
-                  onChange={(e) => setDesde(e.target.value)}
-                />
-              </div>
-              <div className="flex min-w-0 flex-1 flex-col gap-1.5">
-                <Label htmlFor="periodo-ate">Até</Label>
-                <Input
-                  id="periodo-ate"
-                  type="date"
-                  value={ate}
-                  min={desde || undefined}
-                  onChange={(e) => setAte(e.target.value)}
-                />
-              </div>
-            </div>
-            <Button type="submit" size="sm" disabled={!desde || !ate}>
-              Aplicar
-            </Button>
-          </form>
-        </DropdownMenuContent>
-      </DropdownMenu>
+      {ehMobile ? (
+        <Sheet open={painelAberto} onOpenChange={setPainelAberto}>
+          <Button
+            type="button"
+            size="sm"
+            variant={personalizado ? 'default' : 'outline'}
+            disabled={pending}
+            onClick={() => setPainelAberto(true)}
+          >
+            <CalendarRange className="size-4" />
+            {rotuloBotao}
+          </Button>
+          {/* `side="bottom"`: bottom sheet no mobile, não popover comprimido
+              tentando caber um calendário — mesma diretriz que a skill
+              ui-ux-pro-max marca para seleção de data em telas pequenas. */}
+          <SheetContent side="bottom" className="max-h-[85dvh] overflow-y-auto">
+            <SheetHeader>
+              <SheetTitle>Período personalizado</SheetTitle>
+              <SheetDescription>Escolha o início e o fim do intervalo.</SheetDescription>
+            </SheetHeader>
+            <div className="px-4 pb-4">{conteudoDoPicker}</div>
+          </SheetContent>
+        </Sheet>
+      ) : (
+        <DropdownMenu open={painelAberto} onOpenChange={setPainelAberto}>
+          <DropdownMenuTrigger
+            render={
+              <Button
+                type="button"
+                size="sm"
+                variant={personalizado ? 'default' : 'outline'}
+                disabled={pending}
+              />
+            }
+          >
+            <CalendarRange className="size-4" />
+            {rotuloBotao}
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="start" className="w-auto p-4">
+            {conteudoDoPicker}
+          </DropdownMenuContent>
+        </DropdownMenu>
+      )}
 
       {!semFiltro && (
         <Button type="button" size="sm" variant="ghost" disabled={pending} onClick={limpar}>

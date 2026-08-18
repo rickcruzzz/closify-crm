@@ -2,7 +2,7 @@
 
 import * as React from 'react'
 import Link from 'next/link'
-import { Mail, MoreHorizontal, Phone, StickyNote, Users } from 'lucide-react'
+import { MoreHorizontal } from 'lucide-react'
 
 import { cn } from '@/lib/utils'
 import { Checkbox } from '@/components/ui/checkbox'
@@ -13,16 +13,8 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { Button } from '@/components/ui/button'
-import type { ActivityType } from '@/lib/leads/types'
 import { rotuloDePrazo } from '@/lib/tasks/buckets'
-import { taskTypeLabels, type TaskRow } from '@/lib/tasks/types'
-
-const iconePorTipo: Record<ActivityType, typeof Phone> = {
-  ligacao: Phone,
-  email: Mail,
-  reuniao: Users,
-  nota: StickyNote,
-}
+import { iconePorTipo, taskTypeLabels, type TaskRow } from '@/lib/tasks/types'
 
 const horaFormatada = new Intl.DateTimeFormat('pt-BR', {
   timeZone: 'America/Sao_Paulo',
