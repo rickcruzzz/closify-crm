@@ -31,6 +31,9 @@ bolso de quem está começando".
 - Busca e Filtros
 - Landing Page
 - Onboarding do Usuário
+- Calendário
+- Filtro de Período
+- Exportação de Relatórios
 
 ### Funcionalidades Principais
 
@@ -39,6 +42,12 @@ Login com Supabase Auth, incluindo recuperação de senha via Resend e Google OA
 Magic link foi descartado: com Google OAuth e recuperação de senha funcionando, ele
 seria um terceiro caminho de entrada sem cobrir nenhum caso que os outros dois deixam
 de fora.
+
+Trocar senha, dentro do produto, exige confirmar a senha atual (checado pelo
+estado real da sessão, não por um valor vindo do cliente). Só quem está
+criando a primeira senha, chegando por login social, fica isento, ali não há
+o que confirmar. Sem essa exigência, sessão sequestrada bastaria pra trocar a
+senha e trancar o dono de fora da própria conta.
 
 **Kanban**
 Pipeline visual com drag-and-drop entre etapas, persistência no banco e cards com dados essenciais do negócio.
@@ -61,8 +70,24 @@ Plano Free com limites e plano Pro com uso ilimitado, ativado por assinatura rec
 **Integrações (API)**
 Integração com serviços externos via API, incluindo Asaas, Resend e futuras automações.
 
+Google Calendar e Gmail são conectáveis em **Configurações → Integrações**,
+OAuth próprio (`/api/integrations/google/*`), separado do OAuth de login, que
+não persiste refresh token utilizável em background. Um escopo por conexão
+(`calendar.events` ou `gmail.send`, nunca os dois), token cifrado
+(AES-256-GCM) e renovação automática perto de expirar. Botão "Adicionar ao
+Google Calendar" na próxima ação do negócio, "Enviar e-mail" no painel do
+lead, os dois registram atividade na timeline.
+
+WhatsApp é só o link `wa.me` (ver **WhatsApp por link**, abaixo); a Cloud API
+oficial da Meta foi implementada e depois removida, decisão de produto, nunca
+teve conexão real em produção.
+
 **Busca e Filtros**
 Busca por nome, e-mail, empresa, status, responsável e data.
+
+O campo "Lead vinculado" do formulário de negócio usa combobox com busca em
+vez de lista solta, workspace com muitos leads exigia rolar a lista inteira
+procurando pelo nome.
 
 **Landing Page**
 Página pública para apresentar o produto, gerar interesse e converter visitantes em leads.
@@ -152,6 +177,41 @@ abrir a conversa, sem nenhuma dessas dependências.
 **Dashboard de Métricas**
 Cards com Total de Leads, Negócios Abertos, Valor do Pipeline e Taxa de Conversão.
 Gráfico de funil feito com Recharts.
+
+**Exportação de Relatórios**
+Botão "Exportar relatório" no Dashboard captura a área de métricas em PDF
+(`html2canvas-pro` + `jspdf`), já com o nome do workspace e o rótulo do
+período aplicado, pra dono levar o funil pra uma reunião sem precisar
+printar tela.
+
+**Filtro de Período**
+Oito presets (Hoje, Ontem, 7 dias, 30 dias, Mês, Mês passado, Trimestre, Ano)
+mais intervalo customizado, com um range picker visual: grade de mês
+navegável, hover mostra o intervalo em preview antes do segundo clique, dois
+meses lado a lado no desktop e um mês dentro de um painel deslizante no
+mobile. Substituiu dois campos de data soltos e desconectados. Sem
+biblioteca de calendário de terceiro, `@base-ui/react` (base de toda a UI do
+produto) não tem primitivo de data, e a grade de 42 células é a mesma
+reusada pelo Calendário completo, abaixo.
+
+**Calendário**
+Tela **Calendário**, no menu entre Dashboard e Configurações, com três
+modos sobre as tarefas que já existem, sem tabela nova: **Mês** (grade com
+até 3 tarefas por dia e "+N"), **Semana** (7 colunas, mais espaço por dia,
+pensada pra ver conflito de horário) e **Agenda** (lista cronológica
+agrupada por dia, é a mesma tela **Hoje** sem o filtro de "só minhas
+abertas"). Cor por urgência e ícone por tipo, mesmos que Kanban e Hoje usam,
+os três lugares não podem discordar sobre o que é urgente. Diferente da
+tela Hoje, o Calendário mostra tarefa concluída também, é "o que aconteceu
+e vai acontecer neste período", não "o que falta fazer". Semana busca dados
+do servidor quando a pessoa navega pra fora dos 42 dias que a página
+carregou de início.
+
+Ficaram de fora deliberadamente, medido contra produção (12 tarefas em 21
+workspaces, 1 integração conectada): página de histórico/auditoria dedicada
+e rastreabilidade de sincronização/permissão. Mesmo volume que já reprovou
+IA/lead scoring e a Cloud API do WhatsApp neste projeto; a timeline por lead
+já cobre auditoria nesse volume.
 
 ### Multi-empresa e Colaboração
 
