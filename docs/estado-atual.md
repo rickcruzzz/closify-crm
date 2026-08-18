@@ -88,6 +88,15 @@ mensagem de Pro com workspace descartável (com e sem
 `integration_connections`), e o drawer em viewport 390px confirmando as
 linhas separadas. Tudo limpo no fim.
 
+**Deploy confirmado em produção, mesmo dia.** Os dois commits acima
+(calendário/captura de erro e sidebar/mensagem de Pro/drawer) demoraram pra
+aparecer no ar depois do `git push` — chegou a parecer gatilho Git→Vercel
+quebrado (`/calendario` deu 404 por mais de 15 minutos após o push).
+Confirmado depois que era só demora do deploy processar: `/calendario`
+passou a responder `307` (redirect de sessão, esperado) e
+`/api/log-erro` a validar payload (`400` em corpo vazio), os dois contra
+`https://www.velofunil.com.br` direto, sem depender de painel.
+
 Junto: Dashboard ganhou "Exportar relatório" em PDF (`html2canvas-pro` +
 `jspdf`); formulário de negócio trocou o `Select` de lead por um combobox com
 busca (workspace com muitos leads exigia rolar a lista toda); e trocar senha
