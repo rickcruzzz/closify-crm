@@ -73,6 +73,16 @@ export function ImportLeadsDialog({
   // de ERP costuma ter linha de título, linha em branco, ou logo antes da
   // linha real de colunas. 0 é o caso comum (cabeçalho já na linha 1).
   const [pularLinhas, setPularLinhas] = React.useState(0)
+  /**
+   * A pessoa pediu para mexer nas colunas à mão.
+   *
+   * Fechado, o passo mostra só o que foi entendido, em texto. Aberto, mostra
+   * os seletores e o ajuste de linha de cabeçalho. Quem tem planilha comum
+   * nunca precisa abrir: `sugerirMapeamento` acerta os campos sozinho, e
+   * seletor já preenchido parece decisão pendente quando na verdade é
+   * trabalho pronto.
+   */
+  const [ajustando, setAjustando] = React.useState(false)
 
   React.useEffect(() => {
     if (open) {
@@ -83,6 +93,7 @@ export function ImportLeadsDialog({
       setDuplicados('ignorar')
       setResultado(null)
       setPularLinhas(0)
+      setAjustando(false)
     }
   }, [open])
 
@@ -193,6 +204,25 @@ export function ImportLeadsDialog({
     [matriz, cabecalho],
   )
 
+  /**
+   * O reconhecimento automático deu conta sozinho?
+   *
+   * O mínimo que a importação exige é nome mais uma forma de falar com a
+   * pessoa, a mesma regra que `interpretarPlanilha` aplica ao recusar linha
+   * ("sem e-mail nem telefone, não há como contatar") e que a migration 0025
+   * já tinha fixado no banco. Empresa, valor e etapa são desejáveis, não
+   * obrigatórios: planilha que não traz nenhum dos três ainda importa bem.
+   *
+   * Quando isto é verdade, a tela confirma em texto em vez de pedir para
+   * preencher seis seletores. Quando é falso, os seletores abrem sozinhos,
+   * porque aí a decisão é de fato necessária.
+   */
+  const reconheceuOEssencial =
+    mapeamento.name !== undefined &&
+    (mapeamento.email !== undefined || mapeamento.phone !== undefined)
+
+  const mostrarSeletores = ajustando || !reconheceuOEssencial
+
   function ajustarPularLinhas(novo: number) {
     const limitado = Math.max(0, Math.min(novo, Math.max(0, matriz.length - 2)))
     setPularLinhas(limitado)
@@ -237,10 +267,14 @@ export function ImportLeadsDialog({
             {passo === 'resultado' && 'Importação concluída'}
           </DialogTitle>
           <DialogDescription>
+            {/* Diz de antemão que as colunas são reconhecidas sozinhas, para a
+                pessoa chegar no passo seguinte esperando CONFERIR, não
+                preencher. Sem isso, encontrar uma tela cheia de campos depois
+                de subir o arquivo parece que o trabalho só começou. */}
             {passo === 'arquivo' &&
-              'Arquivo do Excel (.xlsx) ou .csv. Cada contato vira um lead e um negócio no Kanban.'}
+              'Arquivo do Excel (.xlsx) ou .csv. As colunas são reconhecidas sozinhas, você só confere. Cada contato vira um lead e um negócio no Kanban.'}
             {passo === 'colunas' &&
-              `${nomeDoArquivo} · ${matriz.length - 1} linha(s). Confira se cada coluna foi para o lugar certo.`}
+              `${nomeDoArquivo} · ${matriz.length - 1} linha(s). Confira antes de importar.`}
             {passo === 'resultado' && 'O que entrou e o que precisa da sua atenção.'}
           </DialogDescription>
         </DialogHeader>
@@ -291,12 +325,21 @@ export function ImportLeadsDialog({
             promete: rolar só ela, não a caixa inteira. */}
         {passo === 'colunas' && (
           <div className="flex min-w-0 flex-col gap-4">
+            {/* A tabela de amostra e o ajuste da linha de cabeçalho só
+                interessam a quem está corrigindo alguma coisa. Para quem tem
+                planilha comum eram duas caixas de conteúdo técnico logo na
+                abertura, antes de qualquer coisa útil. */}
+            {mostrarSeletores && (
             <div className="border-border min-w-0 rounded-lg border p-3">
               <p className="mb-2 text-xs font-medium">Primeiras linhas do arquivo</p>
               <div className="overflow-x-auto">
                 <table className="text-xs">
                   <tbody>
-                    {matriz.slice(0, 3).map((linha, i) => (
+                    {/* Mostra ATÉ a linha escolhida, nunca menos que três: com
+                        `slice(0, 3)` fixo, quem apontava a linha 4 como a dos
+                        títulos escolhia às cegas, porque o destaque caía fora
+                        da janela visível e a tabela parecia não reagir. */}
+                    {matriz.slice(0, Math.max(3, pularLinhas + 2)).map((linha, i) => (
                       <tr key={i}>
                         <td
                           className={cn(
@@ -323,33 +366,95 @@ export function ImportLeadsDialog({
                 </table>
               </div>
 
-              <div className="mt-3 flex items-center gap-2">
-                <Label htmlFor="pular-linhas" className="text-xs whitespace-nowrap">
-                  A linha em destaque é o cabeçalho? Se não, pule
+              {/* A frase antiga ("A linha em destaque é o cabeçalho? Se não,
+                  pule N linha(s) antes dele") falava de "cabeçalho" e pedia um
+                  número sem dizer para quê. Agora diz o que a linha destacada
+                  significa e o que fazer se estiver errada.
+
+                  O número continua sendo o da TABELA ao lado, não o do Excel:
+                  `lerCsv` descarta linha totalmente vazia
+                  (`lib/leads/csv.ts`), então uma planilha com linha em branco
+                  no meio já tem numeração diferente da do Excel, e prometer
+                  "número da linha do Excel" seria mentira em quem mais precisa
+                  desse campo. Os botões evitam que a pessoa precise raciocinar
+                  sobre índice. */}
+              <div className="mt-3 flex flex-wrap items-center gap-2">
+                <Label htmlFor="pular-linhas" className="text-xs">
+                  A linha destacada acima é a dos títulos das colunas. Se não for, mude
+                  aqui:
                 </Label>
                 <Input
                   id="pular-linhas"
                   type="number"
-                  min={0}
-                  max={Math.max(0, matriz.length - 2)}
-                  value={pularLinhas}
+                  min={1}
+                  max={Math.max(1, matriz.length - 1)}
+                  // Campo em base 1 para casar com a coluna de números da
+                  // tabela ao lado; o estado por trás continua em base 0.
+                  value={pularLinhas + 1}
                   className="h-8 w-16"
-                  onChange={(e) => ajustarPularLinhas(Number(e.target.value) || 0)}
+                  onChange={(e) => ajustarPularLinhas((Number(e.target.value) || 1) - 1)}
                 />
-                <span className="text-muted-foreground text-xs whitespace-nowrap">
-                  linha(s) antes dele
-                </span>
               </div>
 
               {nadaReconhecido && (
                 <p className="mt-2 flex items-start gap-1.5 text-xs text-amber-600 dark:text-amber-400">
                   <AlertTriangle aria-hidden className="mt-0.5 size-3.5 shrink-0" />
-                  Não reconhecemos nenhum título de coluna nesta linha (Nome, Telefone, E-mail…).
-                  Se sua planilha tem uma linha de título ou linha em branco antes do cabeçalho de
-                  verdade, ajuste acima até a linha certa ficar em destaque.
+                  Nenhum título conhecido (Nome, Telefone, E-mail…) foi encontrado na linha
+                  destacada. Se a sua planilha tem título ou linha em branco no começo, mude o
+                  número acima até a linha dos títulos ficar destacada.
                 </p>
               )}
             </div>
+            )}
+
+            {/* O caso comum: o reconhecimento automático deu conta, então a
+                tela CONFIRMA o que entendeu em vez de pedir que a pessoa
+                preencha. Seletor já preenchido parece decisão pendente; uma
+                lista curta com o exemplo de cada coluna parece trabalho
+                pronto, que é o que ele é.
+
+                O exemplo ao lado (`amostraDaColuna`, a mesma função que já
+                alimentava a dica dos seletores) é o que transforma "confie em
+                mim" em "confira você mesmo": se o Telefone tivesse casado com
+                a coluna errada, o "(71) 99999-1001" não estaria ali. */}
+            {!mostrarSeletores && (
+              <div className="flex flex-col gap-2">
+                <p className="text-sm font-medium">Entendemos sua planilha assim:</p>
+                <ul className="flex flex-col gap-1.5">
+                  {CAMPOS.filter(({ campo }) => mapeamento[campo] !== undefined).map(
+                    ({ campo, rotulo }) => {
+                      const indice = mapeamento[campo]!
+                      const amostra = amostraDaColuna(corpo, indice)
+                      return (
+                        <li
+                          key={campo}
+                          className="grid grid-cols-[5.5rem_minmax(0,1fr)] items-baseline gap-x-3 text-sm"
+                        >
+                          <span className="text-muted-foreground">{rotulo}</span>
+                          <span className="min-w-0">
+                            <span className="font-medium">
+                              {cabecalho[indice] || `Coluna ${indice + 1}`}
+                            </span>
+                            {amostra && (
+                              <span className="text-muted-foreground"> · ex: {amostra}</span>
+                            )}
+                          </span>
+                        </li>
+                      )
+                    },
+                  )}
+                </ul>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="w-fit px-0 hover:bg-transparent hover:underline"
+                  onClick={() => setAjustando(true)}
+                >
+                  Está errado? Ajustar colunas
+                </Button>
+              </div>
+            )}
 
             {/* Os SETE controles do diálogo (os seis mapeamentos e o de
                 duplicados, logo abaixo) compartilham esta mesma grade, e é ela
@@ -373,7 +478,8 @@ export function ImportLeadsDialog({
                 antes desta mudança. Com o mínimo em zero a coluna encolhe e o
                 texto trunca dentro dela. */}
             <div className="flex flex-col gap-3">
-              {CAMPOS.map(({ campo, rotulo }) => {
+              {mostrarSeletores &&
+                CAMPOS.map(({ campo, rotulo }) => {
                 const indiceSelecionado = mapeamento[campo]
                 const amostra =
                   indiceSelecionado !== undefined
@@ -435,8 +541,12 @@ export function ImportLeadsDialog({
                   o texto de apoio embaixo do select continua explicando o que
                   a escolha faz. */}
               <div className="grid grid-cols-[5.5rem_minmax(0,1fr)] items-center gap-x-3 gap-y-1">
+                {/* Sem sigla: "CRM" é jargão que a landing removeu de
+                    propósito (docs/prd-copy-sem-jargao.md), e aqui a pessoa
+                    está justamente conhecendo o produto. "Repetidos" diz o
+                    caso sem exigir que ela saiba o nome da categoria. */}
                 <Label htmlFor="duplicados" className="text-sm leading-tight">
-                  Já no CRM
+                  Repetidos
                 </Label>
                 <div className="flex min-w-0 flex-col gap-1">
                   <Select
