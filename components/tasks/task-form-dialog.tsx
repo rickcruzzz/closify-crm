@@ -27,6 +27,7 @@ import type { ActivityType } from '@/lib/leads/types'
 import type { WorkspaceMember } from '@/lib/leads/queries'
 import { taskTypeLabels } from '@/lib/tasks/types'
 import {
+  exemploDeTitulo,
   taskTypesCriaveis,
   tipoSugerido,
   type TaskTypeCriavel,
@@ -94,10 +95,15 @@ export function TaskFormDialog({
     handleSubmit,
     control,
     reset,
+    watch,
     formState: { errors },
   } = useForm<TaskFormInput, unknown, TaskFormValues>({
     resolver: zodResolver(taskSchema),
   })
+
+  // `watch` e não `getValues`: o exemplo precisa mudar no MESMO instante em que
+  // a pessoa troca o Tipo, e `getValues` não re-renderiza.
+  const tipoEscolhido = watch('type') ?? 'ligacao'
 
   React.useEffect(() => {
     if (!open) return
@@ -140,7 +146,9 @@ export function TaskFormDialog({
             <Label htmlFor="task-title">O que fazer</Label>
             <Input
               id="task-title"
-              placeholder="Ligar para confirmar a proposta"
+              // O exemplo acompanha o Tipo: fixo em "Ligar para confirmar a
+              // proposta", ele ficava sugerindo ligar com o Tipo já em E-mail.
+              placeholder={exemploDeTitulo(tipoEscolhido)}
               aria-invalid={!!errors.title}
               disabled={isSubmitting}
               {...register('title')}

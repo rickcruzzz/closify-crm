@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { taskTypesCriaveis, tipoSugerido } from './tipo-sugerido'
+import { exemploDeTitulo, taskTypesCriaveis, tipoSugerido } from './tipo-sugerido'
 import { dealStages } from '@/lib/deals/types'
 
 describe('taskTypesCriaveis', () => {
@@ -38,5 +38,31 @@ describe('tipoSugerido', () => {
     for (const stage of dealStages) {
       expect(taskTypesCriaveis).toContain(tipoSugerido(stage))
     }
+  })
+})
+
+describe('exemploDeTitulo', () => {
+  // O defeito: o exemplo era fixo em "Ligar para confirmar a proposta" e ficava
+  // lá com o Tipo em E-mail, sugerindo ligar num campo que a pessoa acabou de
+  // dizer que é e-mail.
+  it('acompanha o tipo escolhido em vez de sempre falar em ligar', () => {
+    expect(exemploDeTitulo('email')).not.toMatch(/[Ll]igar/)
+    expect(exemploDeTitulo('reuniao')).not.toMatch(/[Ll]igar/)
+  })
+
+  it('fala de ligação quando o tipo é ligação', () => {
+    expect(exemploDeTitulo('ligacao')).toMatch(/Ligar/)
+  })
+
+  it('tem exemplo para todo tipo criável', () => {
+    for (const tipo of taskTypesCriaveis) {
+      expect(exemploDeTitulo(tipo).length).toBeGreaterThan(5)
+    }
+  })
+
+  // Editar uma tarefa `nota` antiga abre este campo, e cair no exemplo de
+  // ligação seria a mesma contradição, só que na tela de edição.
+  it('cobre nota, que não se cria mais mas ainda se edita', () => {
+    expect(exemploDeTitulo('nota')).not.toMatch(/[Ll]igar/)
   })
 })
