@@ -49,3 +49,8 @@ next-env.d.ts
 # Python bytecode (scripts de skills)
 __pycache__/
 *.pyc
+
+# Saída da skill graphify: 22MB de grafo gerado (graph.json sozinho tem 21MB),
+# reconstruível a qualquer momento rodando a skill de novo. Artefato de
+# ferramenta, não fonte.
+graphify-out/
