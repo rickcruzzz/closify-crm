@@ -28,6 +28,7 @@ export async function updateSession(request: NextRequest) {
   } = await supabase.auth.getUser()
 
   const { pathname } = request.nextUrl
+
   // /onboarding também exige sessão: fica no grupo (auth), que não tem guard
   // de layout, então sem isso a tela renderiza pra anônimo antes da Server
   // Action recusar. Defesa em profundidade, não a única barreira.
@@ -39,6 +40,59 @@ export async function updateSession(request: NextRequest) {
     pathname.startsWith('/perfil') ||
     pathname.startsWith('/onboarding') ||
     pathname.startsWith('/bem-vindo')
+
+  /**
+   * Teto de sessão: expiração absoluta e timeout de inatividade. Só nas
+   * rotas protegidas — aplicar em `/login`, `/redefinir-senha` (sessão de
+   * recovery) ou `/convite` (guest lendo o e-mail do convite) derrubaria
+   * fluxos que dependem de sessão temporária diferente de "login normal".
+   *
+   * O JWT do Supabase expira em 1h e é renovado sozinho pelo refresh token —
+   * é isso que já faz "fechar a aba não desloga" funcionar, e nada aqui muda
+   * esse comportamento. O que faltava era um TETO: sem isto, a sessão vale
+   * para sempre enquanto o refresh token for usado. Cookie roubado ou
+   * dispositivo esquecido logado continuava bom indefinidamente.
+   *
+   * Expiração absoluta usa `user.last_sign_in_at`, que o próprio Supabase já
+   * mantém — sem tabela nova, sem cookie extra para isso. Só muda em login de
+   * verdade (senha, OAuth, magic link), não em cada renovação de token, então
+   * é a data certa para "há quanto tempo esta pessoa entrou".
+   *
+   * Timeout de inatividade PRECISA de um dado diferente: `last_sign_in_at`
+   * não muda enquanto a pessoa usa o produto todo dia sem nunca refazer
+   * login, então usar só ele aqui derrubaria sessão ativa e quebraria "fechar
+   * aba não desloga" na prática. Por isso um cookie próprio, `vf_atividade`,
+   * gravado com o instante de CADA passagem por este middleware — é a
+   * "última atividade" de verdade, e só ele volta a datar a cada requisição.
+   */
+  if (user && isProtectedPath) {
+    const EXPIRACAO_ABSOLUTA_MS = 30 * 24 * 60 * 60 * 1000 // 30 dias desde o login
+    const TIMEOUT_INATIVIDADE_MS = 14 * 24 * 60 * 60 * 1000 // 14 dias sem nenhuma requisição
+
+    const entrouEm = user.last_sign_in_at ? new Date(user.last_sign_in_at).getTime() : 0
+    const ultimaAtividade = Number(request.cookies.get('vf_atividade')?.value) || entrouEm
+    const agora = Date.now()
+
+    const passouDoTeto = entrouEm > 0 && agora - entrouEm > EXPIRACAO_ABSOLUTA_MS
+    const ficouInativa = agora - ultimaAtividade > TIMEOUT_INATIVIDADE_MS
+
+    if (passouDoTeto || ficouInativa) {
+      await supabase.auth.signOut()
+      const url = request.nextUrl.clone()
+      url.pathname = '/login'
+      const resposta = NextResponse.redirect(url)
+      resposta.cookies.delete('vf_atividade')
+      return resposta
+    }
+
+    supabaseResponse.cookies.set('vf_atividade', String(agora), {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      path: '/',
+      maxAge: Math.ceil(TIMEOUT_INATIVIDADE_MS / 1000),
+    })
+  }
 
   if (!user && isProtectedPath) {
     const url = request.nextUrl.clone()

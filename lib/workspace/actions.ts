@@ -329,7 +329,7 @@ export async function acceptInvite(token: unknown) {
  * recuperável. Se fosse ao contrário, os dados ficariam órfãos e sem dono, que
  * é exatamente o que o pedido de eliminação quer evitar.
  */
-export async function deleteAccount() {
+export async function deleteAccount(senha: unknown) {
   const supabase = await createClient()
 
   const {
@@ -338,6 +338,31 @@ export async function deleteAccount() {
 
   if (!user) {
     return { error: 'Sessão expirada. Entre novamente.' }
+  }
+
+  // Reautentica antes de qualquer efeito irreversível. A confirmação de texto
+  // ("digite EXCLUIR") na UI evita clique acidental, mas não é autenticação:
+  // uma sessão sequestrada (cookie roubado, dispositivo destravado) bastava
+  // para apagar a conta inteira sem que quem fez isso soubesse a senha.
+  //
+  // `signInWithPassword`, não uma comparação de hash local: é o mesmo caminho
+  // que o login usa, então herda o mesmo tratamento de erro do GoTrue sem
+  // duplicar lógica de senha aqui.
+  if (typeof senha !== 'string' || senha.length === 0) {
+    return { error: 'Confirme sua senha para excluir a conta.' }
+  }
+
+  if (!user.email) {
+    return { error: 'Não foi possível confirmar sua identidade. Tente novamente.' }
+  }
+
+  const { error: authCheckError } = await supabase.auth.signInWithPassword({
+    email: user.email,
+    password: senha,
+  })
+
+  if (authCheckError) {
+    return { error: 'Senha incorreta.' }
   }
 
   const { error: rpcError } = await supabase.rpc('excluir_minha_conta')

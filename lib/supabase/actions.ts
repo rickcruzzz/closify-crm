@@ -13,6 +13,7 @@ import {
 } from '@/lib/validations/auth'
 import { appUrl } from '@/lib/app-url'
 import { excedeuLimite, limparTentativas } from '@/lib/rate-limit'
+import { ipDaRequisicao } from '@/lib/request-ip'
 import { guardarIntencao, lerConvitePendente, lerEmailPendente } from '@/lib/auth/intencao'
 
 export async function signIn(values: unknown) {
@@ -21,9 +22,18 @@ export async function signIn(values: unknown) {
     return { error: 'Dados inválidos.' }
   }
 
-  // Limita por e-mail, nao por IP: o alvo de forca bruta e a conta, e IP
-  // atras de NAT e compartilhado por gente que nao tem nada a ver.
-  if (await excedeuLimite('signin', parsed.data.email)) {
+  // Duas camadas, contra duas ameaças diferentes. Por e-mail: força bruta
+  // numa conta específica. Por IP, bem mais folgado: password spraying, a
+  // mesma senha comum testada contra muitos e-mails, nunca esbarraria no
+  // limite de nenhuma conta isolada. Checa os dois ANTES de bater no
+  // Supabase, para a tentativa nem chegar ao GoTrue quando já estourou.
+  const ip = await ipDaRequisicao()
+  const [semLimiteEmail, semLimiteIp] = await Promise.all([
+    excedeuLimite('signin', parsed.data.email),
+    excedeuLimite('signin-ip', ip),
+  ])
+
+  if (semLimiteEmail || semLimiteIp) {
     return {
       error: 'Muitas tentativas de login. Aguarde alguns minutos e tente novamente.',
     }
@@ -33,11 +43,16 @@ export async function signIn(values: unknown) {
   const { error } = await supabase.auth.signInWithPassword(parsed.data)
 
   if (error) {
-    console.error('signInWithPassword falhou', error)
+    // Só {code, status}, não o objeto inteiro: alinhado ao padrão do resto
+    // deste arquivo, e evita logar mais do erro do GoTrue do que o necessário.
+    console.error('signInWithPassword falhou', { code: error.code, status: error.status })
     return { error: 'E-mail ou senha incorretos.' }
   }
 
-  // Acertou a senha: nao deve carregar as tentativas erradas anteriores.
+  // Acertou a senha: nao deve carregar as tentativas erradas anteriores. Só o
+  // contador por e-mail, o de IP não some — o IP não "acertou" nada, ele só
+  // hospedou quem acertou, então continua contando para outras tentativas
+  // vindas dali.
   await limparTentativas('signin', parsed.data.email)
 
   redirect('/dashboard')

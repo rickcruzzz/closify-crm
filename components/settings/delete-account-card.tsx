@@ -41,18 +41,20 @@ export function DeleteAccountCard({
   const router = useRouter()
   const [open, setOpen] = React.useState(false)
   const [confirmacao, setConfirmacao] = React.useState('')
+  const [senha, setSenha] = React.useState('')
   const [excluindo, setExcluindo] = React.useState(false)
 
-  const podeExcluir = confirmacao.trim().toUpperCase() === 'EXCLUIR'
+  const podeExcluir = confirmacao.trim().toUpperCase() === 'EXCLUIR' && senha.length > 0
 
   async function handleDelete() {
     if (!podeExcluir) return
 
     setExcluindo(true)
-    const result = await deleteAccount()
+    const result = await deleteAccount(senha)
 
     if (result?.error) {
       toast.error(result.error)
+      setSenha('')
       setExcluindo(false)
       return
     }
@@ -120,6 +122,27 @@ export function DeleteAccountCard({
                 onChange={(e) => setConfirmacao(e.target.value)}
                 placeholder="EXCLUIR"
                 autoComplete="off"
+                disabled={excluindo}
+              />
+            </div>
+
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="senha-exclusao">Confirme sua senha</Label>
+              {/* `Input` simples, não o `PasswordField` de cadastro: aquele
+                  mostra medidor de força e botão de gerar, feitos para
+                  ESCOLHER senha nova — aqui a pessoa está CONFIRMANDO a que já
+                  tem, e um medidor de força julgando a senha de quem só quer
+                  sair seria ruído, não ajuda. Reautenticação de verdade, não
+                  só o texto "EXCLUIR": uma sessão sequestrada não conhece a
+                  senha, então este campo é o que impede excluir a conta sem
+                  ter passado pelo login de novo. */}
+              <Input
+                id="senha-exclusao"
+                type="password"
+                value={senha}
+                onChange={(e) => setSenha(e.target.value)}
+                placeholder="Sua senha atual"
+                autoComplete="current-password"
                 disabled={excluindo}
               />
             </div>

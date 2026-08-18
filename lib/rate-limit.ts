@@ -21,9 +21,19 @@ import { createAdminClient } from '@/lib/supabase/admin'
  *   hora cobre isso com folga e não serve de canhão. O limite do próprio
  *   Supabase existe, mas é global por projeto, barrar aqui, por endereço,
  *   impede que uma pessoa insistindo consuma a cota de todo mundo.
+ * - `signin-ip`: o `signin` por e-mail sozinho não pega password spraying —
+ *   uma senha comum testada contra MUITOS e-mails diferentes nunca esbarra no
+ *   limite de nenhuma conta individual. Este é o segundo andar: bem mais
+ *   folgado que o de e-mail de propósito, porque o IP visto pelo servidor é
+ *   compartilhado por NAT, CGNAT, VPN corporativa e rede de escritório — não
+ *   dá para tratar "muita gente atrás do mesmo IP" como sinal de ataque. 60
+ *   tentativas em 15 min é alto o bastante para um escritório inteiro errando
+ *   senha ao mesmo tempo, e baixo o bastante para travar uma varredura de
+ *   lista.
  */
 const LIMITES = {
   signin: { limite: 8, janelaSegundos: 15 * 60 },
+  'signin-ip': { limite: 60, janelaSegundos: 15 * 60 },
   invite: { limite: 20, janelaSegundos: 60 * 60 },
   'accept-invite': { limite: 15, janelaSegundos: 15 * 60 },
   'reset-password': { limite: 5, janelaSegundos: 60 * 60 },
