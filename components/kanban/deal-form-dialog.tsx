@@ -28,6 +28,16 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import {
+  Combobox,
+  ComboboxContent,
+  ComboboxEmpty,
+  ComboboxInput,
+  ComboboxItem,
+  ComboboxList,
+  ComboboxTrigger,
+  ComboboxValue,
+} from '@/components/ui/combobox'
 import { dealStageLabels, dealStages, type DealStage } from '@/lib/deals/types'
 import type { DealLeadRow } from '@/lib/deals/queries'
 import type { WorkspaceMember } from '@/lib/leads/queries'
@@ -128,31 +138,42 @@ export function DealFormDialog({
 
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="leadId">Lead vinculado</Label>
+            {/* `Combobox`, não `Select`: workspace com muitos leads fazia a
+                pessoa rolar a lista inteira procurando pelo nome, sem filtro
+                nenhum. O item é o próprio `DealLeadRow`; `itemToStringValue`
+                é o que vira `leadId` no formulário — o combobox trata objeto
+                como valor de verdade, string é só a exibição. */}
             <Controller
               name="leadId"
               control={control}
               render={({ field }) => (
-                <Select
-                  value={field.value}
-                  onValueChange={field.onChange}
+                <Combobox
+                  items={leads}
+                  itemToStringLabel={(lead) => `${lead.name} (${lead.company})`}
+                  itemToStringValue={(lead) => lead.id}
+                  value={leadsById.get(field.value) ?? null}
+                  onValueChange={(lead) => field.onChange(lead?.id ?? '')}
                   disabled={isSubmitting}
                 >
-                  <SelectTrigger id="leadId" className="w-full">
-                    <SelectValue placeholder="Selecione um lead">
-                      {(value) => {
-                        const lead = leadsById.get(value as string)
-                        return lead ? `${lead.name} (${lead.company})` : value
-                      }}
-                    </SelectValue>
-                  </SelectTrigger>
-                  <SelectContent>
-                    {leads.map((lead) => (
-                      <SelectItem key={lead.id} value={lead.id}>
-                        {lead.name} ({lead.company})
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                  <ComboboxTrigger id="leadId">
+                    <ComboboxValue placeholder="Selecione um lead">
+                      {(lead: DealLeadRow | null) =>
+                        lead ? `${lead.name} (${lead.company})` : 'Selecione um lead'
+                      }
+                    </ComboboxValue>
+                  </ComboboxTrigger>
+                  <ComboboxContent>
+                    <ComboboxInput placeholder="Buscar lead..." />
+                    <ComboboxEmpty>Nenhum lead encontrado.</ComboboxEmpty>
+                    <ComboboxList>
+                      {(lead: DealLeadRow) => (
+                        <ComboboxItem key={lead.id} value={lead}>
+                          {lead.name} ({lead.company})
+                        </ComboboxItem>
+                      )}
+                    </ComboboxList>
+                  </ComboboxContent>
+                </Combobox>
               )}
             />
             {errors.leadId && (

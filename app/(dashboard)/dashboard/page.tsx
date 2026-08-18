@@ -16,6 +16,9 @@ import { UpcomingDealsTable } from '@/components/dashboard/upcoming-deals-table'
 import { PeriodFilter } from '@/components/dashboard/period-filter'
 import { ChecklistCard } from '@/components/onboarding/checklist-card'
 import { TourDeBoasVindas } from '@/components/onboarding/tour'
+import { ReportArea } from '@/components/dashboard/report-area'
+import { ExportReportButton } from '@/components/dashboard/export-report-button'
+import { rotuloDoPreset, type PresetDePeriodo } from '@/lib/dashboard/periodo'
 
 export const metadata: Metadata = { title: 'Dashboard' }
 
@@ -25,7 +28,8 @@ export default async function DashboardPage({
   searchParams: Promise<{ periodo?: string; desde?: string; ate?: string }>
 }) {
   const params = await searchParams
-  const { workspaceId } = await getCurrentUserAndWorkspace()
+  const { workspaceId, workspaces } = await getCurrentUserAndWorkspace()
+  const nomeDoWorkspace = workspaces.find((w) => w.id === workspaceId)?.name ?? 'Velo Funil'
 
   // `new Date()` aqui é só o instante "agora" pra ancorar o cálculo, quem
   // decide o que é "hoje" de verdade é `resolverPeriodo` via `diaEmSaoPaulo`,
@@ -67,6 +71,14 @@ export default async function DashboardPage({
   // pulado junto, então não é incomodado.
   const abrirTour = estado.tourStatus === 'not_started'
 
+  // Mesmo texto que `PeriodFilter` mostra na tela, para o relatório dizer o
+  // período que ele de fato cobre sem precisar reabrir o produto para saber.
+  const rotuloDoPeriodo = params.desde
+    ? `${params.desde} até ${params.ate ?? params.desde}`
+    : params.periodo && params.periodo in rotuloDoPreset
+      ? rotuloDoPreset[params.periodo as PresetDePeriodo]
+      : 'Todo o período'
+
   // O dashboard mostra os três painéis sempre, inclusive em workspace novo.
   // Antes o guia de primeiros passos entrava aqui e escondia funil e prazos
   // até existir dado, o que deixava a tela do recém-chegado sem a forma do
@@ -75,7 +87,16 @@ export default async function DashboardPage({
   // Pipeline, onde a ação de fato acontece.
   return (
     <div className="flex flex-col gap-6">
-      <PageHeader title="Dashboard" description="Métricas do seu funil de vendas." />
+      <PageHeader
+        title="Dashboard"
+        description="Métricas do seu funil de vendas."
+        actions={
+          <ExportReportButton
+            nomeDoWorkspace={nomeDoWorkspace}
+            rotuloDoPeriodo={rotuloDoPeriodo}
+          />
+        }
+      />
 
       <PeriodFilter
         presetAtivo={params.desde ? null : (params.periodo ?? null)}
@@ -85,11 +106,16 @@ export default async function DashboardPage({
 
       {mostrarChecklist && <ChecklistCard itens={itens} />}
 
-      <MetricCards metrics={metrics} />
+      {/* Só o que entra no PDF: o checklist é sobre o produto, não sobre o
+          negócio da pessoa, e um relatório com "Cadastre seu primeiro lead"
+          impresso para o cliente não faz sentido nenhum. */}
+      <ReportArea>
+        <MetricCards metrics={metrics} />
 
-      <FunnelChart data={funnelData} />
+        <FunnelChart data={funnelData} />
 
-      <UpcomingDealsTable deals={upcomingDeals} />
+        <UpcomingDealsTable deals={upcomingDeals} />
+      </ReportArea>
 
       {abrirTour && <TourDeBoasVindas aberto />}
     </div>
