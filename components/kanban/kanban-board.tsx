@@ -23,6 +23,14 @@ import type { WorkspaceMember } from '@/lib/leads/queries'
 import type { DealFormValues } from '@/lib/validations/deal'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import {
+  Autocomplete,
+  AutocompleteContent,
+  AutocompleteEmpty,
+  AutocompleteInput,
+  AutocompleteItem,
+  AutocompleteList,
+} from '@/components/ui/autocomplete'
 import { Badge } from '@/components/ui/badge'
 import {
   Select,
@@ -278,6 +286,47 @@ export function KanbanBoard({
     return deals.filter((d) => estadoDeMovimento(d, agora).parado).length
   }, [deals, agora])
 
+  /**
+   * Os nomes que a busca pode sugerir, tirados do que já está no board.
+   *
+   * Sem consulta ao banco de propósito: a lista sai de `deals` e `leadsById`,
+   * que já estão em memória, então a sugestão responde na tecla e não custa
+   * uma ida ao Supabase por caractere digitado. A limitação é honesta e vale
+   * registrar: o board tem teto de carga por etapa (migration 0032), então
+   * cliente que ficou de fora do que veio não aparece aqui. A busca por texto
+   * continua funcionando igual, o que a sugestão faz é poupar digitar o nome
+   * inteiro e acertar a grafia.
+   *
+   * Cada nome aparece UMA vez, com o que ele é (cliente, empresa ou negócio).
+   * Cliente com três negócios sugeria o mesmo nome três vezes, e uma lista que
+   * repete a mesma linha parece defeito.
+   */
+  const sugestoes = React.useMemo(() => {
+    const vistos = new Map<string, { valor: string; tipo: string }>()
+
+    const juntar = (valor: string | null | undefined, tipo: string) => {
+      const limpo = valor?.trim()
+      if (!limpo) return
+      const chave = limpo.toLowerCase()
+      if (vistos.has(chave)) return
+      vistos.set(chave, { valor: limpo, tipo })
+    }
+
+    // Cliente primeiro: é por quem a pessoa procura, o negócio é o que ela
+    // acha depois. Empresa no meio porque agrupa vários clientes.
+    for (const deal of deals) {
+      const lead = deal.lead_id ? leadsById.get(deal.lead_id) : undefined
+      juntar(lead?.name, 'cliente')
+    }
+    for (const deal of deals) {
+      const lead = deal.lead_id ? leadsById.get(deal.lead_id) : undefined
+      juntar(lead?.company, 'empresa')
+    }
+    for (const deal of deals) juntar(deal.title, 'negócio')
+
+    return Array.from(vistos.values())
+  }, [deals, leadsById])
+
   // Filtra só o que é renderizado. O drag-and-drop continua operando sobre
   // `deals` (estado completo), então update otimista e rollback não mudam.
   const filteredDeals = React.useMemo(() => {
@@ -311,16 +360,41 @@ export function KanbanBoard({
     <>
       <div className="mb-4 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
         <div className="flex flex-1 flex-col gap-2 lg:flex-row">
-          <div className="relative max-w-sm flex-1">
-            <Search className="text-muted-foreground pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2" />
-            <Input
-              placeholder="Buscar por negócio, lead ou empresa..."
-              aria-label="Buscar negócios"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="pl-8"
-            />
-          </div>
+          {/* `value`/`onValueChange` controlam o TEXTO, não uma seleção: a
+              busca continua sendo texto livre e filtrar por qualquer palavra
+              segue funcionando. A sugestão só evita digitar o nome inteiro. */}
+          <Autocomplete
+            items={sugestoes}
+            itemToStringValue={(item) => item.valor}
+            value={search}
+            onValueChange={setSearch}
+          >
+            <div className="relative max-w-sm flex-1">
+              <Search className="text-muted-foreground pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2" />
+              <AutocompleteInput
+                render={
+                  <Input
+                    placeholder="Buscar por negócio, lead ou empresa..."
+                    aria-label="Buscar negócios"
+                    className="pl-8"
+                  />
+                }
+              />
+            </div>
+            <AutocompleteContent>
+              <AutocompleteEmpty>Nenhum nome parecido.</AutocompleteEmpty>
+              <AutocompleteList>
+                {(item: { valor: string; tipo: string }) => (
+                  <AutocompleteItem key={item.valor} value={item}>
+                    <span className="flex-1 truncate">{item.valor}</span>
+                    <span className="text-muted-foreground shrink-0 text-xs">
+                      {item.tipo}
+                    </span>
+                  </AutocompleteItem>
+                )}
+              </AutocompleteList>
+            </AutocompleteContent>
+          </Autocomplete>
 
           <Select
             value={ownerFilter}
