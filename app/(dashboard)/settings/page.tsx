@@ -39,7 +39,11 @@ const MENSAGEM_DE_ERRO_DA_INTEGRACAO: Record<string, string> = {
   parametros_ausentes: 'O Google não devolveu os dados esperados. Tente conectar de novo.',
   state_invalido: 'O link de conexão expirou ou é inválido. Tente conectar de novo.',
   falha_ao_conectar: 'Não foi possível concluir a conexão. Tente de novo em instantes.',
-  plano_free: 'Conecte o plano Pro para usar integrações.',
+  // Continua existindo para quem chega por link direto na rota de conexão. O
+  // caminho normal nem produz mais este erro: o card já mostra o estado Pro
+  // antes do clique, em vez de mandar a pessoa ao servidor para ouvir não.
+  plano_free:
+    'Google Calendar e Gmail fazem parte do plano Pro. Veja o que muda em Configurações → Plano.',
 }
 
 const NOME_DA_INTEGRACAO: Record<string, string> = {
@@ -50,7 +54,12 @@ const NOME_DA_INTEGRACAO: Record<string, string> = {
 export default async function SettingsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ aba?: string; conectado?: string; erro?: string }>
+  searchParams: Promise<{
+    aba?: string
+    conectado?: string
+    erro?: string
+    assinar?: string
+  }>
 }) {
   const params = await searchParams
   const { user, workspaceId } = await getCurrentUserAndWorkspace()
@@ -160,13 +169,20 @@ export default async function SettingsPage({
         </div>
       )}
 
-      {aba === 'plano' && <PlanCard plan={workspace?.plan ?? 'free'} isAdmin={isAdmin} />}
+      {aba === 'plano' && (
+        <PlanCard
+          plan={workspace?.plan ?? 'free'}
+          isAdmin={isAdmin}
+          assinarDeInicio={params.assinar === '1'}
+        />
+      )}
 
       {aba === 'integracoes' && (
         <IntegrationsTab
           isAdmin={isAdmin}
           connections={integrationConnections}
           uso={usoDasIntegracoes}
+          plano={workspace?.plan ?? 'free'}
         />
       )}
     </div>

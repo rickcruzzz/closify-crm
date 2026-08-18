@@ -23,6 +23,12 @@ const PRO_FEATURES = [
   'Várias empresas no mesmo login',
   'Colaboradores ilimitados',
   'Leads ilimitados',
+  // Google Calendar e Gmail são exclusivos do Pro desde 12/08 e estavam fora
+  // desta lista, que é justamente a que existe para convencer alguém a pagar.
+  // São o recurso mais concreto do plano: o resto é "mais do mesmo, sem
+  // limite", estes dois são coisa que o Free não faz de jeito nenhum.
+  'Agenda ligada ao Google Calendar',
+  'E-mail pelo Gmail, registrado no cliente',
   'Pipeline Kanban',
   'Dashboard de métricas',
   'Convites por e-mail',

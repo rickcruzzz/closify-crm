@@ -2,12 +2,13 @@
 
 import * as React from 'react'
 import { toast } from 'sonner'
-import { CalendarDays, Loader2, Mail, Plug, Trash2, type LucideIcon } from 'lucide-react'
+import { CalendarDays, Loader2, Mail, Plug, Trash2, Zap, type LucideIcon } from 'lucide-react'
 
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { desconectarIntegracao, testarConexaoIntegracao } from '@/lib/integrations/actions'
+import { ProUpsellDialog } from '@/components/settings/pro-upsell-dialog'
 import type { IntegrationProvider, IntegrationStatus } from '@/types/supabase'
 
 const META: Record<
@@ -20,6 +21,14 @@ const META: Record<
     /** Como nomear o uso pro cliente, singular e plural, linguagem dele, não termo técnico. */
     usoSingular: string
     usoPlural: string
+    /**
+     * O que quem está no Free deixa de fazer.
+     *
+     * Escrito como perda concreta do dia a dia, não como recurso: "integração
+     * indisponível" não diz nada a quem nunca usou, e a decisão de pagar se
+     * toma pelo problema que some, não pelo nome da funcionalidade.
+     */
+    ganhoNoPro: string
   }
 > = {
   google_calendar: {
@@ -29,6 +38,8 @@ const META: Record<
     conectarHref: '/api/integrations/google/connect?provider=google_calendar',
     usoSingular: 'reunião agendada',
     usoPlural: 'reuniões agendadas',
+    ganhoNoPro:
+      'No Pro, a reunião que você marca aqui já aparece na sua agenda do Google, com convite pro cliente.',
   },
   gmail: {
     titulo: 'Gmail',
@@ -37,6 +48,8 @@ const META: Record<
     conectarHref: '/api/integrations/google/connect?provider=gmail',
     usoSingular: 'e-mail enviado',
     usoPlural: 'e-mails enviados',
+    ganhoNoPro:
+      'No Pro, você responde o cliente sem trocar de aba, e o e-mail fica registrado no histórico dele.',
   },
 }
 
@@ -54,6 +67,7 @@ export function IntegrationCard({
   accountLabel,
   lastError,
   uso,
+  plano,
 }: {
   provider: IntegrationProvider
   isAdmin: boolean
@@ -62,8 +76,21 @@ export function IntegrationCard({
   lastError: string | null
   /** Quantas vezes essa integração foi usada nos últimos 30 dias. */
   uso: number
+  /**
+   * O plano do workspace, só para decidir o que o card MOSTRA.
+   *
+   * `docs/estado-atual.md` registra que "regra de plano lê a função, nunca a
+   * coluna". Isto não é regra: é rótulo. Quem decide de verdade continua sendo
+   * o `pro_vigente()` em `/api/integrations/google/connect`, que roda antes de
+   * assinar o `state` do OAuth e fecha o caminho por inteiro — mesmo que
+   * alguém force esta prop no cliente, a conexão não acontece. E a página de
+   * configurações roda `sincronizar_plano_do_workspace` antes de renderizar,
+   * então a coluna está em dia justamente aqui.
+   */
+  plano: 'free' | 'pro'
 }) {
   const [pendente, startTransition] = React.useTransition()
+  const [upsellAberto, setUpsellAberto] = React.useState(false)
   const info = META[provider]
   const Icone = info.icone
   const conectado = status === 'connected'
@@ -119,7 +146,27 @@ export function IntegrationCard({
           </p>
         )}
 
-        {!isAdmin ? (
+        {/* O Free vem ANTES do resto de propósito. Antes disto o card oferecia
+            "Conectar" normalmente, a pessoa clicava, saía da página, o servidor
+            recusava e ela voltava com um toast cinza: uma viagem inteira ao
+            servidor para dizer não. Aqui ela sabe antes de gastar o clique, e
+            tem para onde ir. */}
+        {plano === 'free' ? (
+          <div className="flex flex-col gap-2">
+            <p className="text-muted-foreground text-xs">
+              {info.ganhoNoPro}
+            </p>
+            <Button
+              variant="outline"
+              size="sm"
+              className="w-fit"
+              onClick={() => setUpsellAberto(true)}
+            >
+              <Zap className="size-4" />
+              Conhecer o plano Pro
+            </Button>
+          </div>
+        ) : !isAdmin ? (
           <p className="text-muted-foreground text-xs">
             Só administradores podem gerenciar integrações.
           </p>
@@ -150,6 +197,12 @@ export function IntegrationCard({
           <p className="text-muted-foreground text-xs">Em breve.</p>
         )}
       </CardContent>
+
+      <ProUpsellDialog
+        open={upsellAberto}
+        onOpenChange={setUpsellAberto}
+        recurso={info.titulo}
+      />
     </Card>
   )
 }

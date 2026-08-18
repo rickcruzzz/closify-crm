@@ -38,7 +38,22 @@ const GANHOS_DO_PRO = [
   'Suporte prioritário',
 ]
 
-export function PlanCard({ plan, isAdmin }: { plan: 'free' | 'pro'; isAdmin: boolean }) {
+export function PlanCard({
+  plan,
+  isAdmin,
+  assinarDeInicio = false,
+}: {
+  plan: 'free' | 'pro'
+  isAdmin: boolean
+  /**
+   * Abre o formulário de CPF assim que a tela carrega.
+   *
+   * Serve a quem chegou aqui pelo diálogo de integrações: essa pessoa já
+   * decidiu, já viu a comparação, e obrigá-la a procurar e clicar de novo é
+   * onde a compra se perde. Mesmo motivo do `?plano=pro` que vem da landing.
+   */
+  assinarDeInicio?: boolean
+}) {
   return (
     <Card>
       <CardHeader className="flex flex-col items-start gap-3 sm:flex-row sm:justify-between sm:gap-4">
@@ -84,7 +99,7 @@ export function PlanCard({ plan, isAdmin }: { plan: 'free' | 'pro'; isAdmin: boo
               {/* Só admin assina, `createCheckout` recusa os demais, e mostrar
                   o botão a quem não pode usar só produz um caminho morto. */}
               {isAdmin ? (
-                <SubscribeButton className="w-full sm:w-fit" />
+                <SubscribeButton className="w-full sm:w-fit" abrirDeInicio={assinarDeInicio} />
               ) : (
                 <p className="text-muted-foreground text-sm">
                   Peça a um administrador do workspace para fazer o upgrade.
