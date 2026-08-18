@@ -107,6 +107,11 @@ export const definirSenhaSchema = z
     password: z.string().min(8, 'A senha precisa ter no mínimo 8 caracteres.'),
     confirmPassword: z.string().min(1, 'Confirme sua senha.'),
     email: emailDaSessao,
+    // Opcional aqui de propósito: quem está CRIANDO a primeira senha (login
+    // social) não tem o que confirmar. `definirSenhaInicial` é quem decide se
+    // exige, olhando se a sessão já tinha senha antes — o zod não teria como
+    // saber isso, e tratar como sempre-obrigatório quebraria a criação.
+    currentPassword: z.string().optional(),
   })
   .refine((dados) => dados.password === dados.confirmPassword, {
     message: 'As senhas não coincidem.',

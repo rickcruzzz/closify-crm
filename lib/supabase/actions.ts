@@ -211,12 +211,21 @@ export async function limparTentativasDeLogin(email: string) {
 }
 
 /**
- * Define uma senha para quem entrou por um provedor externo (Google).
+ * Define uma senha nova — primeira vez (login social) ou troca de uma já
+ * existente.
  *
- * Diferente de `updatePassword`, que roda no fluxo de recuperação: aqui a
- * pessoa já está autenticada e está ADICIONANDO um método de acesso, não
- * trocando um existente. Por isso não invalida outras sessões, não há
- * suspeita de conta comprometida neste caminho.
+ * Quem entra pela primeira vez (login social, sem `identity` de e-mail) está
+ * ADICIONANDO um método de acesso, não trocando um existente: não há senha
+ * atual para confirmar. Quem já tem senha está TROCANDO, e aí a confirmação
+ * é obrigatória — sem ela, sessão sequestrada (cookie roubado, dispositivo
+ * destravado) bastava para trocar a senha e trancar o dono de fora da
+ * própria conta, mesma classe de achado que a auditoria de segurança já
+ * corrigiu em `deleteAccount`.
+ *
+ * O caso é decidido aqui, pelo estado REAL da sessão (`user.identities`), não
+ * por um booleano vindo do cliente: `temSenha` na tela é só o que decide o
+ * texto exibido, e um payload forjado poderia mandar `currentPassword`
+ * vazio tentando pular a checagem.
  */
 export async function definirSenhaInicial(values: unknown) {
   const supabase = await createClient()
@@ -241,6 +250,29 @@ export async function definirSenhaInicial(values: unknown) {
   })
   if (!parsed.success) {
     return { error: parsed.error.issues[0]?.message ?? 'Dados inválidos.' }
+  }
+
+  const jaTinhaSenha = (user.identities ?? []).some((i) => i.provider === 'email')
+
+  if (jaTinhaSenha) {
+    if (!parsed.data.currentPassword) {
+      return { error: 'Confirme sua senha atual.' }
+    }
+    if (!user.email) {
+      return { error: 'Não foi possível confirmar sua identidade. Tente novamente.' }
+    }
+
+    // Mesmo caminho que `deleteAccount` usa: `signInWithPassword`, não uma
+    // comparação de hash local. Herda o tratamento de erro do GoTrue sem
+    // duplicar lógica de senha aqui.
+    const { error: authCheckError } = await supabase.auth.signInWithPassword({
+      email: user.email,
+      password: parsed.data.currentPassword,
+    })
+
+    if (authCheckError) {
+      return { error: 'Senha atual incorreta.' }
+    }
   }
 
   const { error } = await supabase.auth.updateUser({ password: parsed.data.password })

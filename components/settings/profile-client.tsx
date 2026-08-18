@@ -49,7 +49,7 @@ export function ProfileClient({
 
   const formSenha = useForm<DefinirSenhaValues>({
     resolver: zodResolver(definirSenhaSchema),
-    defaultValues: { password: '', confirmPassword: '', email },
+    defaultValues: { password: '', confirmPassword: '', email, currentPassword: '' },
   })
 
   async function salvarNome(values: PerfilValues) {
@@ -75,7 +75,7 @@ export function ProfileClient({
       return
     }
     toast.success(temSenha ? 'Senha alterada.' : 'Senha criada.')
-    formSenha.reset({ password: '', confirmPassword: '' })
+    formSenha.reset({ password: '', confirmPassword: '', currentPassword: '' })
     router.refresh()
   }
 
@@ -155,6 +155,29 @@ export function ProfileClient({
             noValidate
             className="flex max-w-sm flex-col gap-4"
           >
+            {/* Só quando já existe senha para confirmar: quem está CRIANDO a
+                primeira (login social) não tem o que digitar aqui. Sem este
+                campo, sessão sequestrada (cookie roubado, dispositivo
+                destravado) bastava para trocar a senha de quem já tem uma —
+                mesma lacuna que a auditoria de segurança já fechou em
+                "excluir conta". */}
+            {temSenha && (
+              <Controller
+                name="currentPassword"
+                control={formSenha.control}
+                render={({ field }) => (
+                  <PasswordField
+                    id="currentPassword"
+                    label="Senha atual"
+                    valor={field.value ?? ''}
+                    onChange={field.onChange}
+                    erro={formSenha.formState.errors.currentPassword?.message}
+                    desabilitado={salvandoSenha}
+                  />
+                )}
+              />
+            )}
+
             <Controller
               name="password"
               control={formSenha.control}
