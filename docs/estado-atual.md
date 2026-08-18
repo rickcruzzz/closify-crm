@@ -4,7 +4,7 @@ Documento de continuidade. É lido no começo de toda sessão (referenciado no
 [CLAUDE.md](../CLAUDE.md)) para que uma conversa nova, ou outra conta, comece
 sabendo o que já foi feito, o que foi decidido e onde estão as armadilhas.
 
-**Atualizado em:** 13/08/2026 (primeiro Pix real recebido e reconciliado, job de reconciliação automática)
+**Atualizado em:** 18/08/2026 (Calendário, filtro de período com range picker, exportação de relatório em PDF, busca de lead, senha exige confirmação para trocar)
 
 > Mantenha este arquivo curto. O detalhe de _por que_ cada coisa é assim mora
 > nas mensagens de commit e nos comentários do código, que são a memória real
@@ -36,6 +36,29 @@ chamada não reprocessou.
 
 Importação de planilha (`.xlsx` e `.csv`) entregue em 11/08, com mapeamento de
 coluna, etapa lida do arquivo e criação de negócio junto do lead.
+
+**Calendário e filtro de período entregues em 18/08.** Tela `/calendario`
+(mês/semana/agenda) sobre as tarefas que já existem, sem tabela nova, e o
+filtro de período do Dashboard ganhou 8 presets e um range picker visual (dois
+meses no desktop, um no mobile), sem lib de calendário externa. Escopo
+reduzido de propósito contra um pedido maior de 4 camadas (filtro + calendário
++ histórico dedicado + rastreabilidade de sincronização): medido contra
+produção (12 tarefas em 21 workspaces, 1 integração conectada), o mesmo volume
+que já reprovou IA/lead scoring e a Cloud API do WhatsApp neste projeto,
+histórico dedicado e rastreabilidade ficaram de fora. Prova rodada contra o
+banco de produção com workspace/conta/lead descartáveis (limpos no fim):
+grade de 42 dias, tarefa concluída aparecendo no intervalo, e busca de
+servidor da Semana ao navegar para fora do mês carregado, todos corretos.
+Playwright não estava disponível nesta sessão, então a parte puramente visual
+(cor dos chips, abertura do drawer) não foi verificada no navegador, só a
+lógica de dados.
+
+Junto: Dashboard ganhou "Exportar relatório" em PDF (`html2canvas-pro` +
+`jspdf`); formulário de negócio trocou o `Select` de lead por um combobox com
+busca (workspace com muitos leads exigia rolar a lista toda); e trocar senha
+dentro do produto passou a exigir confirmar a senha atual (sessão sequestrada
+antes bastava para trancar o dono de fora da própria conta, mesma classe de
+achado que a auditoria de segurança já tinha corrigido em `deleteAccount`).
 
 O Pro passou a ter prazo (0027): pagou, vale 30 dias; venceu, o limite do Free
 volta a valer. Sem `pg_cron` de propósito, a validade é uma função consultada
