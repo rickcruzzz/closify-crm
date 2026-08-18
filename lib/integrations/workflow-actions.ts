@@ -6,6 +6,7 @@ import { createClient } from '@/lib/supabase/server'
 import { resolverWorkspaceAtivo } from '@/lib/workspace/ativo'
 import { obterAccessTokenValido } from '@/lib/integrations/token'
 import { criarEventoDeCalendario, enviarEmailGmail } from '@/lib/integrations/google'
+import { mensagemBloqueioPro } from '@/lib/integrations/mensagem-bloqueio-pro'
 import { emailMessageSchema } from '@/lib/validations/email'
 
 type Sessao = {
@@ -45,7 +46,7 @@ async function exigirProVigente(sessao: Sessao): Promise<{ error: string } | nul
     target_workspace_id: sessao.workspaceId,
   })
   if (!podeUsar) {
-    return { error: 'Seu Pro venceu. Reative o plano para continuar usando integrações.' }
+    return { error: await mensagemBloqueioPro(sessao.supabase, sessao.workspaceId) }
   }
   return null
 }

@@ -4,7 +4,7 @@ Documento de continuidade. É lido no começo de toda sessão (referenciado no
 [CLAUDE.md](../CLAUDE.md)) para que uma conversa nova, ou outra conta, comece
 sabendo o que já foi feito, o que foi decidido e onde estão as armadilhas.
 
-**Atualizado em:** 18/08/2026 (Calendário, filtro de período com range picker, exportação de relatório em PDF, busca de lead, senha exige confirmação para trocar, captura real de erro em produção)
+**Atualizado em:** 18/08/2026 (Calendário, filtro de período com range picker, exportação de relatório em PDF, busca de lead, senha exige confirmação para trocar, captura real de erro em produção, sidebar em seções, mensagem de Pro correta por caso)
 
 > Mantenha este arquivo curto. O detalhe de _por que_ cada coisa é assim mora
 > nas mensagens de commit e nos comentários do código, que são a memória real
@@ -62,6 +62,31 @@ de Mês. E `MonthGrid` já desenha cabeçalho de navegação próprio,
 "Agosto de 2026" na tela por cima do cabeçalho que `calendario-client.tsx`
 já desenha. Os dois corrigidos e reconferidos com screenshot real dos três
 modos, drawer e mobile.
+
+**Sidebar em seções e mensagem de Pro corrigida, 18/08.** Três achados
+reportados com print do produto real. (1) `lib/nav-items.ts` era lista
+plana; virou `navGroups`, grupo sem título (Hoje/Pipeline/Leads/Dashboard/
+Calendário) e "CONFIGURAÇÕES" (Perfil — rota já existia, só não estava na
+sidebar, vivia escondida no menu do rodapé; Equipe; Integrações;
+Preferências, renomeado de "Configurações" pra descrever melhor a aba de
+dados da empresa). (2) Mensagem "Seu Pro venceu, reative" aparecia pra quem
+**nunca teve Pro**: `subscriptions` é 1 linha por workspace, sem histórico,
+não dá pra checar isso na assinatura. Resolvido sem migration:
+`integration_connections` só ganha linha quando o workspace está ou esteve
+Pro (migration 0037 gateia o insert/update), então existir qualquer linha,
+de qualquer provider, prova que o Pro já existiu algum dia. Zero linha vira
+"Integrações são um recurso Pro. Faça upgrade para conectar."; alguma linha
+mantém a mensagem de reativação. Extraído pra
+`lib/integrations/mensagem-bloqueio-pro.ts`, reusado pelas duas Server
+Actions que antes duplicavam a string. (3) Drawer de negócio
+(`deal-detail-sheet.tsx`), bloco "Próxima ação": texto/badge de prazo
+colavam nos botões "Google Calendar"/"Concluir" em mobile —
+`flex items-center justify-between` virou `flex-col` até `sm:` (640px),
+volta a ficar lado a lado a partir daí. Prova rodada com Playwright contra
+produção: sidebar em desktop e mobile (screenshot), os dois casos de
+mensagem de Pro com workspace descartável (com e sem
+`integration_connections`), e o drawer em viewport 390px confirmando as
+linhas separadas. Tudo limpo no fim.
 
 Junto: Dashboard ganhou "Exportar relatório" em PDF (`html2canvas-pro` +
 `jspdf`); formulário de negócio trocou o `Select` de lead por um combobox com

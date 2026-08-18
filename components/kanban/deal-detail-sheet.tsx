@@ -294,7 +294,7 @@ export function DealDetailSheet({
                 <span className="text-muted-foreground text-xs">Próxima ação</span>
 
                 {proximaAcao ? (
-                  <div className="mt-1 flex items-center justify-between gap-2">
+                  <div className="mt-1 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                     <div className="flex min-w-0 flex-col">
                       <span className="truncate text-sm font-medium">
                         {proximaAcao.title}
@@ -309,6 +309,7 @@ export function DealDetailSheet({
                       <Button
                         variant="outline"
                         size="sm"
+                        className="flex-1 sm:flex-initial"
                         disabled={agendandoNoCalendario}
                         onClick={adicionarAoCalendario}
                       >
@@ -322,6 +323,7 @@ export function DealDetailSheet({
                       <Button
                         variant="outline"
                         size="sm"
+                        className="flex-1 sm:flex-initial"
                         disabled={concluindo}
                         onClick={concluir}
                       >

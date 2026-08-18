@@ -8,6 +8,7 @@ import { getCurrentUserAndWorkspace } from '@/lib/supabase/workspace'
 import { decifrar } from '@/lib/integrations/crypto'
 import { revogarToken as revogarTokenGoogle, testarCalendario, testarGmail } from '@/lib/integrations/google'
 import { obterAccessTokenValido } from '@/lib/integrations/token'
+import { mensagemBloqueioPro } from '@/lib/integrations/mensagem-bloqueio-pro'
 import type { IntegrationProvider } from '@/types/supabase'
 
 /**
@@ -103,7 +104,7 @@ export async function testarConexaoIntegracao(provider: IntegrationProvider) {
     target_workspace_id: workspaceId,
   })
   if (!podeUsar) {
-    return { error: 'Seu Pro venceu. Reative o plano para continuar usando integrações.' }
+    return { error: await mensagemBloqueioPro(supabase, workspaceId) }
   }
 
   const resultado = await obterAccessTokenValido(workspaceId, provider)
