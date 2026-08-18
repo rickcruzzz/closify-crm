@@ -470,6 +470,7 @@ export function KanbanBoard({
               totalNaEtapa={totalPorEtapa[stage] ?? 0}
               onOpenDeal={setSelectedDealId}
               onAgendarDeal={abrirDealNoAgendamento}
+              agora={agora}
               filtered={hasActiveFilters}
               // `deals`, não `filteredDeals`: quem filtrou até zerar a tela
               // tem board com conteúdo, e a coluna deve manter a altura.
@@ -484,6 +485,7 @@ export function KanbanBoard({
               deal={activeDeal}
               lead={activeDeal.lead_id ? leadsById.get(activeDeal.lead_id) : undefined}
               proximaAcao={proximaAcaoPorNegocio.get(activeDeal.id)}
+              agora={agora}
             />
           ) : null}
         </DragOverlay>

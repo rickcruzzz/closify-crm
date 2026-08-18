@@ -1,12 +1,17 @@
 'use client'
 
 import * as React from 'react'
-import { CircleAlert, Mail, Phone, StickyNote, Users } from 'lucide-react'
+import { CircleAlert, CircleDashed, Mail, Phone, StickyNote, Users } from 'lucide-react'
 
 import { cn } from '@/lib/utils'
 import type { ActivityType } from '@/lib/leads/types'
 import { rotuloDePrazo } from '@/lib/tasks/buckets'
 import type { ProximaAcaoRow } from '@/lib/tasks/types'
+import {
+  corDaUrgencia,
+  urgenciaDaProximaAcao,
+  urgenciaSemProximaAcao,
+} from '@/lib/kanban/urgencia'
 
 const iconePorTipo: Record<ActivityType, typeof Phone> = {
   ligacao: Phone,
@@ -30,6 +35,7 @@ const iconePorTipo: Record<ActivityType, typeof Phone> = {
 export function ProximaAcao({
   task,
   onAgendar,
+  diasParado = 0,
 }: {
   task: ProximaAcaoRow | undefined
   /**
@@ -41,6 +47,14 @@ export function ProximaAcao({
    * cards mostravam um aviso morto.
    */
   onAgendar?: () => void
+  /**
+   * Há quantos dias o negócio não muda de etapa.
+   *
+   * Decide se a falta de próximo passo é alerta ou aviso: negócio criado hoje
+   * sem tarefa ainda não errou nada; parado há duas semanas E sem próximo
+   * passo são dois sinais na mesma direção.
+   */
+  diasParado?: number
 }) {
   // O relógio nasce no cliente: o servidor da Vercel roda em UTC, e "atrasada"
   // calculada lá erraria por três horas todo fim de tarde.
@@ -83,6 +97,8 @@ export function ProximaAcao({
     }
   }, [onAgendar])
 
+  const urgencia = urgenciaSemProximaAcao(diasParado)
+
   if (!task) {
     // Botão de verdade, com `stopPropagation` e Enter/Espaço tratados à mão:
     // o card inteiro é alvo de arrasto do dnd-kit, que ocupa essas teclas para
@@ -91,10 +107,15 @@ export function ProximaAcao({
     return (
       <button
         type="button"
-        // `text-destructive`, não cinza: negócio sem próximo passo é o que
-        // morre calado no funil. Se o aviso tem a mesma cor do resto do card,
-        // ele não avisa nada.
-        className="text-destructive focus-visible:ring-ring/50 -my-1 flex min-h-6 items-center gap-1 rounded-sm px-1 py-1 text-xs font-medium whitespace-nowrap outline-none hover:underline focus-visible:ring-3"
+        // A cor sai da urgência, não é fixa. Antes era sempre
+        // `text-destructive`, a MESMA de uma tarefa vencida, e como 96% dos
+        // negócios não têm próxima ação o board inteiro ficava vermelho —
+        // alerta em tudo não distingue nada. Agora é âmbar por padrão e só
+        // vira vermelho quando o negócio TAMBÉM está parado.
+        className={cn(
+          'focus-visible:ring-ring/50 -my-1 flex min-h-6 items-center gap-1 rounded-sm px-1 py-1 text-xs font-medium whitespace-nowrap outline-none hover:underline focus-visible:ring-3',
+          corDaUrgencia[urgencia],
+        )}
         ref={aviso}
         onKeyDown={(event) => {
           if (event.key !== 'Enter' && event.key !== ' ') return
@@ -103,7 +124,13 @@ export function ProximaAcao({
           onAgendar?.()
         }}
       >
-        <CircleAlert aria-hidden className="size-3" />
+        {/* Ícone diferente por nível, não só cor: a skill `ui-ux-pro-max`
+            marca "não depender apenas de cor" e daltonismo é comum. */}
+        {urgencia === 'critico' ? (
+          <CircleAlert aria-hidden className="size-3" />
+        ) : (
+          <CircleDashed aria-hidden className="size-3" />
+        )}
         Sem próximo passo
       </button>
     )
@@ -121,14 +148,16 @@ export function ProximaAcao({
     )
   }
 
-  const atrasada = new Date(task.due_at).getTime() < agora.getTime()
+  // Três níveis, não dois: tarefa de hoje ficava com a mesma cor cinza de uma
+  // tarefa de mês que vem, e a de hoje é a única que ainda dá para cumprir.
+  const nivel = urgenciaDaProximaAcao(task.due_at, agora)
 
   return (
     <span
       title={task.title}
       className={cn(
         'flex items-center gap-1 text-xs font-medium whitespace-nowrap',
-        atrasada ? 'text-destructive' : 'text-muted-foreground',
+        corDaUrgencia[nivel],
       )}
     >
       <Icone aria-hidden className="size-3" />

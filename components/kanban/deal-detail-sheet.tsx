@@ -43,10 +43,6 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
 
-function formatBRL(value: number) {
-  return value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
-}
-
 function formatDate(date: string | null) {
   if (!date) return 'Sem data'
   return new Date(date).toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' })
@@ -203,7 +199,15 @@ export function DealDetailSheet({
             <div className="flex flex-col gap-4 px-4">
               <div>
                 <span className="text-muted-foreground text-xs">Valor do negócio</span>
-                <p className="text-xl font-semibold">{formatBRL(deal.value)}</p>
+                {/* Aqui o valor vai CHEIO, sem abreviar: o painel tem largura
+                    de sobra e é onde a pessoa confere o número de verdade. O
+                    card é que abrevia, porque lá o espaço é disputado. */}
+                <p className="text-xl font-semibold">
+                  {deal.value.toLocaleString('pt-BR', {
+                    style: 'currency',
+                    currency: 'BRL',
+                  })}
+                </p>
               </div>
 
               <Separator />

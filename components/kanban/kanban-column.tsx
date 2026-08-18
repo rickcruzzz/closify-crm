@@ -10,14 +10,7 @@ import { Badge } from '@/components/ui/badge'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { DealCard } from '@/components/kanban/deal-card'
 import { EmptyColumnState } from '@/components/kanban/empty-column-state'
-
-function formatBRL(value: number) {
-  return value.toLocaleString('pt-BR', {
-    style: 'currency',
-    currency: 'BRL',
-    maximumFractionDigits: 0,
-  })
-}
+import { formatarValorDeNegocio } from '@/lib/deals/metrics'
 
 // `React.memo`: mesma razão de `DealCard`, sem isso, o board inteiro
 // (6 colunas) refazia o trabalho de renderizar toda coluna a cada tick de
@@ -32,6 +25,7 @@ export const KanbanColumn = React.memo(function KanbanColumn({
   onAgendarDeal,
   filtered = false,
   compact = false,
+  agora,
 }: {
   stage: DealStage
   deals: DealRow[]
@@ -46,6 +40,8 @@ export const KanbanColumn = React.memo(function KanbanColumn({
   filtered?: boolean
   /** Board inteiro sem nenhum negócio: encolhe a coluna. */
   compact?: boolean
+  /** Relógio do cliente, repassado ao card para o cálculo de "parado há N". */
+  agora: Date | null
 }) {
   const { setNodeRef, isOver } = useDroppable({ id: stage, data: { stage } })
   const total = deals.reduce((sum, deal) => sum + deal.value, 0)
@@ -67,8 +63,14 @@ export const KanbanColumn = React.memo(function KanbanColumn({
             {cortou ? `${deals.length} de ${totalNaEtapa}` : deals.length}
           </Badge>
         </div>
-        <span className="text-muted-foreground text-xs font-medium">
-          {formatBRL(total)}
+        {/* Abreviado acima de um milhão, valor cheio no `title`: com um
+            negócio de dez dígitos na etapa, o total virava a coisa mais larga
+            do cabeçalho e empurrava o nome da etapa. */}
+        <span
+          className="text-muted-foreground text-xs font-medium"
+          title={total.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+        >
+          {formatarValorDeNegocio(total)}
         </span>
       </div>
 
@@ -107,6 +109,7 @@ export const KanbanColumn = React.memo(function KanbanColumn({
                   proximaAcao={proximaAcaoPorNegocio.get(deal.id)}
                   onOpen={onOpenDeal}
                   onAgendar={onAgendarDeal}
+                  agora={agora}
                 />
               ))
             )}
