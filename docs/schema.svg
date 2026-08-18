@@ -1,0 +1,312 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1320" height="1620" viewBox="0 0 1320 1620" font-family="Inter, 'Segoe UI', -apple-system, sans-serif">
+<defs>
+  <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+    <path d="M0,0 L10,5 L0,10 z" fill="#4a5a6a" />
+  </marker>
+  <marker id="arrowSetNull" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+    <path d="M0,0 L10,5 L0,10 z" fill="#e8b95f" />
+  </marker>
+  <filter id="cardShadow" x="-20%" y="-20%" width="140%" height="140%">
+    <feDropShadow dx="0" dy="2" stdDeviation="4" flood-color="#000000" flood-opacity="0.35"/>
+  </filter>
+</defs>
+<rect x="0" y="0" width="1320" height="1620" fill="#0b0f14" />
+<text x="40" y="64" font-size="22" font-weight="700" fill="#f0f4f8">Velo Funil — Diagrama de Classes (schema Postgres)</text>
+<text x="40" y="86" font-size="12.5" fill="#7a8794">Gerado por inspeção real do catálogo (information_schema / pg_catalog) — projeto Supabase sa-east-1, 11 tabelas, RLS ligada em todas</text>
+<rect x="1070" y="44" width="10" height="10" rx="2" fill="#1c3a4a" />
+<text x="1086" y="53" font-size="10.5" fill="#7a8794">Workspace / Conta</text>
+<rect x="1070" y="60" width="10" height="10" rx="2" fill="#1c3a2e" />
+<text x="1086" y="69" font-size="10.5" fill="#7a8794">CRM (leads, deals, tasks)</text>
+<rect x="1070" y="76" width="10" height="10" rx="2" fill="#3a2e1c" />
+<text x="1086" y="85" font-size="10.5" fill="#7a8794">Billing (Asaas)</text>
+<rect x="1070" y="92" width="10" height="10" rx="2" fill="#2a2438" />
+<text x="1086" y="101" font-size="10.5" fill="#7a8794">Infra / Integrações</text>
+<path d="M93.6,430 C93.6,485 174,485 174,540" fill="none" stroke="#4a5a6a" stroke-width="1.4" marker-end="url(#arrow)" />
+<path d="M308,215.71428571428572 C336,215.71428571428572 336,296 364,296" fill="none" stroke="#4a5a6a" stroke-width="1.4" marker-end="url(#arrow)" />
+<path d="M308,241.42857142857144 C498,241.42857142857144 498,202.8 688,202.8" fill="none" stroke="#4a5a6a" stroke-width="1.4" marker-end="url(#arrow)" />
+<path d="M308,267.1428571428571 C336,267.1428571428571 336,600 364,600" fill="none" stroke="#4a5a6a" stroke-width="1.4" marker-end="url(#arrow)" />
+<path d="M308,292.8571428571429 C498,292.8571428571429 498,606.4 688,606.4" fill="none" stroke="#4a5a6a" stroke-width="1.4" marker-end="url(#arrow)" />
+<path d="M308,318.57142857142856 C660,318.57142857142856 660,264 1012,264" fill="none" stroke="#4a5a6a" stroke-width="1.4" marker-end="url(#arrow)" />
+<path d="M231.42857142857142,430 C231.42857142857142,674 174,674 174,918" fill="none" stroke="#4a5a6a" stroke-width="1.4" marker-end="url(#arrow)" />
+<path d="M308,370 C660,370 660,1052 1012,1052" fill="none" stroke="#4a5a6a" stroke-width="1.4" marker-end="url(#arrow)" />
+<path d="M632,196.4 C660,196.4 660,421.2 688,421.2" fill="none" stroke="#e8b95f" stroke-width="1.4" marker-end="url(#arrowSetNull)" stroke-dasharray="5,3" />
+<path d="M498,462 C498,501 578.4,501 578.4,540" fill="none" stroke="#4a5a6a" stroke-width="1.4" marker-end="url(#arrow)" />
+<path d="M632,395.6 C660,395.6 660,706 688,706" fill="none" stroke="#4a5a6a" stroke-width="1.4" marker-end="url(#arrow)" />
+<path d="M822,494 C822,517 902.4,517 902.4,540" fill="none" stroke="#4a5a6a" stroke-width="1.4" marker-end="url(#arrow)" />
+<g filter="url(#cardShadow)">
+<rect x="40" y="130" width="268" height="300" rx="8" fill="#141a22" stroke="#2a3441" stroke-width="1"/>
+<path d="M40,156 v-18 q0,-8 8,-8 h252 q8,0 8,8 v18 z" fill="#1c3a4a"/>
+<line x1="40" y1="164" x2="308" y2="164" stroke="#2a3441" stroke-width="1"/>
+<text x="52" y="152" font-size="13.5" font-weight="700" fill="#e8f4f9" font-family="'SF Mono', 'Cascadia Code', Consolas, monospace">workspaces</text>
+</g>
+<text x="52" y="178" font-size="11.5" fill="#c7d1db" font-family="'SF Mono', 'Cascadia Code', Consolas, monospace" font-style="normal">id</text>
+<text x="52" y="191" font-size="9" fill="#7a8794" font-family="'SF Mono', 'Cascadia Code', Consolas, monospace">: uuid</text>
+<text x="296" y="182" font-size="9" fill="#5fd0e8" font-weight="700" text-anchor="end" font-family="'SF Mono', 'Cascadia Code', Consolas, monospace">PK</text>
+<text x="52" y="210" font-size="11.5" fill="#c7d1db" font-family="'SF Mono', 'Cascadia Code', Consolas, monospace" font-style="normal">name</text>
+<text x="52" y="223" font-size="9" fill="#7a8794" font-family="'SF Mono', 'Cascadia Code', Consolas, monospace">: text</text>
+<text x="52" y="242" font-size="11.5" fill="#c7d1db" font-family="'SF Mono', 'Cascadia Code', Consolas, monospace" font-style="normal">plan</text>
+<text x="52" y="255" font-size="9" fill="#7a8794" font-family="'SF Mono', 'Cascadia Code', Consolas, monospace">: workspace_plan</text>
+<text x="52" y="274" font-size="11.5" fill="#7a8794" font-family="'SF Mono', 'Cascadia Code', Consolas, monospace" font-style="italic">segmento?</text>
+<text x="52" y="287" font-size="9" fill="#7a8794" font-family="'SF Mono', 'Cascadia Code', Consolas, monospace">: text</text>
+<text x="52" y="306" font-size="11.5" fill="#7a8794" font-family="'SF Mono', 'Cascadia Code', Consolas, monospace" font-style="italic">cnpj?</text>
+<text x="52" y="319" font-size="9" fill="#7a8794" font-family="'SF Mono', 'Cascadia Code', Consolas, monospace">: text</text>
+<text x="52" y="338" font-size="11.5" fill="#7a8794" font-family="'SF Mono', 'Cascadia Code', Consolas, monospace" font-style="italic">logo_url?</text>
+<text x="52" y="351" font-size="9" fill="#7a8794" font-family="'SF Mono', 'Cascadia Code', Consolas, monospace">: text</text>
+<text x="52" y="370" font-size="11.5" fill="#7a8794" font-family="'SF Mono', 'Cascadia Code', Consolas, monospace" font-style="italic">created_by?</text>
+<text x="52" y="383" font-size="9" fill="#7a8794" font-family="'SF Mono', 'Cascadia Code', Consolas, monospace">: uuid</text>
+<text x="296" y="374" font-size="9" fill="#e8b95f" font-weight="700" text-anchor="end" font-family="'SF Mono', 'Cascadia Code', Consolas, monospace">FK→auth</text>
+<text x="52" y="402" font-size="11.5" fill="#c7d1db" font-family="'SF Mono', 'Cascadia Code', Consolas, monospace" font-style="normal">created_at</text>
+<text x="52" y="415" font-size="9" fill="#7a8794" font-family="'SF Mono', 'Cascadia Code', Consolas, monospace">: timestamptz</text>
+<g filter="url(#cardShadow)">
+<rect x="40" y="540" width="268" height="172" rx="8" fill="#141a22" stroke="#2a3441" stroke-width="1"/>
+<path d="M40,566 v-18 q0,-8 8,-8 h252 q8,0 8,8 v18 z" fill="#1c3a4a"/>
+<line x1="40" y1="574" x2="308" y2="574" stroke="#2a3441" stroke-width="1"/>
+<text x="52" y="562" font-size="13.5" font-weight="700" fill="#e8f4f9" font-family="'SF Mono', 'Cascadia Code', Consolas, monospace">workspace_members</text>
+</g>
+<text x="52" y="588" font-size="11.5" fill="#c7d1db" font-family="'SF Mono', 'Cascadia Code', Consolas, monospace" font-style="normal">workspace_id</text>
+<text x="52" y="601" font-size="9" fill="#7a8794" font-family="'SF Mono', 'Cascadia Code', Consolas, monospace">: uuid</text>
+<text x="296" y="592" font-size="9" fill="#5fd0e8" font-weight="700" text-anchor="end" font-family="'SF Mono', 'Cascadia Code', Consolas, monospace">PK/FK</text>
+<text x="52" y="620" font-size="11.5" fill="#c7d1db" font-family="'SF Mono', 'Cascadia Code', Consolas, monospace" font-style="normal">user_id</text>
+<text x="52" y="633" font-size="9" fill="#7a8794" font-family="'SF Mono', 'Cascadia Code', Consolas, monospace">: uuid</text>
+<text x="296" y="624" font-size="9" fill="#5fd0e8" font-weight="700" text-anchor="end" font-family="'SF Mono', 'Cascadia Code', Consolas, monospace">PK/FK→auth</text>
+<text x="52" y="652" font-size="11.5" fill="#c7d1db" font-family="'SF Mono', 'Cascadia Code', Consolas, monospace" font-style="normal">role</text>
+<text x="52" y="665" font-size="9" fill="#7a8794" font-family="'SF Mono', 'Cascadia Code', Consolas, monospace">: workspace_role</text>
+<text x="52" y="684" font-size="11.5" fill="#c7d1db" font-family="'SF Mono', 'Cascadia Code', Consolas, monospace" font-style="normal">created_at</text>
+<text x="52" y="697" font-size="9" fill="#7a8794" font-family="'SF Mono', 'Cascadia Code', Consolas, monospace">: timestamptz</text>
+<g filter="url(#cardShadow)">
+<rect x="40" y="918" width="268" height="300" rx="8" fill="#141a22" stroke="#2a3441" stroke-width="1"/>
+<path d="M40,944 v-18 q0,-8 8,-8 h252 q8,0 8,8 v18 z" fill="#1c3a4a"/>
+<line x1="40" y1="952" x2="308" y2="952" stroke="#2a3441" stroke-width="1"/>
+<text x="52" y="940" font-size="13.5" font-weight="700" fill="#e8f4f9" font-family="'SF Mono', 'Cascadia Code', Consolas, monospace">workspace_invites</text>
+</g>
+<text x="52" y="966" font-size="11.5" fill="#c7d1db" font-family="'SF Mono', 'Cascadia Code', Consolas, monospace" font-style="normal">id</text>
+<text x="52" y="979" font-size="9" fill="#7a8794" font-family="'SF Mono', 'Cascadia Code', Consolas, monospace">: uuid</text>
+<text x="296" y="970" font-size="9" fill="#5fd0e8" font-weight="700" text-anchor="end" font-family="'SF Mono', 'Cascadia Code', Consolas, monospace">PK</text>
+<text x="52" y="998" font-size="11.5" fill="#c7d1db" font-family="'SF Mono', 'Cascadia Code', Consolas, monospace" font-style="normal">workspace_id</text>
+<text x="52" y="1011" font-size="9" fill="#7a8794" font-family="'SF Mono', 'Cascadia Code', Consolas, monospace">: uuid</text>
+<text x="296" y="1002" font-size="9" fill="#7ee08a" font-weight="700" text-anchor="end" font-family="'SF Mono', 'Cascadia Code', Consolas, monospace">FK</text>
+<text x="52" y="1030" font-size="11.5" fill="#c7d1db" font-family="'SF Mono', 'Cascadia Code', Consolas, monospace" font-style="normal">email</text>
+<text x="52" y="1043" font-size="9" fill="#7a8794" font-family="'SF Mono', 'Cascadia Code', Consolas, monospace">: text</text>
+<text x="52" y="1062" font-size="11.5" fill="#c7d1db" font-family="'SF Mono', 'Cascadia Code', Consolas, monospace" font-style="normal">role</text>
+<text x="52" y="1075" font-size="9" fill="#7a8794" font-family="'SF Mono', 'Cascadia Code', Consolas, monospace">: workspace_role</text>
+<text x="52" y="1094" font-size="11.5" fill="#c7d1db" font-family="'SF Mono', 'Cascadia Code', Consolas, monospace" font-style="normal">token</text>
+<text x="52" y="1107" font-size="9" fill="#7a8794" font-family="'SF Mono', 'Cascadia Code', Consolas, monospace">: uuid</text>
+<text x="52" y="1126" font-size="11.5" fill="#c7d1db" font-family="'SF Mono', 'Cascadia Code', Consolas, monospace" font-style="normal">status</text>
+<text x="52" y="1139" font-size="9" fill="#7a8794" font-family="'SF Mono', 'Cascadia Code', Consolas, monospace">: workspace_invite_status</text>
+<text x="52" y="1158" font-size="11.5" fill="#7a8794" font-family="'SF Mono', 'Cascadia Code', Consolas, monospace" font-style="italic">invited_by?</text>
+<text x="52" y="1171" font-size="9" fill="#7a8794" font-family="'SF Mono', 'Cascadia Code', Consolas, monospace">: uuid</text>
+<text x="296" y="1162" font-size="9" fill="#e8b95f" font-weight="700" text-anchor="end" font-family="'SF Mono', 'Cascadia Code', Consolas, monospace">FK→auth</text>
+<text x="52" y="1190" font-size="11.5" fill="#c7d1db" font-family="'SF Mono', 'Cascadia Code', Consolas, monospace" font-style="normal">expires_at</text>
+<text x="52" y="1203" font-size="9" fill="#7a8794" font-family="'SF Mono', 'Cascadia Code', Consolas, monospace">: timestamptz</text>
+<g filter="url(#cardShadow)">
+<rect x="364" y="130" width="268" height="332" rx="8" fill="#141a22" stroke="#2a3441" stroke-width="1"/>
+<path d="M364,156 v-18 q0,-8 8,-8 h252 q8,0 8,8 v18 z" fill="#1c3a2e"/>
+<line x1="364" y1="164" x2="632" y2="164" stroke="#2a3441" stroke-width="1"/>
+<text x="376" y="152" font-size="13.5" font-weight="700" fill="#e8f4f9" font-family="'SF Mono', 'Cascadia Code', Consolas, monospace">leads</text>
+</g>
+<text x="376" y="178" font-size="11.5" fill="#c7d1db" font-family="'SF Mono', 'Cascadia Code', Consolas, monospace" font-style="normal">id</text>
+<text x="376" y="191" font-size="9" fill="#7a8794" font-family="'SF Mono', 'Cascadia Code', Consolas, monospace">: uuid</text>
+<text x="620" y="182" font-size="9" fill="#5fd0e8" font-weight="700" text-anchor="end" font-family="'SF Mono', 'Cascadia Code', Consolas, monospace">PK</text>
+<text x="376" y="210" font-size="11.5" fill="#c7d1db" font-family="'SF Mono', 'Cascadia Code', Consolas, monospace" font-style="normal">workspace_id</text>
+<text x="376" y="223" font-size="9" fill="#7a8794" font-family="'SF Mono', 'Cascadia Code', Consolas, monospace">: uuid</text>
+<text x="620" y="214" font-size="9" fill="#7ee08a" font-weight="700" text-anchor="end" font-family="'SF Mono', 'Cascadia Code', Consolas, monospace">FK</text>
+<text x="376" y="242" font-size="11.5" fill="#7a8794" font-family="'SF Mono', 'Cascadia Code', Consolas, monospace" font-style="italic">owner_id?</text>
+<text x="376" y="255" font-size="9" fill="#7a8794" font-family="'SF Mono', 'Cascadia Code', Consolas, monospace">: uuid</text>
+<text x="620" y="246" font-size="9" fill="#e8b95f" font-weight="700" text-anchor="end" font-family="'SF Mono', 'Cascadia Code', Consolas, monospace">FK→auth</text>
+<text x="376" y="274" font-size="11.5" fill="#c7d1db" font-family="'SF Mono', 'Cascadia Code', Consolas, monospace" font-style="normal">name</text>
+<text x="376" y="287" font-size="9" fill="#7a8794" font-family="'SF Mono', 'Cascadia Code', Consolas, monospace">: text</text>
+<text x="376" y="306" font-size="11.5" fill="#7a8794" font-family="'SF Mono', 'Cascadia Code', Consolas, monospace" font-style="italic">email?</text>
+<text x="376" y="319" font-size="9" fill="#7a8794" font-family="'SF Mono', 'Cascadia Code', Consolas, monospace">: text</text>
+<text x="376" y="338" font-size="11.5" fill="#7a8794" font-family="'SF Mono', 'Cascadia Code', Consolas, monospace" font-style="italic">phone?</text>
+<text x="376" y="351" font-size="9" fill="#7a8794" font-family="'SF Mono', 'Cascadia Code', Consolas, monospace">: text</text>
+<text x="376" y="370" font-size="11.5" fill="#c7d1db" font-family="'SF Mono', 'Cascadia Code', Consolas, monospace" font-style="normal">status</text>
+<text x="376" y="383" font-size="9" fill="#7a8794" font-family="'SF Mono', 'Cascadia Code', Consolas, monospace">: deal_stage</text>
+<text x="376" y="402" font-size="11.5" fill="#c7d1db" font-family="'SF Mono', 'Cascadia Code', Consolas, monospace" font-style="normal">value</text>
+<text x="376" y="415" font-size="9" fill="#7a8794" font-family="'SF Mono', 'Cascadia Code', Consolas, monospace">: numeric</text>
+<text x="376" y="434" font-size="11.5" fill="#c7d1db" font-family="'SF Mono', 'Cascadia Code', Consolas, monospace" font-style="normal">created_at</text>
+<text x="376" y="447" font-size="9" fill="#7a8794" font-family="'SF Mono', 'Cascadia Code', Consolas, monospace">: timestamptz</text>
+<g filter="url(#cardShadow)">
+<rect x="688" y="130" width="268" height="364" rx="8" fill="#141a22" stroke="#2a3441" stroke-width="1"/>
+<path d="M688,156 v-18 q0,-8 8,-8 h252 q8,0 8,8 v18 z" fill="#1c3a2e"/>
+<line x1="688" y1="164" x2="956" y2="164" stroke="#2a3441" stroke-width="1"/>
+<text x="700" y="152" font-size="13.5" font-weight="700" fill="#e8f4f9" font-family="'SF Mono', 'Cascadia Code', Consolas, monospace">deals</text>
+</g>
+<text x="700" y="178" font-size="11.5" fill="#c7d1db" font-family="'SF Mono', 'Cascadia Code', Consolas, monospace" font-style="normal">id</text>
+<text x="700" y="191" font-size="9" fill="#7a8794" font-family="'SF Mono', 'Cascadia Code', Consolas, monospace">: uuid</text>
+<text x="944" y="182" font-size="9" fill="#5fd0e8" font-weight="700" text-anchor="end" font-family="'SF Mono', 'Cascadia Code', Consolas, monospace">PK</text>
+<text x="700" y="210" font-size="11.5" fill="#c7d1db" font-family="'SF Mono', 'Cascadia Code', Consolas, monospace" font-style="normal">workspace_id</text>
+<text x="700" y="223" font-size="9" fill="#7a8794" font-family="'SF Mono', 'Cascadia Code', Consolas, monospace">: uuid</text>
+<text x="944" y="214" font-size="9" fill="#7ee08a" font-weight="700" text-anchor="end" font-family="'SF Mono', 'Cascadia Code', Consolas, monospace">FK</text>
+<text x="700" y="242" font-size="11.5" fill="#7a8794" font-family="'SF Mono', 'Cascadia Code', Consolas, monospace" font-style="italic">lead_id?</text>
+<text x="700" y="255" font-size="9" fill="#7a8794" font-family="'SF Mono', 'Cascadia Code', Consolas, monospace">: uuid</text>
+<text x="944" y="246" font-size="9" fill="#7ee08a" font-weight="700" text-anchor="end" font-family="'SF Mono', 'Cascadia Code', Consolas, monospace">FK</text>
+<text x="700" y="274" font-size="11.5" fill="#7a8794" font-family="'SF Mono', 'Cascadia Code', Consolas, monospace" font-style="italic">owner_id?</text>
+<text x="700" y="287" font-size="9" fill="#7a8794" font-family="'SF Mono', 'Cascadia Code', Consolas, monospace">: uuid</text>
+<text x="944" y="278" font-size="9" fill="#e8b95f" font-weight="700" text-anchor="end" font-family="'SF Mono', 'Cascadia Code', Consolas, monospace">FK→auth</text>
+<text x="700" y="306" font-size="11.5" fill="#c7d1db" font-family="'SF Mono', 'Cascadia Code', Consolas, monospace" font-style="normal">title</text>
+<text x="700" y="319" font-size="9" fill="#7a8794" font-family="'SF Mono', 'Cascadia Code', Consolas, monospace">: text</text>
+<text x="700" y="338" font-size="11.5" fill="#c7d1db" font-family="'SF Mono', 'Cascadia Code', Consolas, monospace" font-style="normal">value</text>
+<text x="700" y="351" font-size="9" fill="#7a8794" font-family="'SF Mono', 'Cascadia Code', Consolas, monospace">: numeric</text>
+<text x="700" y="370" font-size="11.5" fill="#c7d1db" font-family="'SF Mono', 'Cascadia Code', Consolas, monospace" font-style="normal">stage</text>
+<text x="700" y="383" font-size="9" fill="#7a8794" font-family="'SF Mono', 'Cascadia Code', Consolas, monospace">: deal_stage</text>
+<text x="700" y="402" font-size="11.5" fill="#7a8794" font-family="'SF Mono', 'Cascadia Code', Consolas, monospace" font-style="italic">due_date?</text>
+<text x="700" y="415" font-size="9" fill="#7a8794" font-family="'SF Mono', 'Cascadia Code', Consolas, monospace">: date</text>
+<text x="700" y="434" font-size="11.5" fill="#c7d1db" font-family="'SF Mono', 'Cascadia Code', Consolas, monospace" font-style="normal">stage_changed_at</text>
+<text x="700" y="447" font-size="9" fill="#7a8794" font-family="'SF Mono', 'Cascadia Code', Consolas, monospace">: timestamptz</text>
+<text x="700" y="466" font-size="11.5" fill="#c7d1db" font-family="'SF Mono', 'Cascadia Code', Consolas, monospace" font-style="normal">updated_at</text>
+<text x="700" y="479" font-size="9" fill="#7a8794" font-family="'SF Mono', 'Cascadia Code', Consolas, monospace">: timestamptz</text>
+<g filter="url(#cardShadow)">
+<rect x="364" y="540" width="268" height="300" rx="8" fill="#141a22" stroke="#2a3441" stroke-width="1"/>
+<path d="M364,566 v-18 q0,-8 8,-8 h252 q8,0 8,8 v18 z" fill="#1c3a2e"/>
+<line x1="364" y1="574" x2="632" y2="574" stroke="#2a3441" stroke-width="1"/>
+<text x="376" y="562" font-size="13.5" font-weight="700" fill="#e8f4f9" font-family="'SF Mono', 'Cascadia Code', Consolas, monospace">activities</text>
+</g>
+<text x="376" y="588" font-size="11.5" fill="#c7d1db" font-family="'SF Mono', 'Cascadia Code', Consolas, monospace" font-style="normal">id</text>
+<text x="376" y="601" font-size="9" fill="#7a8794" font-family="'SF Mono', 'Cascadia Code', Consolas, monospace">: uuid</text>
+<text x="620" y="592" font-size="9" fill="#5fd0e8" font-weight="700" text-anchor="end" font-family="'SF Mono', 'Cascadia Code', Consolas, monospace">PK</text>
+<text x="376" y="620" font-size="11.5" fill="#c7d1db" font-family="'SF Mono', 'Cascadia Code', Consolas, monospace" font-style="normal">workspace_id</text>
+<text x="376" y="633" font-size="9" fill="#7a8794" font-family="'SF Mono', 'Cascadia Code', Consolas, monospace">: uuid</text>
+<text x="620" y="624" font-size="9" fill="#7ee08a" font-weight="700" text-anchor="end" font-family="'SF Mono', 'Cascadia Code', Consolas, monospace">FK</text>
+<text x="376" y="652" font-size="11.5" fill="#c7d1db" font-family="'SF Mono', 'Cascadia Code', Consolas, monospace" font-style="normal">lead_id</text>
+<text x="376" y="665" font-size="9" fill="#7a8794" font-family="'SF Mono', 'Cascadia Code', Consolas, monospace">: uuid</text>
+<text x="620" y="656" font-size="9" fill="#7ee08a" font-weight="700" text-anchor="end" font-family="'SF Mono', 'Cascadia Code', Consolas, monospace">FK</text>
+<text x="376" y="684" font-size="11.5" fill="#7a8794" font-family="'SF Mono', 'Cascadia Code', Consolas, monospace" font-style="italic">author_id?</text>
+<text x="376" y="697" font-size="9" fill="#7a8794" font-family="'SF Mono', 'Cascadia Code', Consolas, monospace">: uuid</text>
+<text x="620" y="688" font-size="9" fill="#e8b95f" font-weight="700" text-anchor="end" font-family="'SF Mono', 'Cascadia Code', Consolas, monospace">FK→auth</text>
+<text x="376" y="716" font-size="11.5" fill="#c7d1db" font-family="'SF Mono', 'Cascadia Code', Consolas, monospace" font-style="normal">type</text>
+<text x="376" y="729" font-size="9" fill="#7a8794" font-family="'SF Mono', 'Cascadia Code', Consolas, monospace">: activity_type</text>
+<text x="376" y="748" font-size="11.5" fill="#c7d1db" font-family="'SF Mono', 'Cascadia Code', Consolas, monospace" font-style="normal">description</text>
+<text x="376" y="761" font-size="9" fill="#7a8794" font-family="'SF Mono', 'Cascadia Code', Consolas, monospace">: text</text>
+<text x="376" y="780" font-size="11.5" fill="#7a8794" font-family="'SF Mono', 'Cascadia Code', Consolas, monospace" font-style="italic">integration_provider?</text>
+<text x="376" y="793" font-size="9" fill="#7a8794" font-family="'SF Mono', 'Cascadia Code', Consolas, monospace">: integration_provider</text>
+<text x="376" y="812" font-size="11.5" fill="#c7d1db" font-family="'SF Mono', 'Cascadia Code', Consolas, monospace" font-style="normal">created_at</text>
+<text x="376" y="825" font-size="9" fill="#7a8794" font-family="'SF Mono', 'Cascadia Code', Consolas, monospace">: timestamptz</text>
+<g filter="url(#cardShadow)">
+<rect x="688" y="540" width="268" height="332" rx="8" fill="#141a22" stroke="#2a3441" stroke-width="1"/>
+<path d="M688,566 v-18 q0,-8 8,-8 h252 q8,0 8,8 v18 z" fill="#1c3a2e"/>
+<line x1="688" y1="574" x2="956" y2="574" stroke="#2a3441" stroke-width="1"/>
+<text x="700" y="562" font-size="13.5" font-weight="700" fill="#e8f4f9" font-family="'SF Mono', 'Cascadia Code', Consolas, monospace">tasks</text>
+</g>
+<text x="700" y="588" font-size="11.5" fill="#c7d1db" font-family="'SF Mono', 'Cascadia Code', Consolas, monospace" font-style="normal">id</text>
+<text x="700" y="601" font-size="9" fill="#7a8794" font-family="'SF Mono', 'Cascadia Code', Consolas, monospace">: uuid</text>
+<text x="944" y="592" font-size="9" fill="#5fd0e8" font-weight="700" text-anchor="end" font-family="'SF Mono', 'Cascadia Code', Consolas, monospace">PK</text>
+<text x="700" y="620" font-size="11.5" fill="#c7d1db" font-family="'SF Mono', 'Cascadia Code', Consolas, monospace" font-style="normal">workspace_id</text>
+<text x="700" y="633" font-size="9" fill="#7a8794" font-family="'SF Mono', 'Cascadia Code', Consolas, monospace">: uuid</text>
+<text x="944" y="624" font-size="9" fill="#7ee08a" font-weight="700" text-anchor="end" font-family="'SF Mono', 'Cascadia Code', Consolas, monospace">FK</text>
+<text x="700" y="652" font-size="11.5" fill="#7a8794" font-family="'SF Mono', 'Cascadia Code', Consolas, monospace" font-style="italic">lead_id?</text>
+<text x="700" y="665" font-size="9" fill="#7a8794" font-family="'SF Mono', 'Cascadia Code', Consolas, monospace">: uuid</text>
+<text x="944" y="656" font-size="9" fill="#7ee08a" font-weight="700" text-anchor="end" font-family="'SF Mono', 'Cascadia Code', Consolas, monospace">FK</text>
+<text x="700" y="684" font-size="11.5" fill="#7a8794" font-family="'SF Mono', 'Cascadia Code', Consolas, monospace" font-style="italic">deal_id?</text>
+<text x="700" y="697" font-size="9" fill="#7a8794" font-family="'SF Mono', 'Cascadia Code', Consolas, monospace">: uuid</text>
+<text x="944" y="688" font-size="9" fill="#7ee08a" font-weight="700" text-anchor="end" font-family="'SF Mono', 'Cascadia Code', Consolas, monospace">FK</text>
+<text x="700" y="716" font-size="11.5" fill="#7a8794" font-family="'SF Mono', 'Cascadia Code', Consolas, monospace" font-style="italic">assignee_id?</text>
+<text x="700" y="729" font-size="9" fill="#7a8794" font-family="'SF Mono', 'Cascadia Code', Consolas, monospace">: uuid</text>
+<text x="944" y="720" font-size="9" fill="#e8b95f" font-weight="700" text-anchor="end" font-family="'SF Mono', 'Cascadia Code', Consolas, monospace">FK→auth</text>
+<text x="700" y="748" font-size="11.5" fill="#c7d1db" font-family="'SF Mono', 'Cascadia Code', Consolas, monospace" font-style="normal">title</text>
+<text x="700" y="761" font-size="9" fill="#7a8794" font-family="'SF Mono', 'Cascadia Code', Consolas, monospace">: text</text>
+<text x="700" y="780" font-size="11.5" fill="#c7d1db" font-family="'SF Mono', 'Cascadia Code', Consolas, monospace" font-style="normal">type</text>
+<text x="700" y="793" font-size="9" fill="#7a8794" font-family="'SF Mono', 'Cascadia Code', Consolas, monospace">: activity_type</text>
+<text x="700" y="812" font-size="11.5" fill="#c7d1db" font-family="'SF Mono', 'Cascadia Code', Consolas, monospace" font-style="normal">due_at</text>
+<text x="700" y="825" font-size="9" fill="#7a8794" font-family="'SF Mono', 'Cascadia Code', Consolas, monospace">: timestamptz</text>
+<text x="700" y="844" font-size="11.5" fill="#7a8794" font-family="'SF Mono', 'Cascadia Code', Consolas, monospace" font-style="italic">done_at?</text>
+<text x="700" y="857" font-size="9" fill="#7a8794" font-family="'SF Mono', 'Cascadia Code', Consolas, monospace">: timestamptz</text>
+<g filter="url(#cardShadow)">
+<rect x="1012" y="130" width="268" height="268" rx="8" fill="#141a22" stroke="#2a3441" stroke-width="1"/>
+<path d="M1012,156 v-18 q0,-8 8,-8 h252 q8,0 8,8 v18 z" fill="#3a2e1c"/>
+<line x1="1012" y1="164" x2="1280" y2="164" stroke="#2a3441" stroke-width="1"/>
+<text x="1024" y="152" font-size="13.5" font-weight="700" fill="#e8f4f9" font-family="'SF Mono', 'Cascadia Code', Consolas, monospace">subscriptions</text>
+</g>
+<text x="1024" y="178" font-size="11.5" fill="#c7d1db" font-family="'SF Mono', 'Cascadia Code', Consolas, monospace" font-style="normal">id</text>
+<text x="1024" y="191" font-size="9" fill="#7a8794" font-family="'SF Mono', 'Cascadia Code', Consolas, monospace">: uuid</text>
+<text x="1268" y="182" font-size="9" fill="#5fd0e8" font-weight="700" text-anchor="end" font-family="'SF Mono', 'Cascadia Code', Consolas, monospace">PK</text>
+<text x="1024" y="210" font-size="11.5" fill="#c7d1db" font-family="'SF Mono', 'Cascadia Code', Consolas, monospace" font-style="normal">workspace_id</text>
+<text x="1024" y="223" font-size="9" fill="#7a8794" font-family="'SF Mono', 'Cascadia Code', Consolas, monospace">: uuid</text>
+<text x="1268" y="214" font-size="9" fill="#7ee08a" font-weight="700" text-anchor="end" font-family="'SF Mono', 'Cascadia Code', Consolas, monospace">FK</text>
+<text x="1024" y="242" font-size="11.5" fill="#7a8794" font-family="'SF Mono', 'Cascadia Code', Consolas, monospace" font-style="italic">asaas_customer_id?</text>
+<text x="1024" y="255" font-size="9" fill="#7a8794" font-family="'SF Mono', 'Cascadia Code', Consolas, monospace">: text</text>
+<text x="1024" y="274" font-size="11.5" fill="#7a8794" font-family="'SF Mono', 'Cascadia Code', Consolas, monospace" font-style="italic">asaas_subscription_id?</text>
+<text x="1024" y="287" font-size="9" fill="#7a8794" font-family="'SF Mono', 'Cascadia Code', Consolas, monospace">: text</text>
+<text x="1024" y="306" font-size="11.5" fill="#c7d1db" font-family="'SF Mono', 'Cascadia Code', Consolas, monospace" font-style="normal">status</text>
+<text x="1024" y="319" font-size="9" fill="#7a8794" font-family="'SF Mono', 'Cascadia Code', Consolas, monospace">: subscription_status</text>
+<text x="1024" y="338" font-size="11.5" fill="#7a8794" font-family="'SF Mono', 'Cascadia Code', Consolas, monospace" font-style="italic">current_period_end?</text>
+<text x="1024" y="351" font-size="9" fill="#7a8794" font-family="'SF Mono', 'Cascadia Code', Consolas, monospace">: timestamptz</text>
+<text x="1024" y="370" font-size="11.5" fill="#7a8794" font-family="'SF Mono', 'Cascadia Code', Consolas, monospace" font-style="italic">ultimo_billing_type?</text>
+<text x="1024" y="383" font-size="9" fill="#7a8794" font-family="'SF Mono', 'Cascadia Code', Consolas, monospace">: text</text>
+<g filter="url(#cardShadow)">
+<rect x="1012" y="540" width="268" height="140" rx="8" fill="#141a22" stroke="#2a3441" stroke-width="1"/>
+<path d="M1012,566 v-18 q0,-8 8,-8 h252 q8,0 8,8 v18 z" fill="#3a2e1c"/>
+<line x1="1012" y1="574" x2="1280" y2="574" stroke="#2a3441" stroke-width="1"/>
+<text x="1024" y="562" font-size="13.5" font-weight="700" fill="#e8f4f9" font-family="'SF Mono', 'Cascadia Code', Consolas, monospace">asaas_webhook_events</text>
+</g>
+<text x="1024" y="588" font-size="11.5" fill="#c7d1db" font-family="'SF Mono', 'Cascadia Code', Consolas, monospace" font-style="normal">event_id</text>
+<text x="1024" y="601" font-size="9" fill="#7a8794" font-family="'SF Mono', 'Cascadia Code', Consolas, monospace">: text</text>
+<text x="1268" y="592" font-size="9" fill="#5fd0e8" font-weight="700" text-anchor="end" font-family="'SF Mono', 'Cascadia Code', Consolas, monospace">PK</text>
+<text x="1024" y="620" font-size="11.5" fill="#c7d1db" font-family="'SF Mono', 'Cascadia Code', Consolas, monospace" font-style="normal">event_type</text>
+<text x="1024" y="633" font-size="9" fill="#7a8794" font-family="'SF Mono', 'Cascadia Code', Consolas, monospace">: text</text>
+<text x="1024" y="652" font-size="11.5" fill="#c7d1db" font-family="'SF Mono', 'Cascadia Code', Consolas, monospace" font-style="normal">processed_at</text>
+<text x="1024" y="665" font-size="9" fill="#7a8794" font-family="'SF Mono', 'Cascadia Code', Consolas, monospace">: timestamptz</text>
+<g filter="url(#cardShadow)">
+<rect x="1012" y="918" width="268" height="268" rx="8" fill="#141a22" stroke="#2a3441" stroke-width="1"/>
+<path d="M1012,944 v-18 q0,-8 8,-8 h252 q8,0 8,8 v18 z" fill="#2a2438"/>
+<line x1="1012" y1="952" x2="1280" y2="952" stroke="#2a3441" stroke-width="1"/>
+<text x="1024" y="940" font-size="13.5" font-weight="700" fill="#e8f4f9" font-family="'SF Mono', 'Cascadia Code', Consolas, monospace">integration_connections</text>
+</g>
+<text x="1024" y="966" font-size="11.5" fill="#c7d1db" font-family="'SF Mono', 'Cascadia Code', Consolas, monospace" font-style="normal">id</text>
+<text x="1024" y="979" font-size="9" fill="#7a8794" font-family="'SF Mono', 'Cascadia Code', Consolas, monospace">: uuid</text>
+<text x="1268" y="970" font-size="9" fill="#5fd0e8" font-weight="700" text-anchor="end" font-family="'SF Mono', 'Cascadia Code', Consolas, monospace">PK</text>
+<text x="1024" y="998" font-size="11.5" fill="#c7d1db" font-family="'SF Mono', 'Cascadia Code', Consolas, monospace" font-style="normal">workspace_id</text>
+<text x="1024" y="1011" font-size="9" fill="#7a8794" font-family="'SF Mono', 'Cascadia Code', Consolas, monospace">: uuid</text>
+<text x="1268" y="1002" font-size="9" fill="#7ee08a" font-weight="700" text-anchor="end" font-family="'SF Mono', 'Cascadia Code', Consolas, monospace">FK</text>
+<text x="1024" y="1030" font-size="11.5" fill="#c7d1db" font-family="'SF Mono', 'Cascadia Code', Consolas, monospace" font-style="normal">provider</text>
+<text x="1024" y="1043" font-size="9" fill="#7a8794" font-family="'SF Mono', 'Cascadia Code', Consolas, monospace">: integration_provider</text>
+<text x="1024" y="1062" font-size="11.5" fill="#c7d1db" font-family="'SF Mono', 'Cascadia Code', Consolas, monospace" font-style="normal">status</text>
+<text x="1024" y="1075" font-size="9" fill="#7a8794" font-family="'SF Mono', 'Cascadia Code', Consolas, monospace">: integration_status</text>
+<text x="1024" y="1094" font-size="11.5" fill="#7a8794" font-family="'SF Mono', 'Cascadia Code', Consolas, monospace" font-style="italic">access_token_enc?</text>
+<text x="1024" y="1107" font-size="9" fill="#7a8794" font-family="'SF Mono', 'Cascadia Code', Consolas, monospace">: bytea</text>
+<text x="1024" y="1126" font-size="11.5" fill="#7a8794" font-family="'SF Mono', 'Cascadia Code', Consolas, monospace" font-style="italic">refresh_token_enc?</text>
+<text x="1024" y="1139" font-size="9" fill="#7a8794" font-family="'SF Mono', 'Cascadia Code', Consolas, monospace">: bytea</text>
+<text x="1024" y="1158" font-size="11.5" fill="#7a8794" font-family="'SF Mono', 'Cascadia Code', Consolas, monospace" font-style="italic">connected_by?</text>
+<text x="1024" y="1171" font-size="9" fill="#7a8794" font-family="'SF Mono', 'Cascadia Code', Consolas, monospace">: uuid</text>
+<text x="1268" y="1162" font-size="9" fill="#e8b95f" font-weight="700" text-anchor="end" font-family="'SF Mono', 'Cascadia Code', Consolas, monospace">FK→auth</text>
+<g filter="url(#cardShadow)">
+<rect x="40" y="1264" width="268" height="236" rx="8" fill="#141a22" stroke="#2a3441" stroke-width="1"/>
+<path d="M40,1290 v-18 q0,-8 8,-8 h252 q8,0 8,8 v18 z" fill="#2a2438"/>
+<line x1="40" y1="1298" x2="308" y2="1298" stroke="#2a3441" stroke-width="1"/>
+<text x="52" y="1286" font-size="13.5" font-weight="700" fill="#e8f4f9" font-family="'SF Mono', 'Cascadia Code', Consolas, monospace">onboarding_state</text>
+</g>
+<text x="52" y="1312" font-size="11.5" fill="#c7d1db" font-family="'SF Mono', 'Cascadia Code', Consolas, monospace" font-style="normal">user_id</text>
+<text x="52" y="1325" font-size="9" fill="#7a8794" font-family="'SF Mono', 'Cascadia Code', Consolas, monospace">: uuid</text>
+<text x="296" y="1316" font-size="9" fill="#5fd0e8" font-weight="700" text-anchor="end" font-family="'SF Mono', 'Cascadia Code', Consolas, monospace">PK→auth</text>
+<text x="52" y="1344" font-size="11.5" fill="#c7d1db" font-family="'SF Mono', 'Cascadia Code', Consolas, monospace" font-style="normal">status</text>
+<text x="52" y="1357" font-size="9" fill="#7a8794" font-family="'SF Mono', 'Cascadia Code', Consolas, monospace">: text</text>
+<text x="52" y="1376" font-size="11.5" fill="#7a8794" font-family="'SF Mono', 'Cascadia Code', Consolas, monospace" font-style="italic">etapa?</text>
+<text x="52" y="1389" font-size="9" fill="#7a8794" font-family="'SF Mono', 'Cascadia Code', Consolas, monospace">: text</text>
+<text x="52" y="1408" font-size="11.5" fill="#c7d1db" font-family="'SF Mono', 'Cascadia Code', Consolas, monospace" font-style="normal">tour_status</text>
+<text x="52" y="1421" font-size="9" fill="#7a8794" font-family="'SF Mono', 'Cascadia Code', Consolas, monospace">: text</text>
+<text x="52" y="1440" font-size="11.5" fill="#c7d1db" font-family="'SF Mono', 'Cascadia Code', Consolas, monospace" font-style="normal">checklist_oculto</text>
+<text x="52" y="1453" font-size="9" fill="#7a8794" font-family="'SF Mono', 'Cascadia Code', Consolas, monospace">: bool</text>
+<text x="52" y="1472" font-size="11.5" fill="#c7d1db" font-family="'SF Mono', 'Cascadia Code', Consolas, monospace" font-style="normal">respostas</text>
+<text x="52" y="1485" font-size="9" fill="#7a8794" font-family="'SF Mono', 'Cascadia Code', Consolas, monospace">: jsonb</text>
+<g filter="url(#cardShadow)">
+<rect x="1012" y="1264" width="268" height="108" rx="8" fill="#141a22" stroke="#2a3441" stroke-width="1"/>
+<path d="M1012,1290 v-18 q0,-8 8,-8 h252 q8,0 8,8 v18 z" fill="#2a2438"/>
+<line x1="1012" y1="1298" x2="1280" y2="1298" stroke="#2a3441" stroke-width="1"/>
+<text x="1024" y="1286" font-size="13.5" font-weight="700" fill="#e8f4f9" font-family="'SF Mono', 'Cascadia Code', Consolas, monospace">rate_limit_attempts</text>
+</g>
+<text x="1024" y="1312" font-size="11.5" fill="#c7d1db" font-family="'SF Mono', 'Cascadia Code', Consolas, monospace" font-style="normal">chave</text>
+<text x="1024" y="1325" font-size="9" fill="#7a8794" font-family="'SF Mono', 'Cascadia Code', Consolas, monospace">: text</text>
+<text x="1268" y="1316" font-size="9" fill="#5fd0e8" font-weight="700" text-anchor="end" font-family="'SF Mono', 'Cascadia Code', Consolas, monospace">PK</text>
+<text x="1024" y="1344" font-size="11.5" fill="#c7d1db" font-family="'SF Mono', 'Cascadia Code', Consolas, monospace" font-style="normal">ocorrido_em</text>
+<text x="1024" y="1357" font-size="9" fill="#7a8794" font-family="'SF Mono', 'Cascadia Code', Consolas, monospace">: timestamptz</text>
+<text x="1268" y="1348" font-size="9" fill="#5fd0e8" font-weight="700" text-anchor="end" font-family="'SF Mono', 'Cascadia Code', Consolas, monospace">PK</text>
+<circle cx="44" cy="1570" r="4" fill="#5fd0e8" />
+<text x="54" y="1574" font-size="10.5" fill="#7a8794" font-family="'SF Mono', 'Cascadia Code', Consolas, monospace">PK — chave primária</text>
+<circle cx="199.89999999999998" cy="1570" r="4" fill="#7ee08a" />
+<text x="209.89999999999998" y="1574" font-size="10.5" fill="#7a8794" font-family="'SF Mono', 'Cascadia Code', Consolas, monospace">FK — chave estrangeira (dentro do schema public)</text>
+<circle cx="532.6999999999999" cy="1570" r="4" fill="#e8b95f" />
+<text x="542.6999999999999" y="1574" font-size="10.5" fill="#7a8794" font-family="'SF Mono', 'Cascadia Code', Consolas, monospace">FK→auth — referencia auth.users, sem FK declarada no catálogo</text>
+<line x1="40" y1="1594" x2="66" y2="1594" stroke="#4a5a6a" stroke-width="1.6" />
+<text x="74" y="1598" font-size="10.5" fill="#7a8794" font-family="'SF Mono', 'Cascadia Code', Consolas, monospace">ON DELETE CASCADE (padrão, 11 das 12 relações)</text>
+<line x1="394.59999999999997" y1="1594" x2="420.59999999999997" y2="1594" stroke="#e8b95f" stroke-width="1.6" stroke-dasharray="5,3" />
+<text x="428.59999999999997" y="1598" font-size="10.5" fill="#7a8794" font-family="'SF Mono', 'Cascadia Code', Consolas, monospace">ON DELETE SET NULL (só deals.lead_id)</text>
+</svg>
