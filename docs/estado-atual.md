@@ -372,6 +372,12 @@ trabalho documentado.
       `#confirmPassword`, checkbox por role e os rótulos exatos "Criar conta"
       e "Entrar" seguem intactos —, mas o teste em si não rodou. **Ele não
       falha em `npm test`: falha no gate de deploy.**
+- [x] **Breakpoints conferidos** (375, 768, 1024, 1280, 1440). Um achado que
+      vale registrar: em viewport de **exatamente 1024px a arte não aparece**,
+      e está certo — a barra de rolagem consome ~15px, o viewport efetivo cai
+      para ~1009px e o `lg:` (min-width 1024) não dispara. Cai no layout de
+      coluna única, que é melhor do que espremer o gráfico. Não perseguir isso
+      como bug.
 - [ ] **`/onboarding` (assistente de 4 passos) não foi tocado.** Herdou a
       casca centrada do route group, mas o miolo
       (`components/onboarding/assistente.tsx`, ~13,6KB) continua com o visual
