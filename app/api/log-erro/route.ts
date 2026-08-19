@@ -4,6 +4,8 @@ import { z } from 'zod'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { createClient } from '@/lib/supabase/server'
 import { resolverWorkspaceAtivo } from '@/lib/workspace/ativo'
+import { excedeuLimite } from '@/lib/rate-limit'
+import { ipDaRequisicao } from '@/lib/request-ip'
 
 export const runtime = 'nodejs'
 
@@ -12,7 +14,7 @@ const payloadSchema = z.object({
   digest: z.string().trim().max(200).optional(),
   stack: z.string().trim().max(8000).optional(),
   url: z.string().trim().max(2000).optional(),
-  origem: z.enum(['dashboard', 'global']),
+  origem: z.enum(['dashboard', 'global', 'publico']),
 })
 
 /**
@@ -29,6 +31,11 @@ const payloadSchema = z.object({
  */
 export async function POST(request: Request) {
   try {
+    const ip = await ipDaRequisicao()
+    if (await excedeuLimite('log-erro', ip)) {
+      return NextResponse.json({ ok: false }, { status: 429 })
+    }
+
     const body = await request.json()
     const parsed = payloadSchema.safeParse(body)
     if (!parsed.success) {

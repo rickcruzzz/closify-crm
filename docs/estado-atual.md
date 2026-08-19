@@ -4,7 +4,7 @@ Documento de continuidade. É lido no começo de toda sessão (referenciado no
 [CLAUDE.md](../CLAUDE.md)) para que uma conversa nova, ou outra conta, comece
 sabendo o que já foi feito, o que foi decidido e onde estão as armadilhas.
 
-**Atualizado em:** 18/08/2026 (Calendário, filtro de período com range picker, exportação de relatório em PDF, busca de lead, senha exige confirmação para trocar, captura real de erro em produção, sidebar em seções, mensagem de Pro correta por caso)
+**Atualizado em:** 18/08/2026 (Calendário, filtro de período com range picker, exportação de relatório em PDF, busca de lead, senha exige confirmação para trocar, captura real de erro em produção, sidebar em seções, mensagem de Pro correta por caso, auditoria completa com 8 correções)
 
 > Mantenha este arquivo curto. O detalhe de _por que_ cada coisa é assim mora
 > nas mensagens de commit e nos comentários do código, que são a memória real
@@ -103,6 +103,58 @@ busca (workspace com muitos leads exigia rolar a lista toda); e trocar senha
 dentro do produto passou a exigir confirmar a senha atual (sessão sequestrada
 antes bastava para trancar o dono de fora da própria conta, mesma classe de
 achado que a auditoria de segurança já tinha corrigido em `deleteAccount`).
+
+**Auditoria completa (segurança + código + UI/UX), 18/08.** Três varreduras
+em paralelo contra o estado atual do código (sem re-listar o que já estava em
+"Armadilhas já pagas"). Resultado: 0 CRITICAL, 0 HIGH, 3 MEDIUM, 9 LOW — as 8
+correções acionáveis já aplicadas:
+
+- `app/error.tsx` (boundary de login/cadastro/landing) não chamava
+  `reportarErro`, só `(dashboard)/error.tsx` e `global-error.tsx` chamavam.
+  Erro em `/login` ficava invisível, a mesma lacuna que a 0046 existia pra
+  fechar. Corrigido, com origem `'publico'` nova.
+- `/api/log-erro` sem rate limit: rota pública, grava com service role, sem
+  sessão exigida — podia ser martelada e encher `error_logs` de ruído.
+  30/hora por IP, mesmo padrão de `lib/rate-limit.ts`.
+- `getWorkspacesExclusivosDoUsuario` (`lib/workspace/queries.ts`) sem
+  `.limit()` na contagem de membros — mesma classe de corte silencioso do
+  PostgREST em 1.000 linhas já corrigida 3x no projeto, mas aqui o efeito é
+  sério: workspace grande podia ter a contagem cortada, aparecer como
+  "exclusivo" por engano, e `excluir_minha_conta` apagaria o workspace de
+  outras pessoas junto com a conta de quem excluiu a própria. Trocado por
+  `count: exact, head: true` por workspace (agregado no banco, não trazendo
+  linha por linha). `getWorkspaceSettingsData` ganhou o mesmo `.limit()`
+  preventivo, impacto menor hoje mas mesma classe de defeito.
+- `assignee_id` de tarefa não conferia se o UUID era membro do workspace
+  ativo — mesma classe que a 0038 já corrigiu pra `lead_id`/`deal_id` em
+  `tasks`/`deals`, não estendida pra responsável. `conferirAlvo`
+  (`lib/tasks/actions.ts`) ganhou a terceira checagem.
+- Alvo de toque abaixo de 44px no Calendário: `TaskChip` (24px) e o botão
+  "+N" do modo Mês, únicos dois lugares que não seguiam a regra de
+  `min-h-11` já aplicada em `select.tsx`/`combobox.tsx`/`month-grid.tsx`.
+  Corrigido só em mobile (`md:` volta ao tamanho compacto, onde o toque é
+  por mouse).
+- `mensagem-bloqueio-pro.ts` sem teste: a lógica de decisão foi extraída
+  pra uma função pura (`mensagemPorContagemDeConexoes`), testável sem
+  mockar Supabase, mesmo padrão do resto de `lib/**`. 4 testes novos,
+  cada um documentando o caso (incluindo o defeito original que motivou a
+  função: nunca-teve-Pro recebendo mensagem de reativação).
+- `useEffect` de `deal-detail-sheet.tsx` dependia de uma arrow function
+  inline (`onAgendamentoAberto`) recriada a cada render de `kanban-board.tsx`
+  — sem bug hoje (protegido por guard), mas frágil. Virou `useCallback`.
+
+Prova rodada contra produção real: rate limit testado com 31 requisições
+seguidas (30 passam, a 31ª toma 429, limpo depois); checagem de
+`assignee_id` testada com usuário real fora do workspace (corretamente não
+encontrado como membro). `npx tsc --noEmit`, `npm run lint`, `npm test`
+(319 testes, 315 + 4 novos), `npm run build`, os quatro limpos.
+
+Achado à parte, não corrigido (não é meu código): `.env.example` tem uma
+edição pendente, não commitada, trocando o remetente sugerido do SMTP de
+`suporte@velofunil.com.br` pra `velofunil@outlook.com` — domínio de
+terceiro no lugar do domínio próprio, se isso for aplicado no SMTP real do
+Supabase é regressão de entregabilidade (mais chance de cair em spam,
+exatamente o problema que o comentário do próprio arquivo já documenta).
 
 O Pro passou a ter prazo (0027): pagou, vale 30 dias; venceu, o limite do Free
 volta a valer. Sem `pg_cron` de propósito, a validade é uma função consultada

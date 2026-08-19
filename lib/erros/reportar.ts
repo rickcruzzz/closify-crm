@@ -7,7 +7,7 @@
  */
 export function reportarErro(
   error: Error & { digest?: string },
-  origem: 'dashboard' | 'global',
+  origem: 'dashboard' | 'global' | 'publico',
 ) {
   try {
     fetch('/api/log-erro', {

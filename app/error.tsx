@@ -3,6 +3,7 @@
 import { useEffect } from 'react'
 
 import { Button } from '@/components/ui/button'
+import { reportarErro } from '@/lib/erros/reportar'
 
 export default function Error({
   error,
@@ -13,6 +14,7 @@ export default function Error({
 }) {
   useEffect(() => {
     console.error(error)
+    reportarErro(error, 'publico')
   }, [error])
 
   return (

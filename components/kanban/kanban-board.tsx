@@ -110,6 +110,11 @@ export function KanbanBoard({
     setSelectedDealId(dealId)
     setAbrirAgendamento(true)
   }, [])
+  // Estável de propósito: passada como dependência do `useEffect` de
+  // `DealDetailSheet`. Uma arrow function inline seria recriada a cada
+  // render deste board (que muda bastante, drag and drop), o `useEffect` só
+  // não reagia a isso por causa do guard `if (!open || !abrirAgendamento)`.
+  const marcarAgendamentoAberto = React.useCallback(() => setAbrirAgendamento(false), [])
   const [isFormOpen, setIsFormOpen] = React.useState(false)
   const [search, setSearch] = React.useState('')
   const [ownerFilter, setOwnerFilter] = React.useState('todos')
@@ -500,7 +505,7 @@ export function KanbanBoard({
         calendarConectado={calendarConectado}
         open={!!selectedDealId}
         abrirAgendamento={abrirAgendamento}
-        onAgendamentoAberto={() => setAbrirAgendamento(false)}
+        onAgendamentoAberto={marcarAgendamentoAberto}
         onOpenChange={(open) => {
           if (!open) {
             setSelectedDealId(null)

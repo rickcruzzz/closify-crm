@@ -40,17 +40,22 @@ async function abrirSessao(): Promise<Sessao | { error: string }> {
 }
 
 /**
- * Confere que o lead e o negócio informados são da empresa ativa.
+ * Confere que o lead, o negócio e o responsável informados são da empresa
+ * ativa.
  *
  * A RLS de `tasks` só olha `workspace_id`, ela aceitaria uma tarefa da minha
- * empresa apontando para o `lead_id` de outra. Isso não vaza dado (a leitura
- * do lead continua barrada), mas criaria linha órfã com referência cruzada, e
- * o `join` da tela mostraria "Sem cliente" sem ninguém entender por quê.
+ * empresa apontando para o `lead_id` de outra, ou atribuída a um `user_id`
+ * fora da empresa. Isso não vaza dado (a leitura continua barrada pela RLS
+ * de quem for lida), mas criaria linha com referência cruzada estranha: o
+ * `join` da tela mostraria "Sem cliente" sem ninguém entender por quê, e uma
+ * tarefa atribuída a alguém de fora nunca apareceria pra ninguém que
+ * pudesse concluí-la.
  */
 async function conferirAlvo(
   sessao: Sessao,
   leadId: string | null | undefined,
   dealId: string | null | undefined,
+  assigneeId: string | null | undefined,
 ): Promise<string | null> {
   if (leadId) {
     const { data } = await sessao.supabase
@@ -72,6 +77,17 @@ async function conferirAlvo(
       .maybeSingle()
 
     if (!data) return 'Negócio não encontrado.'
+  }
+
+  if (assigneeId) {
+    const { data } = await sessao.supabase
+      .from('workspace_members')
+      .select('user_id')
+      .eq('user_id', assigneeId)
+      .eq('workspace_id', sessao.workspaceId)
+      .maybeSingle()
+
+    if (!data) return 'Responsável não encontrado nesta empresa.'
   }
 
   return null
@@ -99,7 +115,7 @@ export async function criarTarefa(values: unknown) {
 
   const { title, type, dueAt, assigneeId, leadId, dealId } = parsed.data
 
-  const problema = await conferirAlvo(sessao, leadId, dealId)
+  const problema = await conferirAlvo(sessao, leadId, dealId, assigneeId)
   if (problema) return { error: problema }
 
   const { error } = await sessao.supabase.from('tasks').insert({
@@ -142,7 +158,7 @@ export async function atualizarTarefa(taskId: unknown, values: unknown) {
 
   const { title, type, dueAt, assigneeId, leadId, dealId } = parsed.data
 
-  const problema = await conferirAlvo(sessao, leadId, dealId)
+  const problema = await conferirAlvo(sessao, leadId, dealId, assigneeId)
   if (problema) return { error: problema }
 
   const { error } = await sessao.supabase

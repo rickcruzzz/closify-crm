@@ -30,6 +30,11 @@ import { createAdminClient } from '@/lib/supabase/admin'
  *   tentativas em 15 min é alto o bastante para um escritório inteiro errando
  *   senha ao mesmo tempo, e baixo o bastante para travar uma varredura de
  *   lista.
+ * - `log-erro`: `/api/log-erro` não exige sessão (o erro pode acontecer antes
+ *   de qualquer login resolver), então qualquer script pode martelar o
+ *   endpoint com payload arbitrário e encher `error_logs` de ruído. 30/hora
+ *   por IP cobre um usuário real com erro em loop (ex.: tela quebrando a
+ *   cada render) sem virar canhão de flood.
  */
 const LIMITES = {
   signin: { limite: 8, janelaSegundos: 15 * 60 },
@@ -38,6 +43,7 @@ const LIMITES = {
   'accept-invite': { limite: 15, janelaSegundos: 15 * 60 },
   'reset-password': { limite: 5, janelaSegundos: 60 * 60 },
   'reenviar-confirmacao': { limite: 5, janelaSegundos: 60 * 60 },
+  'log-erro': { limite: 30, janelaSegundos: 60 * 60 },
 } as const
 
 export type AcaoLimitada = keyof typeof LIMITES

@@ -71,7 +71,7 @@ export function MonthView({
               <button
                 type="button"
                 onClick={() => onVerMais(dia)}
-                className="text-muted-foreground hover:text-foreground px-1 text-left text-xs transition-colors"
+                className="text-muted-foreground hover:text-foreground flex min-h-11 items-center px-1 text-left text-xs transition-colors md:min-h-0"
               >
                 +{resto}
               </button>

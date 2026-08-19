@@ -39,7 +39,11 @@ export function TaskChip({
       type="button"
       onClick={onClick}
       className={cn(
-        'hover:bg-accent flex w-full min-h-6 items-center gap-1 rounded px-1 py-0.5 text-left text-xs transition-colors',
+        // `min-h-11` (44px) em mobile — mesmo piso de alvo de toque já
+        // aplicado em select.tsx/combobox.tsx/month-grid.tsx — volta a
+        // `min-h-6` (24px) a partir de `md:`, onde o toque é por mouse, para
+        // não perder densidade na grade de mês em telas grandes.
+        'hover:bg-accent flex min-h-11 w-full items-center gap-1 rounded px-1 py-0.5 text-left text-xs transition-colors md:min-h-6',
         corDaUrgencia[urgencia],
       )}
       title={task.title}
