@@ -1,16 +1,33 @@
 name: Deploy com auditoria
 
-# Substitui o deploy automático nativo da Vercel: aqui o build vira um
-# preview primeiro, a auditoria de segurança roda contra ELE, e só então
-# esse mesmo deployment é promovido pra produção. Se a auditoria falhar, o
-# workflow para antes do passo de promoção, o domínio de produção continua
-# apontando pro deployment anterior, que já passou.
+# Builda um preview a partir de CADA push em `main`, roda a auditoria de
+# segurança contra ELE, e avisa se passou ou não — a promoção final para
+# produção fica com o dono, um clique no painel da Vercel.
+#
+# Por que a promoção não é automática: `POST /v10/projects/.../promote` é
+# recurso do plano Pro/Enterprise da Vercel (a doc oficial já diz isso pra
+# `vercel rollback`, e o mesmo mecanismo move o alias de produção). O projeto
+# está no Hobby (grátis) — confirmado tentando promover 2 deployments READY
+# distintos, os dois voltaram 422 genérico da API, e o padrão bate com as
+# outras funções Pro-only visíveis no próprio painel (Rolling Releases,
+# build Elastic/Turbo). Ver "Vercel Pro" em docs/estado-atual.md.
+#
+# O que o gate garante mesmo sem o passo automático: nada entra em produção
+# SEM primeiro passar pela auditoria — porque quem decide promover só vê o
+# link depois que este workflow já rodou e (se passou) publicou o resultado.
 #
 # Pré-requisito manual (o dono precisa fazer, sem acesso ao painel daqui):
 # gerar VERCEL_TOKEN, VERCEL_ORG_ID e VERCEL_PROJECT_ID e colar como Secrets
 # do repositório, e desligar o deploy automático da Vercel pra `main`
-# (Project Settings → Git), sem isso, a Vercel deploya em paralelo e este
-# gate não impede nada de verdade. Ver docs/estado-atual.md.
+# (Project Settings → Git → Ignored Build Step), sem isso, a Vercel deploya
+# em paralelo e este gate não impede nada de verdade. Ver docs/estado-atual.md.
+#
+# Toda chamada à Vercel aqui é API REST direta (curl), não `vercel` CLI. O
+# CLI resolve o token via `vercel whoami`, e esse comando devolveu
+# "Error: User not found" para um token que a própria API REST aceitava com
+# 200 — reproduzido e confirmado 19/08/2026, com dois tokens gerados em
+# escopos diferentes (time e conta pessoal), mesmo sintoma nos dois. É bug de
+# resolução de usuário do CLI (`vercel@59.1.4`, Node 20/24), não do token.
 
 on:
   push:
@@ -29,6 +46,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       preview_url: ${{ steps.deploy.outputs.preview_url }}
+      dpl_id: ${{ steps.deploy.outputs.dpl_id }}
     steps:
       - uses: actions/checkout@v4
 
@@ -47,24 +65,44 @@ jobs:
           npm test
           npm run build
 
-      - name: Instalar Vercel CLI
-        run: npm install -g vercel@latest
-
-      - name: Vincular projeto Vercel
-        run: vercel pull --yes --environment=preview --token=${{ secrets.VERCEL_TOKEN }}
-        env:
-          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
-          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
-
-      - name: Build para deploy
-        run: vercel build --token=${{ secrets.VERCEL_TOKEN }}
-
-      - name: Deploy de preview
+      # A API REST direto, e não `vercel pull`/`vercel build`/`vercel deploy`
+      # do CLI. O CLI resolve o token via `whoami`, que devolve "User not
+      # found" para este token mesmo ele sendo válido — confirmado batendo o
+      # MESMO token contra `GET /v9/projects/...` (200, dados completos do
+      # projeto). É bug de resolução de usuário do CLI, não do token; a API
+      # REST não tem esse passo intermediário e funciona com o token como
+      # está, sem precisar gerar outro.
+      - name: Criar Deployment de preview via API REST
         id: deploy
         run: |
-          url=$(vercel deploy --prebuilt --token=${{ secrets.VERCEL_TOKEN }})
-          echo "URL do preview: $url"
-          echo "preview_url=$url" >> "$GITHUB_OUTPUT"
+          url=$(curl -sf -X POST "https://api.vercel.com/v13/deployments?teamId=${{ secrets.VERCEL_ORG_ID }}" \
+            -H "Authorization: Bearer ${{ secrets.VERCEL_TOKEN }}" \
+            -H "Content-Type: application/json" \
+            -d '{
+              "name": "closify-crm-dr3t",
+              "project": "${{ secrets.VERCEL_PROJECT_ID }}",
+              "target": "staging",
+              "gitSource": {
+                "type": "github",
+                "repoId": "1318803572",
+                "ref": "${{ github.sha }}"
+              }
+            }' > /tmp/deployment.json
+          cat /tmp/deployment.json
+          node -e "
+            const r = require('/tmp/deployment.json');
+            if (r.error) { console.error(JSON.stringify(r.error)); process.exit(1); }
+            const fs = require('fs');
+            fs.appendFileSync(process.env.GITHUB_OUTPUT, 'preview_url=https://' + r.url + '\n');
+            fs.appendFileSync(process.env.GITHUB_OUTPUT, 'dpl_id=' + r.id + '\n');
+          "
+
+      # A criação do deployment acima só ENFILEIRA o build; ele roda no lado
+      # da Vercel, não aqui. Sem esperar, a auditoria bateria numa URL ainda
+      # 404. `sleep` fixo é o que a própria Vercel recomenda para consumidores
+      # simples da API sem webhook de status configurado.
+      - name: Esperar o build do preview terminar
+        run: sleep 90
 
       - name: Instalar navegador do Playwright
         run: npx playwright install chromium --with-deps
@@ -82,14 +120,20 @@ jobs:
           path: playwright-report/
           retention-days: 7
 
-  promover-producao:
+  avisar-pronto-pra-promover:
     needs: build-e-testar
     runs-on: ubuntu-latest
-    # Só chega aqui se `build-e-testar` passou inteiro, inclusive a
-    # auditoria de segurança. É este `needs` que faz o gate valer.
+    # Só chega aqui se `build-e-testar` passou inteiro, inclusive a auditoria
+    # de segurança. É este `needs` que faz o gate valer: sem passar aqui,
+    # nenhum link de promoção é publicado.
     steps:
-      - name: Instalar Vercel CLI
-        run: npm install -g vercel@latest
-
-      - name: Promover o deployment já testado para produção
-        run: vercel promote ${{ needs.build-e-testar.outputs.preview_url }} --token=${{ secrets.VERCEL_TOKEN }}
+      - name: Resumo — pronto para promover
+        run: |
+          echo "## Build e auditoria passaram ✅" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "Preview testado: ${{ needs.build-e-testar.outputs.preview_url }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "Promoção final é manual (plano Hobby da Vercel não expõe promote via API — ver comentário no topo deste arquivo):" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "1. Abra https://vercel.com/ricks-projects-1e819723/closify-crm-dr3t/${{ needs.build-e-testar.outputs.dpl_id }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "2. Clique em **Promote to Production**" >> "$GITHUB_STEP_SUMMARY"

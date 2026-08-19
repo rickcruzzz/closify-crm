@@ -634,26 +634,40 @@ sessão.
       ajudará a recuperar cartão recusado no futuro, mas não resolve o
       caso da Fani, que já está parada há dias e pode merecer contato
       direto.
-- [ ] **Gate de segurança no deploy (13/08).** `tests/e2e/security-audit.spec.ts`
-      e `.github/workflows/deploy-com-auditoria.yml` foram criados, o
-      workflow builda, roda a auditoria (chave vazada, headers de
-      segurança, stack trace em erro de API) contra um deployment de
-      PREVIEW, e só promove pra produção se passar. **O workflow existe só
-      no disco, não no repositório**: o token OAuth usado aqui não tem o
-      escopo `workflow` do GitHub, e o push do arquivo foi recusado
-      ("refusing to allow an OAuth App to create or update workflow...
-      without workflow scope"). Faltam três passos manuais pra isso valer
-      de verdade:
-      1. Adicionar `.github/workflows/deploy-com-auditoria.yml` ao
-         repositório, pelo painel do GitHub (Add file → upload, colando o
-         conteúdo que já existe no disco) ou com `git push` de uma máquina
-         cujo token/PAT tenha o escopo `workflow`.
-      2. Gerar `VERCEL_TOKEN` (Vercel → Settings → Tokens) e pegar
-         `VERCEL_ORG_ID`/`VERCEL_PROJECT_ID` (`vercel link` local mostra os
-         dois), colar como Secrets do repositório no GitHub.
-      3. **Desligar o deploy automático nativo da Vercel pra `main`**
-         (Project Settings → Git), sem isso, a Vercel continua deployando
-         em paralelo ao Actions, e o gate não impede nada.
+- [x] **Gate de segurança no deploy, funcional em 19/08.** Os três passos
+      manuais que faltavam (arquivo no repositório, Secrets, desligar
+      auto-deploy) foram concluídos. `git push` em `main` builda um preview
+      via API REST da Vercel e roda `tests/e2e/security-audit.spec.ts` contra
+      ele automaticamente.
+
+      **A promoção final para produção NÃO é automática**, diferente do
+      desenho original. `POST /v10/projects/.../promote` é recurso do plano
+      Pro/Enterprise — confirmado tentando promover 2 deployments `READY`
+      distintos, os dois voltaram `422` genérico da API (a doc oficial já
+      documenta isso para `vercel rollback`, mesmo mecanismo por trás). O
+      projeto está no Hobby. `promover-producao` virou
+      `avisar-pronto-pra-promover`: publica no resumo do workflow o link
+      exato do deployment testado e a instrução "clique em Promote to
+      Production". Continua sendo um gate de verdade — nada chega em
+      produção sem antes passar pela auditoria, só o último clique é seu.
+
+      Achados que valem registro pra quem mexer nisso de novo:
+      - `vercel pull`/`vercel build`/`vercel deploy`/`vercel promote` do CLI
+        (`vercel@59.1.4`) devolvem `Error: User not found` mesmo com token
+        válido — o MESMO token responde `200` em `GET /v9/projects/...` via
+        `curl` direto. É bug de resolução de usuário do CLI, reproduzido com
+        dois tokens gerados em escopos diferentes (time e conta pessoal). A
+        correção foi trocar todo o workflow pra chamar a API REST direto,
+        sem depender do CLI.
+      - O comando de "Ignored Build Step" (`if [ "$VERCEL_GIT_COMMIT_REF" =
+        "main" ]...`) usado pra impedir a Vercel de auto-deployar `main`
+        também cancelava deployments criados via API com `ref: main` —
+        incluindo os que o próprio workflow criava para testar. Removido
+        (voltou pra "Automatic"); a defesa contra deploy duplo passou a ser
+        só o fato de produção nunca trocar sem o clique manual de promote.
+      - Se o plano virar Pro no futuro, o passo de promoção automática pode
+        voltar: `POST /v10/projects/{id}/promote/{deploymentId}` é o
+        endpoint certo, só falta o plano suportar.
       Até isso ser feito, o workflow existe mas não está protegendo nada:
       a Vercel ainda promove sozinha a cada push.
 - [ ] **CSP em Report-Only, nunca virou bloqueio.** Medido em 13/08 contra
