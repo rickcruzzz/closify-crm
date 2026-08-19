@@ -4,7 +4,7 @@ Documento de continuidade. É lido no começo de toda sessão (referenciado no
 [CLAUDE.md](../CLAUDE.md)) para que uma conversa nova, ou outra conta, comece
 sabendo o que já foi feito, o que foi decidido e onde estão as armadilhas.
 
-**Atualizado em:** 19/08/2026 (Calendário, filtro de período com range picker, exportação de relatório em PDF, busca de lead, senha exige confirmação para trocar, captura real de erro em produção, sidebar em seções, mensagem de Pro correta por caso, auditoria completa com 8 correções, checkout travado para quem já cancelou)
+**Atualizado em:** 19/08/2026 (Calendário, filtro de período com range picker, exportação de relatório em PDF, busca de lead, senha exige confirmação para trocar, captura real de erro em produção, sidebar em seções, mensagem de Pro correta por caso, auditoria completa com 8 correções, checkout travado para quem já cancelou, DNS migrado pro Cloudflare com WAF/Bot Fight Mode/Rate Limiting ativos)
 
 > Mantenha este arquivo curto. O detalhe de _por que_ cada coisa é assim mora
 > nas mensagens de commit e nos comentários do código, que são a memória real
@@ -242,6 +242,50 @@ achando que não funcionou. `components/layout/navigation-progress.tsx`
 resolve isso: liga no clique real (delegação de evento em `document`,
 qualquer `<a>` interno), desliga quando a rota muda de verdade, não é
 temporizador fingindo progresso.
+
+## Escudo na frente do site: DNS migrado pro Cloudflare (19/08)
+
+Pedido veio de slide próprio do dono ("WAF + Bot Fight Mode + Rate
+Limiting"), junto com pedido de reprovar RLS. RLS provado 14/14 contra
+produção real (sessão autenticada verdadeira, não `service_role`):
+isolamento entre workspace segura mesmo com interface burlada. Mas
+confirmado, com `nslookup -type=NS` e headers HTTP, que **não havia
+nenhum filtro de borda**: domínio resolvia direto pro IP da Vercel, sem
+proxy, sem WAF, sem rate limit fora do que já existe em
+`lib/rate-limit.ts` (que só age depois que a requisição já chegou no
+servidor).
+
+Migração de nameserver guiada passo a passo (ação em painel de terceiro,
+fora do meu alcance, só orientação + confirmação via `nslookup`/`curl`
+depois de cada etapa do dono): domínio adicionado ao Cloudflare, os 8
+registros de DNS (A, CNAME-Vercel, MX/TXT-Resend com SPF/DKIM/DMARC,
+TXT-Google, TXT-Facebook) confirmados replicados **antes** da troca de
+nameserver (ordem importa: só depois de confirmar isso é seguro trocar),
+nameservers do registro.br trocados pra `alfred.ns.cloudflare.com` /
+`marjory.ns.cloudflare.com`. Propagação em ~2h, confirmada depois via
+`nslookup -type=NS` (nameserver mudou de verdade) e `curl -sI` (`Server:
+cloudflare` e `cf-nel` nos headers de produção). Zero downtime, zero
+registro perdido — Resend, Vercel e Google seguem funcionando sem
+nenhuma mudança de configuração do lado deles.
+
+Depois de propagado, 3 proteções confirmadas ativas em produção:
+
+- **WAF (Cloudflare Managed Ruleset)**: já vem "Always active" por
+  padrão no Free, cobre CVE conhecida (log4j/RCE, SQLi, code injection).
+  Não precisou de ação manual, só confirmação no painel.
+- **Bot Fight Mode**: confirmado ativo ("JS Detections: On"), desafia
+  bot automatizado.
+- **Rate limiting**: regra criada manual (Free só permite 1), em
+  `/login`, 30 requisições/10s por IP, ação Block — a rota mais crítica
+  pra força bruta de senha. `/api/webhooks/asaas` e `/api/log-erro`
+  ficam sem regra dedicada de borda até upgrade de plano, mas já têm
+  rate limit próprio da aplicação (`lib/rate-limit.ts`).
+
+RLS continua sendo a defesa real de isolamento de dado (nada muda se o
+Cloudflare falhar ou for contornado); o Escudo é filtro de volume/tipo de
+tráfego ruim antes de chegar no servidor, reduzindo o que bate no código
+em primeiro lugar. Sem custo (plano Free), sem mudança de código, sem
+risco às integrações existentes.
 
 ## Integrações, Google Calendar, Gmail (12/08)
 

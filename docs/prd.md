@@ -232,6 +232,16 @@ já cobre auditoria nesse volume.
 
 Workspaces separados por empresa ou cliente. Convite de colaboradores por e-mail via Resend. Papéis: Admin e Membro. Isolamento total de dados via RLS no Supabase.
 
+### Segurança de borda (Cloudflare)
+
+DNS migrado pro Cloudflare (19/08), proxy ativo na frente da Vercel.
+Cloudflare Managed Ruleset (WAF) protege contra exploit conhecido (SQLi,
+code injection, RCE), ativo por padrão no plano Free. Bot Fight Mode
+desafia bot automatizado. Rate limiting bloqueia por IP em `/login` (30
+requisições/10s), único slot disponível no Free — RLS continua sendo a
+defesa real de isolamento de dado, isso aqui é filtro de volume/tipo de
+tráfego antes de chegar no servidor.
+
 ### Monetização (Asaas)
 
 Plano Free: 1 empresa, até 2 colaboradores e 50 leads.
