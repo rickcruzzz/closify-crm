@@ -266,4 +266,18 @@
     animation-duration: 1s !important;
     animation-iteration-count: infinite !important;
   }
+
+  /* Mesma razão do spinner, e o mesmo defeito: o esqueleto de carregamento
+     pulsava uma vez em 0,01ms e congelava, virando um bloco cinza parado que
+     lê como conteúdo quebrado em vez de conteúdo a caminho. É indicador
+     funcional, não enfeite.
+
+     E fica mais lento (2s), não igual: `animate-pulse` é variação de
+     opacidade, não deslocamento — o que "reduzir movimento" pede é tirar
+     deslize, parallax e autoplay, e um fade lento cumpre a função sem ser o
+     que incomoda. */
+  .animate-pulse {
+    animation-duration: 2s !important;
+    animation-iteration-count: infinite !important;
+  }
 }

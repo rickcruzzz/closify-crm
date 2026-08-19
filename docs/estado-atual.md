@@ -534,6 +534,65 @@ tenho acesso a nenhum destes painéis):
 Sem essas variáveis, os cards de integração aparecem normalmente em
 "Não conectado", nada quebra, só o botão "Conectar" falha ao tentar.
 
+## Auditoria do produto logado, 19/08
+
+Três varreduras contra o código do produto **por dentro** (o redesenho
+anterior tinha coberto só login/cadastro e a landing). Achou bug real, não só
+questão de gosto. Entregue em três commits.
+
+**O calendário escondia a tarefa vencida e mostrava a concluída.** A célula do
+modo Mês exibe 3 chips e resume o resto em "+N", mas cortava com
+`tarefas.slice(0, 3)` sobre a ordem cronológica pura — e cronológico não sabe
+o que já foi feito. Um dia com três tarefas concluídas de manhã e uma vencida
+à tarde gastava os três espaços com as concluídas e escondia a vencida atrás
+do "+1". Numa tela cuja promessa é lembrar do que falta, isso inverte o
+produto. `lib/calendario/ordenar-por-relevancia.ts` (função pura, 6 testes)
+ordena vencida > pendente > concluída antes de fatiar. Provado contra
+produção com exatamente esse cenário.
+
+**O "+N" levava ao lugar errado.** Prometia as tarefas daquele dia e trocava
+para a Agenda, que lista o período carregado inteiro — clicar em "+1" no dia
+20 devolvia agosto todo, e o `diaAncoraSemana` que o clique setava nem era
+lido nesse modo. Passa a abrir a Semana, que usa a âncora de verdade.
+
+**Três exclusões apagavam com um clique**: tarefa, remover colaborador e
+cancelar convite — enquanto lead, negócio e atividade já confirmavam desde
+sempre. O caso mais desconfortável: concluir tarefa oferecia "Desfazer" e
+excluir, que é pior, não oferecia nada. `components/comum/confirmar-exclusao.tsx`
+usa `AlertDialog` (prende foco, não fecha ao clicar fora), não o `Dialog`
+genérico que metade das confirmações do projeto usava.
+
+**Sair passou a confirmar**, por pedido do dono (computador compartilhado). O
+texto diz o que acontece em vez de "tem certeza?". Junto, conserta um defeito
+à parte: o clique não mostrava nada até o redirect, porque o `useTransition`
+descartava o pending e a barra de progresso global só liga em clique de `<a>`,
+nunca em item de menu.
+
+**Configurações saiu de 5 idas em série para 2.** Era a rota mais lenta e a
+que o dono reclamou. `urlDaLogo` era chamado DENTRO do JSX — a página já tinha
+montado e ainda ia buscar mais uma coisa.
+
+**38 lugares diziam jargão que o próprio PRD de copy baniu.** "Pipeline" virou
+"Funil", "Leads" virou "Contatos", "Dashboard" virou "Resultados", "workspace"
+virou "empresa", "Timeline" virou "Histórico", "Taxa de Conversão" virou
+"Viraram venda". **As rotas não mudaram** (`/kanban`, `/leads`, `/dashboard`):
+renomear quebraria link salvo para trocar uma palavra que ninguém digita.
+Sobre "Leads" → "Contatos", que o PRD tinha adiado: o motivo dele se inverteu,
+a landing já diz contatos, então a distância existe hoje e renomear fecha.
+
+**A barra lateral ganhou o número de tarefas do dia.** Só aparece quando há o
+que cobrar — contador em "0" vira ruído e treina a pessoa a ignorar o lugar.
+O cuidado principal foi o custo: roda no layout, ou seja, em toda navegação.
+Usa `count: exact, head: true` e entra no MESMO `Promise.all` que já busca
+sessão, mesmo dependendo do `workspaceId` — `getCurrentUserAndWorkspace` é
+`cache()`, então a segunda chamada devolve a promise da primeira. Encadear em
+série custaria uma ida de rede por navegação.
+
+**Prova rodada com Playwright contra o banco de produção**, workspace
+descartável limpo no fim: 13 verificações, todas passando, incluindo o cenário
+exato do bug do calendário e o "Cancelar" do diálogo de saída mantendo a
+sessão.
+
 ## Pendente do dono (não é código)
 
 - [ ] **`CRON_SECRET` na Vercel (13/08).** Gerado e colado no `.env.local`,
