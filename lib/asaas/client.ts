@@ -46,20 +46,32 @@ export function readAsaasApiKey(): string {
 }
 
 export async function asaasFetch<T>(path: string, init?: RequestInit): Promise<T> {
-  const res = await fetch(`${ASAAS_BASE_URL}${path}`, {
-    ...init,
-    // Depois do spread, não antes: sem isso, o `fetch()` do Next 14 usa
-    // `force-cache` por padrão mesmo em página dinâmica, status de
-    // pagamento nunca pode vir de cache, ou a tela de cobrança mostra
-    // fatura pendente que já foi paga. Fixo em `no-store` de propósito,
-    // pra nenhum call site conseguir reintroduzir cache sem querer.
-    cache: 'no-store',
-    headers: {
-      'Content-Type': 'application/json',
-      access_token: readAsaasApiKey(),
-      ...init?.headers,
-    },
-  })
+  let res: Response
+  try {
+    res = await fetch(`${ASAAS_BASE_URL}${path}`, {
+      ...init,
+      // Depois do spread, não antes: sem isso, o `fetch()` do Next 14 usa
+      // `force-cache` por padrão mesmo em página dinâmica, status de
+      // pagamento nunca pode vir de cache, ou a tela de cobrança mostra
+      // fatura pendente que já foi paga. Fixo em `no-store` de propósito,
+      // pra nenhum call site conseguir reintroduzir cache sem querer.
+      cache: 'no-store',
+      // Sem isso, um Asaas degradado prende a requisição até o teto da
+      // função na Vercel — checkout/webhook ficam pendurados sem erro
+      // claro em vez de falhar rápido com algo que o chamador pode tratar.
+      signal: AbortSignal.timeout(10_000),
+      headers: {
+        'Content-Type': 'application/json',
+        access_token: readAsaasApiKey(),
+        ...init?.headers,
+      },
+    })
+  } catch (err) {
+    if (err instanceof Error && err.name === 'TimeoutError') {
+      throw new AsaasApiError(0, path, 'Tempo esgotado ao falar com o Asaas (10s).')
+    }
+    throw err
+  }
 
   if (!res.ok) {
     const body = await res.text()
