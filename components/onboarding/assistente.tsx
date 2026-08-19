@@ -16,6 +16,7 @@ import {
 } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { AuthAlerta } from '@/components/auth/auth-alerta'
 import {
   ETAPAS,
   MODELOS_DE_VENDA,
@@ -185,19 +186,22 @@ export function AssistenteDeOnboarding({
           </div>
         )}
 
-        <CardTitle className="text-xl">{TITULOS[etapa]}</CardTitle>
-        <CardDescription>{SUBTITULOS[etapa]}</CardDescription>
+        {/* `h1` aqui e não só o `CardTitle`: esta é a página inteira, e página
+            sem cabeçalho de nível 1 deixa o leitor de tela sem ponto de
+            entrada. O mesmo vale para as outras sete telas do fluxo, onde o
+            `AuthCabecalho` cuida disso — aqui não dá para usá-lo porque o
+            header carrega a barra de progresso antes do título, e encaixar
+            isso numa prop tornaria o componente pior para os oito casos. */}
+        <CardTitle className="animate-in fade-in slide-in-from-bottom-2 fill-mode-both ease-entrada duration-entrada delay-passo-2 text-xl">
+          <h1>{TITULOS[etapa]}</h1>
+        </CardTitle>
+        <CardDescription className="animate-in fade-in slide-in-from-bottom-2 fill-mode-both ease-entrada duration-entrada delay-passo-3">
+          {SUBTITULOS[etapa]}
+        </CardDescription>
       </CardHeader>
 
-      <CardContent className="flex flex-col gap-4">
-        {erro && (
-          <p
-            role="alert"
-            className="bg-destructive/10 text-destructive rounded-md px-3 py-2 text-sm"
-          >
-            {erro}
-          </p>
-        )}
+      <CardContent className="animate-in fade-in slide-in-from-bottom-2 fill-mode-both ease-entrada duration-entrada delay-passo-4 flex flex-col gap-4">
+        {erro && <AuthAlerta>{erro}</AuthAlerta>}
 
         {etapa === 'empresa' && (
           <PassoEmpresa

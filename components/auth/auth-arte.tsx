@@ -24,9 +24,9 @@ import { PipelinePreviewCard } from '@/components/landing/pipeline-preview-card'
  * — o blur de 64px numa área grande era o item mais caro de GPU da página e
  * re-rasterizava a cada troca de tema. Gradiente radial compõe direto.
  *
- * `aria-hidden` no wrapper inteiro, mesmo critério do `kanban-preview`: um
- * leitor de tela recitando seis etapas e valores fictícios no meio de um login
- * atrapalha quem só quer chegar ao campo de e-mail.
+ * `aria-hidden` no wrapper inteiro: um leitor de tela recitando seis etapas e
+ * valores fictícios no meio de um login atrapalha quem só quer chegar ao campo
+ * de e-mail. A ilustração é reforço visual, não conteúdo.
  */
 export function AuthArte() {
   return (

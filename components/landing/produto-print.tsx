@@ -5,12 +5,18 @@ import { cn } from '@/lib/utils'
 /**
  * Um print real do produto, na moldura de janela que a landing já usa.
  *
- * **Por que print e não mais um mock em HTML.** Os mocks
- * (`PipelinePreviewCard`, `KanbanPreview`) continuam onde estão e seguem
- * úteis: são leves, acompanham o tema e nunca desatualizam. Mas eles são uma
- * *representação* do produto, e quem chega de anúncio quer ver a tela de
- * verdade — é o que todo concorrente sério mostra. O print entra abaixo da
- * dobra, onde o peso não disputa com o LCP; o hero segue com o mock.
+ * **Por que print e não mais um mock em HTML.** O mock do hero
+ * (`PipelinePreviewCard`) fica onde está e segue útil: é leve, acompanha o
+ * tema e nunca desatualiza — e ali o peso de uma imagem disputaria com o LCP.
+ * Mas mock é uma *representação* do produto, e quem chega de anúncio quer ver
+ * a tela de verdade. O print entra abaixo da dobra, onde o peso não custa a
+ * métrica.
+ *
+ * O `KanbanPreview`, que desenhava o quadro à mão em "Como funciona", foi
+ * removido junto com esta troca: manter dois caminhos para a mesma ilustração
+ * significaria manter os dois em dia, e ele já carregava um defeito silencioso
+ * (a borda colorida por etapa nunca pintou, porque `stageAccent[stage]` é um
+ * objeto e o `clsx` transformava as chaves em nomes de classe).
  *
  * **Dois arquivos, trocados por CSS.** A landing tem alternador de tema, e um
  * print claro sobre fundo escuro (ou o contrário) destrói a ilusão de que

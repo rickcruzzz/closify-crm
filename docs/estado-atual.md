@@ -381,20 +381,22 @@ trabalho documentado.
       para ~1009px e o `lg:` (min-width 1024) não dispara. Cai no layout de
       coluna única, que é melhor do que espremer o gráfico. Não perseguir isso
       como bug.
-- [ ] **`/onboarding` (assistente de 4 passos) não foi tocado.** Herdou a
-      casca centrada do route group, mas o miolo
-      (`components/onboarding/assistente.tsx`, ~13,6KB) continua com o visual
-      anterior e sem o stagger dos tokens novos.
-- [ ] **Hero da landing ainda usa o stagger falso.** Converter para
-      `delay-passo-*` alinharia o ritmo do site inteiro ao das telas de auth.
-      Fica de fora porque muda a sensação da landing pela segunda vez (a
-      correção da curva já mudou uma) e as duas merecem ser avaliadas juntas.
-- [ ] **`kanban-preview.tsx` (~linha 105):** `cn('border-l-2',
-      stageAccent[negocio.stage])` — `stageAccent[stage]` é o objeto
-      `{text,bg,bar}`, o `clsx` transforma as chaves em nomes de classe, e a
-      borda colorida por etapa nunca pintou. Correção: `style={{
-      borderLeftColor: stageAccent[...].bar }}`, como o
-      `pipeline-preview-card.tsx` já faz. Não misturar com este PR.
+- [x] **`/onboarding`** recebeu o stagger, o `h1` que faltava e o
+      `AuthAlerta` (era a 6ª cópia do mesmo bloco de erro). O `AuthCabecalho`
+      **não** foi usado ali de propósito: o header do assistente carrega a
+      barra de progresso antes do título, e espremer isso numa prop tornaria o
+      componente pior para as outras sete telas.
+- [x] **Hero da landing convertido** para duração constante + `delay-passo-*`.
+      Os 650/750/800/850/900ms eram *durações* com todos os elementos começando
+      em t=0 — não escalonavam nada, só deixavam os últimos mais lentos. Agora
+      as duas metades do site têm o mesmo ritmo por construção, não por acaso.
+- [x] **`kanban-preview.tsx` removido**, não corrigido. Ao trocar "Como
+      funciona" pelo print real, o componente ficou sem nenhum consumidor —
+      corrigir a borda colorida de um mock que ninguém renderiza seria manter
+      dois caminhos para a mesma ilustração. O defeito (o `clsx` transformando
+      as chaves de `stageAccent[stage]` em nomes de classe) fica registrado
+      aqui como classe de erro a não repetir: objeto passado para `cn()` vira
+      classe pelas chaves, silenciosamente.
 - [ ] **HTML de `/cadastro` não contém formulário.** O `useSearchParams` empurra
       tudo para o cliente via `<Suspense>`; o fallback virou um esqueleto (era
       `null`), mas a página tem `canonical` e serve HTML sem conteúdo para

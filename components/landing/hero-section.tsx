@@ -16,7 +16,19 @@ export function HeroSection() {
       />
       <div className="mx-auto grid max-w-6xl items-center gap-12 lg:grid-cols-2 lg:gap-8">
         <div className="flex flex-col items-center gap-6 text-center lg:items-start lg:text-left">
-          <SegmentBadge className="animate-in fade-in slide-in-from-bottom-2 ease-entrada font-mono text-xs tracking-wide uppercase duration-[650ms]" />
+          {/* Duração CONSTANTE mais atraso crescente, e não duração crescente.
+              O hero usava 650/750/800/850/900ms com todos os elementos
+              começando em t=0: isso não escalona nada, só deixa os últimos
+              mais lentos — a diferença entre "a tela entra em ordem" e "os
+              elementos de baixo demoram mais para chegar", que é como estava.
+              Os tokens `delay-passo-*` vivem no globals.css e são os mesmos
+              das telas de autenticação, para as duas metades do site terem o
+              mesmo ritmo em vez de coincidirem por acaso.
+
+              Uma distância só (12px) para a sequência inteira: variar o
+              percurso além do atraso faz os elementos parecerem brigar, em vez
+              de uma tela entrando junto. */}
+          <SegmentBadge className="animate-in fade-in slide-in-from-bottom-3 fill-mode-both ease-entrada duration-entrada delay-passo-1 font-mono text-xs tracking-wide uppercase" />
           {/* Nome e categoria continuam DENTRO do h1, mas só para quem lê por
               texto: leitor de tela e o verificador de marca do Google, que
               compara o nome do app no consent screen com o heading principal
@@ -33,11 +45,11 @@ export function HeroSection() {
               Tracking fica mais negativo quanto maior o texto, é o que separa
               um título "de template" de um desenhado. Ver também o h2 das
               demais seções, em -0.02em. */}
-          <h1 className="animate-in fade-in slide-in-from-bottom-3 ease-entrada text-4xl font-semibold tracking-[-0.03em] text-balance duration-[750ms] md:text-6xl">
+          <h1 className="animate-in fade-in slide-in-from-bottom-3 fill-mode-both ease-entrada duration-entrada delay-passo-2 text-4xl font-semibold tracking-[-0.03em] text-balance md:text-6xl">
             <span className="sr-only">Velo Funil, CRM para pequenos negócios. </span>
             Pare de perder venda por esquecimento.
           </h1>
-          <p className="text-muted-foreground animate-in fade-in slide-in-from-bottom-4 ease-entrada max-w-2xl text-lg text-balance duration-[800ms]">
+          <p className="text-muted-foreground animate-in fade-in slide-in-from-bottom-3 fill-mode-both ease-entrada duration-entrada delay-passo-3 max-w-2xl text-lg text-balance">
             Todo cliente que você esquece de responder é um cliente que você perde. O
             Velo Funil mostra, numa tela só, com quem você precisa falar hoje, sem
             post-it, sem aba de planilha escondida, sem depender da sua memória.
@@ -65,7 +77,7 @@ export function HeroSection() {
               separam sem que a mudança pareça ter relação. Escrito, é decisão;
               implícito, é acidente esperando. Acima de `sm` os botões voltam a
               ter a largura do próprio conteúdo, lado a lado. */}
-          <div className="animate-in fade-in slide-in-from-bottom-5 ease-entrada mt-2 flex w-full flex-col items-stretch gap-3 duration-[850ms] sm:w-auto sm:flex-row sm:items-center">
+          <div className="animate-in fade-in slide-in-from-bottom-3 fill-mode-both ease-entrada duration-entrada delay-passo-4 mt-2 flex w-full flex-col items-stretch gap-3 sm:w-auto sm:flex-row sm:items-center">
             <Link
               id="hero-cta"
               href="/cadastro"
@@ -84,13 +96,13 @@ export function HeroSection() {
               Ver como funciona
             </ScrollLink>
           </div>
-          <p className="text-muted-foreground animate-in fade-in slide-in-from-bottom-5 ease-entrada text-sm text-balance duration-[850ms]">
+          <p className="text-muted-foreground animate-in fade-in slide-in-from-bottom-3 fill-mode-both ease-entrada duration-entrada delay-passo-4 text-sm text-balance">
             Comece grátis e gerencie contatos ilimitados. Por apenas R$ 49/mês, toda a
             sua equipe trabalha em um só lugar.
           </p>
         </div>
 
-        <div className="animate-in fade-in slide-in-from-bottom-5 ease-entrada duration-[900ms]">
+        <div className="animate-in fade-in slide-in-from-bottom-3 fill-mode-both ease-entrada duration-entrada delay-passo-5">
           <PipelinePreviewCard />
         </div>
       </div>
