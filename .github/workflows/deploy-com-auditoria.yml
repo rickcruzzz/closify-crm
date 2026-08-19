@@ -75,7 +75,7 @@ jobs:
       - name: Criar Deployment de preview via API REST
         id: deploy
         run: |
-          url=$(curl -sf -X POST "https://api.vercel.com/v13/deployments?teamId=${{ secrets.VERCEL_ORG_ID }}" \
+          curl -sf -X POST "https://api.vercel.com/v13/deployments?teamId=${{ secrets.VERCEL_ORG_ID }}" \
             -H "Authorization: Bearer ${{ secrets.VERCEL_TOKEN }}" \
             -H "Content-Type: application/json" \
             -d '{
@@ -89,13 +89,7 @@ jobs:
               }
             }' > /tmp/deployment.json
           cat /tmp/deployment.json
-          node -e "
-            const r = require('/tmp/deployment.json');
-            if (r.error) { console.error(JSON.stringify(r.error)); process.exit(1); }
-            const fs = require('fs');
-            fs.appendFileSync(process.env.GITHUB_OUTPUT, 'preview_url=https://' + r.url + '\n');
-            fs.appendFileSync(process.env.GITHUB_OUTPUT, 'dpl_id=' + r.id + '\n');
-          "
+          node scripts/ci/publicar-saida-do-deploy.mjs /tmp/deployment.json "$GITHUB_OUTPUT"
 
       # A criação do deployment acima só ENFILEIRA o build; ele roda no lado
       # da Vercel, não aqui. Sem esperar, a auditoria bateria numa URL ainda
