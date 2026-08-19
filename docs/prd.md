@@ -67,6 +67,13 @@ Papéis como Admin e Membro para controlar acesso e edição.
 **Parte premium (paga via Asaas)**
 Plano Free com limites e plano Pro com uso ilimitado, ativado por assinatura recorrente no Asaas.
 
+Quem tenta usar um recurso Pro sem ser Pro vê mensagem diferente conforme o
+caso: nunca assinou vê "Faça upgrade para conectar"; já foi Pro e a
+assinatura venceu vê "Reative o plano". A distinção vem de
+`integration_connections` ter alguma linha (só existe se o workspace esteve
+Pro alguma vez), já que `subscriptions` guarda só o estado atual, sem
+histórico.
+
 **Integrações (API)**
 Integração com serviços externos via API, incluindo Asaas, Resend e futuras automações.
 
@@ -94,6 +101,14 @@ Página pública para apresentar o produto, gerar interesse e converter visitant
 
 **Onboarding do Usuário**
 Fluxo guiado para ajudar o usuário a criar workspace, cadastrar lead e começar a usar o sistema rápido.
+
+**Navegação (sidebar)**
+Menu lateral em seções: grupo principal sem título (Hoje, Pipeline, Leads,
+Dashboard, Calendário) e "CONFIGURAÇÕES" (Perfil, Equipe, Integrações,
+Preferências). Perfil já existia como rota, só não tinha entrada própria no
+menu, vivia escondido no menu do rodapé. "Preferências" é o antigo item
+"Configurações", renomeado pra descrever melhor a aba de dados da empresa,
+distinta de Perfil (dados da pessoa).
 
 **Gestão de Leads e Contatos**
 Cadastro completo de leads e contatos, com listagem, busca, filtros e página de detalhe com timeline.

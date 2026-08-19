@@ -155,6 +155,18 @@ classDiagram
         +timestamptz ocorrido_em PK
     }
 
+    class error_logs {
+        +uuid id PK
+        +text message
+        +text digest "nullable"
+        +text stack "nullable"
+        +text url "nullable"
+        +text origem
+        +uuid workspace_id "sem FK, nullable"
+        +uuid user_id "→ auth.users, sem FK, nullable"
+        +timestamptz created_at
+    }
+
     workspaces "1" --> "many" workspace_members : CASCADE
     workspaces "1" --> "many" leads : CASCADE
     workspaces "1" --> "many" deals : CASCADE
@@ -172,9 +184,12 @@ classDiagram
 ```
 
 *Tabelas soltas, sem FK para nenhuma outra do schema `public`:
-`asaas_webhook_events` (dedupe de webhook do Asaas) e `rate_limit_attempts`
-(controle de tentativas de login). Aparecem no diagrama, sem linha de
-relação — é o que o catálogo mostra, não omissão.*
+`asaas_webhook_events` (dedupe de webhook do Asaas), `rate_limit_attempts`
+(controle de tentativas de login) e `error_logs` (captura de erro dos
+boundaries do produto, migration 0046). Aparecem no diagrama, sem linha de
+relação — é o que o catálogo mostra, não omissão. `error_logs` também é
+zero-policy (RLS ligada, só `service_role` acessa), mesmo padrão de
+`asaas_webhook_events`.*
 
 ## Achado da inspeção: colunas que apontam para `auth.users` sem FK declarada
 
@@ -204,7 +219,7 @@ integridade referencial para essas colunas é garantida pela aplicação
 
 ## Resumo do catálogo
 
-11 tabelas no schema `public`, todas com Row Level Security ligada
+12 tabelas no schema `public`, todas com Row Level Security ligada
 (`rls_enabled: true` em `list_tables`, confirmado, não suposto). 12
 relações de foreign key entre tabelas do schema; a maioria com `ON DELETE
 CASCADE` a partir de `workspaces`, exceto `deals.lead_id` (`SET NULL` — um

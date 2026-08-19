@@ -1,4 +1,4 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1320" height="1620" viewBox="0 0 1320 1620" font-family="Inter, 'Segoe UI', -apple-system, sans-serif">
+<svg xmlns="http://www.w3.org/2000/svg" width="1320" height="1716" viewBox="0 0 1320 1716" font-family="Inter, 'Segoe UI', -apple-system, sans-serif">
 <defs>
   <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
     <path d="M0,0 L10,5 L0,10 z" fill="#4a5a6a" />
@@ -10,9 +10,9 @@
     <feDropShadow dx="0" dy="2" stdDeviation="4" flood-color="#000000" flood-opacity="0.35"/>
   </filter>
 </defs>
-<rect x="0" y="0" width="1320" height="1620" fill="#0b0f14" />
+<rect x="0" y="0" width="1320" height="1716" fill="#0b0f14" />
 <text x="40" y="64" font-size="22" font-weight="700" fill="#f0f4f8">Velo Funil — Diagrama de Classes (schema Postgres)</text>
-<text x="40" y="86" font-size="12.5" fill="#7a8794">Gerado por inspeção real do catálogo (information_schema / pg_catalog) — projeto Supabase sa-east-1, 11 tabelas, RLS ligada em todas</text>
+<text x="40" y="86" font-size="12.5" fill="#7a8794">Gerado por inspeção real do catálogo (information_schema / pg_catalog) — projeto Supabase sa-east-1, 12 tabelas, RLS ligada em todas</text>
 <rect x="1070" y="44" width="10" height="10" rx="2" fill="#1c3a4a" />
 <text x="1086" y="53" font-size="10.5" fill="#7a8794">Workspace / Conta</text>
 <rect x="1070" y="60" width="10" height="10" rx="2" fill="#1c3a2e" />
@@ -299,14 +299,40 @@
 <text x="1024" y="1344" font-size="11.5" fill="#c7d1db" font-family="'SF Mono', 'Cascadia Code', Consolas, monospace" font-style="normal">ocorrido_em</text>
 <text x="1024" y="1357" font-size="9" fill="#7a8794" font-family="'SF Mono', 'Cascadia Code', Consolas, monospace">: timestamptz</text>
 <text x="1268" y="1348" font-size="9" fill="#5fd0e8" font-weight="700" text-anchor="end" font-family="'SF Mono', 'Cascadia Code', Consolas, monospace">PK</text>
-<circle cx="44" cy="1570" r="4" fill="#5fd0e8" />
-<text x="54" y="1574" font-size="10.5" fill="#7a8794" font-family="'SF Mono', 'Cascadia Code', Consolas, monospace">PK — chave primária</text>
-<circle cx="199.89999999999998" cy="1570" r="4" fill="#7ee08a" />
-<text x="209.89999999999998" y="1574" font-size="10.5" fill="#7a8794" font-family="'SF Mono', 'Cascadia Code', Consolas, monospace">FK — chave estrangeira (dentro do schema public)</text>
-<circle cx="532.6999999999999" cy="1570" r="4" fill="#e8b95f" />
-<text x="542.6999999999999" y="1574" font-size="10.5" fill="#7a8794" font-family="'SF Mono', 'Cascadia Code', Consolas, monospace">FK→auth — referencia auth.users, sem FK declarada no catálogo</text>
-<line x1="40" y1="1594" x2="66" y2="1594" stroke="#4a5a6a" stroke-width="1.6" />
-<text x="74" y="1598" font-size="10.5" fill="#7a8794" font-family="'SF Mono', 'Cascadia Code', Consolas, monospace">ON DELETE CASCADE (padrão, 11 das 12 relações)</text>
-<line x1="394.59999999999997" y1="1594" x2="420.59999999999997" y2="1594" stroke="#e8b95f" stroke-width="1.6" stroke-dasharray="5,3" />
-<text x="428.59999999999997" y="1598" font-size="10.5" fill="#7a8794" font-family="'SF Mono', 'Cascadia Code', Consolas, monospace">ON DELETE SET NULL (só deals.lead_id)</text>
+<g filter="url(#cardShadow)">
+<rect x="364" y="1264" width="268" height="332" rx="8" fill="#141a22" stroke="#2a3441" stroke-width="1"/>
+<path d="M364,1290 v-18 q0,-8 8,-8 h252 q8,0 8,8 v18 z" fill="#2a2438"/>
+<line x1="364" y1="1298" x2="632" y2="1298" stroke="#2a3441" stroke-width="1"/>
+<text x="376" y="1286" font-size="13.5" font-weight="700" fill="#e8f4f9" font-family="'SF Mono', 'Cascadia Code', Consolas, monospace">error_logs</text>
+</g>
+<text x="376" y="1312" font-size="11.5" fill="#c7d1db" font-family="'SF Mono', 'Cascadia Code', Consolas, monospace" font-style="normal">id</text>
+<text x="376" y="1325" font-size="9" fill="#7a8794" font-family="'SF Mono', 'Cascadia Code', Consolas, monospace">: uuid</text>
+<text x="620" y="1316" font-size="9" fill="#5fd0e8" font-weight="700" text-anchor="end" font-family="'SF Mono', 'Cascadia Code', Consolas, monospace">PK</text>
+<text x="376" y="1344" font-size="11.5" fill="#c7d1db" font-family="'SF Mono', 'Cascadia Code', Consolas, monospace" font-style="normal">message</text>
+<text x="376" y="1357" font-size="9" fill="#7a8794" font-family="'SF Mono', 'Cascadia Code', Consolas, monospace">: text</text>
+<text x="376" y="1376" font-size="11.5" fill="#7a8794" font-family="'SF Mono', 'Cascadia Code', Consolas, monospace" font-style="italic">digest?</text>
+<text x="376" y="1389" font-size="9" fill="#7a8794" font-family="'SF Mono', 'Cascadia Code', Consolas, monospace">: text</text>
+<text x="376" y="1408" font-size="11.5" fill="#7a8794" font-family="'SF Mono', 'Cascadia Code', Consolas, monospace" font-style="italic">stack?</text>
+<text x="376" y="1421" font-size="9" fill="#7a8794" font-family="'SF Mono', 'Cascadia Code', Consolas, monospace">: text</text>
+<text x="376" y="1440" font-size="11.5" fill="#7a8794" font-family="'SF Mono', 'Cascadia Code', Consolas, monospace" font-style="italic">url?</text>
+<text x="376" y="1453" font-size="9" fill="#7a8794" font-family="'SF Mono', 'Cascadia Code', Consolas, monospace">: text</text>
+<text x="376" y="1472" font-size="11.5" fill="#c7d1db" font-family="'SF Mono', 'Cascadia Code', Consolas, monospace" font-style="normal">origem</text>
+<text x="376" y="1485" font-size="9" fill="#7a8794" font-family="'SF Mono', 'Cascadia Code', Consolas, monospace">: text</text>
+<text x="376" y="1504" font-size="11.5" fill="#7a8794" font-family="'SF Mono', 'Cascadia Code', Consolas, monospace" font-style="italic">workspace_id?</text>
+<text x="376" y="1517" font-size="9" fill="#7a8794" font-family="'SF Mono', 'Cascadia Code', Consolas, monospace">: uuid</text>
+<text x="376" y="1536" font-size="11.5" fill="#7a8794" font-family="'SF Mono', 'Cascadia Code', Consolas, monospace" font-style="italic">user_id?</text>
+<text x="376" y="1549" font-size="9" fill="#7a8794" font-family="'SF Mono', 'Cascadia Code', Consolas, monospace">: uuid</text>
+<text x="620" y="1540" font-size="9" fill="#e8b95f" font-weight="700" text-anchor="end" font-family="'SF Mono', 'Cascadia Code', Consolas, monospace">FK→auth</text>
+<text x="376" y="1568" font-size="11.5" fill="#c7d1db" font-family="'SF Mono', 'Cascadia Code', Consolas, monospace" font-style="normal">created_at</text>
+<text x="376" y="1581" font-size="9" fill="#7a8794" font-family="'SF Mono', 'Cascadia Code', Consolas, monospace">: timestamptz</text>
+<circle cx="44" cy="1666" r="4" fill="#5fd0e8" />
+<text x="54" y="1670" font-size="10.5" fill="#7a8794" font-family="'SF Mono', 'Cascadia Code', Consolas, monospace">PK — chave primária</text>
+<circle cx="199.89999999999998" cy="1666" r="4" fill="#7ee08a" />
+<text x="209.89999999999998" y="1670" font-size="10.5" fill="#7a8794" font-family="'SF Mono', 'Cascadia Code', Consolas, monospace">FK — chave estrangeira (dentro do schema public)</text>
+<circle cx="532.6999999999999" cy="1666" r="4" fill="#e8b95f" />
+<text x="542.6999999999999" y="1670" font-size="10.5" fill="#7a8794" font-family="'SF Mono', 'Cascadia Code', Consolas, monospace">FK→auth — referencia auth.users, sem FK declarada no catálogo</text>
+<line x1="40" y1="1690" x2="66" y2="1690" stroke="#4a5a6a" stroke-width="1.6" />
+<text x="74" y="1694" font-size="10.5" fill="#7a8794" font-family="'SF Mono', 'Cascadia Code', Consolas, monospace">ON DELETE CASCADE (padrão, 11 das 12 relações)</text>
+<line x1="394.59999999999997" y1="1690" x2="420.59999999999997" y2="1690" stroke="#e8b95f" stroke-width="1.6" stroke-dasharray="5,3" />
+<text x="428.59999999999997" y="1694" font-size="10.5" fill="#7a8794" font-family="'SF Mono', 'Cascadia Code', Consolas, monospace">ON DELETE SET NULL (só deals.lead_id)</text>
 </svg>
