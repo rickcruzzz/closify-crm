@@ -52,7 +52,20 @@ export async function createCheckout(values: unknown) {
   }
 
   let customerId = existingSubscription?.asaas_customer_id ?? null
-  let subscriptionId = existingSubscription?.asaas_subscription_id ?? null
+  // `subscriptionId` só é reaproveitado se a assinatura anterior ainda está
+  // viva no Asaas. Uma assinatura `canceled` (cancelSubscription já chamou
+  // DELETE nela) fica INACTIVE/deleted=true lá — reusar o id faz este
+  // fluxo pular a criação de assinatura nova (linha abaixo só cria quando
+  // `!subscriptionId`) e tentar buscar a fatura de uma assinatura morta,
+  // que não tem pagamento nenhum. `payments.data` vem vazio,
+  // `invoiceUrl` fica `undefined`, e a pessoa vê "assinatura criada, mas
+  // não foi possível gerar o link de pagamento" — mesmo que a assinatura
+  // NUNCA tenha sido recriada. Achado real: workspace "pedro eee" preso
+  // nesse estado, confirmado contra a API do Asaas.
+  let subscriptionId =
+    existingSubscription?.status === 'canceled'
+      ? null
+      : (existingSubscription?.asaas_subscription_id ?? null)
 
   // externalReference fica opaco pro Asaas (eles só devolvem de volta nos
   // webhooks), codifica workspace e usuário juntos aqui pra permitir
@@ -140,13 +153,20 @@ export async function createCheckout(values: unknown) {
   // via service role, mexe no status de cobrança), usa admin client aqui
   // de propósito, é a única escrita legítima fora do webhook porque só
   // grava customer_id/subscription_id, nunca o status de pagamento em si.
+  //
+  // `status` reusa o antigo só quando a assinatura antiga também foi
+  // reusada (não passou por `canceled` acima). Uma assinatura RECÉM-CRIADA
+  // no Asaas (subscriptionId != asaas_subscription_id anterior) começa
+  // sempre como 'trialing' — gravar 'canceled' aqui travaria o workspace no
+  // mesmo estado que motivou criar a assinatura de novo.
+  const subscriptionFoiRecriada = subscriptionId !== existingSubscription?.asaas_subscription_id
   const admin = createAdminClient()
   const { error: upsertError } = await admin.from('subscriptions').upsert(
     {
       workspace_id: workspaceId,
       asaas_customer_id: customerId,
       asaas_subscription_id: subscriptionId,
-      status: existingSubscription?.status ?? 'trialing',
+      status: subscriptionFoiRecriada ? 'trialing' : (existingSubscription?.status ?? 'trialing'),
     },
     { onConflict: 'workspace_id' },
   )

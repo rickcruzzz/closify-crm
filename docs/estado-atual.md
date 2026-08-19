@@ -4,7 +4,7 @@ Documento de continuidade. É lido no começo de toda sessão (referenciado no
 [CLAUDE.md](../CLAUDE.md)) para que uma conversa nova, ou outra conta, comece
 sabendo o que já foi feito, o que foi decidido e onde estão as armadilhas.
 
-**Atualizado em:** 18/08/2026 (Calendário, filtro de período com range picker, exportação de relatório em PDF, busca de lead, senha exige confirmação para trocar, captura real de erro em produção, sidebar em seções, mensagem de Pro correta por caso, auditoria completa com 8 correções)
+**Atualizado em:** 19/08/2026 (Calendário, filtro de período com range picker, exportação de relatório em PDF, busca de lead, senha exige confirmação para trocar, captura real de erro em produção, sidebar em seções, mensagem de Pro correta por caso, auditoria completa com 8 correções, checkout travado para quem já cancelou)
 
 > Mantenha este arquivo curto. O detalhe de _por que_ cada coisa é assim mora
 > nas mensagens de commit e nos comentários do código, que são a memória real
@@ -380,11 +380,29 @@ Sem essas variáveis, os cards de integração aparecem normalmente em
 - [ ] **Vercel Pro + Supabase Pro** no primeiro cliente pagante. Vercel por
       regra (Hobby proíbe uso comercial); Supabase por **backup**, o Free não
       faz nenhum, e perder dado de cliente pago é problema jurídico.
-- [ ] **Sujeira em aberto:** os workspaces `Henrique System` e `pedro eee`
-      estão `pro` com a assinatura já cancelada no Asaas. Cancelei por API e o
-      banco não acompanhou; o webhook registrou 5 `SUBSCRIPTION_DELETED` sem
-      aplicar. Causa não determinada, investigar antes de confiar no
-      cancelamento automático.
+- [x] **Sujeira em `pedro eee` virou bug real, corrigido em 19/08.** O
+      workspace tinha voltado para `free` desde então (o downgrade aplicou em
+      algum momento), mas `subscriptions` continuava com `status: 'canceled'`
+      apontando pro `asaas_subscription_id` morto (`deleted: true` no Asaas).
+      Reportado pelo dono: tentou assinar o Pro de novo e tomou "Assinatura
+      criada, mas não foi possível gerar o link de pagamento". Causa raiz:
+      `createCheckout` (`lib/asaas/actions.ts`) só decidia criar assinatura
+      nova checando `if (!subscriptionId)`, sem olhar se a assinatura
+      REUSADA ainda estava viva no Asaas. Com `subscriptionId` preenchido
+      (mesmo morto), pulava a criação, buscava fatura de uma assinatura sem
+      pagamento nenhum (`payments.data: []`), e devolvia o erro genérico —
+      ninguém com assinatura cancelada conseguia assinar de novo pela tela.
+      Corrigido: `subscriptionId` só é reaproveitado quando
+      `existingSubscription.status !== 'canceled'`; o `upsert` também para
+      de gravar o `status` antigo por cima de uma assinatura recém-criada
+      (senão gravaria `'canceled'` na assinatura nova). Provado ponta a
+      ponta com Playwright contra o Asaas real (workspace descartável,
+      reproduzindo o mesmo estado: assinatura criada e cancelada de
+      verdade, depois "Assinar Pro" pela UI): `asaas_subscription_id`
+      trocou pro novo, `status` gravou `trialing`, `?pago=1` na URL. Tudo
+      limpo no fim. Não determinada a causa original do webhook não ter
+      aplicado o cancelamento em `Henrique System`/`pedro eee` na época —
+      só a consequência no checkout foi corrigida.
 - [x] Rate limit de e-mail de 30 para 100/hora. Feito.
 - [x] Colar os templates `confirmacao-cadastro.html` e
       `recuperacao-de-senha.html` no painel. Feito e verificado com envio real:
