@@ -679,12 +679,16 @@ Nunca deixar dado de teste para trás.
 ## Ferramentas
 
 MCP do Supabase e Playwright vêm de plugins e ficam em `~/.claude.json`, que é
-da máquina, não do login. **O MCP do Supabase já apareceu apontando para o
-projeto errado** (`zjhgoaoctboxdtygdwjs`, vazio, de outra conta) enquanto o
-`.env.local` usa `unydqzzjokhjwcqufehr`. Confira o projeto antes de aplicar
-qualquer migration por ele. O MCP do Stripe pede autorização e **não é usado**
-(o projeto é Asaas). Quando o Playwright cai, o caminho é `curl` + análise do
-HTML, ou script Node contra a API.
+da máquina, não do login. **Já apareceu apontando para o projeto errado**
+(`zjhgoaoctboxdtygdwjs`, vazio, de outra conta) numa sessão antiga, quando o
+`.env.local` ainda usava `unydqzzjokhjwcqufehr`. **Confirmado certo em
+19/08/2026**, sessão no VS Code: `list_projects` devolve só
+`tmyeunithjqkbwvezyyn` (`velofunil-sao-paulo`, `sa-east-1`,
+`ACTIVE_HEALTHY`), o mesmo projeto do `.env.local` pós-cutover. Ainda assim,
+**confira o projeto antes de aplicar qualquer migration por ele** — já errou
+uma vez. O MCP do Stripe pede autorização e **não é usado** (o projeto é
+Asaas). Quando o Playwright cai, o caminho é `curl` + análise do HTML, ou
+script Node contra a API.
 
 **MCP do Supabase via conector do claude.ai (19/08), diferente do plugin
 acima.** O dono confirmou no painel (`claude.ai/settings/connectors`) que o
