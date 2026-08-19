@@ -10,6 +10,7 @@ import {
 } from 'lucide-react'
 
 import { cn } from '@/lib/utils'
+import { ProdutoPrint } from '@/components/landing/produto-print'
 import { Card, CardContent } from '@/components/ui/card'
 import { RevealOnScroll } from '@/components/landing/reveal-on-scroll'
 
@@ -188,6 +189,18 @@ export function FeaturesSection() {
             )
           })}
         </div>
+
+        {/* O "Painel de resultados" é a feature que mais depende de ver para
+            entender: a lista consegue dizer que existem gráficos, não como
+            eles se parecem nem que são simples de ler. Um print do painel real
+            responde a pergunta que a grade acima deixa aberta.
+
+            Fica DEPOIS da grade, e não no meio: interromper sete cards para
+            enfiar uma imagem quebraria a leitura em varredura, que é como
+            grade de features é lida. */}
+        <RevealOnScroll delay={520} className="mt-12">
+          <ProdutoPrint nome="dashboard" alt="painel de resultados · Acme Corp" />
+        </RevealOnScroll>
       </div>
     </section>
   )

@@ -353,19 +353,22 @@ trabalho documentado.
 
 ### O que falta desta frente
 
-- [ ] **Prints reais do produto na landing.** Planejado e não executado.
-      Recomendação: híbrido, não substituição — o mock HTML fica no hero
-      (é o LCP da página, imagem grande ali atrasa a métrica que mais importa
-      em tráfego pago), e prints reais entram abaixo da dobra, com
-      `loading="lazy"`. Roteiro: **nunca** printar produção com dado de
-      cliente (LGPD); criar workspace descartável via `service_role` com dados
-      de `lib/deals/mock-data.ts`, capturar com Playwright em
-      `deviceScaleFactor: 2` **nos dois temas** (a landing tem toggle, print de
-      um tema só quebra no outro), converter para AVIF/WebP, servir por
-      `next/image` com `width`/`height` explícitos, trocar tema por CSS
-      (`dark:hidden`) e não por JS. **Não existe pasta `public/`** no projeto,
-      precisa ser criada. Custo real: print desatualiza, então o roteiro de
-      recaptura precisa ficar registrado aqui.
+- [x] **Prints reais do produto na landing.** Feito. Híbrido, não
+      substituição: o mock em HTML continua no hero (é o LCP da página, imagem
+      grande ali atrasaria a métrica que mais importa em tráfego pago), e os
+      prints entram abaixo da dobra — Kanban em "Como funciona" (no lugar do
+      mock, que prometia "arraste até Fechado Ganho" sem mostrar a tela real) e
+      Dashboard no fim de "Funcionalidades". `public/produto/` tem 6 arquivos:
+      3 telas × 2 temas, 1440×900 capturado em `deviceScaleFactor: 2`. A troca
+      de tema é por CSS (`dark:hidden`), nunca por JS — decidir no cliente
+      causaria descasamento de hidratação.
+      **Para recapturar quando a UI mudar** (é a única desvantagem real de usar
+      print): `npm run build && npm run start -- -p 3970`, depois
+      `node --env-file=.env.local scripts/capturar-prints-do-produto.mjs`. O
+      script cria o cenário fictício, captura nos dois temas e **apaga tudo num
+      `finally`**, inclusive se falhar no meio. Nunca aponte para conta de
+      cliente: as telas mostram nome, empresa, telefone e valor de negócio, e
+      publicar isso é tratamento de dado pessoal sem base legal.
 - [ ] **`tests/e2e/funil-completo.spec.ts` não foi executado** (exige
       `.env.local` e roda contra o Asaas). O contrato de DOM foi conferido
       manualmente no navegador — `#name`, `#email`, `#password`,

@@ -1,7 +1,7 @@
 import { ArrowRight, FileSpreadsheet, LayoutGrid, TrendingUp } from 'lucide-react'
 
 import { RevealOnScroll } from '@/components/landing/reveal-on-scroll'
-import { KanbanPreview } from '@/components/landing/kanban-preview'
+import { ProdutoPrint } from '@/components/landing/produto-print'
 import { FREE_LEAD_LIMIT } from '@/lib/plans'
 
 /**
@@ -89,9 +89,16 @@ export function HowItWorksSection() {
 
         {/* A tela de verdade, logo abaixo dos passos. A landing vendia
             "pipeline visual Kanban" sem nunca mostrar um, quem nunca usou CRM
-            não tem como imaginar o formato a partir do texto. */}
+            não tem como imaginar o formato a partir do texto.
+
+            Passou a ser um PRINT do produto, no lugar do mock em HTML que
+            estava aqui: os três passos acima acabaram de prometer "cada
+            negócio vira um card, arraste até Fechado Ganho", e uma
+            representação desenhada à mão não fecha essa promessa do mesmo
+            jeito que a tela real. O mock continua no hero, onde o peso de uma
+            imagem disputaria com o LCP. */}
         <RevealOnScroll delay={400} className="mt-10">
-          <KanbanPreview />
+          <ProdutoPrint nome="kanban" alt="funil de vendas · Acme Corp" />
         </RevealOnScroll>
 
         <RevealOnScroll delay={490}>
