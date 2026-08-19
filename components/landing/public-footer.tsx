@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { MessageCircle } from 'lucide-react'
 
 import { Logo } from '@/components/branding/logo'
+import { SuporteEmailMenu } from '@/components/landing/suporte-email-menu'
 import { CONTROLADOR } from '@/lib/legal'
 
 // O rodapé repetia os links do menu do topo (Funcionalidades, Planos, Entrar,
@@ -75,12 +76,22 @@ export function PublicFooter() {
             {CONTROLADOR.whatsapp.exibicao}
           </a>{' '}
           ·{' '}
-          <a
-            href={`mailto:${CONTROLADOR.email}`}
-            className="hover:text-foreground -my-3.5 inline-block py-3.5 underline underline-offset-4 transition-colors"
-          >
-            {CONTROLADOR.email}
-          </a>
+          {/* Menu em vez de `mailto:` puro: o endereço é encaminhado (Cloudflare
+              Email Routing) para outra caixa, não uma conta própria, e um
+              `mailto:` abre o app de e-mail PADRÃO DO SISTEMA — em máquina com
+              Outlook desktop instalado, o clique tentava abrir ele e batia em
+              erro de cache de contato, sem relação com a configuração de DNS.
+              O menu deixa escolher onde abrir em vez de depender disso. */}
+          <SuporteEmailMenu
+            email={CONTROLADOR.email}
+            className="hover:text-foreground -my-3.5 inline-block cursor-pointer py-3.5 underline underline-offset-4 transition-colors"
+          />
+          {/* Sinaliza o redirecionamento sem expor a mecânica interna do
+              domínio — resposta ao relato de confusão de quem clicou esperando
+              abrir a própria caixa e caiu direto no Outlook. */}
+          <span className="text-muted-foreground/70 block text-[11px]">
+            (você escolhe onde abrir — encaminha para nossa caixa de suporte)
+          </span>
         </p>
       </div>
     </footer>
