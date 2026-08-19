@@ -152,8 +152,23 @@ export function PricingSection() {
                       <span className="text-muted-foreground text-sm">{plan.period}</span>
                     )}
                   </div>
+                  {/* Era `text-xs text-muted-foreground`: a informação
+                      comercialmente mais forte da página escrita no menor
+                      tamanho e na cor mais apagada dela. Preço por EMPRESA, e
+                      não por usuário, é o que separa este produto de todos os
+                      concorrentes mapeados na pesquisa (ver comentário do tipo
+                      `precoLegenda` acima) — quem tem três vendedores paga o
+                      mesmo que quem tem um, e isso muda a conta na cabeça de
+                      quem está decidindo.
+
+                      Ganhou a cor da marca e uma superfície própria. Continua
+                      afirmando o NOSSO modelo, sem citar concorrente: dizer o
+                      que os outros cobram seria afirmação sobre terceiro que
+                      não temos como provar na página. */}
                   {plan.precoLegenda && (
-                    <p className="text-muted-foreground text-xs">{plan.precoLegenda}</p>
+                    <p className="bg-primary/10 text-primary ring-primary/20 mt-1 w-fit rounded-md px-2 py-1 text-xs font-medium ring-1">
+                      {plan.precoLegenda}
+                    </p>
                   )}
                   <p className="text-muted-foreground text-sm">{plan.description}</p>
                 </CardHeader>

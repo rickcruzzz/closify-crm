@@ -8,14 +8,11 @@ import { ArrowRight, Check, Loader2, PartyPopper } from 'lucide-react'
 import { toast } from 'sonner'
 
 import { Button } from '@/components/ui/button'
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card'
+import { Card, CardContent } from '@/components/ui/card'
 import { PasswordField } from '@/components/auth/password-field'
+import { AuthCabecalho } from '@/components/auth/auth-cabecalho'
+import { AuthAlerta } from '@/components/auth/auth-alerta'
+import { passo4 } from '@/components/auth/animacao'
 import { definirSenhaInicial } from '@/lib/supabase/actions'
 import { pularOnboarding } from '@/lib/onboarding/actions'
 import {
@@ -86,38 +83,30 @@ export function BemVindoClient({
 
   return (
     <Card>
-      <CardHeader className="items-center text-center">
-        <div className="bg-primary text-primary-foreground mb-2 flex size-10 items-center justify-center rounded-lg">
-          <PartyPopper className="size-5" />
-        </div>
-        <CardTitle className="text-xl">
-          {retomando
+      <AuthCabecalho
+        variante="cartao"
+        icone={<PartyPopper className="size-5" />}
+        titulo={
+          retomando
             ? 'Vamos continuar de onde você parou'
             : primeiroNome
               ? `Bem-vindo ao Velo Funil, ${primeiroNome}!`
-              : 'Bem-vindo ao Velo Funil!'}
-        </CardTitle>
-        <CardDescription>
-          {retomando ? (
+              : 'Bem-vindo ao Velo Funil!'
+        }
+        descricao={
+          retomando ? (
             <>Sua configuração ficou pela metade. Retomamos no ponto exato.</>
           ) : (
             <>
               Sua conta foi criada com <span className="text-foreground">{email}</span>.
               Vamos preparar seu ambiente de vendas, leva cerca de 2 minutos.
             </>
-          )}
-        </CardDescription>
-      </CardHeader>
+          )
+        }
+      />
 
-      <CardContent className="flex flex-col gap-4">
-        {formError && (
-          <p
-            role="alert"
-            className="bg-destructive/10 text-destructive rounded-md px-3 py-2 text-sm"
-          >
-            {formError}
-          </p>
-        )}
+      <CardContent className={`${passo4} flex flex-col gap-4`}>
+        {formError && <AuthAlerta>{formError}</AuthAlerta>}
 
         {podeDefinirSenha && !mostrandoSenha && (
           <div className="bg-muted/40 flex flex-col gap-3 rounded-lg p-4">

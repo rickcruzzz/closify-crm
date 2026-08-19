@@ -22,8 +22,13 @@ const geistMono = localFont({
 })
 
 const APP_NAME = 'Velo Funil'
+// Alimenta `og:description` e `twitter:description` de TODAS as páginas menos a
+// home (que tem os seus próprios). Ficou parada no vocabulário anterior ao
+// docs/prd-copy-sem-jargao.md — "pipeline", "Kanban" e "PMEs" são jargão para
+// quem tem agência, clínica ou imobiliária pequena, e a segunda frase era a
+// headline que o PRD substituiu.
 const APP_DESCRIPTION =
-  'CRM com pipeline de vendas em Kanban para PMEs de serviço no Brasil. Simples como planilha, premium como software líder.'
+  'CRM para pequenos negócios organizarem clientes e vendas num quadro visual, sem planilha. Plano gratuito para começar.'
 
 export const metadata: Metadata = {
   // metadataBase resolve URLs relativas de OG/Twitter para absolutas, sem

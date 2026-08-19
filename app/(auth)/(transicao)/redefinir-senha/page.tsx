@@ -17,6 +17,10 @@ import {
   CardTitle,
 } from '@/components/ui/card'
 import { PasswordField } from '@/components/auth/password-field'
+import { AuthCabecalho } from '@/components/auth/auth-cabecalho'
+import { AuthAlerta } from '@/components/auth/auth-alerta'
+import { AuthCarregando } from '@/components/auth/auth-carregando'
+import { passo4 } from '@/components/auth/animacao'
 import { createClient } from '@/lib/supabase/client'
 import { resetPasswordSchema, type ResetPasswordValues } from '@/lib/validations/auth'
 import { limparTentativasDeLogin } from '@/lib/supabase/actions'
@@ -61,15 +65,7 @@ function mensagemDoErro(codigo: string | undefined, mensagem: string): string {
 
 export default function RedefinirSenhaPage() {
   return (
-    <Suspense
-      fallback={
-        <Card>
-          <CardContent className="flex min-h-40 items-center justify-center">
-            <Loader2 aria-label="Verificando o link" className="size-5 animate-spin" />
-          </CardContent>
-        </Card>
-      }
-    >
+    <Suspense fallback={<AuthCarregando rotulo="Verificando o link…" />}>
       <RedefinirSenhaPageInner />
     </Suspense>
   )
@@ -278,13 +274,7 @@ function RedefinirSenhaPageInner() {
   }, [estadoDoLink])
 
   if (estadoDoLink === 'verificando') {
-    return (
-      <Card>
-        <CardContent className="flex min-h-40 items-center justify-center">
-          <Loader2 aria-label="Verificando o link" className="size-5 animate-spin" />
-        </CardContent>
-      </Card>
-    )
+    return <AuthCarregando rotulo="Verificando o link…" />
   }
 
   if (estadoDoLink === 'sucesso') {
@@ -321,17 +311,14 @@ function RedefinirSenhaPageInner() {
   if (estadoDoLink === 'invalido') {
     return (
       <Card>
-        <CardHeader className="items-center text-center">
-          <div className="bg-destructive/10 text-destructive mb-2 flex size-10 items-center justify-center rounded-lg">
-            <MailWarning className="size-5" />
-          </div>
-          <CardTitle className="text-xl">Link expirado</CardTitle>
-          <CardDescription>
-            Este link de redefinição já foi usado ou passou da validade. Peça um novo,
-            ele vale por uma hora e só funciona uma vez.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="flex flex-col gap-3">
+        <AuthCabecalho
+          variante="cartao"
+          tom="erro"
+          icone={<MailWarning className="size-5" />}
+          titulo="Link expirado"
+          descricao="Este link de redefinição já foi usado ou passou da validade. Peça um novo, ele vale por uma hora e só funciona uma vez."
+        />
+        <CardContent className={`${passo4} flex flex-col gap-3`}>
           <Button className="w-full" render={<Link href="/esqueci-senha" />}>
             Pedir novo link
           </Button>
@@ -345,19 +332,13 @@ function RedefinirSenhaPageInner() {
 
   return (
     <Card>
-      <CardHeader>
-        <CardTitle className="text-xl">Redefinir senha</CardTitle>
-        <CardDescription>Escolha uma nova senha para sua conta.</CardDescription>
-      </CardHeader>
+      <AuthCabecalho
+        variante="cartao"
+        titulo="Redefinir senha"
+        descricao="Escolha uma nova senha para sua conta."
+      />
       <CardContent className="flex flex-col gap-4">
-        {formError && (
-          <p
-            role="alert"
-            className="bg-destructive/10 text-destructive rounded-md px-3 py-2 text-sm"
-          >
-            {formError}
-          </p>
-        )}
+        {formError && <AuthAlerta>{formError}</AuthAlerta>}
 
         <form
           onSubmit={handleSubmit(onSubmit)}

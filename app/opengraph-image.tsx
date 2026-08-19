@@ -1,7 +1,15 @@
 import { ImageResponse } from 'next/og'
 
 export const runtime = 'edge'
-export const alt = 'Velo Funil: pipeline de vendas em Kanban para PMEs'
+// Esta imagem é o que aparece no WhatsApp, no Instagram e no Facebook antes de
+// qualquer clique — para tráfego pago, é literalmente a primeira coisa que o
+// lead vê do produto. Estava parada na headline e no vocabulário ANTERIORES ao
+// docs/prd-copy-sem-jargao.md: "Simples como planilha, premium como software
+// líder" é a linha listada como "antes" naquele documento, e "pipeline",
+// "Kanban" e "PMEs" são três dos termos que ele proíbe por serem jargão para
+// quem tem agência, clínica ou imobiliária pequena. O texto abaixo passou a
+// ser o mesmo do hero.
+export const alt = 'Velo Funil: CRM para pequenos negócios pararem de perder venda por esquecimento'
 export const size = { width: 1200, height: 630 }
 export const contentType = 'image/png'
 
@@ -63,11 +71,11 @@ export default function OpengraphImage() {
           maxWidth: 900,
         }}
       >
-        Simples como planilha, premium como software líder.
+        Pare de perder venda por esquecimento.
       </div>
 
       <div style={{ marginTop: 28, fontSize: 30, color: '#a1a1a1', maxWidth: 860 }}>
-        Pipeline de vendas em Kanban para PMEs de serviço no Brasil.
+        O CRM que mostra, numa tela só, com quem você precisa falar hoje.
       </div>
     </div>,
     size,

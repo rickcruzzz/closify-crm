@@ -7,13 +7,10 @@ import Link from 'next/link'
 import { CheckCircle2, Loader2, MailWarning } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card'
+import { Card, CardContent } from '@/components/ui/card'
+import { AuthCabecalho } from '@/components/auth/auth-cabecalho'
+import { AuthCarregando } from '@/components/auth/auth-carregando'
+import { passo4 } from '@/components/auth/animacao'
 import { createClient } from '@/lib/supabase/client'
 import { destinoDoConvite } from '@/lib/supabase/actions'
 
@@ -40,15 +37,7 @@ type Estado = 'aguardando' | 'confirmando' | 'confirmado' | 'erro'
  */
 export default function ConfirmarPage() {
   return (
-    <Suspense
-      fallback={
-        <Card>
-          <CardContent className="flex min-h-40 items-center justify-center">
-            <Loader2 aria-label="Carregando" className="size-5 animate-spin" />
-          </CardContent>
-        </Card>
-      }
-    >
+    <Suspense fallback={<AuthCarregando rotulo="Carregando…" />}>
       <ConfirmarPageInner />
     </Suspense>
   )
@@ -156,53 +145,29 @@ function ConfirmarPageInner() {
     setEstado('confirmado')
   }
 
-  if (estado === 'erro') {
-    return (
-      <Card>
-        <CardHeader className="items-center text-center">
-          <div className="bg-destructive/10 text-destructive mb-2 flex size-10 items-center justify-center rounded-lg">
-            <MailWarning className="size-5" />
-          </div>
-          <CardTitle className="text-xl">Link inválido ou expirado</CardTitle>
-          <CardDescription>
-            Este link de confirmação já foi usado ou passou da validade. Entre com seu
-            e-mail e senha, se a conta já estiver confirmada, o acesso funciona
-            normalmente.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Button className="w-full" render={<Link href="/login" />}>
-            Ir para o login
-          </Button>
-        </CardContent>
-      </Card>
-    )
-  }
+  // A ORDEM DESTAS CHECAGENS NÃO PODE INVERTER.
+  //
+  // O fluxo antigo (`#access_token=` no fragmento) chega em `confirmando` e
+  // `confirmado` SEM `tokenHash` — a verificação já aconteceu do lado do
+  // Supabase antes do redirect. Se a checagem de `!tokenHash` subisse para
+  // antes destas duas, todo e-mail no formato antigo cairia direto em "link
+  // inválido", sem erro nenhum no console, no meio de um cadastro que
+  // funcionou.
 
   if (estado === 'confirmando') {
-    return (
-      <Card>
-        <CardContent className="flex min-h-40 flex-col items-center justify-center gap-3">
-          <Loader2 aria-hidden className="size-5 animate-spin" />
-          <p className="text-muted-foreground text-sm">Confirmando sua conta...</p>
-        </CardContent>
-      </Card>
-    )
+    return <AuthCarregando rotulo="Confirmando sua conta…" />
   }
 
   if (estado === 'confirmado') {
     return (
       <Card>
-        <CardHeader className="items-center text-center">
-          <div className="mb-2 flex size-10 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
-            <CheckCircle2 className="size-5" />
-          </div>
-          <CardTitle className="text-xl">E-mail verificado</CardTitle>
-          <CardDescription>
-            Sua conta no Velo Funil está ativa. É só entrar e começar.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
+        <AuthCabecalho
+          variante="cartao"
+          icone={<CheckCircle2 className="size-5" />}
+          titulo="E-mail verificado"
+          descricao="Sua conta no Velo Funil está ativa. É só entrar e começar."
+        />
+        <CardContent className={passo4}>
           <Button
             className="w-full"
             disabled={indoParaDestino}
@@ -216,42 +181,39 @@ function ConfirmarPageInner() {
     )
   }
 
-  if (tokenHash) {
+  // Link consumido/expirado, OU URL incompleta (digitada à mão, cortada por
+  // algum cliente de e-mail). Os dois casos eram blocos JSX idênticos copiados
+  // em lugares diferentes do arquivo — mesma tela, mesma saída, duas cópias
+  // para manter em dia.
+  if (estado === 'erro' || !tokenHash) {
     return (
       <Card>
-        <CardHeader>
-          <CardTitle className="text-xl">Confirme seu e-mail</CardTitle>
-          <CardDescription>
-            Falta só clicar abaixo para ativar sua conta no Velo Funil.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Button className="w-full" onClick={confirmar}>
-            Confirmar meu e-mail
+        <AuthCabecalho
+          variante="cartao"
+          tom="erro"
+          icone={<MailWarning className="size-5" />}
+          titulo="Link inválido ou expirado"
+          descricao="Este link de confirmação já foi usado ou passou da validade. Entre com seu e-mail e senha, se a conta já estiver confirmada, o acesso funciona normalmente."
+        />
+        <CardContent className={passo4}>
+          <Button className="w-full" render={<Link href="/login" />}>
+            Ir para o login
           </Button>
         </CardContent>
       </Card>
     )
   }
 
-  // Nem fragmento nem query: URL incompleta (digitada à mão, ou link cortado
-  // por algum cliente de e-mail).
   return (
     <Card>
-      <CardHeader className="items-center text-center">
-        <div className="bg-destructive/10 text-destructive mb-2 flex size-10 items-center justify-center rounded-lg">
-          <MailWarning className="size-5" />
-        </div>
-        <CardTitle className="text-xl">Link inválido ou expirado</CardTitle>
-        <CardDescription>
-          Este link de confirmação já foi usado ou passou da validade. Entre com seu
-          e-mail e senha, se a conta já estiver confirmada, o acesso funciona
-          normalmente.
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
-        <Button className="w-full" render={<Link href="/login" />}>
-          Ir para o login
+      <AuthCabecalho
+        variante="cartao"
+        titulo="Confirme seu e-mail"
+        descricao="Falta só clicar abaixo para ativar sua conta no Velo Funil."
+      />
+      <CardContent className={passo4}>
+        <Button className="w-full" onClick={confirmar}>
+          Confirmar meu e-mail
         </Button>
       </CardContent>
     </Card>

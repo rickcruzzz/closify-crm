@@ -162,18 +162,21 @@ export function FeaturesSection() {
                       ultimo && 'sm:flex-row sm:items-center sm:justify-center sm:gap-4',
                     )}
                   >
-                    <div className="flex items-center gap-3">
-                      <div
-                        className={cn(
-                          'flex size-10 shrink-0 items-center justify-center rounded-lg',
-                          feature.accent.bg,
-                        )}
-                      >
-                        <feature.icon className={cn('size-5', feature.accent.text)} />
-                      </div>
-                      <span className="text-muted-foreground font-mono text-xs tracking-wide">
-                        {String(i + 1).padStart(2, '0')}
-                      </span>
+                    {/* Sem o `01`–`07` que ficava ao lado do ícone.
+                        Numeração é um device estrutural: comunica que a ORDEM
+                        carrega informação. Em "Como funciona" isso é verdade
+                        (traga a planilha → arraste → veja o dinheiro é uma
+                        sequência real, e lá os números ficam). Aqui não: são
+                        sete recursos independentes, e numerar sugere um passo
+                        a passo que não existe — além de dividir a atenção com
+                        o ícone, que é o que de fato identifica cada um. */}
+                    <div
+                      className={cn(
+                        'flex size-10 shrink-0 items-center justify-center rounded-lg',
+                        feature.accent.bg,
+                      )}
+                    >
+                      <feature.icon className={cn('size-5', feature.accent.text)} />
                     </div>
                     <div className={cn(ultimo && 'sm:flex sm:max-w-md sm:flex-col sm:gap-1')}>
                       <h3 className="text-base font-semibold">{feature.title}</h3>
