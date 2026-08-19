@@ -272,7 +272,7 @@ export function ImportLeadsDialog({
                 preencher. Sem isso, encontrar uma tela cheia de campos depois
                 de subir o arquivo parece que o trabalho só começou. */}
             {passo === 'arquivo' &&
-              'Arquivo do Excel (.xlsx) ou .csv. As colunas são reconhecidas sozinhas, você só confere. Cada contato vira um lead e um negócio no Kanban.'}
+              'Arquivo do Excel (.xlsx) ou .csv. As colunas são reconhecidas sozinhas, você só confere. Cada linha vira um contato e um negócio no funil.'}
             {passo === 'colunas' &&
               `${nomeDoArquivo} · ${matriz.length - 1} linha(s). Confira antes de importar.`}
             {passo === 'resultado' && 'O que entrou e o que precisa da sua atenção.'}
@@ -640,8 +640,8 @@ export function ImportLeadsDialog({
               {resultado.importados === 0
                 ? `${resultado.atualizados} contato(s) atualizados.`
                 : resultado.importados === 1
-                  ? '1 lead importado, com o negócio criado no Kanban.'
-                  : `${resultado.importados} leads importados, com os negócios criados no Kanban.`}
+                  ? '1 contato importado, com o negócio criado no funil.'
+                  : `${resultado.importados} contatos importados, com os negócios criados no funil.`}
             </p>
 
             {(resultado.duplicados > 0 ||

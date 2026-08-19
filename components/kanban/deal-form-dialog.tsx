@@ -112,7 +112,7 @@ export function DealFormDialog({
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>Novo negócio</DialogTitle>
-          <DialogDescription>Cadastre um novo negócio no seu pipeline.</DialogDescription>
+          <DialogDescription>Cadastre um novo negócio no seu funil.</DialogDescription>
         </DialogHeader>
 
         <form

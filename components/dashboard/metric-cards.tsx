@@ -44,7 +44,7 @@ const cards: MetricCardConfig[] = [
     format: (metrics) => metrics.openDeals.toString(),
   },
   {
-    label: 'Valor do Pipeline',
+    label: 'Valor no funil',
     icon: DollarSign,
     accent: {
       text: 'text-emerald-500 dark:text-emerald-400',
@@ -53,7 +53,7 @@ const cards: MetricCardConfig[] = [
     format: (metrics) => formatCompactBRL(metrics.pipelineValue),
   },
   {
-    label: 'Taxa de Conversão',
+    label: 'Viraram venda',
     icon: Target,
     accent: {
       text: 'text-amber-500 dark:text-amber-400',
@@ -65,7 +65,7 @@ const cards: MetricCardConfig[] = [
     // Fechado Perdido lado a lado, que é o dado por trás do percentual.
     // Reaproveita em vez de construir uma tela nova só pra isso.
     href: '/kanban',
-    hrefLabel: 'Ver no pipeline',
+    hrefLabel: 'Ver no funil',
   },
 ]
 
@@ -80,13 +80,13 @@ export function MetricCards({ metrics }: { metrics: DashboardMetrics }) {
         <CardContent>
           <EmptyState
             icon={Target}
-            title="Seu pipeline está pronto"
-            description="Cadastre o primeiro lead para começar a acompanhar suas oportunidades. As métricas aparecem aqui assim que houver movimento."
+            title="Seu funil está pronto"
+            description="Cadastre o primeiro contato para começar a acompanhar suas oportunidades. Os números aparecem aqui assim que houver movimento."
           >
-            <Button render={<Link href="/leads">Adicionar primeiro lead</Link>} />
+            <Button render={<Link href="/leads">Adicionar primeiro contato</Link>} />
             <Button
               variant="outline"
-              render={<Link href="/kanban">Ver o pipeline</Link>}
+              render={<Link href="/kanban">Ver o funil</Link>}
             />
           </EmptyState>
         </CardContent>

@@ -77,11 +77,11 @@ export function UpcomingDealsTable({ deals }: { deals: UpcomingDeal[] }) {
           <EmptyState
             icon={CalendarClock}
             title="Nenhum negócio em aberto"
-            description="Assim que você criar negócios no pipeline, os prazos mais próximos aparecem aqui."
+            description="Assim que você criar negócios no funil, os prazos mais próximos aparecem aqui."
           >
             <Button
               variant="outline"
-              render={<Link href="/kanban">Ir para o pipeline</Link>}
+              render={<Link href="/kanban">Ir para o funil</Link>}
             />
           </EmptyState>
         ) : (

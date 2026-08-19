@@ -219,7 +219,7 @@ export function ActivityActions({
           <DialogHeader>
             <DialogTitle>Excluir esta atividade?</DialogTitle>
             <DialogDescription>
-              O registro sai da timeline do lead em definitivo.
+              O registro sai do histórico do contato em definitivo.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="sm:justify-between">

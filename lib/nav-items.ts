@@ -6,6 +6,7 @@ import {
   Plug,
   Settings,
   User,
+  UserCog,
   Users,
 } from 'lucide-react'
 
@@ -37,9 +38,18 @@ export const navGroups: NavGroup[] = [
       // dia. O Pipeline continua sendo a identidade do produto e fica logo
       // abaixo.
       { title: 'Hoje', href: '/hoje', icon: CalendarCheck },
-      { title: 'Pipeline', href: '/kanban', icon: KanbanSquare },
-      { title: 'Leads', href: '/leads', icon: Users },
-      { title: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
+      // "Funil", não "Pipeline". A rota segue `/kanban` de propósito: renomear
+      // quebraria link salvo e favorito para trocar uma palavra que ninguém
+      // digita. O que a pessoa lê muda; o endereço não.
+      { title: 'Funil', href: '/kanban', icon: KanbanSquare },
+      // "Contatos", não "Leads". O PRD de copy adiou esta troca temendo
+      // prometer "contatos" na landing e a pessoa encontrar "Leads" depois de
+      // pagar — mas a landing JÁ diz contatos, então renomear aqui fecha essa
+      // distância em vez de criá-la.
+      { title: 'Contatos', href: '/leads', icon: Users },
+      // "Resultados", não "Dashboard": descreve o que a tela entrega (quanto
+      // entrou, quanto está em aberto) em vez de nomear o tipo de tela.
+      { title: 'Resultados', href: '/dashboard', icon: LayoutDashboard },
       // Monitoramento por data (o que tenho hoje, atrasado, previsto), não
       // conexão técnica com o Google — isso já vive em Integrações. Item
       // principal, não escondido: é onde a pessoa responde "o que vem por
@@ -54,7 +64,10 @@ export const navGroups: NavGroup[] = [
       // escondido no menu do rodapé (user-menu.tsx). Dados da PESSOA, não
       // da empresa, por isso separado de "Preferências" abaixo.
       { title: 'Perfil', href: '/perfil', icon: User },
-      { title: 'Equipe', href: '/settings?aba=equipe', icon: Users, aba: 'equipe' },
+      // `UserCog`, não `Users`: o mesmo ícone servia "Contatos" e "Equipe" ao
+      // mesmo tempo, e ícone repetido em menu curto anula a própria função do
+      // ícone, que é dar um segundo caminho de reconhecimento além do texto.
+      { title: 'Equipe', href: '/settings?aba=equipe', icon: UserCog, aba: 'equipe' },
       // Aponta pra mesma página de Preferências, só que já na aba certa,
       // evita duplicar a tela de integrações num lugar novo.
       { title: 'Integrações', href: '/settings?aba=integracoes', icon: Plug, aba: 'integracoes' },

@@ -14,7 +14,7 @@ const FREE_FEATURES = [
   `${FREE_WORKSPACE_LIMIT} empresa`,
   `Até ${FREE_MEMBER_LIMIT} colaboradores`,
   `Até ${FREE_LEAD_LIMIT} leads`,
-  'Pipeline Kanban',
+  'Funil visual, arrasta e solta',
   'Dashboard de métricas',
   'Convites por e-mail',
 ]
@@ -29,7 +29,7 @@ const PRO_FEATURES = [
   // limite", estes dois são coisa que o Free não faz de jeito nenhum.
   'Agenda ligada ao Google Calendar',
   'E-mail pelo Gmail, registrado no cliente',
-  'Pipeline Kanban',
+  'Funil visual, arrasta e solta',
   'Dashboard de métricas',
   'Convites por e-mail',
   'Suporte prioritário',

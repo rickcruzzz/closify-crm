@@ -187,7 +187,7 @@ export function HojeClient({
                 title="Coloque um cliente no funil"
                 description="Um negócio no funil é o que dá o que fazer: dele sai a próxima ação que aparece nesta tela."
               >
-                <Button onClick={() => router.push('/kanban')}>Abrir o Pipeline</Button>
+                <Button onClick={() => router.push('/kanban')}>Abrir o funil</Button>
               </EmptyState>
             ) : (
               <EmptyState
@@ -196,11 +196,11 @@ export function HojeClient({
                 description={
                   escopo === 'equipe'
                     ? 'Nenhum negócio da equipe tem próxima ação marcada. Sem isso, é fácil um cliente ficar sem resposta.'
-                    : 'Nenhum negócio seu tem próxima ação marcada. Abra o Pipeline e agende o próximo passo de quem está parado.'
+                    : 'Nenhum negócio seu tem próxima ação marcada. Abra o funil e agende o próximo passo de quem está parado.'
                 }
               >
                 <Button variant="outline" onClick={() => router.push('/kanban')}>
-                  Ir para o Pipeline
+                  Ir para o funil
                 </Button>
               </EmptyState>
             )}

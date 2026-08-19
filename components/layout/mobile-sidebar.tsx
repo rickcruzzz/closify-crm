@@ -13,10 +13,12 @@ export function MobileSidebar({
   workspaces,
   activeWorkspaceId,
   currentUser,
+  tarefasDoDia,
 }: {
   workspaces: WorkspaceSummary[]
   activeWorkspaceId: string
   currentUser: CurrentUser
+  tarefasDoDia: number
 }) {
   const [open, setOpen] = React.useState(false)
 
@@ -35,6 +37,7 @@ export function MobileSidebar({
           workspaces={workspaces}
           activeWorkspaceId={activeWorkspaceId}
           currentUser={currentUser}
+          tarefasDoDia={tarefasDoDia}
           onNavigate={() => setOpen(false)}
         />
       </SheetContent>

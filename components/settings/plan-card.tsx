@@ -102,7 +102,7 @@ export function PlanCard({
                 <SubscribeButton className="w-full sm:w-fit" abrirDeInicio={assinarDeInicio} />
               ) : (
                 <p className="text-muted-foreground text-sm">
-                  Peça a um administrador do workspace para fazer o upgrade.
+                  Peça a um administrador da empresa para fazer o upgrade.
                 </p>
               )}
 

@@ -171,7 +171,7 @@ export function SubscriptionCard({
           <DialogHeader>
             <DialogTitle>Cancelar assinatura?</DialogTitle>
             <DialogDescription>
-              A cobrança recorrente para imediatamente e o workspace volta para o plano
+              A cobrança recorrente para imediatamente e a empresa volta para o plano
               Free. Seus dados continuam salvos, mas os limites do Free voltam a valer.
             </DialogDescription>
           </DialogHeader>

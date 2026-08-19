@@ -120,7 +120,7 @@ export function LeadFormDialog({
           <DialogDescription>
             {isEditing
               ? 'Atualize as informações do lead.'
-              : 'Cadastre um novo lead no seu pipeline.'}
+              : 'Cadastre um novo contato no seu funil.'}
           </DialogDescription>
         </DialogHeader>
 

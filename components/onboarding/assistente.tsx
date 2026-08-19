@@ -409,7 +409,7 @@ function PassoDeEscolha({
 function Processando() {
   const passos = [
     'Configurando sua empresa',
-    'Preparando seu pipeline',
+    'Preparando seu funil',
     'Personalizando seu ambiente',
   ]
 

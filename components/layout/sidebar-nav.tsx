@@ -6,7 +6,14 @@ import { usePathname, useSearchParams } from 'next/navigation'
 import { cn } from '@/lib/utils'
 import { navGroups } from '@/lib/nav-items'
 
-export function SidebarNav({ onNavigate }: { onNavigate?: () => void }) {
+export function SidebarNav({
+  onNavigate,
+  tarefasDoDia,
+}: {
+  onNavigate?: () => void
+  /** Quantas tarefas minhas vencem hoje ou já venceram — o badge do "Hoje". */
+  tarefasDoDia: number
+}) {
   const pathname = usePathname()
   const searchParams = useSearchParams()
   const abaAtual = searchParams.get('aba')
@@ -65,7 +72,29 @@ export function SidebarNav({ onNavigate }: { onNavigate?: () => void }) {
                 )}
               >
                 <Icon aria-hidden className="size-4 shrink-0" />
-                {item.title}
+                <span className="flex-1 truncate">{item.title}</span>
+
+                {/* O único badge do menu, e só quando há o que cobrar. Um
+                    contador que mostra "0" vira ruído permanente: a pessoa
+                    aprende a ignorar o lugar onde o número aparece, e aí ele
+                    não funciona no dia em que houver algo.
+
+                    `aria-label` completo porque "3" sozinho, lido em
+                    sequência com "Hoje", sai como "Hoje 3" — que soa como
+                    parte do nome do item, não como uma pendência. */}
+                {item.href === '/hoje' && tarefasDoDia > 0 && (
+                  <span
+                    aria-label={`${tarefasDoDia} ${tarefasDoDia === 1 ? 'tarefa' : 'tarefas'} para hoje`}
+                    className={cn(
+                      'flex min-w-5 shrink-0 items-center justify-center rounded-full px-1.5 text-xs font-semibold tabular-nums',
+                      active
+                        ? 'bg-primary-foreground/20 text-primary-foreground'
+                        : 'bg-primary/15 text-primary',
+                    )}
+                  >
+                    {tarefasDoDia > 99 ? '99+' : tarefasDoDia}
+                  </span>
+                )}
               </Link>
             )
           })}

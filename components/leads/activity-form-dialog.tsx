@@ -83,7 +83,7 @@ export function ActivityFormDialog({
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>Registrar atividade</DialogTitle>
-          <DialogDescription>Adicione um evento à timeline deste lead.</DialogDescription>
+          <DialogDescription>Adicione um evento ao histórico deste contato.</DialogDescription>
         </DialogHeader>
 
         <form

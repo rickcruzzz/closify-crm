@@ -12,7 +12,7 @@ import { WeekView } from '@/components/calendario/week-view'
 import { AgendaView } from '@/components/calendario/agenda-view'
 import { TaskFormDialog, type TarefaEmEdicao } from '@/components/tasks/task-form-dialog'
 import { agruparTarefasPorDia } from '@/lib/calendario/agrupar-por-dia'
-import { rotuloDoMes } from '@/lib/calendario/grade-do-mes'
+import { rotuloDaSemana, rotuloDoMes } from '@/lib/calendario/grade-do-mes'
 import { diasDaSemana } from '@/lib/calendario/semana'
 import { diaEmSaoPaulo } from '@/lib/tasks/buckets'
 import { atualizarTarefa, buscarTarefasNoIntervalo, concluirTarefa } from '@/lib/tasks/actions'
@@ -239,7 +239,7 @@ export function CalendarioClient({
             <ChevronLeft aria-hidden className="size-4" />
           </Button>
           <span className="text-sm font-medium">
-            {modo === 'mes' ? rotuloDoMes(ano, mes) : `Semana de ${diaAncoraSemana}`}
+            {modo === 'mes' ? rotuloDoMes(ano, mes) : rotuloDaSemana(diaAncoraSemana)}
             {buscandoSemana && <span className="text-muted-foreground"> · carregando…</span>}
           </span>
           <Button

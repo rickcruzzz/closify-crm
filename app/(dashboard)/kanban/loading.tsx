@@ -5,7 +5,7 @@ export default function KanbanLoading() {
   return (
     <div>
       <PageHeader
-        title="Pipeline"
+        title="Funil"
         description="Acompanhe seus negócios em cada etapa do funil."
       />
       <div className="flex gap-4 overflow-x-auto pb-4">

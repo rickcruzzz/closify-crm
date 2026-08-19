@@ -60,7 +60,7 @@ export function FunnelChart({ data }: { data: FunnelStageCount[] }) {
             <EmptyState
               icon={Filter}
               title="Funil ainda vazio"
-              description="Crie negócios no pipeline para visualizar a distribuição por etapa."
+              description="Crie negócios no funil para ver quantos estão em cada etapa."
             >
               <Button
                 variant="outline"

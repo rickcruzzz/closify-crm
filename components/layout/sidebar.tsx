@@ -6,10 +6,12 @@ export function Sidebar({
   workspaces,
   activeWorkspaceId,
   currentUser,
+  tarefasDoDia,
 }: {
   workspaces: WorkspaceSummary[]
   activeWorkspaceId: string
   currentUser: CurrentUser
+  tarefasDoDia: number
 }) {
   return (
     <aside className="bg-sidebar border-sidebar-border hidden w-64 shrink-0 border-r md:block">
@@ -17,6 +19,7 @@ export function Sidebar({
         workspaces={workspaces}
         activeWorkspaceId={activeWorkspaceId}
         currentUser={currentUser}
+        tarefasDoDia={tarefasDoDia}
       />
     </aside>
   )

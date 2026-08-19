@@ -85,7 +85,7 @@ export function ProfileClient({
         <CardHeader>
           <CardTitle>Dados pessoais</CardTitle>
           <CardDescription>
-            Seu nome aparece para os colaboradores do workspace e nas atividades que
+            Seu nome aparece para os colaboradores da empresa e nas atividades que
             você registra.
           </CardDescription>
         </CardHeader>

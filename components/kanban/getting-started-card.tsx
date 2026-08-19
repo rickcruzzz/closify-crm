@@ -53,7 +53,7 @@ export function GettingStartedCard() {
       <CardHeader>
         <CardTitle>Primeiros passos</CardTitle>
         <CardDescription>
-          Seu workspace está pronto. Três passos para sair da planilha.
+          Sua empresa está pronta. Três passos para sair da planilha.
         </CardDescription>
       </CardHeader>
       <CardContent>

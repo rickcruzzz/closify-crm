@@ -106,7 +106,7 @@ export function WorkspaceSwitcher({
       </DropdownMenuTrigger>
       <DropdownMenuContent align="start" className="w-64">
         <DropdownMenuGroup>
-          <DropdownMenuLabel>Workspaces</DropdownMenuLabel>
+          <DropdownMenuLabel>Suas empresas</DropdownMenuLabel>
         </DropdownMenuGroup>
         <DropdownMenuSeparator />
         {workspaces.map((workspace) => (

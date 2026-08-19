@@ -6,6 +6,7 @@ import { Topbar } from '@/components/layout/topbar'
 import { TooltipProvider } from '@/components/ui/tooltip'
 import { getCurrentUserAndWorkspace } from '@/lib/supabase/workspace'
 import { lerEstadoDoOnboarding, precisaDeBoasVindas } from '@/lib/onboarding/estado'
+import { contarTarefasDoDiaDoUsuario } from '@/lib/tasks/queries'
 
 // Tudo aqui dentro é área logada: nada deve ser indexado. As páginas filhas
 // só sobrescrevem o title; este robots vale para todas.
@@ -18,9 +19,20 @@ export default async function DashboardLayout({
 }: {
   children: React.ReactNode
 }) {
-  const [{ user, workspaceId, workspaces }, estadoOnboarding] = await Promise.all([
+  // As três na MESMA onda, apesar de a contagem precisar do `workspaceId`.
+  // `contarTarefasDoDiaDoUsuario` chama `getCurrentUserAndWorkspace()` por
+  // dentro, e ela é `cache()` do React: a segunda chamada devolve a MESMA
+  // promise da primeira, sem nova ida ao Supabase Auth. Então o custo total é
+  // `max(onboarding, auth + contagem)` e não a soma dos três em fila.
+  //
+  // Fazer `await` do bloco acima e só então contar acrescentaria uma ida de
+  // rede a TODA navegação — precisamente o defeito que já custou caro aqui e
+  // está registrado em `docs/estado-atual.md` (196ms por consulta, vezes 8-10
+  // por navegação). Um badge não vale isso.
+  const [{ user, workspaceId, workspaces }, estadoOnboarding, tarefasDoDia] = await Promise.all([
     getCurrentUserAndWorkspace(),
     lerEstadoDoOnboarding(),
+    contarTarefasDoDiaDoUsuario(),
   ])
 
   if (workspaces.length === 0) {
@@ -59,7 +71,12 @@ export default async function DashboardLayout({
           principal, o sidebar nunca mais estica além da tela: fica fixo sem
           precisar de `position: sticky`. */}
       <div className="flex h-dvh overflow-hidden">
-        <Sidebar workspaces={workspaces} activeWorkspaceId={workspaceId} currentUser={currentUser} />
+        <Sidebar
+          workspaces={workspaces}
+          activeWorkspaceId={workspaceId}
+          currentUser={currentUser}
+          tarefasDoDia={tarefasDoDia}
+        />
         {/* `overflow-x-hidden` explícito ao lado do `overflow-y-auto`: pela
             própria especificação CSS, `overflow-y` diferente de `visible`
             faz o navegador tratar `overflow-x` como `auto` mesmo sem pedir,
@@ -67,7 +84,12 @@ export default async function DashboardLayout({
             que passasse da borda. Deixar explícito também documenta a
             decisão em vez de depender do cálculo automático do navegador. */}
         <div className="flex min-w-0 flex-1 flex-col overflow-x-hidden overflow-y-auto">
-          <Topbar workspaces={workspaces} activeWorkspaceId={workspaceId} currentUser={currentUser} />
+          <Topbar
+            workspaces={workspaces}
+            activeWorkspaceId={workspaceId}
+            currentUser={currentUser}
+            tarefasDoDia={tarefasDoDia}
+          />
           <main id="conteudo" className="flex-1 p-4 md:p-6">
           {/* Largura máxima no conteúdo, não no `main`: o `main` continua
               ocupando a tela para o fundo não cortar, e o miolo centraliza.

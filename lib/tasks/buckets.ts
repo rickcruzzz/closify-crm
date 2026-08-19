@@ -34,6 +34,21 @@ export function diaEmSaoPaulo(instante: Date): string {
 }
 
 /**
+ * O último instante do dia corrente em São Paulo, em ISO com offset.
+ *
+ * Serve a quem pergunta "o que vence até o fim de hoje?" — o badge da barra
+ * lateral e as consultas de intervalo do calendário, que já montavam esta
+ * string à mão.
+ *
+ * `-03:00` fixo, e não um cálculo de offset: o Brasil aboliu o horário de
+ * verão em 2019, então Brasília não muda mais de offset. Se um dia voltar,
+ * este é o ponto único a corrigir, em vez de várias strings espalhadas.
+ */
+export function fimDoDiaEmSaoPaulo(instante: Date): string {
+  return `${diaEmSaoPaulo(instante)}T23:59:59-03:00`
+}
+
+/**
  * Distância em dias de calendário entre dois `YYYY-MM-DD`.
  *
  * Reancorado em `Date.UTC` de propósito: subtrair dois instantes reais daria

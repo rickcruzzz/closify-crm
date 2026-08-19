@@ -42,7 +42,7 @@ const PASSOS: Passo[] = [
     icone: LayoutDashboard,
     titulo: 'Seu centro de vendas',
     texto:
-      'O Dashboard reúne as métricas do seu funil: quantos leads, quanto há em negociação e a taxa de conversão.',
+      'Resultados reúne os números do seu funil: quantos contatos, quanto há em negociação e quantos viraram venda.',
   },
   {
     icone: Users,
@@ -54,7 +54,7 @@ const PASSOS: Passo[] = [
     icone: KanbanSquare,
     titulo: 'Acompanhe suas oportunidades',
     texto:
-      'O Pipeline mostra cada negócio na etapa em que está. Arraste o card para mover conforme a conversa avança.',
+      'O funil mostra cada negócio na etapa em que está. Arraste o card para mover conforme a conversa avança.',
   },
   {
     icone: CalendarCheck,

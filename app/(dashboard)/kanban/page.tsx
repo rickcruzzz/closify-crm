@@ -8,7 +8,7 @@ import { PageHeader } from '@/components/layout/page-header'
 import { KanbanBoard } from '@/components/kanban/kanban-board'
 import { GettingStartedCard } from '@/components/kanban/getting-started-card'
 
-export const metadata: Metadata = { title: 'Pipeline' }
+export const metadata: Metadata = { title: 'Funil' }
 
 export default async function KanbanPage() {
   const { user, workspaceId } = await getCurrentUserAndWorkspace()
@@ -35,7 +35,7 @@ export default async function KanbanPage() {
     // horizontal e espremê-lo esconderia colunas atrás da rolagem.
     <div className="-mx-4 max-w-none px-4 md:-mx-6 md:px-6">
       <PageHeader
-        title="Pipeline"
+        title="Funil"
         description="Acompanhe seus negócios em cada etapa do funil."
       />
 

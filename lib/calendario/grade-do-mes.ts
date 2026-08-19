@@ -71,6 +71,35 @@ export function rotuloDoDiaPorExtenso(diaYyyyMmDd: string): string {
   return texto.charAt(0).toUpperCase() + texto.slice(1)
 }
 
+const FORMATADOR_DIA_E_MES = new Intl.DateTimeFormat('pt-BR', {
+  day: 'numeric',
+  month: 'long',
+  timeZone: 'UTC',
+})
+
+/**
+ * "17 a 23 de agosto" — cabeçalho do modo Semana.
+ *
+ * O cabeçalho mostrava a data crua (`Semana de 2026-08-17`): formato de banco
+ * de dados vazando para a tela, no mesmo lugar onde o modo Mês já dizia
+ * "Agosto de 2026" em português. Quem lê "2026-08-17" precisa traduzir.
+ *
+ * O mês aparece uma vez só quando a semana não cruza a virada ("17 a 23 de
+ * agosto"), e duas quando cruza ("31 de agosto a 6 de setembro") — repetir o
+ * mês sempre produziria "17 de agosto a 23 de agosto", que ninguém fala.
+ */
+export function rotuloDaSemana(primeiroDiaYyyyMmDd: string): string {
+  const [ano, mes, dia] = primeiroDiaYyyyMmDd.split('-').map(Number) as [number, number, number]
+  const inicio = new Date(Date.UTC(ano, mes - 1, dia))
+  const fim = new Date(Date.UTC(ano, mes - 1, dia + 6))
+
+  if (inicio.getUTCMonth() === fim.getUTCMonth()) {
+    return `${inicio.getUTCDate()} a ${FORMATADOR_DIA_E_MES.format(fim)}`
+  }
+
+  return `${FORMATADOR_DIA_E_MES.format(inicio)} a ${FORMATADOR_DIA_E_MES.format(fim)}`
+}
+
 /** Um dia está dentro do intervalo [inicio, fim], inclusive nas duas pontas. */
 export function diaEstaNoIntervalo(
   dia: string,

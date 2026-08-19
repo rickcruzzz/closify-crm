@@ -68,7 +68,7 @@ export function AcceptInviteCard({
       <CardHeader>
         <CardTitle className="text-xl">Convite para {workspaceName}</CardTitle>
         <CardDescription>
-          Você foi convidado para colaborar no workspace <strong>{workspaceName}</strong> no
+          Você foi convidado para colaborar na empresa <strong>{workspaceName}</strong> no
           Velo Funil, com o e-mail {inviteEmail}.
         </CardDescription>
       </CardHeader>

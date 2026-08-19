@@ -1,4 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
+import { getCurrentUserAndWorkspace } from '@/lib/supabase/workspace'
+import { fimDoDiaEmSaoPaulo } from '@/lib/tasks/buckets'
 import type { ProximaAcaoRow, TaskRow } from '@/lib/tasks/types'
 
 /**
@@ -101,6 +103,61 @@ export async function getTasksAbertas(
   }
 
   return enriquecer(workspaceId, data ?? [])
+}
+
+/**
+ * Quantas tarefas MINHAS já venceram ou vencem hoje — o número do menu.
+ *
+ * Existe para a sidebar dizer, sem a pessoa abrir nada, se há trabalho
+ * esperando. Um menu que nunca muda é um menu que ninguém relê; este número é
+ * o que traz alguém de volta ao "Hoje" no meio do dia.
+ *
+ * `count: 'exact', head: true` traz só o número, sem linha nenhuma — isto roda
+ * no layout, ou seja, em TODA navegação, e trazer as linhas aqui pagaria o
+ * custo de `getTasksAbertas` de novo em cada tela só para exibir um badge. É o
+ * mesmo padrão de agregação no banco que `getUsoDasIntegracoes` e a contagem
+ * de membros já usam.
+ *
+ * Só as próprias, nunca as da equipe: o badge cobra ação de quem está olhando,
+ * e um número que inclui tarefa de outra pessoa cobra o que não é seu.
+ *
+ * O corte é o fim do dia em São Paulo, e não `new Date()`, porque a pergunta
+ * do badge é "tenho algo hoje?", não "tenho algo neste minuto?" — às 9h uma
+ * tarefa marcada para as 17h ainda conta, e é justamente ela que a pessoa
+ * precisa lembrar.
+ */
+export async function contarTarefasDoDiaDoUsuario(): Promise<number> {
+  // Resolve a sessão por dentro em vez de receber ids por parâmetro, para
+  // poder entrar no MESMO `Promise.all` do layout que já busca a sessão:
+  // `getCurrentUserAndWorkspace` é `cache()`, então esta chamada devolve a
+  // promise que a outra já criou, sem segunda ida ao Supabase Auth.
+  const { user, workspaceId } = await getCurrentUserAndWorkspace()
+  return contarTarefasDoDia(workspaceId, user.id)
+}
+
+export async function contarTarefasDoDia(
+  workspaceId: string,
+  assigneeId: string,
+): Promise<number> {
+  const supabase = await createClient()
+
+  const { count, error } = await supabase
+    .from('tasks')
+    .select('id', { count: 'exact', head: true })
+    .eq('workspace_id', workspaceId)
+    .eq('assignee_id', assigneeId)
+    .is('done_at', null)
+    .lte('due_at', fimDoDiaEmSaoPaulo(new Date()))
+
+  // Badge é informação secundária: se a contagem falhar, o menu continua
+  // funcionando sem ele. Derrubar a navegação inteira por causa de um número
+  // seria pior do que não mostrar o número.
+  if (error) {
+    console.error('contarTarefasDoDia falhou', error)
+    return 0
+  }
+
+  return count ?? 0
 }
 
 /**

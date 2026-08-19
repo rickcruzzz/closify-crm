@@ -368,7 +368,7 @@ export function LeadDetailClient({
 
           <Card>
             <CardHeader className="flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <CardTitle>Timeline de atividades</CardTitle>
+              <CardTitle>Histórico de atividades</CardTitle>
               <Button
                 variant="outline"
                 size="sm"

@@ -176,11 +176,11 @@ export function MembersCard({
         {isAlone ? (
           <EmptyState
             icon={UserPlus}
-            title="Você está sozinho neste workspace"
+            title="Você está sozinho nesta empresa"
             description={
               isAdmin
-                ? 'Convide seu time para dividir o pipeline e acompanhar os leads em conjunto.'
-                : 'Um admin pode convidar mais pessoas para este workspace.'
+                ? 'Convide seu time para dividir o funil e acompanhar os contatos em conjunto.'
+                : 'Um admin pode convidar mais pessoas para esta empresa.'
             }
           >
             {isAdmin && (

@@ -4,6 +4,7 @@ import {
   diaEstaNoIntervalo,
   gradeDoMes,
   rotuloDoDiaPorExtenso,
+  rotuloDaSemana,
   rotuloDoMes,
 } from './grade-do-mes'
 
@@ -60,6 +61,25 @@ describe('rotuloDoMes', () => {
 describe('rotuloDoDiaPorExtenso', () => {
   it('formata dia da semana, dia e mês por extenso, capitalizado', () => {
     expect(rotuloDoDiaPorExtenso('2026-08-18')).toBe('Terça-feira, 18 de agosto')
+  })
+})
+
+describe('rotuloDaSemana', () => {
+  it('mostra o mês uma vez só quando a semana não vira o mês', () => {
+    // O cabeçalho exibia a data crua do banco ("Semana de 2026-08-17") na
+    // mesma barra onde o modo Mês já dizia "Agosto de 2026" em português.
+    expect(rotuloDaSemana('2026-08-17')).toBe('17 a 23 de agosto')
+  })
+
+  it('mostra os dois meses quando a semana atravessa a virada', () => {
+    // Repetir o mês sempre produziria "17 de agosto a 23 de agosto", que
+    // ninguém fala; omiti-lo sempre produziria "31 a 6 de setembro", que
+    // está errado. A virada é o caso que separa as duas regras.
+    expect(rotuloDaSemana('2026-08-31')).toBe('31 de agosto a 6 de setembro')
+  })
+
+  it('atravessa a virada do ano sem quebrar', () => {
+    expect(rotuloDaSemana('2026-12-28')).toBe('28 de dezembro a 3 de janeiro')
   })
 })
 
