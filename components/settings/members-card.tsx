@@ -8,6 +8,7 @@ import { Loader2, MoreHorizontal, Plus, UserPlus } from 'lucide-react'
 
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { ConfirmarExclusao } from '@/components/comum/confirmar-exclusao'
 import {
   Card,
   CardContent,
@@ -119,6 +120,14 @@ export function MembersCard({
     else toast.success('Papel atualizado.')
   }
 
+  // Um estado só para as duas confirmações: são mutuamente exclusivas (não dá
+  // para remover alguém e cancelar um convite ao mesmo tempo), e dois booleanos
+  // separados permitiriam o estado impossível de ambos abertos.
+  const [confirmando, setConfirmando] = React.useState<
+    { tipo: 'remover'; id: string; nome: string } | { tipo: 'convite'; id: string; email: string } | null
+  >(null)
+  const [executando, setExecutando] = React.useState(false)
+
   async function handleRemove(userId: string) {
     const result = await removeMember(userId)
     if (result?.error) toast.error(result.error)
@@ -129,6 +138,18 @@ export function MembersCard({
     const result = await revokeInvite(inviteId)
     if (result?.error) toast.error(result.error)
     else toast.success('Convite cancelado.')
+  }
+
+  async function confirmar() {
+    if (!confirmando) return
+    setExecutando(true)
+    try {
+      if (confirmando.tipo === 'remover') await handleRemove(confirmando.id)
+      else await handleRevoke(confirmando.id)
+      setConfirmando(null)
+    } finally {
+      setExecutando(false)
+    }
   }
 
   return (
@@ -215,7 +236,13 @@ export function MembersCard({
                             </DropdownMenuItem>
                             <DropdownMenuItem
                               variant="destructive"
-                              onClick={() => handleRemove(member.user_id)}
+                              onClick={() =>
+                                setConfirmando({
+                                  tipo: 'remover',
+                                  id: member.user_id,
+                                  nome: member.name,
+                                })
+                              }
                             >
                               Remover
                             </DropdownMenuItem>
@@ -239,7 +266,9 @@ export function MembersCard({
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={() => handleRevoke(invite.id)}
+                        onClick={() =>
+                          setConfirmando({ tipo: 'convite', id: invite.id, email: invite.email })
+                        }
                       >
                         Cancelar
                       </Button>
@@ -251,6 +280,35 @@ export function MembersCard({
           </Table>
         )}
       </CardContent>
+
+      {/* Remover colaborador e cancelar convite apagavam com um clique no
+          menu, enquanto excluir lead, negócio e atividade já confirmavam.
+          Remover é o mais grave dos três: a pessoa perde o acesso na hora e,
+          se o plano estiver no limite de vagas, readmiti-la pode nem ser
+          possível sem upgrade. */}
+      <ConfirmarExclusao
+        open={confirmando !== null}
+        onOpenChange={(aberto) => !aberto && setConfirmando(null)}
+        titulo={
+          confirmando?.tipo === 'convite' ? 'Cancelar este convite?' : 'Remover este colaborador?'
+        }
+        descricao={
+          confirmando?.tipo === 'convite' ? (
+            <>
+              O link enviado para <strong>{confirmando.email}</strong> para de funcionar. Você pode
+              convidar de novo depois.
+            </>
+          ) : (
+            <>
+              <strong>{confirmando?.nome}</strong> perde o acesso a esta empresa imediatamente. Os
+              leads, negócios e atividades registrados por essa pessoa continuam aqui.
+            </>
+          )
+        }
+        rotuloDaAcao={confirmando?.tipo === 'convite' ? 'Cancelar convite' : 'Remover'}
+        pendente={executando}
+        onConfirmar={confirmar}
+      />
 
       <Dialog open={inviteOpen} onOpenChange={setInviteOpen}>
         <DialogContent className="sm:max-w-md">

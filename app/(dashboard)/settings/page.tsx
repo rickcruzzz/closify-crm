@@ -14,6 +14,8 @@ import { getCurrentUserAndWorkspace } from '@/lib/supabase/workspace'
 import { createClient } from '@/lib/supabase/server'
 import { getWorkspaceSettingsData } from '@/lib/workspace/queries'
 import { getIntegrationConnections, getUsoDasIntegracoes } from '@/lib/integrations/queries'
+import type { IntegrationConnectionRow } from '@/lib/integrations/queries'
+import type { IntegrationProvider } from '@/types/supabase'
 
 export const metadata: Metadata = { title: 'Configurações' }
 
@@ -78,15 +80,35 @@ export default async function SettingsPage({
     await supabase.rpc('sincronizar_plano_do_workspace', { target_workspace_id: workspaceId })
   }
 
-  const { workspace, members, invites } = await getWorkspaceSettingsData(workspaceId)
+  // UMA onda para tudo que não depende de nada. Antes eram três em série:
+  // `getWorkspaceSettingsData` sozinho, depois as integrações, e por último
+  // `urlDaLogo` — este último chamado DENTRO do JSX, ou seja, a página já
+  // tinha montado e ainda esperava mais uma ida ao servidor. Somado ao RPC da
+  // aba Plano, dava até cinco viagens encadeadas na rota mais lenta do
+  // produto, que é justamente a que foi reclamada como "demora pra carregar".
+  //
+  // As duas consultas condicionais continuam condicionais: quem abre a aba
+  // Empresa não paga pelas integrações, e vice-versa. O que mudou é que,
+  // quando são necessárias, saem juntas em vez de uma esperar a outra.
+  const [{ workspace, members, invites }, [integrationConnections, usoDasIntegracoes]] =
+    await Promise.all([
+      getWorkspaceSettingsData(workspaceId),
+      aba === 'integracoes'
+        ? Promise.all([getIntegrationConnections(workspaceId), getUsoDasIntegracoes(workspaceId)])
+        : Promise.resolve<[IntegrationConnectionRow[], Record<IntegrationProvider, number>]>([
+            [],
+            { google_calendar: 0, gmail: 0 },
+          ]),
+    ])
 
   const currentMember = members.find((m) => m.user_id === user.id)
   const isAdmin = currentMember?.role === 'admin'
 
-  const [integrationConnections, usoDasIntegracoes] =
-    aba === 'integracoes'
-      ? await Promise.all([getIntegrationConnections(workspaceId), getUsoDasIntegracoes(workspaceId)])
-      : [[], { google_calendar: 0, gmail: 0 }]
+  // `urlDaLogo` depende do `workspace` acima, então não cabe no `Promise.all`
+  // — mas cabe AQUI, antes do `return`, e não no meio do JSX. A diferença é
+  // real: dentro do JSX o React já começou a renderizar a árvore e para no
+  // meio dela; aqui a espera acontece uma vez, antes de qualquer marcação.
+  const logoUrl = aba === 'empresa' ? await urlDaLogo(workspace?.logo_url ?? null) : null
 
   const descricao: Record<AbaDeConfiguracoes, string> = {
     empresa: 'Dados da sua empresa, usados no sistema e nas comunicações.',
@@ -139,7 +161,7 @@ export default async function SettingsPage({
             bairro: workspace?.bairro ?? '',
             cidade: workspace?.cidade ?? '',
             estado: workspace?.estado ?? '',
-            logoUrl: await urlDaLogo(workspace?.logo_url ?? null),
+            logoUrl,
           }}
         />
       )}

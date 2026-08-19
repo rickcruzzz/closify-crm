@@ -13,6 +13,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { Button } from '@/components/ui/button'
+import { ConfirmarExclusao } from '@/components/comum/confirmar-exclusao'
 import { rotuloDePrazo } from '@/lib/tasks/buckets'
 import { iconePorTipo, taskTypeLabels, type TaskRow } from '@/lib/tasks/types'
 
@@ -44,6 +45,11 @@ export function TaskItem({
 }) {
   const Icone = iconePorTipo[task.type]
   const concluida = Boolean(task.done_at)
+  // O diálogo vive AQUI, e não em cada tela que lista tarefas, porque quem
+  // pode apagar é este item. Nos dois consumidores atuais (`/hoje` e o painel
+  // do lead) o pai só recebe a confirmação já dada, e qualquer tela nova que
+  // renderize `TaskItem` nasce protegida sem precisar lembrar disso.
+  const [confirmandoExclusao, setConfirmandoExclusao] = React.useState(false)
 
   return (
     <li className="hover:bg-accent/40 flex items-center gap-3 rounded-lg px-2 py-2 transition-colors">
@@ -113,13 +119,32 @@ export function TaskItem({
               <DropdownMenuItem
                 variant="destructive"
                 disabled={pendente}
-                onClick={() => onExcluir(task.id)}
+                onClick={() => setConfirmandoExclusao(true)}
               >
                 Excluir
               </DropdownMenuItem>
             )}
           </DropdownMenuContent>
         </DropdownMenu>
+      )}
+
+      {onExcluir && (
+        <ConfirmarExclusao
+          open={confirmandoExclusao}
+          onOpenChange={setConfirmandoExclusao}
+          titulo="Excluir esta tarefa?"
+          descricao={
+            <>
+              &quot;{task.title}&quot; sai da sua lista em definitivo. Se o objetivo é
+              marcar como feita, use a caixa de seleção — assim ela fica no histórico.
+            </>
+          }
+          pendente={pendente}
+          onConfirmar={() => {
+            setConfirmandoExclusao(false)
+            onExcluir(task.id)
+          }}
+        />
       )}
     </li>
   )

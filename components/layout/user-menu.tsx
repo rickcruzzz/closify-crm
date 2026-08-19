@@ -1,6 +1,6 @@
 'use client'
 
-import { useTransition } from 'react'
+import * as React from 'react'
 import Link from 'next/link'
 import { ChevronsUpDown, LogOut, Settings, User, Users } from 'lucide-react'
 
@@ -14,7 +14,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { signOut } from '@/lib/supabase/actions'
+import { LogoutDialog } from '@/components/layout/logout-dialog'
 
 export type CurrentUser = {
   name: string
@@ -38,7 +38,7 @@ export function UserMenu({
   currentUser: CurrentUser
   variant?: 'compact' | 'expanded'
 }) {
-  const [, startTransition] = useTransition()
+  const [confirmandoSaida, setConfirmandoSaida] = React.useState(false)
 
   // Sem nome de exibição cadastrado, `currentUser.name` cai pro e-mail
   // (app/(dashboard)/layout.tsx), nome e e-mail viram a MESMA string, e
@@ -125,19 +125,20 @@ export function UserMenu({
           </DropdownMenuItem>
         </DropdownMenuGroup>
         <DropdownMenuSeparator />
+        {/* Abre a confirmação em vez de sair na hora. O menu fecha sozinho no
+            clique, e o `AlertDialog` é irmão dele na árvore (não filho), senão
+            desmontaria junto com o menu antes de aparecer. */}
         <DropdownMenuItem
           variant="destructive"
           className="gap-2"
-          onClick={() => {
-            startTransition(async () => {
-              await signOut()
-            })
-          }}
+          onClick={() => setConfirmandoSaida(true)}
         >
           <LogOut className="size-4" />
           Sair
         </DropdownMenuItem>
       </DropdownMenuContent>
+
+      <LogoutDialog open={confirmandoSaida} onOpenChange={setConfirmandoSaida} />
     </DropdownMenu>
   )
 }

@@ -20,6 +20,7 @@ import { TaskItem } from '@/components/tasks/task-item'
 import { TaskFormDialog, type TarefaEmEdicao } from '@/components/tasks/task-form-dialog'
 import { createActivity, deleteLead, updateLead } from '@/lib/leads/actions'
 import { criarTarefa, concluirTarefa, excluirTarefa, atualizarTarefa } from '@/lib/tasks/actions'
+import { avisarTarefaConcluida } from '@/lib/tasks/avisar-concluida'
 import { enviarEmailViaGmail } from '@/lib/integrations/workflow-actions'
 import { linkDoWhatsApp } from '@/lib/leads/whatsapp'
 import type { TaskRow } from '@/lib/tasks/types'
@@ -170,10 +171,17 @@ export function LeadDetailClient({
       toast.error(resultado.error)
       return
     }
-    // Sem update otimista aqui: concluir grava uma atividade na timeline logo
-    // ao lado, e as duas listas precisam mudar juntas. Deixar a tarefa sumir
-    // antes da atividade aparecer mostraria um estado que nunca existiu.
-    toast.success('Tarefa concluída.')
+    // Sem update otimista aqui, e isto CONTINUA de propósito: concluir grava
+    // uma atividade no histórico logo ao lado, e as duas listas precisam mudar
+    // juntas. Deixar a tarefa sumir antes da atividade aparecer mostraria um
+    // estado que nunca existiu. É a única das três telas de tarefa que espera
+    // o servidor, e a razão é esta — não é descuido.
+    //
+    // O "Desfazer", esse sim, faltava aqui e nas outras: o gesto é o mesmo
+    // checkbox pequeno das demais telas, e errar era irreversível pela
+    // interface. `desmarcarPendente` no desfazer destrava o checkbox, que o
+    // sucesso deixa travado de propósito (ver comentário abaixo).
+    avisarTarefaConcluida(taskId, () => desmarcarPendente(taskId))
     // Sem router.refresh(): concluirTarefa já revalida '/leads/${lead.id}'
     // sempre que a tarefa concluída pertence a este lead, o caso de toda
     // tarefa listada aqui.

@@ -16,6 +16,7 @@ import { rotuloDoMes } from '@/lib/calendario/grade-do-mes'
 import { diasDaSemana } from '@/lib/calendario/semana'
 import { diaEmSaoPaulo } from '@/lib/tasks/buckets'
 import { atualizarTarefa, buscarTarefasNoIntervalo, concluirTarefa } from '@/lib/tasks/actions'
+import { avisarTarefaConcluida } from '@/lib/tasks/avisar-concluida'
 import type { TaskRow } from '@/lib/tasks/types'
 import type { WorkspaceMember } from '@/lib/leads/queries'
 import type { TaskFormValues } from '@/lib/validations/task'
@@ -144,9 +145,15 @@ export function CalendarioClient({
     })
   }
 
+  // Semana, e não Agenda. O botão promete "as tarefas DESTE dia", e a Agenda
+  // lista o período carregado inteiro (`agenda-view.tsx` percorre `tasks`, sem
+  // filtrar por dia) — clicar em "+1" no dia 20 devolvia agosto todo, e o
+  // `diaAncoraSemana` que acabou de ser setado nem era lido nesse modo. A
+  // Semana usa a âncora de verdade e mostra todos os chips do dia sem corte,
+  // que é exatamente o que o botão oferece.
   function verMaisNoDia(dia: string) {
     setDiaAncoraSemana(dia)
-    setModo('agenda')
+    setModo('semana')
   }
 
   async function concluir(taskId: string) {
@@ -163,7 +170,14 @@ export function CalendarioClient({
       return
     }
 
-    toast.success('Tarefa concluída.')
+    // Mesma proteção de `/hoje`: o chip do calendário é ainda menor que a
+    // linha da lista, e concluir por engano no celular era irreversível pela
+    // tela. Desfazer aqui limpa o `done_at` local antes de revalidar, senão o
+    // chip continuaria cinza e riscado até o RSC chegar.
+    avisarTarefaConcluida(taskId, () => {
+      setTasks((atual) => atual.map((t) => (t.id === taskId ? { ...t, done_at: null } : t)))
+      router.refresh()
+    })
     router.refresh()
   }
 
