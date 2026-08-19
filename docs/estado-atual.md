@@ -4,7 +4,7 @@ Documento de continuidade. É lido no começo de toda sessão (referenciado no
 [CLAUDE.md](../CLAUDE.md)) para que uma conversa nova, ou outra conta, comece
 sabendo o que já foi feito, o que foi decidido e onde estão as armadilhas.
 
-**Atualizado em:** 19/08/2026 (Calendário, filtro de período com range picker, exportação de relatório em PDF, busca de lead, senha exige confirmação para trocar, captura real de erro em produção, sidebar em seções, mensagem de Pro correta por caso, auditoria completa com 8 correções, checkout travado para quem já cancelou, DNS migrado pro Cloudflare com WAF/Bot Fight Mode/Rate Limiting ativos, auditoria de performance de ponta a ponta com 5 correções)
+**Atualizado em:** 19/08/2026 (Calendário, filtro de período com range picker, exportação de relatório em PDF, busca de lead, senha exige confirmação para trocar, captura real de erro em produção, sidebar em seções, mensagem de Pro correta por caso, auditoria completa com 8 correções, checkout travado para quem já cancelou, DNS migrado pro Cloudflare com WAF/Bot Fight Mode/Rate Limiting ativos, auditoria de performance de ponta a ponta com 5 correções, redesign do fluxo de autenticação em 8 telas e 3 bugs silenciosos de CSS)
 
 > Mantenha este arquivo curto. O detalhe de _por que_ cada coisa é assim mora
 > nas mensagens de commit e nos comentários do código, que são a memória real
@@ -286,6 +286,111 @@ Cloudflare falhar ou for contornado); o Escudo é filtro de volume/tipo de
 tráfego ruim antes de chegar no servidor, reduzindo o que bate no código
 em primeiro lugar. Sem custo (plano Free), sem mudança de código, sem
 risco às integrações existentes.
+
+## Redesign do fluxo de autenticação e da landing (19/08)
+
+Commit `ad90527`. Pedido do dono: fluxo inteiro de criar conta até entrar no
+produto com cara profissional e animação de verdade, mais a landing "menos
+genérica e mais vendável". Referência trazida: o signup do monday CRM (tela
+dividida) e um componente de exemplo com depoimentos e foto de banco de
+imagem — **os depoimentos e a foto ficaram de fora de propósito**, a decisão
+travada contra prova social inventada continua valendo.
+
+**Três bugs silenciosos apareceram durante o trabalho**, todos corrigidos:
+
+1. **`--ease-entrada` nunca chegou ao CSS compilado.** `globals.css` tinha um
+   terminador de comentário no meio do texto; as linhas seguintes viravam CSS
+   cru, o parser achava o `{` do `:root` abaixo e descartava a regra inteira.
+   `grep -c entrada` no compilado dava **0**. Os 10 usos de `ease-entrada` e o
+   `var(--ease-entrada)` do RevealOnScroll rodavam com o easing padrão do
+   navegador desde sempre. **A landing mudou de sensação junto com a
+   correção** — é a curva que o autor escreveu, rodando pela primeira vez.
+   A variável vive num `@theme static`: `@theme` porque é o namespace
+   `--ease-*` que gera a utility, `static` porque `inline` pararia de emitir a
+   variável em `:root` e o RevealOnScroll a lê em `style` inline (var
+   indefinida dentro de shorthand `transition` invalida a declaração inteira).
+2. **`Separator` nunca desenhou.** O primitivo do Base UI emite
+   `data-orientation="horizontal"`, mas a classe era `data-horizontal:h-px`,
+   que gera o seletor `[data-horizontal]` — atributo inexistente. Altura 0. Os
+   divisores "ou" de login/cadastro apareciam sem as linhas, e o separador do
+   painel de negócio no Kanban não pintava. Exceção consciente à regra de não
+   editar `components/ui` à mão: regenerar pelo CLI traria o defeito de volta.
+3. **`CardHeader` é grid, e `items-center` ali alinha no eixo vertical.** Sem
+   `justify-items-center` o ícone de estado (largura fixa) encostava à
+   esquerda enquanto o texto centralizava.
+
+**Estrutura:** `app/(auth)` virou dois route groups. `(entrada)` tem login e
+cadastro em tela dividida — formulário à esquerda, `PipelinePreviewCard` à
+direita (o mesmo funil do hero, HTML puro, zero JS, `aria-hidden`). O corte é
+em `lg` por conta, não por gosto: as colunas fixas do card somam 304px, então
+abaixo disso a barra do gráfico vira um traço. No mobile a arte some
+(`hidden lg:flex`), nunca vira topo — empilhá-la empurraria o formulário para
+baixo da dobra. `(transicao)` tem as 6 telas de estado, centradas, ainda com
+Card. **URLs inalteradas**, então `middleware.ts` e todos os `redirect()`
+seguem válidos.
+
+**Movimento:** tokens de duração (`micro` 180ms, `estado` 320ms, `entrada`
+600ms) e 5 passos de `animation-delay` no `@theme`. O stagger do hero era
+falso — durações crescentes começando todas em t=0 não atrasam nada, só
+deixam os últimos elementos mais lentos. `delay-*` neste projeto é
+`animation-delay`, não `transition-delay`, porque o `tw-animate-css` redefine
+o utility do core (conferido no source do pacote).
+
+**Landing:** as features perderam a numeração `01`–`07` (numerar sugere que a
+ordem carrega informação; sete recursos independentes não são sequência — em
+"Como funciona" os números ficam, lá o processo é real); a legenda de preço
+por empresa ganhou peso visual (era a informação comercialmente mais forte da
+página escrita no menor tamanho e na cor mais apagada dela); e a imagem de
+compartilhamento (`opengraph-image.tsx`) mais o `APP_DESCRIPTION` saíram da
+headline e do vocabulário **anteriores** ao `prd-copy-sem-jargao.md` — era
+literalmente o que aparecia no WhatsApp antes de qualquer clique, com os três
+termos que o próprio PRD proíbe.
+
+**A copy da landing não foi reescrita, de propósito**: ela já passou pelo PRD
+de copy, tem substitutos definidos para cada jargão e um comentário-regra em
+`stats-section.tsx` sobre métrica inventada. Mexer nela seria desfazer
+trabalho documentado.
+
+### O que falta desta frente
+
+- [ ] **Prints reais do produto na landing.** Planejado e não executado.
+      Recomendação: híbrido, não substituição — o mock HTML fica no hero
+      (é o LCP da página, imagem grande ali atrasa a métrica que mais importa
+      em tráfego pago), e prints reais entram abaixo da dobra, com
+      `loading="lazy"`. Roteiro: **nunca** printar produção com dado de
+      cliente (LGPD); criar workspace descartável via `service_role` com dados
+      de `lib/deals/mock-data.ts`, capturar com Playwright em
+      `deviceScaleFactor: 2` **nos dois temas** (a landing tem toggle, print de
+      um tema só quebra no outro), converter para AVIF/WebP, servir por
+      `next/image` com `width`/`height` explícitos, trocar tema por CSS
+      (`dark:hidden`) e não por JS. **Não existe pasta `public/`** no projeto,
+      precisa ser criada. Custo real: print desatualiza, então o roteiro de
+      recaptura precisa ficar registrado aqui.
+- [ ] **`tests/e2e/funil-completo.spec.ts` não foi executado** (exige
+      `.env.local` e roda contra o Asaas). O contrato de DOM foi conferido
+      manualmente no navegador — `#name`, `#email`, `#password`,
+      `#confirmPassword`, checkbox por role e os rótulos exatos "Criar conta"
+      e "Entrar" seguem intactos —, mas o teste em si não rodou. **Ele não
+      falha em `npm test`: falha no gate de deploy.**
+- [ ] **`/onboarding` (assistente de 4 passos) não foi tocado.** Herdou a
+      casca centrada do route group, mas o miolo
+      (`components/onboarding/assistente.tsx`, ~13,6KB) continua com o visual
+      anterior e sem o stagger dos tokens novos.
+- [ ] **Hero da landing ainda usa o stagger falso.** Converter para
+      `delay-passo-*` alinharia o ritmo do site inteiro ao das telas de auth.
+      Fica de fora porque muda a sensação da landing pela segunda vez (a
+      correção da curva já mudou uma) e as duas merecem ser avaliadas juntas.
+- [ ] **`kanban-preview.tsx` (~linha 105):** `cn('border-l-2',
+      stageAccent[negocio.stage])` — `stageAccent[stage]` é o objeto
+      `{text,bg,bar}`, o `clsx` transforma as chaves em nomes de classe, e a
+      borda colorida por etapa nunca pintou. Correção: `style={{
+      borderLeftColor: stageAccent[...].bar }}`, como o
+      `pipeline-preview-card.tsx` já faz. Não misturar com este PR.
+- [ ] **HTML de `/cadastro` não contém formulário.** O `useSearchParams` empurra
+      tudo para o cliente via `<Suspense>`; o fallback virou um esqueleto (era
+      `null`), mas a página tem `canonical` e serve HTML sem conteúdo para
+      buscador. Correção de raiz: virar Server Component recebendo
+      `searchParams` e passando `convite`/`plano`/`email` como props.
 
 ## Auditoria de performance de ponta a ponta (19/08)
 
