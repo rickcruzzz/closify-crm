@@ -282,8 +282,11 @@ Empresário que já vende bem, mas sente que perdeu controle da operação comer
 - Pagamento: Asaas (clientes, assinaturas, webhooks, Pix/boleto/cartão).
 - Deploy: Vercel.
 - Dev / IA: Cursor + Claude Code.
-- Analytics: PostHog e Vercel Analytics.
-- Automação futura: n8n, WhatsApp Business API, Notion API, Linear API.
+- Analytics: Vercel Analytics. PostHog não está instalado, não existe nada
+  medindo ativação hoje.
+- Automação futura: n8n, Notion API, Linear API. WhatsApp Business Cloud API
+  foi implementada e removida (13/08), decisão de produto; ver **WhatsApp por
+  link**, acima.
 
 Selecione/adicione no formulário: Next.js, React, Tailwind CSS, shadcn/ui, Supabase, Vercel, Claude Code, Node.js, PostgreSQL, TypeScript, Resend (e-mails).
 
