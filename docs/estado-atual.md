@@ -397,11 +397,22 @@ trabalho documentado.
       as chaves de `stageAccent[stage]` em nomes de classe) fica registrado
       aqui como classe de erro a não repetir: objeto passado para `cn()` vira
       classe pelas chaves, silenciosamente.
-- [ ] **HTML de `/cadastro` não contém formulário.** O `useSearchParams` empurra
-      tudo para o cliente via `<Suspense>`; o fallback virou um esqueleto (era
-      `null`), mas a página tem `canonical` e serve HTML sem conteúdo para
-      buscador. Correção de raiz: virar Server Component recebendo
-      `searchParams` e passando `convite`/`plano`/`email` como props.
+- [x] **HTML de `/cadastro` passou a conter o formulário.** A página era
+      `'use client'` inteira e lia a intenção por `useSearchParams`, o que
+      obriga uma fronteira de Suspense — e como ela envolvia a página toda, o
+      HTML servido tinha só o esqueleto do fallback. Com `canonical` pedindo
+      indexação, o buscador recebia tela vazia; quem chega de anúncio com rede
+      ruim, também. Virou Server Component lendo `searchParams` e passando
+      `convite`/`plano`/`email` como props para `components/auth/signup-form.tsx`.
+      Provado com `curl` no HTML cru: `#name`, `#email`, `#password` e
+      `#confirmPassword` presentes. A rota passa de estática (`○`) para
+      dinâmica (`ƒ`), que é o custo natural de `searchParams` — sem consulta a
+      banco, só render. O `layout.tsx` que existia nesta pasta só para carregar
+      a metadata (client component não pode exportá-la) foi removido junto.
+      **O pré-preenchimento do e-mail de convite continua dependendo do
+      cliente** (é como o `react-hook-form` funciona, com input não
+      controlado); conferido em navegador real que o valor chega correto após
+      a hidratação.
 
 ## Auditoria de performance de ponta a ponta (19/08)
 
