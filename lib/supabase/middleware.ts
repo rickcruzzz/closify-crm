@@ -36,6 +36,8 @@ export async function updateSession(request: NextRequest) {
     pathname.startsWith('/dashboard') ||
     pathname.startsWith('/kanban') ||
     pathname.startsWith('/leads') ||
+    pathname.startsWith('/hoje') ||
+    pathname.startsWith('/calendario') ||
     pathname.startsWith('/settings') ||
     pathname.startsWith('/perfil') ||
     pathname.startsWith('/onboarding') ||

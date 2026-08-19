@@ -59,8 +59,10 @@ function ConfirmarPageInner() {
   const searchParams = useSearchParams()
   const [estado, setEstado] = React.useState<Estado>('aguardando')
   const [tokenHash, setTokenHash] = React.useState<string | null>(null)
+  const [indoParaDestino, setIndoParaDestino] = React.useState(false)
 
   async function irParaDestino() {
+    setIndoParaDestino(true)
     const supabase = createClient()
     const {
       data: { user },
@@ -201,7 +203,12 @@ function ConfirmarPageInner() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <Button className="w-full" onClick={() => void irParaDestino()}>
+          <Button
+            className="w-full"
+            disabled={indoParaDestino}
+            onClick={() => void irParaDestino()}
+          >
+            {indoParaDestino && <Loader2 className="size-4 animate-spin" />}
             Acessar o Velo Funil
           </Button>
         </CardContent>

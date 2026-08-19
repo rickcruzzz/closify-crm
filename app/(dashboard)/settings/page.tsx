@@ -12,10 +12,7 @@ import {
 } from '@/components/settings/settings-tabs'
 import { getCurrentUserAndWorkspace } from '@/lib/supabase/workspace'
 import { createClient } from '@/lib/supabase/server'
-import {
-  getWorkspaceSettingsData,
-  getWorkspacesExclusivosDoUsuario,
-} from '@/lib/workspace/queries'
+import { getWorkspaceSettingsData } from '@/lib/workspace/queries'
 import { getIntegrationConnections, getUsoDasIntegracoes } from '@/lib/integrations/queries'
 
 export const metadata: Metadata = { title: 'Configurações' }
@@ -64,30 +61,27 @@ export default async function SettingsPage({
   const params = await searchParams
   const { user, workspaceId } = await getCurrentUserAndWorkspace()
 
-  // Único lugar que ainda sincroniza `workspaces.plan` com a validade real da
-  // assinatura, saiu do caminho quente (`getCurrentUserAndWorkspace`, que
-  // roda em toda navegação) porque era uma ESCRITA a cada tela. Aqui é onde a
-  // pessoa de fato olha o próprio plano, e o rótulo "Free/Pro" merece estar em
-  // dia. Os LIMITES não dependem disto: consultam `pro_vigente()` direto no
-  // banco, então plano vencido é barrado na hora mesmo com o rótulo atrasado.
-  const supabase = await createClient()
-  await supabase.rpc('sincronizar_plano_do_workspace', { target_workspace_id: workspaceId })
-
-  const { workspace, members, invites } = await getWorkspaceSettingsData(workspaceId)
-
   const aba: AbaDeConfiguracoes = ABAS_VALIDAS.includes(params.aba as AbaDeConfiguracoes)
     ? (params.aba as AbaDeConfiguracoes)
     : 'empresa'
 
+  // Único lugar que ainda sincroniza `workspaces.plan` com a validade real da
+  // assinatura, saiu do caminho quente (`getCurrentUserAndWorkspace`, que
+  // roda em toda navegação) porque era uma ESCRITA a cada tela. Só roda de
+  // novo aqui na aba Plano, é a única que mostra o rótulo "Free/Pro" —
+  // rodar em Empresa/Equipe/Integrações pagava uma escrita bloqueante
+  // (~700ms medido) sem ninguém olhar o rótulo. Os LIMITES não dependem
+  // disto: consultam `pro_vigente()` direto no banco, então plano vencido é
+  // barrado na hora mesmo com o rótulo atrasado nas outras abas.
+  if (aba === 'plano') {
+    const supabase = await createClient()
+    await supabase.rpc('sincronizar_plano_do_workspace', { target_workspace_id: workspaceId })
+  }
+
+  const { workspace, members, invites } = await getWorkspaceSettingsData(workspaceId)
+
   const currentMember = members.find((m) => m.user_id === user.id)
   const isAdmin = currentMember?.role === 'admin'
-
-  // Mesma regra da RPC `excluir_minha_conta`: workspace com um único membro
-  // morre junto da conta. Listado no diálogo para a pessoa ver o que perde,
-  // ela costuma pensar só na própria conta e esquecer dos dados dos clientes
-  // que estão lá dentro.
-  const workspacesQueSeraoApagados =
-    aba === 'equipe' ? await getWorkspacesExclusivosDoUsuario(user.id) : []
 
   const [integrationConnections, usoDasIntegracoes] =
     aba === 'integracoes'
@@ -164,7 +158,7 @@ export default async function SettingsPage({
               única ação irreversível da tela, e dividir card com o convite de
               colaborador é convite a errar o clique. */}
           <div className="border-border/60 border-t pt-6">
-            <DeleteAccountCard workspacesQueSeraoApagados={workspacesQueSeraoApagados} />
+            <DeleteAccountCard />
           </div>
         </div>
       )}

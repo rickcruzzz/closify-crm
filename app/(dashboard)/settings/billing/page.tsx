@@ -27,21 +27,23 @@ export default async function BillingPage({
 }) {
   const { assinar, pago } = await searchParams
   const { user, workspaceId } = await getCurrentUserAndWorkspace()
-  const { workspace, members } = await getWorkspaceSettingsData(workspaceId)
-  const plan = workspace?.plan ?? 'free'
-
-  const isAdmin = members.find((m) => m.user_id === user.id)?.role === 'admin'
 
   const supabase = await createClient()
-  const { count: leadCount } = await supabase
-    .from('leads')
-    .select('id', { count: 'exact', head: true })
-    .eq('workspace_id', workspaceId)
 
-  // Estado real da cobrança, não só o plano. Sem isto, quem tinha assinatura
+  // As três consultas abaixo só dependem de `workspaceId`, nenhuma do
+  // resultado das outras, mas rodavam uma atrás da outra: três idas
+  // sequenciais ao banco onde uma bastava. Estado real da cobrança
+  // (`getEstadoAssinatura`), não só o plano: sem isto, quem tinha assinatura
   // criada com fatura em aberto via "Free" e um botão de assinar de novo,
   // sem saber que já existia uma cobrança esperando pagamento.
-  const assinatura = await getEstadoAssinatura(workspaceId)
+  const [{ workspace, members }, { count: leadCount }, assinatura] = await Promise.all([
+    getWorkspaceSettingsData(workspaceId),
+    supabase.from('leads').select('id', { count: 'exact', head: true }).eq('workspace_id', workspaceId),
+    getEstadoAssinatura(workspaceId),
+  ])
+
+  const plan = workspace?.plan ?? 'free'
+  const isAdmin = members.find((m) => m.user_id === user.id)?.role === 'admin'
 
   return (
     <div className="flex flex-col gap-6">

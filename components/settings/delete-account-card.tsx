@@ -23,7 +23,7 @@ import {
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { deleteAccount } from '@/lib/workspace/actions'
+import { deleteAccount, listarWorkspacesQueSeraoApagados } from '@/lib/workspace/actions'
 
 /**
  * Exclusão de conta, LGPD, art. 18, VI.
@@ -32,17 +32,29 @@ import { deleteAccount } from '@/lib/workspace/actions'
  * irreversível e apaga leads e negócios junto, então o custo de um clique
  * acidental é alto demais para um botão simples.
  */
-export function DeleteAccountCard({
-  workspacesQueSeraoApagados,
-}: {
-  /** Nomes dos workspaces onde a pessoa é o único membro. */
-  workspacesQueSeraoApagados: string[]
-}) {
+export function DeleteAccountCard() {
   const router = useRouter()
   const [open, setOpen] = React.useState(false)
   const [confirmacao, setConfirmacao] = React.useState('')
   const [senha, setSenha] = React.useState('')
   const [excluindo, setExcluindo] = React.useState(false)
+  const [workspacesQueSeraoApagados, setWorkspacesQueSeraoApagados] = React.useState<
+    string[]
+  >([])
+
+  // Buscado só quando o diálogo abre, não no carregamento da aba: é a única
+  // hora em que essa lista aparece na tela, e a maioria das visitas à aba
+  // Equipe nunca abre este diálogo.
+  React.useEffect(() => {
+    if (!open) return
+    let cancelado = false
+    listarWorkspacesQueSeraoApagados().then((nomes) => {
+      if (!cancelado) setWorkspacesQueSeraoApagados(nomes)
+    })
+    return () => {
+      cancelado = true
+    }
+  }, [open])
 
   const podeExcluir = confirmacao.trim().toUpperCase() === 'EXCLUIR' && senha.length > 0
 

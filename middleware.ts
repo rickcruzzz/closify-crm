@@ -19,6 +19,8 @@ export const config = {
     '/dashboard/:path*',
     '/kanban/:path*',
     '/leads/:path*',
+    '/hoje/:path*',
+    '/calendario/:path*',
     '/settings/:path*',
     '/perfil',
     '/onboarding/:path*',

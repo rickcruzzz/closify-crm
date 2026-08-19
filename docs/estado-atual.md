@@ -4,7 +4,7 @@ Documento de continuidade. É lido no começo de toda sessão (referenciado no
 [CLAUDE.md](../CLAUDE.md)) para que uma conversa nova, ou outra conta, comece
 sabendo o que já foi feito, o que foi decidido e onde estão as armadilhas.
 
-**Atualizado em:** 19/08/2026 (Calendário, filtro de período com range picker, exportação de relatório em PDF, busca de lead, senha exige confirmação para trocar, captura real de erro em produção, sidebar em seções, mensagem de Pro correta por caso, auditoria completa com 8 correções, checkout travado para quem já cancelou, DNS migrado pro Cloudflare com WAF/Bot Fight Mode/Rate Limiting ativos)
+**Atualizado em:** 19/08/2026 (Calendário, filtro de período com range picker, exportação de relatório em PDF, busca de lead, senha exige confirmação para trocar, captura real de erro em produção, sidebar em seções, mensagem de Pro correta por caso, auditoria completa com 8 correções, checkout travado para quem já cancelou, DNS migrado pro Cloudflare com WAF/Bot Fight Mode/Rate Limiting ativos, auditoria de performance de ponta a ponta com 5 correções)
 
 > Mantenha este arquivo curto. O detalhe de _por que_ cada coisa é assim mora
 > nas mensagens de commit e nos comentários do código, que são a memória real
@@ -286,6 +286,81 @@ Cloudflare falhar ou for contornado); o Escudo é filtro de volume/tipo de
 tráfego ruim antes de chegar no servidor, reduzindo o que bate no código
 em primeiro lugar. Sem custo (plano Free), sem mudança de código, sem
 risco às integrações existentes.
+
+## Auditoria de performance de ponta a ponta (19/08)
+
+Pedido do dono, dois relatos concretos: cadastro/login "às vezes não entra",
+e Configurações "tem que clicar várias vezes pra carregar". Investigado com
+prova real (Playwright contra produção, timing de rede real, não estimado),
+não suposição — mesmo padrão do resto do projeto.
+
+**Cadastro/login não estavam quebrados**, estavam sem sinal visual em um
+ponto específico. Medido: `/auth/v1/signup` do Supabase custa ~2s de
+verdade (GoTrue espera o SMTP do Resend confirmar antes de responder, não dá
+pra tornar assíncrono do nosso lado), login ~0,9s, os dois já mostravam
+spinner. O buraco real: depois de clicar no link do e-mail e cair em
+"E-mail verificado", o botão **"Acessar o Velo Funil"** (`app/(auth)/
+confirmar/page.tsx`) fazia 3 chamadas sequenciais (`destinoDoConvite`,
+`getUser`, `workspace_members`) sem `disabled` nem spinner, e a navegação
+seguinte é `router.replace()` programático — a barra de progresso do site
+(`navigation-progress.tsx`) só escuta clique em `<a>` real, nunca essa.
+Clique, tela parada, zero sinal. `/bem-vindo` tinha o mesmo padrão de 3
+idas ao banco que já tinha motivado um `loading.tsx` em `/onboarding`, só
+que ficou de fora daquela correção. Os dois ganharam o sinal que faltava.
+
+**Configurações era o achado grave, confirmado com número real.** Clicar na
+aba Equipe chegou a **8,4s** medido via `browser_network_request` (não
+estimativa), contra ~1,25s da aba Empresa — bate exatamente com "precisa
+clicar várias vezes". Causa raiz, duas partes:
+
+- `sincronizar_plano_do_workspace` (`app/(dashboard)/settings/page.tsx`) é
+  RPC de **escrita**, ~700ms medido isolado, e rodava em toda troca de aba,
+  inclusive Empresa/Equipe/Integrações, que não mostram o rótulo do plano.
+  A doutrina do projeto já diz que nenhuma regra de LIMITE depende dessa
+  coluna (`pro_vigente()` é a fonte real, ver 0027) — só o rótulo cosmético
+  depende. Agora só roda quando `aba === 'plano'`.
+- `getWorkspacesExclusivosDoUsuario` populava a lista de workspaces que
+  seriam apagados dentro do diálogo "Excluir conta" — **fechado por
+  padrão**. Toda visita à aba Equipe pagava essa consulta mesmo que
+  ninguém fosse excluir a conta. Virou Server Action
+  (`listarWorkspacesQueSeraoApagados`, `lib/workspace/actions.ts`),
+  chamada só quando o diálogo abre de fato.
+
+Chain isolada (script descartável, sessão real do usuário de teste) somou
+~1,1s pras mesmas queries; a diferença até os 2,5-8,4s observados não é
+banco, é custo de renderização RSC da árvore da aba Equipe (MembersCard +
+DeleteAccountCard), sem instrumentação de servidor não dá pra fatiar mais
+fundo numa sessão só. As duas correções aplicadas removem a parte provada e
+evitável (~850ms-1s); o resto seria trabalho de profiling em produção, não
+entrou nesta rodada.
+
+**Auditoria mais ampla, todo o resto do dashboard**: Dashboard, Kanban,
+Leads, Leads/[id], Hoje, Calendário e o layout raiz já usam `Promise.all`
+consistente, nenhum outro achado sequencial ali — a base já tinha passado
+por essa disciplina numa sessão anterior (ver "Lag de navegação" abaixo).
+Achados fora desses: `/perfil` fazia um `supabase.auth.getUser()` próprio
+depois de `getCurrentUserAndWorkspace()` já ter resolvido o mesmo usuário
+via `obterUsuarioAutenticado()` (cacheado por requisição) — segunda ida
+redundante ao Supabase Auth, removida, usa `user.identities` que já vinha
+no retorno. `/settings/billing` tinha 3 consultas independentes
+(`getWorkspaceSettingsData`, contagem de leads, `getEstadoAssinatura`)
+rodando uma atrás da outra sem depender do resultado umas das outras,
+viraram `Promise.all`.
+
+**Achado à parte, não é performance, é brecha de sessão**: `/hoje` e
+`/calendario` não estavam no `matcher` do `middleware.ts` nem em
+`isProtectedPath` (`lib/supabase/middleware.ts`) — as duas rotas existem,
+estão na sidebar, mas o middleware nunca rodava nelas. Consequência real:
+o teto de sessão (30 dias absoluto, 14 dias de inatividade) e a checagem
+de e-mail confirmado não se aplicavam a quem só navegasse por essas duas
+telas, mesma classe de brecha que o comentário do próprio arquivo já
+credita a três incidentes pagos neste projeto (autoupgrade, limite de
+leads, autoconvite). Adicionadas às duas listas.
+
+`npx tsc --noEmit`, `npm run lint`, `npm test` (319 testes) e `npm run
+build`, os quatro limpos. Medição de `/settings` feita com conta e
+workspace descartáveis criados via `service_role` (e-mail pré-confirmado,
+sessão real via `signInWithPassword`), limpos no fim.
 
 ## Integrações, Google Calendar, Gmail (12/08)
 

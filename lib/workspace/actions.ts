@@ -14,6 +14,7 @@ import {
   uuidSchema,
 } from '@/lib/validations/workspace'
 import { getCurrentUserAndWorkspace } from '@/lib/supabase/workspace'
+import { getWorkspacesExclusivosDoUsuario } from '@/lib/workspace/queries'
 import { canAddMember } from '@/lib/limits'
 import { appUrl } from '@/lib/app-url'
 import { concluirOnboardingPorConvite } from '@/lib/onboarding/estado'
@@ -329,6 +330,26 @@ export async function acceptInvite(token: unknown) {
  * recuperável. Se fosse ao contrário, os dados ficariam órfãos e sem dono, que
  * é exatamente o que o pedido de eliminação quer evitar.
  */
+/**
+ * Nomes dos workspaces que somem junto se a pessoa excluir a própria conta.
+ *
+ * Antes era buscado no Server Component da aba Equipe, toda vez que a aba
+ * carregava, mesmo com o diálogo de exclusão fechado (o caso comum). Só o
+ * diálogo mostra essa lista, então buscar aqui, quando ele abre, tira essa
+ * consulta do carregamento normal da aba.
+ */
+export async function listarWorkspacesQueSeraoApagados() {
+  const supabase = await createClient()
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  if (!user) return []
+
+  return getWorkspacesExclusivosDoUsuario(user.id)
+}
+
 export async function deleteAccount(senha: unknown) {
   const supabase = await createClient()
 
