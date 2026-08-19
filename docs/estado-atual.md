@@ -686,6 +686,26 @@ qualquer migration por ele. O MCP do Stripe pede autorização e **não é usado
 (o projeto é Asaas). Quando o Playwright cai, o caminho é `curl` + análise do
 HTML, ou script Node contra a API.
 
+**MCP do Supabase via conector do claude.ai (19/08), diferente do plugin
+acima.** O dono confirmou no painel (`claude.ai/settings/connectors`) que o
+conector Supabase está "Desvinculado"/conectado, mas nenhuma ferramenta
+`mcp__*Supabase*` apareceu nesta sessão, nem depois de reiniciar (o mesmo
+reinício resolveu o caso análogo do MCP da Vercel, ver "Vercel MCP" abaixo).
+Ficou pendente sem causa confirmada — pode ser propagação lenta, pode ser
+escopo de autorização insuficiente, pode ser troca de conta destravando.
+Enquanto não resolver: banco é lido/escrito por script Node descartável com
+`SUPABASE_SERVICE_ROLE_KEY` (`node --env-file=.env.local script.mjs`), mesmo
+padrão que resolveu toda a investigação do checkout travado nesta sessão,
+sem depender do MCP nenhuma vez.
+
+**Vercel MCP (`mcp__claude_ai_Vercel__*`) funciona nesta sessão**, projeto
+`closify-crm-dr3t` (`prj_1MkOuMTY5zGiRXEG8TWRKSs9n3hJ`), team
+`ricks-projects-1e819723` (`team_7KBrcdMaIrg3kCRSZy3cNA34`). Serve pra
+confirmar deploy sem depender do dono abrir o painel — `list_deployments`
+com `since` no timestamp do push mostra `state: READY/BUILDING/ERROR` do
+commit exato. Repositório GitHub é `rickcruzzz/closify-crm` (nome antigo do
+projeto, mantido).
+
 ## Últimos commits relevantes
 
 | Commit    | O quê                                                              |
