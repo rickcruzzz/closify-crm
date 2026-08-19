@@ -1,4 +1,4 @@
-import { Card, CardHeader } from '@/components/ui/card'
+import { Card } from '@/components/ui/card'
 import { VerifiqueEmailClient } from '@/components/auth/verifique-email-client'
 import { lerEmailPendente } from '@/lib/auth/intencao'
 
@@ -19,9 +19,7 @@ export default async function VerifiqueEmailPage() {
 
   return (
     <Card>
-      <CardHeader className="items-center">
-        <VerifiqueEmailClient email={email} />
-      </CardHeader>
+      <VerifiqueEmailClient email={email} />
     </Card>
   )
 }

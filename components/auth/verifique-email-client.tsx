@@ -5,7 +5,13 @@ import Link from 'next/link'
 import { Loader2, MailCheck } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
-import { CardContent, CardDescription, CardFooter, CardTitle } from '@/components/ui/card'
+import {
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card'
 import { reenviarConfirmacao } from '@/lib/supabase/actions'
 
 /** Espera antes de liberar o próximo reenvio, para não virar botão de martelar. */
@@ -38,24 +44,26 @@ export function VerifiqueEmailClient({ email }: { email: string | null }) {
 
   return (
     <>
-      <div className="flex flex-col items-center gap-3 text-center">
-        <div className="bg-primary/10 text-primary flex size-10 items-center justify-center rounded-lg">
-          <MailCheck className="size-5" />
+      <CardHeader className="items-center">
+        <div className="flex flex-col items-center gap-3 text-center">
+          <div className="bg-primary/10 text-primary flex size-10 items-center justify-center rounded-lg">
+            <MailCheck className="size-5" />
+          </div>
+          <CardTitle className="text-xl">Confirme seu e-mail</CardTitle>
+          <CardDescription>
+            {email ? (
+              <>
+                Enviamos um link de confirmação para <strong>{email}</strong>. Clique nele para
+                ativar sua conta.
+              </>
+            ) : (
+              'Enviamos um link de confirmação para o e-mail cadastrado. Clique nele para ativar sua conta.'
+            )}
+          </CardDescription>
         </div>
-        <CardTitle className="text-xl">Confirme seu e-mail</CardTitle>
-        <CardDescription>
-          {email ? (
-            <>
-              Enviamos um link de confirmação para <strong>{email}</strong>. Clique nele para
-              ativar sua conta.
-            </>
-          ) : (
-            'Enviamos um link de confirmação para o e-mail cadastrado. Clique nele para ativar sua conta.'
-          )}
-        </CardDescription>
-      </div>
+      </CardHeader>
 
-      <CardContent className="flex flex-col gap-3 pt-6">
+      <CardContent className="flex flex-col gap-3">
         <p className="text-muted-foreground text-center text-sm">
           Não chegou? Confira a caixa de spam antes de pedir outro.
         </p>
