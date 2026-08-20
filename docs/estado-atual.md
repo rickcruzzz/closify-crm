@@ -4,7 +4,84 @@ Documento de continuidade. É lido no começo de toda sessão (referenciado no
 [CLAUDE.md](../CLAUDE.md)) para que uma conversa nova, ou outra conta, comece
 sabendo o que já foi feito, o que foi decidido e onde estão as armadilhas.
 
-**Atualizado em:** 20/08/2026 (Supabase Pro e Vercel Pro contratados com ganho medido, Fluid Compute, gate de deploy fechado de ponta a ponta, endurecimento de segurança da conta Vercel, e-mail de suporte com encaminhamento real, abas de Configurações sem feedback corrigidas)
+**Atualizado em:** 20/08/2026 (Central do Dono em localhost achando 3 assinaturas ativas que não entregavam Pro, pixel deixando de sujar dados em localhost, conta de anúncio corrigida no registro, Supabase Pro e Vercel Pro com ganho medido, Fluid Compute, gate de deploy fechado, e-mail de suporte com encaminhamento real)
+
+## Central do Dono, só em localhost (20/08)
+
+Rota `/dono`, fora do produto: uma tela que responde quem são todos os
+clientes, quanto entra por mês, o que está quebrado — e comanda o que precisa
+ser comandado. Existe porque o RLS deste projeto **não tem conceito de dono da
+plataforma** (tudo gira em `is_workspace_member`/`is_workspace_admin`, relativo
+a um workspace), então qualquer pergunta sobre o negócio inteiro exigia
+escrever script Node na hora.
+
+**Ela se pagou antes de existir.** A investigação que precedeu o código cruzou
+as assinaturas do Asaas contra o banco e achou dinheiro parado, em produção:
+
+| Assinatura | Asaas | Banco | O que era |
+|---|---|---|---|
+| `sub_epjbmoerbqoz7c76` | ATIVA | não existe | assinatura viva que o sistema nunca registrou |
+| `sub_dbs8pblwj2irujc2` | ATIVA | `past_due`, vencimento nulo | pessoa com assinatura ativa **sem receber o Pro** |
+| `sub_3qwh8ygjnpon66ae` | ATIVA | `past_due`, vencimento nulo | idem |
+| `sub_teste_local_1786896365194` | não existe | `active` até 15/09 | **assinatura de teste dando Pro de graça** |
+
+Das 4 assinaturas ativas no gateway, **3 não estavam entregando o plano**, e um
+dos 2 "clientes Pro" do banco era lixo de teste. Nada disso gerava erro em
+lugar nenhum — do ponto de vista do sistema, estava tudo funcionando. A causa
+raiz provável é o `CRON_SECRET` que nunca foi colado na Vercel (pendência
+aberta abaixo): o cron de reconciliação toma 401 todo dia em silêncio.
+
+**O gate de ambiente, que é o que sustenta o resto.** A Central lê com
+`createAdminClient()`, que ignora RLS por completo — vê nome, e-mail, telefone
+e valor de negócio de todos os clientes. Publicar isso é vazamento de dado de
+terceiro sob a LGPD. Este é o **primeiro gate de ambiente do projeto** (a
+varredura anterior por `NODE_ENV`/`VERCEL_ENV` só achava flags de cookie
+`secure`), e ele tem duas condições, não uma: `NODE_ENV === 'development'`
+**e** host local. A segunda existe porque `next dev` escuta em todas as
+interfaces de rede — sem ela, qualquer pessoa no mesmo Wi-Fi abriria
+`http://<ip-da-máquina>:3000/dono`. A decisão mora numa função pura
+(`lib/dono/ambiente.ts`, 12 testes) porque gate de segurança sem teste é gate
+que ninguém sabe se funciona, e o `import 'server-only'` fica no irmão
+(`somente-local.ts`), que é chamado no layout, na página e no topo de cada
+query e cada ação.
+
+Provado nos quatro sentidos: build de produção devolve **404** em `/dono`
+enquanto `/` e `/login` dão 200; `npm run dev` abre por `localhost` e
+`127.0.0.1`; e com o dev rodando, requisição com `Host:` do IP da máquina, do
+domínio real, ou `localhost.evil.com` toma 404.
+
+**Números conferidos contra medição independente**, não estimados: entra por
+mês R$ 98 (2 × R$49, via `pro_vigente()`), saldo R$ 43,05, a receber R$ 245 (5
+cobranças), vencido R$ 98 (2), 26 empresas, 15 novas em 7 dias. O card
+"Assinaturas no Asaas" mostra 4 com a nota "mas só 2 com Pro aqui" — a
+divergência fica impossível de não ver.
+
+**Controle total**, cada ação atrás do mesmo gate: consertar assinatura
+(reusa `lib/asaas/aplicar-evento.ts`, o caminho já compartilhado entre webhook
+e cron, para não virar uma terceira cópia da regra do dinheiro), liberar Pro de
+cortesia por 30 dias, voltar para Grátis, apagar empresa (exige digitar o nome
+exato, conferido **no servidor**). Tudo gravado em `.dono-registro.jsonl`
+(fora do Git): liberar Pro de brinde e esquecer quem ganhou é problema de
+dinheiro, e terminal some quando a janela fecha. As três ações foram provadas
+ponta a ponta com empresa descartável — `pro_vigente()` virando `true`,
+voltando a `false`, e a exclusão levando a assinatura em cascata; base voltou
+a 26 empresas no fim, nada deixado para trás.
+
+**O bloco de anúncio nasce desligado, de propósito.** Falta um token com
+`ads_read` (`META_ADS_TOKEN`); o que existe, `META_CONVERSIONS_API_TOKEN`, só
+envia conversão — testado, a Graph API responde `(#200) Ad account owner has
+NOT grant ads_management or ads_read permission`. Mostrar "R$ 0,00" ali seria
+mentira perigosa: gasto zero por falta de token é indistinguível de gasto zero
+de verdade, e essa diferença é o que decide se há campanha rodando.
+
+**O Meta Pixel parou de sujar os próprios dados.** `meta-pixel.tsx` filtrava
+por rota mas não por ambiente: disparava de `localhost` e de todo preview da
+Vercel. Medido na API da Meta, **18.192 PageViews de `localhost` numa hora só**
+(13/08). Isso entra no conjunto com que a Meta aprende quem é o público — ruído
+de desenvolvimento vira anúncio otimizado para gente que não existe. Agora só
+dispara em `www.velofunil.com.br`. Provado com navegador real, mesma sessão:
+em localhost o script `meta-pixel` não existe no DOM; em produção existe, com
+o id certo.
 
 ## Infraestrutura: Supabase Pro, Vercel Pro, Fluid Compute (20/08)
 
@@ -670,17 +747,16 @@ sessão.
       sem isso, o Vercel Cron chama `/api/cron/reconciliar-assinaturas` e
       toma 401 todo dia, silenciosamente (a rota não avisa ninguém, só
       responde o erro). Ver `.env.example` pra onde gerar.
-- [ ] **`NEXT_PUBLIC_META_PIXEL_ID` na Vercel (13/08).** Meta Pixel ligado
-      (`components/analytics/meta-pixel.tsx`, só em páginas públicas,
-      landing/cadastro/login/termos/privacidade, nunca no CRM logado) pra
-      viabilizar tráfego pago. Funciona local (`.env.local`), mas
-      `NEXT_PUBLIC_*` é inlined no BUILD, sem colar o mesmo valor
-      (`1566349361566072`) nas env vars da Vercel e rodar um novo deploy, o
-      pixel não aparece em produção. **Risco de compliance em aberto,
-      registrado, não escondido**: é rastreamento de terceiro (cookie
-      `_fbp`) sob a LGPD, mesma razão pela qual o GA4 foi descartado do
-      projeto, hoje não existe banner de consentimento de cookies no
-      site. Ligado por pedido explícito.
+- [x] **`NEXT_PUBLIC_META_PIXEL_ID` na Vercel — resolvido, confirmado em
+      20/08.** O valor (`1566349361566072`) já está nas env vars da Vercel:
+      medido na própria API da Meta, o pixel dispara de
+      `www.velofunil.com.br` continuamente (milhares de PageView, ~21
+      `CompleteRegistration` e 6 `Purchase` em 7 dias), e a Conversions API
+      também. Confirmado à parte com navegador real: o script `meta-pixel`
+      e o id aparecem no HTML de produção. **Risco de compliance continua
+      em aberto**: é rastreamento de terceiro (cookie `_fbp`) sob a LGPD,
+      mesma razão pela qual o GA4 foi descartado, e não existe banner de
+      consentimento no site. Ligado por pedido explícito.
 - [ ] **Auditoria de prontidão pra tráfego pago (13/08).** Verificado
       contra o banco de produção: 10 workspaces, zero em `plan = 'pro'`,
       nenhum pagamento (Pix, boleto ou cartão) jamais completou o ciclo
@@ -786,14 +862,29 @@ sessão.
       `recuperacao-de-senha.html` no painel. Feito e verificado com envio real:
       o link sai como `.../redefinir-senha?token_hash=…`.
 - [x] Cancelar as assinaturas de teste no Asaas. Feito, eram 3, não 2.
-- [x] **Meta Ads MCP conectado (13/08).** Conta de anúncio `27108979755418323`
-      (BRL, `ACTIVE`, com método de pagamento) é a do Velo Funil, confirmada
-      pelo dono entre as duas contas que a autenticação trouxe (a outra é
-      `Rickdaskin Ads`, negócio de terceiro). Serve pra gerenciar campanha
-      pelo Claude Code direto, mas isso não substitui a pendência acima: o
-      Pixel (`NEXT_PUBLIC_META_PIXEL_ID`) ainda precisa ir pra env var da
-      Vercel, e o Pix real de R$ 49 ainda precisa ser pago antes de ligar
-      qualquer campanha de verdade.
+- [ ] **Conta de anúncio: a registrada aqui estava ERRADA (corrigido 20/08).**
+      Esta entrada dizia que `27108979755418323` ("Orlando Henrique") era a
+      conta do Velo Funil. Verificado contra a API da Meta: o pixel que o site
+      de fato alimenta, `1566349361566072` ("h-systens", o valor de
+      `NEXT_PUBLIC_META_PIXEL_ID`), pertence ao business **Rickdaskin**
+      (`1717888109644664`) e está atribuído à outra conta,
+      **`1316925630418162` ("Rickdaskin Ads")**. A conta "Orlando Henrique"
+      tem um pixel diferente (`987545847222328`) com 11 PageViews no total,
+      parado desde 13/08, além de uma campanha de cliente de terceiro
+      ("Lizz Ante Nutri").
+
+      **Consequência prática:** subir campanha na conta antes registrada
+      otimizaria às cegas — ela não enxerga as conversões do site. **Ação do
+      dono, antes de ligar qualquer campanha:** rodar na `Rickdaskin Ads`
+      (recomendado, o pixel certo já está lá) ou compartilhar o pixel
+      `1566349361566072` com a outra conta no Business Manager. A escolha
+      está fixada em `lib/dono/meta-ads.ts` (`CONTA_DE_ANUNCIO`), com o
+      porquê registrado no próprio arquivo.
+
+      Nenhuma das 3 campanhas existentes jamais rodou (todas `PAUSED`, gasto
+      zero) — daí `utm_source`/`fbc`/`fbp` estarem vazios nas 26 empresas: a
+      captura (`components/landing/utm-capture.tsx`) está correta e só nunca
+      foi exercitada, porque nunca houve clique de anúncio.
 
 ## Fila técnica, na ordem
 

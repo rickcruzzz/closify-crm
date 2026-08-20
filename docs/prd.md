@@ -334,6 +334,28 @@ Um CRM com aparência premium, limpa e confiante. Interface escura como padrão,
 - Priorizar funcionalidade core primeiro, depois iterar.
 - Testar cada milestone antes de avançar para o próximo.
 
+### Ferramenta interna: Central do Dono (não faz parte do produto vendido)
+
+A rota `/dono` **não é uma tela do Velo Funil**. É o painel de quem opera o
+negócio: lista todas as empresas cadastradas, o dinheiro real no Asaas, os
+e-mails transacionais, o anúncio, e permite corrigir assinatura, liberar Pro
+de cortesia, rebaixar plano e apagar empresa.
+
+Três consequências que decorrem disso, e que qualquer mudança nela precisa
+respeitar:
+
+1. **Só existe em localhost.** Ela lê com a service role, que ignora RLS —
+   enxerga dado pessoal de todos os clientes. Fora de `NODE_ENV=development`
+   **e** host local, a rota devolve 404 (`lib/dono/somente-local.ts`).
+   Publicá-la seria vazamento de dado de terceiro sob a LGPD, não bug de UI.
+2. **Não entra na navegação do produto** nem herda o layout do dashboard.
+   Nenhum cliente deve descobrir que ela existe, e nenhum item de menu deve
+   apontar para uma rota que só dá 404 em produção.
+3. **Não é onde regra de negócio nasce.** Ela reusa os caminhos que já
+   existem (`lib/asaas/aplicar-evento.ts` para status de assinatura, a RPC
+   `pro_vigente` para saber quem paga). Reimplementar uma regra ali criaria
+   uma segunda verdade que diverge da do produto na primeira mudança.
+
 ## 8. Auditoria de qualidade e correção de bugs
 
 Para garantir que o Velo Funil esteja pronto para produção, use este prompt de auditoria e correção como guia:

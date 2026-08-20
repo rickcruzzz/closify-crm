@@ -7,6 +7,18 @@ Migrations novas mudam este arquivo com o tempo; ao suspeitar de
 desatualização, reconsulte o catálogo em vez de confiar cegamente nele (mesma
 regra de `docs/estado-atual.md`).
 
+**Reconferido em 20/08/2026, sem alteração.** A Central do Dono (`/dono`,
+rota local) foi construída sobre o schema existente e **não criou nem alterou
+nenhuma tabela, coluna ou enum** — ela só lê, e escreve pelas mesmas portas
+que o produto já usava (`subscriptions`, `workspaces.plan`, a RPC
+`apply_asaas_subscription_status` via `lib/asaas/aplicar-evento.ts`).
+Confirmado por dois caminhos: `git diff` em `supabase/` vazio, e a lista de
+tabelas expostas pelo PostgREST em produção continua nas mesmas 13
+(`activities`, `asaas_webhook_events`, `deals`, `error_logs`,
+`integration_connections`, `leads`, `onboarding_state`,
+`rate_limit_attempts`, `subscriptions`, `tasks`, `workspace_invites`,
+`workspace_members`, `workspaces`). Registrado em vez de assumido.
+
 **Nota de metodologia.** Extraído com a ferramenta MCP Supabase
 (`execute_sql`, contra o projeto de produção), 4 consultas: colunas
 (`information_schema.columns`), chaves primárias e estrangeiras

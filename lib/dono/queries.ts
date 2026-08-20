@@ -1,0 +1,173 @@
+import 'server-only'
+
+import { createAdminClient } from '@/lib/supabase/admin'
+import { PRO_PLAN_PRICE } from '@/lib/plans'
+
+import { exigirAmbienteLocal } from './somente-local'
+import type { EmpresaNaCentral, NumerosDaCentral } from './tipos'
+
+/**
+ * Teto explícito em toda busca.
+ *
+ * O PostgREST corta em 1.000 linhas **em silêncio**: a resposta volta 200, sem
+ * erro, com menos dados do que existe. Este projeto já pagou essa armadilha
+ * três vezes (funil, Kanban e seletor de leads mentindo em silêncio, migration
+ * 0032). Aqui o teto é alto de propósito — hoje a base inteira tem 54 negócios,
+ * então 5.000 dá anos de folga — e quando alguma busca ENCOSTAR nele, a tela
+ * avisa que o número pode estar cortado em vez de mentir.
+ */
+const TETO = 5000
+
+/** Uma semana, em milissegundos. */
+const SETE_DIAS = 7 * 24 * 60 * 60 * 1000
+
+type LinhaDeEmpresa = {
+  id: string
+  name: string
+  created_at: string
+  created_by: string | null
+  telefone: string | null
+  whatsapp: string | null
+}
+
+type LinhaDeAssinatura = {
+  workspace_id: string
+  status: 'trialing' | 'active' | 'past_due' | 'canceled'
+  current_period_end: string | null
+  asaas_subscription_id: string | null
+}
+
+export type LeituraDoBanco = {
+  numeros: NumerosDaCentral
+  empresas: EmpresaNaCentral[]
+  assinaturas: LinhaDeAssinatura[]
+  podeEstarCortado: boolean
+  errosRecentes: number
+}
+
+/**
+ * Lê o retrato do negócio inteiro: todas as empresas, quem é dono de cada uma,
+ * quanto cada uma usa, e quem está pagando de verdade.
+ *
+ * ## Por que uma consulta por empresa para saber quem é Pro
+ *
+ * `pro_vigente(uuid)` é chamada uma vez por empresa, em paralelo. Parece
+ * desperdício e é deliberado: a doutrina travada deste projeto é **"regra de
+ * plano lê a função, nunca a coluna"**. `workspaces.plan` é só o último valor
+ * gravado e não sabe que o tempo passou — foi exatamente essa confusão que
+ * causou o bug da migration 0028 (Pro vencido aceitando o terceiro membro e a
+ * trigger de leads recusando o lead dele).
+ *
+ * Reescrever a lógica de `pro_vigente` em TypeScript seria mais rápido e
+ * criaria uma TERCEIRA verdade sobre quem é Pro, que diverge da função na
+ * primeira mudança de carência (`dias_de_graca`, migration 0044). Com 26
+ * empresas, o paralelo resolve em uma fração de segundo. Se um dia isso doer,
+ * vira uma RPC que agrega no banco — não uma cópia da regra aqui.
+ *
+ * ## Por que `auth.admin.listUsers`
+ *
+ * Não existe tabela `profiles` neste projeto: nome e e-mail vivem só em
+ * `auth.users`, que fica fora do schema exposto pelo PostgREST (documentado em
+ * `lib/leads/queries.ts:166-169`), então não dá para fazer join. O precedente
+ * de resolver identidade por admin client é `lib/asaas/aplicar-evento.ts:151`.
+ */
+export async function lerBanco(): Promise<LeituraDoBanco> {
+  await exigirAmbienteLocal()
+
+  const supabase = createAdminClient()
+
+  const [usuarios, empresasRes, membrosRes, assinaturasRes, contatosRes, negociosRes, errosRes] =
+    await Promise.all([
+      supabase.auth.admin.listUsers({ page: 1, perPage: 1000 }),
+      supabase
+        .from('workspaces')
+        .select('id, name, created_at, created_by, telefone, whatsapp')
+        .order('created_at', { ascending: false })
+        .limit(TETO),
+      supabase.from('workspace_members').select('workspace_id, user_id').limit(TETO),
+      supabase
+        .from('subscriptions')
+        .select('workspace_id, status, current_period_end, asaas_subscription_id')
+        .limit(TETO),
+      // Só a coluna de agrupamento: trazer o lead inteiro para contar seria
+      // pagar rede por dado que ninguém lê. Mesma disciplina de
+      // `ProximaAcaoRow` (`lib/deals/queries.ts`), onde um `select` largo em
+      // rota sem paginação dobrou o custo medido da rota.
+      supabase.from('leads').select('workspace_id').limit(TETO),
+      supabase.from('deals').select('workspace_id').limit(TETO),
+      supabase.from('error_logs').select('id', { count: 'exact', head: true }),
+    ])
+
+  const empresas = (empresasRes.data ?? []) as LinhaDeEmpresa[]
+  const membros = membrosRes.data ?? []
+  const assinaturas = (assinaturasRes.data ?? []) as LinhaDeAssinatura[]
+  const contatos = contatosRes.data ?? []
+  const negocios = negociosRes.data ?? []
+
+  // Encostar no teto significa que pode haver mais linhas que não vieram. Não
+  // dá para saber quantas — só que o número mostrado é um piso, não o total.
+  const podeEstarCortado = [empresas, membros, assinaturas, contatos, negocios].some(
+    (lista) => lista.length >= TETO,
+  )
+
+  const porUsuario = new Map(usuarios.data.users.map((u) => [u.id, u]))
+  const assinaturaPorEmpresa = new Map(assinaturas.map((s) => [s.workspace_id, s]))
+  const contar = (lista: { workspace_id: string }[]) => {
+    const mapa = new Map<string, number>()
+    for (const item of lista) {
+      mapa.set(item.workspace_id, (mapa.get(item.workspace_id) ?? 0) + 1)
+    }
+    return mapa
+  }
+  const membrosPorEmpresa = contar(membros)
+  const contatosPorEmpresa = contar(contatos)
+  const negociosPorEmpresa = contar(negocios)
+
+  // A fonte da verdade sobre quem paga. Ver o bloco de documentação acima.
+  const vigencias = await Promise.all(
+    empresas.map(async (empresa) => {
+      const { data } = await supabase.rpc('pro_vigente', { target_workspace_id: empresa.id })
+      return [empresa.id, data === true] as const
+    }),
+  )
+  const proVigentePorEmpresa = new Map(vigencias)
+
+  const lista: EmpresaNaCentral[] = empresas.map((empresa) => {
+    const dono = empresa.created_by ? porUsuario.get(empresa.created_by) : undefined
+    const assinatura = assinaturaPorEmpresa.get(empresa.id)
+
+    return {
+      id: empresa.id,
+      nome: empresa.name,
+      // `name` nos metadados é o que o cadastro grava; o e-mail entra como
+      // reserva para a linha nunca aparecer sem identificação nenhuma.
+      dono: (dono?.user_metadata?.name as string | undefined) ?? dono?.email ?? null,
+      email: dono?.email ?? null,
+      telefone: empresa.whatsapp ?? empresa.telefone ?? null,
+      pagando: proVigentePorEmpresa.get(empresa.id) ?? false,
+      statusAssinatura: assinatura?.status ?? null,
+      proVenceEm: assinatura?.current_period_end ?? null,
+      criadoEm: empresa.created_at,
+      ultimoAcesso: dono?.last_sign_in_at ?? null,
+      quantidadeDeMembros: membrosPorEmpresa.get(empresa.id) ?? 0,
+      quantidadeDeContatos: contatosPorEmpresa.get(empresa.id) ?? 0,
+      quantidadeDeNegocios: negociosPorEmpresa.get(empresa.id) ?? 0,
+    }
+  })
+
+  const pagando = lista.filter((e) => e.pagando).length
+  const limiteDaSemana = Date.now() - SETE_DIAS
+
+  return {
+    numeros: {
+      entraPorMes: pagando * PRO_PLAN_PRICE,
+      clientesPagando: pagando,
+      contasCriadas: lista.length,
+      novasEm7Dias: lista.filter((e) => new Date(e.criadoEm).getTime() >= limiteDaSemana).length,
+    },
+    empresas: lista,
+    assinaturas,
+    podeEstarCortado,
+    errosRecentes: errosRes.count ?? 0,
+  }
+}

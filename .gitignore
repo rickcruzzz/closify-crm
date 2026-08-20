@@ -54,3 +54,8 @@ __pycache__/
 # reconstruível a qualquer momento rodando a skill de novo. Artefato de
 # ferramenta, não fonte.
 graphify-out/
+
+# Diário de tudo que foi comandado pela Central do Dono (lib/dono/actions.ts).
+# Carrega nome e id de empresa de cliente real, e é local por natureza: cada
+# máquina tem o seu, ninguém precisa do meu.
+.dono-registro.jsonl

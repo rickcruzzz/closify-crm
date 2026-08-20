@@ -29,6 +29,25 @@ const PREFIXOS_PRIVADOS = [
   '/bem-vindo',
 ]
 
+/**
+ * O domínio de produção. Só ele alimenta o pixel.
+ *
+ * Medido em 20/08/2026, olhando os eventos que a Meta de fato recebeu: além de
+ * `www.velofunil.com.br`, chegavam eventos de `localhost` e de previews
+ * `closify-crm-dr3t-*.vercel.app`. Num único dia (13/08), **18.192 PageViews
+ * vieram de `localhost`** — provavelmente recarregamento em laço durante o
+ * desenvolvimento.
+ *
+ * Isso não é ruído inofensivo: o pixel é o conjunto de dados com que a Meta
+ * aprende quem é o público a perseguir. Milhares de visitas falsas de uma
+ * máquina só ensinam o algoritmo a procurar gente que não existe, e a conta
+ * disso chega em dinheiro de anúncio gasto no alvo errado.
+ *
+ * A checagem é por `hostname` do navegador porque é o que separa os três casos
+ * de verdade. `NODE_ENV` não serve: preview da Vercel roda como `production`.
+ */
+const DOMINIO_DE_PRODUCAO = 'www.velofunil.com.br'
+
 export function MetaPixel() {
   const pathname = usePathname()
   const pixelId = process.env.NEXT_PUBLIC_META_PIXEL_ID
@@ -37,7 +56,14 @@ export function MetaPixel() {
     (prefixo) => pathname === prefixo || pathname.startsWith(`${prefixo}/`),
   )
 
-  if (!pixelId || eAreaPrivada) return null
+  // `undefined` no servidor: durante a renderização inicial não há `window`, e
+  // deixar passar aqui faria o script entrar no HTML e disparar antes de
+  // qualquer checagem. Como o pixel só tem valor depois da hidratação
+  // (`afterInteractive`), não renderizar no servidor não custa evento nenhum.
+  const hostname = typeof window === 'undefined' ? undefined : window.location.hostname
+  const eProducao = hostname === DOMINIO_DE_PRODUCAO
+
+  if (!pixelId || eAreaPrivada || !eProducao) return null
 
   return (
     <>
