@@ -101,8 +101,17 @@ jobs:
       - name: Instalar navegador do Playwright
         run: npx playwright install chromium --with-deps
 
+      # `--project=security`, nunca bare `npx playwright test`: o
+      # playwright.config.ts define DOIS projetos, e o segundo (`funil`) cria
+      # conta real e cobrança real de R$49 no Asaas de produção — documentado
+      # no próprio config como "fica fora do CI de propósito". Sem o filtro,
+      # este passo rodava os dois. Achado ao vivo: falhou antes de chegar no
+      # checkout de verdade (bateu na parede de login do Vercel Deployment
+      # Protection no preview), então nenhuma cobrança real saiu — mas foi
+      # sorte de ordem de execução, não segurança por desenho. Corrigido
+      # 20/08/2026, antes de rodar em produção com esse risco.
       - name: Auditoria de segurança contra o preview
-        run: npx playwright test
+        run: npx playwright test --project=security
         env:
           BASE_URL: ${{ steps.deploy.outputs.preview_url }}
 
