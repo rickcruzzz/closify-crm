@@ -26,16 +26,21 @@ const TIPOS: Record<string, string> = {
   '.jpg': 'image/jpeg',
   '.jpeg': 'image/jpeg',
   '.webp': 'image/webp',
+  '.mp4': 'video/mp4',
+  '.mov': 'video/quicktime',
 }
 
 export async function GET(
   _requisicao: Request,
-  { params }: { params: Promise<{ arquivo: string }> },
+  { params }: { params: Promise<{ destino: string; arquivo: string }> },
 ) {
   await exigirAmbienteLocal()
 
-  const { arquivo } = await params
-  const caminho = await caminhoSeguroDoCriativo(decodeURIComponent(arquivo))
+  const { destino, arquivo } = await params
+  const caminho = await caminhoSeguroDoCriativo(
+    decodeURIComponent(destino),
+    decodeURIComponent(arquivo),
+  )
 
   if (!caminho) {
     return new Response('Arte não encontrada.', { status: 404 })

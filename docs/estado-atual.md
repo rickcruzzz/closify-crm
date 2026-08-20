@@ -4,7 +4,49 @@ Documento de continuidade. É lido no começo de toda sessão (referenciado no
 [CLAUDE.md](../CLAUDE.md)) para que uma conversa nova, ou outra conta, comece
 sabendo o que já foi feito, o que foi decidido e onde estão as armadilhas.
 
-**Atualizado em:** 20/08/2026 (Central do Dono com páginas de alertas, anúncio e criativos; fila de alertas caiu de 11 para 4 ao filtrar ruído de teste; limpeza de dados de teste 26→24 empresas; 3 assinaturas ativas que não entregavam Pro; pixel deixando de sujar dados em localhost; conta de anúncio corrigida no registro; Supabase Pro e Vercel Pro com ganho medido; gate de deploy fechado)
+**Atualizado em:** 20/08/2026 (envio de criativos com conferência de qualidade e separação anúncio/orgânico; Central do Dono com páginas de alertas, anúncio e criativos; fila de alertas caiu de 11 para 4 ao filtrar ruído de teste; limpeza de dados de teste 26→24 empresas; 3 assinaturas ativas que não entregavam Pro; pixel deixando de sujar dados em localhost; conta de anúncio corrigida no registro; Supabase Pro e Vercel Pro com ganho medido; gate de deploy fechado)
+
+## Envio de criativos com conferência de qualidade (20/08)
+
+`/dono/criativos` deixou de ser só galeria: virou a porta de entrada das peças,
+com **anúncio e orgânico em pastas separadas** (`criativos/anuncio` e
+`criativos/organico`, as duas fora do Git). Arrasta foto ou vídeo, e o arquivo
+é conferido **antes de subir**.
+
+**Só entra o que serve, e a recusa ensina.** Cada reprovação diz três coisas: o
+que está errado, por que importa e o que fazer. "Arquivo inválido" transfere
+para a pessoa o trabalho de adivinhar, e o resultado é ela parar de testar
+criativo — que é a alavanca mais barata do tráfego pago. Reprova o que
+**quebra** (proporção fora das três do Meta, largura abaixo de 1080, formato
+recusado, vertical acima de 90s); ressalva o que só **custa desempenho** (vídeo
+de 3 minutos, arquivo acima de 1 GB, quadrado onde o vertical rende mais).
+Bloquear o que apenas rende menos seria decidir pelo dono.
+
+**Os dez posicionamentos se resolvem em três proporções** — 1:1, 4:5 e 9:16 —,
+e é isso que a peça aprovada mostra: em quais dos dez ela entra. Números
+conferidos na documentação do Meta em 20/08, não de memória: mínimo 1080p,
+MP4/MOV, teto de 4 GB, Reels até 90s, 15-60s de melhor desempenho, e a zona
+segura vertical (14% no topo, 20% no rodapé) que o Meta unificou em março de
+2026 em torno do Reels, o mais restritivo.
+
+**A medição acontece no navegador, e a autorização no servidor.** O navegador
+mede antes de enviar porque isso recusa um vídeo de 200 MB em um segundo, sem
+subir nada. Mas medição no cliente é informação, não permissão — e isso foi
+provado durante a construção: **um arquivo de 720×720 declarado como 1080×1080
+passou e entrou na biblioteca**. A rota passou a medir a imagem dos bytes reais
+(`medirImagemNoServidor`, a mesma função que a galeria já usava) e a descartar
+o número que o cliente manda. Para vídeo a medida do navegador é aceita, e a
+limitação está escrita no código em vez de escondida: ler dimensão de MP4
+exigiria ffmpeg, e o risco real aqui é peça ruim na biblioteca, não estranho
+escrevendo no disco — a rota inteira está atrás do gate de ambiente local.
+
+**Provado contra o servidor real:** 1080×1920 aceito com os 5 posicionamentos
+listados; 1920×1080 recusado por proporção com as três medidas certas na
+resposta; 720×720 recusado por resolução; `video/x-msvideo` recusado por
+formato; orgânico gravado na pasta própria. Em build de produção,
+`/dono/criativos`, `GET` e `POST` de `/api/dono/upload` e a rota que serve o
+arquivo devolvem **404** — o `GET` levava 405, que confirmava a existência da
+rota, e isso foi fechado. 402 testes (381 antes + 21 novos).
 
 ## Central do Dono, parte 2: alertas, anúncio e criativos (20/08)
 

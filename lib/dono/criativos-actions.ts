@@ -2,7 +2,7 @@
 
 import { revalidatePath } from 'next/cache'
 
-import { anotarCriativo } from './criativos'
+import { anotarCriativo, type Destino } from './criativos'
 import { exigirAmbienteLocal } from './somente-local'
 
 /**
@@ -12,8 +12,12 @@ import { exigirAmbienteLocal } from './somente-local'
  * importado por um Server Component para LER a pasta, e um arquivo não pode ser
  * `'use server'` inteiro e exportar tipos ao mesmo tempo.
  */
-export async function anotarCriativoAction(arquivo: string, nota: string): Promise<void> {
+export async function anotarCriativoAction(
+  destino: Destino,
+  arquivo: string,
+  nota: string,
+): Promise<void> {
   await exigirAmbienteLocal()
-  await anotarCriativo(arquivo, nota)
+  await anotarCriativo(destino, arquivo, nota)
   revalidatePath('/dono/criativos')
 }

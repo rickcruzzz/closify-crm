@@ -22,10 +22,25 @@ import { exigirAmbienteLocal } from './somente-local'
 const PASTA = join(process.cwd(), 'criativos')
 const NOTAS = join(PASTA, '.notas.json')
 
-const EXTENSOES = ['.png', '.jpg', '.jpeg', '.webp']
+/**
+ * Anúncio e orgânico vivem em pastas separadas.
+ *
+ * Não é organização por gosto: são materiais com critérios diferentes. Peça de
+ * anúncio precisa caber num posicionamento pago e passa pela conferência de
+ * qualidade; conteúdo orgânico tem outra régua e outro ciclo de vida. Numa
+ * pasta só, a galeria do anúncio encheria de material que nunca vai virar
+ * campanha, e achar a peça certa na hora de subir viraria trabalho.
+ */
+export type Destino = 'anuncio' | 'organico'
+
+const EXTENSOES = ['.png', '.jpg', '.jpeg', '.webp', '.mp4', '.mov']
+const EXTENSOES_DE_VIDEO = ['.mp4', '.mov']
 
 export type Criativo = {
   arquivo: string
+  destino: Destino
+  /** Vídeo não é medido no servidor — ver `medir-no-navegador.ts`. */
+  ehVideo: boolean
   /** Tamanho em bytes. */
   peso: number
   largura: number
@@ -47,7 +62,7 @@ export type Criativo = {
  * dimensão nos primeiros bytes e o formato está documentado há décadas — ler
  * na mão custa esta função e nada mais.
  */
-function medir(bytes: Buffer): { largura: number; altura: number } {
+export function medirImagemNoServidor(bytes: Buffer): { largura: number; altura: number } {
   // PNG: assinatura de 8 bytes, depois o chunk IHDR com largura e altura em
   // big-endian nas posições 16 e 20.
   if (bytes.length > 24 && bytes.toString('hex', 0, 4) === '89504e47') {
@@ -102,36 +117,56 @@ async function lerNotas(): Promise<Record<string, string>> {
   }
 }
 
-/** Lista as artes disponíveis, medidas e classificadas. */
-export async function listarCriativos(): Promise<Criativo[]> {
+/**
+ * Lista as peças de um destino, medidas e classificadas.
+ *
+ * ## Por que vídeo entra sem medida
+ *
+ * A dimensão de um MP4 vive nos átomos do contêiner, e lê-la aqui exigiria
+ * interpretar o formato à mão ou instalar ffmpeg — peso desproporcional para
+ * uma tela local. O vídeo já foi medido no navegador **antes de subir**
+ * (`medir-no-navegador.ts`), e a rota de upload recusa o que não passa. Então
+ * o que está na pasta já foi aprovado: medir de novo aqui seria refazer um
+ * trabalho cujo resultado não muda.
+ */
+export async function listarCriativos(destino: Destino): Promise<Criativo[]> {
   await exigirAmbienteLocal()
+
+  const raiz = join(PASTA, destino)
 
   let arquivos: string[]
   try {
-    arquivos = await readdir(PASTA)
+    arquivos = await readdir(raiz)
   } catch {
     // A pasta ainda não existe — é o estado do primeiro uso, não um erro.
     return []
   }
 
   const notas = await lerNotas()
-  const imagens = arquivos.filter((a) => EXTENSOES.includes(extname(a).toLowerCase()))
+  const pecas = arquivos.filter((a) => EXTENSOES.includes(extname(a).toLowerCase()))
 
   const criativos = await Promise.all(
-    imagens.map(async (arquivo): Promise<Criativo | null> => {
+    pecas.map(async (arquivo): Promise<Criativo | null> => {
       try {
-        const caminho = join(PASTA, arquivo)
-        const [info, bytes] = await Promise.all([stat(caminho), readFile(caminho)])
-        const { largura, altura } = medir(bytes)
+        const caminho = join(raiz, arquivo)
+        const ehVideo = EXTENSOES_DE_VIDEO.includes(extname(arquivo).toLowerCase())
+        const info = await stat(caminho)
+
+        // Só imagem é lida byte a byte: ver o bloco acima sobre vídeo.
+        const { largura, altura } = ehVideo
+          ? { largura: 0, altura: 0 }
+          : medirImagemNoServidor(await readFile(caminho))
 
         return {
           arquivo,
+          destino,
+          ehVideo,
           peso: info.size,
           largura,
           altura,
           classificacao: classificar(largura, altura),
           modificadoEm: info.mtime.toISOString(),
-          nota: notas[arquivo] ?? '',
+          nota: notas[`${destino}/${arquivo}`] ?? '',
         }
       } catch {
         // Um arquivo ilegível não pode esconder os outros da galeria.
@@ -145,13 +180,23 @@ export async function listarCriativos(): Promise<Criativo[]> {
     .sort((a, b) => b.modificadoEm.localeCompare(a.modificadoEm))
 }
 
-/** Grava a anotação de uma arte. */
-export async function anotarCriativo(arquivo: string, nota: string): Promise<void> {
+/**
+ * Grava a anotação de uma peça.
+ *
+ * A chave carrega o destino (`anuncio/arte.png`) porque o mesmo nome de arquivo
+ * pode existir nas duas pastas, e a anotação de uma não é a da outra.
+ */
+export async function anotarCriativo(
+  destino: Destino,
+  arquivo: string,
+  nota: string,
+): Promise<void> {
   await exigirAmbienteLocal()
 
+  const chave = `${destino}/${arquivo}`
   const notas = await lerNotas()
-  if (nota.trim()) notas[arquivo] = nota.trim()
-  else delete notas[arquivo]
+  if (nota.trim()) notas[chave] = nota.trim()
+  else delete notas[chave]
 
   await writeFile(NOTAS, JSON.stringify(notas, null, 2), 'utf8')
 }
@@ -166,11 +211,17 @@ export async function anotarCriativo(arquivo: string, nota: string): Promise<voi
  * rota local, um `<img src>` numa página maliciosa aberta no mesmo navegador
  * poderia tentar.
  */
-export async function caminhoSeguroDoCriativo(arquivo: string): Promise<string | null> {
+export async function caminhoSeguroDoCriativo(
+  destino: string,
+  arquivo: string,
+): Promise<string | null> {
+  // O destino vem da URL como qualquer outra parte dela: só os dois valores
+  // conhecidos passam, nunca o que o chamador mandar.
+  if (destino !== 'anuncio' && destino !== 'organico') return null
   if (arquivo.includes('/') || arquivo.includes('\\') || arquivo.includes('..')) return null
   if (!EXTENSOES.includes(extname(arquivo).toLowerCase())) return null
 
-  const caminho = join(PASTA, arquivo)
+  const caminho = join(PASTA, destino, arquivo)
   // Cinto e suspensório: mesmo com as checagens acima, confirma que o caminho
   // resolvido continua dentro da pasta.
   if (!caminho.startsWith(PASTA)) return null
