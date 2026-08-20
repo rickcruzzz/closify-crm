@@ -270,6 +270,48 @@ export default function PrivacidadePage() {
         </LegalP>
       </LegalSection>
 
+      <LegalSection titulo="11. Integrações opcionais com Google Calendar e Gmail">
+        <LegalP>
+          Você pode, se quiser, conectar sua conta do Google em Configurações →
+          Integrações para usar dois recursos opcionais. Essa conexão nunca é ativada
+          automaticamente — só existe se você mesmo clicar em &quot;Conectar&quot;.
+        </LegalP>
+        <LegalList>
+          <li>
+            <strong className="text-foreground">Google Calendar:</strong> ao clicar em
+            &quot;Adicionar ao Google Calendar&quot; numa tarefa, criamos um evento
+            específico no seu calendário, com os dados dessa tarefa. Não lemos, listamos
+            nem modificamos eventos que já existem na sua agenda.
+          </li>
+          <li>
+            <strong className="text-foreground">Gmail:</strong> ao clicar em &quot;Enviar
+            e-mail&quot; na página de um lead, enviamos o e-mail que você escreveu, em
+            seu nome. Não lemos sua caixa de entrada nem listamos e-mails existentes.
+          </li>
+        </LegalList>
+        <LegalP>
+          O token de acesso concedido pelo Google é armazenado cifrado (mesmo padrão da
+          seção 8, &quot;Segurança&quot;), nunca compartilhado com terceiros e nunca usado para
+          publicidade ou para treinar modelo de inteligência artificial. Nosso uso de
+          informações recebidas das APIs do Google segue a Política de Dados do Usuário
+          dos Serviços de API do Google, incluindo os requisitos de Uso Limitado
+          (Limited Use).
+        </LegalP>
+        <LegalP>
+          Você pode revogar esse acesso a qualquer momento, desconectando em
+          Configurações → Integrações, ou diretamente em{' '}
+          <a
+            href="https://myaccount.google.com/permissions"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-foreground underline underline-offset-4"
+          >
+            myaccount.google.com/permissions
+          </a>
+          .
+        </LegalP>
+      </LegalSection>
+
       <LegalBackLink />
     </article>
   )
