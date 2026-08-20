@@ -1,46 +1,40 @@
 'use server'
 
 import { revalidatePath } from 'next/cache'
-import { appendFile } from 'node:fs/promises'
-import { join } from 'node:path'
 
 import { createAdminClient } from '@/lib/supabase/admin'
 import { aplicarEventoAsaas } from '@/lib/asaas/aplicar-evento'
 import { buscarPagamentoMaisRecente } from '@/lib/asaas/status-real'
 
+import { registrarNoDiario } from './diario'
+import { reexibir, reexibirTudo, silenciar } from './silenciados'
 import { exigirAmbienteLocal } from './somente-local'
 
 export type ResultadoDaAcao = { ok: true; mensagem: string } | { ok: false; erro: string }
 
-/**
- * O diário do que foi comandado por aqui.
- *
- * ## Por que gravar em arquivo, e não só no console
- *
- * Liberar Pro de cortesia é uma decisão de dinheiro que não deixa rastro
- * nenhum: o banco fica igual a uma assinatura paga de verdade, e daqui a três
- * meses ninguém lembra se aquela empresa pagou ou ganhou. O terminal onde o
- * `npm run dev` está rodando some quando a janela fecha.
- *
- * Arquivo local, uma linha JSON por ação, fora do Git (`.gitignore`) porque
- * carrega nome e id de cliente real.
- */
-const ARQUIVO_DE_REGISTRO = join(process.cwd(), '.dono-registro.jsonl')
+/** Para de mostrar um alerta específico. Reversível — ver `silenciados.ts`. */
+export async function silenciarAlerta(id: string): Promise<ResultadoDaAcao> {
+  await exigirAmbienteLocal()
+  await silenciar(id)
+  revalidatePath('/dono')
+  revalidatePath('/dono/alertas')
+  return { ok: true, mensagem: 'Alerta silenciado.' }
+}
 
-async function registrar(acao: string, detalhes: Record<string, unknown>): Promise<void> {
-  const linha = JSON.stringify({
-    quando: new Date().toISOString(),
-    acao,
-    ...detalhes,
-  })
+export async function reexibirAlerta(id: string): Promise<ResultadoDaAcao> {
+  await exigirAmbienteLocal()
+  await reexibir(id)
+  revalidatePath('/dono')
+  revalidatePath('/dono/alertas')
+  return { ok: true, mensagem: 'Alerta de volta.' }
+}
 
-  try {
-    await appendFile(ARQUIVO_DE_REGISTRO, `${linha}\n`, 'utf8')
-  } catch (err) {
-    // Falhar o registro não pode desfazer a ação que já aconteceu no banco —
-    // seria pior. Mas precisa aparecer em algum lugar.
-    console.error('Central do Dono: não consegui gravar o registro da ação.', err)
-  }
+export async function reexibirTodosOsAlertas(): Promise<ResultadoDaAcao> {
+  await exigirAmbienteLocal()
+  await reexibirTudo()
+  revalidatePath('/dono')
+  revalidatePath('/dono/alertas')
+  return { ok: true, mensagem: 'Todos os alertas voltaram.' }
 }
 
 /**
@@ -93,7 +87,7 @@ export async function consertarAssinatura(subscriptionId: string): Promise<Resul
     return { ok: false, erro: 'A correção falhou. O erro completo está no terminal.' }
   }
 
-  await registrar('consertar-assinatura', {
+  await registrarNoDiario('consertar-assinatura', {
     subscriptionId,
     statusAplicado: pagamento.statusMapeado,
     encontrouLinha: resultado.matched,
@@ -158,7 +152,7 @@ export async function liberarProDeCortesia(workspaceId: string): Promise<Resulta
     return { ok: false, erro: `Assinatura gravada, mas o plano não subiu: ${erroDoPlano.message}` }
   }
 
-  await registrar('liberar-pro-de-cortesia', { workspaceId, venceEm })
+  await registrarNoDiario('liberar-pro-de-cortesia', { workspaceId, venceEm })
   revalidatePath('/dono')
 
   return {
@@ -194,7 +188,7 @@ export async function voltarParaGratis(workspaceId: string): Promise<ResultadoDa
     return { ok: false, erro: `Assinatura cancelada, mas o plano não desceu: ${erroDoPlano.message}` }
   }
 
-  await registrar('voltar-para-gratis', { workspaceId })
+  await registrarNoDiario('voltar-para-gratis', { workspaceId })
   revalidatePath('/dono')
 
   return { ok: true, mensagem: 'Empresa voltou para o plano gratuito.' }
@@ -250,7 +244,7 @@ export async function apagarEmpresa(
 
   // Registrado com o nome, não só o id: depois de apagada, o id não permite
   // mais descobrir de quem era.
-  await registrar('apagar-empresa', { workspaceId, nome: empresa.name })
+  await registrarNoDiario('apagar-empresa', { workspaceId, nome: empresa.name })
   revalidatePath('/dono')
 
   return { ok: true, mensagem: `"${empresa.name}" foi apagada.` }

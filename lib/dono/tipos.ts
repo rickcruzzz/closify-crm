@@ -29,7 +29,27 @@ export type EmpresaNaCentral = {
   quantidadeDeMembros: number
   quantidadeDeContatos: number
   quantidadeDeNegocios: number
+  /**
+   * A campanha de anúncio que trouxe esta empresa, quando ela veio de uma.
+   *
+   * Gravado por `components/landing/utm-capture.tsx` a partir da URL. É o que
+   * permite dizer quanto custou cada cliente pagante — ver `atribuicao.ts`.
+   */
+  utmCampaign: string | null
+  /** Se chegou por um clique de anúncio do Meta (o `fbclid` da URL). */
+  veioDeCliqueDeAnuncio: boolean
 }
+
+/** As famílias de problema que a Central sabe reconhecer. */
+export type TipoDePendencia =
+  | 'assinatura-orfa'
+  | 'assinatura-nao-entrega'
+  | 'assinatura-de-teste'
+  | 'pro-vencendo'
+  | 'email-nao-chegou'
+  | 'email-com-erro-de-digitacao'
+  | 'cliente-sumido'
+  | 'erros-no-produto'
 
 /** Um item da fila de "precisa da sua atenção". */
 export type Pendencia = {
@@ -40,6 +60,8 @@ export type Pendencia = {
    * parado; `atencao` é problema real sem sangramento imediato.
    */
   gravidade: 'dinheiro' | 'atencao'
+  /** Usado para agrupar itens iguais e para silenciar uma família inteira. */
+  tipo: TipoDePendencia
   titulo: string
   /** A frase que explica o que aconteceu, em português de dono de negócio. */
   detalhe: string
@@ -110,26 +132,20 @@ export type DadosDaCentral = {
   podeEstarCortado: boolean
   dinheiro: Resultado<DinheiroNoAsaas>
   emails: Resultado<EmailEnviado[]>
-  anuncio: Resultado<ResumoDoAnuncio>
+  /** O anúncio vive em `/dono/anuncio`, com leitura própria — ver `central.ts`. */
   pendencias: Pendencia[]
+  /**
+   * O que o dono mandou parar de mostrar.
+   *
+   * Vem junto, e não descartado, porque silenciar sem poder desfazer é o mesmo
+   * que perder: sem esta lista não haveria como oferecer "mostrar de novo".
+   */
+  silenciadas: Pendencia[]
   errosRecentes: number
   /** Quando esta leitura foi feita, para a tela poder dizer "há 2 minutos". */
   lidoEm: string
 }
 
-/** O que o Meta Ads devolve, quando há token que permita ler. */
-export type ResumoDoAnuncio = {
-  contaId: string
-  contaNome: string
-  gasto: number
-  alcance: number
-  cliques: number
-  custoPorClique: number
-  campanhas: {
-    id: string
-    nome: string
-    ativa: boolean
-    gasto: number
-    cliques: number
-  }[]
-}
+// Os tipos do anúncio moram em `meta-ads.ts` e `atribuicao.ts`, junto de quem
+// os produz: eles só interessam à página `/dono/anuncio`, e trazê-los para o
+// vocabulário comum faria parecer que a Visão geral depende deles.

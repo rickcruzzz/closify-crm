@@ -55,7 +55,17 @@ __pycache__/
 # ferramenta, não fonte.
 graphify-out/
 
-# Diário de tudo que foi comandado pela Central do Dono (lib/dono/actions.ts).
+# Diário de tudo que foi comandado pela Central do Dono (lib/dono/diario.ts).
 # Carrega nome e id de empresa de cliente real, e é local por natureza: cada
 # máquina tem o seu, ninguém precisa do meu.
 .dono-registro.jsonl
+
+# Alertas que o dono mandou parar de mostrar (lib/dono/silenciados.ts).
+# Preferência de uma pessoa numa máquina, não dado de produto.
+.dono-silenciados.json
+
+# Artes de anúncio da Central (lib/dono/criativos.ts). Ficam FORA de `public/`
+# de propósito — lá elas entrariam no build, iriam para o ar e ganhariam uma
+# URL pública. E fora do Git porque criativo é iteração: dez variações de um
+# anúncio não são dez versões de código.
+criativos/

@@ -4,7 +4,78 @@ Documento de continuidade. É lido no começo de toda sessão (referenciado no
 [CLAUDE.md](../CLAUDE.md)) para que uma conversa nova, ou outra conta, comece
 sabendo o que já foi feito, o que foi decidido e onde estão as armadilhas.
 
-**Atualizado em:** 20/08/2026 (Central do Dono em localhost achando 3 assinaturas ativas que não entregavam Pro, pixel deixando de sujar dados em localhost, conta de anúncio corrigida no registro, Supabase Pro e Vercel Pro com ganho medido, Fluid Compute, gate de deploy fechado, e-mail de suporte com encaminhamento real)
+**Atualizado em:** 20/08/2026 (Central do Dono com páginas de alertas, anúncio e criativos; fila de alertas caiu de 11 para 4 ao filtrar ruído de teste; limpeza de dados de teste 26→24 empresas; 3 assinaturas ativas que não entregavam Pro; pixel deixando de sujar dados em localhost; conta de anúncio corrigida no registro; Supabase Pro e Vercel Pro com ganho medido; gate de deploy fechado)
+
+## Central do Dono, parte 2: alertas, anúncio e criativos (20/08)
+
+A Central ganhou três páginas próprias (`/dono/alertas`, `/dono/anuncio`,
+`/dono/criativos`), navegadas por link real — não aba com estado, para o botão
+voltar funcionar e cada página carregar só o que precisa. O resumo dos alertas
+continua no topo da Visão geral, com as três mais graves e um link.
+
+**O ruído foi o achado.** Na primeira execução, **8 dos 11 alertas eram
+e-mails de teste que eu mesmo gerei** em sessões anteriores. Medido: dos 7
+e-mails com falha, **6 nem tinham conta no banco** — endereços inventados por
+script. Uma fila com 70% de lixo ensina a ignorar a fila inteira, e junto com o
+item chato vai embora o alerta de dinheiro.
+
+A correção não é lista negra nem regex de "parece teste": `montarPendencias`
+passou a receber o conjunto de e-mails que pertencem a contas reais e **ignora
+falha para endereço que ninguém usou para se cadastrar**. Resultado medido:
+**11 → 4 alertas**, e os 4 restantes são os problemas de verdade (3 de
+dinheiro). Cada alerta ganhou "silenciar", com contador e volta — silenciar sem
+poder desfazer é o mesmo que perder.
+
+**Por que regex de "teste" foi descartado, com um caso concreto.** Ao preparar
+a limpeza, o padrão pegou `testei122@gmaa2il.com` — que **não é teste**: é
+pessoa real que digitou o e-mail errado (`gmaa2il` em vez de `gmail`), dona da
+"Agência Nova Era" com 2 contatos e 2 negócios. Apagar por padrão automático
+teria destruído dado de cliente. A limpeza foi por lista conferida uma a uma, e
+o caso dela virou um **alerta novo**: `lib/dono/dominios.ts` compara o domínio
+com os comuns por distância de edição e avisa que aquela pessoa nunca vai
+receber confirmação de cadastro, recuperação de senha nem cobrança — oferecendo
+o telefone que ela cadastrou. Outro alerta novo: cliente que usou e sumiu há
+mais de 14 dias.
+
+**Limpeza dos dados de teste, feita:** empresas `Workspace Teste E2E` e
+`Teste Pro` (esta era a do `sub_teste_local` dando Pro de graça) e 4 contas
+órfãs. **26 → 24 empresas**, cascata levou o conteúdo, e a "Agência Nova Era"
+foi conferida intacta com seus 2 contatos depois.
+
+**`/dono/anuncio` nasce nos dois estados.** Enquanto nenhuma campanha rodou —
+que é hoje — a pergunta é "posso ligar?", e a tela é uma lista de conferência
+verificada contra a API: pixel certo na conta, fuso, eventos chegando, campanhas
+existentes, e se o token permite agir. Uma tabela de zeros seria inútil
+justamente quando ele mais precisa de direção. Depois que gastar, a tela vira
+**quanto custou cada cliente pagante** — gasto do Meta ÷ empresas que vieram da
+campanha e viraram Pro, com o payback em meses de mensalidade. Esse número é
+possível porque `workspaces` já guarda `utm_campaign`/`fbc` e
+`utm-capture.tsx` já grava; a ponte estava construída e **nunca havia sido
+exercitada** (0 de 24, porque nenhuma campanha rodou). `lib/dono/atribuicao.ts`
+é o primeiro consumidor dela.
+
+Ações no anúncio: **pausar, ligar e mudar orçamento** — as três reversíveis.
+Criar campanha ficou de fora de propósito: são ~15 campos onde errar um queima
+dinheiro em silêncio, e é decisão estratégica, não operação. Continua pelo chat.
+Mudar orçamento mostra o valor atual ao lado do novo, porque é a única cujo erro
+só aparece na fatura.
+
+**`/dono/criativos` nasce pronta e vazia.** O gerador de imagem (Replicate) não
+está ativo — confirmado, a chamada expirou em 300s. A galeria lista o que
+estiver na pasta `criativos/` (fora de `public/` e fora do Git), mede a
+dimensão lendo o cabeçalho do arquivo à mão — sem dependência nova no
+`package.json` do produto por causa de uma tela local — e diz em que formato do
+Meta a arte se encaixa. Provado com três artes: 1080×1080 aprovada exata,
+1024×1024 aprovada com "pode aparecer borrada", 1920×1080 recusada com a
+sugestão do formato mais próximo. A rota que serve a imagem
+(`/api/dono/criativo/[arquivo]`) recusa travessia de diretório — testado com
+`../.env.local` e variações codificadas, todas 404.
+
+**Provado contra produção:** build de produção devolve **404** nas quatro rotas
+e na rota de imagem, enquanto `/` e `/login` dão 200; em `dev` as quatro abrem
+por `localhost` e dão 404 com `Host` do IP da máquina, do domínio real ou
+`localhost.evil.com`. Silenciar levou a fila de 4 para 3 com o contador certo.
+381 testes (319 antes + 62 novos).
 
 ## Central do Dono, só em localhost (20/08)
 

@@ -10,7 +10,7 @@ import { formatarTempoRelativo } from '@/lib/dono/formato'
 import type { DadosDaCentral } from '@/lib/dono/tipos'
 
 import { BlocoDeSaude } from './bloco-de-saude'
-import { BlocoDoAnuncio } from './bloco-do-anuncio'
+import { Navegacao } from './navegacao'
 import { Numeros } from './numeros'
 import { PrecisaDeAtencao } from './precisa-de-atencao'
 import { TabelaDeClientes } from './tabela-de-clientes'
@@ -87,10 +87,11 @@ export function CentralClient({ dados }: { dados: DadosDaCentral }) {
         </div>
       )}
 
+      <Navegacao alertas={dados.pendencias.length} />
+
       <PrecisaDeAtencao pendencias={dados.pendencias} />
       <Numeros numeros={dados.numeros} dinheiro={dados.dinheiro} />
       <TabelaDeClientes empresas={dados.empresas} />
-      <BlocoDoAnuncio anuncio={dados.anuncio} />
       <BlocoDeSaude emails={dados.emails} />
 
       <Toaster />

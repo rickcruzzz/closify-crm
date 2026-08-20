@@ -28,6 +28,8 @@ type LinhaDeEmpresa = {
   created_by: string | null
   telefone: string | null
   whatsapp: string | null
+  utm_campaign: string | null
+  fbc: string | null
 }
 
 type LinhaDeAssinatura = {
@@ -43,6 +45,15 @@ export type LeituraDoBanco = {
   assinaturas: LinhaDeAssinatura[]
   podeEstarCortado: boolean
   errosRecentes: number
+  /**
+   * Todo e-mail que pertence a uma conta de verdade.
+   *
+   * Existe para separar cliente travado de lixo de script no filtro de
+   * pendências: um e-mail que voltou (bounce) para um endereço que ninguém
+   * usou para se cadastrar é ruído de teste, não problema de cliente. Ver o
+   * comentário do filtro em `pendencias.ts`.
+   */
+  emailsDeContasReais: Set<string>
 }
 
 /**
@@ -81,7 +92,7 @@ export async function lerBanco(): Promise<LeituraDoBanco> {
       supabase.auth.admin.listUsers({ page: 1, perPage: 1000 }),
       supabase
         .from('workspaces')
-        .select('id, name, created_at, created_by, telefone, whatsapp')
+        .select('id, name, created_at, created_by, telefone, whatsapp, utm_campaign, fbc')
         .order('created_at', { ascending: false })
         .limit(TETO),
       supabase.from('workspace_members').select('workspace_id, user_id').limit(TETO),
@@ -152,6 +163,10 @@ export async function lerBanco(): Promise<LeituraDoBanco> {
       quantidadeDeMembros: membrosPorEmpresa.get(empresa.id) ?? 0,
       quantidadeDeContatos: contatosPorEmpresa.get(empresa.id) ?? 0,
       quantidadeDeNegocios: negociosPorEmpresa.get(empresa.id) ?? 0,
+      utmCampaign: empresa.utm_campaign,
+      // `fbc` só existe quando a pessoa chegou por um clique de anúncio do
+      // Meta (`fbclid` na URL), gravado por `components/landing/utm-capture.tsx`.
+      veioDeCliqueDeAnuncio: Boolean(empresa.fbc),
     }
   })
 
@@ -169,5 +184,8 @@ export async function lerBanco(): Promise<LeituraDoBanco> {
     assinaturas,
     podeEstarCortado,
     errosRecentes: errosRes.count ?? 0,
+    emailsDeContasReais: new Set(
+      usuarios.data.users.map((u) => u.email).filter((e): e is string => Boolean(e)),
+    ),
   }
 }
