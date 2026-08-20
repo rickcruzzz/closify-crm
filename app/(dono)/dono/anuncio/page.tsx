@@ -1,7 +1,5 @@
-import { Navegacao } from '@/components/dono/navegacao'
 import { PainelDoAnuncio } from '@/components/dono/painel-do-anuncio'
 import { Card, CardContent } from '@/components/ui/card'
-import { Toaster } from '@/components/ui/sonner'
 import {
   cruzarCampanhasComClientes,
   resumirAtribuicao,
@@ -31,7 +29,6 @@ export default async function PaginaDoAnuncio() {
           </p>
         </header>
 
-        <Navegacao />
 
         <Card size="sm">
           <CardContent className="flex flex-col gap-2 py-6">
@@ -46,7 +43,6 @@ export default async function PaginaDoAnuncio() {
           </CardContent>
         </Card>
 
-        <Toaster />
       </div>
     )
   }
@@ -79,7 +75,6 @@ export default async function PaginaDoAnuncio() {
         </p>
       </header>
 
-      <Navegacao />
 
       <PainelDoAnuncio
         prontidao={prontidao.dados}
@@ -88,7 +83,6 @@ export default async function PaginaDoAnuncio() {
         mensalidade={PRO_PLAN_PRICE}
       />
 
-      <Toaster />
     </div>
   )
 }

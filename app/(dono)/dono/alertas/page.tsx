@@ -1,6 +1,4 @@
 import { ListaDeAlertas } from '@/components/dono/lista-de-alertas'
-import { Navegacao } from '@/components/dono/navegacao'
-import { Toaster } from '@/components/ui/sonner'
 import { lerCentral } from '@/lib/dono/central'
 import { formatarTempoRelativo } from '@/lib/dono/formato'
 import { exigirAmbienteLocal } from '@/lib/dono/somente-local'
@@ -23,13 +21,9 @@ export default async function PaginaDeAlertas() {
         </p>
       </header>
 
-      <Navegacao alertas={dados.pendencias.length} />
 
       <ListaDeAlertas pendencias={dados.pendencias} silenciadas={dados.silenciadas} />
 
-      {/* Esta rota não usa o layout do produto, que é onde o Toaster global
-          mora. Sem esta linha, silenciar e corrigir aconteceriam em silêncio. */}
-      <Toaster />
     </div>
   )
 }

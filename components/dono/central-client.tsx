@@ -5,12 +5,10 @@ import { useRouter } from 'next/navigation'
 import { AlertTriangle, Loader2, RefreshCw } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
-import { Toaster } from '@/components/ui/sonner'
 import { formatarTempoRelativo } from '@/lib/dono/formato'
 import type { DadosDaCentral } from '@/lib/dono/tipos'
 
 import { BlocoDeSaude } from './bloco-de-saude'
-import { Navegacao } from './navegacao'
 import { Numeros } from './numeros'
 import { PrecisaDeAtencao } from './precisa-de-atencao'
 import { TabelaDeClientes } from './tabela-de-clientes'
@@ -87,14 +85,12 @@ export function CentralClient({ dados }: { dados: DadosDaCentral }) {
         </div>
       )}
 
-      <Navegacao alertas={dados.pendencias.length} />
 
       <PrecisaDeAtencao pendencias={dados.pendencias} />
       <Numeros numeros={dados.numeros} dinheiro={dados.dinheiro} />
       <TabelaDeClientes empresas={dados.empresas} />
       <BlocoDeSaude emails={dados.emails} />
 
-      <Toaster />
     </div>
   )
 }
