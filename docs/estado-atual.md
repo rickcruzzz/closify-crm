@@ -4,7 +4,66 @@ Documento de continuidade. É lido no começo de toda sessão (referenciado no
 [CLAUDE.md](../CLAUDE.md)) para que uma conversa nova, ou outra conta, comece
 sabendo o que já foi feito, o que foi decidido e onde estão as armadilhas.
 
-**Atualizado em:** 19/08/2026 (Calendário, filtro de período com range picker, exportação de relatório em PDF, busca de lead, senha exige confirmação para trocar, captura real de erro em produção, sidebar em seções, mensagem de Pro correta por caso, auditoria completa com 8 correções, checkout travado para quem já cancelou, DNS migrado pro Cloudflare com WAF/Bot Fight Mode/Rate Limiting ativos, auditoria de performance de ponta a ponta com 5 correções, redesign do fluxo de autenticação em 8 telas e 3 bugs silenciosos de CSS)
+**Atualizado em:** 20/08/2026 (Supabase Pro e Vercel Pro contratados com ganho medido, Fluid Compute, gate de deploy fechado de ponta a ponta, endurecimento de segurança da conta Vercel, e-mail de suporte com encaminhamento real, abas de Configurações sem feedback corrigidas)
+
+## Infraestrutura: Supabase Pro, Vercel Pro, Fluid Compute (20/08)
+
+Os dois planos pagos no mesmo dia, com ganho **medido**, não estimado — padrão
+de provar contra produção aplicado à própria infraestrutura, não só ao código.
+
+**Supabase Free → Pro.** Duas medições independentes, mesmo projeto
+(`sa-east-1`), mesmo dia, mesmas queries do código real
+(`getWorkspaceSettingsData` e a RPC `sincronizar_plano_do_workspace`), antes e
+depois do upgrade: 1.100ms → 150ms (86%) e 700ms → 167ms (76%). Ressalva
+honesta registrada: parte do ganho pode ser o Supabase Free "dormindo" antes
+da medição, não só compute — mas a melhora é real e grande de qualquer forma.
+
+**Vercel Hobby → Pro + Fluid Compute.** Fluid Compute é grátis em qualquer
+plano (`"fluid": true` em `vercel.json`), testado em par A/B isolado (branch
+descartável, dois deployments de preview, nunca tocou `main` antes da
+decisão): cold start 369ms → 150ms, quente 307ms → 141ms (54-59%). Aplicado
+em produção depois da prova. Vercel Pro em si **não** deixa o site mais
+rápido no volume atual (medido: 18 requisições/24h, longe de qualquer teto do
+Hobby) — o motivo real de pagar foi outro: Hobby proíbe uso comercial nos
+termos, e o produto já tem cliente pagante real. Importa pra quando o volume
+crescer (teto de banda/requisições de borda, skew protection em deploy,
+observabilidade que faltava pro mistério nunca resolvido do
+`/esqueci-senha` de 108s).
+
+**Gate de deploy, fechado de ponta a ponta.** As duas falhas que impediam o
+workflow de completar desde a virada pra Vercel Pro:
+- Parêntese não fechado num script bash embutido no YAML (`url=$(curl ...`
+  nunca fechado depois de eu trocar o fim do passo) — corrigido extraindo a
+  lógica pra `scripts/ci/publicar-saida-do-deploy.mjs`, testável isolado.
+- `promote` via API é Pro/Enterprise (confirmado com `422` em 2 tentativas
+  antes mesmo de saber a causa) — mesmo com Vercel Pro contratado depois, o
+  workflow continua avisando o link em vez de promover sozinho, decisão
+  registrada mais abaixo, não vale reautomatizar sem necessidade real.
+
+**Segurança da conta Vercel.** Dois achados de alta prioridade do Security
+Dashboard do time, resolvidos: `Enforce Sensitive Environment Variables`
+(segredo vira só-escrita, ninguém reabre valor salvo) e
+`Two-Factor Authentication Enforcement` (2FA obrigatório pra qualquer membro
+do time). `Require Verified Commits` **ficou desligado de propósito**:
+nenhum commit deste projeto é assinado hoje (conferido,
+`commit.gpgsign`/`user.signingkey` vazios); ligar isso agora bloquearia todo
+deploy futuro, inclusive os meus.
+
+**E-mail de suporte, encaminhamento real.** `suporte@velofunil.com.br` não
+tinha MX nenhum — quem escrevesse pra ele tomava bounce. Cloudflare Email
+Routing configurado (grátis), encaminha pra caixa real do dono, mantendo o
+domínio próprio autenticado no rodapé e nos e-mails transacionais (a
+alternativa cogitada, trocar pra `velofunil@outlook.com`, foi descartada por
+regressão de entregabilidade — domínio de terceiro não autentica).
+
+**Abas de Configurações sem feedback, corrigido.** `components/settings/settings-tabs.tsx`
+eram `<Link>` puros: clicar em Empresa/Equipe/Plano/Integrações não dava
+nenhum sinal entre o clique e o conteúdo novo aparecer, então parecia travado
+e a pessoa clicava de novo. Mesma classe de queixa já resolvida em
+`workspace-switcher.tsx`/`user-menu.tsx`: `useTransition` + spinner na aba
+clicada + todas desabilitadas durante a transição. Provado localmente (build
+de produção real, conta de teste Pro): no tick imediatamente seguinte ao
+clique, antes até da URL mudar, o spinner já está visível.
 
 > Mantenha este arquivo curto. O detalhe de _por que_ cada coisa é assim mora
 > nas mensagens de commit e nos comentários do código, que são a memória real
