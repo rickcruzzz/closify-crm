@@ -59,23 +59,45 @@ function baseUrl(): string {
 }
 
 /**
- * Chave global da API.
+ * Chave global da API (`GLOBAL_API_KEY` do Evolution GO).
  *
- * O Evolution não tem login: quem tem esta chave cria instância, lê mensagem e
- * envia em nome de qualquer número conectado. É credencial de servidor, nunca
- * pode ir para o browser — daí o `server-only` no topo do arquivo.
+ * Autentica só as rotas ADMINISTRATIVAS — criar instância, listar todas,
+ * apagar (`/instance/create`, `/instance/all`, `/instance/delete/{id}`).
+ *
+ * ## Por que existe uma segunda chave, por instância
+ *
+ * Diferente da Evolution API (Node/Baileys) original, o Evolution GO
+ * (github.com/EvolutionAPI/evolution-go, reescrita em Go sobre `whatsmeow`,
+ * confirmado pelo Swagger do servidor) usa DUAS credenciais: esta global
+ * para administrar instâncias, e um **token por instância** — escolhido no
+ * momento da criação — para tudo que age SOBRE uma instância já criada
+ * (conectar, status, QR, enviar mensagem). Testado contra o servidor real:
+ * `/instance/connect` com a `GLOBAL_API_KEY` no header `apikey` devolve
+ * `401 not authorized`; com o token da instância no mesmo header, `200`.
+ *
+ * É credencial de servidor, nunca vai para o browser — daí o `server-only`
+ * no topo do arquivo.
  */
 function apiKey(): string {
   const key = process.env.EVOLUTION_API_KEY
   if (!key) {
     throw new Error(
-      'EVOLUTION_API_KEY não configurada. É a chave que o painel da Hostinger gerou ao subir o template.',
+      'EVOLUTION_API_KEY não configurada. É a GLOBAL_API_KEY do Evolution GO, gerada ao subir o template na VPS.',
     )
   }
   return key
 }
 
-export async function evolutionFetch<T>(path: string, init?: RequestInit): Promise<T> {
+/**
+ * @param apikeyOverride Quando informado, substitui a `GLOBAL_API_KEY` no
+ * header `apikey` — é o token da instância, exigido pelas rotas que agem
+ * sobre uma instância já criada. Ver o comentário de `apiKey()` acima.
+ */
+export async function evolutionFetch<T>(
+  path: string,
+  init?: RequestInit,
+  apikeyOverride?: string,
+): Promise<T> {
   let res: Response
 
   try {
@@ -90,7 +112,7 @@ export async function evolutionFetch<T>(path: string, init?: RequestInit): Promi
       signal: AbortSignal.timeout(15_000),
       headers: {
         'Content-Type': 'application/json',
-        apikey: apiKey(),
+        apikey: apikeyOverride ?? apiKey(),
         ...init?.headers,
       },
     })

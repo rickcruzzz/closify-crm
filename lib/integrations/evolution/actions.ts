@@ -1,13 +1,16 @@
 'use server'
 
+import { randomBytes } from 'node:crypto'
+
 import { revalidatePath } from 'next/cache'
 
 import { appUrl } from '@/lib/app-url'
 import { mensagemBloqueioPro } from '@/lib/integrations/mensagem-bloqueio-pro'
+import { cifrar, decifrar } from '@/lib/integrations/crypto'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 
-import { configurarWebhook, criarInstancia, obterEstado, obterQrCode } from './api'
+import { conectarInstancia, criarInstancia, obterEstado, obterQrCode } from './api'
 
 /**
  * Conectar e desconectar o WhatsApp de uma empresa.
@@ -19,9 +22,18 @@ import { configurarWebhook, criarInstancia, obterEstado, obterQrCode } from './a
  * restringido pela Meta afeta **um** cliente, não a base inteira. Número
  * compartilhado entre empresas seria um ponto único de falha com consequência
  * proporcional ao número de clientes.
+ *
+ * ## O token da instância, cifrado como um token OAuth qualquer
+ *
+ * O Evolution GO (ver `./api.ts` para o porquê do nome) exige um token
+ * PRÓPRIO por instância — nós escolhemos o valor na criação, e ele vira a
+ * senha de acesso a partir daí. É gravado em `access_token_enc`, a mesma
+ * coluna cifrada que Google Calendar/Gmail já usam para o access token deles
+ * — mesmo risco (quem lê essa coluna pode agir em nome da conexão), mesma
+ * defesa.
  */
-export type ResultadoDaConexao =
-  { ok: true; qrCode: string | null } | { ok: false; erro: string }
+export type ResultadoDaConexao = { ok: true; qrCode: string | null } | { ok: false; erro: string }
+
 /** Só admin mexe em integração — mesma regra do Google Calendar e do Gmail. */
 async function exigirAdmin(workspaceId: string): Promise<string> {
   const supabase = await createClient()
@@ -40,8 +52,23 @@ async function exigirAdmin(workspaceId: string): Promise<string> {
   }
   return user.id
 }
+
+/** Lê o token cifrado da conexão já existente, decifrado. `null` se não existe. */
+async function obterTokenDaInstancia(workspaceId: string): Promise<string | null> {
+  const admin = createAdminClient()
+  const { data } = await admin
+    .from('integration_connections')
+    .select('access_token_enc')
+    .eq('workspace_id', workspaceId)
+    .eq('provider', 'whatsapp')
+    .maybeSingle()
+
+  if (!data?.access_token_enc) return null
+  return decifrar(data.access_token_enc as unknown as string)
+}
+
 /**
- * Cria a instância no Evolution e devolve o QR Code para leitura.
+ * Cria a instância no Evolution GO e devolve o QR Code para leitura.
  *
  * O QR expira em ~20 segundos e o Evolution gera outro sozinho, então ele
  * **nunca é gravado** — a tela busca ao vivo enquanto o diálogo está aberto.
@@ -64,20 +91,25 @@ export async function conectarWhatsapp(workspaceId: string): Promise<ResultadoDa
     if (!podeUsar) {
       return { ok: false, erro: await mensagemBloqueioPro(supabase, workspaceId) }
     }
-    // O nome da instância no Evolution é o id da empresa: é único por
-    // construção, e faz o webhook saber de quem é a mensagem sem consulta
-    // extra.
-    const instancia = `velofunil-${workspaceId}`
-    const { qrCode } = await criarInstancia(instancia)
+
+    // Reconectar depois de uma queda é o caminho comum numa API não oficial:
+    // reusa o token já gravado em vez de criar instância nova (o Evolution
+    // GO recusaria o mesmo instanceId com token diferente) — só gera um
+    // token novo quando esta empresa nunca conectou antes.
+    let token = await obterTokenDaInstancia(workspaceId)
+    if (!token) {
+      token = randomBytes(24).toString('hex')
+      await criarInstancia(workspaceId, `velofunil-${workspaceId}`, token)
+    }
+
     // O Evolution não assina o payload do webhook, então a URL carrega um
     // segredo que autentica a chamada. Ver o cabeçalho da rota.
     const segredo = process.env.EVOLUTION_WEBHOOK_SECRET
-    if (segredo) {
-      await configurarWebhook(
-        instancia,
-        `${appUrl()}/api/webhooks/evolution/${encodeURIComponent(instancia)}/${segredo}`,
-      )
-    }
+    const webhookUrl = segredo
+      ? `${appUrl()}/api/webhooks/evolution/${encodeURIComponent(workspaceId)}/${segredo}`
+      : ''
+    const { qrCode } = await conectarInstancia(token, webhookUrl)
+
     // `upsert` e não `insert`: reconectar depois de uma queda é o caminho
     // comum numa API não oficial, e um insert cru estouraria na chave única.
     const admin = createAdminClient()
@@ -86,7 +118,8 @@ export async function conectarWhatsapp(workspaceId: string): Promise<ResultadoDa
         workspace_id: workspaceId,
         provider: 'whatsapp',
         status: 'disconnected',
-        external_id: instancia,
+        external_id: workspaceId,
+        access_token_enc: cifrar(token) as unknown as never,
         connected_by: userId,
         scopes: [],
       },
@@ -97,18 +130,18 @@ export async function conectarWhatsapp(workspaceId: string): Promise<ResultadoDa
   } catch (err) {
     return {
       ok: false,
-      erro:
-        err instanceof Error
-          ? err.message
-          : 'Não consegui falar com o servidor do WhatsApp.',
+      erro: err instanceof Error ? err.message : 'Não consegui falar com o servidor do WhatsApp.',
     }
   }
 }
+
 /** Busca um QR novo enquanto o diálogo está aberto (o anterior expirou). */
 export async function renovarQrCode(workspaceId: string): Promise<ResultadoDaConexao> {
   try {
     await exigirAdmin(workspaceId)
-    const qrCode = await obterQrCode(`velofunil-${workspaceId}`)
+    const token = await obterTokenDaInstancia(workspaceId)
+    if (!token) return { ok: false, erro: 'Conexão não encontrada. Tente conectar de novo.' }
+    const qrCode = await obterQrCode(token)
     return { ok: true, qrCode }
   } catch (err) {
     return {
@@ -117,6 +150,7 @@ export async function renovarQrCode(workspaceId: string): Promise<ResultadoDaCon
     }
   }
 }
+
 /**
  * Diz se o número já foi conectado.
  *
@@ -128,7 +162,10 @@ export async function estadoDaConexao(
 ): Promise<{ conectado: boolean; numero: string | null }> {
   try {
     await exigirAdmin(workspaceId)
-    const instancia = await obterEstado(`velofunil-${workspaceId}`)
+    const token = await obterTokenDaInstancia(workspaceId)
+    if (!token) return { conectado: false, numero: null }
+
+    const instancia = await obterEstado(token)
     const conectado = instancia.estado === 'open'
     if (conectado) {
       const admin = createAdminClient()

@@ -5,7 +5,7 @@ import { NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 
 /**
- * Recebe os eventos do Evolution API.
+ * Recebe os eventos do Evolution GO.
  *
  * ## O que esta rota resolve
  *
@@ -17,6 +17,18 @@ import { createAdminClient } from '@/lib/supabase/admin'
  * Cada mensagem que passa por aqui vira `activity` do lead. A empresa passa a
  * ser dona do próprio histórico, independentemente de quem atendeu ou de qual
  * aparelho.
+ *
+ * ## Evolution GO, não Evolution API (Node/Baileys)
+ *
+ * A VPS roda `github.com/EvolutionAPI/evolution-go` (whatsmeow), confirmado
+ * pelo Swagger do servidor em 21/08 — API diferente da que o resto do
+ * projeto foi originalmente escrito pra consumir. O formato dos campos de
+ * mensagem (`isFromMe`, `pushName`, `chat`) é o de `types.MessageInfo` do
+ * `whatsmeow`, lido do schema do Swagger. O ENVELOPE externo do webhook
+ * (se realmente chega como `{event, data}`) não pôde ser confirmado sem uma
+ * mensagem real chegando — o Swagger só documenta rotas HTTP, não o formato
+ * assíncrono do callback. `console.log` do payload cru fica ligado até a
+ * primeira mensagem real confirmar o formato; tirar depois.
  *
  * ## Por que o segredo vai na URL
  *
@@ -42,13 +54,19 @@ export const maxDuration = 15
 /** Prazo da tarefa de follow-up, em horas. */
 const PRAZO_DE_RESPOSTA_HORAS = 2
 
-type MensagemDoEvolution = {
-  key?: {
-    id?: string
-    remoteJid?: string
-    /** `true` quando fomos NÓS que mandamos — não vira tarefa. */
-    fromMe?: boolean
-  }
+/**
+ * Formato de `types.MessageInfo` do `whatsmeow`, conforme o Swagger do
+ * servidor — campos no nível raiz, diferente do `key.fromMe` aninhado da
+ * Evolution API (Node) original.
+ */
+type MensagemDoEvolutionGo = {
+  id?: string
+  chat?: string
+  isFromMe?: boolean
+  isGroup?: boolean
+  pushName?: string
+  /** O texto em si não está documentado no Swagger (é o corpo do evento
+   * assíncrono, não uma resposta HTTP) — tentamos os formatos mais prováveis. */
   message?: {
     conversation?: string
     extendedTextMessage?: { text?: string }
@@ -56,14 +74,13 @@ type MensagemDoEvolution = {
     audioMessage?: unknown
     documentMessage?: { fileName?: string }
   }
-  pushName?: string
-  messageTimestamp?: number
+  text?: string
 }
 
-type PayloadDoEvolution = {
+type PayloadDoEvolutionGo = {
   event?: string
-  instance?: string
-  data?: MensagemDoEvolution | MensagemDoEvolution[] | { state?: string }
+  type?: string
+  data?: MensagemDoEvolutionGo | MensagemDoEvolutionGo[] | { connected?: boolean; state?: string }
 }
 
 function segredoConfere(recebido: string, esperado: string | undefined): boolean {
@@ -85,7 +102,9 @@ function segredoConfere(recebido: string, esperado: string | undefined): boolean
  * mandou algo, e isso é informação), registra o tipo. Uma timeline que diz
  * "mandou um áudio" é melhor que uma que não diz nada.
  */
-function textoDaMensagem(mensagem: MensagemDoEvolution): string {
+function textoDaMensagem(mensagem: MensagemDoEvolutionGo): string {
+  if (mensagem.text) return mensagem.text
+
   const m = mensagem.message
   if (!m) return '(mensagem sem conteúdo)'
 
@@ -99,27 +118,26 @@ function textoDaMensagem(mensagem: MensagemDoEvolution): string {
 }
 
 /** `5511999998888@s.whatsapp.net` vira `5511999998888`. Grupo devolve `null`. */
-function telefoneDoRemetente(remoteJid: string | undefined): string | null {
-  if (!remoteJid) return null
-  // Mensagem de grupo termina em `@g.us` e não corresponde a um lead.
-  if (remoteJid.endsWith('@g.us')) return null
-  return remoteJid.split('@')[0] || null
+function telefoneDoRemetente(chat: string | undefined, isGroup: boolean | undefined): string | null {
+  if (!chat) return null
+  if (isGroup) return null
+  return chat.split('@')[0] || null
 }
 
 export async function POST(
   requisicao: Request,
-  { params }: { params: Promise<{ instancia: string; segredo: string }> },
+  { params }: { params: Promise<{ workspaceId: string; segredo: string }> },
 ) {
-  const { instancia, segredo } = await params
+  const { workspaceId, segredo } = await params
   const admin = createAdminClient()
 
-  // A conexão diz de qual empresa é esta instância, e guarda o segredo que
-  // autentica a chamada.
+  // A conexão confirma que esta empresa tem WhatsApp conectado, e guarda o
+  // segredo que autentica a chamada.
   const { data: conexao } = await admin
     .from('integration_connections')
-    .select('workspace_id, external_id, account_label')
+    .select('workspace_id')
     .eq('provider', 'whatsapp')
-    .eq('external_id', instancia)
+    .eq('workspace_id', workspaceId)
     .maybeSingle()
 
   // 404 e não 401: confirmar que a instância existe já entregaria informação a
@@ -128,57 +146,64 @@ export async function POST(
     return new NextResponse('Não encontrado.', { status: 404 })
   }
 
-  let payload: PayloadDoEvolution
+  let payload: PayloadDoEvolutionGo
   try {
-    payload = (await requisicao.json()) as PayloadDoEvolution
+    payload = (await requisicao.json()) as PayloadDoEvolutionGo
   } catch {
     return NextResponse.json({ erro: 'Corpo inválido.' }, { status: 400 })
   }
 
+  // Log temporário: o envelope externo real ({event,data} ou outro formato)
+  // não pôde ser confirmado sem uma mensagem chegando de verdade (ver
+  // comentário no topo do arquivo). Remover assim que confirmado em
+  // produção.
+  console.log('Webhook Evolution GO payload cru:', JSON.stringify(payload).slice(0, 2000))
+
   // O número caiu. Marcar como erro é o que faz a tela avisar em vez de deixar
   // a pessoa achando que está tudo certo — numa API não oficial, queda é o
   // evento que não pode passar despercebido.
-  if (payload.event === 'connection.update') {
-    const estado = (payload.data as { state?: string } | undefined)?.state
+  if (payload.event === 'CONNECTION' || payload.type === 'CONNECTION') {
+    const dados = payload.data as { connected?: boolean; state?: string } | undefined
+    const desconectou = dados?.connected === false || dados?.state === 'close'
 
-    if (estado === 'close') {
+    if (desconectou) {
       await admin
         .from('integration_connections')
         .update({ status: 'error', last_error: 'O WhatsApp desconectou.' })
         .eq('provider', 'whatsapp')
-        .eq('external_id', instancia)
-    } else if (estado === 'open') {
+        .eq('workspace_id', workspaceId)
+    } else if (dados?.connected === true || dados?.state === 'open') {
       await admin
         .from('integration_connections')
         .update({ status: 'connected', last_error: null })
         .eq('provider', 'whatsapp')
-        .eq('external_id', instancia)
+        .eq('workspace_id', workspaceId)
     }
 
     return NextResponse.json({ ok: true })
   }
 
-  if (payload.event !== 'messages.upsert') {
+  if (payload.event !== 'MESSAGE' && payload.type !== 'MESSAGE') {
     // Evento que não assinamos. Responder 200 evita que o Evolution fique
     // reenviando algo que nunca vamos processar.
-    return NextResponse.json({ ok: true, ignorado: payload.event })
+    return NextResponse.json({ ok: true, ignorado: payload.event ?? payload.type })
   }
 
   const mensagens = Array.isArray(payload.data)
     ? payload.data
     : payload.data
-      ? [payload.data as MensagemDoEvolution]
+      ? [payload.data as MensagemDoEvolutionGo]
       : []
 
   for (const mensagem of mensagens) {
-    const eventId = mensagem.key?.id
+    const eventId = mensagem.id
     if (!eventId) continue
 
     // Mensagem que NÓS enviamos volta como evento também. Registrar viraria
     // eco: a atividade já foi criada no momento do envio.
-    if (mensagem.key?.fromMe) continue
+    if (mensagem.isFromMe) continue
 
-    const telefone = telefoneDoRemetente(mensagem.key?.remoteJid)
+    const telefone = telefoneDoRemetente(mensagem.chat, mensagem.isGroup)
     if (!telefone) continue
 
     // Dedupe antes de qualquer escrita: o Evolution reenvia em caso de falha
@@ -186,7 +211,7 @@ export async function POST(
     // unique_violation — evento repetido, não é erro.
     const { error: erroDedupe } = await admin
       .from('whatsapp_webhook_events')
-      .insert({ event_id: `${instancia}:${eventId}` })
+      .insert({ event_id: `${workspaceId}:${eventId}` })
 
     if (erroDedupe) {
       if (erroDedupe.code === '23505') continue
@@ -199,7 +224,7 @@ export async function POST(
     // com 3.000 leads significava 3.000 linhas lidas a cada "oi". Ver a
     // migration 0047.
     const { data: encontrado } = await admin.rpc('encontrar_lead_por_telefone', {
-      p_workspace_id: conexao.workspace_id,
+      p_workspace_id: workspaceId,
       p_telefone: telefone,
     })
 
@@ -212,7 +237,7 @@ export async function POST(
       const { data: novo, error: erroLead } = await admin
         .from('leads')
         .insert({
-          workspace_id: conexao.workspace_id,
+          workspace_id: workspaceId,
           name: mensagem.pushName?.trim() || `WhatsApp ${telefone.slice(-4)}`,
           // Sem e-mail, e isso e legitimo: a migration 0025 tornou a coluna
           // nullable exatamente porque a lista do publico-alvo e de WhatsApp.
@@ -236,7 +261,7 @@ export async function POST(
     }
 
     await admin.from('activities').insert({
-      workspace_id: conexao.workspace_id,
+      workspace_id: workspaceId,
       lead_id: lead,
       type: 'nota',
       description: `WhatsApp: ${textoDaMensagem(mensagem)}`,
@@ -249,7 +274,7 @@ export async function POST(
     const { data: tarefaAberta } = await admin
       .from('tasks')
       .select('id')
-      .eq('workspace_id', conexao.workspace_id)
+      .eq('workspace_id', workspaceId)
       .eq('lead_id', lead)
       .is('done_at', null)
       .limit(1)
@@ -257,7 +282,7 @@ export async function POST(
 
     if (!tarefaAberta) {
       await admin.from('tasks').insert({
-        workspace_id: conexao.workspace_id,
+        workspace_id: workspaceId,
         lead_id: lead,
         title: 'Responder no WhatsApp',
         type: 'nota',
