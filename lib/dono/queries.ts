@@ -3,6 +3,7 @@ import 'server-only'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { PRO_PLAN_PRICE } from '@/lib/plans'
 
+import { ehContaInterna } from './contas-internas'
 import { exigirAmbienteLocal } from './somente-local'
 import type { EmpresaNaCentral, NumerosDaCentral } from './tipos'
 
@@ -170,7 +171,12 @@ export async function lerBanco(): Promise<LeituraDoBanco> {
     }
   })
 
-  const pagando = lista.filter((e) => e.pagando).length
+  // Contas internas (a de revisão do Google, por exemplo) têm Pro de cortesia
+  // e inflariam a receita: a Central diria R$98/mês quando entraram R$49.
+  // Elas continuam na lista de empresas — existem de verdade —, só não contam
+  // como dinheiro. Ver `contas-internas.ts`.
+  const pagantesDeVerdade = lista.filter((e) => e.pagando && !ehContaInterna(e.email))
+  const pagando = pagantesDeVerdade.length
   const limiteDaSemana = Date.now() - SETE_DIAS
 
   return {
