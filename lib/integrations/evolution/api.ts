@@ -77,17 +77,22 @@ export async function criarInstancia(
  *
  * O QR expira em ~20 segundos e o Evolution gera outro sozinho, então ele
  * **nunca é guardado** — a tela busca ao vivo enquanto o diálogo está
- * aberto. `data.qrcode` já vem pronto como `data:image/png;base64,...`
- * (testado contra o servidor real), sem precisar montar o prefixo.
+ * aberto.
  *
  * `webhookUrl` vai NESTA chamada, não numa rota separada de webhook — o
  * Evolution GO não tem `/webhook/set` como a Evolution API original.
+ *
+ * `/instance/connect` NÃO devolve o QR Code no corpo — testado contra o
+ * servidor real: a resposta só tem `eventString`/`jid`/`webhookUrl`. O QR
+ * mora em `/instance/qr`, uma chamada separada logo em seguida. Sem essa
+ * segunda chamada, a tela ficava presa em "Não consegui gerar o código" —
+ * `conectarInstancia` sempre devolvia `qrCode: null` mesmo com sucesso.
  */
 export async function conectarInstancia(
   tokenDaInstancia: string,
   webhookUrl: string,
 ): Promise<{ qrCode: string | null }> {
-  const resposta = await evolutionFetch<{ data?: { qrcode?: string } }>(
+  await evolutionFetch(
     '/instance/connect',
     {
       method: 'POST',
@@ -102,7 +107,8 @@ export async function conectarInstancia(
     tokenDaInstancia,
   )
 
-  return { qrCode: resposta?.data?.qrcode ?? null }
+  const qrCode = await obterQrCode(tokenDaInstancia)
+  return { qrCode }
 }
 
 /** Busca um QR novo para uma instância que ainda não foi conectada. */
