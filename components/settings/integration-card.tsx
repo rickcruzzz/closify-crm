@@ -18,6 +18,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { desconectarIntegracao, testarConexaoIntegracao } from '@/lib/integrations/actions'
 import { ProUpsellDialog } from '@/components/settings/pro-upsell-dialog'
+import { EvolutionConnectDialog } from '@/components/settings/evolution-connect-dialog'
 import type { IntegrationProvider, IntegrationStatus } from '@/types/supabase'
 
 const META: Record<
@@ -95,6 +96,7 @@ export function IntegrationCard({
   lastError,
   uso,
   plano,
+  workspaceId,
 }: {
   provider: IntegrationProvider
   isAdmin: boolean
@@ -103,6 +105,7 @@ export function IntegrationCard({
   lastError: string | null
   /** Quantas vezes essa integração foi usada nos últimos 30 dias. */
   uso: number
+  workspaceId: string
   /**
    * O plano do workspace, só para decidir o que o card MOSTRA.
    *
@@ -118,6 +121,7 @@ export function IntegrationCard({
 }) {
   const [pendente, startTransition] = React.useTransition()
   const [upsellAberto, setUpsellAberto] = React.useState(false)
+  const [conectarWhatsappAberto, setConectarWhatsappAberto] = React.useState(false)
   const info = META[provider]
   const Icone = info.icone
   const conectado = status === 'connected'
@@ -220,6 +224,15 @@ export function IntegrationCard({
             <Plug className="size-4" />
             Conectar {info.titulo}
           </Button>
+        ) : provider === 'whatsapp' ? (
+          <Button
+            className="w-fit"
+            size="sm"
+            onClick={() => setConectarWhatsappAberto(true)}
+          >
+            <Plug className="size-4" />
+            Conectar {info.titulo}
+          </Button>
         ) : (
           <p className="text-muted-foreground text-xs">Em breve.</p>
         )}
@@ -230,6 +243,14 @@ export function IntegrationCard({
         onOpenChange={setUpsellAberto}
         recurso={info.titulo}
       />
+
+      {provider === 'whatsapp' && (
+        <EvolutionConnectDialog
+          open={conectarWhatsappAberto}
+          onOpenChange={setConectarWhatsappAberto}
+          workspaceId={workspaceId}
+        />
+      )}
     </Card>
   )
 }

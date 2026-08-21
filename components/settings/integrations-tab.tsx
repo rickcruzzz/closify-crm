@@ -2,19 +2,21 @@ import { IntegrationCard } from '@/components/settings/integration-card'
 import type { IntegrationConnectionRow } from '@/lib/integrations/queries'
 import type { IntegrationProvider } from '@/types/supabase'
 
-const PROVIDERS: IntegrationProvider[] = ['google_calendar', 'gmail']
+const PROVIDERS: IntegrationProvider[] = ['google_calendar', 'gmail', 'whatsapp']
 
 export function IntegrationsTab({
   isAdmin,
   connections,
   uso,
   plano,
+  workspaceId,
 }: {
   isAdmin: boolean
   connections: IntegrationConnectionRow[]
   uso: Record<IntegrationProvider, number>
   /** Só decide o que o card mostra; a regra real está no servidor. */
   plano: 'free' | 'pro'
+  workspaceId: string
 }) {
   return (
     <div className="grid gap-4 md:grid-cols-2">
@@ -30,6 +32,7 @@ export function IntegrationsTab({
             lastError={conexao?.lastError ?? null}
             uso={uso[provider]}
             plano={plano}
+            workspaceId={workspaceId}
           />
         )
       })}

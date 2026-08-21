@@ -107,12 +107,23 @@ migration 0014 e **nunca foi agendada** — o comentário de lá esperava
 `pg_cron`. Não precisava: `/api/cron/limpar-eventos` agora roda as duas purgas
 por Vercel Cron, ligando uma função que estava pronta e parada há semanas.
 
-**Pendente para ligar:** VPS KVM 2 com template Evolution Go, aplicar a
-migration 0047 pelo painel do Supabase, e as três variáveis
-(`EVOLUTION_API_URL`, `EVOLUTION_API_KEY`, `EVOLUTION_WEBHOOK_SECRET`). Falta
-também a tela de conexão com QR Code, que é o último pedaço da fase 1.
+**Atualização (21/08, tarde): migration 0047 aplicada em produção** via MCP do
+Supabase (projeto `tmyeunithjqkbwvezyyn`) — `whatsapp_webhook_events`, o
+índice funcional de telefone e as duas RPCs (`encontrar_lead_por_telefone`,
+`purge_old_whatsapp_webhook_events`) já existem no banco real. **Tela de
+conexão com QR Code entregue** (`components/settings/evolution-connect-dialog.tsx`):
+diálogo com aviso de risco antes do QR, renova o código a cada 18s (expira em
+segundos), verifica conexão a cada 3s e fecha sozinho ao conectar. Ligada no
+card de WhatsApp em `/settings` (`integrations-tab.tsx` ganhou `whatsapp` na
+lista de providers, antes só tinha Google Calendar/Gmail).
 
-414 testes (406 antes + 8 do aquecimento), tsc, lint e build limpos.
+**Pendente para ligar:** VPS comprada, falta colar as três variáveis
+(`EVOLUTION_API_URL`, `EVOLUTION_API_KEY`, `EVOLUTION_WEBHOOK_SECRET`) no
+`.env.local` e na Vercel, e testar ponta a ponta com número descartável —
+conectar pelo diálogo, mandar mensagem de fora, ver virar atividade + tarefa.
+
+414 testes (sem novo teste nesta rodada — o diálogo é UI, coberto por leitura
+do fluxo, não por unitário), tsc, lint e build limpos.
 
 ## Central do Dono, parte 2: alertas, anúncio e criativos (20/08)
 

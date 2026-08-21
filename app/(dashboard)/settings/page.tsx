@@ -199,6 +199,7 @@ export default async function SettingsPage({
           connections={integrationConnections}
           uso={usoDasIntegracoes}
           plano={workspace?.plan ?? 'free'}
+          workspaceId={workspaceId}
         />
       )}
     </div>
