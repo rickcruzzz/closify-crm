@@ -27,6 +27,21 @@ export async function updateSession(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser()
 
+  // O RSC seguinte faria sua PRÓPRIA `auth.getUser()` — ida de rede idêntica
+  // que o middleware acabou de pagar, dobrando o TTFB de toda navegação
+  // logada (medido: ~1.2-1.9s, a maior parte é essas duas idas em série, o
+  // middleware bloqueia antes do handler rodar). O middleware já validou o
+  // JWT contra o Supabase Auth; carimbar o resultado num header interno deixa
+  // `obterUsuarioAutenticado` reaproveitar em vez de perguntar de novo.
+  //
+  // O header nasce em `request.headers`, não em `supabaseResponse.headers`:
+  // só assim ele chega ao Server Component desta MESMA requisição — headers
+  // de resposta voltam pro navegador, não seguem para o handler.
+  if (user) {
+    request.headers.set('x-vf-usuario-verificado', JSON.stringify(user))
+    supabaseResponse = NextResponse.next({ request })
+  }
+
   const { pathname } = request.nextUrl
 
   // /onboarding também exige sessão: fica no grupo (auth), que não tem guard
