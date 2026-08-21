@@ -153,11 +153,19 @@ export async function POST(
     return NextResponse.json({ erro: 'Corpo inválido.' }, { status: 400 })
   }
 
-  // Log temporário: o envelope externo real ({event,data} ou outro formato)
-  // não pôde ser confirmado sem uma mensagem chegando de verdade (ver
-  // comentário no topo do arquivo). Remover assim que confirmado em
-  // produção.
-  console.log('Webhook Evolution GO payload cru:', JSON.stringify(payload).slice(0, 2000))
+  // Log temporário: só a FORMA do envelope (chaves, não conteúdo), o
+  // suficiente para confirmar se {event,data} bate com o formato real sem
+  // colocar mensagem de cliente no log da Vercel. O envelope externo não
+  // pôde ser confirmado sem uma mensagem chegando de verdade (ver comentário
+  // no topo do arquivo). Remover assim que confirmado em produção.
+  console.log('Webhook Evolution GO — forma do envelope:', {
+    event: payload.event,
+    type: payload.type,
+    dataÉArray: Array.isArray(payload.data),
+    dataChaves: Array.isArray(payload.data)
+      ? Object.keys(payload.data[0] ?? {})
+      : Object.keys(payload.data ?? {}),
+  })
 
   // O número caiu. Marcar como erro é o que faz a tela avisar em vez de deixar
   // a pessoa achando que está tudo certo — numa API não oficial, queda é o
