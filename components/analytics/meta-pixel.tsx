@@ -7,10 +7,20 @@ import { usePathname } from 'next/navigation'
  * Meta Pixel, só nas páginas públicas.
  *
  * O CRM logado (`/dashboard`, `/kanban`, `/leads`, `/settings`, `/perfil`,
- * `/onboarding`, `/bem-vindo`) nunca carrega isto: quem já é cliente não é
- * alvo de atribuição de anúncio, e reduzir o pixel às páginas que uma visita
- * paga de fato alcança (landing, cadastro, login, termos, privacidade) é o
- * que mantém a superfície de rastreamento do tamanho do que se justifica.
+ * `/onboarding`, `/bem-vindo`, `/hoje`, `/calendario`) nunca carrega isto:
+ * quem já é cliente não é alvo de atribuição de anúncio, e reduzir o pixel às
+ * páginas que uma visita paga de fato alcança (landing, cadastro, login,
+ * termos, privacidade) é o que mantém a superfície de rastreamento do tamanho
+ * do que se justifica.
+ *
+ * `/hoje` e `/calendario` faltavam nesta lista (achado em 21/08 investigando
+ * lentidão percebida): o pixel carregava nelas de verdade, `<Script
+ * strategy="afterInteractive">` competindo com o React durante hidratação —
+ * medido com erro #418/#423 do React só nessas duas rotas, ausente nas outras
+ * do CRM. A página inteira era descartada e re-renderizada do zero no
+ * navegador, o que soma tempo real de carregamento em cima do que já é lento.
+ * Mesma classe de lacuna que o `middleware.ts` já pagou (rotas existem, na
+ * sidebar, mas ficaram fora de uma lista de exclusão).
  *
  * Nota de conformidade: este pixel grava cookie de terceiro (`_fbp`) e é
  * rastreamento de verdade sob a LGPD, a mesma razão pela qual o GA4 foi
@@ -27,6 +37,8 @@ const PREFIXOS_PRIVADOS = [
   '/perfil',
   '/onboarding',
   '/bem-vindo',
+  '/hoje',
+  '/calendario',
 ]
 
 /**
