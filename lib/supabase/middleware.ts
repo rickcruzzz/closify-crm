@@ -1,7 +1,17 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
+import { assinarUsuarioVerificado } from '@/lib/supabase/usuario-verificado-header'
+
 export async function updateSession(request: NextRequest) {
+  // Apaga QUALQUER valor deste header vindo do cliente antes de decidir
+  // qualquer coisa — sem isso, uma requisição a rota fora do matcher deste
+  // middleware chegaria ao RSC com um header forjado que `obterUsuarioAutenticado`
+  // aceitaria como se fosse o resultado de `auth.getUser()`. O nome do header
+  // por si só não distingue "escrito pelo middleware" de "mandado pelo
+  // cliente" — só a assinatura HMAC (ver `usuario-verificado-header.ts`) faz
+  // essa distinção depois.
+  request.headers.delete('x-vf-usuario-verificado')
   let supabaseResponse = NextResponse.next({ request })
 
   const supabase = createServerClient(
@@ -31,14 +41,19 @@ export async function updateSession(request: NextRequest) {
   // que o middleware acabou de pagar, dobrando o TTFB de toda navegação
   // logada (medido: ~1.2-1.9s, a maior parte é essas duas idas em série, o
   // middleware bloqueia antes do handler rodar). O middleware já validou o
-  // JWT contra o Supabase Auth; carimbar o resultado num header interno deixa
-  // `obterUsuarioAutenticado` reaproveitar em vez de perguntar de novo.
+  // JWT contra o Supabase Auth; carimbar o resultado ASSINADO num header
+  // interno deixa `obterUsuarioAutenticado` reaproveitar em vez de perguntar
+  // de novo, sem abrir bypass: a assinatura HMAC prova que foi este
+  // middleware quem escreveu, não o cliente.
   //
   // O header nasce em `request.headers`, não em `supabaseResponse.headers`:
   // só assim ele chega ao Server Component desta MESMA requisição — headers
   // de resposta voltam pro navegador, não seguem para o handler.
   if (user) {
-    request.headers.set('x-vf-usuario-verificado', JSON.stringify(user))
+    request.headers.set(
+      'x-vf-usuario-verificado',
+      await assinarUsuarioVerificado(JSON.stringify(user)),
+    )
     supabaseResponse = NextResponse.next({ request })
   }
 
