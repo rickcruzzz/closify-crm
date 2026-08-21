@@ -192,11 +192,29 @@ export async function testarCalendario(accessToken: string): Promise<boolean> {
 // Monta o e-mail no formato RFC 2822 exigido pelo `raw` da API do Gmail,
 // texto simples, sem anexo, sem HTML: o produto não vira um cliente de
 // e-mail completo (fora de escopo, decisão do plano).
-function montarMimeSimples(destinatario: string, assunto: string, corpo: string): string {
+/**
+ * RFC 2047: um header de e-mail (aqui, `Subject`) só aceita ASCII puro. Um
+ * assunto com acento passado cru ("Contato José") quebra o parser do Gmail —
+ * medido em produção, a API devolve "Invalid input" sem apontar qual campo.
+ * `=?UTF-8?B?<base64>?=` é a forma "encoded-word" que o padrão exige para
+ * qualquer caractere fora de ASCII no header.
+ */
+export function codificarHeaderMime(valor: string): string {
+  // eslint-disable-next-line no-control-regex -- checagem de ASCII puro é o próprio propósito
+  if (/^[\x00-\x7F]*$/.test(valor)) return valor
+  return `=?UTF-8?B?${Buffer.from(valor, 'utf8').toString('base64')}?=`
+}
+
+export function montarMimeSimples(destinatario: string, assunto: string, corpo: string): string {
   const linhas = [
     `To: ${destinatario}`,
-    `Subject: ${assunto}`,
+    `Subject: ${codificarHeaderMime(assunto)}`,
+    'MIME-Version: 1.0',
     'Content-Type: text/plain; charset="UTF-8"',
+    // O CORPO (diferente do header acima) aceita UTF-8 cru, mas só se o
+    // transporte for declarado — sem isto, o Gmail já rejeitou mensagem com
+    // acento no corpo com o mesmo "Invalid input" genérico.
+    'Content-Transfer-Encoding: 8bit',
     '',
     corpo,
   ]

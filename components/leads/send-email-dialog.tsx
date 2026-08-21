@@ -26,11 +26,14 @@ import {
 export function SendEmailDialog({
   open,
   onOpenChange,
+  remetente,
   destinatario,
   onSend,
 }: {
   open: boolean
   onOpenChange: (open: boolean) => void
+  /** E-mail da conta Gmail conectada. `null` quando ninguém conectou ainda. */
+  remetente: string | null
   /** Só para mostrar pra quem vai, o e-mail de verdade sai do lead no servidor. */
   destinatario: string
   onSend: (values: EmailMessageFormValues) => void | Promise<void>
@@ -66,8 +69,26 @@ export function SendEmailDialog({
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>Enviar e-mail</DialogTitle>
-          <DialogDescription>Para {destinatario}, pelo Gmail conectado.</DialogDescription>
+          <DialogDescription>
+            {remetente
+              ? 'Este e-mail sai da sua conta do Gmail conectada.'
+              : 'Conecte o Gmail em Configurações para enviar.'}
+          </DialogDescription>
         </DialogHeader>
+
+        {/* "De → Para" visível antes de escrever, não só depois de enviar:
+            quem manda vê exatamente qual conta vai aparecer como remetente
+            para o cliente, sem precisar adivinhar ou abrir Configurações. */}
+        <div className="bg-muted/50 flex flex-col gap-1 rounded-lg border px-3 py-2 text-sm">
+          <div className="flex items-baseline gap-2">
+            <span className="text-muted-foreground w-10 shrink-0 text-xs font-medium">De</span>
+            <span className="truncate font-medium">{remetente ?? 'Gmail não conectado'}</span>
+          </div>
+          <div className="flex items-baseline gap-2">
+            <span className="text-muted-foreground w-10 shrink-0 text-xs font-medium">Para</span>
+            <span className="truncate font-medium">{destinatario}</span>
+          </div>
+        </div>
 
         <form onSubmit={handleSubmit(onSubmit)} noValidate className="flex flex-col gap-4">
           <div className="flex flex-col gap-1.5">

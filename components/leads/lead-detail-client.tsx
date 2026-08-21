@@ -56,6 +56,7 @@ export function LeadDetailClient({
   members,
   currentUserId,
   isAdmin,
+  remetenteGmail,
 }: {
   lead: LeadRow
   activities: ActivityRow[]
@@ -63,6 +64,8 @@ export function LeadDetailClient({
   members: WorkspaceMember[]
   currentUserId: string
   isAdmin: boolean
+  /** E-mail da conta Gmail conectada, mostrado como remetente no diálogo de envio. `null` se ninguém conectou. */
+  remetenteGmail: string | null
 }) {
   const router = useRouter()
   const [formOpen, setFormOpen] = React.useState(false)
@@ -414,6 +417,7 @@ export function LeadDetailClient({
         <SendEmailDialog
           open={emailFormOpen}
           onOpenChange={setEmailFormOpen}
+          remetente={remetenteGmail}
           destinatario={lead.email}
           onSend={handleSendEmail}
         />
