@@ -2,7 +2,16 @@
 
 import * as React from 'react'
 import { toast } from 'sonner'
-import { CalendarDays, Loader2, Mail, Plug, Trash2, Zap, type LucideIcon } from 'lucide-react'
+import {
+  CalendarDays,
+  Loader2,
+  Mail,
+  MessageCircle,
+  Plug,
+  Trash2,
+  Zap,
+  type LucideIcon,
+} from 'lucide-react'
 
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -50,6 +59,24 @@ const META: Record<
     usoPlural: 'e-mails enviados',
     ganhoNoPro:
       'No Pro, você responde o cliente sem trocar de aba, e o e-mail fica registrado no histórico dele.',
+  },
+  whatsapp: {
+    titulo: 'WhatsApp',
+    // A dor real, achada na pesquisa de mercado: não é "esquecer de
+    // responder" (essa é a segunda). É o histórico morar no celular do
+    // vendedor — quando ele sai, a empresa perde contato, negociação em
+    // andamento e histórico de uma vez, e se ele for pro concorrente, a
+    // carteira vai junto. Esquecer uma venda dói uma vez; perder a carteira
+    // não tem conserto.
+    descricao: 'Toda conversa fica no histórico do cliente, não no celular de quem atendeu.',
+    // `null` de propósito: conectar exige ler QR Code, então é diálogo, não
+    // link direto como o OAuth do Google.
+    conectarHref: null,
+    icone: MessageCircle,
+    usoSingular: 'conversa registrada',
+    usoPlural: 'conversas registradas',
+    ganhoNoPro:
+      'No Pro, quando o cliente responde no WhatsApp vira histórico e tarefa aqui — e continua sendo da empresa mesmo se o vendedor sair.',
   },
 }
 

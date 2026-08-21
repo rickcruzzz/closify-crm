@@ -4,6 +4,10 @@
     {
       "path": "/api/cron/reconciliar-assinaturas",
       "schedule": "0 12 * * *"
+    },
+    {
+      "path": "/api/cron/limpar-eventos",
+      "schedule": "0 6 * * *"
     }
   ]
 }

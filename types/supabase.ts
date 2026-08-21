@@ -48,7 +48,11 @@ export type DadosDaEmpresa = {
 }
 export type SubscriptionStatus = 'trialing' | 'active' | 'past_due' | 'canceled'
 export type WorkspaceInviteStatus = 'pending' | 'accepted' | 'expired'
-export type IntegrationProvider = 'google_calendar' | 'gmail'
+// `whatsapp` sempre existiu no enum do banco: a migration 0043 removeu o
+// codigo da Cloud API, nao o valor (Postgres nao tem ALTER TYPE ... DROP
+// VALUE). O tipo volta agora que a integracao pelo Evolution usa esse mesmo
+// slot em `integration_connections` e `activities.integration_provider`.
+export type IntegrationProvider = 'google_calendar' | 'gmail' | 'whatsapp'
 export type IntegrationStatus = 'connected' | 'error' | 'disconnected'
 
 export type Database = {
@@ -328,6 +332,26 @@ export type Database = {
       }
       // Dedupe de webhook do Asaas. Só a service_role escreve aqui (RLS ligada
       // e sem policy), ver 0012_security_audit_fixes.sql.
+      // Dedupe do webhook do Evolution (WhatsApp). Mesmo padrao de
+      // asaas_webhook_events: RLS ligada, zero policy, so a service_role
+      // alcanca. Diferenca que importa: esta tabela NASCE com purga de 7 dias
+      // (0047), porque o volume de WhatsApp e ordens de grandeza maior — ver o
+      // cabecalho da migration.
+      whatsapp_webhook_events: {
+        Row: {
+          event_id: string
+          processed_at: string
+        }
+        Insert: {
+          event_id: string
+          processed_at?: string
+        }
+        Update: {
+          event_id?: string
+          processed_at?: string
+        }
+        Relationships: []
+      }
       asaas_webhook_events: {
         Row: {
           event_id: string
@@ -657,6 +681,29 @@ export type Database = {
           p_status: SubscriptionStatus
         }
         Returns: boolean
+      }
+      // Casa o telefone que o WhatsApp entrega (com DDI) contra `leads.phone`
+      // (digitado a mao ou vindo de planilha) pelos ultimos 8 digitos, usando
+      // indice funcional. Substitui a varredura O(n) do codigo antigo, que
+      // trazia todos os leads do workspace por mensagem recebida. Ver 0047.
+      encontrar_lead_por_telefone: {
+        Args: {
+          p_workspace_id: string
+          p_telefone: string
+        }
+        Returns: string | null
+      }
+      // Purga de 7 dias do dedupe do WhatsApp. Chamada pelo cron.
+      purge_old_whatsapp_webhook_events: {
+        Args: Record<string, never>
+        Returns: number
+      }
+      // Purga de 90 dias do dedupe do Asaas. Existe desde a 0014 e nunca foi
+      // agendada — o comentario da migration esperava pg_cron, que nao e
+      // necessario: o projeto ja tem Vercel Cron.
+      purge_old_asaas_webhook_events: {
+        Args: Record<string, never>
+        Returns: number
       }
     }
     Enums: Record<string, never>

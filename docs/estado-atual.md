@@ -48,6 +48,72 @@ formato; orgânico gravado na pasta própria. Em build de produção,
 arquivo devolvem **404** — o `GET` levava 405, que confirmava a existência da
 rota, e isso foi fechado. 402 testes (381 antes + 21 novos).
 
+## WhatsApp pelo Evolution API: fase 1, o laço fechado (21/08)
+
+Integração construída, **ainda não ligada** — falta a VPS. O que existe é o
+código inteiro da fase 1, com a migration escrita e o gate limpo.
+
+**A dor mudou de lugar durante a pesquisa, e isso mudou o produto.** A promessa
+atual é "pare de perder venda por esquecimento". Verdadeira, mas é a *segunda*
+dor. A primeira, achada em fontes de mercado: **o vendedor sai e leva a
+carteira junto.** O histórico mora no celular dele; na demissão ou na saída
+para o concorrente, a empresa perde contato, negociação em andamento e
+histórico de uma vez — e ainda fica exposta na LGPD, porque continua
+responsável pelo dado sem conseguir auditar. Esquecer uma venda dói uma vez;
+perder a carteira não tem conserto.
+
+Por isso a fase 1 é **o laço fechado**, não o chat: toda mensagem recebida vira
+`activity` do lead e, se não houver tarefa aberta, uma tarefa "Responder no
+WhatsApp" com prazo de 2h. Número desconhecido vira lead novo — cliente
+chegando pelo WhatsApp entra no funil sozinho. A empresa passa a ser dona do
+histórico, independentemente de quem atendeu.
+
+**A restrição que define o escopo, e que precisa ser dita na venda:** no
+Evolution, uma instância é uma sessão de WhatsApp Web. Todos veem a **mesma**
+caixa de entrada — não há fila com dono definido nem relatório por atendente.
+Isso é recurso da API oficial. A fase 1 resolve "a empresa é dona do
+histórico"; não resolve "cinco vendedores dividindo a fila".
+
+**Capacidade medida (Evolution Go, 50-150 MB/instância segundo a Hostinger),
+com folga de 30%:** KVM 2 = 33 clientes (R$ 49/mês) · KVM 4 = 79 (R$ 71) ·
+KVM 8 = 170 (R$ 143). Para 400: 5× KVM 4 = R$ 355/mês. O gargalo é RAM, não
+CPU — mesmo 244 sessões reconectam em ~11s num KVM 8.
+
+**O risco, registrado e não escondido.** Desde janeiro de 2026 a Meta detecta
+por **fingerprint de comportamento** (cadência, tempo entre ações, IP), não
+mais só por volume: número antigo e volume baixo não protegem mais. A
+comunidade relata 40-60% de suspensão no primeiro trimestre. As camadas
+construídas — limite por idade da conexão (10/h na 1ª semana → 20 → 30, nunca
+acima de 30/h), **nenhuma função que aceite lista de destinatários**, e
+assinatura só de `MESSAGES_UPSERT` e `CONNECTION_UPDATE` — reduzem muito.
+**Não zeram.** A proteção mais eficaz é externa ao código: proxy residencial
+brasileiro (~R$ 18/mês), sem o qual a conexão sai pelo IP do datacenter, que é
+o primeiro sinal que o WhatsApp procura.
+
+**Duas correções sobre o código antigo** (`1133f42`, da Cloud API):
+
+- O casamento de telefone era **O(n) por mensagem** — buscava todos os leads do
+  workspace e comparava os últimos 8 dígitos em JavaScript. Com 3.000 leads,
+  cada "oi" varria 3.000 linhas. Virou índice funcional
+  (`right(regexp_replace(phone,'\D','','g'), 8)`) + RPC `security definer`.
+- A tabela de dedupe **nasce com purga de 7 dias**. Projetado a 240 mil
+  eventos/dia (400 clientes), ela chegaria a 9,7 GB em 12 meses e estouraria o
+  plano do Supabase em ~9 meses guardando dado sem valor. A
+  `asaas_webhook_events` sobrevive sem limpeza só porque recebe poucas linhas
+  por mês.
+
+**Achado de brinde:** `purge_old_asaas_webhook_events()` existe desde a
+migration 0014 e **nunca foi agendada** — o comentário de lá esperava
+`pg_cron`. Não precisava: `/api/cron/limpar-eventos` agora roda as duas purgas
+por Vercel Cron, ligando uma função que estava pronta e parada há semanas.
+
+**Pendente para ligar:** VPS KVM 2 com template Evolution Go, aplicar a
+migration 0047 pelo painel do Supabase, e as três variáveis
+(`EVOLUTION_API_URL`, `EVOLUTION_API_KEY`, `EVOLUTION_WEBHOOK_SECRET`). Falta
+também a tela de conexão com QR Code, que é o último pedaço da fase 1.
+
+414 testes (406 antes + 8 do aquecimento), tsc, lint e build limpos.
+
 ## Central do Dono, parte 2: alertas, anúncio e criativos (20/08)
 
 A Central ganhou três páginas próprias (`/dono/alertas`, `/dono/anuncio`,

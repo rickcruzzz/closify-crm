@@ -97,7 +97,7 @@ export default async function SettingsPage({
         ? Promise.all([getIntegrationConnections(workspaceId), getUsoDasIntegracoes(workspaceId)])
         : Promise.resolve<[IntegrationConnectionRow[], Record<IntegrationProvider, number>]>([
             [],
-            { google_calendar: 0, gmail: 0 },
+            { google_calendar: 0, gmail: 0, whatsapp: 0 },
           ]),
     ])
 
