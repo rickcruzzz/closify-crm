@@ -131,6 +131,9 @@ export async function buscarAssinante(
   email: string
   fbc: string | null
   fbp: string | null
+  /** Telefone do dono, quando cadastrado no Auth — vira `ph` no evento do Meta. */
+  telefone: string | null
+  userId: string
 } | null> {
   const { data: assinatura } = await supabase
     .from('subscriptions')
@@ -152,7 +155,14 @@ export async function buscarAssinante(
   const email = dono?.user?.email
   if (!email) return null
 
-  return { workspaceName: workspace.name, email, fbc: workspace.fbc, fbp: workspace.fbp }
+  return {
+    workspaceName: workspace.name,
+    email,
+    fbc: workspace.fbc,
+    fbp: workspace.fbp,
+    telefone: dono?.user?.phone || null,
+    userId: workspace.created_by,
+  }
 }
 
 /**
@@ -221,6 +231,8 @@ async function enviarConversaoParaMeta(
       eventId,
       fbc: assinante.fbc,
       fbp: assinante.fbp,
+      telefone: assinante.telefone,
+      userId: assinante.userId,
     })
   } catch (err) {
     console.error('Asaas: erro ao enviar conversão pro Meta', err)

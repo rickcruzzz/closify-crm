@@ -243,6 +243,8 @@ export async function finalizarOnboarding(values: unknown) {
         eventId: crypto.randomUUID(),
         fbc: atribuicao?.fbc,
         fbp: atribuicao?.fbp,
+        telefone: user.phone || null,
+        userId: user.id,
       })
     }
   } catch (err) {

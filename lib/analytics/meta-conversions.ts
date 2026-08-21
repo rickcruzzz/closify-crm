@@ -9,6 +9,21 @@ type EventoDeAtribuicao = {
   fbc?: string | null
   /** Cookie `_fbp` do próprio Pixel. */
   fbp?: string | null
+  /**
+   * Telefone em qualquer formato — a Meta normaliza por conta própria
+   * (documentação oficial: aceita com/sem DDI, remove pontuação). Quando
+   * `null`/ausente, o campo `ph` simplesmente não entra no payload.
+   */
+  telefone?: string | null
+  /**
+   * UUID do usuário no Supabase Auth. Vira `external_id` hasheado — um
+   * terceiro identificador estável que não depende de cookie nem de o
+   * e-mail bater exatamente, e é o que a documentação da Meta lista junto
+   * de e-mail/telefone como os três que mais elevam o Event Match Quality
+   * (a métrica que decide o quanto o algoritmo reconhece a conversão e
+   * consegue otimizar a entrega em cima dela).
+   */
+  userId?: string | null
 }
 
 /**
@@ -25,9 +40,25 @@ type EventoDeAtribuicao = {
  * não dependem do request atual ter vindo de um navegador.
  *
  * E-mail é o único identificador que sempre existe, hasheado em SHA-256
- * minúsculo, como a API exige. `fbc`/`fbp` nunca são hasheados (a API
+ * minúsculo, como a API exige. Telefone e `external_id` entram do mesmo
+ * jeito quando disponíveis — mais identificadores por evento é o que a
+ * documentação da Meta aponta como o principal alavancador do Event Match
+ * Quality, e Match Quality mais alto é o que faz o algoritmo aprender mais
+ * rápido quem de fato converte. `fbc`/`fbp` nunca são hasheados (a API
  * espera o valor cru nesses dois campos).
  */
+export function normalizarTelefone(valor: string): string {
+  // A Meta documenta que aceita variação de formatação, mas recomenda
+  // remover tudo que não é dígito antes de hashear — reduz a chance de duas
+  // grafias do mesmo número ("(11) 99999-9999" vs "11999999999") virarem
+  // hashes diferentes e nunca casarem.
+  return valor.replace(/\D/g, '')
+}
+
+function sha256(valor: string): string {
+  return createHash('sha256').update(valor).digest('hex')
+}
+
 async function enviarEventoParaMeta(
   eventName: 'CompleteRegistration' | 'Purchase',
   params: EventoDeAtribuicao & { customData?: Record<string, unknown> },
@@ -39,7 +70,9 @@ async function enviarEventoParaMeta(
   // do projeto: falta de env var não quebra nada, só não faz o efeito.
   if (!pixelId || !token) return
 
-  const emailHash = createHash('sha256').update(params.email.trim().toLowerCase()).digest('hex')
+  const emailHash = sha256(params.email.trim().toLowerCase())
+  const telefoneHash = params.telefone ? sha256(normalizarTelefone(params.telefone)) : null
+  const externalIdHash = params.userId ? sha256(params.userId) : null
 
   const corpo = {
     data: [
@@ -50,6 +83,8 @@ async function enviarEventoParaMeta(
         action_source: 'system_generated',
         user_data: {
           em: [emailHash],
+          ...(telefoneHash ? { ph: [telefoneHash] } : {}),
+          ...(externalIdHash ? { external_id: [externalIdHash] } : {}),
           ...(params.fbc ? { fbc: params.fbc } : {}),
           ...(params.fbp ? { fbp: params.fbp } : {}),
         },
