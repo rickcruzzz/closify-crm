@@ -1,23 +1,20 @@
+import { Suspense } from 'react'
 import type { Metadata } from 'next'
-import {
-  getDashboardMetrics,
-  getFunnelCounts,
-  getUpcomingDeals,
-} from '@/lib/dashboard/queries'
 import { resolverPeriodo } from '@/lib/dashboard/periodo'
 import { getCurrentUserAndWorkspace } from '@/lib/supabase/workspace'
 import { lerEstadoDoOnboarding } from '@/lib/onboarding/estado'
 import { lerSinaisDeAtivacao } from '@/lib/onboarding/sinais'
 import { checklistCumprido, montarChecklist } from '@/lib/onboarding/checklist'
 import { PageHeader } from '@/components/layout/page-header'
-import { MetricCards } from '@/components/dashboard/metric-cards'
-import { FunnelChart } from '@/components/dashboard/funnel-chart'
-import { UpcomingDealsTable } from '@/components/dashboard/upcoming-deals-table'
+import { MetricCardsAsync } from '@/components/dashboard/metric-cards-async'
+import { FunnelChartAsync } from '@/components/dashboard/funnel-chart-async'
+import { UpcomingDealsTableAsync } from '@/components/dashboard/upcoming-deals-table-async'
 import { PeriodFilter } from '@/components/dashboard/period-filter'
 import { ChecklistCard } from '@/components/onboarding/checklist-card'
 import { TourDeBoasVindas } from '@/components/onboarding/tour'
 import { ReportArea } from '@/components/dashboard/report-area'
 import { ExportReportButton } from '@/components/dashboard/export-report-button'
+import { Skeleton } from '@/components/ui/skeleton'
 import { rotuloDoPreset, type PresetDePeriodo } from '@/lib/dashboard/periodo'
 
 export const metadata: Metadata = { title: 'Dashboard' }
@@ -41,13 +38,14 @@ export default async function DashboardPage({
     params.ate ?? null,
   )
 
-  // `getUpcomingDeals` fica de fora do período de propósito: é sobre prazo
-  // FUTURO (due_date), não sobre quando o negócio nasceu, filtrar isso por
-  // "criado nos últimos 7 dias" misturaria dois conceitos diferentes.
-  const [metrics, funnelData, upcomingDeals, sinais, estado] = await Promise.all([
-    getDashboardMetrics(workspaceId, periodo),
-    getFunnelCounts(workspaceId, periodo),
-    getUpcomingDeals(workspaceId),
+  // Métricas, funil e próximos prazos SAÍRAM deste `Promise.all` — cada um
+  // virou seu próprio componente `async`, envolvido em `<Suspense>` abaixo.
+  // Antes, a tela inteira ficava em branco até a mais lenta das 5 queries
+  // terminar; agora só `sinais`/`estado` (rápidas, decidem SE o checklist e o
+  // tour aparecem, não têm skeleton próprio) seguram a renderização inicial,
+  // e cada painel pesado aparece assim que sua própria query resolve —
+  // streaming de verdade, não spinner fingindo progresso.
+  const [sinais, estado] = await Promise.all([
     lerSinaisDeAtivacao(workspaceId),
     lerEstadoDoOnboarding(),
   ])
@@ -110,11 +108,25 @@ export default async function DashboardPage({
           negócio da pessoa, e um relatório com "Cadastre seu primeiro lead"
           impresso para o cliente não faz sentido nenhum. */}
       <ReportArea>
-        <MetricCards metrics={metrics} />
+        <Suspense
+          fallback={
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              {Array.from({ length: 4 }).map((_, i) => (
+                <Skeleton key={i} className="h-24 w-full" />
+              ))}
+            </div>
+          }
+        >
+          <MetricCardsAsync workspaceId={workspaceId} periodo={periodo} />
+        </Suspense>
 
-        <FunnelChart data={funnelData} />
+        <Suspense fallback={<Skeleton className="h-80 w-full" />}>
+          <FunnelChartAsync workspaceId={workspaceId} periodo={periodo} />
+        </Suspense>
 
-        <UpcomingDealsTable deals={upcomingDeals} />
+        <Suspense fallback={<Skeleton className="h-64 w-full" />}>
+          <UpcomingDealsTableAsync workspaceId={workspaceId} />
+        </Suspense>
       </ReportArea>
 
       {abrirTour && <TourDeBoasVindas aberto />}
