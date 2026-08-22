@@ -160,8 +160,10 @@ export async function createLead(values: unknown) {
   }
 
   const repetido = await contatoJaCadastrado(supabase, workspaceId, {
-    email: parsed.data.email,
-    phone: parsed.data.phone,
+    // Vazio e ausente são a mesma coisa aqui: contato em branco não pode
+    // casar com outro contato em branco e virar "repetido".
+    email: parsed.data.email || null,
+    phone: parsed.data.phone || null,
   })
   if (repetido) {
     return { error: mensagemDeRepetido(repetido.name), leadExistenteId: repetido.id }
@@ -170,8 +172,11 @@ export async function createLead(values: unknown) {
   const { error } = await supabase.from('leads').insert({
     workspace_id: workspaceId,
     name: parsed.data.name,
-    email: parsed.data.email,
-    phone: parsed.data.phone,
+    // `null`, não string vazia: é assim que a constraint
+    // `leads_contato_minimo` (migration 0025) enxerga "sem esse contato", e
+    // `coalesce(email,'') <> ''` trata os dois igual de qualquer forma.
+    email: parsed.data.email || null,
+    phone: parsed.data.phone || null,
     company: parsed.data.company,
     status: parsed.data.status,
     owner_id: parsed.data.ownerId,
@@ -214,7 +219,7 @@ export async function updateLead(leadId: string, values: unknown) {
   const repetido = await contatoJaCadastrado(
     supabase,
     workspaceId,
-    { email: parsed.data.email, phone: parsed.data.phone },
+    { email: parsed.data.email || null, phone: parsed.data.phone || null },
     leadId,
   )
   if (repetido) {

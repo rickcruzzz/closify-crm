@@ -147,7 +147,17 @@ export function LeadFormDialog({
 
           <div className="grid grid-cols-2 gap-3">
             <div className="flex flex-col gap-1.5">
-              <Label htmlFor="email">E-mail</Label>
+              {/* "ou telefone" no rótulo em vez de um asterisco de
+                  obrigatório: a regra real é ter ALGUMA forma de falar com a
+                  pessoa (constraint `leads_contato_minimo`, migration 0025), e
+                  dizer isso aqui evita que alguém invente um e-mail só para
+                  conseguir salvar um contato que chegou pelo WhatsApp. */}
+              <Label htmlFor="email">
+                E-mail
+                <span className="text-muted-foreground ml-1 text-xs font-normal">
+                  · ou telefone
+                </span>
+              </Label>
               <Input
                 id="email"
                 type="email"
@@ -164,7 +174,12 @@ export function LeadFormDialog({
             </div>
 
             <div className="flex flex-col gap-1.5">
-              <Label htmlFor="phone">Telefone</Label>
+              <Label htmlFor="phone">
+                Telefone
+                <span className="text-muted-foreground ml-1 text-xs font-normal">
+                  · ou e-mail
+                </span>
+              </Label>
               {/* Formata enquanto digita: sem isso o campo aceitava
                   "71993309404" cru e cada lead ficava num formato diferente. */}
               <Controller
