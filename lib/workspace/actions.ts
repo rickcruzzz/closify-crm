@@ -295,7 +295,7 @@ export async function acceptInvite(token: unknown) {
     return { error: 'Muitas tentativas. Aguarde alguns minutos e tente novamente.' }
   }
 
-  const { error } = await supabase.rpc('accept_workspace_invite', {
+  const { data: workspaceId, error } = await supabase.rpc('accept_workspace_invite', {
     invite_token: parsed.data,
   })
 
@@ -303,6 +303,16 @@ export async function acceptInvite(token: unknown) {
     console.error('acceptInvite falhou', error)
     const known = INVITE_ERRORS.find((message) => error.message.includes(message))
     return { error: known ?? 'Não foi possível aceitar o convite.' }
+  }
+
+  // Bug real reportado pelo dono, achado em 21/08: sem isto, quem aceita o
+  // convite continua vendo a empresa mais antiga que já participava (ou a
+  // que acabou de criar no cadastro) — `resolverWorkspaceAtivo` cai nesse
+  // fallback sempre que o cookie `vf_empresa` não aponta pra empresa certa.
+  // A migration 0048 fez a RPC devolver o `workspace_id` exatamente para
+  // isto: gravar o cookie na hora, sem uma segunda consulta.
+  if (workspaceId) {
+    await definirWorkspaceAtivo(workspaceId)
   }
 
   // Mesma razão do aceite automático na página do convite: quem entra numa

@@ -4,6 +4,7 @@ import { redirect } from 'next/navigation'
 import { Card, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { createClient } from '@/lib/supabase/server'
 import { concluirOnboardingPorConvite } from '@/lib/onboarding/estado'
+import { definirWorkspaceAtivo } from '@/lib/workspace/ativo'
 import { AcceptInviteCard } from '@/components/settings/accept-invite-card'
 import { Logo } from '@/components/branding/logo'
 
@@ -44,9 +45,20 @@ export default async function ConvitePage({
     user?.email === invite.email
 
   if (podeAceitarSozinho) {
-    const { error } = await supabase.rpc('accept_workspace_invite', { invite_token: token })
+    const { data: workspaceId, error } = await supabase.rpc('accept_workspace_invite', {
+      invite_token: token,
+    })
 
     if (!error) {
+      // Bug real reportado pelo dono, achado em 21/08: sem gravar o cookie
+      // aqui, quem aceitava continuava vendo a empresa mais antiga (ou a
+      // que acabou de criar no cadastro), nunca a empresa de quem
+      // convidou — `resolverWorkspaceAtivo` cai nesse fallback sempre que
+      // o cookie `vf_empresa` não aponta pra empresa certa.
+      if (workspaceId) {
+        await definirWorkspaceAtivo(workspaceId)
+      }
+
       // A empresa já existe, montada por quem convidou, não há o que
       // configurar. Sem esta marca, o middleware mandaria a pessoa às
       // boas-vindas e ela atravessaria quatro perguntas sobre uma empresa que

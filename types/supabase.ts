@@ -645,7 +645,7 @@ export type Database = {
       }
       accept_workspace_invite: {
         Args: { invite_token: string }
-        Returns: void
+        Returns: string
       }
       get_invite_by_token: {
         Args: { invite_token: string }
