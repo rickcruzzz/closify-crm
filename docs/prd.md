@@ -20,20 +20,30 @@ bolso de quem está começando".
 
 ## 3. Requisitos Funcionais
 
-- Login e Autenticação
-- Kanban
-- Dashboards
-- Multi usuário
-- Multi empresa
-- Permissões por usuário
-- Parte premium (paga)
-- Integrações (API)
-- Busca e Filtros
-- Landing Page
-- Onboarding do Usuário
-- Calendário
-- Filtro de Período
-- Exportação de Relatórios
+Estado real, conferido contra produção — não é planejamento. O que está
+marcado está no ar em <https://www.velofunil.com.br> e foi exercitado com
+dado real; o que não está tem o motivo escrito ao lado.
+
+- [x] Login e Autenticação — e-mail/senha, Google OAuth, recuperação por Resend
+- [x] Kanban (Funil) — drag-and-drop, filtro de parados, próxima ação no card
+- [x] Dashboards (Resultados) — métricas reais, gráfico de funil, 8 presets de período
+- [x] Multi usuário — convite por e-mail, papéis admin/membro
+- [x] Multi empresa — workspace isolado por RLS, provado 14/14 com sessão real
+- [x] Permissões por usuário — checadas em RLS **e** na UI
+- [x] Parte premium (paga) — Asaas, Pix real recebido, webhook + reconciliação diária
+- [x] Integrações (API) — Google Calendar, Gmail, WhatsApp pelo Evolution
+- [x] Busca e Filtros — nome, e-mail, empresa, status, responsável, data
+- [x] Landing Page — com prints reais do produto
+- [x] Onboarding do Usuário — assistente de 4 passos + checklist derivado do estado
+- [x] Calendário — Mês, Semana e Agenda sobre as tarefas existentes
+- [x] Filtro de Período — 8 presets + intervalo customizado com range picker
+- [x] Exportação de Relatórios — PDF do painel de Resultados
+- [ ] Exportar para Excel/CSV — **próximo da fila.** Tira a objeção "vou ficar
+      preso no sistema" na hora da venda
+- [ ] Dashboard de receita — ganho no mês e ticket médio saem do que já existe;
+      tempo médio de fechamento não, exige histórico de MUDANÇA de etapa
+- [ ] Campos e etapas customizáveis — `deal_stage` é enum do Postgres usado em
+      22 arquivos; virar tabela é projeto próprio. Só com cliente pagante pedindo
 
 ### Funcionalidades Principais
 
@@ -85,9 +95,11 @@ não persiste refresh token utilizável em background. Um escopo por conexão
 Google Calendar" na próxima ação do negócio, "Enviar e-mail" no painel do
 lead, os dois registram atividade na timeline.
 
-WhatsApp é só o link `wa.me` (ver **WhatsApp por link**, abaixo); a Cloud API
-oficial da Meta foi implementada e depois removida, decisão de produto, nunca
-teve conexão real em produção.
+WhatsApp tem **dois mecanismos independentes**: o link `wa.me` (ver
+**WhatsApp por link**, abaixo), que nunca dependeu de token nenhum, e a
+integração pelo **Evolution GO** numa VPS própria (ver **WhatsApp pelo
+Evolution**, abaixo). A Cloud API oficial da Meta foi implementada e depois
+removida em 13/08, decisão de produto — nunca teve conexão real em produção.
 
 **Busca e Filtros**
 Busca por nome, e-mail, empresa, status, responsável e data.
@@ -103,8 +115,8 @@ Página pública para apresentar o produto, gerar interesse e converter visitant
 Fluxo guiado para ajudar o usuário a criar workspace, cadastrar lead e começar a usar o sistema rápido.
 
 **Navegação (sidebar)**
-Menu lateral em seções: grupo principal sem título (Hoje, Pipeline, Leads,
-Dashboard, Calendário) e "CONFIGURAÇÕES" (Perfil, Equipe, Integrações,
+Menu lateral em seções: grupo principal sem título (Hoje, Funil, Contatos,
+Resultados, Calendário) e "CONFIGURAÇÕES" (Perfil, Equipe, Integrações,
 Preferências). Perfil já existia como rota, só não tinha entrada própria no
 menu, vivia escondido no menu do rodapé. "Preferências" é o antigo item
 "Configurações", renomeado pra descrever melhor a aba de dados da empresa,
@@ -142,7 +154,7 @@ regra de negócio.
 
 **Onboarding e ativação**
 Quem cria conta passa por boas-vindas, responde 4 perguntas curtas (empresa,
-segmento, modelo de venda, tamanho da equipe) e cai num Dashboard com checklist
+segmento, modelo de venda, tamanho da equipe) e cai em Resultados com checklist
 de ativação. O assistente **retoma de onde parou**, o estado vive em
 `onboarding_state`, uma linha por pessoa, não por empresa.
 
@@ -175,7 +187,7 @@ alteração. Um negócio cujo valor foi corrigido ontem mas que está na mesma
 etapa há três semanas conta como parado; usar a data de edição esconderia
 exatamente esse caso.
 
-Aparece como filtro "Parados" no Pipeline, com contagem, e só quando existe
+Aparece como filtro "Parados" no Funil, com contagem, e só quando existe
 algum, num funil saudável o botão fica escondido. O card não mostra:
 lá já mora a próxima ação, e duas datas competindo fazem a pessoa não saber
 qual obedecer.
@@ -189,12 +201,37 @@ API oficial exige Meta Business verificado, que exige CNPJ ativo, mais aprovaç�
 de template e custo por mensagem, o link resolve o que a pessoa quer, que é
 abrir a conversa, sem nenhuma dessas dependências.
 
-**Dashboard de Métricas**
-Cards com Total de Leads, Negócios Abertos, Valor do Pipeline e Taxa de Conversão.
+**WhatsApp pelo Evolution (fase 1: o laço fechado)**
+Conexão do número da empresa por QR Code em **Configurações → Integrações**,
+sobre Evolution GO hospedado em VPS própria. Toda mensagem recebida vira
+atividade no histórico do contato e, se não houver tarefa aberta, uma tarefa
+"Responder no WhatsApp" com prazo de 2h. Número desconhecido **cria contato
+novo** — quem chega pelo WhatsApp entra no funil sozinho.
+
+A dor que isso resolve é maior que "esquecer de responder": **o vendedor sai e
+leva a carteira junto**. O histórico mora no celular dele, e na saída a empresa
+perde contato, negociação e histórico de uma vez, além de ficar exposta na
+LGPD. Esquecer uma venda dói uma vez; perder a carteira não tem conserto.
+
+**O que a fase 1 não resolve, e precisa ser dito na venda:** uma instância é
+uma sessão de WhatsApp Web, então todos veem a **mesma** caixa de entrada. Não
+há fila com dono definido nem relatório por atendente — isso é recurso da API
+oficial. Resolve "a empresa é dona do histórico", não "cinco vendedores
+dividindo a fila".
+
+**Risco declarado na própria tela, antes do QR:** não é API oficial, e a Meta
+pode restringir o número sem aviso. Desde janeiro/2026 a detecção olha
+fingerprint de comportamento, não só volume, então número antigo e volume baixo
+não protegem mais. As camadas construídas (limite por idade da conexão, nenhuma
+função que aceite lista de destinatários, assinatura só dos dois eventos
+necessários) reduzem muito. **Não zeram.**
+
+**Resultados (métricas)**
+Cards com Contatos, Negócios abertos, Valor no funil e Viraram venda.
 Gráfico de funil feito com Recharts.
 
 **Exportação de Relatórios**
-Botão "Exportar relatório" no Dashboard captura a área de métricas em PDF
+Botão "Exportar relatório" em Resultados captura a área de métricas em PDF
 (`html2canvas-pro` + `jspdf`), já com o nome do workspace e o rótulo do
 período aplicado, pra dono levar o funil pra uma reunião sem precisar
 printar tela.
@@ -210,7 +247,7 @@ produto) não tem primitivo de data, e a grade de 42 células é a mesma
 reusada pelo Calendário completo, abaixo.
 
 **Calendário**
-Tela **Calendário**, no menu entre Dashboard e Configurações, com três
+Tela **Calendário**, no menu entre Resultados e Configurações, com três
 modos sobre as tarefas que já existem, sem tabela nova: **Mês** (grade com
 até 3 tarefas por dia e "+N"), **Semana** (7 colunas, mais espaço por dia,
 pensada pra ver conflito de horário) e **Agenda** (lista cronológica
@@ -402,13 +439,53 @@ Para garantir que o Velo Funil esteja pronto para produção, use este prompt de
 
 ### Checklist de deploy/validação final
 
-- [ ] Build local concluído sem erros.
-- [ ] Migrations aplicadas no Supabase de produção.
-- [ ] Webhook Asaas configurado em produção e validado.
-- [ ] Plano Pro ativado corretamente após evento de pagamento.
-- [ ] Fluxo de auth completo (login, cadastro, reset de senha, convites).
-- [ ] Dashboard de métricas com dados reais e filtros.
-- [ ] Permissões e workspaces validados.
-- [ ] Documentação interna alinhada com Asaas.
-- [ ] Texto e copy do produto consistentes com a solução real.
-- [ ] Proposta de testes automatizados para os fluxos críticos.
+Cada item marcado tem prova, não impressão — o método está em
+`docs/estado-atual.md` ("Como verificar as coisas aqui"). Atualizado 22/08/2026.
+
+- [x] **Build local concluído sem erros.** `npx tsc --noEmit`, `npm run lint`,
+      `npm test` (436 testes) e `npm run build`, os quatro limpos, rodados
+      antes de cada commit.
+- [x] **Migrations aplicadas no Supabase de produção.** 47 migrations no
+      projeto `tmyeunithjqkbwvezyyn` (`sa-east-1`). Conferido contra o
+      catálogo real: 14 tabelas e 29 RPCs expostas, ver `docs/schema.md`.
+- [x] **Webhook Asaas configurado em produção e validado.** Recebe, deduplica
+      e aplica. Ganhou rede de segurança depois que um Pix real ficou preso
+      por webhook não entregue: `/api/cron/reconciliar-assinaturas` roda 1×/dia
+      e corrige divergência sozinho.
+- [x] **Plano Pro ativado corretamente após evento de pagamento.** Pix real de
+      R$49 confirmado (workspace "Orne", 13/08). Fluxo auditado ponta a ponta:
+      pagamento libera, retry deduplica, cancelamento rebaixa, requisição sem
+      token toma 401.
+- [x] **Fluxo de auth completo.** Login, cadastro, reset de senha, convites e
+      Google OAuth. Convite entra na empresa de quem convidou — bug de 22/08,
+      corrigido e provado.
+- [x] **Dashboard de métricas com dados reais e filtros.** Queries reais, zero
+      mock. 8 presets de período mais intervalo customizado.
+- [x] **Permissões e workspaces validados.** RLS provada 14/14 contra produção
+      com sessão autenticada real (não `service_role`): isolamento entre
+      empresas segura mesmo com a interface burlada. Limite de empresas do Free
+      travado no banco desde a 0018, reprovado com a RPC real.
+- [x] **Documentação interna alinhada com Asaas.** Sem vestígio de Stripe nos
+      caminhos de cobrança (o agente/skill de Stripe no repo não se aplica).
+- [x] **Texto e copy do produto consistentes com a solução real.** Jargão
+      banido pelo `prd-copy-sem-jargao.md` eliminado das telas (Pipeline→Funil,
+      Leads→Contatos, Dashboard→Resultados), incluindo o que a renomeação de
+      19/08 tinha deixado passar.
+- [x] **Testes automatizados para os fluxos críticos.** 436 testes cobrindo
+      lógica pura em `lib/**`; cada caso documenta o defeito que o motivou.
+      Ressalva honesta: `tests/e2e/funil-completo.spec.ts` **nunca foi
+      executado** (exige `.env.local` e roda contra o Asaas). Ele não falha em
+      `npm test` — falha no gate de deploy.
+
+**Pendências que não são de código** (dependem de painel de terceiro, ver
+`docs/estado-atual.md` → "Pendente do dono"):
+
+- [ ] `CRON_SECRET` nas variáveis da Vercel — sem ele o cron de reconciliação
+      toma 401 todo dia, em silêncio.
+- [ ] CSP em modo bloqueio — hoje está em `Report-Only`; falta decidir entre
+      aceitar `'unsafe-eval'` ou isolar a dependência que o exige.
+- [ ] Conta de anúncio: rodar campanha na conta que enxerga o pixel do site
+      (`Rickdaskin Ads`), ou compartilhar o pixel com a outra.
+- [ ] Sandbox do Asaas nos testes de checkout — hoje o checkout é exercitado
+      contra produção, e foi isso que deixou 2 cobranças em aberto no nome de
+      uma usuária real.

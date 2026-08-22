@@ -7,7 +7,29 @@ Migrations novas mudam este arquivo com o tempo; ao suspeitar de
 desatualização, reconsulte o catálogo em vez de confiar cegamente nele (mesma
 regra de `docs/estado-atual.md`).
 
-**Reconferido em 20/08/2026, sem alteração.** A Central do Dono (`/dono`,
+**Reconferido em 22/08/2026 — mudou.** A migration 0047 (WhatsApp pelo
+Evolution) acrescentou a **14ª tabela**, `whatsapp_webhook_events`, mais um
+índice funcional em `leads` e três funções. Conferido contra o banco real, não
+contra a migration: o documento OpenAPI do PostgREST em produção lista hoje 14
+tabelas e 29 RPCs, entre elas `encontrar_lead_por_telefone`,
+`telefone_normalizado` e `purge_old_whatsapp_webhook_events`.
+
+O índice novo é **funcional e parcial**, o que não aparece numa listagem de
+colunas e por isso fica registrado aqui:
+
+```sql
+create index leads_telefone_ultimos8_idx
+  on public.leads (workspace_id, right(regexp_replace(phone, '\D', '', 'g'), 8))
+  where phone is not null;
+```
+
+Ele existe porque casar telefone de mensagem recebida varria todos os leads do
+workspace e comparava em JavaScript — com 3.000 leads, cada "oi" custava 3.000
+linhas. O risco aceito está no comentário da própria migration: dois leads com
+os mesmos 8 dígitos finais em DDDs diferentes colidem; é raro, e anexar ao lead
+errado é reparável, ao contrário de perder a mensagem.
+
+**Registro anterior, de 20/08/2026, mantido:** A Central do Dono (`/dono`,
 rota local) foi construída sobre o schema existente e **não criou nem alterou
 nenhuma tabela, coluna ou enum** — ela só lê, e escreve pelas mesmas portas
 que o produto já usava (`subscriptions`, `workspaces.plan`, a RPC
@@ -162,6 +184,11 @@ classDiagram
         +timestamptz processed_at
     }
 
+    class whatsapp_webhook_events {
+        +text event_id PK
+        +timestamptz processed_at
+    }
+
     class rate_limit_attempts {
         +text chave PK
         +timestamptz ocorrido_em PK
@@ -196,9 +223,15 @@ classDiagram
 ```
 
 *Tabelas soltas, sem FK para nenhuma outra do schema `public`:
-`asaas_webhook_events` (dedupe de webhook do Asaas), `rate_limit_attempts`
-(controle de tentativas de login) e `error_logs` (captura de erro dos
-boundaries do produto, migration 0046). Aparecem no diagrama, sem linha de
+`asaas_webhook_events` (dedupe de webhook do Asaas),
+`whatsapp_webhook_events` (dedupe de webhook do Evolution, migration 0047),
+`rate_limit_attempts` (controle de tentativas de login) e `error_logs`
+(captura de erro dos boundaries do produto, migration 0046).
+`whatsapp_webhook_events` é a única das quatro que **nasce com purga**
+(`purge_old_whatsapp_webhook_events()`, 7 dias, rodada por Vercel Cron): a
+projeção de 240 mil eventos/dia com 400 clientes a levaria a 9,7 GB em 12
+meses. A irmã do Asaas sobrevive sem limpeza só porque recebe poucas linhas
+por mês. Aparecem no diagrama, sem linha de
 relação — é o que o catálogo mostra, não omissão. `error_logs` também é
 zero-policy (RLS ligada, só `service_role` acessa), mesmo padrão de
 `asaas_webhook_events`.*
