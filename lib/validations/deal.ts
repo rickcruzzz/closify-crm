@@ -34,11 +34,32 @@ export const dealSchema = z.object({
   // A faixa vai de 2000 a 2100: cobre negócio antigo importado de planilha e
   // contrato de longo prazo, e barra o erro de digitação sem inventar uma
   // regra que o usuário não entenderia.
+  // OPCIONAL, e isso é o comportamento certo — `deals.due_date` é nullable no
+  // banco desde a 0001, a query de "Próximos prazos" já filtra
+  // `.not('due_date','is',null)` e `UpcomingDeal.due_date` já é `string |
+  // null`. O produto inteiro foi escrito esperando negócio sem prazo; só este
+  // schema obrigava.
+  //
+  // Obrigar era pior do que parecia: quem acabou de falar com um cliente
+  // raramente sabe quando fecha, então inventava uma data para conseguir
+  // salvar — e é exatamente essa data inventada que alimenta o aviso de
+  // "atrasado" e a lista de próximos prazos. A obrigação degradava o dado que
+  // o produto usa para cobrar.
+  //
+  // As validações de formato continuam valendo para quando a data É
+  // informada: `input type="date"` aceita ano 0111 sem reclamar, e isso já
+  // encheu o banco de prazos como 0111-11-11, exibidos como "atrasado há
+  // 699.346 dias". A faixa 2000–2100 cobre negócio antigo vindo de planilha e
+  // contrato longo, sem inventar regra que a pessoa não entenderia.
   dueDate: z
-    .string()
-    .min(1, 'Informe o prazo.')
-    .refine((valor) => /^\d{4}-\d{2}-\d{2}$/.test(valor), 'Data inválida.')
+    .union([z.literal(''), z.string()])
+    .optional()
+    .refine(
+      (valor) => !valor || /^\d{4}-\d{2}-\d{2}$/.test(valor),
+      'Data inválida.',
+    )
     .refine((valor) => {
+      if (!valor) return true
       const [ano, mes, dia] = valor.split('-').map(Number)
       const data = new Date(ano!, mes! - 1, dia!)
       // Rejeita data que não existe no calendário (31/02 vira 3 de março).
@@ -47,6 +68,7 @@ export const dealSchema = z.object({
       )
     }, 'Essa data não existe.')
     .refine((valor) => {
+      if (!valor) return true
       const ano = Number(valor.slice(0, 4))
       return ano >= 2000 && ano <= 2100
     }, 'Informe um ano entre 2000 e 2100.'),

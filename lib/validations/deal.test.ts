@@ -47,7 +47,26 @@ describe('dealSchema, prazo', () => {
 
   it('recusa formato fora de AAAA-MM-DD', () => {
     expect(dealSchema.safeParse({ ...base, dueDate: '15/09/2026' }).success).toBe(false)
-    expect(dealSchema.safeParse({ ...base, dueDate: '' }).success).toBe(false)
+  })
+
+  /**
+   * Prazo é opcional, e string vazia é AUSÊNCIA de prazo — não formato
+   * inválido. Os dois casos estavam no mesmo teste, o que escondia a
+   * diferença.
+   *
+   * `deals.due_date` é nullable desde a migration 0001, a query de "Próximos
+   * prazos" já filtra `is not null` e o tipo `UpcomingDeal.due_date` já é
+   * `string | null`: o produto sempre esperou negócio sem prazo, só este
+   * schema obrigava.
+   *
+   * Obrigar produzia o defeito que os testes acima combatem: quem não sabia
+   * quando ia fechar digitava qualquer data para conseguir salvar, e era essa
+   * data inventada que virava "atrasado" na tela.
+   */
+  it('aceita negócio sem prazo', () => {
+    expect(dealSchema.safeParse({ ...base, dueDate: '' }).success).toBe(true)
+    expect(dealSchema.safeParse({ ...base, dueDate: undefined }).success).toBe(true)
+    expect(dealSchema.safeParse(base).success).toBe(true)
   })
 })
 

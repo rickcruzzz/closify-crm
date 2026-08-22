@@ -73,7 +73,10 @@ export async function createDeal(values: unknown) {
     value: parsed.data.value,
     stage: parsed.data.stage,
     owner_id: parsed.data.ownerId,
-    due_date: parsed.data.dueDate,
+    // String vazia viraria `''` na coluna `date` e o Postgres recusaria.
+    // Prazo em branco é ausência de prazo, e `null` é como o banco (e a query
+    // de "Próximos prazos", que filtra por `is not null`) já representa isso.
+    due_date: parsed.data.dueDate || null,
   })
 
   if (error) {

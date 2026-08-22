@@ -330,7 +330,16 @@ export function DealFormDialog({
             </div>
 
             <div className="flex flex-col gap-1.5">
-              <Label htmlFor="dueDate">Prazo</Label>
+              <Label htmlFor="dueDate">
+                Prazo
+                {/* Dizer que é opcional evita a data inventada: sem isso, quem
+                    ainda não sabe quando fecha preenchia qualquer coisa só
+                    para conseguir salvar — e era essa data que depois
+                    aparecia como "atrasado". */}
+                <span className="text-muted-foreground ml-1 text-xs font-normal">
+                  · opcional
+                </span>
+              </Label>
               <Input
                 id="dueDate"
                 type="date"
