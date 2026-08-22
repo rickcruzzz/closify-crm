@@ -59,8 +59,27 @@
 
    Mexer no L/C exige refazer a conta, AA pede 4.5 para texto e 3.0 para
    elemento de UI (o ring de foco). */
+/* Profundidade das superfícies, corrigida em 22/08.
+
+   O fundo e o cartão eram a MESMA cor no claro (`oklch(1 0 0)` nos dois): sem
+   diferença entre a página e o que está em cima dela, todo card sumia contra
+   o branco e a tela inteira lia como uma folha lisa. No escuro o fundo era
+   `oklch(0.145)`, perto demais do preto absoluto, o que come a sombra e achata
+   a mesma hierarquia por baixo.
+
+   Agora as três camadas são distintas em ambos os temas:
+   fundo → sidebar → cartão. A escada é pequena de propósito (0.01–0.02 de L
+   entre elas); o que resolve não é contraste alto, é existir diferença.
+
+   O croma minúsculo (0.003–0.005) puxa os neutros um grau na direção do teal
+   da marca. É imperceptível como cor e perceptível como coesão — cinza de
+   croma zero ao lado de um primary saturado lê como cinza de template.
+
+   Contraste preservado: `--foreground` continua `oklch(0.145)` sobre
+   `oklch(0.975)` no claro e `oklch(0.985)` sobre `oklch(0.17)` no escuro,
+   os dois muito acima dos 4.5 de AA. */
 :root {
-  --background: oklch(1 0 0);
+  --background: oklch(0.975 0.003 200);
   --foreground: oklch(0.145 0 0);
   --card: oklch(1 0 0);
   --card-foreground: oklch(0.145 0 0);
@@ -87,7 +106,9 @@
   --chart-4: oklch(0.371 0 0);
   --chart-5: oklch(0.269 0 0);
   --radius: 0.625rem;
-  --sidebar: oklch(0.985 0 0);
+  /* Entre o fundo e o cartão: a barra lateral é estrutura, não conteúdo
+     elevado, então fica um degrau abaixo do card e um acima da página. */
+  --sidebar: oklch(0.988 0.002 200);
   --sidebar-foreground: oklch(0.145 0 0);
   --sidebar-primary: oklch(0.205 0 0);
   --sidebar-primary-foreground: oklch(0.985 0 0);
@@ -98,9 +119,10 @@
 }
 
 .dark {
-  --background: oklch(0.145 0 0);
+  /* Grafite, não preto absoluto — ver o comentário do bloco claro acima. */
+  --background: oklch(0.17 0.004 220);
   --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
+  --card: oklch(0.215 0.005 220);
   --card-foreground: oklch(0.985 0 0);
   --popover: oklch(0.205 0 0);
   --popover-foreground: oklch(0.985 0 0);
@@ -122,7 +144,8 @@
   --chart-3: oklch(0.439 0 0);
   --chart-4: oklch(0.371 0 0);
   --chart-5: oklch(0.269 0 0);
-  --sidebar: oklch(0.205 0 0);
+  /* Um degrau abaixo do card, acima do fundo — mesma lógica do tema claro. */
+  --sidebar: oklch(0.195 0.004 220);
   --sidebar-foreground: oklch(0.985 0 0);
   /* Era um azul/violeta herdado do default do shadcn, sem nenhum consumidor e
      fora da paleta cinza do tema. Alinhado ao --primary do modo escuro. */
