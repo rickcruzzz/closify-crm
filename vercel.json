@@ -1,5 +1,7 @@
 {
   "fluid": true,
+  "_comentario_regions": "As funções rodavam em iad1 (Washington DC), o padrão da Vercel, enquanto o banco está em sa-east-1 (São Paulo). Medido em produção pelo header x-vercel-id: 'gru1::iad1::...' — a borda atendia em São Paulo e mandava a execução para os EUA. Cada consulta ao Supabase fazia a travessia SP→Virginia→SP e voltava, ~110-160ms de latência por ida, e uma navegação faz de 3 a 6 consultas. O projeto já tinha pago metade dessa conta ao mover o BANCO de Ohio para São Paulo (196ms por consulta, medido em 12/08); a função ficou do outro lado do continente. gru1 põe as duas pontas na mesma região.",
+  "regions": ["gru1"],
   "crons": [
     {
       "path": "/api/cron/reconciliar-assinaturas",
