@@ -79,7 +79,16 @@
    `oklch(0.975)` no claro e `oklch(0.985)` sobre `oklch(0.17)` no escuro,
    os dois muito acima dos 4.5 de AA. */
 :root {
-  --background: oklch(0.975 0.003 200);
+  /* ESCADA DE SUPERFÍCIES DO MODO CLARO — sidebar < página < card.
+     A versão anterior ia de 0.975 (página) a 0.988 (sidebar) a 1.0 (card):
+     2,5 pontos de luminosidade no total, imperceptíveis. Na tela virava uma
+     chapa branca só, sem separar navegação de conteúdo nem mostrar onde um
+     cartão começa. O modo escuro parecia melhor não por sorte: lá a escada é
+     0.17 → 0.195 → 0.215, e sobre uma base escura essa diferença é enorme em
+     termos relativos.
+     Aqui a sidebar ANCORA em vez de flutuar, que é o padrão de todo app de
+     trabalho sério no claro — a navegação recua, o conteúdo avança. */
+  --background: oklch(0.978 0.003 205);
   --foreground: oklch(0.145 0 0);
   --card: oklch(1 0 0);
   --card-foreground: oklch(0.145 0 0);
@@ -87,16 +96,27 @@
   --popover-foreground: oklch(0.145 0 0);
   --primary: oklch(0.5 0.13 195);
   --primary-foreground: oklch(0.99 0.01 195);
-  --secondary: oklch(0.97 0 0);
+  /* Superfícies internas (hover, badge, estado selecionado) ganham o mesmo
+     viés de matiz dos neutros: cinza de croma zero ao lado de um primary
+     saturado lê como cinza de template. */
+  --secondary: oklch(0.955 0.004 205);
   --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
+  --muted: oklch(0.955 0.004 205);
+  /* 0.556 dava ~4.6:1 sobre branco: passa em AA por pouco e some sobre
+     superfície cinza, que é onde a maior parte do texto secundário deste
+     produto vive. 0.50 sobe para ~5.8:1 e continua legível sobre o card. */
+  --muted-foreground: oklch(0.5 0.008 205);
+  --accent: oklch(0.955 0.004 205);
   --accent-foreground: oklch(0.205 0 0);
   --destructive: oklch(0.577 0.245 27.325);
   --destructive-foreground: oklch(0.985 0 0);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
+  /* Borda precisa desenhar contra CARD BRANCO, não contra a página. Em 0.922
+     sobre 1.0 o traço praticamente não existia, e era isso que fazia a grade
+     do calendário sumir no claro. */
+  --border: oklch(0.893 0.004 205);
+  /* Campo de formulário carrega borda mais firme que divisória: é alvo de
+     clique, e some ainda mais fácil sobre branco. */
+  --input: oklch(0.872 0.005 205);
   /* Ring de foco na cor da marca: o anel de teclado vira sinal de identidade
      em vez de um cinza que some contra a borda. */
   --ring: oklch(0.5 0.13 195);
@@ -106,16 +126,19 @@
   --chart-4: oklch(0.371 0 0);
   --chart-5: oklch(0.269 0 0);
   --radius: 0.625rem;
-  /* Entre o fundo e o cartão: a barra lateral é estrutura, não conteúdo
-     elevado, então fica um degrau abaixo do card e um acima da página. */
-  --sidebar: oklch(0.988 0.002 200);
+  /* Estrutura, não conteúdo elevado: fica ABAIXO da página, não entre a
+     página e o card (ver a escada no topo deste bloco). */
+  --sidebar: oklch(0.957 0.004 205);
   --sidebar-foreground: oklch(0.145 0 0);
   --sidebar-primary: oklch(0.205 0 0);
   --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
+  /* Hover na sidebar precisa aparecer sobre um fundo que já é cinza: o
+     0.97 de antes era mais CLARO que a própria barra e não marcava nada. */
+  --sidebar-accent: oklch(0.925 0.005 205);
   --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
+  /* A linha que separa navegação de conteúdo. Some em 0.922. */
+  --sidebar-border: oklch(0.882 0.005 205);
+  --sidebar-ring: oklch(0.5 0.13 195);
 }
 
 .dark {
@@ -166,6 +189,24 @@
   }
   html {
     @apply font-sans;
+  }
+
+  /* ELEVAÇÃO DO CARTÃO, SÓ NO MODO CLARO.
+     Sobre fundo claro, um cartão branco precisa projetar sombra para o olho
+     ler que ele está À FRENTE da página — o contorno sozinho lê como desenho,
+     não como profundidade. No escuro o efeito é o oposto: sombra preta sobre
+     fundo escuro não aparece, e o que separa as camadas ali já é a própria
+     luminosidade, então a regra é anulada em vez de herdada.
+     Duas camadas curtas e fracas de propósito: sombra longa em app de trabalho
+     lê como cartão de marketing. */
+  [data-slot='card'] {
+    box-shadow:
+      0 1px 2px oklch(0.145 0.02 205 / 0.05),
+      0 2px 6px oklch(0.145 0.02 205 / 0.04);
+  }
+
+  .dark [data-slot='card'] {
+    box-shadow: none;
   }
 
   /* O Tailwind v4 mudou o Preflight: `button` passou a usar `cursor: default`

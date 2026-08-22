@@ -24,7 +24,7 @@ type MetricCardConfig = {
 // nada. Fica pendente até existir uma tabela de snapshots mensais.
 const cards: MetricCardConfig[] = [
   {
-    label: 'Total de Leads',
+    label: 'Contatos',
     icon: Users,
     accent: {
       text: 'text-blue-500 dark:text-blue-400',
@@ -32,10 +32,10 @@ const cards: MetricCardConfig[] = [
     },
     format: (metrics) => metrics.totalLeads.toString(),
     href: '/leads',
-    hrefLabel: 'Ver leads',
+    hrefLabel: 'Ver contatos',
   },
   {
-    label: 'Negócios Abertos',
+    label: 'Negócios abertos',
     icon: Briefcase,
     accent: {
       text: 'text-violet-500 dark:text-violet-400',

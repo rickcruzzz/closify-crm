@@ -43,14 +43,14 @@ export function montarChecklist(sinais: SinaisDeAtivacao): ItemDoChecklist[] {
     },
     {
       chave: 'pipeline',
-      titulo: 'Pipeline pronto',
+      titulo: 'Funil pronto',
       descricao: 'Seu funil já vem com as 6 etapas configuradas.',
       href: '/kanban',
       concluido: true,
     },
     {
       chave: 'lead',
-      titulo: 'Cadastrar o primeiro lead',
+      titulo: 'Cadastrar o primeiro contato',
       descricao: 'Quem é o contato e de qual empresa.',
       href: '/leads',
       concluido: sinais.leads > 0,

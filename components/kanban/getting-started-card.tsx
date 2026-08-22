@@ -27,7 +27,7 @@ type Step = {
 const STEPS: Step[] = [
   {
     icon: Users,
-    title: 'Cadastre seu primeiro lead',
+    title: 'Cadastre seu primeiro contato',
     description: 'Quem é o contato e de qual empresa. É o ponto de partida do funil.',
     action: { tipo: 'link', href: '/leads', label: 'Ir para Leads' },
   },

@@ -17,7 +17,7 @@ import { ExportReportButton } from '@/components/dashboard/export-report-button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { rotuloDoPreset, type PresetDePeriodo } from '@/lib/dashboard/periodo'
 
-export const metadata: Metadata = { title: 'Dashboard' }
+export const metadata: Metadata = { title: 'Resultados' }
 
 export default async function DashboardPage({
   searchParams,
@@ -86,8 +86,8 @@ export default async function DashboardPage({
   return (
     <div className="flex flex-col gap-6">
       <PageHeader
-        title="Dashboard"
-        description="Métricas do seu funil de vendas."
+        title="Resultados"
+        description="Quanto entrou, quanto está em jogo e o que virou venda."
         actions={
           <ExportReportButton
             nomeDoWorkspace={nomeDoWorkspace}

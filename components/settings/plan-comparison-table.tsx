@@ -15,7 +15,7 @@ const FREE_FEATURES = [
   `Até ${FREE_MEMBER_LIMIT} colaboradores`,
   `Até ${FREE_LEAD_LIMIT} leads`,
   'Funil visual, arrasta e solta',
-  'Dashboard de métricas',
+  'Painel de resultados',
   'Convites por e-mail',
 ]
 
@@ -30,7 +30,7 @@ const PRO_FEATURES = [
   'Agenda ligada ao Google Calendar',
   'E-mail pelo Gmail, registrado no cliente',
   'Funil visual, arrasta e solta',
-  'Dashboard de métricas',
+  'Painel de resultados',
   'Convites por e-mail',
   'Suporte prioritário',
 ]

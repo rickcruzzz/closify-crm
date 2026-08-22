@@ -66,7 +66,7 @@ const PASSOS: Passo[] = [
     icone: PartyPopper,
     titulo: 'Tudo pronto',
     texto:
-      'Seu ambiente está configurado. Comece cadastrando o primeiro lead, o checklist no Dashboard guia o resto.',
+      'Tudo pronto. Cadastre o primeiro contato — a lista em Resultados guia o resto.',
   },
 ]
 
