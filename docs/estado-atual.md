@@ -4,7 +4,90 @@ Documento de continuidade. É lido no começo de toda sessão (referenciado no
 [CLAUDE.md](../CLAUDE.md)) para que uma conversa nova, ou outra conta, comece
 sabendo o que já foi feito, o que foi decidido e onde estão as armadilhas.
 
-**Atualizado em:** 20/08/2026 (envio de criativos com conferência de qualidade e separação anúncio/orgânico; Central do Dono com páginas de alertas, anúncio e criativos; fila de alertas caiu de 11 para 4 ao filtrar ruído de teste; limpeza de dados de teste 26→24 empresas; 3 assinaturas ativas que não entregavam Pro; pixel deixando de sujar dados em localhost; conta de anúncio corrigida no registro; Supabase Pro e Vercel Pro com ganho medido; gate de deploy fechado)
+**Atualizado em:** 22/08/2026 (funções rodavam em Washington DC com o banco em São Paulo, achado no header e corrigido na config do projeto; WhatsApp sem QR por Postgres esgotado na VPS; migration 0049 provada desnecessária e removida)
+
+## As funções rodavam nos Estados Unidos (22/08)
+
+O piso de lentidão que três sessões tentaram derrubar estava no header que a
+própria Vercel devolve, e ninguém tinha olhado:
+
+    x-vercel-id: gru1::iad1::...
+                  ↑     ↑
+            borda SP   execução em Washington DC
+
+O banco está em `sa-east-1` desde a migração de agosto. A função ficou em
+`iad1`, o padrão da Vercel. Cada consulta atravessava o continente e voltava —
+~110-160ms por ida, com 3 a 6 consultas por navegação.
+
+**A decomposição que levou até lá**, medida em produção com sessão real:
+
+| o quê | tempo |
+|---|---|
+| `/termos` (estática, CDN, sem função) | 85ms |
+| `/api/log-erro` (função + 1 consulta) | 620ms |
+| `/perfil` (rota logada mais simples) | 750ms |
+| `/dashboard` (a pior) | 1221ms |
+
+Os ~535ms entre a estática e a função apareciam **antes** de qualquer layout
+ou consulta de página, e repetir a chamada não derrubava o número
+(`615, 614, 649, 664`) — logo não era cold start, era a travessia.
+
+**Armadilha que custou dois deploys quebrados:** `"regions": ["gru1"]` no
+`vercel.json` **não comanda as funções de um projeto Next.js**. O deployment
+passa a declarar `regions: ['gru1']` no metadata e continua executando em
+`iad1`. Quem manda é `serverlessFunctionRegion`, configuração do PROJETO
+(Settings → Functions), alterável por `PATCH /v9/projects/{id}`. Só vale para
+deployments novos — mudar exige redeploy.
+
+**E JSON não tem comentário.** A tentativa de explicar a escolha numa chave
+`_comentario_regions` derrubou os dois deploys seguintes antes de qualquer
+build: `should NOT have additional property`. O schema do `vercel.json` recusa
+propriedade desconhecida.
+
+## WhatsApp: o QR nunca vinha, e a causa é a VPS (22/08)
+
+A tela mostrava o texto cru do servidor em vermelho
+(`no QR code available. Please wait a moment and try again`). Medido: 20
+tentativas em 134s, sempre 400, sempre ~5080ms (constante demais para ser
+rede — é timeout interno), `Connected: false` o tempo todo.
+
+`/instance/logs/{id}` diz a causa em texto claro, e ela não é do código:
+
+    Failed to create container: failed to upgrade database:
+    pq: sorry, too many clients already
+
+O Postgres da VPS está sem conexão livre, o whatsmeow não cria o store da
+instância, e sem store não há cliente nem QR. **Não é acúmulo de instância
+órfã** — só existe 1 no servidor, conferido. Pendente do dono: reiniciar o
+Evolution na VPS libera as conexões; se voltar, `max_connections` é baixo
+demais para o pool que ele abre por instância.
+
+Corrigido do lado do código: `conectarInstancia` pedia o QR no instante
+seguinte ao `/instance/connect`, cujo 200 significa "pedido aceito", não
+"sessão pronta". Agora espera dentro de um orçamento, com **teto de 5
+tentativas** — sem teto, a correção teria trocado um erro diagnosticável por
+um "Preparando…" eterno. Reconectar número já pareado também caía no mesmo
+buraco e gravava `disconnected` por cima de conexão viva. E a Server Action
+passou a registrar `ultimoErroDaInstancia`: foi o log do servidor que resolveu
+o caso, e ele estava a uma chamada de distância o tempo todo.
+
+## A migration que consertava um buraco inexistente (22/08)
+
+A 0049 foi escrita afirmando que a policy de INSERT em `workspaces` deixava
+qualquer autenticado criar empresas à vontade pelo PostgREST. **Falso**,
+provado com sessão real: a PRIMEIRA linha já toma `42501`. Empresa não nasce
+por insert aqui — nasce pela RPC `create_workspace_with_admin` (0007),
+`security definer`, único caminho.
+
+A trava existe desde a **0018**, dentro dessa RPC, e a ressalva de ler
+`pro_vigente()` em vez da coluna `plan` já tinha sido corrigida pela **0038**
+(FALHA 2). Medido com a RPC real: 1ª empresa criada, 2ª recusada. A 0049 foi
+removida — aplicá-la criaria uma segunda cópia da regra de plano, divergindo
+da primeira no dia em que uma mudasse.
+
+Fica a lição, que é sobre método e não sobre esta migration: *"regra que só
+vive na Server Action não é regra"* virou reflexo neste projeto, e o reflexo
+disparou sem conferir se o banco já tinha a trava. Verificar primeiro.
 
 ## Envio de criativos com conferência de qualidade (20/08)
 
