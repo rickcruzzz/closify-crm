@@ -19,8 +19,35 @@ import {
   renovarQrCode,
 } from '@/lib/integrations/evolution/actions'
 
-/** O QR do Evolution expira rápido — renova sozinho enquanto a tela está aberta. */
-const INTERVALO_RENOVAR_QR_MS = 18_000
+/**
+ * De quanto em quanto tempo buscar o QR novo do servidor.
+ *
+ * 20s porque é o ciclo REAL do Evolution GO, medido nos logs da instância em
+ * 22/08: ele gera um QR novo a cada 20 segundos e invalida o anterior. O
+ * valor antigo (18s) ficava fora de fase — a tela pegava um código com 2
+ * segundos de vida pela frente, e quem levasse esse tempo para apontar a
+ * câmera escaneava um QR já morto.
+ */
+const INTERVALO_RENOVAR_QR_MS = 20_000
+
+/**
+ * De quanto em quanto tempo reabrir a sessão do zero.
+ *
+ * O achado que explicava "escaneio e não conecta": o Evolution GO gera no
+ * MÁXIMO 6 QR codes por sessão e então mata tudo — nos logs,
+ * `QR timeout — signaling kill channel`, seguido de `Restarting client` e
+ * `No jid found. Creating new device`. Isso acontece por volta dos 160
+ * segundos.
+ *
+ * Sem isto, passado esse tempo a tela seguia mostrando o último QR buscado,
+ * que pertencia a uma sessão que já não existia: escanear não conectava e
+ * não produzia erro nenhum, nem na tela nem no log — o pior tipo de falha.
+ *
+ * 140s deixa 20 segundos de folga antes do corte, tempo de a nova sessão
+ * subir e entregar o primeiro QR sem que a tela pisque vazia.
+ */
+const INTERVALO_RECONECTAR_MS = 140_000
+
 /** Intervalo de checagem se a leitura já aconteceu. */
 const INTERVALO_CHECAR_ESTADO_MS = 3_000
 
@@ -51,17 +78,27 @@ export function EvolutionConnectDialog({
   const [erro, setErro] = React.useState<string | null>(null)
   const [conectado, setConectado] = React.useState(false)
 
-  const iniciarConexao = React.useCallback(async () => {
-    setCarregando(true)
-    setErro(null)
-    const resultado = await conectarWhatsapp(workspaceId)
-    setCarregando(false)
-    if (!resultado.ok) {
-      setErro(resultado.erro)
-      return
-    }
-    setQrCode(resultado.qrCode)
-  }, [workspaceId])
+  /**
+   * @param silencioso Renovação de fundo (a sessão vai expirar): mantém o QR
+   * atual na tela enquanto o novo não chega. Sem isto, a cada reconexão
+   * automática o código sumia e virava spinner por um instante — piscada
+   * gratuita, e pior, bem no momento em que a pessoa pode estar mirando a
+   * câmera.
+   */
+  const iniciarConexao = React.useCallback(
+    async (silencioso = false) => {
+      if (!silencioso) setCarregando(true)
+      setErro(null)
+      const resultado = await conectarWhatsapp(workspaceId)
+      if (!silencioso) setCarregando(false)
+      if (!resultado.ok) {
+        setErro(resultado.erro)
+        return
+      }
+      setQrCode(resultado.qrCode)
+    },
+    [workspaceId],
+  )
 
   // Abrir o diálogo já dispara a criação da instância e o primeiro QR Code.
   React.useEffect(() => {
@@ -82,6 +119,17 @@ export function EvolutionConnectDialog({
     }, INTERVALO_RENOVAR_QR_MS)
     return () => clearInterval(intervalo)
   }, [open, conectado, erro, workspaceId])
+
+  // Reabre a sessão antes de o servidor matá-la (ver INTERVALO_RECONECTAR_MS).
+  // Sem isto, a tela mostrava indefinidamente o QR de uma sessão encerrada, e
+  // escanear simplesmente não fazia nada — sem erro, sem aviso, sem conexão.
+  React.useEffect(() => {
+    if (!open || conectado || erro) return
+    const intervalo = setInterval(() => {
+      void iniciarConexao(true)
+    }, INTERVALO_RECONECTAR_MS)
+    return () => clearInterval(intervalo)
+  }, [open, conectado, erro, iniciarConexao])
 
   // Checa se a leitura já aconteceu, para o diálogo fechar sozinho — ninguém
   // deveria precisar clicar em "já escaneei".
@@ -131,7 +179,16 @@ export function EvolutionConnectDialog({
               <p role="alert" className="text-destructive text-center text-sm">
                 {erro}
               </p>
-              <Button variant="outline" size="sm" onClick={iniciarConexao} disabled={carregando}>
+              {/* Arrow function, não `onClick={iniciarConexao}`: o handler
+                  receberia o MouseEvent como primeiro argumento, e qualquer
+                  objeto é truthy — o clique cairia no modo silencioso e não
+                  mostraria spinner nenhum. */}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => void iniciarConexao()}
+                disabled={carregando}
+              >
                 {carregando ? (
                   <Loader2 className="size-4 animate-spin" />
                 ) : (

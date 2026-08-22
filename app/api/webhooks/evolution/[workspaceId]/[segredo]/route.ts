@@ -24,11 +24,20 @@ import { createAdminClient } from '@/lib/supabase/admin'
  * pelo Swagger do servidor em 21/08 — API diferente da que o resto do
  * projeto foi originalmente escrito pra consumir. O formato dos campos de
  * mensagem (`isFromMe`, `pushName`, `chat`) é o de `types.MessageInfo` do
- * `whatsmeow`, lido do schema do Swagger. O ENVELOPE externo do webhook
- * (se realmente chega como `{event, data}`) não pôde ser confirmado sem uma
- * mensagem real chegando — o Swagger só documenta rotas HTTP, não o formato
- * assíncrono do callback. `console.log` do payload cru fica ligado até a
- * primeira mensagem real confirmar o formato; tirar depois.
+ * `whatsmeow`, lido do schema do Swagger.
+ *
+ * ## Nome do evento não é o nome da assinatura
+ *
+ * `/instance/connect` recebe `subscribe: ['MESSAGE', 'CONNECTION']`, mas
+ * esses são os nomes das CATEGORIAS assinadas. O que chega no corpo do
+ * webhook são os tipos de evento do `whatsmeow`: `Message`, `Connected`,
+ * `LoggedOut`, `QRCode`, `QRTimeout`.
+ *
+ * Isso custou um bug real: a primeira versão filtrava por `CONNECTION` e
+ * `MESSAGE`, e o log do servidor mostrava a rota respondendo
+ * `{"ok":true,"ignorado":"LoggedOut"}` — ou seja, ignorando tudo, e teria
+ * ignorado a primeira mensagem de cliente do mesmo jeito. Confirmado em
+ * 22/08 lendo `/instance/logs/{id}` do servidor real.
  *
  * ## Por que o segredo vai na URL
  *
@@ -153,37 +162,60 @@ export async function POST(
     return NextResponse.json({ erro: 'Corpo inválido.' }, { status: 400 })
   }
 
-  // Log temporário: só a FORMA do envelope (chaves, não conteúdo), o
-  // suficiente para confirmar se {event,data} bate com o formato real sem
-  // colocar mensagem de cliente no log da Vercel. O envelope externo não
-  // pôde ser confirmado sem uma mensagem chegando de verdade (ver comentário
-  // no topo do arquivo). Remover assim que confirmado em produção.
-  console.log('Webhook Evolution GO — forma do envelope:', {
-    event: payload.event,
-    type: payload.type,
-    dataÉArray: Array.isArray(payload.data),
-    dataChaves: Array.isArray(payload.data)
-      ? Object.keys(payload.data[0] ?? {})
-      : Object.keys(payload.data ?? {}),
-  })
+  // `MESSAGE` e `CONNECTION` são os nomes da ASSINATURA (o que pedimos em
+  // `/instance/connect`), não os nomes dos eventos que chegam. Confirmado no
+  // log do servidor em 22/08: `subscriptions [MESSAGE CONNECTION] eventType
+  // QRCode` — e o webhook respondia `{"ok":true,"ignorado":"LoggedOut"}`,
+  // porque procurava por `CONNECTION` e recebia `LoggedOut`.
+  //
+  // Os nomes reais vêm dos tipos de evento do `whatsmeow`, a biblioteca que
+  // o Evolution GO usa por baixo.
+  const evento = payload.event ?? payload.type
+
+  /** Conectou de verdade: o número está pareado e a sessão está de pé. */
+  const CONECTOU = ['Connected', 'PairSuccess']
+  /** Caiu: sessão encerrada, número desvinculado, ou queda de rede. */
+  const DESCONECTOU = ['LoggedOut', 'Disconnected', 'StreamReplaced']
+  /** Mensagem recebida. */
+  const MENSAGEM = ['Message']
+
+  // Ruído do ciclo de pareamento: o servidor gera um QR novo a cada 20s e
+  // avisa por webhook. Não é informação para o CRM (a tela já busca o QR
+  // ativamente enquanto o diálogo está aberto) e não deve virar log.
+  if (evento === 'QRCode' || evento === 'QRTimeout') {
+    return NextResponse.json({ ok: true, ignorado: evento })
+  }
+
+  if (evento && CONECTOU.includes(evento)) {
+    await admin
+      .from('integration_connections')
+      .update({ status: 'connected', last_error: null })
+      .eq('provider', 'whatsapp')
+      .eq('workspace_id', workspaceId)
+
+    return NextResponse.json({ ok: true })
+  }
 
   // O número caiu. Marcar como erro é o que faz a tela avisar em vez de deixar
   // a pessoa achando que está tudo certo — numa API não oficial, queda é o
   // evento que não pode passar despercebido.
-  if (payload.event === 'CONNECTION' || payload.type === 'CONNECTION') {
-    const dados = payload.data as { connected?: boolean; state?: string } | undefined
-    const desconectou = dados?.connected === false || dados?.state === 'close'
+  //
+  // `LoggedOut` também chega durante o pareamento normal (antes de haver
+  // número vinculado, o whatsmeow considera a sessão deslogada), então só
+  // marca erro se a conexão JÁ estava conectada — senão toda tentativa de
+  // conectar terminaria com a tela dizendo que caiu.
+  if (evento && DESCONECTOU.includes(evento)) {
+    const { data: conexaoAtual } = await admin
+      .from('integration_connections')
+      .select('status')
+      .eq('provider', 'whatsapp')
+      .eq('workspace_id', workspaceId)
+      .maybeSingle()
 
-    if (desconectou) {
+    if (conexaoAtual?.status === 'connected') {
       await admin
         .from('integration_connections')
         .update({ status: 'error', last_error: 'O WhatsApp desconectou.' })
-        .eq('provider', 'whatsapp')
-        .eq('workspace_id', workspaceId)
-    } else if (dados?.connected === true || dados?.state === 'open') {
-      await admin
-        .from('integration_connections')
-        .update({ status: 'connected', last_error: null })
         .eq('provider', 'whatsapp')
         .eq('workspace_id', workspaceId)
     }
@@ -191,10 +223,10 @@ export async function POST(
     return NextResponse.json({ ok: true })
   }
 
-  if (payload.event !== 'MESSAGE' && payload.type !== 'MESSAGE') {
-    // Evento que não assinamos. Responder 200 evita que o Evolution fique
+  if (!evento || !MENSAGEM.includes(evento)) {
+    // Evento que não tratamos. Responder 200 evita que o Evolution fique
     // reenviando algo que nunca vamos processar.
-    return NextResponse.json({ ok: true, ignorado: payload.event ?? payload.type })
+    return NextResponse.json({ ok: true, ignorado: evento })
   }
 
   const mensagens = Array.isArray(payload.data)
