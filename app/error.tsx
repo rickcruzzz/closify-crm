@@ -19,12 +19,18 @@ export default function Error({
 
   return (
     <div className="flex min-h-dvh flex-col items-center justify-center gap-4 p-8 text-center">
-      <p className="text-muted-foreground text-sm font-medium">Erro</p>
-      <h1 className="text-2xl font-semibold tracking-tight">Algo deu errado</h1>
+      {/* "Algo deu errado" seguido de "ocorreu um erro inesperado" dizia a
+          mesma coisa duas vezes e nenhuma delas respondia a única pergunta que
+          alguém faz ao ver erro num sistema que guarda a carteira de clientes:
+          perdi o que era meu? A resposta vem antes da instrução. */}
+      <h1 className="text-2xl font-semibold tracking-tight">
+        Esta tela não carregou
+      </h1>
       <p className="text-muted-foreground max-w-sm">
-        Ocorreu um erro inesperado. Tente novamente ou volte mais tarde.
+        Seus dados estão salvos e seguros. Tente abrir de novo — se continuar
+        assim, fale com a gente pelo suporte.
       </p>
-      <Button onClick={() => reset()}>Tentar novamente</Button>
+      <Button onClick={() => reset()}>Tentar de novo</Button>
     </div>
   )
 }

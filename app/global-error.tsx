@@ -48,11 +48,11 @@ export default function GlobalError({
         }}
       >
         <h1 style={{ fontSize: '1.5rem', fontWeight: 600, margin: 0 }}>
-          Algo deu errado
+          O Velo Funil não abriu
         </h1>
         <p style={{ color: '#a1a1a1', maxWidth: '28rem', margin: 0, lineHeight: 1.6 }}>
-          Ocorreu um erro inesperado ao carregar o Velo Funil. Tente novamente em alguns
-          instantes.
+          Seus dados estão salvos e seguros — a falha foi ao carregar a tela.
+          Recarregue a página; se continuar, fale com a gente pelo suporte.
         </p>
         <button
           onClick={reset}
