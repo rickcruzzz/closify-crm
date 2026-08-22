@@ -281,7 +281,7 @@ tráfego antes de chegar no servidor.
 
 ### Monetização (Asaas)
 
-Plano Free: 1 empresa, até 2 colaboradores e 50 leads.
+Plano Free: 1 empresa, até 2 colaboradores e 300 contatos (`FREE_LEAD_LIMIT`, `lib/plans.ts` — o número já subiu de 50 e este documento tinha ficado para trás; a trava real vive numa trigger do banco, migration 0026, não na Server Action).
 Multi-empresa é recurso do Pro, sem esse limite, o teto de colaboradores não
 segura nada: bastava criar uma empresa nova para cada dupla.
 Plano Pro: colaboradores e leads ilimitados por R$49/mês.

@@ -17,7 +17,7 @@ ver `docs/estado-atual.md`, "Gate de segurança no deploy").
 
 ## O que existe, em números
 
-- **30 arquivos de teste unitário** (Vitest, `lib/**/*.test.ts`), 315 testes,
+- **45 arquivos de teste unitário** (Vitest, `lib/**/*.test.ts`), 436 testes,
   ~1.5s de execução. Cobrem só lógica pura — schema de validação, parser de
   CSV/planilha, formatador de data/telefone, medidor de força de senha,
   criptografia de token, template de e-mail. Deliberadamente sem
@@ -43,7 +43,7 @@ ver `docs/estado-atual.md`, "Gate de segurança no deploy").
 classDiagram
     class TestesUnitarios {
         <<Vitest — lib/**/*.test.ts>>
-        30 arquivos, 315 testes
+        45 arquivos, 436 testes
         environment: node
         ~1.5s de execução
     }
@@ -156,7 +156,7 @@ sequenceDiagram
     TSC-->>Dev: erro de tipo? para aqui, corrige antes de seguir
     Dev->>Lint: roda manualmente
     Lint-->>Dev: warning/erro? corrige antes de seguir
-    Dev->>Vitest: roda manualmente (315 testes, ~1.5s)
+    Dev->>Vitest: roda manualmente (436 testes, ~1.5s)
     Vitest-->>Dev: falha? o teste documenta QUAL defeito pegou
     Dev->>Build: roda manualmente
     Build-->>Dev: build quebrado? não segue para commit
@@ -173,7 +173,7 @@ sequenceDiagram
     Note over Vercel,Prod: Aqui é onde o "robô" DEVERIA gritar antes do<br/>cliente perceber — e não existe ainda.
 
     Vercel->>Prod: deploy automático, SEM gate nenhum
-    Note over Vercel: deploy-com-auditoria.yml existe no disco,<br/>rodaria security-audit.spec.ts contra preview<br/>ANTES de promover — mas não está no repositório<br/>(falta escopo "workflow" no token que fez o push)
+    Note over Vercel: deploy-com-auditoria.yml ESTÁ no repositório<br/>e roda security-audit.spec.ts contra o preview<br/>antes de liberar a promoção (desde 19/08).<br/>A promoção final continua sendo clique manual.
 
     opt se algo quebrar em produção
         Prod-->>Dev: só aparece se um cliente reclamar,<br/>OU se error_logs for consultado manualmente<br/>(captura de erro entregue em 18/08, sem alerta automático)
@@ -191,7 +191,7 @@ sequenceDiagram
    para `main` — sem isso a Vercel promove em paralelo ao Actions e o gate
    não impede nada.
 3. **Somar `npm test` ao workflow**, hoje ele só roda `security-audit.spec.ts`
-   E2E; os 315 testes unitários não fazem parte do gate de CI nenhum, só do
+   E2E; os 436 testes unitários não fazem parte do gate de CI nenhum, só do
    checklist manual do desenvolvedor.
 4. **Alerta automático quando `error_logs` recebe uma linha nova** — hoje é
    consulta manual (SQL/MCP), sem push/e-mail/Slack quando algo quebra.
