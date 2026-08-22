@@ -99,6 +99,12 @@ export function ProximaAcao({
     return (
       <button
         type="button"
+        // O texto visível descreve o ESTADO, que é o que serve para varrer o
+        // board de olho ("quais destes estão largados?"). Mas nome acessível
+        // precisa dizer a AÇÃO: sem isto o leitor de tela anunciava
+        // "Sem próximo passo, botão", e o que o clique faz ficava invisível
+        // justamente para quem não vê o cursor mudar nem o sublinhado do hover.
+        aria-label="Agendar o próximo passo deste negócio"
         // A cor sai da urgência, não é fixa. Antes era sempre
         // `text-destructive`, a MESMA de uma tarefa vencida, e como 96% dos
         // negócios não têm próxima ação o board inteiro ficava vermelho —
