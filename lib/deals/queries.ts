@@ -22,6 +22,17 @@ export type DealLeadRow = {
   email: string | null
   company: string | null
   phone: string | null
+  /**
+   * O valor estimado guardado no contato, usado para pré-preencher o
+   * formulário de negócio.
+   *
+   * A importação de planilha já fazia isso (`lib/leads/actions.ts`: o negócio
+   * nasce com `value: origem?.value`), mas a criação manual não — quem
+   * cadastrava um contato com valor e depois abria "Novo negócio" digitava o
+   * mesmo número de novo. Dois caminhos para o mesmo dado discordando entre
+   * si.
+   */
+  value: number
 }
 
 /**
@@ -126,7 +137,7 @@ export async function getWorkspaceLeadsForSelect(workspaceId: string): Promise<D
 
   const { data, error } = await supabase
     .from('leads')
-    .select('id, name, email, company, phone')
+    .select('id, name, email, company, phone, value')
     .eq('workspace_id', workspaceId)
     .order('created_at', { ascending: false })
     .limit(LEADS_NO_SELETOR)

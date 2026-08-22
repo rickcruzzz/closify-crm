@@ -71,6 +71,8 @@ export function DealFormDialog({
     handleSubmit,
     control,
     reset,
+    getValues,
+    setValue,
     formState: { errors },
   } = useForm<DealFormInput, unknown, DealFormValues>({
     resolver: zodResolver(dealSchema),
@@ -96,6 +98,36 @@ export function DealFormDialog({
       })
     }
   }, [open, members, reset])
+
+  /**
+   * Escolher o contato preenche título e valor.
+   *
+   * O contato já guarda um valor estimado, e quem acabou de cadastrá-lo
+   * tinha que digitar o mesmo número de novo aqui — trabalho duplicado que o
+   * dono notou e questionou. Pior: a IMPORTAÇÃO de planilha nunca fez isso,
+   * ela cria o negócio com `value` vindo do lead (`lib/leads/actions.ts`).
+   * Os dois caminhos discordavam sobre a mesma regra.
+   *
+   * Só preenche campo INTOCADO (título vazio, valor zerado). Quem já digitou
+   * algo antes de escolher o contato não perde o que escreveu, e trocar de
+   * contato depois de ajustar o valor não desfaz o ajuste.
+   *
+   * O título segue o mesmo formato que a importação usa — "nome, empresa" é
+   * como um vendedor procura no board.
+   */
+  function preencherComDadosDoLead(lead: DealLeadRow | null) {
+    if (!lead) return
+
+    if (!getValues('title')?.trim()) {
+      setValue('title', lead.company ? `${lead.name}, ${lead.company}` : lead.name, {
+        shouldValidate: true,
+      })
+    }
+
+    if (!Number(getValues('value'))) {
+      setValue('value', lead.value, { shouldValidate: true })
+    }
+  }
 
   async function onSubmit(values: DealFormValues) {
     setIsSubmitting(true)
@@ -152,7 +184,10 @@ export function DealFormDialog({
                   itemToStringLabel={(lead) => `${lead.name} (${lead.company})`}
                   itemToStringValue={(lead) => lead.id}
                   value={leadsById.get(field.value) ?? null}
-                  onValueChange={(lead) => field.onChange(lead?.id ?? '')}
+                  onValueChange={(lead) => {
+                    field.onChange(lead?.id ?? '')
+                    preencherComDadosDoLead(lead)
+                  }}
                   disabled={isSubmitting}
                 >
                   <ComboboxTrigger id="leadId">
@@ -255,7 +290,14 @@ export function DealFormDialog({
 
           <div className="grid grid-cols-2 gap-3">
             <div className="flex flex-col gap-1.5">
-              <Label htmlFor="value">Valor (R$)</Label>
+              <Label htmlFor="value">
+                Valor (R$)
+                {/* Diz de onde veio o número quando ele aparece sozinho: sem
+                    isso, o campo preenchido por conta própria parece bug. */}
+                <span className="text-muted-foreground ml-1 text-xs font-normal">
+                  · do contato, dá para ajustar
+                </span>
+              </Label>
               {/* Mesma máscara do formulário de lead: formata os milhares
                   durante a digitação, com os dois últimos dígitos sempre nos
                   centavos. */}
