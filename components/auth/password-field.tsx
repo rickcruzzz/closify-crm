@@ -95,7 +95,7 @@ export function PasswordField({
               disabled={desabilitado}
             >
               {copiada ? (
-                <Check aria-hidden className="size-4 text-emerald-500" />
+                <Check aria-hidden className="size-4 text-emerald-600 dark:text-emerald-400" />
               ) : (
                 <Copy aria-hidden className="size-4" />
               )}

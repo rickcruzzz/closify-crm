@@ -18,9 +18,24 @@ const activityConfig: Record<
   ActivityType,
   { label: string; icon: typeof Phone; className: string }
 > = {
-  ligacao: { label: 'Ligação', icon: Phone, className: 'bg-blue-500/10 text-blue-500' },
-  email: { label: 'E-mail', icon: Mail, className: 'bg-violet-500/10 text-violet-500' },
-  reuniao: { label: 'Reunião', icon: Users, className: 'bg-amber-500/10 text-amber-500' },
+  // Mesmo ajuste de `lead-status-badge`: no claro o ícone carregava o
+  // contraste sozinho contra um fundo de 10% sobre branco, e sem par `dark:`
+  // o tom claro ainda vazava para o tema escuro.
+  ligacao: {
+    label: 'Ligação',
+    icon: Phone,
+    className: 'bg-blue-500/10 text-blue-600 dark:text-blue-400',
+  },
+  email: {
+    label: 'E-mail',
+    icon: Mail,
+    className: 'bg-violet-500/10 text-violet-600 dark:text-violet-400',
+  },
+  reuniao: {
+    label: 'Reunião',
+    icon: Users,
+    className: 'bg-amber-500/10 text-amber-700 dark:text-amber-400',
+  },
   nota: {
     label: 'Nota',
     icon: FileText,
