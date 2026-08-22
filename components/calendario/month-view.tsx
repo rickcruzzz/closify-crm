@@ -52,23 +52,29 @@ export function MonthView({
         return (
           <div
             className={cn(
-              // `min-h-28` e não `min-h-24`: o chip passou a ter duas linhas
-              // (hora em cima, cliente embaixo) para o nome parar de ser
-              // cortado, e a altura antiga apertava três deles.
-              'flex min-h-28 flex-col gap-1 rounded-md border p-1 transition-colors',
-              dia === hoje
-                ? // Dia de hoje ganha fundo, não só borda: a borda sozinha
-                  // some no meio da grade quando há evento colorido ao lado.
-                  'border-primary/40 bg-primary/5'
-                : 'hover:border-border border-transparent',
-              !ehDoMesCorrente && 'opacity-40',
+              // Sem borda própria: a moldura e as divisórias agora são
+              // desenhadas pelo `MonthGrid` (`divide-*`), e repetir aqui
+              // daria linha dupla em toda célula.
+              //
+              // `min-h-28` porque o chip tem duas linhas (hora em cima,
+              // cliente embaixo) — a altura anterior apertava três deles.
+              'hover:bg-accent/40 flex min-h-28 flex-col gap-1 p-1.5 transition-colors',
+              dia === hoje && 'bg-primary/[0.07]',
+              // Dia de outro mês fica presente mas claramente fora: some por
+              // opacidade, não por cor, para o número continuar legível a
+              // quem precisa dele.
+              !ehDoMesCorrente && 'opacity-35',
             )}
           >
             <span
               className={cn(
-                'px-1 text-xs leading-none',
+                'flex size-6 shrink-0 items-center justify-center self-start rounded-full text-xs leading-none tabular-nums',
                 dia === hoje
-                  ? 'text-primary font-semibold'
+                  ? // Marcador redondo preenchido é a convenção de agenda
+                    // (Google Calendar, Outlook, Pipedrive): a data de hoje
+                    // se encontra num relance, sem precisar caçar cor de
+                    // texto no meio dos eventos.
+                    'bg-primary text-primary-foreground font-semibold'
                   : 'text-muted-foreground font-medium',
               )}
             >

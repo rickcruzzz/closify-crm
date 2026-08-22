@@ -62,21 +62,29 @@ export function TaskChip({
       type="button"
       onClick={onClick}
       className={cn(
-        // Faixa de cor na borda esquerda: dá o estado (atrasado/hoje/futuro)
-        // sem depender do texto ficar colorido, que era o que deixava a
-        // grade inteira gritando em vermelho.
-        'hover:bg-accent flex w-full flex-col gap-0.5 rounded border-l-2 py-1 pl-1.5 pr-1 text-left transition-colors',
-        corDaUrgencia[urgencia],
+        // Fundo próprio, não só texto solto: dentro de uma célula com moldura
+        // o evento precisa ler como um objeto pousado ali, senão vira texto
+        // perdido no meio do vazio.
+        //
+        // A faixa de cor fica na borda esquerda — dá o estado
+        // (atrasado / hoje / futuro) sem tingir o texto inteiro, que era o
+        // que deixava a grade toda gritando em vermelho.
+        'flex w-full flex-col gap-0.5 rounded-[5px] border-l-2 py-1 pr-1 pl-1.5 text-left transition-colors',
         urgencia === 'critico'
-          ? 'border-l-destructive'
+          ? 'border-l-destructive bg-destructive/10 hover:bg-destructive/15'
           : urgencia === 'atencao'
-            ? 'border-l-amber-500'
-            : 'border-l-border',
+            ? 'border-l-amber-500 bg-amber-500/10 hover:bg-amber-500/15'
+            : 'border-l-primary/50 bg-muted/60 hover:bg-muted',
       )}
       // O título completo mora aqui: some do chip, mas quem passa o mouse lê.
       title={`${hora} · ${principal}${task.lead_name ? ` — ${task.title}` : ''}`}
     >
-      <span className="flex items-center gap-1 text-[11px] leading-none opacity-80">
+      <span
+        className={cn(
+          'flex items-center gap-1 text-[11px] leading-none font-medium',
+          corDaUrgencia[urgencia],
+        )}
+      >
         <Icone aria-hidden className="size-3 shrink-0" />
         {/* `tabular-nums` para as horas alinharem entre as linhas da célula:
             sem isso "09:00" e "11:30" saem com larguras diferentes. */}
