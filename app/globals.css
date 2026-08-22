@@ -167,6 +167,26 @@
   html {
     @apply font-sans;
   }
+
+  /* O Tailwind v4 mudou o Preflight: `button` passou a usar `cursor: default`
+     em vez de `cursor: pointer`, "para bater com o comportamento padrão do
+     navegador" (guia de upgrade oficial). O projeto migrou para o v4 e nunca
+     restaurou isso — resultado, TODO botão do produto (63 arquivos importam
+     `components/ui/button`) exibia a seta comum, não a mãozinha.
+
+     É pequeno e é dos detalhes que mais fazem uma tela parecer inacabada:
+     sem a mãozinha, o elemento não se anuncia como clicável, e a pessoa
+     hesita antes de clicar.
+
+     Este é o trecho que a própria documentação do Tailwind indica para o
+     caso; fica no CSS base em vez de virar `cursor-pointer` espalhado por
+     componente, para valer também em `[role="button"]` (os primitivos do
+     Base UI) sem precisar caçar um por um. `:not(:disabled)` preserva a seta
+     onde o clique não faria nada. */
+  button:not(:disabled),
+  [role='button']:not(:disabled) {
+    cursor: pointer;
+  }
 }
 
 @utility text-balance {
