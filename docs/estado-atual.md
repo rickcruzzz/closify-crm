@@ -4,7 +4,55 @@ Documento de continuidade. É lido no começo de toda sessão (referenciado no
 [CLAUDE.md](../CLAUDE.md)) para que uma conversa nova, ou outra conta, comece
 sabendo o que já foi feito, o que foi decidido e onde estão as armadilhas.
 
-**Atualizado em:** 22/08/2026 (funções rodavam em Washington DC com o banco em São Paulo, achado no header e corrigido na config do projeto; WhatsApp sem QR por Postgres esgotado na VPS; migration 0049 provada desnecessária e removida)
+**Atualizado em:** 22/08/2026 (funções rodavam em Washington DC com o banco em São Paulo, corrigido na config do projeto e medido: /dashboard 1221ms → 400ms; modo claro sem escada de superfícies, refeito; jargão remanescente e telas de erro; WhatsApp sem QR por Postgres esgotado na VPS; migration 0049 provada desnecessária e removida)
+
+## Modo claro sem profundidade, e o jargão que sobrou (22/08)
+
+Reportado com print: no claro "perde as forças, fica difícil de enxergar". Era
+medível, não impressão. A escada de superfícies ia de **0.975 (página) a 0.988
+(sidebar) a 1.0 (card)** — 2,5 pontos de luminosidade no total, uma chapa
+branca. O escuro parecia melhor não por acaso: lá é 0.17 → 0.195 → 0.215, e
+sobre base escura a mesma distância é enorme em termos relativos.
+
+**A sidebar passou a ANCORAR em vez de flutuar** (0.957 < página 0.978 < card
+1.0), que é como todo app de trabalho se comporta no claro: a navegação recua,
+o conteúdo avança. Junto:
+
+| token | antes | agora | por quê |
+|---|---|---|---|
+| `--border` | 0.922 | 0.893 | tem que desenhar contra o CARD BRANCO, não contra a página — era isso que apagava a grade do calendário |
+| `--input` | 0.922 | 0.872 | campo é alvo de clique, some mais fácil que divisória |
+| `--muted-foreground` | 0.556 | 0.50 | passava em AA por pouco (~4.6:1) e sumia sobre cinza; agora ~5.8:1 |
+| `--sidebar-accent` | 0.97 | 0.925 | o hover era mais CLARO que a própria barra, não marcava nada |
+
+Cartão ganhou sombra curta **só no claro** — sobre fundo claro o contorno
+sozinho lê como desenho, não profundidade; no escuro a regra é anulada, porque
+sombra preta sobre fundo escuro não aparece. Neutros com viés de matiz 205 para
+acompanhar o primary teal.
+
+Confirmado nos bytes servidos em produção (`--sidebar:oklch(95.7%...)`,
+`--border:oklch(89.3%...)`), não só no build local.
+
+**O jargão que a renomeação de 19/08 deixou passar.** A barra lateral dizia
+"Resultados" e a página dizia "Dashboard"; os cartões diziam "Total de Leads"
+enquanto o menu dizia "Contatos" — dois nomes para a mesma coisa na mesma tela.
+E **"Pipeline pronto"** era o primeiro item que todo mundo lê ao criar a conta.
+
+A descrição da tela virou resposta em vez de definição: "Métricas do seu funil
+de vendas" (o que a tela É) → "Quanto entrou, quanto está em jogo e o que virou
+venda" (o que ela RESPONDE).
+
+**Telas de erro.** "Algo deu errado" + "Ocorreu um erro inesperado" dizia a
+mesma coisa duas vezes sem responder a única pergunta que alguém faz ao ver
+erro num sistema que guarda a carteira de clientes: *perdi o que era meu?*
+Agora a resposta vem antes da instrução — "Seus dados estão salvos e seguros".
+
+**Decidido não mexer:** a tarja de URL que o navegador mostra no rodapé ao
+passar o mouse num link. É do navegador, não do site; escondê-la exige trocar
+`<a href>` por `div onClick`, o que quebra abrir em nova aba, leitor de tela, e
+**a barra de progresso deste projeto** (`navigation-progress.tsx` liga no
+clique de `<a>` real, por delegação). Custaria três coisas que o cliente nota
+para apagar uma que ele não nota.
 
 ## As funções rodavam nos Estados Unidos (22/08)
 
