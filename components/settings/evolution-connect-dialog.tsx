@@ -52,6 +52,25 @@ const INTERVALO_RECONECTAR_MS = 140_000
 const INTERVALO_CHECAR_ESTADO_MS = 3_000
 
 /**
+ * Espera entre tentativas quando o servidor respondeu certo mas ainda não
+ * tinha QR pronto. Curto de propósito: deixar isso para o ciclo de renovação
+ * (20s) faria a tela parecer travada justamente no primeiro contato com a
+ * funcionalidade.
+ */
+const INTERVALO_TENTAR_QR_MS = 3_000
+
+/**
+ * Quantas vezes insistir antes de admitir que o código não vem.
+ *
+ * Sem teto, a tela giraria "Preparando…" para sempre e esconderia falha de
+ * servidor — que foi exatamente o caso encontrado em 22/08: o Postgres da VPS
+ * respondia `sorry, too many clients already`, o whatsmeow não conseguia criar
+ * o store da instância e o QR nunca era gerado. Uma espera infinita teria
+ * transformado um defeito diagnosticável em "o produto não funciona".
+ */
+const MAX_TENTATIVAS_QR = 5
+
+/**
  * Diálogo de conexão do WhatsApp via Evolution API.
  *
  * ## Por que o aviso de risco vai aqui, não só na documentação
@@ -77,6 +96,10 @@ export function EvolutionConnectDialog({
   const [carregando, setCarregando] = React.useState(false)
   const [erro, setErro] = React.useState<string | null>(null)
   const [conectado, setConectado] = React.useState(false)
+  // Só serve para reagendar a retentativa: sem ele, uma tentativa que volta
+  // sem QR não muda estado nenhum, as dependências do efeito ficam iguais, o
+  // cleanup não roda e nunca há uma próxima tentativa.
+  const [tentativaQr, setTentativaQr] = React.useState(0)
 
   /**
    * @param silencioso Renovação de fundo (a sessão vai expirar): mantém o QR
@@ -95,6 +118,14 @@ export function EvolutionConnectDialog({
         setErro(resultado.erro)
         return
       }
+      // Reconectar um número que já está pareado não devolve QR, e antes
+      // isso caía no mesmo caminho de "sem código" — a tela pedia para
+      // escanear algo que não existia, para uma conexão que já funcionava.
+      if (resultado.jaConectado) {
+        setConectado(true)
+        toast.success('WhatsApp já estava conectado.')
+        return
+      }
       setQrCode(resultado.qrCode)
     },
     [workspaceId],
@@ -106,6 +137,7 @@ export function EvolutionConnectDialog({
     setQrCode(null)
     setErro(null)
     setConectado(false)
+    setTentativaQr(0)
     void iniciarConexao()
   }, [open, iniciarConexao])
 
@@ -130,6 +162,29 @@ export function EvolutionConnectDialog({
     }, INTERVALO_RECONECTAR_MS)
     return () => clearInterval(intervalo)
   }, [open, conectado, erro, iniciarConexao])
+
+  // A sessão pode ainda estar subindo quando o QR é pedido: `/instance/connect`
+  // responde 200 ao ACEITAR o pedido, não ao terminar de parear. O servidor já
+  // espera até 12s (`esperarQrCode`), e aqui a tela continua tentando em vez de
+  // desistir — era exatamente esta janela que devolvia
+  // `no QR code available. Please wait a moment and try again` em vermelho.
+  React.useEffect(() => {
+    if (!open || conectado || erro || qrCode || carregando) return
+    if (tentativaQr >= MAX_TENTATIVAS_QR) {
+      setErro(
+        'O servidor do WhatsApp não conseguiu abrir a sessão para gerar o código. Tente de novo em alguns minutos; se continuar, fale com o suporte.',
+      )
+      return
+    }
+    const t = setTimeout(() => {
+      void (async () => {
+        const resultado = await renovarQrCode(workspaceId)
+        if (resultado.ok && resultado.qrCode) setQrCode(resultado.qrCode)
+        else setTentativaQr((n) => n + 1)
+      })()
+    }, INTERVALO_TENTAR_QR_MS)
+    return () => clearTimeout(t)
+  }, [open, conectado, erro, qrCode, carregando, tentativaQr, workspaceId])
 
   // Checa se a leitura já aconteceu, para o diálogo fechar sozinho — ninguém
   // deveria precisar clicar em "já escaneei".
@@ -207,7 +262,15 @@ export function EvolutionConnectDialog({
               className="size-56 rounded-md border"
             />
           ) : (
-            <p className="text-muted-foreground text-sm">Não consegui gerar o código.</p>
+            // Não é erro: é a sessão subindo. O efeito acima segue tentando,
+            // então a tela informa o que está acontecendo em vez de acusar
+            // uma falha que não houve.
+            <>
+              <Loader2 className="text-muted-foreground size-6 animate-spin" />
+              <p className="text-muted-foreground text-center text-sm">
+                Preparando o código no servidor. Isso leva alguns segundos.
+              </p>
+            </>
           )}
         </div>
 

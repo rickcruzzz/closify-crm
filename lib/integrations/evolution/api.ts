@@ -1,6 +1,6 @@
 import 'server-only'
 
-import { evolutionFetch } from './client'
+import { EvolutionApiError, evolutionFetch } from './client'
 
 /**
  * As operações do Evolution GO que este produto usa.
@@ -91,7 +91,7 @@ export async function criarInstancia(
 export async function conectarInstancia(
   tokenDaInstancia: string,
   webhookUrl: string,
-): Promise<{ qrCode: string | null }> {
+): Promise<{ qrCode: string | null; jaConectado: boolean }> {
   await evolutionFetch(
     '/instance/connect',
     {
@@ -107,18 +107,68 @@ export async function conectarInstancia(
     tokenDaInstancia,
   )
 
-  const qrCode = await obterQrCode(tokenDaInstancia)
-  return { qrCode }
+  const qrCode = await esperarQrCode(tokenDaInstancia)
+  if (qrCode) return { qrCode, jaConectado: false }
+
+  // Ficar sem QR depois da espera tem duas causas OPOSTAS, e confundi-las é o
+  // que fazia a tela mentir: ou a sessão ainda não subiu (tentar de novo
+  // resolve), ou o número já está pareado e por isso não há QR nenhum para
+  // mostrar (tentar de novo nunca resolveria). Só o estado separa as duas.
+  const { estado } = await obterEstado(tokenDaInstancia)
+  return { qrCode: null, jaConectado: estado === 'open' }
 }
 
-/** Busca um QR novo para uma instância que ainda não foi conectada. */
+/**
+ * Busca um QR novo para uma instância que ainda não foi conectada.
+ *
+ * Devolve `null` — em vez de estourar — quando o servidor responde
+ * `400 {"error":"no QR code available. Please wait a moment and try again"}`.
+ * Isso NÃO é falha: é o Evolution dizendo que a sessão ainda está subindo. O
+ * código antigo tratava como erro e o texto cru do servidor aparecia em
+ * vermelho na tela de conexão, com um botão "Tentar de novo" que a pessoa
+ * precisava apertar para fazer o que o próprio servidor tinha acabado de
+ * pedir. Ver `esperarQrCode`.
+ *
+ * Só o 400 é engolido: token errado devolve 401 e instância inexistente
+ * devolve 404, e esses dois continuam subindo como erro de verdade.
+ */
 export async function obterQrCode(tokenDaInstancia: string): Promise<string | null> {
-  const resposta = await evolutionFetch<{ data?: { qrcode?: string } }>(
-    '/instance/qr',
-    undefined,
-    tokenDaInstancia,
-  )
-  return resposta?.data?.qrcode ?? null
+  try {
+    const resposta = await evolutionFetch<{ data?: { qrcode?: string } }>(
+      '/instance/qr',
+      undefined,
+      tokenDaInstancia,
+    )
+    return resposta?.data?.qrcode ?? null
+  } catch (err) {
+    if (err instanceof EvolutionApiError && err.status === 400) return null
+    throw err
+  }
+}
+
+/**
+ * Espera o QR ficar disponível, em vez de pedir uma vez e desistir.
+ *
+ * `/instance/connect` responde 200 assim que ACEITA o pedido, não quando a
+ * sessão está pronta — o pareamento com o servidor do WhatsApp leva alguns
+ * segundos. Pedir o QR no instante seguinte, que era o que o código fazia,
+ * pega a janela em que ele ainda não existe.
+ *
+ * O orçamento fica bem abaixo do teto da função da Vercel, e o intervalo é
+ * curto o bastante para o QR aparecer sem parecer travado.
+ */
+export async function esperarQrCode(
+  tokenDaInstancia: string,
+  limiteMs = 12_000,
+): Promise<string | null> {
+  const prazo = Date.now() + limiteMs
+
+  for (;;) {
+    const qr = await obterQrCode(tokenDaInstancia)
+    if (qr) return qr
+    if (Date.now() >= prazo) return null
+    await new Promise((resolve) => setTimeout(resolve, 800))
+  }
 }
 
 /**
@@ -139,6 +189,36 @@ export async function obterEstado(tokenDaInstancia: string): Promise<EstadoDeIns
     dados?.Connected && dados?.LoggedIn ? 'open' : dados?.Connected ? 'connecting' : 'close'
 
   return { estado, numero: dados?.Name || null }
+}
+
+/**
+ * Último erro que o servidor registrou para esta instância.
+ *
+ * Existe porque o erro que a instância devolve na porta da frente não diz
+ * nada: `/instance/qr` responde sempre o mesmo
+ * `no QR code available. Please wait a moment and try again`, seja a sessão
+ * ainda subindo (transitório, resolve sozinho) ou o servidor incapaz de criar
+ * a sessão (permanente, ninguém resolve esperando). Foi o que aconteceu em
+ * 22/08: 20 tentativas ao longo de 134s, sempre o mesmo 400, enquanto o log
+ * do servidor dizia a causa em texto claro —
+ * `pq: sorry, too many clients already`, o Postgres da VPS sem conexão livre
+ * para o whatsmeow criar o store da instância.
+ *
+ * Rota administrativa: usa a `GLOBAL_API_KEY`, não o token da instância
+ * (testado, com o token da instância devolve `not authorized`).
+ *
+ * Nunca estoura: isto roda no caminho de falha, e um erro aqui só trocaria um
+ * diagnóstico ruim por um pior.
+ */
+export async function ultimoErroDaInstancia(instanceId: string): Promise<string | null> {
+  try {
+    const linhas = await evolutionFetch<Array<{ level?: string; message?: string }>>(
+      `/instance/logs/${encodeURIComponent(instanceId)}`,
+    )
+    return (linhas ?? []).find((l) => l.level === 'ERROR')?.message ?? null
+  } catch {
+    return null
+  }
 }
 
 /** Desconecta o número sem apagar a instância — dá para reconectar depois. */

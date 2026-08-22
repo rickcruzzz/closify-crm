@@ -10,7 +10,13 @@ import { cifrar, decifrar } from '@/lib/integrations/crypto'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 
-import { conectarInstancia, criarInstancia, obterEstado, obterQrCode } from './api'
+import {
+  conectarInstancia,
+  criarInstancia,
+  obterEstado,
+  obterQrCode,
+  ultimoErroDaInstancia,
+} from './api'
 
 /**
  * Conectar e desconectar o WhatsApp de uma empresa.
@@ -32,7 +38,9 @@ import { conectarInstancia, criarInstancia, obterEstado, obterQrCode } from './a
  * — mesmo risco (quem lê essa coluna pode agir em nome da conexão), mesma
  * defesa.
  */
-export type ResultadoDaConexao = { ok: true; qrCode: string | null } | { ok: false; erro: string }
+export type ResultadoDaConexao =
+  | { ok: true; qrCode: string | null; jaConectado?: boolean }
+  | { ok: false; erro: string }
 
 /** Só admin mexe em integração — mesma regra do Google Calendar e do Gmail. */
 async function exigirAdmin(workspaceId: string): Promise<string> {
@@ -108,7 +116,18 @@ export async function conectarWhatsapp(workspaceId: string): Promise<ResultadoDa
     const webhookUrl = segredo
       ? `${appUrl()}/api/webhooks/evolution/${encodeURIComponent(workspaceId)}/${segredo}`
       : ''
-    const { qrCode } = await conectarInstancia(token, webhookUrl)
+    const { qrCode, jaConectado } = await conectarInstancia(token, webhookUrl)
+
+    // Sem QR e sem conexão, o motivo só existe do lado do servidor — a
+    // resposta da API é a mesma para causa transitória e para falha de
+    // infraestrutura. Registrar aqui é o que separa "tente de novo" de
+    // "o Postgres da VPS está sem conexões livres".
+    if (!qrCode && !jaConectado) {
+      console.error('whatsapp: sessão não gerou QR', {
+        workspaceId,
+        motivo: await ultimoErroDaInstancia(workspaceId),
+      })
+    }
 
     // `upsert` e não `insert`: reconectar depois de uma queda é o caminho
     // comum numa API não oficial, e um insert cru estouraria na chave única.
@@ -117,7 +136,11 @@ export async function conectarWhatsapp(workspaceId: string): Promise<ResultadoDa
       {
         workspace_id: workspaceId,
         provider: 'whatsapp',
-        status: 'disconnected',
+        // Reconectar um número que já estava pareado não devolve QR — e
+        // gravar 'disconnected' aqui apagaria uma conexão viva do registro,
+        // deixando a tela de Integrações dizendo "Não conectado" para quem
+        // está conectado.
+        status: jaConectado ? 'connected' : 'disconnected',
         external_id: workspaceId,
         access_token_enc: cifrar(token) as unknown as never,
         connected_by: userId,
@@ -126,7 +149,7 @@ export async function conectarWhatsapp(workspaceId: string): Promise<ResultadoDa
       { onConflict: 'workspace_id,provider' },
     )
     revalidatePath('/settings')
-    return { ok: true, qrCode }
+    return { ok: true, qrCode, jaConectado }
   } catch (err) {
     return {
       ok: false,
