@@ -52,15 +52,24 @@ export function MonthView({
         return (
           <div
             className={cn(
-              'flex min-h-24 flex-col gap-0.5 rounded-md border p-1',
-              dia === hoje ? 'border-primary' : 'border-transparent',
+              // `min-h-28` e não `min-h-24`: o chip passou a ter duas linhas
+              // (hora em cima, cliente embaixo) para o nome parar de ser
+              // cortado, e a altura antiga apertava três deles.
+              'flex min-h-28 flex-col gap-1 rounded-md border p-1 transition-colors',
+              dia === hoje
+                ? // Dia de hoje ganha fundo, não só borda: a borda sozinha
+                  // some no meio da grade quando há evento colorido ao lado.
+                  'border-primary/40 bg-primary/5'
+                : 'hover:border-border border-transparent',
               !ehDoMesCorrente && 'opacity-40',
             )}
           >
             <span
               className={cn(
-                'px-1 text-xs font-medium',
-                dia === hoje ? 'text-primary' : 'text-muted-foreground',
+                'px-1 text-xs leading-none',
+                dia === hoje
+                  ? 'text-primary font-semibold'
+                  : 'text-muted-foreground font-medium',
               )}
             >
               {numeroDoDia}

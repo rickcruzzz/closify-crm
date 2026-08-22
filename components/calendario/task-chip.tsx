@@ -12,31 +12,31 @@ const horaFormatada = new Intl.DateTimeFormat('pt-BR', {
 })
 
 /**
- * Uma tarefa como chip de linha, usado nas células do modo Mês e nas colunas
- * do modo Semana.
+ * Uma tarefa como chip, usado nas células do modo Mês e nas colunas do Semana.
  *
- * ## Por que o nome do cliente vem primeiro
+ * ## Duas linhas, não uma
  *
- * A versão anterior mostrava só hora + título da tarefa, e o resultado na
- * tela era `09:00 yyuuuu` — o título é o que a pessoa digitou correndo
- * ("ligar", "retorno", ou pior), enquanto o NOME DO CLIENTE é o que ela
- * procura ao bater o olho na agenda.
+ * A célula do mês tem cerca de 100px úteis. A primeira tentativa punha ícone,
+ * hora, nome e título na MESMA linha, e o resultado medido em produção foi
+ * `09:00 Cl… t` — o nome do cliente, que é a informação que a tela existe
+ * para dar, cortado em duas letras.
  *
- * `lead_name` já vinha em `TaskRow` (resolvido em `enriquecer`, em
- * `lib/tasks/queries.ts`) e estava sendo descartado aqui — a informação mais
- * valiosa da linha chegava ao componente e era jogada fora.
+ * Empilhado, cada coisa tem a largura inteira: a hora na linha de cima (com o
+ * ícone do tipo) e o nome embaixo, em destaque. Custa altura, e é o troco
+ * certo — uma agenda que não deixa reconhecer o cliente não está economizando
+ * espaço, está desperdiçando a tela toda.
  *
- * Ordem: cliente → hora → título como apoio. Sem cliente vinculado (tarefa
- * de negócio sem lead), o título assume o lugar principal em vez de deixar
- * um vazio.
+ * O título da tarefa sai do chip de propósito. Ele é o que a pessoa digitou
+ * correndo ("ligar", "retorno", "yyuuuu"), quase nunca ajuda a identificar, e
+ * era justamente ele que empurrava o nome para fora. Continua acessível no
+ * `title` nativo (hover) e no painel que abre ao clicar.
  *
  * ## Cor
  *
- * Segue a MESMA regra de urgência que o Kanban e a tela /hoje já usam
+ * Segue a MESMA regra de urgência do Kanban e da tela /hoje
  * (`lib/kanban/urgencia.ts`) — três lugares do produto não podem discordar
- * sobre o que é "atrasado" ou "hoje". Tarefa concluída nunca é `critico` nem
- * `atencao`: já aconteceu, cor neutra e texto riscado, não é mais uma
- * cobrança.
+ * sobre o que é "atrasado". Concluída nunca é `critico` nem `atencao`: já
+ * aconteceu, cor neutra e riscada, não é mais cobrança.
  */
 export function TaskChip({
   task,
@@ -52,40 +52,44 @@ export function TaskChip({
   const urgencia = concluida ? 'neutro' : urgenciaDaProximaAcao(task.due_at, agora)
   const hora = horaFormatada.format(new Date(task.due_at))
 
-  // Sem lead vinculado o título é tudo o que existe para identificar a
-  // tarefa; com lead, ele vira apoio (o cliente é quem manda na linha).
+  // Sem lead vinculado (tarefa de negócio solto) o título é tudo o que existe
+  // para identificar a linha — aí ele assume o lugar do nome em vez de deixar
+  // um vazio.
   const principal = task.lead_name ?? task.title
-  const apoio = task.lead_name ? task.title : null
 
   return (
     <button
       type="button"
       onClick={onClick}
       className={cn(
-        // `min-h-11` (44px) em mobile — mesmo piso de alvo de toque já
-        // aplicado em select.tsx/combobox.tsx/month-grid.tsx — volta a
-        // `min-h-6` (24px) a partir de `md:`, onde o toque é por mouse, para
-        // não perder densidade na grade de mês em telas grandes.
-        'hover:bg-accent flex min-h-11 w-full items-center gap-1.5 rounded px-1 py-0.5 text-left text-xs transition-colors md:min-h-6',
+        // Faixa de cor na borda esquerda: dá o estado (atrasado/hoje/futuro)
+        // sem depender do texto ficar colorido, que era o que deixava a
+        // grade inteira gritando em vermelho.
+        'hover:bg-accent flex w-full flex-col gap-0.5 rounded border-l-2 py-1 pl-1.5 pr-1 text-left transition-colors',
         corDaUrgencia[urgencia],
+        urgencia === 'critico'
+          ? 'border-l-destructive'
+          : urgencia === 'atencao'
+            ? 'border-l-amber-500'
+            : 'border-l-border',
       )}
-      // O `title` nativo carrega a linha inteira: na célula do mês o texto é
-      // truncado, e é aqui que quem passa o mouse lê o resto.
-      title={`${hora} · ${principal}${apoio ? ` — ${apoio}` : ''}`}
+      // O título completo mora aqui: some do chip, mas quem passa o mouse lê.
+      title={`${hora} · ${principal}${task.lead_name ? ` — ${task.title}` : ''}`}
     >
-      <Icone aria-hidden className="size-3 shrink-0" />
-      {/* `tabular-nums` para as horas alinharem entre linhas da mesma célula:
-          sem isso "09:00" e "11:30" saem com larguras diferentes e a coluna
-          de nomes fica serrilhada. */}
-      <span className="shrink-0 tabular-nums opacity-80">{hora}</span>
-      <span className={cn('truncate font-medium', concluida && 'line-through opacity-70')}>
+      <span className="flex items-center gap-1 text-[11px] leading-none opacity-80">
+        <Icone aria-hidden className="size-3 shrink-0" />
+        {/* `tabular-nums` para as horas alinharem entre as linhas da célula:
+            sem isso "09:00" e "11:30" saem com larguras diferentes. */}
+        <span className="tabular-nums">{hora}</span>
+      </span>
+      <span
+        className={cn(
+          'text-foreground truncate text-xs leading-tight font-medium',
+          concluida && 'text-muted-foreground line-through',
+        )}
+      >
         {principal}
       </span>
-      {apoio && (
-        // Só aparece quando sobra espaço (célula do mês é estreita): some
-        // primeiro que o nome do cliente, que é o que não pode faltar.
-        <span className="hidden truncate opacity-60 lg:inline">{apoio}</span>
-      )}
     </button>
   )
 }
