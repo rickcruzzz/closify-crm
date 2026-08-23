@@ -70,3 +70,6 @@ graphify-out/
 # anúncio não são dez versões de código.
 criativos/
 .diagnostico-whatsapp.csv
+
+# Scripts descartáveis de investigação (o padrão do projeto é criá-los, usá-los e apagá-los).
+tmp-*.mjs
