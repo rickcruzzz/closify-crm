@@ -24,6 +24,27 @@ type EventoDeAtribuicao = {
    * consegue otimizar a entrega em cima dela).
    */
   userId?: string | null
+  /**
+   * De onde a conversão veio, no vocabulário da Meta.
+   *
+   * Estava fixo em `system_generated` para os dois eventos, e isso custava
+   * caro de um jeito invisível: medido em 22/08 na própria API da Meta, o
+   * relatório de qualidade do canal web voltava VAZIO (`web: []`) e a
+   * agregação por origem mostrava `SERVER` uma única vez em 7 dias, apesar de
+   * 19 eventos terem sido enviados pela Conversions API na semana. Ou seja, os
+   * eventos chegavam e não eram classificados como conversão de site.
+   *
+   * A documentação é explícita: evento de SITE enviado pela Conversions API
+   * **exige** `action_source`, `client_user_agent` e `event_source_url`.
+   * `system_generated` existe para conversão que nasce sem navegador nenhum —
+   * é o caso do Purchase, que chega por webhook do Asaas horas depois do Pix,
+   * e continua correto ali. Cadastro, não: acontece com a pessoa no site.
+   */
+  actionSource?: 'website' | 'system_generated'
+  /** Só entra com `actionSource: 'website'`, e a Meta exige junto da URL. */
+  clientUserAgent?: string | null
+  clientIp?: string | null
+  eventSourceUrl?: string | null
 }
 
 /**
@@ -80,13 +101,18 @@ async function enviarEventoParaMeta(
         event_name: eventName,
         event_time: Math.floor(Date.now() / 1000),
         event_id: params.eventId,
-        action_source: 'system_generated',
+        action_source: params.actionSource ?? 'system_generated',
+        // A Meta trata como obrigatório para evento de site, e é o par que
+        // mais eleva o Event Match Quality depois de e-mail e telefone.
+        ...(params.eventSourceUrl ? { event_source_url: params.eventSourceUrl } : {}),
         user_data: {
           em: [emailHash],
           ...(telefoneHash ? { ph: [telefoneHash] } : {}),
           ...(externalIdHash ? { external_id: [externalIdHash] } : {}),
           ...(params.fbc ? { fbc: params.fbc } : {}),
           ...(params.fbp ? { fbp: params.fbp } : {}),
+          ...(params.clientIp ? { client_ip_address: params.clientIp } : {}),
+          ...(params.clientUserAgent ? { client_user_agent: params.clientUserAgent } : {}),
         },
         ...(params.customData ? { custom_data: params.customData } : {}),
       },

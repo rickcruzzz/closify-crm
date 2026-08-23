@@ -1,6 +1,7 @@
 'use server'
 
 import { revalidatePath } from 'next/cache'
+import { headers } from 'next/headers'
 import { z } from 'zod'
 
 import { createClient } from '@/lib/supabase/server'
@@ -12,6 +13,8 @@ import {
   type AtribuicaoUtm,
 } from '@/lib/auth/intencao'
 import { enviarConversaoDeRegistro } from '@/lib/analytics/meta-conversions'
+import { appUrl } from '@/lib/app-url'
+import { ipDaRequisicao } from '@/lib/request-ip'
 import { registrar } from '@/lib/onboarding/eventos'
 import { passoDoOnboardingSchema } from '@/lib/validations/onboarding'
 import { FREE_WORKSPACE_LIMIT } from '@/lib/plans'
@@ -238,6 +241,12 @@ export async function finalizarOnboarding(values: unknown) {
       data: { user },
     } = await sessao.supabase.auth.getUser()
     if (user?.email) {
+      // Cadastro acontece com a pessoa NO SITE, então o evento é de site e
+      // não `system_generated`. Medido na API da Meta em 22/08: com o valor
+      // antigo o canal web ficava sem nenhum dado de qualidade, e o evento
+      // não era contado como conversão de site. IP e user agent vêm dos
+      // headers desta própria requisição — é a pessoa real, não o servidor.
+      const cabecalhos = await headers()
       await enviarConversaoDeRegistro({
         email: user.email,
         eventId: crypto.randomUUID(),
@@ -245,6 +254,10 @@ export async function finalizarOnboarding(values: unknown) {
         fbp: atribuicao?.fbp,
         telefone: user.phone || null,
         userId: user.id,
+        actionSource: 'website',
+        clientIp: await ipDaRequisicao(),
+        clientUserAgent: cabecalhos.get('user-agent'),
+        eventSourceUrl: `${appUrl()}/onboarding`,
       })
     }
   } catch (err) {
