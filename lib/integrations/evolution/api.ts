@@ -147,19 +147,28 @@ export async function obterQrCode(tokenDaInstancia: string): Promise<string | nu
 }
 
 /**
- * Espera o QR ficar disponível, em vez de pedir uma vez e desistir.
+ * Espera o QR ficar disponível, mas por pouco tempo — e o motivo importa.
  *
  * `/instance/connect` responde 200 assim que ACEITA o pedido, não quando a
- * sessão está pronta — o pareamento com o servidor do WhatsApp leva alguns
- * segundos. Pedir o QR no instante seguinte, que era o que o código fazia,
- * pega a janela em que ele ainda não existe.
+ * sessão está pronta: o pareamento leva segundos. Pedir o QR no instante
+ * seguinte pega a janela em que ele ainda não existe, e era esse o defeito
+ * original.
  *
- * O orçamento fica bem abaixo do teto da função da Vercel, e o intervalo é
- * curto o bastante para o QR aparecer sem parecer travado.
+ * Mas a primeira correção errou para o outro lado, esperando até 12s DENTRO da
+ * Server Action. Medido no servidor real em 23/08, cada `/instance/qr` custa
+ * ~3s; somando com a latência da rota, a requisição do navegador ficava
+ * pendurada tempo demais e o próprio navegador desistia — o que aparece para a
+ * pessoa como "verifique a conexão e tente novamente", uma mensagem que não é
+ * nossa e que não diz nada sobre o que houve.
+ *
+ * Quem espera passou a ser a TELA, que já busca o QR sozinha a cada poucos
+ * segundos e sabe mostrar "preparando o código" enquanto isso. Aqui ficam
+ * apenas duas tentativas: se o QR já estiver pronto (caso comum quando a
+ * instância existe), a pessoa o recebe na mesma resposta e nada pisca.
  */
 export async function esperarQrCode(
   tokenDaInstancia: string,
-  limiteMs = 12_000,
+  limiteMs = 4_000,
 ): Promise<string | null> {
   const prazo = Date.now() + limiteMs
 
@@ -167,7 +176,7 @@ export async function esperarQrCode(
     const qr = await obterQrCode(tokenDaInstancia)
     if (qr) return qr
     if (Date.now() >= prazo) return null
-    await new Promise((resolve) => setTimeout(resolve, 800))
+    await new Promise((resolve) => setTimeout(resolve, 600))
   }
 }
 

@@ -53,11 +53,14 @@ const INTERVALO_CHECAR_ESTADO_MS = 3_000
 
 /**
  * Espera entre tentativas quando o servidor respondeu certo mas ainda não
- * tinha QR pronto. Curto de propósito: deixar isso para o ciclo de renovação
- * (20s) faria a tela parecer travada justamente no primeiro contato com a
- * funcionalidade.
+ * tinha QR pronto.
+ *
+ * A busca em si já custa ~3s no servidor do WhatsApp (medido em 23/08), então
+ * este intervalo é o respiro ENTRE buscas, não o tempo total — na prática cada
+ * ciclo leva uns 5s. Deixar isso para o ciclo de renovação (20s) faria a tela
+ * parecer travada justamente no primeiro contato com a funcionalidade.
  */
-const INTERVALO_TENTAR_QR_MS = 3_000
+const INTERVALO_TENTAR_QR_MS = 2_000
 
 /**
  * Quantas vezes insistir antes de admitir que o código não vem.
@@ -67,8 +70,11 @@ const INTERVALO_TENTAR_QR_MS = 3_000
  * respondia `sorry, too many clients already`, o whatsmeow não conseguia criar
  * o store da instância e o QR nunca era gerado. Uma espera infinita teria
  * transformado um defeito diagnosticável em "o produto não funciona".
+ *
+ * Seis tentativas a ~5s cada dão cerca de 30 segundos de paciência, que é
+ * bastante mais do que os ~3s que o servidor leva quando está saudável.
  */
-const MAX_TENTATIVAS_QR = 5
+const MAX_TENTATIVAS_QR = 6
 
 /**
  * Diálogo de conexão do WhatsApp via Evolution API.
