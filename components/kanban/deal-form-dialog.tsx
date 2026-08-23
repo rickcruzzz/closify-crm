@@ -169,7 +169,7 @@ export function DealFormDialog({
           </div>
 
           <div className="flex flex-col gap-1.5">
-            <Label htmlFor="leadId">Lead vinculado</Label>
+            <Label htmlFor="leadId">Contato vinculado</Label>
             {/* `Combobox`, não `Select`: workspace com muitos leads fazia a
                 pessoa rolar a lista inteira procurando pelo nome, sem filtro
                 nenhum. O item é o próprio `DealLeadRow`; `itemToStringValue`
@@ -193,7 +193,7 @@ export function DealFormDialog({
                   <ComboboxTrigger id="leadId">
                     <ComboboxValue placeholder="Selecione um contato">
                       {(lead: DealLeadRow | null) =>
-                        lead ? `${lead.name} (${lead.company})` : 'Selecione um lead'
+                        lead ? `${lead.name} (${lead.company})` : 'Selecione um contato'
                       }
                     </ComboboxValue>
                   </ComboboxTrigger>

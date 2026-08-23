@@ -51,7 +51,34 @@ function ComboboxTrigger({
 
 // Campo de texto que aparece dentro do popup, para filtrar a lista já aberta
 // — diferente do `Trigger`, que é o botão fechado mostrando o item escolhido.
-const ComboboxInput = ComboboxPrimitive.Input
+/**
+ * Campo de busca do combobox.
+ *
+ * Exceção consciente à regra de não editar `components/ui` à mão — a mesma do
+ * `Separator`, e pelo mesmo motivo: regenerar pelo CLI traz o defeito de volta.
+ *
+ * O primitivo do Base UI vem **sem uma classe sequer**, então herdava o estilo
+ * padrão do navegador: caixa branca de borda grossa dentro de um popup escuro.
+ * Aparecia num print do produto como se fosse defeito de renderização.
+ *
+ * O estilo é o de campo de busca no topo de lista, não o de input de
+ * formulário: sem borda ao redor (o popup já delimita), só uma divisória
+ * embaixo separando da lista, e fundo transparente. `h-11` no telefone pela
+ * regra de alvo de toque de 44px que o resto do projeto segue, `md:h-10` no
+ * desktop, onde o alvo é o ponteiro.
+ */
+function ComboboxInput({ className, ...props }: ComboboxPrimitive.Input.Props) {
+  return (
+    <ComboboxPrimitive.Input
+      data-slot="combobox-input"
+      className={cn(
+        'border-border placeholder:text-muted-foreground text-foreground h-11 w-full border-0 border-b bg-transparent px-3 text-base outline-none md:h-10 md:text-sm',
+        className,
+      )}
+      {...props}
+    />
+  )
+}
 
 function ComboboxContent({
   className,
