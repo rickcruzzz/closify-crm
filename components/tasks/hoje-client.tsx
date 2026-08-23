@@ -21,9 +21,22 @@ import { TaskFormDialog, type TarefaEmEdicao } from '@/components/tasks/task-for
 import type { WorkspaceMember } from '@/lib/leads/queries'
 import { agruparPorPrazo } from '@/lib/tasks/buckets'
 import { taskBucketLabels, taskBuckets, type TaskRow } from '@/lib/tasks/types'
-import { atualizarTarefa, concluirTarefa, excluirTarefa } from '@/lib/tasks/actions'
-import { avisarTarefaConcluida } from '@/lib/tasks/avisar-concluida'
+import {
+  atualizarTarefa,
+  concluirTarefa,
+  excluirTarefa,
+  reabrirTarefa,
+} from '@/lib/tasks/actions'
 import type { TaskFormValues } from '@/lib/validations/task'
+
+/**
+ * Quanto tempo a tarefa concluída fica visível, riscada, antes de sair.
+ *
+ * Longo o bastante para o olho registrar o que aconteceu e a mão alcançar o
+ * "Desfazer"; curto o bastante para a lista não virar um cemitério de itens
+ * já feitos enquanto a pessoa trabalha.
+ */
+const TEMPO_RISCADA_MS = 4_000
 
 export function HojeClient({
   tasks: tasksIniciais,
@@ -82,23 +95,90 @@ export function HojeClient({
     })
   }
 
+  /**
+   * Quem acabou de ser concluída e ainda está na tela, riscada.
+   *
+   * A tarefa sumia no mesmo instante do clique. Funcionava, mas não dava tempo
+   * de registrar o que tinha acontecido — e o "Desfazer" ficava num aviso no
+   * canto oposto da tela, longe do lugar onde a pessoa estava olhando.
+   *
+   * Agora ela fica alguns segundos riscada, no próprio lugar, com o desfazer
+   * ao lado. Some depois. Continua sem pedir confirmação: concluir tarefa é o
+   * gesto mais repetido do produto, e um "tem certeza?" a cada clique viraria
+   * imposto diário — o que se ganha aqui é ver o erro, não evitá-lo com atrito.
+   */
+  const [saindo, setSaindo] = React.useState<Set<string>>(new Set())
+  const timers = React.useRef(new Map<string, ReturnType<typeof setTimeout>>())
+
+  // Um timer que dispara depois de a tela trocar tentaria atualizar estado de
+  // um componente que já não existe.
+  React.useEffect(() => {
+    const mapa = timers.current
+    return () => {
+      mapa.forEach((t) => clearTimeout(t))
+      mapa.clear()
+    }
+  }, [])
+
   async function concluir(taskId: string) {
-    // Some da lista antes da resposta: marcar tarefa é o gesto mais repetido
-    // da tela, e esperar o servidor a cada clique tornaria a lista pesada.
     const anterior = tasks
-    setTasks((atual) => atual.filter((t) => t.id !== taskId))
+    // Marca como concluída SEM tirar da lista: é isso que deixa a linha
+    // riscada no lugar em vez de evaporar.
+    setTasks((atual) =>
+      atual.map((t) => (t.id === taskId ? { ...t, done_at: new Date().toISOString() } : t)),
+    )
+    setSaindo((atual) => new Set(atual).add(taskId))
 
     const resultado = await concluirTarefa(taskId)
 
     if ('error' in resultado) {
       setTasks(anterior)
+      setSaindo((atual) => {
+        const novo = new Set(atual)
+        novo.delete(taskId)
+        return novo
+      })
       toast.error(resultado.error)
       return
     }
 
-    // O aviso com desfazer mora em `avisarTarefaConcluida` desde que as outras
-    // duas telas que concluem tarefa passaram a oferecê-lo também.
-    avisarTarefaConcluida(taskId, () => router.refresh())
+    timers.current.set(
+      taskId,
+      setTimeout(() => {
+        setTasks((atual) => atual.filter((t) => t.id !== taskId))
+        setSaindo((atual) => {
+          const novo = new Set(atual)
+          novo.delete(taskId)
+          return novo
+        })
+        timers.current.delete(taskId)
+        router.refresh()
+      }, TEMPO_RISCADA_MS),
+    )
+  }
+
+  /** Reabre a tarefa que ainda está na tela, antes de ela sair. */
+  async function desfazerConclusao(taskId: string) {
+    const timer = timers.current.get(taskId)
+    if (timer) {
+      clearTimeout(timer)
+      timers.current.delete(taskId)
+    }
+
+    const resultado = await reabrirTarefa(taskId)
+    if ('error' in resultado) {
+      toast.error(resultado.error)
+      return
+    }
+
+    setTasks((atual) =>
+      atual.map((t) => (t.id === taskId ? { ...t, done_at: null } : t)),
+    )
+    setSaindo((atual) => {
+      const novo = new Set(atual)
+      novo.delete(taskId)
+      return novo
+    })
     router.refresh()
   }
 
@@ -245,6 +325,7 @@ export function HojeClient({
                           agora={agora}
                           atrasada={atrasado}
                           onConcluir={concluir}
+                          onDesfazer={saindo.has(task.id) ? desfazerConclusao : undefined}
                           onEditar={(t) =>
                             setEmEdicao({
                               id: t.id,

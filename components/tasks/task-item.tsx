@@ -2,7 +2,7 @@
 
 import * as React from 'react'
 import Link from 'next/link'
-import { MoreHorizontal } from 'lucide-react'
+import { MoreHorizontal, Undo2 } from 'lucide-react'
 
 import { cn } from '@/lib/utils'
 import { Checkbox } from '@/components/ui/checkbox'
@@ -29,6 +29,7 @@ export function TaskItem({
   atrasada,
   pendente = false,
   onConcluir,
+  onDesfazer,
   onEditar,
   onExcluir,
 }: {
@@ -40,6 +41,12 @@ export function TaskItem({
    * para o clique duplo não disparar a Server Action duas vezes. */
   pendente?: boolean
   onConcluir: (taskId: string) => void
+  /**
+   * Só chega preenchido enquanto a tarefa está saindo da lista — os poucos
+   * segundos em que ela aparece riscada. É o que põe o desfazer AO LADO da
+   * tarefa, em vez de num aviso no canto oposto da tela que some sozinho.
+   */
+  onDesfazer?: (taskId: string) => void
   onEditar?: (task: TaskRow) => void
   onExcluir?: (taskId: string) => void
 }) {
@@ -85,6 +92,18 @@ export function TaskItem({
           {task.assignee_name && ` · ${task.assignee_name}`}
         </span>
       </div>
+
+      {onDesfazer && (
+        <Button
+          variant="outline"
+          size="sm"
+          className="shrink-0"
+          onClick={() => onDesfazer(task.id)}
+        >
+          <Undo2 className="size-4" />
+          Desfazer
+        </Button>
+      )}
 
       <span
         className={cn(

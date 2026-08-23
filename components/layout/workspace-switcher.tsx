@@ -5,9 +5,20 @@ import { useRouter } from 'next/navigation'
 import { Building2, Check, ChevronsUpDown, Loader2, Plus, Zap } from 'lucide-react'
 import { toast } from 'sonner'
 
-import { trocarEmpresa } from '@/lib/workspace/actions'
+import { criarEmpresa, trocarEmpresa } from '@/lib/workspace/actions'
 
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 import { FREE_WORKSPACE_LIMIT } from '@/lib/plans'
 import {
   DropdownMenu,
@@ -75,6 +86,39 @@ export function WorkspaceSwitcher({
   // em "Nova empresa"/"upgrade" não mostra nada até a navegação terminar, e
   // Select/DropdownMenuItem não são `<a>`, então a barra de progresso global
   // (que só liga em clique de link) nunca cobre esses dois.
+  // "Nova empresa" mandava para `/onboarding`, que redireciona de volta quem
+  // já concluiu a configuração — o resultado era voltar para Resultados sem
+  // criar nada. O assistente não serve para a segunda empresa: ele grava em
+  // `onboarding_state`, uma linha por PESSOA, e refazê-lo apagaria as
+  // respostas da primeira. Aqui o nome basta; o resto vai em Configurações.
+  const [criandoEmpresa, setCriandoEmpresa] = React.useState(false)
+  const [nomeNovaEmpresa, setNomeNovaEmpresa] = React.useState('')
+  const [erroNovaEmpresa, setErroNovaEmpresa] = React.useState<string | null>(null)
+  const [salvandoEmpresa, setSalvandoEmpresa] = React.useState(false)
+
+  async function confirmarNovaEmpresa() {
+    setSalvandoEmpresa(true)
+    setErroNovaEmpresa(null)
+    const resultado = await criarEmpresa(nomeNovaEmpresa)
+    setSalvandoEmpresa(false)
+
+    if ('error' in resultado) {
+      setErroNovaEmpresa(resultado.error)
+      return
+    }
+
+    setCriandoEmpresa(false)
+    setNomeNovaEmpresa('')
+    // Entra na empresa recém-criada: criar e continuar na antiga faria a
+    // pessoa achar que não funcionou.
+    await trocarEmpresa(resultado.workspaceId)
+    toast.success('Empresa criada.')
+    // Cai em Configurações, que é onde ela vai preencher o resto — e não em
+    // Resultados, que numa empresa recém-nascida só mostra zeros.
+    router.push('/settings')
+    router.refresh()
+  }
+
   function navegarPara(destino: string) {
     startTransitionNavegacao(() => {
       router.push(destino)
@@ -139,7 +183,7 @@ export function WorkspaceSwitcher({
           <DropdownMenuItem
             className="gap-2"
             disabled={navegando}
-            onClick={() => navegarPara('/onboarding')}
+            onClick={() => setCriandoEmpresa(true)}
           >
             {navegando ? (
               <Loader2 aria-hidden className="size-4 animate-spin" />
@@ -168,6 +212,59 @@ export function WorkspaceSwitcher({
           </DropdownMenuItem>
         )}
       </DropdownMenuContent>
+
+      <Dialog open={criandoEmpresa} onOpenChange={setCriandoEmpresa}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Nova empresa</DialogTitle>
+            <DialogDescription>
+              Cada empresa tem seus próprios contatos, funil e equipe, separados
+              das demais.
+            </DialogDescription>
+          </DialogHeader>
+
+          <form
+            className="flex flex-col gap-4"
+            onSubmit={(e) => {
+              e.preventDefault()
+              void confirmarNovaEmpresa()
+            }}
+          >
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="nome-nova-empresa">Nome da empresa</Label>
+              <Input
+                id="nome-nova-empresa"
+                autoFocus
+                placeholder="Consultoria Aurora"
+                value={nomeNovaEmpresa}
+                disabled={salvandoEmpresa}
+                aria-invalid={!!erroNovaEmpresa}
+                onChange={(e) => setNomeNovaEmpresa(e.target.value)}
+              />
+              {erroNovaEmpresa && (
+                <p role="alert" className="text-destructive text-xs">
+                  {erroNovaEmpresa}
+                </p>
+              )}
+            </div>
+
+            <DialogFooter>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setCriandoEmpresa(false)}
+                disabled={salvandoEmpresa}
+              >
+                Cancelar
+              </Button>
+              <Button type="submit" disabled={salvandoEmpresa || nomeNovaEmpresa.trim().length < 2}>
+                {salvandoEmpresa && <Loader2 className="size-4 animate-spin" />}
+                Criar empresa
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </DropdownMenu>
   )
 }

@@ -480,3 +480,49 @@ export async function trocarEmpresa(workspaceId: unknown) {
 
   return { success: true }
 }
+
+/**
+ * Cria uma empresa nova para quem já usa o produto.
+ *
+ * ## O buraco que isto fecha
+ *
+ * "Nova empresa", no seletor da barra lateral, mandava para `/onboarding` — e
+ * o `/onboarding` tem um guard que redireciona para `/dashboard` quem já
+ * concluiu a configuração. Os dois comportamentos estão certos isoladamente,
+ * mas juntos formavam um beco: **ninguém que já usa o produto conseguia criar
+ * uma segunda empresa pela interface.** A pessoa clicava e voltava para
+ * Resultados, sem mensagem e sem empresa nova.
+ *
+ * O assistente de 4 perguntas não serve aqui: ele grava em `onboarding_state`,
+ * que é uma linha por PESSOA e não por empresa, então refazê-lo sobrescreveria
+ * as respostas da primeira empresa. Para a segunda em diante, o nome basta —
+ * o resto se preenche em Configurações.
+ *
+ * O limite do plano NÃO é conferido aqui: quem decide é a RPC
+ * `create_workspace_with_admin` (migration 0018), no banco. Server Action é
+ * endpoint HTTP, e regra de plano que só vive nela não é regra — lição que
+ * este projeto já pagou três vezes.
+ */
+export async function criarEmpresa(
+  nome: string,
+): Promise<{ workspaceId: string } | { error: string }> {
+  const parsed = updateWorkspaceNameSchema.safeParse({ name: nome })
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0]?.message ?? 'Informe o nome da empresa.' }
+  }
+
+  const supabase = await createClient()
+  const { data, error } = await supabase.rpc('create_workspace_with_admin', {
+    workspace_name: parsed.data.name.trim(),
+  })
+
+  if (error) {
+    // A mensagem do limite de plano vem da própria RPC e é escrita para ser
+    // lida por quem usa ("O plano Free inclui 1 empresa..."), então repassar
+    // é melhor que trocar por um genérico.
+    return { error: error.message || 'Não foi possível criar a empresa.' }
+  }
+
+  revalidatePath('/', 'layout')
+  return { workspaceId: data as string }
+}
