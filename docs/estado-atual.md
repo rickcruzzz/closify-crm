@@ -8,6 +8,81 @@ sabendo o que já foi feito, o que foi decidido e onde estão as armadilhas.
 
 **Antes disso, 22/08/2026** (funções rodavam em Washington DC com o banco em São Paulo, corrigido na config do projeto e medido: /dashboard 1221ms → 400ms; modo claro sem escada de superfícies, refeito; jargão remanescente e telas de erro; WhatsApp sem QR por Postgres esgotado na VPS; migration 0049 provada desnecessária e removida)
 
+## WhatsApp: conectou sem proxy, mas não se sustenta (23/08, noite)
+
+**Pareou.** `LoggedIn=true` aos 118 segundos, sem proxy nenhum, pelo IP de
+datacenter da Hostinger. O que travava as tentativas anteriores **não era o
+IP** — era a corrida de 20 segundos entre o QR aparecer e alguém escaneá-lo. A
+saída foi uma página local que rebusca o código a cada 3s
+(`/instance/qr` responde em ~2,5s), o que elimina a janela apertada.
+
+**Mas a sessão não se sustenta, e este é o número que decide a integração:**
+
+| medição | sessão logada |
+|---|---|
+| primeiros 2 minutos | 63% (4 quedas) |
+| primeiros 13 minutos (`vigiar-sessao-whatsapp.mjs`) | **26%**, com 5 min seguidos fora |
+
+Está **degradando**, não estabilizando. E a causa não é nossa: o servidor
+responde em 60ms, o webhook de produção devolve 200 em 375ms e recusa segredo
+errado. Quem derruba é o WhatsApp.
+
+`scripts/diagnostico/vigiar-sessao-whatsapp.mjs` existe para essa pergunta —
+uma leitura isolada diria "conectado" ou "caído" e as duas seriam verdade; só a
+série separa oscilação de sessão sendo derrubada.
+
+### A arquitetura aguenta 100 clientes; o WhatsApp é que não
+
+Simulado contra produção com workspace descartável, **85 de 85 requisições sem
+uma falha**:
+
+| concorrência | vazão | p95 |
+|---|---|---|
+| sequencial | 3,1 req/s | 646ms |
+| 5 simultâneas | 15,2 req/s | 378ms |
+| **15 simultâneas** | **28,4 req/s** | **550ms** |
+
+100 clientes a ~100 mensagens/dia dão 0,12 req/s de média e ~1,7 req/s de pico:
+**16× de folga**. O laço fechado funcionou inteiro — 86 mensagens viraram 86
+contatos, 86 atividades e 86 tarefas. Vercel e Supabase não são o gargalo.
+
+**A conta que isso destrava:** sem proxy, o WhatsApp deixa de custar R$ 18 por
+cliente e vira custo fixo diluído — margem de **92%** com 100 clientes, contra
+51% com um IP por número (100 × R$ 18 = R$ 1.800/mês). É a diferença entre um
+adicional que precisa ser cobrado à parte e um recurso que cabe no plano. Só
+que isso depende da sessão parar de cair.
+
+## A mensagem sumia quando o plano batia no teto (23/08)
+
+Achado pela própria simulação de carga, não por leitura de código: **86
+mensagens de números desconhecidos criaram 86 contatos.** É o desenho certo,
+mas expõe uma aritmética que ninguém tinha feito — três dias de WhatsApp
+movimentado estouram sozinhos o teto de 300 do Free, sem a pessoa cadastrar
+ninguém.
+
+E a partir dali o webhook fazia `continue`. O dedupe já tinha sido gravado três
+linhas antes, então o Evolution nunca reenvia: o cliente escrevia "quero
+comprar", a trigger recusava o contato, e **a mensagem desaparecia** — sem
+erro, sem tarefa, sem aviso. Num produto que promete não perder venda, perdê-la
+pelo silêncio do próprio produto é a falha mais cara possível.
+
+Agora a mensagem continua fora do funil (limite de plano é trigger, e não se
+fura), mas não some: `error_logs` guarda **telefone e texto** — um sem o outro
+não permite decidir se aquela venda valia — e `last_error` sobe para a tela
+dizendo o que ainda funciona antes do que não funciona.
+
+**Provado ponta a ponta** contra build de produção, com workspace Free em 300
+contatos e limpo no fim: mensagem de número novo gravada em `error_logs` com o
+código `42501`; aviso na tela; conexão seguindo `connected`; **contato já
+existente continuando a entrar normalmente**; e, depois do upgrade, o contato
+301 criado e o aviso apagado sozinho.
+
+**Armadilha do próprio teste, que vale mais que a correção:** a primeira prova
+do upgrade falhou porque eu mudei só `workspaces.plan`. A trigger vigente
+(0040) lê **`pro_vigente()`**, que exige assinatura viva — exatamente a
+doutrina travada na 0027. Testar plano trocando a coluna testa uma regra que
+não existe.
+
 ## A landing dizia uma coisa e mostrava outra (23/08)
 
 Auditoria da página pública em 390px e 1440px, com navegador e medição. Três
