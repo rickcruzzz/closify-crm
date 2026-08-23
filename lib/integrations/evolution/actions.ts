@@ -15,6 +15,7 @@ import {
   criarInstancia,
   obterEstado,
   obterQrCode,
+  recomecarSessaoDePareamento,
   ultimoErroDaInstancia,
 } from './api'
 
@@ -158,13 +159,45 @@ export async function conectarWhatsapp(workspaceId: string): Promise<ResultadoDa
   }
 }
 
-/** Busca um QR novo enquanto o diálogo está aberto (o anterior expirou). */
-export async function renovarQrCode(workspaceId: string): Promise<ResultadoDaConexao> {
+/**
+ * Busca o código enquanto o diálogo está aberto.
+ *
+ * `recomecar` separa as duas coisas diferentes de que a tela precisa:
+ *
+ * - `false` — só pegar o código atual. Barato, e é o caso comum de "ainda não
+ *   estava pronto quando a tela pediu".
+ * - `true` — começar uma sessão nova, apagando e recriando a instância. É a
+ *   ÚNICA forma de escapar do corte que o Evolution aplica aos ~160s; nem
+ *   `connect` de novo nem `disconnect`+`connect` reiniciam nada
+ *   (ver `recomecarSessaoDePareamento`).
+ */
+export async function renovarQrCode(
+  workspaceId: string,
+  recomecar = false,
+): Promise<ResultadoDaConexao> {
   try {
     await exigirAdmin(workspaceId)
     const token = await obterTokenDaInstancia(workspaceId)
     if (!token) return { ok: false, erro: 'Conexão não encontrada. Tente conectar de novo.' }
-    const qrCode = await obterQrCode(token)
+
+    if (!recomecar) return { ok: true, qrCode: await obterQrCode(token) }
+
+    // Confere o estado IMEDIATAMENTE antes de apagar: se a pessoa acabou de
+    // parear, recriar a instância derrubaria o número recém-conectado —
+    // trocaria um código velho na tela por um cliente desconectado.
+    const { estado } = await obterEstado(token)
+    if (estado === 'open') return { ok: true, qrCode: null, jaConectado: true }
+
+    const segredo = process.env.EVOLUTION_WEBHOOK_SECRET
+    const webhookUrl = segredo
+      ? `${appUrl()}/api/webhooks/evolution/${encodeURIComponent(workspaceId)}/${segredo}`
+      : ''
+    const qrCode = await recomecarSessaoDePareamento(
+      workspaceId,
+      `velofunil-${workspaceId}`,
+      token,
+      webhookUrl,
+    )
     return { ok: true, qrCode }
   } catch (err) {
     return {

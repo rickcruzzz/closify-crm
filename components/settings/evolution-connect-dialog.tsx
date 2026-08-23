@@ -43,10 +43,14 @@ const INTERVALO_RENOVAR_QR_MS = 20_000
  * que pertencia a uma sessão que já não existia: escanear não conectava e
  * não produzia erro nenhum, nem na tela nem no log — o pior tipo de falha.
  *
- * 140s deixa 20 segundos de folga antes do corte, tempo de a nova sessão
- * subir e entregar o primeiro QR sem que a tela pisque vazia.
+ * Confirmado numa tentativa real em 23/08: primeiro QR às 19:26:59, corte às
+ * 19:29:39 — 160 segundos exatos.
+ *
+ * 110s deixa 50 segundos de folga. Eram 140s, margem apertada demais para um
+ * reinício que leva alguns segundos e precisa entregar o QR novo antes de o
+ * antigo virar pó.
  */
-const INTERVALO_RECONECTAR_MS = 140_000
+const INTERVALO_RECONECTAR_MS = 110_000
 
 /** Intervalo de checagem se a leitura já aconteceu. */
 const INTERVALO_CHECAR_ESTADO_MS = 3_000
@@ -161,13 +165,27 @@ export function EvolutionConnectDialog({
   // Reabre a sessão antes de o servidor matá-la (ver INTERVALO_RECONECTAR_MS).
   // Sem isto, a tela mostrava indefinidamente o QR de uma sessão encerrada, e
   // escanear simplesmente não fazia nada — sem erro, sem aviso, sem conexão.
+  //
+  // Chamava `iniciarConexao`, que faz `/instance/connect` — e o servidor IGNORA
+  // quando a instância já está rodando, dizendo no log "Instance already
+  // running, settings updated without restarting client". A reconexão
+  // preventiva, portanto, nunca reconectou nada: a sessão morria no horário do
+  // mesmo jeito. `renovarQrCode(id, true)` recria a instância, que é o único
+  // caminho que o servidor aceita.
   React.useEffect(() => {
     if (!open || conectado || erro) return
-    const intervalo = setInterval(() => {
-      void iniciarConexao(true)
+    const intervalo = setInterval(async () => {
+      const resultado = await renovarQrCode(workspaceId, true)
+      if (!resultado.ok) return
+      if (resultado.jaConectado) {
+        setConectado(true)
+        toast.success('WhatsApp conectado.')
+        return
+      }
+      if (resultado.qrCode) setQrCode(resultado.qrCode)
     }, INTERVALO_RECONECTAR_MS)
     return () => clearInterval(intervalo)
-  }, [open, conectado, erro, iniciarConexao])
+  }, [open, conectado, erro, workspaceId])
 
   // A sessão pode ainda estar subindo quando o QR é pedido: `/instance/connect`
   // responde 200 ao ACEITAR o pedido, não ao terminar de parear. O servidor já

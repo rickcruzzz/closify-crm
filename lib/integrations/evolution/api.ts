@@ -230,6 +230,62 @@ export async function ultimoErroDaInstancia(instanceId: string): Promise<string 
   }
 }
 
+/**
+ * Começa uma sessão de pareamento genuinamente nova.
+ *
+ * ## O defeito, lido no log de uma tentativa real (23/08)
+ *
+ * O Evolution GO gera no máximo 6 QR codes por sessão e então mata tudo:
+ * `QR timeout — signaling kill channel`, seguido de `Received kill signal`.
+ * Medido numa tentativa real: primeiro QR às 19:26:59, corte às 19:29:39 —
+ * **160 segundos**. Depois disso a tela seguia exibindo o código de uma sessão
+ * que já não existia, e escanear devolvia "verifique sua conexão e tente mais
+ * tarde" — mensagem do WhatsApp, não nossa, o que torna o rastro difícil de
+ * seguir até aqui.
+ *
+ * ## Por que apagar a instância, e não algo mais suave
+ *
+ * Três saídas testadas contra o servidor real, e as duas primeiras FALHAM:
+ *
+ *   `/instance/connect` de novo    -> "Instance already running, settings
+ *                                      updated without restarting client"
+ *   `/instance/disconnect`+connect -> mesma coisa. `disconnect` só derruba
+ *                                      número JÁ pareado; num pareamento que
+ *                                      nunca completou não há o que desconectar
+ *   apagar + criar + conectar      -> QR diferente e contador de volta ao #1
+ *
+ * A instância é recriada com o MESMO `instanceId` e o MESMO token, então nada
+ * muda para o resto do sistema: o `webhookUrl` continua apontando para o mesmo
+ * lugar e a linha de `integration_connections` segue válida.
+ *
+ * Só faz sentido enquanto o pareamento não completou. Depois de conectado,
+ * apagar a instância derrubaria o número — quem chama confere o estado antes.
+ */
+export async function recomecarSessaoDePareamento(
+  instanceId: string,
+  nome: string,
+  token: string,
+  webhookUrl: string,
+): Promise<string | null> {
+  await apagarInstancia(instanceId)
+
+  // O servidor precisa de um instante para liberar o id antes de aceitá-lo de
+  // volta; sem a pausa o `create` pode colidir com a instância em remoção.
+  await new Promise((resolve) => setTimeout(resolve, 1_500))
+
+  await criarInstancia(instanceId, nome, token)
+  await evolutionFetch(
+    '/instance/connect',
+    {
+      method: 'POST',
+      body: JSON.stringify({ webhookUrl, subscribe: ['MESSAGE', 'CONNECTION'] }),
+    },
+    token,
+  )
+
+  return esperarQrCode(token)
+}
+
 /** Desconecta o número sem apagar a instância — dá para reconectar depois. */
 export async function desconectar(tokenDaInstancia: string): Promise<void> {
   await evolutionFetch('/instance/disconnect', { method: 'POST' }, tokenDaInstancia)
