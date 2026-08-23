@@ -4,7 +4,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 export default function LeadsLoading() {
   return (
     <div>
-      <PageHeader title="Leads" description="Busque, filtre e acompanhe seus leads." />
+      <PageHeader title="Contatos" description="Busque, filtre e acompanhe seus contatos." />
 
       <div className="mb-4 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
         <Skeleton className="h-9 max-w-sm flex-1" />

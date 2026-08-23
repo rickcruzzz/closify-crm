@@ -218,8 +218,8 @@ export function LeadsPageClient({
   const emptyState = hasActiveFilters ? (
     <EmptyState
       icon={SearchX}
-      title="Nenhum lead corresponde aos filtros"
-      description="Tente outro termo de busca ou volte a ver todos os leads."
+      title="Nenhum contato corresponde aos filtros"
+      description="Tente outro termo de busca ou volte a ver todos os contatos."
     >
       <Button variant="outline" onClick={clearFilters}>
         Limpar filtros
@@ -228,16 +228,16 @@ export function LeadsPageClient({
   ) : (
     <EmptyState
       icon={Users}
-      title="Nenhum lead ainda"
+      title="Nenhum contato ainda"
       description="Cadastre seu primeiro contato ou traga sua planilha atual — em minutos o funil começa a trabalhar por você."
     >
       <Button onClick={openCreateForm}>
         <Plus className="size-4" />
-        Novo lead
+        Novo contato
       </Button>
       <Button variant="outline" onClick={() => setImportOpen(true)}>
         <Upload className="size-4" />
-        Importar CSV
+        Importar planilha
       </Button>
     </EmptyState>
   )
@@ -267,7 +267,7 @@ export function LeadsPageClient({
 
   return (
     <div>
-      <PageHeader title="Leads" description="Busque, filtre e acompanhe seus leads." />
+      <PageHeader title="Contatos" description="Busque, filtre e acompanhe seus contatos." />
 
       <div className="mb-4 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
         <form
@@ -278,7 +278,7 @@ export function LeadsPageClient({
             <Search className="text-muted-foreground pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2" />
             <Input
               placeholder="Buscar por nome ou empresa..."
-              aria-label="Buscar leads por nome ou empresa"
+              aria-label="Buscar contatos por nome ou empresa"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="pl-8"
@@ -319,11 +319,11 @@ export function LeadsPageClient({
         <div className="flex shrink-0 gap-2">
           <Button variant="outline" onClick={() => setImportOpen(true)}>
             <Upload className="size-4" />
-            Importar CSV
+            Importar planilha
           </Button>
           <Button onClick={openCreateForm}>
             <Plus className="size-4" />
-            Novo lead
+            Novo contato
           </Button>
         </div>
       </div>

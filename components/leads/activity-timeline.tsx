@@ -64,7 +64,7 @@ export function ActivityTimeline({
         icon={History}
         size="sm"
         title="Nenhuma atividade ainda"
-        description="Registre ligações, e-mails, reuniões e notas para manter o histórico do lead."
+        description="Registre ligações, e-mails, reuniões e notas para manter o histórico do contato."
       />
     )
   }

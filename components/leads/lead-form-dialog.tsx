@@ -116,10 +116,10 @@ export function LeadFormDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>{isEditing ? 'Editar lead' : 'Novo lead'}</DialogTitle>
+          <DialogTitle>{isEditing ? 'Editar contato' : 'Novo contato'}</DialogTitle>
           <DialogDescription>
             {isEditing
-              ? 'Atualize as informações do lead.'
+              ? 'Atualize as informações do contato.'
               : 'Cadastre um novo contato no seu funil.'}
           </DialogDescription>
         </DialogHeader>
@@ -133,7 +133,7 @@ export function LeadFormDialog({
             <Label htmlFor="name">Nome completo</Label>
             <Input
               id="name"
-              placeholder="Nome do lead"
+              placeholder="Nome do contato"
               aria-invalid={!!errors.name}
               disabled={isSubmitting}
               {...register('name')}
@@ -161,7 +161,7 @@ export function LeadFormDialog({
               <Input
                 id="email"
                 type="email"
-                placeholder="lead@empresa.com.br"
+                placeholder="contato@empresa.com.br"
                 aria-invalid={!!errors.email}
                 disabled={isSubmitting}
                 {...register('email')}
@@ -328,7 +328,7 @@ export function LeadFormDialog({
           <DialogFooter>
             <Button type="submit" disabled={isSubmitting}>
               {isSubmitting && <Loader2 className="size-4 animate-spin" />}
-              {isEditing ? 'Salvar alterações' : 'Criar lead'}
+              {isEditing ? 'Salvar alterações' : 'Criar contato'}
             </Button>
           </DialogFooter>
         </form>

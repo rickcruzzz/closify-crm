@@ -83,7 +83,7 @@ export default async function BillingPage({
         <CardContent className="flex flex-col gap-5">
           {plan === 'free' && (
             <div className="grid gap-4 sm:grid-cols-2">
-              <UsageBar label="Leads" used={leadCount ?? 0} limit={FREE_LEAD_LIMIT} />
+              <UsageBar label="Contatos" used={leadCount ?? 0} limit={FREE_LEAD_LIMIT} />
               <UsageBar
                 label="Colaboradores"
                 used={members.length}

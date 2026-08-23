@@ -335,7 +335,7 @@ export function LeadDetailClient({
                   icon={ListTodo}
                   size="sm"
                   title="Sem próxima ação"
-                  description="Lead sem tarefa é lead que some. Agende o próximo passo agora."
+                  description="Contato sem tarefa é contato que some. Agende o próximo passo agora."
                 />
               ) : (
                 <ul className="flex flex-col">

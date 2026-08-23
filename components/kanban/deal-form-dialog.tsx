@@ -191,15 +191,15 @@ export function DealFormDialog({
                   disabled={isSubmitting}
                 >
                   <ComboboxTrigger id="leadId">
-                    <ComboboxValue placeholder="Selecione um lead">
+                    <ComboboxValue placeholder="Selecione um contato">
                       {(lead: DealLeadRow | null) =>
                         lead ? `${lead.name} (${lead.company})` : 'Selecione um lead'
                       }
                     </ComboboxValue>
                   </ComboboxTrigger>
                   <ComboboxContent>
-                    <ComboboxInput placeholder="Buscar lead..." />
-                    <ComboboxEmpty>Nenhum lead encontrado.</ComboboxEmpty>
+                    <ComboboxInput placeholder="Buscar contato..." />
+                    <ComboboxEmpty>Nenhum contato encontrado.</ComboboxEmpty>
                     <ComboboxList>
                       {(lead: DealLeadRow) => (
                         <ComboboxItem key={lead.id} value={lead}>

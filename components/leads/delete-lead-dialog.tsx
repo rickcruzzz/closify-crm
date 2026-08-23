@@ -33,7 +33,7 @@ export function DeleteLeadDialog({
     <AlertDialog open={open} onOpenChange={onOpenChange}>
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle>Excluir lead</AlertDialogTitle>
+          <AlertDialogTitle>Excluir contato</AlertDialogTitle>
           <AlertDialogDescription>
             Tem certeza que deseja excluir {lead?.name}? Essa ação não pode ser desfeita.
           </AlertDialogDescription>

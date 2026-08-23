@@ -379,7 +379,7 @@ export function KanbanBoard({
               <AutocompleteInput
                 render={
                   <Input
-                    placeholder="Buscar por negócio, lead ou empresa..."
+                    placeholder="Buscar por negócio, contato ou empresa..."
                     aria-label="Buscar negócios"
                     className="pl-8"
                   />
