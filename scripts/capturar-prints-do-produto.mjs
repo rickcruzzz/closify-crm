@@ -51,7 +51,28 @@ let userId = null
 let workspaceId = null
 
 try {
-  const email = `captura-${Date.now()}@acmecorp.com.br`
+  // Este endereço aparece NO PRINT, no rodapé da barra lateral — o menu de
+  // usuário mostra o e-mail de login, não um campo de perfil. Um
+  // `captura-1787477116800@…` truncado na tela denuncia a captura sintética e
+  // parece defeito para quem está decidindo se cria a conta. O domínio já é
+  // fictício; o que faltava era a parte local ser plausível.
+  //
+  // Ele precisa ser único, e é: o `finally` abaixo apaga a conta ao fim de toda
+  // execução. A limpeza defensiva logo em seguida cobre o caso em que uma
+  // execução anterior morreu antes do `finally` (Ctrl+C, queda do servidor).
+  const email = 'rick@acmecorp.com.br'
+
+  const { data: antigos } = await admin.auth.admin.listUsers({ perPage: 200 })
+  const orfao = antigos?.users?.find((x) => x.email === email)
+  if (orfao) {
+    const { data: wsOrfaos } = await admin
+      .from('workspaces')
+      .select('id')
+      .eq('created_by', orfao.id)
+    for (const w of wsOrfaos ?? []) await admin.from('workspaces').delete().eq('id', w.id)
+    await admin.auth.admin.deleteUser(orfao.id)
+    console.log('conta órfã de uma execução anterior removida')
+  }
 
   const { data: u, error: uErr } = await admin.auth.admin.createUser({
     email,
@@ -157,6 +178,13 @@ try {
     // Semear ANTES de navegar: o next-themes lê do localStorage, e sem isso o
     // primeiro quadro sai no tema padrão.
     await page.addInitScript((t) => window.localStorage.setItem('theme', t), tema)
+    // O banner de cookies nasce no rodapé de QUALQUER rota enquanto ninguém
+    // respondeu, inclusive das telas de dentro do produto — e apareceu por cima
+    // do print na primeira recaptura depois que ele passou a existir. Um aviso
+    // de LGPD atravessado no material de venda mostra o produto discutindo
+    // consentimento em vez de trabalhando. Responder aqui não altera o que a
+    // tela desenha: o banner é a única coisa que essa chave controla.
+    await page.addInitScript(() => window.localStorage.setItem('vf_consentimento_v1', 'recusado'))
 
     await page.goto(`${BASE}/login`)
     await page.locator('#email').fill(email)
