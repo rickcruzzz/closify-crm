@@ -314,7 +314,10 @@ export function MembersCard({
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>Convidar colaborador</DialogTitle>
-            <DialogDescription>Enviamos um link de convite por e-mail.</DialogDescription>
+            <DialogDescription>
+              Quem entrar trabalha nesta mesma empresa e vê os mesmos contatos,
+              funil e tarefas. Enviamos um link de convite por e-mail.
+            </DialogDescription>
           </DialogHeader>
 
           <form

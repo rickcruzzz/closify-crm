@@ -505,7 +505,7 @@ export async function trocarEmpresa(workspaceId: unknown) {
  */
 export async function criarEmpresa(
   nome: string,
-): Promise<{ workspaceId: string } | { error: string }> {
+): Promise<{ workspaceId: string } | { error: string; limiteDoPlano?: boolean }> {
   const parsed = updateWorkspaceNameSchema.safeParse({ name: nome })
   if (!parsed.success) {
     return { error: parsed.error.issues[0]?.message ?? 'Informe o nome da empresa.' }
@@ -520,7 +520,15 @@ export async function criarEmpresa(
     // A mensagem do limite de plano vem da própria RPC e é escrita para ser
     // lida por quem usa ("O plano Free inclui 1 empresa..."), então repassar
     // é melhor que trocar por um genérico.
-    return { error: error.message || 'Não foi possível criar a empresa.' }
+    //
+    // `limiteDoPlano` existe para a tela oferecer o caminho: dizer "faça
+    // upgrade" sem mostrar ONDE deixa a pessoa num beco, tendo que procurar
+    // sozinha o que fazer depois de ler a frase. O código `42501` é o mesmo
+    // que as outras travas de plano usam.
+    return {
+      error: error.message || 'Não foi possível criar a empresa.',
+      limiteDoPlano: error.code === '42501' || error.message?.includes('plano Free'),
+    }
   }
 
   revalidatePath('/', 'layout')

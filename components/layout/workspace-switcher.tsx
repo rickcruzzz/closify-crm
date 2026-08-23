@@ -94,16 +94,19 @@ export function WorkspaceSwitcher({
   const [criandoEmpresa, setCriandoEmpresa] = React.useState(false)
   const [nomeNovaEmpresa, setNomeNovaEmpresa] = React.useState('')
   const [erroNovaEmpresa, setErroNovaEmpresa] = React.useState<string | null>(null)
+  const [erroEDeLimite, setErroEDeLimite] = React.useState(false)
   const [salvandoEmpresa, setSalvandoEmpresa] = React.useState(false)
 
   async function confirmarNovaEmpresa() {
     setSalvandoEmpresa(true)
     setErroNovaEmpresa(null)
+    setErroEDeLimite(false)
     const resultado = await criarEmpresa(nomeNovaEmpresa)
     setSalvandoEmpresa(false)
 
     if ('error' in resultado) {
       setErroNovaEmpresa(resultado.error)
+      setErroEDeLimite(Boolean(resultado.limiteDoPlano))
       return
     }
 
@@ -218,8 +221,8 @@ export function WorkspaceSwitcher({
           <DialogHeader>
             <DialogTitle>Nova empresa</DialogTitle>
             <DialogDescription>
-              Cada empresa tem seus próprios contatos, funil e equipe, separados
-              das demais.
+              Uma empresa nova começa vazia e separada: contatos, funil e equipe
+              próprios, sem nada em comum com esta.
             </DialogDescription>
           </DialogHeader>
 
@@ -242,11 +245,47 @@ export function WorkspaceSwitcher({
                 onChange={(e) => setNomeNovaEmpresa(e.target.value)}
               />
               {erroNovaEmpresa && (
-                <p role="alert" className="text-destructive text-xs">
-                  {erroNovaEmpresa}
-                </p>
+                <div role="alert" className="flex flex-col gap-2">
+                  <p className="text-destructive text-xs">{erroNovaEmpresa}</p>
+                  {/* Dizer "faça upgrade" sem mostrar onde deixa a pessoa num
+                      beco: ela leu a frase e agora tem que descobrir sozinha o
+                      que fazer. O caminho vai junto da recusa. */}
+                  {erroEDeLimite && (
+                    <Button
+                      type="button"
+                      size="sm"
+                      className="w-full"
+                      onClick={() => {
+                        setCriandoEmpresa(false)
+                        router.push('/settings/billing')
+                      }}
+                    >
+                      <Zap className="size-4" />
+                      Ver o plano Pro
+                    </Button>
+                  )}
+                </div>
               )}
             </div>
+
+            {/* Muita gente abre esta caixa querendo outra coisa: colocar alguém
+                para trabalhar JUNTO, no mesmo funil. São ações opostas, e a
+                diferença só fica clara quando aparecem lado a lado. */}
+            <p className="text-muted-foreground border-border border-t pt-3 text-xs">
+              Quer que alguém trabalhe com você nesta empresa, vendo os mesmos
+              contatos?{' '}
+              <button
+                type="button"
+                className="text-foreground underline underline-offset-4 hover:no-underline"
+                onClick={() => {
+                  setCriandoEmpresa(false)
+                  router.push('/settings?aba=equipe')
+                }}
+              >
+                Convide um colaborador
+              </button>
+              .
+            </p>
 
             <DialogFooter>
               <Button
