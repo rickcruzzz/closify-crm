@@ -4,7 +4,65 @@ Documento de continuidade. É lido no começo de toda sessão (referenciado no
 [CLAUDE.md](../CLAUDE.md)) para que uma conversa nova, ou outra conta, comece
 sabendo o que já foi feito, o que foi decidido e onde estão as armadilhas.
 
-**Atualizado em:** 22/08/2026 (funções rodavam em Washington DC com o banco em São Paulo, corrigido na config do projeto e medido: /dashboard 1221ms → 400ms; modo claro sem escada de superfícies, refeito; jargão remanescente e telas de erro; WhatsApp sem QR por Postgres esgotado na VPS; migration 0049 provada desnecessária e removida)
+**Atualizado em:** 23/08/2026 (landing auditada: promessa falsa no hero, logo quebrado no telefone, banner de cookies cobrindo o CTA, e prints mostrando o jargão que a própria página baniu; PRD, schema e grafo realinhados)
+
+**Antes disso, 22/08/2026** (funções rodavam em Washington DC com o banco em São Paulo, corrigido na config do projeto e medido: /dashboard 1221ms → 400ms; modo claro sem escada de superfícies, refeito; jargão remanescente e telas de erro; WhatsApp sem QR por Postgres esgotado na VPS; migration 0049 provada desnecessária e removida)
+
+## A landing dizia uma coisa e mostrava outra (23/08)
+
+Auditoria da página pública em 390px e 1440px, com navegador e medição. Três
+defeitos reais, nenhum deles visível na leitura do código.
+
+**O hero prometia "contatos ilimitados" no plano grátis.** O Free comporta 300,
+e a própria página dizia isso em outros três lugares. No lugar entrou a
+vantagem que nenhum concorrente mapeado tem: **R$ 49 pela empresa inteira, não
+por vendedor.**
+
+**O logo quebrava em duas linhas no telefone** — 56px de altura onde uma linha
+ocupa 28, espremido em 67px entre tema, CTA e menu.
+
+**O banner de cookies cobria o CTA, e o banner era meu, de um dia antes.**
+Medido: 206px, 27% da tela, começando no mesmo pixel do "Começar grátis".
+Compactado para 122px. Quem chega de anúncio via o botão tapado por um aviso de
+cookie.
+
+**Os prints do produto mostravam o vocabulário que a landing baniu.** Este é o
+achado que mais vale registrar como método: os seis PNGs foram capturados em
+19/08 às **09:46**, e a renomeação que tirou "Pipeline/Leads/Dashboard" do
+produto inteiro entrou às **10:39** do mesmo dia — 53 minutos depois. Nada
+tocou `public/produto/` desde então. A página afirmava "Funil" e "Contatos" por
+escrito e mostrava "Pipeline" e "Leads" em imagem, na mesma dobra.
+
+Confirmado por três caminhos antes de recapturar: horário dos dois commits,
+ausência de commit posterior na pasta, e leitura direta do PNG. **Print é o
+único artefato deste projeto que não acompanha refatoração** — nenhum
+`tsc`/`lint`/`test` olha dentro de uma imagem.
+
+A recaptura expôs mais dois, os dois corrigidos no
+`scripts/capturar-prints-do-produto.mjs`: o **banner de consentimento entrava
+no print** (nasce no rodapé de qualquer rota enquanto ninguém responde), e o
+rodapé exibia `captura-1787477116800@…` — o menu de usuário mostra o e-mail de
+login, não um campo de perfil.
+
+**Copy:** quatro funcionalidades eram nomeadas pelo que SÃO ("Painel de
+resultados") e passaram a ser nomeadas pelo problema ("Quanto você tem para
+fechar este mês"). **WhatsApp entrou como oitavo card** — não aparecia em lugar
+nenhum da landing, apesar de ser o canal onde a PME brasileira vende. E o print
+da tela "Hoje", 387 KB parados em `public/produto/` sem nenhum consumidor desde
+a captura, virou o fecho de "Como funciona".
+
+**Grafo de conhecimento e documentos alinhados na mesma rodada.** O PRD tinha
+uma linha genérica para a landing; o `docs/schema.md` dizia 12 tabelas no
+resumo e 14 no topo (são 14, reconferido pelo OpenAPI do PostgREST em produção:
+14 definições, 29 RPCs, 12 FKs) e não registrava nenhuma das três **triggers**
+que governam limite de plano — invisíveis para quem inspeciona colunas, que é
+como aquele documento nasceu.
+
+**Pendência honesta do grafo:** o limite de sessão dos subagentes interrompeu a
+extração semântica no meio. Entraram o código (AST, determinístico) e o
+diagrama; **12 arquivos ficaram re-enfileirados** para a próxima rodada (os 6
+documentos e os 6 prints). O manifest foi salvo sem estampá-los de propósito,
+então `/graphify . --update` os pega sozinho — não é preciso lembrar.
 
 ## Modo claro sem profundidade, e o jargão que sobrou (22/08)
 
