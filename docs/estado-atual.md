@@ -54,6 +54,57 @@ passar o mouse num link. É do navegador, não do site; escondê-la exige trocar
 clique de `<a>` real, por delegação). Custaria três coisas que o cliente nota
 para apagar uma que ele não nota.
 
+## WhatsApp: por que o QR não conectava, e o caminho que funciona (23/08)
+
+Três tentativas reais falharam com a mesma sequência: lê o QR, o WhatsApp pede
+para ler de novo, e a segunda leitura devolve **"verifique sua conexão e tente
+mais tarde"**. Essa mensagem **não existe neste código** — é do WhatsApp, e foi
+o que mais atrasou o diagnóstico.
+
+**O log da instância conta a história inteira:**
+
+    19:26:59  QR code generated #1 (max: 30)
+    19:27:14  Instance already running, settings updated WITHOUT RESTARTING
+    19:27:31  Instance already running, settings updated WITHOUT RESTARTING
+    19:29:19  QR code generated #6
+    19:29:39  QR timeout — signaling kill channel
+    19:29:39  Received kill signal
+
+Duas coisas somadas: o Evolution **mata a sessão de pareamento após 6 QR
+codes** (~160s), e a reconexão preventiva que a tela fazia **nunca reconectou
+nada** — o servidor responde "already running" e ignora.
+
+**As três saídas, testadas contra o servidor real:**
+
+| tentativa | resultado |
+|---|---|
+| `/instance/connect` de novo | "already running", não reinicia |
+| `/instance/disconnect` + connect | **também não** — `disconnect` só derruba número JÁ pareado |
+| apagar + criar + conectar | sessão nova, contador de volta ao #1 |
+
+**Erro registrado para não se repetir:** cheguei a implementar a segunda opção
+e a descrever como solução, depois de um teste em que o QR mudou. O QR tinha
+mudado por decurso de tempo, não pelo disconnect — correlação lida como causa.
+Só apareceu ao medir de novo com o log na mão.
+
+**A saída melhor, achada num print do painel do Evolution:** existe
+`POST /instance/pair`, que devolve um **código de 8 letras**
+(`{"data":{"PairingCode":"6VHM-7PC7"}}`) em vez de QR. Não tem janela de
+câmera, a validade é folgada, e é o **único caminho para quem abre o CRM pelo
+próprio celular** — ninguém escaneia a própria tela. Por isso o link para
+trocar de modo fica visível sempre, não escondido atrás de uma falha.
+
+**Outros números medidos, úteis para quem mexer nisso:**
+`/instance/qr` custa ~3s por chamada e **fica para trás**: entregou 3 códigos
+distintos enquanto o servidor gerava 4, com o primeiro parado na API por 65s.
+E o QR só é servido depois que a sessão sobe — `/instance/connect` responde 200
+ao ACEITAR o pedido, não ao terminar de parear.
+
+**Se o código de pareamento também falhar**, a hipótese que sobra é o IP: a VPS
+é Hostinger (datacenter, Campinas/SP), e o WhatsApp trata IP de datacenter como
+sinal de automação. Aí a solução é externa ao código — proxy residencial
+brasileiro (~R$ 18/mês), já registrado como risco na seção do Evolution.
+
 ## As funções rodavam nos Estados Unidos (22/08)
 
 O piso de lentidão que três sessões tentaram derrubar estava no header que a
