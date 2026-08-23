@@ -292,12 +292,63 @@ export async function POST(
       // Falha ao criar lead (teto de plano, por exemplo) não pode derrubar o
       // webhook: o dedupe já foi gravado, e devolver erro faria o Evolution
       // reenviar algo que vai falhar de novo pelo mesmo motivo.
+      //
+      // Mas `continue` sozinho DESCARTA A MENSAGEM EM SILÊNCIO, e isso é o
+      // oposto exato do que este produto promete. Medido em 23/08 numa
+      // simulação de carga: 86 mensagens de números desconhecidos criaram 86
+      // contatos — três dias de WhatsApp movimentado estouram sozinhos o teto
+      // de 300 do plano Free, sem o cliente cadastrar ninguém. A partir daí,
+      // toda mensagem de número novo cairia aqui e sumiria: o cliente escreve
+      // "quero comprar", o dedupe impede o reenvio, e ninguém nunca fica
+      // sabendo. Perder venda por esquecimento é o problema que o produto
+      // existe para resolver; perdê-la por silêncio do próprio produto é pior.
+      //
+      // Então a mensagem não é salva no funil, mas TAMBÉM não é perdida:
+      // fica em `error_logs` com telefone e texto (recuperável por consulta),
+      // e o motivo sobe para a tela de Integrações via `last_error`.
       if (erroLead || !novo) {
         console.error('Webhook Evolution: não consegui criar o lead', erroLead)
+
+        const limiteDoPlano = erroLead?.code === '42501'
+        const aviso = limiteDoPlano
+          ? 'Seu plano chegou ao limite de contatos. Mensagens de números novos ' +
+            'não estão entrando no funil — só as de quem já é seu contato. ' +
+            'Faça upgrade para voltar a receber tudo.'
+          : 'Não consegui registrar a mensagem de um número novo. ' +
+            'As mensagens de quem já é seu contato continuam entrando.'
+
+        await Promise.all([
+          // O texto vai junto porque um telefone sem a mensagem não permite
+          // decidir se aquele contato valia a venda.
+          admin.from('error_logs').insert({
+            message: `WhatsApp: mensagem não registrada (${erroLead?.code ?? 'sem código'}) ` +
+              `de ${telefone}: ${textoDaMensagem(mensagem)}`,
+            origem: 'whatsapp',
+            url: `/api/webhooks/evolution/${workspaceId}`,
+            workspace_id: workspaceId,
+          }),
+          admin
+            .from('integration_connections')
+            .update({ last_error: aviso })
+            .eq('workspace_id', workspaceId)
+            .eq('provider', 'whatsapp'),
+        ])
+
         continue
       }
 
       lead = novo.id
+
+      // Criar contato novo voltou a funcionar: apaga o aviso de limite, senão
+      // ele fica preso na tela para sempre depois do upgrade. Só roda quando um
+      // contato NOVO nasce — que é exatamente o caso que falhava — então não
+      // custa uma escrita por mensagem recebida.
+      await admin
+        .from('integration_connections')
+        .update({ last_error: null })
+        .eq('workspace_id', workspaceId)
+        .eq('provider', 'whatsapp')
+        .not('last_error', 'is', null)
     }
 
     await admin.from('activities').insert({

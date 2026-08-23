@@ -171,8 +171,24 @@ export function IntegrationCard({
           </p>
         )}
 
-        {status === 'error' && lastError && (
-          <p role="alert" className="bg-destructive/10 text-destructive rounded-md px-3 py-2 text-sm">
+        {/* Duas gravidades, e a diferença importa. `error` é a conexão caída:
+            nada entra, e o vermelho está certo. Mas existe um terceiro estado
+            que antes não aparecia em lugar nenhum — conectado E com aviso: a
+            sessão do WhatsApp está de pé, mensagens de contatos conhecidos
+            entram normalmente, e só as de números novos estão sendo recusadas
+            porque o plano chegou ao teto. Pintar isso de vermelho faria a
+            pessoa tentar reconectar uma conexão que está boa; esconder faria
+            ela perder venda sem saber. Âmbar, e o texto diz o que ainda
+            funciona. */}
+        {lastError && (
+          <p
+            role="alert"
+            className={
+              status === 'error'
+                ? 'bg-destructive/10 text-destructive rounded-md px-3 py-2 text-sm'
+                : 'rounded-md bg-amber-500/10 px-3 py-2 text-sm text-amber-700 dark:text-amber-400'
+            }
+          >
             {lastError}
           </p>
         )}

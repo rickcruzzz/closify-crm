@@ -69,3 +69,4 @@ graphify-out/
 # URL pública. E fora do Git porque criativo é iteração: dez variações de um
 # anúncio não são dez versões de código.
 criativos/
+.diagnostico-whatsapp.csv
