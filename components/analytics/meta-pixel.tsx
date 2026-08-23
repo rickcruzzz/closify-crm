@@ -1,7 +1,13 @@
 'use client'
 
+import * as React from 'react'
 import Script from 'next/script'
 import { usePathname } from 'next/navigation'
+
+import {
+  EVENTO_CONSENTIMENTO,
+  lerConsentimentoDoNavegador,
+} from '@/components/analytics/banner-consentimento'
 
 /**
  * Meta Pixel, só nas páginas públicas.
@@ -22,12 +28,13 @@ import { usePathname } from 'next/navigation'
  * Mesma classe de lacuna que o `middleware.ts` já pagou (rotas existem, na
  * sidebar, mas ficaram fora de uma lista de exclusão).
  *
- * Nota de conformidade: este pixel grava cookie de terceiro (`_fbp`) e é
- * rastreamento de verdade sob a LGPD, a mesma razão pela qual o GA4 foi
- * descartado do projeto (ver docs/estado-atual.md, decisão travada). Hoje
- * não existe banner de consentimento de cookies no site. Ligado por pedido
- * explícito; registrado aqui e em docs/estado-atual.md como risco de
- * compliance em aberto, não como decisão silenciosa.
+ * Conformidade (fechado em 23/08): este pixel grava cookie de terceiro
+ * (`_fbp`) e é rastreamento de marketing sob a LGPD — a mesma razão pela qual
+ * o GA4 foi descartado deste projeto. Ele agora só existe DEPOIS de a pessoa
+ * aceitar, em `BannerConsentimento`. Bloqueio prévio, não desligamento
+ * posterior: enquanto não houver "aceito", o script não entra na página, e
+ * portanto nenhum cookie é gravado. Consentimento pedido depois do
+ * rastreamento não é consentimento.
  */
 const PREFIXOS_PRIVADOS = [
   '/dashboard',
@@ -75,7 +82,25 @@ export function MetaPixel() {
   const hostname = typeof window === 'undefined' ? undefined : window.location.hostname
   const eProducao = hostname === DOMINIO_DE_PRODUCAO
 
-  if (!pixelId || eAreaPrivada || !eProducao) return null
+  // Nasce `false` e nunca `true` no servidor: sem `window` não há como saber a
+  // escolha, e o padrão seguro é não rastrear. Vira `true` no efeito, e volta a
+  // valer imediatamente quando alguém aceita nesta mesma visita — que é
+  // exatamente a visita vinda do anúncio, a que mais importa medir.
+  const [consentido, setConsentido] = React.useState(false)
+
+  React.useEffect(() => {
+    const reavaliar = () => setConsentido(lerConsentimentoDoNavegador() === 'aceito')
+    reavaliar()
+    window.addEventListener(EVENTO_CONSENTIMENTO, reavaliar)
+    // `storage` cobre a aba vizinha: aceitar em uma e o pixel ligar na outra.
+    window.addEventListener('storage', reavaliar)
+    return () => {
+      window.removeEventListener(EVENTO_CONSENTIMENTO, reavaliar)
+      window.removeEventListener('storage', reavaliar)
+    }
+  }, [])
+
+  if (!pixelId || eAreaPrivada || !eProducao || !consentido) return null
 
   return (
     <>

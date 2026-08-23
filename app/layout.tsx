@@ -7,6 +7,7 @@ import { ThemeProvider } from '@/components/theme-provider'
 import { Toaster } from '@/components/ui/sonner'
 import { Analytics } from '@/components/analytics'
 import { MetaPixel } from '@/components/analytics/meta-pixel'
+import { BannerConsentimento } from '@/components/analytics/banner-consentimento'
 import { UtmCapture } from '@/components/landing/utm-capture'
 import { NavigationProgress } from '@/components/layout/navigation-progress'
 
@@ -105,6 +106,9 @@ export default function RootLayout({
           <Analytics />
           <MetaPixel />
           <UtmCapture />
+          {/* Depois do pixel na ordem do JSX, mas o pixel só liga com o "aceito"
+              que sai daqui — ver o cabeçalho de banner-consentimento.tsx. */}
+          <BannerConsentimento />
         </ThemeProvider>
       </body>
     </html>
