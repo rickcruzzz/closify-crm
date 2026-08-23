@@ -8,6 +8,65 @@ sabendo o que já foi feito, o que foi decidido e onde estão as armadilhas.
 
 **Antes disso, 22/08/2026** (funções rodavam em Washington DC com o banco em São Paulo, corrigido na config do projeto e medido: /dashboard 1221ms → 400ms; modo claro sem escada de superfícies, refeito; jargão remanescente e telas de erro; WhatsApp sem QR por Postgres esgotado na VPS; migration 0049 provada desnecessária e removida)
 
+## Verificação OAuth do Google: o escopo era largo demais (23/08)
+
+A submissão foi reprovada em 20/08, e a objeção principal era procedente:
+
+> *"The demo video you provided does not sufficiently demonstrate why the
+> following scope(s) are necessary or **why narrower permissions cannot be
+> used**."*
+
+Podiam ser. O app pedia `calendar.events`, que dá acesso a eventos em **todos**
+os calendários — inclusive os que terceiros compartilharam com a pessoa.
+`criarEventoNoCalendar` escreve em `calendars/primary/events`, a agenda do
+próprio usuário, e nada mais. Trocado por **`calendar.events.owned`**.
+
+`calendar.app.created` é ainda mais restrito e foi **descartado com motivo**:
+obriga a criar um calendário secundário do app, e o evento sairia da agenda
+principal — que é onde ele precisa estar para a pessoa não perder a reunião.
+Trocaria uma objeção de verificação por um defeito de produto.
+
+**Custo medido antes de mexer:** uma única conexão de Calendar em produção.
+Quem já conectou reconecta; com uma conexão, é o momento mais barato que essa
+troca jamais teria.
+
+### O que mais o revisor cobrou, e que não era escopo
+
+**A tela de consentimento tem que aparecer com os escopos EXPANDIDOS.** O
+Google exige clicar em *"See access details"* / *"Show all services"* antes de
+continuar. No vídeo antigo, o Gmail estava expandido e o **Calendar não** — e
+era exatamente esse o item reprovado. Não é detalhe de edição: sem expandir,
+o revisor não consegue ler o que está sendo concedido.
+
+**Os três lugares têm que dizer a mesma coisa:** o escopo que o app pede, o
+escopo salvo no Console e o escopo que aparece no vídeo. Divergência entre
+eles é motivo de reprovação por si só ("Scope Matching"), e é fácil de criar
+sem perceber — basta gravar antes de promover.
+
+### O vídeo, e o que ele custou
+
+Três gravações até acertar. As duas primeiras se perderam por coisas que uma
+verificação de 30 segundos teria evitado:
+
+1. **O `Textarea` não repassava a ref** — descoberto no meio da gravação, com o
+   formulário de e-mail recusando texto válido. Ver a seção própria acima.
+2. **O contato de demonstração usava `google.review@velofunil.com.br`**, que é
+   login mas não caixa postal: o e-mail voltou com `550 5.1.1` e o vídeo
+   registrou "Endereço não encontrado" em tela cheia. Trocado por
+   `suporte@velofunil.com.br`, que tem roteamento no Cloudflare — e **testado
+   antes** da terceira gravação, não depois.
+
+O corte final foi montado com ffmpeg a partir de duas gravações (o trecho novo
+do Calendar + as partes de Gmail que já estavam boas), normalizando resolução
+(1914×978 e 1920×1080) e removendo bounce, spam, VS Code e o painel da Vercel
+que entraram sem querer. 5min42s viraram 2min52s.
+
+**A conta de revisão** (`google.review@velofunil.com.br`, empresa "Google
+Review Ltda") fica com as integrações **desconectadas** de propósito: é isso
+que permite ao revisor rodar o consentimento inteiro com a conta dele. Ela é
+Pro com assinatura até 2027 e tem um contato, um negócio e uma tarefa aberta,
+para as duas funcionalidades serem testáveis em dois cliques.
+
 ## WhatsApp: conectou sem proxy, mas não se sustenta (23/08, noite)
 
 **Pareou.** `LoggedIn=true` aos 118 segundos, sem proxy nenhum, pelo IP de
