@@ -467,6 +467,37 @@ clique, antes até da URL mudar, o spinner já está visível.
 > nas mensagens de commit e nos comentários do código, que são a memória real
 > do projeto. Aqui fica só o que não cabe em nenhum dos dois: o estado.
 
+## O que os números de cliente realmente dizem (22/08)
+
+Auditado no banco, separando por origem do e-mail de quem criou a conta. O
+resultado corrige um número que este documento e o PRD vinham repetindo:
+
+| grupo | empresas | ativaram | pagam |
+|---|---|---|---|
+| conta de teste (e-mail descartável: `neplis`, `beiwoh`, `joystill`…) | 15 | 5 | 1 |
+| contas do próprio dono | 4 | 4 | 1 |
+| **cliente real externo** | **8** | **5 (62,5%)** | **0** |
+
+**As duas assinaturas "ativas" não são de cliente.** `Orne`
+(`wixese9814@neplis.com`) é a conta em que o próprio dono pagou o Pix de R$ 49
+para provar o checkout — o "primeiro Pix real" registrado abaixo é verdadeiro
+como prova técnica e falso como receita. `Google Review Ltda`
+(`google.review@velofunil.com.br`) é cortesia criada para o vídeo de
+verificação do Google, válida até 2027.
+
+O único cliente externo que chegou a tentar assinar, `Fani RRH Consultoria`,
+está `past_due` desde 04/08 e nunca concluiu.
+
+**Consequência prática, e é a que importa:** não existe conversão
+cadastro→pagante medida, nem churn, nem LTV — não por falta de instrumentação,
+mas porque a conversão nunca aconteceu com alguém de fora. Qualquer cálculo de
+CAC feito sobre a base cheia (a conta de 7,7% que já circulou aqui) está medindo
+as contas de teste do próprio dono.
+
+O que É real e vale registrar: **5 de 8 pessoas externas que criaram conta
+usaram o produto de verdade**. A ativação funciona; a monetização ainda não foi
+provada uma vez sequer.
+
 ## Onde o produto está
 
 Em produção em <https://www.velofunil.com.br>, funcional, com o **primeiro

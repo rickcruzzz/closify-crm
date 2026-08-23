@@ -12,7 +12,7 @@ Copie tudo entre as linhas.
 
 ---
 
-Preciso de um plano para levar um micro-SaaS brasileiro de **2 para 1.000
+Preciso de um plano para levar um micro-SaaS brasileiro de **zero para 1.000
 clientes pagantes** em 12 a 18 meses, com ticket baixo e sem investidor. Já fiz
 a conta de mídia paga e sei o que ela sustenta; o que preciso agora é saber
 **quais canais realmente produzem volume nesse modelo** e em que ordem atacá-los.
@@ -33,20 +33,34 @@ Cobrança recorrente por Pix, boleto e cartão (Asaas).
 
 | métrica | valor |
 |---|---|
-| empresas cadastradas | 26 |
-| que criaram ao menos 1 contato (ativaram) | 14 (**53,8%**) |
-| que nunca fizeram nada | 12 (**46,2%**) |
-| clientes pagantes | 2 (**7,7%** dos cadastros) |
-| conversão ativado → pagante | **14,3%** |
-| receita recorrente atual | R$ 98/mês |
-| clientes vindos de anúncio | **0** (nunca rodei campanha) |
+| empresas cadastradas (total) | 26 |
+| **destas, contas de teste** (e-mail descartável) | **15** |
+| **destas, contas minhas** (dono do produto) | **4** |
+| **clientes reais externos** | **8** |
+| clientes externos que ativaram (criaram 1º contato) | **5 (62,5%)** |
+| **clientes externos PAGANTES** | **0** |
 
-**A conta de mídia que já fiz** (com esses números, ticket R$ 49):
+**A ressalva mais importante desta pesquisa, e eu preciso que ela oriente sua
+resposta:** eu tinha 2 assinaturas marcadas como ativas, mas ao conferir os
+e-mails descobri que **nenhuma é cliente externo** — uma é a conta em que eu
+mesmo paguei um Pix de R$ 49 para testar o checkout, e a outra é uma conta de
+cortesia criada para um vídeo de verificação. O único cliente externo que
+tentou assinar ficou com pagamento em aberto e nunca concluiu.
+
+Ou seja: **ninguém que não me conhece jamais pagou por este produto.** Não
+tenho conversão de cadastro→pagante medida, não tenho churn, não tenho LTV.
+Tenho apenas a prova de que 5 de 8 pessoas reais que criaram conta usaram o
+produto de verdade. Nenhum deles veio de anúncio — nunca rodei campanha.
+
+**A conta de mídia que já fiz** — mas com a ressalva de que ela usa uma
+conversão de 7,7% que veio da base CONTAMINADA (incluía minhas contas de
+teste). Com 0 pagantes externos, a conversão real é desconhecida, e estes
+números são o cenário otimista, não a medição:
 - Cada cliente, reinvestindo sua mensalidade em anúncio, gera **33% de um novo
   cliente por mês** se o CPL for R$ 11
 - **CPL de equilíbrio com churn de 6%/mês: R$ 62,88** — acima disso a base
   encolhe, abaixo ela cresce sozinha
-- Se a ativação subir de 53,8% para 85%, o CPL de equilíbrio sobe para R$ 99,63
+- Se a ativação subir de 62,5% para 85%, o CPL de equilíbrio sobe proporcionalmente
 - Simulando reinvestimento com aporte de R$ 1.500/mês: **1.000 clientes
   acumulados em 13-15 meses**, dependendo do churn
 - 1.000 clientes **novos por mês** exigiria R$ 147 mil/mês e R$ 441 mil de
@@ -103,9 +117,15 @@ Meu público é PME de serviço. Quem já fala com essas empresas todo mês?
 - Existe atalho por **marketplace ou diretório** (Capterra, GetApp, B2B Stack,
   RD Marketplace) que traga cliente qualificado no Brasil?
 
-### 5. Ativação — meu vazamento medido de 46%
-Metade de quem cria conta nunca cadastra um contato sequer. Isso é o maior
-buraco do funil e não custa mídia para consertar.
+### 5. Ativação e a primeira venda
+De 8 clientes externos, 5 usaram o produto de verdade (62,5%) e **nenhum
+pagou**. O buraco não é a ativação — é a passagem de "usa de graça" para
+"paga". E não custa mídia para atacar.
+- Como um SaaS consegue a **primeira venda para um estranho**? Que táticas são
+  documentadas para converter usuário gratuito ativo em pagante quando ainda não
+  existe nenhum caso de sucesso para mostrar?
+- O plano Grátis está **generoso demais** (300 contatos, 2 colaboradores)? Qual
+  limite força a decisão de pagar sem parecer punição?
 - Que táticas de onboarding mais elevam ativação em SaaS B2B? Quero número de
   impacto: tour guiado, dado de exemplo pré-carregado, importação de planilha
   logo na entrada, checklist, contato humano, vídeo curto.

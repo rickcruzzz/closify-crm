@@ -26,24 +26,43 @@ Salesforce.
 **Preço:** Grátis (1 empresa, 2 colaboradores, 300 contatos) · Pro R$ 49/mês
 (ilimitado). Cobrança recorrente por Pix, boleto e cartão via Asaas.
 
-**Estado real do negócio, medido, não estimado:**
-- 26 empresas cadastradas no total
-- 2 assinaturas Pro pagantes de verdade (R$ 98/mês de receita recorrente)
-- 1 Pix real de R$ 49 já confirmado ponta a ponta
+**Estado real do negócio, medido no banco de dados, não estimado:**
+
+| métrica | valor |
+|---|---|
+| empresas cadastradas (total) | 26 |
+| **destas, contas de teste** (e-mail descartável) | **15** |
+| **destas, contas minhas** (dono do produto) | **4** |
+| **clientes reais externos** | **8** |
+| clientes externos que ativaram (criaram 1º contato) | **5 (62,5%)** |
+| **clientes externos PAGANTES** | **0** |
+
+**A ressalva mais importante desta pesquisa, e eu preciso que ela oriente sua
+resposta:** eu tinha 2 assinaturas marcadas como ativas, mas ao conferir os
+e-mails descobri que **nenhuma é cliente externo** — uma é a conta em que eu
+mesmo paguei um Pix de R$ 49 para testar o checkout, e a outra é uma conta de
+cortesia criada para um vídeo de verificação. O único cliente externo que
+tentou assinar ficou com pagamento em aberto e nunca concluiu.
+
+Ou seja: **ninguém que não me conhece jamais pagou por este produto.** Não
+tenho conversão de cadastro→pagante medida, não tenho churn, não tenho LTV.
+Tenho apenas a prova de que 5 de 8 pessoas reais que criaram conta usaram o
+produto de verdade.
+
 - **Nenhuma campanha de anúncio jamais rodou.** Três campanhas existem na conta,
-  todas pausadas, gasto zero. Estou partindo do zero absoluto em tráfego pago.
+  todas pausadas, gasto zero. Parto do zero absoluto em tráfego pago.
 - Aquisição até hoje: 100% orgânica/indicação
 
 **Ticket e economia unitária:**
 - R$ 49/mês, sem taxa de setup, sem contrato de fidelidade
-- Não sei meu churn ainda (base pequena demais e nova demais para medir)
-- Não sei meu LTV real pelo mesmo motivo
+- **Não tenho churn, LTV nem taxa de conversão para pagante** — não por falta de
+  medição, mas porque a conversão nunca aconteceu com cliente externo
 - Custo marginal por cliente é baixo (SaaS em infraestrutura serverless)
 
 ## O que já está tecnicamente pronto
 
 - **Meta Pixel instalado e disparando** de produção (id confirmado ativo, com
-  milhares de PageView, ~21 CompleteRegistration e 6 Purchase em 7 dias)
+  milhares de PageView, 16 CompleteRegistration e 3 Purchase nos últimos 7 dias, conferido na API da Meta hoje)
 - **Conversions API (CAPI) enviando server-side**, com hash SHA-256 de e-mail,
   telefone e external_id no `user_data`
 - **UTM e fbc/fbp capturados e gravados no banco** na criação da conta — a
@@ -86,7 +105,8 @@ Com ticket de **R$ 49/mês** no mercado brasileiro de SaaS B2B para PME em 2026:
 
 ### 2. Estrutura de campanha para orçamento pequeno
 - **Qual objetivo de campanha** usar: Conversões otimizando para
-  CompleteRegistration, ou para Purchase? Com apenas 6 Purchase em 7 dias,
+  CompleteRegistration, ou para Purchase? Com apenas 3 Purchase em 7 dias (e 16
+  CompleteRegistration),
   provavelmente não tenho volume para o algoritmo sair da fase de aprendizado
   em Purchase — **qual é o limiar real de eventos/semana** que o Meta exige
   para sair de learning, e como se contorna isso com pouco volume?
@@ -103,8 +123,8 @@ Com ticket de **R$ 49/mês** no mercado brasileiro de SaaS B2B para PME em 2026:
 - Como alcançar **dono de PME de serviço** (agência, clínica, consultoria,
   imobiliária) sem interesses óbvios e caros? Existem interesses ou
   comportamentos subutilizados que funcionam para esse perfil?
-- **Lookalike com base minúscula**: com 26 cadastros e 2 pagantes, vale criar
-  lookalike? Qual o tamanho mínimo real de semente para o lookalike não virar
+- **Lookalike com base minúscula**: com 8 clientes externos e nenhum pagante,
+  vale criar lookalike? Qual o tamanho mínimo real de semente para o lookalike não virar
   ruído?
 - **Retargeting com tráfego baixo**: com poucos visitantes/dia, o público de
   remarketing atinge tamanho útil? A partir de quantos visitantes/dia isso
