@@ -286,6 +286,48 @@ export async function recomecarSessaoDePareamento(
   return esperarQrCode(token)
 }
 
+/**
+ * Pede um código de pareamento em vez de QR Code.
+ *
+ * ## Por que existe, e por que é o caminho melhor
+ *
+ * O QR do WhatsApp vive ~20 segundos e a sessão inteira morre em ~160s
+ * (6 códigos), o que abre uma janela estreita entre "o código aparece na tela"
+ * e "o celular consegue lê-lo". Foi ali que as tentativas reais falharam, com
+ * o WhatsApp respondendo "verifique sua conexão e tente mais tarde".
+ *
+ * O código de pareamento não tem nenhum desses problemas: são 8 letras
+ * (`6VHM-7PC7`), digitadas à mão, com validade bem mais folgada. Não depende
+ * de câmera, de foco, nem de a pessoa estar com o celular na frente do
+ * monitor — o que também resolve quem acessa o CRM pelo próprio celular e não
+ * tinha como escanear a tela dele mesmo.
+ *
+ * Testado contra o servidor real em 23/08: `POST /instance/pair` responde
+ * `{"data":{"PairingCode":"6VHM-7PC7"},"message":"success"}`.
+ *
+ * O número precisa vir só com dígitos e DDI (`5511988887777`) — quem chama
+ * normaliza com `normalizarTelefoneBrasileiro`, a mesma validação que o botão
+ * "Chamar no WhatsApp" já usa.
+ */
+export async function pedirCodigoDePareamento(
+  tokenDaInstancia: string,
+  telefoneComDdi: string,
+): Promise<string | null> {
+  const resposta = await evolutionFetch<{ data?: { PairingCode?: string } }>(
+    '/instance/pair',
+    {
+      method: 'POST',
+      body: JSON.stringify({
+        phone: telefoneComDdi,
+        subscribe: ['MESSAGE', 'CONNECTION'],
+      }),
+    },
+    tokenDaInstancia,
+  )
+
+  return resposta?.data?.PairingCode ?? null
+}
+
 /** Desconecta o número sem apagar a instância — dá para reconectar depois. */
 export async function desconectar(tokenDaInstancia: string): Promise<void> {
   await evolutionFetch('/instance/disconnect', { method: 'POST' }, tokenDaInstancia)

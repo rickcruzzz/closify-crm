@@ -5,6 +5,9 @@ import { toast } from 'sonner'
 import { AlertTriangle, Loader2, RefreshCw } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { formatarTelefoneBR } from '@/lib/format-input'
 import {
   Dialog,
   DialogContent,
@@ -14,6 +17,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import {
+  conectarPorCodigo,
   conectarWhatsapp,
   estadoDaConexao,
   renovarQrCode,
@@ -110,6 +114,12 @@ export function EvolutionConnectDialog({
   // sem QR não muda estado nenhum, as dependências do efeito ficam iguais, o
   // cleanup não roda e nunca há uma próxima tentativa.
   const [tentativaQr, setTentativaQr] = React.useState(0)
+  // Duas formas de conectar, e a por código é a que sobrevive melhor: o QR
+  // vive ~20s e a sessão morre em ~160s, janela em que a leitura falhava.
+  const [modo, setModo] = React.useState<'qr' | 'codigo'>('qr')
+  const [telefone, setTelefone] = React.useState('')
+  const [codigo, setCodigo] = React.useState<string | null>(null)
+  const [pedindoCodigo, setPedindoCodigo] = React.useState(false)
 
   /**
    * @param silencioso Renovação de fundo (a sessão vai expirar): mantém o QR
@@ -148,6 +158,9 @@ export function EvolutionConnectDialog({
     setErro(null)
     setConectado(false)
     setTentativaQr(0)
+    setModo('qr')
+    setCodigo(null)
+    setTelefone('')
     void iniciarConexao()
   }, [open, iniciarConexao])
 
@@ -238,7 +251,9 @@ export function EvolutionConnectDialog({
         <DialogHeader>
           <DialogTitle>Conectar WhatsApp</DialogTitle>
           <DialogDescription>
-            Escaneie com o WhatsApp do número da empresa, em Aparelhos conectados.
+            {modo === 'qr'
+              ? 'Escaneie com o WhatsApp do número da empresa, em Aparelhos conectados.'
+              : 'Informe o número da empresa e digite o código no WhatsApp dele.'}
           </DialogDescription>
         </DialogHeader>
 
@@ -253,6 +268,22 @@ export function EvolutionConnectDialog({
         <div className="flex min-h-56 flex-col items-center justify-center gap-3">
           {conectado ? (
             <p className="text-sm font-medium">Conectado. Fechando…</p>
+          ) : modo === 'codigo' ? (
+            <BlocoCodigo
+              telefone={telefone}
+              setTelefone={setTelefone}
+              codigo={codigo}
+              pedindo={pedindoCodigo}
+              onPedir={async () => {
+                setPedindoCodigo(true)
+                setErro(null)
+                const r = await conectarPorCodigo(workspaceId, telefone)
+                setPedindoCodigo(false)
+                if (r.ok) setCodigo(r.codigo)
+                else setErro(r.erro)
+              }}
+              erro={erro}
+            />
           ) : erro ? (
             <>
               <p role="alert" className="text-destructive text-center text-sm">
@@ -298,6 +329,25 @@ export function EvolutionConnectDialog({
           )}
         </div>
 
+        {/* A troca de caminho fica visível o tempo todo, não escondida atrás de
+            uma falha: quem abre o CRM pelo celular não tem como escanear a
+            própria tela, e para essa pessoa o código é o único caminho. */}
+        {!conectado && (
+          <button
+            type="button"
+            onClick={() => {
+              setModo((m) => (m === 'qr' ? 'codigo' : 'qr'))
+              setErro(null)
+              setCodigo(null)
+            }}
+            className="text-muted-foreground hover:text-foreground text-center text-xs underline underline-offset-4"
+          >
+            {modo === 'qr'
+              ? 'Não consegue escanear? Conectar com um código'
+              : 'Voltar para o QR Code'}
+          </button>
+        )}
+
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Cancelar
@@ -305,5 +355,74 @@ export function EvolutionConnectDialog({
         </DialogFooter>
       </DialogContent>
     </Dialog>
+  )
+}
+
+/**
+ * O caminho por código de 8 letras.
+ *
+ * Separado em componente próprio porque o diálogo já carrega três estados
+ * concorrentes (carregando, erro, conectado) e embutir mais um ramo inline
+ * tornaria o `return` ilegível.
+ *
+ * O código aparece em fonte monoespaçada e tamanho grande de propósito: ele é
+ * digitado à mão em outro aparelho, e `0/O` ou `1/I` confundidos custam uma
+ * tentativa inteira.
+ */
+function BlocoCodigo({
+  telefone,
+  setTelefone,
+  codigo,
+  pedindo,
+  onPedir,
+  erro,
+}: {
+  telefone: string
+  setTelefone: (v: string) => void
+  codigo: string | null
+  pedindo: boolean
+  onPedir: () => void
+  erro: string | null
+}) {
+  if (codigo) {
+    return (
+      <div className="flex flex-col items-center gap-3 text-center">
+        <p className="text-muted-foreground text-sm">
+          No WhatsApp do número, toque em <strong>Aparelhos conectados</strong> →{' '}
+          <strong>Conectar aparelho</strong> → <strong>Conectar com número</strong> e digite:
+        </p>
+        <p className="bg-muted rounded-lg px-4 py-3 font-mono text-2xl font-semibold tracking-[0.2em]">
+          {codigo}
+        </p>
+        <p className="text-muted-foreground text-xs">
+          Assim que confirmar no celular, esta janela fecha sozinha.
+        </p>
+      </div>
+    )
+  }
+
+  return (
+    <div className="flex w-full max-w-xs flex-col gap-3">
+      <div className="flex flex-col gap-1.5">
+        <Label htmlFor="telefone-whatsapp">Número do WhatsApp da empresa</Label>
+        <Input
+          id="telefone-whatsapp"
+          inputMode="numeric"
+          placeholder="(11) 98888-7777"
+          value={telefone}
+          disabled={pedindo}
+          onChange={(e) => setTelefone(formatarTelefoneBR(e.target.value))}
+        />
+      </div>
+      {erro && (
+        <p role="alert" className="text-destructive text-sm">
+          {erro}
+        </p>
+      )}
+      <Button onClick={onPedir} disabled={pedindo || telefone.trim().length < 10}>
+        {pedindo && <Loader2 className="size-4 animate-spin" />}
+        Receber código
+      </Button>
+    </div>
   )
 }

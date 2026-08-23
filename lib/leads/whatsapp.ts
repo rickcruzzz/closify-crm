@@ -14,6 +14,23 @@ import { apenasDigitos } from '@/lib/leads/planilha'
  * o botão do que oferecer um que quebra.
  */
 export function linkDoWhatsApp(telefone: string | null | undefined): string | null {
+  const numero = normalizarTelefoneBrasileiro(telefone)
+  return numero ? `https://wa.me/${numero}` : null
+}
+
+/**
+ * O número em formato internacional só com dígitos (`5511988887777`), ou
+ * `null` quando não tem cara de telefone brasileiro válido.
+ *
+ * Extraída de `linkDoWhatsApp` para ser reusada pelo pareamento por código do
+ * WhatsApp, que precisa do mesmo número mas não de um link. A validação já
+ * separa celular de fixo e recusa número estrangeiro do mesmo tamanho, com
+ * teste travando cada caso — duplicar essa lógica criaria uma segunda verdade
+ * que divergiria da primeira na primeira mudança.
+ */
+export function normalizarTelefoneBrasileiro(
+  telefone: string | null | undefined,
+): string | null {
   if (!telefone) return null
 
   let numero = apenasDigitos(telefone)
@@ -55,12 +72,12 @@ function montar(numeroComDdi: string): string | null {
   // 13 dígitos = celular: todo celular do país recebeu o nono dígito, que é
   // sempre 9.
   if (numeroComDdi.length === 13) {
-    return primeiro === '9' ? `https://wa.me/${numeroComDdi}` : null
+    return primeiro === '9' ? numeroComDdi : null
   }
 
   // 12 dígitos = fixo: começa em 2, 3, 4 ou 5.
   if (primeiro && primeiro >= '2' && primeiro <= '5') {
-    return `https://wa.me/${numeroComDdi}`
+    return numeroComDdi
   }
 
   return null

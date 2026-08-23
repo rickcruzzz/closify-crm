@@ -5,6 +5,7 @@ import { randomBytes } from 'node:crypto'
 import { revalidatePath } from 'next/cache'
 
 import { appUrl } from '@/lib/app-url'
+import { normalizarTelefoneBrasileiro } from '@/lib/leads/whatsapp'
 import { mensagemBloqueioPro } from '@/lib/integrations/mensagem-bloqueio-pro'
 import { cifrar, decifrar } from '@/lib/integrations/crypto'
 import { createClient } from '@/lib/supabase/server'
@@ -15,6 +16,7 @@ import {
   criarInstancia,
   obterEstado,
   obterQrCode,
+  pedirCodigoDePareamento,
   recomecarSessaoDePareamento,
   ultimoErroDaInstancia,
 } from './api'
@@ -41,6 +43,10 @@ import {
  */
 export type ResultadoDaConexao =
   | { ok: true; qrCode: string | null; jaConectado?: boolean }
+  | { ok: false; erro: string }
+
+export type ResultadoDoCodigo =
+  | { ok: true; codigo: string }
   | { ok: false; erro: string }
 
 /** Só admin mexe em integração — mesma regra do Google Calendar e do Gmail. */
@@ -241,5 +247,80 @@ export async function estadoDaConexao(
     // Falhar aqui é normal enquanto a instância ainda está subindo — a tela
     // continua tentando em vez de mostrar erro no meio da leitura do QR.
     return { conectado: false, numero: null }
+  }
+}
+
+/**
+ * Conecta pelo código de 8 letras, em vez do QR Code.
+ *
+ * É o caminho mais confiável dos dois, e existe porque o QR tem uma janela
+ * curta demais: vive ~20s e a sessão inteira morre em ~160s, o que fazia o
+ * WhatsApp recusar a leitura com "verifique sua conexão e tente mais tarde".
+ * Digitar 8 letras não depende de câmera nem de tempo de foco — e funciona
+ * para quem abre o CRM no próprio celular, que não tem como escanear a
+ * própria tela.
+ *
+ * O número é validado pela MESMA função que o botão "Chamar no WhatsApp" usa
+ * (`normalizarTelefoneBrasileiro`), então um número torto é recusado aqui, com
+ * mensagem clara, em vez de virar um código que nunca chega.
+ */
+export async function conectarPorCodigo(
+  workspaceId: string,
+  telefone: string,
+): Promise<ResultadoDoCodigo> {
+  try {
+    const userId = await exigirAdmin(workspaceId)
+
+    const numero = normalizarTelefoneBrasileiro(telefone)
+    if (!numero) {
+      return {
+        ok: false,
+        erro: 'Informe o número com DDD, como (11) 98888-7777.',
+      }
+    }
+
+    // Mesmo caminho de `conectarWhatsapp`: reusa o token já gravado e só cria
+    // instância nova quando esta empresa nunca conectou antes.
+    let token = await obterTokenDaInstancia(workspaceId)
+    if (!token) {
+      token = randomBytes(24).toString('hex')
+      await criarInstancia(workspaceId, `velofunil-${workspaceId}`, token)
+    }
+
+    const segredo = process.env.EVOLUTION_WEBHOOK_SECRET
+    const webhookUrl = segredo
+      ? `${appUrl()}/api/webhooks/evolution/${encodeURIComponent(workspaceId)}/${segredo}`
+      : ''
+    await conectarInstancia(token, webhookUrl)
+
+    const codigo = await pedirCodigoDePareamento(token, numero)
+    if (!codigo) {
+      console.error('whatsapp: servidor não devolveu código', {
+        workspaceId,
+        motivo: await ultimoErroDaInstancia(workspaceId),
+      })
+      return { ok: false, erro: 'O servidor não gerou o código. Tente de novo em instantes.' }
+    }
+
+    const admin = createAdminClient()
+    await admin.from('integration_connections').upsert(
+      {
+        workspace_id: workspaceId,
+        provider: 'whatsapp',
+        status: 'disconnected',
+        external_id: workspaceId,
+        access_token_enc: cifrar(token) as unknown as never,
+        connected_by: userId,
+        scopes: [],
+      },
+      { onConflict: 'workspace_id,provider' },
+    )
+    revalidatePath('/settings')
+    return { ok: true, codigo }
+  } catch (err) {
+    return {
+      ok: false,
+      erro: err instanceof Error ? err.message : 'Não consegui falar com o servidor do WhatsApp.',
+    }
   }
 }
