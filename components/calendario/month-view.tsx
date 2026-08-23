@@ -58,7 +58,13 @@ export function MonthView({
               //
               // `min-h-28` porque o chip tem duas linhas (hora em cima,
               // cliente embaixo) — a altura anterior apertava três deles.
-              'hover:bg-accent/40 flex min-h-28 flex-col gap-1 p-1.5 transition-colors',
+              //
+              // `p-2` e não `p-1.5`: com 6px o marcador redondo do dia atual
+              // encostava na divisória e lia como grudado no canto. Um número
+              // solto aguenta essa margem; um círculo preenchido, não — ele
+              // ocupa a caixa inteira e qualquer folga que sobre vira o
+              // respiro visível.
+              'hover:bg-accent/40 flex min-h-28 flex-col gap-1 p-2 transition-colors',
               dia === hoje && 'bg-primary/[0.07]',
               // Dia de outro mês fica presente mas claramente fora: some por
               // opacidade, não por cor, para o número continuar legível a
@@ -68,13 +74,20 @@ export function MonthView({
           >
             <span
               className={cn(
+                // `size-6` em TODOS os dias, não só no de hoje: se o círculo
+                // existisse apenas na data atual, a linha de números daquela
+                // semana ficaria com uma altura diferente das outras.
                 'flex size-6 shrink-0 items-center justify-center self-start rounded-full text-xs leading-none tabular-nums',
                 dia === hoje
                   ? // Marcador redondo preenchido é a convenção de agenda
                     // (Google Calendar, Outlook, Pipedrive): a data de hoje
                     // se encontra num relance, sem precisar caçar cor de
                     // texto no meio dos eventos.
-                    'bg-primary text-primary-foreground font-semibold'
+                    //
+                    // `text-[11px]` porque o dígito dentro de um círculo cheio
+                    // lê maior que o mesmo dígito solto — igualar o tamanho da
+                    // fonte faria a data de hoje parecer de outro corpo.
+                    'bg-primary text-primary-foreground text-[11px] font-semibold'
                   : 'text-muted-foreground font-medium',
               )}
             >
