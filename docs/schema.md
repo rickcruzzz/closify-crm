@@ -7,6 +7,14 @@ Migrations novas mudam este arquivo com o tempo; ao suspeitar de
 desatualização, reconsulte o catálogo em vez de confiar cegamente nele (mesma
 regra de `docs/estado-atual.md`).
 
+**Reconferido em 23/08/2026 — estrutura intacta, regra nova.** A migration
+0050 não criou tabela, coluna nem enum: só uma função `returns trigger` e o
+gatilho dela em `workspace_members`. Por isso o catálogo continua idêntico
+(14 tabelas, 29 RPCs, 12 FKs, reconferidos nesta data pelo OpenAPI do
+PostgREST de produção) enquanto o comportamento do banco mudou — ver
+**Regras que vivem em trigger**, abaixo. Função de trigger não aparece entre
+as RPCs porque o PostgREST não expõe `returns trigger`, o que é o esperado.
+
 **Reconferido em 22/08/2026 — mudou.** A migration 0047 (WhatsApp pelo
 Evolution) acrescentou a **14ª tabela**, `whatsapp_webhook_events`, mais um
 índice funcional em `leads` e três funções. Conferido contra o banco real, não
@@ -236,6 +244,38 @@ relação — é o que o catálogo mostra, não omissão. `error_logs` também �
 zero-policy (RLS ligada, só `service_role` acessa), mesmo padrão de
 `asaas_webhook_events`.*
 
+## Regras que vivem em trigger, não em coluna
+
+Uma listagem de colunas, chaves e enums — que é o que este documento extrai —
+**não mostra nenhuma regra de negócio**. Elas ficam registradas aqui porque são
+invisíveis para quem inspeciona o catálogo do jeito normal, e porque este
+projeto já pagou cinco vezes a lição de descobrir isso tarde.
+
+| Tabela | Trigger | O que impede |
+|---|---|---|
+| `leads` | `validar_limite_de_leads` (0023, corrigida na 0026) | 301º contato num workspace Free |
+| `workspace_members` | `validar_limite_de_membros` (**0050**, 23/08) | 3º colaborador num workspace Free |
+| `deals`, `tasks` | validação de alvo (0038) | `lead_id`/`deal_id` de outra empresa |
+
+A **0050** é a mais recente e nasceu de um furo medido em produção: a trava de
+2 membros existia, mas só dentro da RPC `accept_workspace_invite` — e ninguém é
+obrigado a passar por convite. A policy de INSERT permite que um admin escreva
+direto na tabela, e a chave pública do Supabase está no HTML por design.
+Testado com sessão autenticada real de uma conta Free: **6 membros inseridos
+numa empresa cujo teto é 2**, sem convite, sem e-mail, sem tocar em Server
+Action nenhuma.
+
+A variação da lição, que vale registrar: a regra não estava numa Server Action
+— estava numa **RPC**, que já é melhor. Só que uma RPC protege *um* caminho até
+a tabela. Trigger protege todos.
+
+Duas propriedades das três triggers, iguais por decisão e não por acaso:
+lêem `pro_vigente()` e nunca a coluna `workspaces.plan` (doutrina travada desde
+a 0027 — a coluna é o último valor gravado e não sabe que o período pago
+venceu), e liberam quando `auth.uid()` é nulo, que é o caminho da service role:
+webhook, job de reconciliação e script de manutenção não são o abuso que elas
+combatem.
+
 ## Achado da inspeção: colunas que apontam para `auth.users` sem FK declarada
 
 `deals.owner_id`, `leads.owner_id`, `tasks.assignee_id`, `tasks.created_by`,
@@ -264,8 +304,13 @@ integridade referencial para essas colunas é garantida pela aplicação
 
 ## Resumo do catálogo
 
-12 tabelas no schema `public`, todas com Row Level Security ligada
-(`rls_enabled: true` em `list_tables`, confirmado, não suposto). 12
-relações de foreign key entre tabelas do schema; a maioria com `ON DELETE
+**14 tabelas** no schema `public`, todas com Row Level Security ligada
+(`rls_enabled: true` em `list_tables`, confirmado, não suposto). Este número
+dizia 12 até 23/08/2026 — ficou para trás quando a 0046 (`error_logs`) e a
+0047 (`whatsapp_webhook_events`) entraram. Reconferido lendo o documento
+OpenAPI que o PostgREST de produção serve, que é a mesma fonte que o app
+consome: 14 definições e 29 RPCs. 12
+relações de foreign key entre tabelas do schema (reconferidas na mesma
+leitura, este número continua certo); a maioria com `ON DELETE
 CASCADE` a partir de `workspaces`, exceto `deals.lead_id` (`SET NULL` — um
 negócio sobrevive à exclusão do lead vinculado).

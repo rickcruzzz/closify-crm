@@ -33,7 +33,7 @@ dado real; o que não está tem o motivo escrito ao lado.
 - [x] Parte premium (paga) — Asaas, Pix real recebido, webhook + reconciliação diária
 - [x] Integrações (API) — Google Calendar, Gmail, WhatsApp pelo Evolution
 - [x] Busca e Filtros — nome, e-mail, empresa, status, responsável, data
-- [x] Landing Page — com prints reais do produto
+- [x] Landing Page — prints reais, preço por empresa, sem prova social inventada
 - [x] Onboarding do Usuário — assistente de 4 passos + checklist derivado do estado
 - [x] Calendário — Mês, Semana e Agenda sobre as tarefas existentes
 - [x] Filtro de Período — 8 presets + intervalo customizado com range picker
@@ -109,7 +109,43 @@ vez de lista solta, workspace com muitos leads exigia rolar a lista inteira
 procurando pelo nome.
 
 **Landing Page**
-Página pública para apresentar o produto, gerar interesse e converter visitantes em leads.
+Página pública, e a única superfície que o tráfego pago vai encontrar. Sete
+seções, nesta ordem: hero, números, como funciona, funcionalidades, preço, FAQ
+e chamada final.
+
+*A promessa do hero é a vantagem que nenhum concorrente tem:* **R$ 49 por mês
+pela empresa inteira, não por vendedor.** Até 22/08 o hero prometia "contatos
+ilimitados" no plano grátis — falso, o Free comporta 300, e a própria página
+desmentia isso em outros três lugares. Prometer no topo o que a página nega
+embaixo é o primeiro dado que o visitante descobre que não bate, justamente
+enquanto decide se confia.
+
+*As funcionalidades são nomeadas pelo problema, não pelo recurso.* "Painel de
+resultados" virou "Quanto você tem para fechar este mês"; "Controle por
+colaborador" virou "Cada um vê o que precisa ver". Descrever o recurso produz
+uma página que qualquer CRM do mundo poderia assinar. São 8 cards — o oitavo é
+o **WhatsApp**, que não aparecia em lugar nenhum da landing apesar de ser o
+canal onde a PME brasileira de fato vende.
+
+*Imagem: híbrido, por causa do LCP.* O funil do hero é HTML puro, sem JS e sem
+imagem — é o maior elemento acima da dobra e uma imagem ali atrasaria a métrica
+que mais importa em tráfego pago. Os prints reais do produto (`public/produto/`,
+3 telas × 2 temas, 1440×900 em `deviceScaleFactor: 2`) entram **abaixo** da
+dobra: Kanban em "Como funciona", tela "Hoje" fechando a mesma seção, e
+Resultados no fim de "Funcionalidades". A troca claro/escuro é por CSS
+(`dark:hidden`), nunca por JS — decidir no cliente causaria descasamento de
+hidratação.
+
+*Sem prova social, e isso é decisão travada.* Nenhum depoimento, logo de
+cliente ou contador de empresas. A `StatsSection` já teve métrica copiada de
+concorrente e ela foi removida de propósito; com zero cliente externo pagante,
+qualquer número desses seria invenção. Entra quando houver cliente real.
+
+*Banner de consentimento (LGPD).* O Meta Pixel grava cookie de terceiro e só
+dispara depois do "Aceitar" — "Recusar" tem o mesmo tamanho e o mesmo peso
+visual, como a ANPD recomenda. Ele mora no rodapé da viewport e foi compactado
+para 122px no telefone (16% da tela): a primeira versão ocupava 206px e cobria
+exatamente o botão "Começar grátis", que é o destino de todo clique de anúncio.
 
 **Onboarding do Usuário**
 Fluxo guiado para ajudar o usuário a criar workspace, cadastrar lead e começar a usar o sistema rápido.
