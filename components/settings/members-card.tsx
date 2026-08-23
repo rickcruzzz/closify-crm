@@ -1,6 +1,7 @@
 'use client'
 
 import * as React from 'react'
+import { useRouter } from 'next/navigation'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { Controller, useForm } from 'react-hook-form'
 import { toast } from 'sonner'
@@ -96,6 +97,7 @@ export function MembersCard({
 
   // Workspace nunca fica com zero membros (quem cria já entra como admin), então
   // o estado vazio real é "só eu, sem convite pendente", comum em conta nova.
+  const router = useRouter()
   const isAlone = members.length <= 1 && invites.length === 0
 
   async function onInvite(values: InviteMemberValues) {
@@ -103,7 +105,18 @@ export function MembersCard({
     try {
       const result = await inviteMember(values)
       if (result?.error) {
-        toast.error(result.error)
+        // Recusa por limite de plano ganha o caminho junto, como já acontece
+        // na importação de planilha e ao criar empresa: dizer "faça upgrade"
+        // sem mostrar onde deixa a pessoa num beco, no exato momento em que
+        // ela demonstrou intenção de pagar.
+        const eLimiteDePlano =
+          result.error.includes('limite de') || result.error.includes('plano Free')
+        toast.error(result.error, {
+          duration: eLimiteDePlano ? 10_000 : undefined,
+          action: eLimiteDePlano
+            ? { label: 'Ver o Pro', onClick: () => router.push('/settings/billing') }
+            : undefined,
+        })
         return
       }
       toast.success('Convite enviado.')
