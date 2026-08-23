@@ -16,8 +16,34 @@ export class GoogleApiError extends Error {
 // autoriza envio de e-mail, e vice-versa. Menor privilégio: a pessoa concede
 // exatamente o que a tela pediu, visível na própria tela de consentimento do
 // Google.
+//
+// ## Por que `calendar.events.owned` e não `calendar.events`
+//
+// A verificação do Google reprovou a primeira submissão em 20/08 com a
+// pergunta certa: *"why narrower permissions cannot be used"*. E a resposta
+// honesta era que podiam.
+//
+//   calendar.events        eventos em TODOS os calendários — inclusive os de
+//                          terceiros que compartilharam acesso com a pessoa
+//   calendar.events.owned  eventos apenas nos calendários que ela POSSUI
+//
+// Este app cria evento em `calendars/primary` (ver `criarEventoNoCalendar`),
+// que é do próprio usuário. Nunca tocou em calendário de terceiro e não tem
+// funcionalidade que precise disso, então o escopo largo estava pedindo acesso
+// que o produto não usa — exatamente o que a política de menor privilégio
+// proíbe.
+//
+// Considerado e descartado: `calendar.app.created` é ainda mais restrito, mas
+// obriga a criar um calendário SECUNDÁRIO só do app. O evento deixaria de cair
+// na agenda principal de quem usa, que é onde ele precisa aparecer para a
+// pessoa não perder a reunião — trocaria uma objeção de verificação por um
+// defeito de produto.
+//
+// **Ao mudar esta constante, o escopo precisa ser atualizado também na tela de
+// consentimento do Google Cloud Console.** Eles têm que bater exatamente: a
+// verificação compara o que o app pede com o que está configurado lá.
 const ESCOPO_POR_PROVIDER: Record<'google_calendar' | 'gmail', string> = {
-  google_calendar: 'https://www.googleapis.com/auth/calendar.events',
+  google_calendar: 'https://www.googleapis.com/auth/calendar.events.owned',
   gmail: 'https://www.googleapis.com/auth/gmail.send',
 }
 
@@ -182,7 +208,7 @@ export async function criarEventoDeCalendario(
 export async function testarCalendario(accessToken: string): Promise<boolean> {
   // `calendars.get` (o endpoint usado antes aqui) exige calendar.readonly/
   // calendar/calendar.calendars, a lista oficial de escopos aceitos por
-  // esse método não inclui `calendar.events`, que é o único que a conexão
+  // esse método não inclui `calendar.events.owned`, que é o único que a conexão
   // pede (menor privilégio). Mesma causa raiz do bug já corrigido em
   // `testarGmail`: testar com endpoint que a conexão não tem permissão de
   // chamar sempre devolve 403 e marca conexão saudável como quebrada.
@@ -247,7 +273,7 @@ export async function enviarEmailGmail(
 // endpoint próprio, e tanto `GET /gmail/v1/users/me/profile` quanto
 // `GET /calendar/v3/calendars/primary` pedem escopo de LEITURA que a conexão
 // nunca tem (ela só pede o escopo mínimo de escrita, `gmail.send` ou
-// `calendar.events`, ver `ESCOPO_POR_PROVIDER`). Testar com endpoint que a
+// `calendar.events.owned`, ver `ESCOPO_POR_PROVIDER`). Testar com endpoint que a
 // própria integração não tem permissão de chamar sempre devolve 403 e marca
 // conexão saudável como quebrada, dois bugs iguais, achados em sequência.
 //
