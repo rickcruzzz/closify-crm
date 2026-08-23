@@ -167,13 +167,13 @@ export function EvolutionConnectDialog({
   // O QR expira em segundos — sem renovar sozinho, a pessoa veria um código
   // morto na tela sem saber por quê.
   React.useEffect(() => {
-    if (!open || conectado || erro) return
+    if (!open || conectado || erro || modo !== 'qr') return
     const intervalo = setInterval(async () => {
       const resultado = await renovarQrCode(workspaceId)
       if (resultado.ok) setQrCode(resultado.qrCode)
     }, INTERVALO_RENOVAR_QR_MS)
     return () => clearInterval(intervalo)
-  }, [open, conectado, erro, workspaceId])
+  }, [open, conectado, erro, modo, workspaceId])
 
   // Reabre a sessão antes de o servidor matá-la (ver INTERVALO_RECONECTAR_MS).
   // Sem isto, a tela mostrava indefinidamente o QR de uma sessão encerrada, e
@@ -185,8 +185,12 @@ export function EvolutionConnectDialog({
   // preventiva, portanto, nunca reconectou nada: a sessão morria no horário do
   // mesmo jeito. `renovarQrCode(id, true)` recria a instância, que é o único
   // caminho que o servidor aceita.
+  //
+  // `modo !== 'qr'` é o guarda mais importante deste arquivo: este efeito APAGA
+  // e recria a instância, e fazer isso enquanto alguém digita um código de
+  // pareamento invalidaria justamente o código que está na tela dela.
   React.useEffect(() => {
-    if (!open || conectado || erro) return
+    if (!open || conectado || erro || modo !== 'qr') return
     const intervalo = setInterval(async () => {
       const resultado = await renovarQrCode(workspaceId, true)
       if (!resultado.ok) return
@@ -198,7 +202,7 @@ export function EvolutionConnectDialog({
       if (resultado.qrCode) setQrCode(resultado.qrCode)
     }, INTERVALO_RECONECTAR_MS)
     return () => clearInterval(intervalo)
-  }, [open, conectado, erro, workspaceId])
+  }, [open, conectado, erro, modo, workspaceId])
 
   // A sessão pode ainda estar subindo quando o QR é pedido: `/instance/connect`
   // responde 200 ao ACEITAR o pedido, não ao terminar de parear. O servidor já
@@ -206,7 +210,7 @@ export function EvolutionConnectDialog({
   // desistir — era exatamente esta janela que devolvia
   // `no QR code available. Please wait a moment and try again` em vermelho.
   React.useEffect(() => {
-    if (!open || conectado || erro || qrCode || carregando) return
+    if (!open || conectado || erro || qrCode || carregando || modo !== 'qr') return
     if (tentativaQr >= MAX_TENTATIVAS_QR) {
       setErro(
         'O servidor do WhatsApp não conseguiu abrir a sessão para gerar o código. Tente de novo em alguns minutos; se continuar, fale com o suporte.',
@@ -221,7 +225,7 @@ export function EvolutionConnectDialog({
       })()
     }, INTERVALO_TENTAR_QR_MS)
     return () => clearTimeout(t)
-  }, [open, conectado, erro, qrCode, carregando, tentativaQr, workspaceId])
+  }, [open, conectado, erro, qrCode, carregando, tentativaQr, modo, workspaceId])
 
   // Checa se a leitura já aconteceu, para o diálogo fechar sozinho — ninguém
   // deveria precisar clicar em "já escaneei".
