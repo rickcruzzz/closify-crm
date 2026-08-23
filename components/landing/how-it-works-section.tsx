@@ -101,6 +101,26 @@ export function HowItWorksSection() {
           <ProdutoPrint nome="kanban" alt="funil de vendas · Acme Corp" />
         </RevealOnScroll>
 
+        {/* O quarto passo que a página não mostrava: o que a pessoa VÊ no dia
+            seguinte. Os três passos acima explicam a montagem; esta tela é o
+            uso — e é ela que devolve o dinheiro do assinante todo dia de manhã.
+
+            O print já existia em `public/produto/` desde a captura original e
+            nunca teve consumidor: 387 KB parados no repositório enquanto a
+            seção mais importante do produto ficava sem imagem. */}
+        <RevealOnScroll delay={400} className="mt-14">
+          <div className="mx-auto mb-6 flex max-w-2xl flex-col items-center gap-2 text-center">
+            <h3 className="text-xl font-semibold tracking-[-0.02em] md:text-2xl">
+              E aí é só abrir e trabalhar
+            </h3>
+            <p className="text-muted-foreground text-balance">
+              Todo dia o sistema já sabe com quem você precisa falar — o que venceu,
+              o que é de hoje e o que vem em seguida.
+            </p>
+          </div>
+          <ProdutoPrint nome="hoje" alt="o que precisa da sua atenção · Acme Corp" />
+        </RevealOnScroll>
+
         <RevealOnScroll delay={490}>
           <p className="text-muted-foreground mt-6 flex items-center justify-center gap-1.5 text-center text-sm">
             Leva menos de dois minutos do cadastro ao primeiro contato

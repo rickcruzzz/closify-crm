@@ -1,5 +1,6 @@
 import {
   BarChart3,
+  MessageCircle,
   KanbanSquare,
   ListChecks,
   Building2,
@@ -37,9 +38,9 @@ const features: Feature[] = [
     delay: 0,
   },
   {
-    title: 'Todos os seus contatos num só lugar',
+    title: 'O histórico fica com a empresa',
     description:
-      'Cadastre, busque e filtre seus clientes em potencial, com o histórico completo de ligações, e-mails e conversas de cada um.',
+      'Cada ligação, e-mail e conversa fica registrada no contato. Quando um vendedor sai, o relacionamento continua aqui — não no celular dele.',
     icon: ListChecks,
     accent: {
       text: 'text-violet-500 dark:text-violet-400',
@@ -64,9 +65,9 @@ const features: Feature[] = [
     delay: 260,
   },
   {
-    title: 'Painel de resultados',
+    title: 'Quanto você tem para fechar este mês',
     description:
-      'Gráficos simples pra ver quanto você tem em negociação e quantos clientes viraram venda, sem montar fórmula nenhuma.',
+      'O valor que está em jogo, o que já virou venda e o que travou no caminho. Sem montar fórmula, sem esperar alguém consolidar planilha.',
     icon: BarChart3,
     accent: {
       text: 'text-emerald-500 dark:text-emerald-400',
@@ -89,8 +90,9 @@ const features: Feature[] = [
     delay: 130,
   },
   {
-    title: 'Notificações e prazos',
-    description: 'Nunca perca um prazo: veja os negócios mais próximos do vencimento.',
+    title: 'A tela que diz o que fazer hoje',
+    description:
+      'Abriu o sistema, já sabe com quem falar: o que venceu, o que é de hoje e o que vem nos próximos dias, em ordem de urgência.',
     icon: Bell,
     accent: {
       text: 'text-amber-500 dark:text-amber-400',
@@ -100,9 +102,24 @@ const features: Feature[] = [
     delay: 260,
   },
   {
-    title: 'Controle por colaborador',
+    // O canal onde a PME brasileira realmente vende não aparecia em lugar
+    // nenhum desta página. É a feature mais reconhecível do produto para
+    // quem chega de anúncio, e estava invisível.
+    title: 'Fala com o cliente pelo WhatsApp',
     description:
-      'Escolha o que cada pessoa da equipe pode ver e fazer, dono da empresa vê tudo, colaborador vê só o que precisa.',
+      'Abra a conversa direto do contato, sem procurar o número na agenda. Conectando o WhatsApp da empresa, a mensagem que chega vira contato e tarefa sozinha.',
+    icon: MessageCircle,
+    accent: {
+      text: 'text-emerald-500 dark:text-emerald-400',
+      bg: 'bg-emerald-500/10 dark:bg-emerald-400/10',
+      hover: 'pointer:hover:bg-emerald-500/[0.04] dark:pointer:hover:bg-emerald-400/[0.04]',
+    },
+    delay: 0,
+  },
+  {
+    title: 'Cada um vê o que precisa ver',
+    description:
+      'Dono acompanha a operação inteira; colaborador trabalha na parte dele. Sem planilha compartilhada onde qualquer um apaga a linha errada.',
     icon: ShieldCheck,
     accent: {
       text: 'text-red-500 dark:text-red-400',
@@ -124,10 +141,11 @@ export function FeaturesSection() {
             <span aria-hidden className="bg-primary h-px w-4" />
           </span>
           <h2 className="text-3xl font-semibold tracking-[-0.02em] md:text-4xl">
-            Tudo que seu funil precisa
+            O que você para de fazer na mão
           </h2>
           <p className="text-muted-foreground text-lg text-balance">
-            Sem planilha, sem complicação. Só o essencial para vender mais.
+            Cada recurso aqui existe porque alguém estava resolvendo aquilo com
+            planilha, post-it ou memória — e perdendo venda no caminho.
           </p>
         </RevealOnScroll>
 
@@ -136,19 +154,35 @@ export function FeaturesSection() {
             truque que dá o acabamento de grade contínua. */}
         <div className="bg-border ring-border grid grid-cols-1 gap-px overflow-hidden rounded-xl ring-1 sm:grid-cols-2 lg:grid-cols-3">
           {features.map((feature, i) => {
-            // Sete não é múltiplo de 2 nem de 3: sobra sempre um card sozinho
-            // na última linha do grid. Sem span, a célula vazia ao lado pinta
-            // a cor de fundo do grid (o truque de `bg-border`+`gap-px` logo
-            // acima) e vira um retângulo escuro sem nada dentro. O último
-            // card ocupa a linha inteira nos dois breakpoints em vez disso,
-            // resolve sem depender de quantos cards existirem no futuro.
+            // Célula vazia no fim do grid pinta a cor do fundo (o truque de
+            // `bg-border`+`gap-px` logo acima) e vira um retângulo escuro sem
+            // nada dentro. O último card estica para cobrir o que sobrar — e
+            // quanto sobra depende de quantos cards existem, então a conta é
+            // feita, não fixada.
+            //
+            // Com 8 cards: em 2 colunas fecha exato (nada a esticar); em 3
+            // colunas sobra uma célula, e o último ocupa duas. Se a lista
+            // mudar de tamanho de novo, isto continua certo sozinho.
             const ultimo = i === features.length - 1
+            const sobramEm2 = features.length % 2
+            const sobramEm3 = features.length % 3
+            const spanUltimo = ultimo
+              ? cn(
+                  sobramEm2 === 1 && 'sm:col-span-2',
+                  sobramEm3 === 1 && 'lg:col-span-3',
+                  sobramEm3 === 2 && 'lg:col-span-2',
+                )
+              : undefined
+            // O card só vira faixa horizontal quando de fato atravessa a
+            // linha inteira; esticado por uma coluna, o layout de coluna
+            // continua sendo o certo.
+            const viraFaixa = ultimo && sobramEm2 === 1
 
             return (
               <RevealOnScroll
                 key={feature.title}
                 delay={feature.delay}
-                className={cn(ultimo && 'sm:col-span-2 lg:col-span-3')}
+                className={spanUltimo}
               >
                 <Card
                   className={cn(
@@ -160,7 +194,7 @@ export function FeaturesSection() {
                   <CardContent
                     className={cn(
                       'flex flex-col gap-3',
-                      ultimo && 'sm:flex-row sm:items-center sm:justify-center sm:gap-4',
+                      viraFaixa && 'sm:flex-row sm:items-center sm:justify-center sm:gap-4',
                     )}
                   >
                     {/* Sem o `01`–`07` que ficava ao lado do ícone.

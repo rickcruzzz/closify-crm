@@ -46,10 +46,10 @@ export function FaqSection() {
             <span aria-hidden className="bg-primary h-px w-4" />
           </span>
           <h2 className="text-3xl font-semibold tracking-[-0.02em] md:text-4xl">
-            Perguntas frequentes
+            Antes de criar a conta
           </h2>
           <p className="text-muted-foreground text-lg text-balance">
-            O que as pessoas costumam querer saber antes de criar a conta.
+            As perguntas que chegam com mais frequência, respondidas sem enrolação.
           </p>
         </RevealOnScroll>
 

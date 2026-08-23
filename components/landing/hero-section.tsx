@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { ArrowRight } from 'lucide-react'
 
 import { buttonVariants } from '@/components/ui/button'
+import { FREE_LEAD_LIMIT } from '@/lib/plans'
 import { cn } from '@/lib/utils'
 import { PipelinePreviewCard } from '@/components/landing/pipeline-preview-card'
 import { SegmentBadge } from '@/components/landing/segment-badge'
@@ -96,9 +97,19 @@ export function HeroSection() {
               Ver como funciona
             </ScrollLink>
           </div>
+          {/* Esta linha dizia "gerencie contatos ilimitados" no plano grátis.
+              Era falso: o Free comporta {FREE_LEAD_LIMIT} contatos, e o próprio
+              site diz isso em outros três lugares (planos, FAQ e "como
+              funciona"). Prometer no topo o que a página desmente embaixo não é
+              exagero de marketing — é a primeira coisa que o visitante descobre
+              que não bate, no lugar onde ele ainda está decidindo se confia.
+
+              O que substitui é a vantagem que o produto tem DE VERDADE e que
+              nenhum concorrente mapeado oferece: preço por empresa, não por
+              usuário. */}
           <p className="text-muted-foreground animate-in fade-in slide-in-from-bottom-3 fill-mode-both ease-entrada duration-entrada delay-passo-4 text-sm text-balance">
-            Comece grátis e gerencie contatos ilimitados. Por apenas R$ 49/mês, toda a
-            sua equipe trabalha em um só lugar.
+            Grátis para começar, com {FREE_LEAD_LIMIT} contatos. No Pro, R$ 49 por mês
+            pela empresa inteira — não por vendedor.
           </p>
         </div>
 

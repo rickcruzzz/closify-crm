@@ -79,12 +79,19 @@ export function BannerConsentimento() {
       role="dialog"
       aria-label="Aviso de cookies"
       aria-live="polite"
-      className="fixed inset-x-0 bottom-0 z-50 p-4 sm:p-6"
+      // `p-3` no telefone: medido em 390×844, a versão anterior ocupava 206px
+      // — 27% da tela — e cobria exatamente o CTA do hero, que começa no mesmo
+      // pixel. Quem chega de anúncio via o "Começar grátis" tapado por um aviso
+      // de cookie. Banner de consentimento tem que ser inevitável, não
+      // volumoso.
+      className="fixed inset-x-0 bottom-0 z-50 p-3 sm:p-6"
     >
-      <div className="bg-card border-border mx-auto flex max-w-3xl flex-col gap-4 rounded-xl border p-4 shadow-lg sm:flex-row sm:items-center sm:gap-6 sm:p-5">
-        <p className="text-muted-foreground flex-1 text-sm">
-          Usamos cookies para entender como as pessoas chegam até aqui e melhorar
-          o Velo Funil. Você escolhe.{' '}
+      <div className="bg-card border-border mx-auto flex max-w-3xl flex-col gap-3 rounded-xl border p-3 shadow-lg sm:flex-row sm:items-center sm:gap-6 sm:p-5">
+        {/* O texto encurtou pelo mesmo motivo da altura: três linhas de
+            explicação no telefone empurram os botões para fora do polegar.
+            Diz o que é feito, com o link para quem quiser o detalhe. */}
+        <p className="text-muted-foreground flex-1 text-xs sm:text-sm">
+          Usamos cookies para saber de onde vêm as visitas.{' '}
           <Link
             href="/privacidade"
             className="text-foreground underline underline-offset-4 hover:no-underline"
@@ -98,12 +105,17 @@ export function BannerConsentimento() {
         <div className="flex shrink-0 gap-2">
           <Button
             variant="outline"
-            className="flex-1 sm:flex-none"
+            size="sm"
+            className="flex-1 sm:size-auto sm:flex-none"
             onClick={() => responder('recusado')}
           >
             Recusar
           </Button>
-          <Button className="flex-1 sm:flex-none" onClick={() => responder('aceito')}>
+          <Button
+            size="sm"
+            className="flex-1 sm:size-auto sm:flex-none"
+            onClick={() => responder('aceito')}
+          >
             Aceitar
           </Button>
         </div>

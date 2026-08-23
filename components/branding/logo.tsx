@@ -36,7 +36,7 @@ export function Logo({
   className?: string
 }) {
   return (
-    <div className={cn('flex items-center gap-2', className)}>
+    <div className={cn('flex shrink-0 items-center gap-2', className)}>
       <div
         className={cn(
           'bg-primary text-primary-foreground flex shrink-0 items-center justify-center rounded-lg',
@@ -63,7 +63,12 @@ export function Logo({
           verdade, daí o `sr-only`, que é o mesmo recurso já usado em
           `components/ui/sheet.tsx` e no link de pular para o conteúdo. */}
       {showWordmark && (
-        <span className="text-lg font-semibold tracking-tight">
+        // `whitespace-nowrap`: medido em 390px de largura, o wordmark quebrava
+        // em duas linhas ("Velo" em cima, "Funil" embaixo) e a marca ficava com
+        // 56px de altura onde uma linha ocupa 28. Não era falta de espaço na
+        // página — era o cabeçalho espremendo o logo entre o seletor de tema, o
+        // CTA e o botão de menu, e nada impedindo a quebra.
+        <span className="text-lg font-semibold tracking-tight whitespace-nowrap">
           <span className="sr-only">Velo Funil</span>
           <span aria-hidden>
             Velo <span className="text-muted-foreground font-normal">Funil</span>
