@@ -4,11 +4,100 @@ Documento de continuidade. É lido no começo de toda sessão (referenciado no
 [CLAUDE.md](../CLAUDE.md)) para que uma conversa nova, ou outra conta, comece
 sabendo o que já foi feito, o que foi decidido e onde estão as armadilhas.
 
-**Atualizado em:** 24/08/2026 (landing repositionada no inimigo certo: 82% da PME brasileira vende por WhatsApp, e a página atacava a planilha; seção de confiança nova; comparação de preço; e o print da tela "Hoje" AINDA tinha o jargão banido, apesar do commit de 23/08 dizer o contrário)
+**Atualizado em:** 24/08/2026, tarde (WhatsApp: loop infinito no diálogo de
+pareamento corrigido, reconexão automática + e-mail de aviso quando uma sessão
+JÁ conectada cai, e a estabilidade medida piorou — 0% de tempo logado em 13
+minutos seguidos, contra 26% da medição anterior)
+
+**Antes disso, 24/08/2026, manhã** (landing repositionada no inimigo certo: 82% da PME brasileira vende por WhatsApp, e a página atacava a planilha; seção de confiança nova; comparação de preço; e o print da tela "Hoje" AINDA tinha o jargão banido, apesar do commit de 23/08 dizer o contrário)
 
 **Antes disso, 23/08/2026** (landing auditada: promessa falsa no hero, logo quebrado no telefone, banner de cookies cobrindo o CTA, e prints mostrando o jargão que a própria página baniu; PRD, schema e grafo realinhados)
 
 **Antes disso, 22/08/2026** (funções rodavam em Washington DC com o banco em São Paulo, corrigido na config do projeto e medido: /dashboard 1221ms → 400ms; modo claro sem escada de superfícies, refeito; jargão remanescente e telas de erro; WhatsApp sem QR por Postgres esgotado na VPS; migration 0049 provada desnecessária e removida)
+
+## WhatsApp: loop infinito corrigido, mas a instabilidade piorou (24/08, tarde)
+
+O dono reportou o diálogo de conexão girando pra sempre, com a mensagem
+"verifique sua conexão" reaparecendo. Investigado a fundo contra o servidor
+real, dois defeitos de código e um achado de infraestrutura que nenhum dos
+dois resolve sozinho.
+
+### O loop era real, e tinha causa exata
+
+`components/settings/evolution-connect-dialog.tsx` tinha quatro laços de
+repetição. Só o primeiro (esperar o primeiro QR) tinha teto — 6 tentativas,
+~30s, depois erro de verdade. **Os outros três rodavam pra sempre**: renovar
+QR a cada 20s, recriar a sessão inteira a cada 110s, checar se conectou a
+cada 3s, nenhum deles jamais setava `erro`. Se o pareamento nunca completasse
+do lado do WhatsApp, a tela girava QR novo sem admitir que algo estava
+errado — e "verifique sua conexão e tente mais tarde" já estava documentado
+aqui como mensagem **do próprio WhatsApp**, não deste código (grep confirma:
+a string só existe em comentário, nunca é gerada pela aplicação).
+
+Ganharam um teto de 5 minutos (`TEMPO_MAXIMO_DE_TENTATIVA_MS`), depois do
+qual a tela desiste e nomeia a causa mais provável (IP de datacenter) em vez
+de girar pra sempre.
+
+### O achado maior: sessão CONECTADA caindo em silêncio
+
+Consultado o banco de produção: 2 conexões de WhatsApp existem, batendo
+exatamente com as 2 instâncias reais no servidor Evolution (`/instance/all`,
+a rota certa — `/instance/fetchInstances`, da Evolution API Node original,
+dá 404 aqui, é Evolution GO). Uma estava genuinamente conectada
+(`Connected:true, LoggedIn:true`, 161ms), a outra genuinamente desconectada
+sem atividade desde 21/08.
+
+O webhook (`app/api/webhooks/evolution/.../route.ts`) já tratava queda de
+sessão conectada — `LoggedOut`/`Disconnected`/`StreamReplaced` marcavam
+`status: 'error'` com `last_error`. Mas isso **nunca chegava a ninguém**: só
+aparecia como texto passivo em Configurações → Integrações, sem e-mail, sem
+alerta ativo, e nenhum cron ou reconexão automática existia — confirmado
+lendo os dois crons reais (`reconciliar-assinaturas`,
+`limpar-eventos`), nenhum toca WhatsApp.
+
+Corrigido: o webhook agora distingue os dois motivos de queda. `LoggedOut` é
+a pessoa desvinculando o aparelho pelo próprio celular — só pareamento novo
+resolve, vai direto pro aviso. `Disconnected`/`StreamReplaced` tentam
+reconectar sozinhos primeiro (`tentarReconectarAutomaticamente`, reusando o
+token já gravado, o mesmo caminho que `conectarWhatsapp` usa quando um
+humano clica "Conectar"), e só avisam por e-mail
+(`lib/emails/whatsapp-desconectado.ts`, pro `created_by` do workspace,
+mesmo padrão de destinatário que os e-mails de cobrança já usam) quando essa
+tentativa falha. A checagem de `status === 'connected'` antes de agir garante
+no máximo um e-mail por queda, não um por webhook repetido.
+
+### A medição que veio depois, e piorou o diagnóstico
+
+Rodado `scripts/diagnostico/vigiar-sessao-whatsapp.mjs` por 13 minutos contra
+a instância que estava conectada. Resultado: **0% de tempo com `LoggedIn:true`
+na janela inteira** — pior que a medição anterior (26% em 13 minutos, já
+registrada aqui). `Connected` oscilava (62%), `LoggedIn` nunca voltou a `true`
+uma vez sequer durante os 13 minutos.
+
+Os logs do servidor (`/instance/logs/{id}`) não ajudaram a explicar: presos
+em 23/08 03:12, mais de 24h atrás — o endpoint não reflete atividade recente,
+o que também significa que `ultimoErroDaInstancia` (usado para mostrar erro
+detalhado na tela) pode estar mostrando informação velha sem avisar que é
+velha.
+
+**Testado de novo, minutos depois do fim da medição: `LoggedIn:true`.** A
+sessão se recuperou sozinha. Isso descarta a hipótese de processo travado
+(zumbi) — é oscilação de verdade, o whatsmeow reconectando e caindo por
+conta própria, consistente com a hipótese já registrada aqui: desde
+janeiro/2026 a Meta detecta por fingerprint de comportamento, e IP de
+datacenter (a VPS é Hostinger) é o sinal mais forte que ela procura.
+
+**O que a correção de hoje resolve, e o que não resolve:** o e-mail garante
+que uma queda sustentada vira aviso em vez de silêncio — antes disso não
+existia rede de segurança nenhuma. Mas não elimina a oscilação em si: se o
+whatsmeow se reconecta sozinho antes do próximo webhook de queda, o cliente
+nunca é avisado (correto, seria alarme falso), mas a mensagem que chegou
+durante a janela de "logado sozinho, mas de fato não estava recebendo" pode
+se perder do mesmo jeito. A causa raiz continua sendo a mesma: proxy
+residencial brasileiro (~R$18/mês) reduz a chance de a Meta marcar o IP como
+automação; sem ele, a oscilação medida hoje é o comportamento esperado, não
+um bug a mais para caçar.
+
 
 ## A landing vendia o produto errado, para o inimigo errado (24/08)
 

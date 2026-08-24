@@ -2,6 +2,11 @@ import { timingSafeEqual } from 'node:crypto'
 
 import { NextResponse } from 'next/server'
 
+import { appUrl } from '@/lib/app-url'
+import { conectarInstancia, obterEstado } from '@/lib/integrations/evolution/api'
+import { obterTokenDaInstancia } from '@/lib/integrations/evolution/token'
+import { renderWhatsappDesconectadoEmail } from '@/lib/emails/whatsapp-desconectado'
+import { getResend } from '@/lib/resend/client'
 import { createAdminClient } from '@/lib/supabase/admin'
 
 /**
@@ -133,6 +138,90 @@ function telefoneDoRemetente(chat: string | undefined, isGroup: boolean | undefi
   return chat.split('@')[0] || null
 }
 
+/**
+ * Tenta levantar de novo uma sessão que estava conectada e caiu.
+ *
+ * Devolve `true` só quando o servidor confirma `LoggedIn: true` depois da
+ * tentativa — nunca assume sucesso pelo `/instance/connect` não ter
+ * estourado, porque essa chamada responde 200 ao ACEITAR o pedido, não ao
+ * terminar de conectar (mesma armadilha documentada em `obterQrCode`).
+ *
+ * Nunca deixa escapar exceção: uma falha aqui (Evolution fora do ar,
+ * timeout) deve levar ao caminho de "marcar erro e avisar", não derrubar o
+ * webhook com 500 e fazer o Evolution reenviar o mesmo evento de queda.
+ */
+async function tentarReconectarAutomaticamente(workspaceId: string): Promise<boolean> {
+  try {
+    const token = await obterTokenDaInstancia(workspaceId)
+    if (!token) return false
+
+    const segredo = process.env.EVOLUTION_WEBHOOK_SECRET
+    const webhookUrl = segredo
+      ? `${appUrl()}/api/webhooks/evolution/${encodeURIComponent(workspaceId)}/${segredo}`
+      : ''
+    const { jaConectado } = await conectarInstancia(token, webhookUrl)
+    if (jaConectado) return true
+
+    // `conectarInstancia` pode devolver um QR em vez de `jaConectado`, se o
+    // Evolution decidiu que a sessão precisa de pareamento novo (ex.: o
+    // armazenamento local da instância se perdeu). Um QR não confirma nada
+    // sozinho — confere o estado de verdade antes de dizer que reconectou.
+    const { estado } = await obterEstado(token)
+    return estado === 'open'
+  } catch (err) {
+    console.error('Webhook Evolution: reconexão automática falhou', err)
+    return false
+  }
+}
+
+/**
+ * Avisa quem criou a empresa que o WhatsApp caiu e a reconexão automática
+ * não resolveu sozinha.
+ *
+ * Mesmo padrão de resolução de destinatário que `buscarAssinante`
+ * (`lib/asaas/aplicar-evento.ts`) já usa para os e-mails de cobrança:
+ * `workspaces.created_by` é quem recebe, porque é o único vínculo entre
+ * workspace e conta de login que o schema garante (sem tabela própria de
+ * "quem administra notificação").
+ *
+ * Engole qualquer falha de propósito — mesma razão de `aplicarEventoAsaas`:
+ * o estado já foi gravado antes desta chamada, o e-mail é aviso, não é o
+ * efeito. Deixar a exceção escapar faria o Evolution reenviar o evento de
+ * queda pra sempre por causa de um problema no Resend, não na conexão.
+ */
+async function avisarQueoWhatsappCaiu(
+  admin: ReturnType<typeof createAdminClient>,
+  workspaceId: string,
+): Promise<void> {
+  try {
+    const { data: workspace } = await admin
+      .from('workspaces')
+      .select('name, created_by')
+      .eq('id', workspaceId)
+      .maybeSingle()
+    if (!workspace?.created_by) return
+
+    const { data: dono } = await admin.auth.admin.getUserById(workspace.created_by)
+    const email = dono?.user?.email
+    if (!email) return
+
+    const { subject, html } = renderWhatsappDesconectadoEmail({
+      workspaceName: workspace.name,
+      appUrl: appUrl(),
+    })
+
+    const { error } = await getResend().emails.send({
+      from: 'Velo Funil <suporte@velofunil.com.br>',
+      to: email,
+      subject,
+      html,
+    })
+    if (error) console.error('Webhook Evolution: falha ao enviar aviso de queda', error)
+  } catch (err) {
+    console.error('Webhook Evolution: falha ao montar aviso de queda', err)
+  }
+}
+
 export async function POST(
   requisicao: Request,
   { params }: { params: Promise<{ workspaceId: string; segredo: string }> },
@@ -202,7 +291,7 @@ export async function POST(
   //
   // `LoggedOut` também chega durante o pareamento normal (antes de haver
   // número vinculado, o whatsmeow considera a sessão deslogada), então só
-  // marca erro se a conexão JÁ estava conectada — senão toda tentativa de
+  // mexe em algo se a conexão JÁ estava conectada — senão toda tentativa de
   // conectar terminaria com a tela dizendo que caiu.
   if (evento && DESCONECTOU.includes(evento)) {
     const { data: conexaoAtual } = await admin
@@ -212,15 +301,43 @@ export async function POST(
       .eq('workspace_id', workspaceId)
       .maybeSingle()
 
-    if (conexaoAtual?.status === 'connected') {
-      await admin
-        .from('integration_connections')
-        .update({ status: 'error', last_error: 'O WhatsApp desconectou.' })
-        .eq('provider', 'whatsapp')
-        .eq('workspace_id', workspaceId)
+    if (conexaoAtual?.status !== 'connected') {
+      return NextResponse.json({ ok: true })
     }
 
-    return NextResponse.json({ ok: true })
+    // `LoggedOut` é a pessoa desvinculando o aparelho pelo próprio celular —
+    // tentar reconectar não resolveria, só um pareamento novo (QR/código)
+    // resolve. `Disconnected`/`StreamReplaced` costumam ser queda de rede ou
+    // o processo do Evolution reiniciando: nesses dois, o mesmo caminho que
+    // `conectarWhatsapp` usa para reconectar manualmente (`/instance/connect`
+    // reaproveitando o token já gravado) tende a levantar a sessão sozinho,
+    // sem pedir QR novo — é o "caminho comum numa API não oficial" que
+    // `lib/integrations/evolution/actions.ts` já documentava, só que
+    // disparado automaticamente em vez de esperar alguém notar e clicar.
+    const reconectouSozinho = evento !== 'LoggedOut' && (await tentarReconectarAutomaticamente(workspaceId))
+
+    if (reconectouSozinho) {
+      await admin
+        .from('integration_connections')
+        .update({ status: 'connected', last_error: null })
+        .eq('provider', 'whatsapp')
+        .eq('workspace_id', workspaceId)
+      return NextResponse.json({ ok: true, reconectado: true })
+    }
+
+    await admin
+      .from('integration_connections')
+      .update({ status: 'error', last_error: 'O WhatsApp desconectou.' })
+      .eq('provider', 'whatsapp')
+      .eq('workspace_id', workspaceId)
+
+    // Só chega aqui numa transição REAL de conectado -> caído (o `if` acima
+    // já filtrou o resto), então isto dispara no máximo uma vez por queda —
+    // a próxima notificação deste mesmo evento vai encontrar `status` já em
+    // `error` e sair pelo `return` do topo, sem reenviar o aviso.
+    await avisarQueoWhatsappCaiu(admin, workspaceId)
+
+    return NextResponse.json({ ok: true, reconectado: false })
   }
 
   if (!evento || !MENSAGEM.includes(evento)) {

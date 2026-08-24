@@ -7,7 +7,8 @@ import { revalidatePath } from 'next/cache'
 import { appUrl } from '@/lib/app-url'
 import { normalizarTelefoneBrasileiro } from '@/lib/leads/whatsapp'
 import { mensagemBloqueioPro } from '@/lib/integrations/mensagem-bloqueio-pro'
-import { cifrar, decifrar } from '@/lib/integrations/crypto'
+import { cifrar } from '@/lib/integrations/crypto'
+import { obterTokenDaInstancia } from '@/lib/integrations/evolution/token'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 
@@ -66,20 +67,6 @@ async function exigirAdmin(workspaceId: string): Promise<string> {
     throw new Error('Só quem administra a empresa pode conectar o WhatsApp.')
   }
   return user.id
-}
-
-/** Lê o token cifrado da conexão já existente, decifrado. `null` se não existe. */
-async function obterTokenDaInstancia(workspaceId: string): Promise<string | null> {
-  const admin = createAdminClient()
-  const { data } = await admin
-    .from('integration_connections')
-    .select('access_token_enc')
-    .eq('workspace_id', workspaceId)
-    .eq('provider', 'whatsapp')
-    .maybeSingle()
-
-  if (!data?.access_token_enc) return null
-  return decifrar(data.access_token_enc as unknown as string)
 }
 
 /**

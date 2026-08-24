@@ -7,13 +7,21 @@ Migrations novas mudam este arquivo com o tempo; ao suspeitar de
 desatualização, reconsulte o catálogo em vez de confiar cegamente nele (mesma
 regra de `docs/estado-atual.md`).
 
+**Reconferido em 24/08/2026 — coluna nova, RPC nova.** As migrations 0051-0053
+(reverse trial) acrescentaram `workspaces.trial_ate` (`timestamptz`,
+nullable) e a RPC `em_trial(workspace_id)`. Contagem de tabelas continua em
+**14** — a 0051 não criou tabela —, mas RPCs subiram de 29 para **30**,
+conferido pelo OpenAPI do PostgREST de produção, não pela leitura das
+migrations. `pro_vigente()` já existia; o que mudou foi a lógica **dentro**
+dela, invisível para quem só lista assinaturas de função — ver **Regras que
+vivem em trigger**, abaixo, seção "reverse trial" acrescentada nesta data.
+
 **Reconferido em 23/08/2026 — estrutura intacta, regra nova.** A migration
 0050 não criou tabela, coluna nem enum: só uma função `returns trigger` e o
-gatilho dela em `workspace_members`. Por isso o catálogo continua idêntico
-(14 tabelas, 29 RPCs, 12 FKs, reconferidos nesta data pelo OpenAPI do
-PostgREST de produção) enquanto o comportamento do banco mudou — ver
-**Regras que vivem em trigger**, abaixo. Função de trigger não aparece entre
-as RPCs porque o PostgREST não expõe `returns trigger`, o que é o esperado.
+gatilho dela em `workspace_members`. Por isso o catálogo continuava idêntico
+naquela data (14 tabelas, 29 RPCs, 12 FKs) enquanto o comportamento do banco
+mudou. Função de trigger não aparece entre as RPCs porque o PostgREST não
+expõe `returns trigger`, o que é o esperado.
 
 **Reconferido em 22/08/2026 — mudou.** A migration 0047 (WhatsApp pelo
 Evolution) acrescentou a **14ª tabela**, `whatsapp_webhook_events`, mais um
@@ -60,6 +68,19 @@ tabelas expostas pelo PostgREST em produção continua nas mesmas 13
 Versão renderizada, imagem única com todas as tabelas, chaves e legendas:
 [schema.svg](schema.svg).
 
+**`schema.svg` está um campo atrás do Mermaid abaixo desde 24/08/2026**
+(falta `trial_ate` em `workspaces`). Tentativa de regeneração nesta sessão:
+`chrome-headless-shell` baixa mas falha ao subir no Windows local (dois erros
+distintos de lançamento, sem sandbox funcional). Comando pra regenerar em
+ambiente com Chromium headless de verdade (Linux/Mac, ou WSL):
+
+```sh
+npx -y @mermaid-js/mermaid-cli -i docs/schema.md -o docs/schema.svg -b transparent
+```
+
+O bloco Mermaid abaixo é a fonte verdadeira e já está correto — é ele que este
+documento pede para editar e ler como texto, o SVG é conveniência visual.
+
 Mesmo diagrama em Mermaid, editável e legível como texto puro:
 
 ```mermaid
@@ -73,6 +94,7 @@ classDiagram
         +text tamanho_equipe
         +text cnpj
         +text logo_url
+        +timestamptz trial_ate "nullable, migration 0051"
         +uuid created_by "→ auth.users, sem FK"
         +timestamptz created_at
     }
@@ -172,6 +194,7 @@ classDiagram
         +bytea refresh_token_enc
         +timestamptz token_expires_at
         +timestamptz last_synced_at
+        +text last_error "nullable, migration 0034 — faltava neste diagrama"
         +uuid connected_by "→ auth.users, sem FK"
         +timestamptz created_at
     }
@@ -276,6 +299,23 @@ venceu), e liberam quando `auth.uid()` é nulo, que é o caminho da service role
 webhook, job de reconciliação e script de manutenção não são o abuso que elas
 combatem.
 
+### Reverse trial (0051-0053, 24/08): a mesma função, lógica nova por dentro
+
+`pro_vigente(workspace_id)` não ganhou coluna nem parâmetro — só passou a
+consultar duas fontes em vez de uma: assinatura Asaas vigente **ou**
+`workspaces.trial_ate > now()`. Invisível para quem lista apenas as
+assinaturas de função no catálogo; só aparece lendo o corpo dela.
+
+A trigger de limite de membros (0050, tabela acima) e a de criação de
+workspace passaram a checar `pro_vigente() and not em_trial(workspace_id)`,
+não `pro_vigente()` sozinho. A razão é um furo medido em produção antes da
+correção: durante os 7 dias de trial dava para criar 5 empresas ou convidar
+10 colaboradores e **ficar com esse estoque depois do trial acabar**, porque
+`pro_vigente()` incluía o trial e a trigger só olhava esse booleano. `em_trial`
+isola o caso — o trial libera o *uso* de funcionalidades Pro, nunca a
+*permanência* de estoque (empresas extras, colaboradores extras) além do
+plano Free.
+
 ## Achado da inspeção: colunas que apontam para `auth.users` sem FK declarada
 
 `deals.owner_id`, `leads.owner_id`, `tasks.assignee_id`, `tasks.created_by`,
@@ -307,10 +347,11 @@ integridade referencial para essas colunas é garantida pela aplicação
 **14 tabelas** no schema `public`, todas com Row Level Security ligada
 (`rls_enabled: true` em `list_tables`, confirmado, não suposto). Este número
 dizia 12 até 23/08/2026 — ficou para trás quando a 0046 (`error_logs`) e a
-0047 (`whatsapp_webhook_events`) entraram. Reconferido lendo o documento
+0047 (`whatsapp_webhook_events`) entraram. **30 RPCs** desde 24/08/2026 (era
+29): a `em_trial`, da migration 0053, é a única função nova — `trial_ate` é
+coluna, não RPC, e por isso não conta aqui. Reconferido lendo o documento
 OpenAPI que o PostgREST de produção serve, que é a mesma fonte que o app
-consome: 14 definições e 29 RPCs. 12
-relações de foreign key entre tabelas do schema (reconferidas na mesma
-leitura, este número continua certo); a maioria com `ON DELETE
-CASCADE` a partir de `workspaces`, exceto `deals.lead_id` (`SET NULL` — um
-negócio sobrevive à exclusão do lead vinculado).
+consome. 12 relações de foreign key entre tabelas do schema (reconferidas na
+mesma leitura, este número continua certo); a maioria com `ON DELETE CASCADE`
+a partir de `workspaces`, exceto `deals.lead_id` (`SET NULL` — um negócio
+sobrevive à exclusão do lead vinculado).

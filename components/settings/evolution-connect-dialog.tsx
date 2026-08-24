@@ -85,6 +85,33 @@ const INTERVALO_TENTAR_QR_MS = 2_000
 const MAX_TENTATIVAS_QR = 6
 
 /**
+ * Por quanto tempo total insistir em conectar antes de desistir e mostrar erro.
+ *
+ * ## O bug que isto corrige (24/08)
+ *
+ * Os três efeitos abaixo (renovar QR a cada 20s, recriar sessão a cada 110s,
+ * checar se conectou a cada 3s) rodavam **para sempre** enquanto
+ * `!conectado && !erro` — e nenhum deles jamais setava `erro`. Se o
+ * pareamento nunca completasse do lado do WhatsApp, a tela girava QR novo
+ * indefinidamente, sem nunca admitir que algo estava errado. Reportado pelo
+ * dono como "loop infinito", junto do sintoma que já estava documentado em
+ * `lib/integrations/evolution/actions.ts`: o WhatsApp recusando a leitura
+ * com "verifique sua conexão e tente mais tarde" — mensagem NATIVA do
+ * WhatsApp, não deste código, sinal de que o servidor está rejeitando o
+ * pareamento antes de completar (hipótese mais forte: IP de datacenter da
+ * VPS, que o WhatsApp trata como sinal de automação desde jan/2026).
+ *
+ * ## Por que 5 minutos, não menos
+ *
+ * `INTERVALO_RECONECTAR_MS` é 110s — um teto menor que ~2 ciclos completos
+ * (220s) desistiria antes da segunda tentativa de sessão nova sequer
+ * terminar, o que pareceria abandonar cedo demais para quem só estava sendo
+ * lento pra pegar o celular. 5 minutos cobre 2 recriações de sessão inteiras
+ * com folga.
+ */
+const TEMPO_MAXIMO_DE_TENTATIVA_MS = 5 * 60_000
+
+/**
  * Diálogo de conexão do WhatsApp via Evolution API.
  *
  * ## Por que o aviso de risco vai aqui, não só na documentação
@@ -110,6 +137,10 @@ export function EvolutionConnectDialog({
   const [carregando, setCarregando] = React.useState(false)
   const [erro, setErro] = React.useState<string | null>(null)
   const [conectado, setConectado] = React.useState(false)
+  // Marca quando o primeiro QR chegou — é a partir daqui que o teto de 5
+  // minutos conta. `Date.now()` num `useState` inicial travaria no valor do
+  // PRIMEIRO render do componente, não de quando a conexão de fato começou.
+  const inicioDaTentativaRef = React.useRef<number | null>(null)
   // Só serve para reagendar a retentativa: sem ele, uma tentativa que volta
   // sem QR não muda estado nenhum, as dependências do efeito ficam iguais, o
   // cleanup não roda e nunca há uma próxima tentativa.
@@ -130,6 +161,12 @@ export function EvolutionConnectDialog({
    */
   const iniciarConexao = React.useCallback(
     async (silencioso = false) => {
+      // Reseta o relógio do teto de 5 minutos: as duas chamadas não-silenciosas
+      // (abrir o diálogo, clicar "Tentar de novo") são pedidos NOVOS de
+      // conectar. `silencioso` nunca é passado como `true` neste arquivo hoje,
+      // mas o guarda continua certo se um dia existir renovação de fundo: essa
+      // não deveria reiniciar o prazo de quem já está tentando há um tempo.
+      if (!silencioso) inicioDaTentativaRef.current = Date.now()
       if (!silencioso) setCarregando(true)
       setErro(null)
       const resultado = await conectarWhatsapp(workspaceId)
@@ -161,19 +198,40 @@ export function EvolutionConnectDialog({
     setModo('qr')
     setCodigo(null)
     setTelefone('')
+    // `iniciarConexao()` abaixo já zera o relógio do teto de 5 minutos (é uma
+    // chamada não-silenciosa) — reabrir o diálogo é um pedido novo de
+    // conectar, não continuação do anterior.
     void iniciarConexao()
   }, [open, iniciarConexao])
+
+  /**
+   * Verdadeiro quando já passou tempo demais tentando, sem nunca conectar.
+   *
+   * Chamado no TOPO dos três efeitos sem teto (renovar QR, recriar sessão,
+   * checar conexão) — cada um confere isto antes de agendar a próxima
+   * rodada, e desiste com uma mensagem que nomeia a causa mais provável em
+   * vez de deixar a pessoa achando que o produto travou.
+   */
+  const estourouOTempo = React.useCallback(() => {
+    const inicio = inicioDaTentativaRef.current
+    if (inicio === null || Date.now() - inicio < TEMPO_MAXIMO_DE_TENTATIVA_MS) return false
+    setErro(
+      'Não conseguimos confirmar a conexão depois de várias tentativas. O WhatsApp pode estar recusando o pareamento vindo do nosso servidor — tente de novo em alguns minutos, ou fale com o suporte se continuar.',
+    )
+    return true
+  }, [])
 
   // O QR expira em segundos — sem renovar sozinho, a pessoa veria um código
   // morto na tela sem saber por quê.
   React.useEffect(() => {
     if (!open || conectado || erro || modo !== 'qr') return
     const intervalo = setInterval(async () => {
+      if (estourouOTempo()) return
       const resultado = await renovarQrCode(workspaceId)
       if (resultado.ok) setQrCode(resultado.qrCode)
     }, INTERVALO_RENOVAR_QR_MS)
     return () => clearInterval(intervalo)
-  }, [open, conectado, erro, modo, workspaceId])
+  }, [open, conectado, erro, modo, workspaceId, estourouOTempo])
 
   // Reabre a sessão antes de o servidor matá-la (ver INTERVALO_RECONECTAR_MS).
   // Sem isto, a tela mostrava indefinidamente o QR de uma sessão encerrada, e
@@ -192,6 +250,7 @@ export function EvolutionConnectDialog({
   React.useEffect(() => {
     if (!open || conectado || erro || modo !== 'qr') return
     const intervalo = setInterval(async () => {
+      if (estourouOTempo()) return
       const resultado = await renovarQrCode(workspaceId, true)
       if (!resultado.ok) return
       if (resultado.jaConectado) {
@@ -202,7 +261,7 @@ export function EvolutionConnectDialog({
       if (resultado.qrCode) setQrCode(resultado.qrCode)
     }, INTERVALO_RECONECTAR_MS)
     return () => clearInterval(intervalo)
-  }, [open, conectado, erro, modo, workspaceId])
+  }, [open, conectado, erro, modo, workspaceId, estourouOTempo])
 
   // A sessão pode ainda estar subindo quando o QR é pedido: `/instance/connect`
   // responde 200 ao ACEITAR o pedido, não ao terminar de parear. O servidor já
@@ -232,6 +291,7 @@ export function EvolutionConnectDialog({
   React.useEffect(() => {
     if (!open || conectado || erro) return
     const intervalo = setInterval(async () => {
+      if (estourouOTempo()) return
       const resultado = await estadoDaConexao(workspaceId)
       if (resultado.conectado) {
         setConectado(true)
@@ -239,7 +299,7 @@ export function EvolutionConnectDialog({
       }
     }, INTERVALO_CHECAR_ESTADO_MS)
     return () => clearInterval(intervalo)
-  }, [open, conectado, erro, workspaceId])
+  }, [open, conectado, erro, workspaceId, estourouOTempo])
 
   // Fecha sozinho um instante depois de conectar, para a pessoa ver a
   // confirmação antes da tela sumir.

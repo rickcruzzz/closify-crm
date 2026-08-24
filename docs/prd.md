@@ -30,10 +30,13 @@ dado real; o que não está tem o motivo escrito ao lado.
 - [x] Multi usuário — convite por e-mail, papéis admin/membro
 - [x] Multi empresa — workspace isolado por RLS, provado 14/14 com sessão real
 - [x] Permissões por usuário — checadas em RLS **e** na UI
-- [x] Parte premium (paga) — Asaas, Pix real recebido, webhook + reconciliação diária
+- [x] Parte premium (paga) — Asaas, reverse trial de 7 dias, checkout de
+      Pix/boleto dentro do produto, webhook + reconciliação diária
 - [x] Integrações (API) — Google Calendar, Gmail, WhatsApp pelo Evolution
 - [x] Busca e Filtros — nome, e-mail, empresa, status, responsável, data
-- [x] Landing Page — prints reais, preço por empresa, sem prova social inventada
+- [x] Landing Page — dor do WhatsApp (não planilha), 7 dias de trial vendidos,
+      seção de confiança, prints reais legíveis no zoom e no mobile, sem prova
+      social inventada
 - [x] Onboarding do Usuário — assistente de 4 passos + checklist derivado do estado
 - [x] Calendário — Mês, Semana e Agenda sobre as tarefas existentes
 - [x] Filtro de Período — 8 presets + intervalo customizado com range picker
@@ -109,16 +112,41 @@ vez de lista solta, workspace com muitos leads exigia rolar a lista inteira
 procurando pelo nome.
 
 **Landing Page**
-Página pública, e a única superfície que o tráfego pago vai encontrar. Sete
-seções, nesta ordem: hero, números, como funciona, funcionalidades, preço, FAQ
-e chamada final.
+Página pública, e a única superfície que o tráfego pago vai encontrar. Oito
+seções, nesta ordem: hero, números, como funciona, funcionalidades,
+**confiança**, preço, FAQ e chamada final.
+
+*O inimigo da página mudou em 24/08, com número atrás.* Até então ela atacava
+a planilha ("Da planilha ao funil em três passos"). Medido na 12ª Pesquisa
+Pulso do Sebrae (2026): **82% dos pequenos negócios brasileiros têm o WhatsApp
+como principal canal de venda**, 76% vendem por lá — quem não tem planilha lia
+"exporte seu .csv" e concluía que o produto era para outra pessoa. A headline
+virou **"O WhatsApp guarda a conversa. Não guarda o cliente."**: não compete
+com o WhatsApp, o complementa, porque "mas eu já uso WhatsApp" é a objeção nº 1
+do público. "Como funciona" segue a mesma troca: passo 1 deixou de exigir
+planilha ("Traga sua planilha" → "Traga quem já é seu cliente").
 
 *A promessa do hero é a vantagem que nenhum concorrente tem:* **R$ 49 por mês
-pela empresa inteira, não por vendedor.** Até 22/08 o hero prometia "contatos
-ilimitados" no plano grátis — falso, o Free comporta 300, e a própria página
-desmentia isso em outros três lugares. Prometer no topo o que a página nega
-embaixo é o primeiro dado que o visitante descobre que não bate, justamente
-enquanto decide se confia.
+pela empresa inteira, não por vendedor.** A comparação de preço, na seção de
+planos, torna isso concreto: Agendor cobra a partir de R$ 53 **por usuário**,
+cinco pessoas dão R$ 265/mês contra os R$ 49 daqui — preço de tabela pública
+deles, não prova social inventada. Até 22/08 o hero prometia "contatos
+ilimitados" no plano grátis — falso, prometer no topo o que a página nega
+embaixo é o primeiro dado que o visitante descobre que não bate.
+
+*O hero agora vende o que o produto de fato entrega.* Desde a migration 0051
+toda empresa nasce com **7 dias de Pro completo**, sem cartão — e até 24/08 a
+landing seguia anunciando o freemium antigo ("grátis pra sempre, sem prazo pra
+decidir"), vendendo menos do que o sistema dá. Corrigido no hero, na faixa de
+números, no cabeçalho de planos e na primeira pergunta da FAQ.
+
+*Seção de confiança, nova em 24/08, substitui a prova social que o produto não
+tem.* Auditadas seis landings de referência (Agendor, Pipedrive, Attio,
+Basecamp, Tally, Page AI): todas sustentam a página em "N mil empresas" ou
+depoimento com nome — com zero cliente externo pagante, copiar isso deixaria
+buraco onde mais dói. Em vez disso, quatro garantias conferíveis (isolamento
+por RLS, dados em `sa-east-1`, cartão que nunca passa pelo nosso servidor,
+cancelamento sem multa) e o CNPJ, antes preso só nas páginas legais.
 
 *As funcionalidades são nomeadas pelo problema, não pelo recurso.* "Painel de
 resultados" virou "Quanto você tem para fechar este mês"; "Controle por
@@ -136,10 +164,35 @@ Resultados no fim de "Funcionalidades". A troca claro/escuro é por CSS
 (`dark:hidden`), nunca por JS — decidir no cliente causaria descasamento de
 hidratação.
 
-*Sem prova social, e isso é decisão travada.* Nenhum depoimento, logo de
-cliente ou contador de empresas. A `StatsSection` já teve métrica copiada de
+No telefone, o print encolhia para 21% do tamanho original (a tela é
+desenhada em 1440px, a moldura mede ~307px) — texto de 14px virava mancha
+cinza ilegível. Corrigido em 24/08 com recorte: abaixo de `sm` a imagem
+renderiza a 300% da largura do container, deslocada para mostrar o canto que
+importa (título, busca, primeiras colunas), com `overflow-hidden` cortando o
+resto. No desktop, o `sizes` pedia exatamente a largura da moldura (1160px) —
+zoom acima de 105% já borrava; agora pede 2048px, com folga de 1,5x.
+
+*Sem prova social inventada, e isso é decisão travada.* Nenhum depoimento, logo
+de cliente ou contador de empresas. A `StatsSection` já teve métrica copiada de
 concorrente e ela foi removida de propósito; com zero cliente externo pagante,
-qualquer número desses seria invenção. Entra quando houver cliente real.
+qualquer número desses seria invenção. A seção de confiança (acima) é o que
+substitui isso com transparência verificável em vez de número forjado. Entra
+depoimento real quando houver cliente disposto a dar um.
+
+*Sem travessão no texto que o cliente lê.* Removido de 48 lugares em 24/08 —
+landing, telas de erro, e-mails transacionais, páginas legais — por ser um dos
+sinais mais reconhecíveis de texto gerado por máquina; cada ocorrência foi
+reescrita pela pontuação que o caso pedia (ponto final, dois-pontos, vírgula),
+não trocada por hífen.
+
+*Nome civil do titular (MEI) e telefone cru, fora da vitrine.* Razão social
+("64.543.748 ORLANDO..." — dado da Receita) e o número do WhatsApp por extenso
+saíram da seção de confiança e do rodapé em 24/08: reforço visual não precisa
+de nome de pessoa física, e o link `wa.me` já abre a conversa sem o número
+escrito do lado. Continuam onde são exigência, não escolha de marca: nas
+páginas legais (LGPD, Art. 9º, I, exige identificar o controlador) e nos
+avisos de fatura (o nome aparece no extrato do cartão de qualquer jeito,
+avisar antes evita contestação).
 
 *Banner de consentimento (LGPD).* O Meta Pixel grava cookie de terceiro e só
 dispara depois do "Aceitar" — "Recusar" tem o mesmo tamanho e o mesmo peso
@@ -262,6 +315,37 @@ não protegem mais. As camadas construídas (limite por idade da conexão, nenhu
 função que aceite lista de destinatários, assinatura só dos dois eventos
 necessários) reduzem muito. **Não zeram.**
 
+**Sessão que cai deixou de ser silenciosa (24/08).** Medido contra produção
+antes da correção: a sessão conectada oscilava de estado durante o uso normal,
+não só durante o pareamento — o mesmo achado de uma medição anterior (26% de
+tempo logado numa janela de 13 minutos, ver `docs/estado-atual.md`). Até então,
+uma queda virava só um `last_error` passivo na aba Integrações, que ninguém via
+a menos que abrisse a tela por acaso — para um produto que promete "não perder
+venda por esquecimento", perder a própria conexão em silêncio é o mesmo defeito
+ao contrário.
+
+O webhook (`app/api/webhooks/evolution/[workspaceId]/[segredo]/route.ts`) agora
+distingue os dois motivos de queda que o `whatsmeow` reporta: `LoggedOut` é a
+pessoa desvinculando o aparelho pelo próprio celular — só um pareamento novo
+resolve, então vai direto para o aviso. `Disconnected`/`StreamReplaced` costumam
+ser queda de rede ou o processo do Evolution reiniciando — para esses dois, o
+webhook **tenta reconectar sozinho**, reaproveitando o token já gravado (o
+mesmo caminho que `conectarWhatsapp` usa quando um humano clica "Conectar"),
+antes de admitir que caiu. Só manda e-mail para quem criou a empresa
+(`lib/emails/whatsapp-desconectado.ts`) quando essa tentativa automática
+falha — e só uma vez por queda: a checagem de `status === 'connected'` antes de
+agir garante que webhooks repetidos do mesmo evento não reenviem o aviso.
+
+O diálogo de conexão (`components/settings/evolution-connect-dialog.tsx`) tinha
+o defeito irmão do lado do pareamento: três dos quatro laços de repetição
+(renovar QR a cada 20s, recriar sessão a cada 110s, checar conexão a cada 3s)
+rodavam para sempre sem nunca desistir, reportado como "loop infinito" — o
+sintoma real era o WhatsApp recusando a leitura com a própria mensagem dele,
+"verifique sua conexão e tente mais tarde", nunca gerada por este código.
+Ganharam um teto de 5 minutos, depois do qual a tela admite que não conseguiu e
+nomeia a causa mais provável (IP de datacenter da VPS) em vez de girar QR novo
+para sempre.
+
 **Resultados (métricas)**
 Cards com Contatos, Negócios abertos, Valor no funil e Viraram venda.
 Gráfico de funil feito com Recharts.
@@ -317,11 +401,54 @@ tráfego antes de chegar no servidor.
 
 ### Monetização (Asaas)
 
-Plano Free: 1 empresa, até 2 colaboradores e 300 contatos (`FREE_LEAD_LIMIT`, `lib/plans.ts` — o número já subiu de 50 e este documento tinha ficado para trás; a trava real vive numa trigger do banco, migration 0026, não na Server Action).
-Multi-empresa é recurso do Pro, sem esse limite, o teto de colaboradores não
-segura nada: bastava criar uma empresa nova para cada dupla.
-Plano Pro: colaboradores e leads ilimitados por R$49/mês.
-Cliente e assinatura criados via API do Asaas, com cobrança recorrente e webhook para ativação automática.
+**Reverse trial desde 24/08 (migration 0051), decisão de produto para vender
+ao máximo em vez de reter ao mínimo.** Toda empresa nasce com **7 dias de Pro
+completo** — multi-empresa, colaboradores e contatos ilimitados, sem pedir
+cartão — em vez de nascer no Free. Passado o prazo, sem assinatura, a empresa
+cai para o Free de verdade. Reverse trial converte historicamente 18-32%
+contra 2-8% de freemium puro: quem experimenta o produto inteiro sente a
+perda de recurso ao voltar para o teto, o que freemium nunca cria.
+
+`pro_vigente(workspace_id)` (RPC, `security definer`) passou a considerar
+duas fontes, não uma: assinatura paga vigente **ou** `workspaces.trial_ate >
+now()`. É a única função que qualquer trigger de limite pode consultar — nunca
+a coluna `workspaces.plan`, doutrina travada desde a 0027, porque o trial
+também teria uma "data que ninguém sabe que passou".
+
+**O trial dá funcionalidade, não estoque, e isso levou uma correção
+(migration 0053).** Achado próprio: durante os 7 dias dava para criar 5
+empresas, ou convidar 10 colaboradores, e ficar com esse estoque depois do
+trial acabar — porque a trigger de limite só olhava `pro_vigente()`, que
+inclui o trial. A nova função `em_trial(workspace_id)` isola só o caso do
+trial, e as triggers de limite de membro e criação de workspace passaram a
+exigir `pro_vigente() and not em_trial()` — Pro pago libera estoque
+permanente, trial libera só o uso temporário das funcionalidades.
+
+**Plano Free volta a ser apertado depois do trial (migration 0052):** 1
+empresa, até `FREE_MEMBER_LIMIT` = **2** colaboradores e `FREE_LEAD_LIMIT` =
+**50** contatos (`lib/plans.ts`). O número passou por 300 numa correção
+anterior e voltou a 50 nesta rodada — a landing vende "grátis pra sempre" como
+chamariz de baixo atrito, não como plano generoso; quem precisa de mais sente
+o teto rápido e assina.
+
+Multi-empresa é recurso do Pro (e do trial), sem esse limite o teto de
+colaboradores não segura nada — bastava criar uma empresa nova para cada
+dupla. Plano Pro: colaboradores e leads ilimitados por R$49/mês, pela empresa
+inteira, não por vendedor.
+
+Cliente e assinatura criados via API do Asaas, com cobrança recorrente e
+webhook para ativação automática.
+
+**Checkout dentro do produto desde 24/08.** "Assinar Pro" abria a página do
+Asaas em outra aba — a pessoa saía do produto no momento de maior intenção de
+compra, e a tela do Asaas mostra o nome civil do titular (para MEI, sem opção
+de nome fantasia desde 15/11/2023, dado da Receita). Pix e boleto passaram a
+renderizar dentro de um diálogo do próprio produto (`pagar-dialog.tsx`): QR
+Code real, código copia-e-cola, linha digitável formatada no padrão FEBRABAN,
+com polling que confere a confirmação a cada 5s e para quando a aba está em
+segundo plano. Cartão continua no Asaas de propósito — processar número de
+cartão pelo nosso servidor colocaria o projeto no escopo de PCI-DSS, o que não
+compensa para um SaaS deste porte.
 
 ## 4. Personas de Usuário
 
