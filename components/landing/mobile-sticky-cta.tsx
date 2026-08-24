@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { ArrowRight } from 'lucide-react'
 
 import { buttonVariants } from '@/components/ui/button'
+import { useHeroCtaVisivel } from '@/hooks/use-hero-cta-visivel'
 import { cn } from '@/lib/utils'
 
 /**
@@ -17,27 +18,22 @@ import { cn } from '@/lib/utils'
  * novo perto do CTA final pra não duplicar dois botões iguais na mesma tela.
  */
 export function MobileStickyCta() {
-  const [heroVisivel, setHeroVisivel] = React.useState(true)
+  // A visibilidade do hero vem do hook compartilhado, e não de um observer
+  // próprio: a navbar precisa da MESMA resposta para esconder o CTA dela
+  // quando esta barra sobe, e dois observers independentes discordariam na
+  // fronteira — o instante em que os dois botões apareceriam juntos.
+  const heroVisivel = useHeroCtaVisivel()
   const [finalVisivel, setFinalVisivel] = React.useState(false)
 
   React.useEffect(() => {
-    const heroCta = document.getElementById('hero-cta')
     const finalCta = document.getElementById('final-cta')
-    if (!heroCta || !finalCta) return
+    if (!finalCta) return
 
-    const heroObserver = new IntersectionObserver(([entry]) =>
-      setHeroVisivel(entry.isIntersecting),
-    )
     const finalObserver = new IntersectionObserver(([entry]) =>
       setFinalVisivel(entry.isIntersecting),
     )
-    heroObserver.observe(heroCta)
     finalObserver.observe(finalCta)
-
-    return () => {
-      heroObserver.disconnect()
-      finalObserver.disconnect()
-    }
+    return () => finalObserver.disconnect()
   }, [])
 
   const mostrar = !heroVisivel && !finalVisivel

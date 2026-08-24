@@ -16,6 +16,7 @@ import {
 import { Logo } from '@/components/branding/logo'
 import { ScrollLink } from '@/components/landing/scroll-link'
 import { NavCtaLink } from '@/components/landing/nav-cta-link'
+import { useHeroCtaVisivel } from '@/hooks/use-hero-cta-visivel'
 import { cn } from '@/lib/utils'
 
 const navLinks = [
@@ -26,6 +27,9 @@ const navLinks = [
 ] as const
 
 export function PublicNavbar() {
+  // Fonte única compartilhada com `mobile-sticky-cta` — ver o hook.
+  const heroVisivel = useHeroCtaVisivel()
+
   const [menuAberto, setMenuAberto] = React.useState(false)
 
   return (
@@ -95,9 +99,30 @@ export function PublicNavbar() {
               custaria caminho de conversão em troca de nada, já que ali ele
               cabe. Abaixo de 360 o mesmo "Começar grátis" continua no menu
               lateral e no Hero, que fica logo abaixo. */}
+          {/* No CELULAR este botão some quando a barra fixa do rodapé sobe.
+
+              Medido em 24/08: ao rolar, os dois apareciam juntos — mesmo
+              texto, mesma cor, dois botões idênticos na mesma tela, somando
+              138px (16% da viewport) de moldura fixa. `mobile-sticky-cta`
+              existe para SUBSTITUIR este numa tela pequena, não para
+              acompanhá-lo; dois CTAs iguais competindo dividem a atenção em
+              vez de somar.
+
+              No desktop (`md:`) nada muda: lá a barra do rodapé nem existe. */}
           <NavCtaLink
             href="/cadastro"
-            className={cn(buttonVariants(), 'hidden min-h-12 min-[340px]:inline-flex md:min-h-8')}
+            className={cn(
+              buttonVariants(),
+              'min-h-12 md:min-h-8',
+              // Trocar a STRING inteira, não somar `max-md:hidden` por cima:
+              // medido, `min-[340px]:inline-flex` vence a classe somada e o
+              // botão continuava visível. Duas utilities de `display` no mesmo
+              // elemento é briga de especificidade que o Tailwind resolve pela
+              // ordem no CSS gerado, não pela ordem que se escreve aqui.
+              heroVisivel
+                ? 'hidden min-[340px]:inline-flex'
+                : 'hidden md:inline-flex',
+            )}
           >
             Começar grátis
           </NavCtaLink>

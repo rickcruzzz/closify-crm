@@ -84,14 +84,38 @@ export function BannerConsentimento() {
       // pixel. Quem chega de anúncio via o "Começar grátis" tapado por um aviso
       // de cookie. Banner de consentimento tem que ser inevitável, não
       // volumoso.
-      className="fixed inset-x-0 bottom-0 z-50 p-3 sm:p-6"
+      // ## Card no canto, não faixa de largura total
+      //
+      // Sendo `fixed`, o banner sempre cobre a base da VIEWPORT — e é ali que
+      // fica o fim da primeira dobra. Encolher a altura só adia: já cobriu o
+      // "Começar grátis" em 23/08 (206px) e, depois de compactado para 122px,
+      // voltou a cobrir a linha do preço em 24/08.
+      //
+      // Tentativa descartada: reservar espaço com `padding-bottom` no body.
+      // Medido, não resolve — aquilo protege o FIM DO DOCUMENTO, e o problema
+      // é a dobra, que o elemento fixo cobre de qualquer jeito.
+      //
+      // O que resolve é ele deixar de ocupar a largura inteira. Como card
+      // ancorado à esquerda com largura limitada, a faixa inferior continua
+      // livre à direita, e o conteúdo centralizado do hero (título, CTA,
+      // preço) deixa de ficar sistematicamente atrás dele. É o padrão que
+      // Vercel, Linear e Stripe usam, e não custa nada em conformidade: o
+      // aviso segue inevitável, com "Recusar" do mesmo tamanho de "Aceitar".
+      //
+      // No TELEFONE não existe canto: `max-w-md` (448px) é maior que a tela,
+      // e o card ocupa a largura toda de qualquer jeito. Ali o que resta é
+      // comprimir. Decomposto em 390×844: 121px totais = 48 de padding + 32 de
+      // texto + 28 de botão + gaps. O padding externo caiu para `p-2` e o gap
+      // interno para `gap-2`; o texto encurtou. O piso é o alvo de toque de
+      // 44px dos botões, que não se mexe.
+      className="fixed bottom-0 left-0 z-50 w-full max-w-md p-2 sm:p-4"
     >
-      <div className="bg-card border-border mx-auto flex max-w-3xl flex-col gap-3 rounded-xl border p-3 shadow-lg sm:flex-row sm:items-center sm:gap-6 sm:p-5">
+      <div className="bg-card border-border flex flex-col gap-2 rounded-xl border p-3 shadow-lg">
         {/* O texto encurtou pelo mesmo motivo da altura: três linhas de
             explicação no telefone empurram os botões para fora do polegar.
             Diz o que é feito, com o link para quem quiser o detalhe. */}
         <p className="text-muted-foreground flex-1 text-xs sm:text-sm">
-          Usamos cookies para saber de onde vêm as visitas.{' '}
+          Cookies para medir de onde vêm as visitas.{' '}
           <Link
             href="/privacidade"
             className="text-foreground underline underline-offset-4 hover:no-underline"
@@ -106,14 +130,14 @@ export function BannerConsentimento() {
           <Button
             variant="outline"
             size="sm"
-            className="flex-1 sm:size-auto sm:flex-none"
+            className="min-h-11 flex-1 md:min-h-9"
             onClick={() => responder('recusado')}
           >
             Recusar
           </Button>
           <Button
             size="sm"
-            className="flex-1 sm:size-auto sm:flex-none"
+            className="min-h-11 flex-1 md:min-h-9"
             onClick={() => responder('aceito')}
           >
             Aceitar

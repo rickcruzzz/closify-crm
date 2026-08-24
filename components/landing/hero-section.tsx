@@ -119,7 +119,7 @@ export function HeroSection() {
               separam sem que a mudança pareça ter relação. Escrito, é decisão;
               implícito, é acidente esperando. Acima de `sm` os botões voltam a
               ter a largura do próprio conteúdo, lado a lado. */}
-          <div className="animate-in fade-in slide-in-from-bottom-3 fill-mode-both ease-entrada duration-entrada delay-passo-4 mt-2 flex w-full flex-col items-stretch gap-3 sm:w-auto sm:flex-row sm:items-center">
+          <div className="animate-in fade-in slide-in-from-bottom-3 fill-mode-both ease-entrada duration-entrada delay-passo-4 order-1 mt-2 flex w-full flex-col items-stretch gap-3 sm:order-none sm:w-auto sm:flex-row sm:items-center">
             <Link
               id="hero-cta"
               href="/cadastro"
@@ -164,9 +164,51 @@ export function HeroSection() {
               O preço fica na frase seguinte, curto, porque o teto do Free
               continua dito na seção de planos e na FAQ —
               três lugares, nenhum deles o hero. */}
+          {/* Duas linhas, não uma corrida, e com PESO no que vende.
+
+              A frase estava certa na ordem e errada na hierarquia: era a
+              informação comercialmente mais forte da página escrita no menor
+              tamanho e na cor mais apagada dela — o mesmo defeito que a
+              legenda "por empresa" já teve nos cards de preço e que foi
+              corrigido lá.
+
+              Medido em 24/08: o primeiro "R$ 49" da página aparece aqui, a
+              0,7 tela, ou seja, na dobra. Quem só olha o topo já podia sair
+              sabendo quanto custa — só não conseguia LER. Separar em duas
+              linhas e dar peso ao preço e ao "pela empresa inteira" resolve
+              sem mexer na posição, que já estava certa. */}
+          {/* Uma frase só, com o peso DENTRO dela.
+
+              A primeira tentativa quebrou em duas linhas com `gap`, e a
+              segunda — justamente a do preço — caía embaixo do banner de
+              consentimento na primeira visita: banner em 646px, linha do
+              preço em 656px, medido. O CTA já tinha sido protegido disso em
+              23/08; empurrar informação nova para o mesmo buraco seria repetir
+              o defeito num alvo diferente.
+
+              A ordem continua sendo a do Pipedrive (oferta, depois preço) —
+              copywriter não anuncia a limitação antes da promessa. O que muda
+              é só a hierarquia: "R$ 49" e "pela empresa inteira" ganham peso e
+              cor dentro da mesma linha, em vez de virarem um parágrafo à
+              parte. É a informação comercialmente mais forte da dobra, e
+              estava no menor tamanho e na cor mais apagada da página.
+
+              No TELEFONE ela aparece ANTES dos botões (`order-1` no bloco de
+              CTAs, revertido em `sm:`). Abaixo deles, ela cai na faixa que o
+              banner de consentimento ocupa — e comprimir o banner até liberá-la
+              exigiria botões de alvo menor que 44px, o que troca um problema de
+              leitura por um de acessibilidade. Acima, ela é lida sempre, e a
+              ordem de leitura continua correta: oferta, preço, botão.
+
+              A frase foi encurtada até CABER acima do banner de consentimento,
+              medido em 390px: com "nunca por vendedor a mais" no fim ela ia a
+              três linhas e sobrepunha 46px. "Pela empresa inteira" já carrega
+              o mesmo sentido, e a conta completa (cinco pessoas a R$ 53 = R$
+              265) vive na seção de planos, onde há espaço para ela. */}
           <p className="text-muted-foreground animate-in fade-in slide-in-from-bottom-3 fill-mode-both ease-entrada duration-entrada delay-passo-4 text-sm text-balance">
-            {DIAS_DE_TRIAL} dias com tudo liberado, sem cartão de crédito. Depois, R$ 49
-            por mês pela empresa inteira, não por vendedor.
+            {DIAS_DE_TRIAL} dias com tudo liberado, sem cartão. Depois,{' '}
+            <span className="text-foreground font-semibold">R$ 49/mês</span>{' '}
+            <span className="text-primary font-medium">pela empresa inteira</span>.
           </p>
         </div>
 
