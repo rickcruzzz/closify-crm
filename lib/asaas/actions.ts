@@ -9,6 +9,8 @@ import { getCurrentUserAndWorkspace } from '@/lib/supabase/workspace'
 import { cancelSubscriptionSchema, checkoutSchema } from '@/lib/validations/billing'
 import { PRO_PLAN_PRICE } from '@/lib/plans'
 import { CONTROLADOR } from '@/lib/legal'
+import { prepararPixParaExibir, type QrCodePixDoAsaas } from '@/lib/asaas/pix'
+import { prepararBoletoParaExibir, type LinhaDigitavelDoAsaas } from '@/lib/asaas/boleto'
 
 type AsaasCustomer = { id: string }
 type AsaasSubscription = { id: string }
@@ -190,18 +192,19 @@ export async function createCheckout(values: unknown) {
     return { error: 'Assinatura criada, mas não foi possível gerar o link de pagamento.' }
   }
 
-  // Devolve a URL em vez de fazer `redirect(invoiceUrl)`.
+  // Confirma que a cobrança existe, mas NÃO devolve mais a URL da fatura.
   //
-  // Com o redirect, a pessoa saía do produto e não voltava: pagava na página do
-  // Asaas e ficava lá. A saída natural seria o `callback.successUrl` do Asaas,
-  // mas ele **não funciona**, testado contra a API em 11/08/2026: o
-  // `POST /subscriptions` aceita o campo com HTTP 200, não o devolve na
-  // leitura, não propaga para a cobrança gerada, e o `PUT /payments` com
-  // `callback` responde 500.
+  // Até 23/08 esta função devolvia `{ url }` e quem chamava abria a página do
+  // Asaas em outra aba. Agora o pagamento acontece dentro do produto
+  // (`PagarDialog`), que busca as três formas da mesma cobrança — o `invoiceUrl`
+  // continua existindo e é usado lá, só para cartão.
   //
-  // Sem cooperação do Asaas, o retorno tem que ser nosso: quem chama abre a
-  // fatura em outra aba e mantém esta em `/settings/billing?pago=1`.
-  return { url: invoiceUrl }
+  // Fica registrado o motivo de a volta do Asaas nunca ter sido automática: o
+  // `callback.successUrl` **não funciona**, testado contra a API em 11/08/2026 —
+  // `POST /subscriptions` aceita o campo com HTTP 200, não o devolve na leitura,
+  // não propaga para a cobrança gerada, e `PUT /payments` com `callback`
+  // responde 500. Com o pagamento aqui dentro, isso deixou de ser um problema.
+  return { success: true }
 }
 
 /**
@@ -301,4 +304,120 @@ export async function cancelSubscription(values: unknown) {
   revalidatePath('/settings/billing')
   revalidatePath('/settings')
   return { success: true }
+}
+
+/**
+ * Os três meios de pagamento da cobrança em aberto, para exibir DENTRO do app.
+ *
+ * ## Uma cobrança, três representações
+ *
+ * O projeto cria a assinatura com `billingType: 'UNDEFINED'`, e isso é o que
+ * torna esta tela possível: no Asaas, uma cobrança assim aceita qualquer método,
+ * e cada endpoint devolve a forma correspondente da MESMA cobrança. Medido
+ * contra a API em 23/08 — a mesma `pay_...` respondeu `pixQrCode` (200),
+ * `identificationField` (200) e trouxe `bankSlipUrl`.
+ *
+ * Não é preciso criar uma cobrança por método, nem perguntar antes qual a
+ * pessoa quer. Ela escolhe na tela, com os três já prontos.
+ *
+ * ## Por que cartão continua saindo daqui
+ *
+ * O Asaas permite processar cartão por API (`/creditCard/tokenizeCreditCard`),
+ * mas isso faz o número do cartão passar pelo nosso servidor e nos coloca no
+ * escopo de PCI-DSS: auditoria, questionário de conformidade e
+ * responsabilidade legal em caso de vazamento. Para um SaaS de R$ 49 operado
+ * por uma pessoa, o custo não se paga. Cartão usa `invoiceUrl`, onde a
+ * responsabilidade é do Asaas.
+ *
+ * ## Por que uma falha parcial não derruba a tela
+ *
+ * Pix e boleto são buscados em paralelo e cada um pode falhar sozinho. Se o Pix
+ * não vier, a tela mostra boleto e cartão — quem está tentando pagar não pode
+ * ficar sem nenhum caminho porque um endpoint oscilou.
+ */
+export async function obterFormasDePagamento() {
+  const { workspaceId } = await getCurrentUserAndWorkspace()
+  const supabase = await createClient()
+
+  const { data: isAdmin } = await supabase.rpc('is_workspace_admin', {
+    target_workspace_id: workspaceId,
+  })
+  if (!isAdmin) {
+    return { error: 'Só administradores podem ver os dados de pagamento.' }
+  }
+
+  const { data: assinatura } = await supabase
+    .from('subscriptions')
+    .select('asaas_subscription_id')
+    .eq('workspace_id', workspaceId)
+    .maybeSingle()
+
+  const subscriptionId = assinatura?.asaas_subscription_id
+  if (!subscriptionId) {
+    return { error: 'Nenhuma assinatura encontrada. Comece pelo botão de assinar.' }
+  }
+
+  let cobranca: { id: string; invoiceUrl: string; bankSlipUrl?: string; value?: number } | undefined
+  try {
+    const lista = await asaasFetch<{
+      data: Array<{ id: string; invoiceUrl: string; bankSlipUrl?: string; value?: number }>
+    }>(`/payments?subscription=${subscriptionId}&status=PENDING&limit=1`)
+    cobranca = lista.data[0]
+  } catch (err) {
+    console.error('obterFormasDePagamento: falha ao buscar a cobrança', err)
+    return { error: 'Não foi possível carregar a cobrança. Tente de novo em instantes.' }
+  }
+
+  if (!cobranca) {
+    return { error: 'Não há cobrança em aberto para esta assinatura.' }
+  }
+
+  // Em paralelo e tolerantes a falha individual: um método fora do ar não pode
+  // esconder os outros dois de quem está com o cartão na mão.
+  const [pixBruto, boletoBruto] = await Promise.all([
+    asaasFetch<QrCodePixDoAsaas>(`/payments/${cobranca.id}/pixQrCode`).catch((err) => {
+      console.error('obterFormasDePagamento: Pix indisponível', err)
+      return null
+    }),
+    asaasFetch<LinhaDigitavelDoAsaas>(`/payments/${cobranca.id}/identificationField`).catch(
+      (err) => {
+        console.error('obterFormasDePagamento: boleto indisponível', err)
+        return null
+      },
+    ),
+  ])
+
+  return {
+    pagamento: {
+      valor: cobranca.value ?? PRO_PLAN_PRICE,
+      pix: prepararPixParaExibir(pixBruto),
+      boleto: prepararBoletoParaExibir(boletoBruto),
+      boletoPdfUrl: cobranca.bankSlipUrl ?? null,
+      /** Só para cartão — ver o comentário sobre PCI acima. */
+      urlDoCartao: cobranca.invoiceUrl,
+    },
+  }
+}
+
+/**
+ * O pagamento já caiu?
+ *
+ * A tela chama isto de tempos em tempos enquanto o QR está aberto. Quem aplica
+ * o efeito continua sendo o webhook do Asaas (`lib/asaas/aplicar-evento.ts`) —
+ * esta função só LÊ, e por isso não há risco de duas fontes ativando o plano.
+ *
+ * Lê `pro_vigente()` em vez de `subscriptions.status` pelo motivo de sempre: a
+ * coluna é o último valor gravado e não sabe que o período venceu (0027).
+ */
+export async function pagamentoFoiConfirmado() {
+  const { workspaceId } = await getCurrentUserAndWorkspace()
+  const supabase = await createClient()
+
+  const [{ data: proVigente }, { data: emTrial }] = await Promise.all([
+    supabase.rpc('pro_vigente', { target_workspace_id: workspaceId }),
+    supabase.rpc('em_trial', { target_workspace_id: workspaceId }),
+  ])
+
+  // Pro valendo sem ser por trial só pode ser pagamento confirmado.
+  return { confirmado: proVigente === true && emTrial !== true }
 }

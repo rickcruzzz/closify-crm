@@ -1,6 +1,5 @@
 'use client'
 
-import { useRouter } from 'next/navigation'
 import * as React from 'react'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { Controller, useForm } from 'react-hook-form'
@@ -19,6 +18,7 @@ import {
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { createCheckout } from '@/lib/asaas/actions'
+import { PagarDialog } from '@/components/settings/pagar-dialog'
 import { checkoutSchema, type CheckoutValues } from '@/lib/validations/billing'
 import { PRO_PLAN_PRICE } from '@/lib/plans'
 import { formatarCpfCnpj } from '@/lib/documento-br'
@@ -48,8 +48,8 @@ export function SubscribeButton({
    */
   abrirDeInicio?: boolean
 }) {
-  const router = useRouter()
   const [dialogOpen, setDialogOpen] = React.useState(abrirDeInicio)
+  const [pagamentoAberto, setPagamentoAberto] = React.useState(false)
   const [isSubmitting, setIsSubmitting] = React.useState(false)
 
   const {
@@ -61,41 +61,48 @@ export function SubscribeButton({
     defaultValues: { cpfCnpj: '' },
   })
 
+  /**
+   * Cria a assinatura e abre o pagamento AQUI DENTRO.
+   *
+   * ## O que mudou, e por que
+   *
+   * Antes esta função abria a fatura do Asaas em outra aba — e precisava abrir
+   * a aba ANTES do `await`, porque depois dele o navegador deixa de tratar
+   * `window.open` como resposta a um clique e o bloqueador de pop-up mata a
+   * janela. Aquilo era contorno para um problema que agora não existe: Pix e
+   * boleto acontecem no `PagarDialog`, sem sair do produto.
+   *
+   * O ganho não é só de fluxo. A página do Asaas exibe o **nome civil do
+   * titular** em destaque (para MEI não há nome fantasia na base do CNPJ desde
+   * 15/11/2023), e quem clicou em "Assinar o Velo Funil" caía numa tela com o
+   * nome de um desconhecido no topo.
+   *
+   * Cartão continua indo para o Asaas, a partir do próprio diálogo: processar
+   * cartão por API colocaria o número no nosso servidor e nos jogaria no
+   * escopo do PCI-DSS.
+   */
   async function onSubmit(values: CheckoutValues) {
     setIsSubmitting(true)
-
-    // A aba é aberta ANTES da chamada, ainda dentro do gesto do clique.
-    // Depois do `await`, o navegador não trata mais `window.open` como
-    // resposta direta a uma ação da pessoa e o bloqueador de pop-up mata a
-    // janela, que é justamente o link de pagamento.
-    const abaDaFatura = window.open('', '_blank')
 
     const result = await createCheckout(values)
 
     if (result?.error) {
-      abaDaFatura?.close()
       toast.error(result.error)
       setIsSubmitting(false)
       return
     }
 
-    if (result?.url) {
-      if (abaDaFatura) {
-        abaDaFatura.location.href = result.url
-        // Esta aba fica no produto, mostrando que a cobrança está a caminho.
-        // Antes o app dava `redirect()` para o Asaas e a pessoa simplesmente
-        // não voltava: pagava e ficava na página do banco.
-        router.replace('/settings/billing?pago=1')
-      } else {
-        // Pop-up bloqueado: melhor ir para o pagamento na mesma aba do que
-        // deixar a pessoa sem link nenhum.
-        window.location.href = result.url
-      }
-    }
+    // A assinatura existe no Asaas a partir daqui. O diálogo de pagamento
+    // busca as três formas da MESMA cobrança e deixa a pessoa escolher.
+    setIsSubmitting(false)
+    setDialogOpen(false)
+    setPagamentoAberto(true)
   }
 
   return (
     <>
+      <PagarDialog open={pagamentoAberto} onOpenChange={setPagamentoAberto} />
+
       <Button onClick={() => setDialogOpen(true)} className={cn('w-fit', className)}>
         <Zap className="size-4" />
         Assinar Pro por R$ {PRO_PLAN_PRICE}/mês
@@ -106,8 +113,8 @@ export function SubscribeButton({
           <DialogHeader>
             <DialogTitle>Assinar plano Pro</DialogTitle>
             <DialogDescription>
-              A Asaas exige CPF ou CNPJ pra gerar a cobrança recorrente. Você escolhe Pix,
-              boleto ou cartão na próxima tela.
+              Precisamos do CPF ou CNPJ para emitir a cobrança. Na próxima tela você escolhe
+              entre Pix, boleto e cartão.
             </DialogDescription>
           </DialogHeader>
 

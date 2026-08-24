@@ -3,9 +3,10 @@
 import * as React from 'react'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
-import { AlertTriangle, CheckCircle2, Clock, ExternalLink, Loader2 } from 'lucide-react'
+import { AlertTriangle, CheckCircle2, Clock, Loader2 } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
+import { PagarDialog } from '@/components/settings/pagar-dialog'
 import { Badge } from '@/components/ui/badge'
 import {
   Dialog,
@@ -48,6 +49,7 @@ export function SubscriptionCard({
 }) {
   const router = useRouter()
   const [cancelarAberto, setCancelarAberto] = React.useState(false)
+  const [pagamentoAberto, setPagamentoAberto] = React.useState(false)
   const [confirmacao, setConfirmacao] = React.useState('')
   const [cancelando, setCancelando] = React.useState(false)
 
@@ -97,6 +99,8 @@ export function SubscriptionCard({
 
   return (
     <>
+      <PagarDialog open={pagamentoAberto} onOpenChange={setPagamentoAberto} />
+
       <div className="border-border/60 flex flex-col gap-4 rounded-lg border p-4">
         <div className="flex items-start justify-between gap-3">
           <div className="flex items-center gap-2">
@@ -130,14 +134,14 @@ export function SubscriptionCard({
               )}
             </p>
 
-            <Button
-              className="w-fit"
-              render={
-                <a href={estado.fatura.url} target="_blank" rel="noopener noreferrer" />
-              }
-            >
+            {/* Abre o pagamento AQUI, não na página do Asaas.
+                Este botão levava para o `invoiceUrl`, e lá o nome civil do
+                titular aparece em destaque — para MEI não há nome fantasia na
+                base do CNPJ desde 15/11/2023. Quem clicava para pagar o Velo
+                Funil via o nome de um desconhecido no topo da tela.
+                O cartão continua indo para o Asaas, de dentro do diálogo. */}
+            <Button className="w-fit" onClick={() => setPagamentoAberto(true)}>
               Pagar fatura
-              <ExternalLink className="size-4" />
             </Button>
           </div>
         )}
