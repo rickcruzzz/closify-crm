@@ -76,6 +76,16 @@ export type Database = {
           // Âncoras de match da Conversions API do Meta, ver 0042_fbc_fbp.sql.
           fbc: string | null
           fbp: string | null
+          /**
+           * Fim do trial de 7 dias que toda empresa nova ganha (0051).
+           * `null` em empresa criada antes disso — elas não ganharam trial
+           * retroativo de propósito.
+           *
+           * Distinto de `subscriptions.status`: aquele é o estado da cobrança
+           * no Asaas, este é cortesia do produto. Confundir os dois seria dar
+           * Pro de graça a quem só abriu o checkout.
+           */
+          trial_ate: string | null
         } & DadosDaEmpresa
         Insert: {
           id?: string
@@ -88,6 +98,8 @@ export type Database = {
           utm_campaign?: string | null
           fbc?: string | null
           fbp?: string | null
+          /** Quem escreve isto é a RPC `create_workspace_with_admin` (0051). */
+          trial_ate?: string | null
         } & Partial<DadosDaEmpresa>
         Update: {
           id?: string
@@ -591,8 +603,22 @@ export type Database = {
         Args: { target_email: string; target_workspace_id: string }
         Returns: boolean
       }
-      /** O período pago ainda vale? Ver migration 0027. */
+      /**
+       * O Pro vale AGORA? Por assinatura paga OU por trial dentro do prazo.
+       * Ver migrations 0027 (assinatura) e 0051 (trial).
+       */
       pro_vigente: {
+        Args: { target_workspace_id: string }
+        Returns: boolean
+      }
+      /**
+       * Está em trial e ainda NÃO pagou.
+       *
+       * Distingue "está avaliando" de "é cliente", que `pro_vigente()` sozinha
+       * não separa. As travas de estoque (empresas e colaboradores) usam esta
+       * função: trial dá funcionalidade, nunca estoque — ver migration 0053.
+       */
+      em_trial: {
         Args: { target_workspace_id: string }
         Returns: boolean
       }

@@ -6,7 +6,18 @@ import { obterUsuarioAutenticado } from '@/lib/supabase/usuario-autenticado'
 import { resolverWorkspaceAtivoComVinculos, workspaceEscolhidoNoCookie } from '@/lib/workspace/ativo'
 import type { WorkspacePlan } from '@/types/supabase'
 
-export type WorkspaceDoUsuario = { id: string; name: string; plan: WorkspacePlan }
+export type WorkspaceDoUsuario = {
+  id: string
+  name: string
+  plan: WorkspacePlan
+  /**
+   * Fim do trial de 7 dias (migration 0051), ou `null` para empresa criada
+   * antes dele. Vem nesta consulta em vez de numa própria porque o layout já lê
+   * esta linha em toda navegação — buscar de novo custaria uma ida ao banco por
+   * página, e a doutrina do projeto sobre isso já foi paga três vezes.
+   */
+  trial_ate: string | null
+}
 
 // Layout e cada page do (dashboard) precisam do usuário logado + workspace_id.
 // React cache() memoiza por request: mesma consulta chamada em layout.tsx e
@@ -28,7 +39,7 @@ export const getCurrentUserAndWorkspace = cache(async () => {
 
   const { data: memberships } = await supabase
     .from('workspace_members')
-    .select('workspace_id, workspaces (id, name, plan)')
+    .select('workspace_id, workspaces (id, name, plan, trial_ate)')
     .eq('user_id', user.id)
     .order('created_at', { ascending: true })
     .order('workspace_id', { ascending: true })

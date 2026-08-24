@@ -5,6 +5,8 @@ import { Sidebar } from '@/components/layout/sidebar'
 import { Topbar } from '@/components/layout/topbar'
 import { TooltipProvider } from '@/components/ui/tooltip'
 import { getCurrentUserAndWorkspace } from '@/lib/supabase/workspace'
+import { situacaoDoPlanoDaEmpresaAtiva } from '@/lib/plans/trial-queries'
+import { AvisoDeTrial } from '@/components/layout/aviso-de-trial'
 import { lerEstadoDoOnboarding, precisaDeBoasVindas } from '@/lib/onboarding/estado'
 import { contarTarefasDoDiaDoUsuario } from '@/lib/tasks/queries'
 
@@ -29,11 +31,17 @@ export default async function DashboardLayout({
   // rede a TODA navegação — precisamente o defeito que já custou caro aqui e
   // está registrado em `docs/estado-atual.md` (196ms por consulta, vezes 8-10
   // por navegação). Um badge não vale isso.
-  const [{ user, workspaceId, workspaces }, estadoOnboarding, tarefasDoDia] = await Promise.all([
-    getCurrentUserAndWorkspace(),
-    lerEstadoDoOnboarding(),
-    contarTarefasDoDiaDoUsuario(),
-  ])
+  const [{ user, workspaceId, workspaces }, estadoOnboarding, tarefasDoDia, situacaoDoPlano] =
+    await Promise.all([
+      getCurrentUserAndWorkspace(),
+      lerEstadoDoOnboarding(),
+      contarTarefasDoDiaDoUsuario(),
+      // Entra na MESMA onda pelo mesmo motivo da contagem de tarefas: depende
+      // do `workspaceId`, mas obtém-no de `getCurrentUserAndWorkspace()`, que é
+      // `cache()` — a segunda chamada devolve a promise da primeira, sem nova
+      // ida ao Auth. Em série, seria mais uma viagem de rede por navegação.
+      situacaoDoPlanoDaEmpresaAtiva(),
+    ])
 
   if (workspaces.length === 0) {
     redirect('/onboarding')
@@ -89,6 +97,14 @@ export default async function DashboardLayout({
             activeWorkspaceId={workspaceId}
             currentUser={currentUser}
             tarefasDoDia={tarefasDoDia}
+          />
+          {/* Entre a barra e o conteúdo: não empurra a navegação para baixo e
+              aparece antes de qualquer tela do produto. Só renderiza algo nos
+              últimos 3 dias do trial ou depois que ele acaba — ver
+              `AVISAR_A_PARTIR_DE`. */}
+          <AvisoDeTrial
+            trialAte={workspaces.find((w) => w.id === workspaceId)?.trial_ate ?? null}
+            assinaturaAtiva={situacaoDoPlano.temAssinaturaPaga}
           />
           <main id="conteudo" className="flex-1 p-4 md:p-6">
           {/* Largura máxima no conteúdo, não no `main`: o `main` continua
