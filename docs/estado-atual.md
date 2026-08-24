@@ -1395,9 +1395,13 @@ sessão.
         incluindo os que o próprio workflow criava para testar. Removido
         (voltou pra "Automatic"); a defesa contra deploy duplo passou a ser
         só o fato de produção nunca trocar sem o clique manual de promote.
-      - Se o plano virar Pro no futuro, o passo de promoção automática pode
-        voltar: `POST /v10/projects/{id}/promote/{deploymentId}` é o
-        endpoint certo, só falta o plano suportar.
+      - **Testado de novo em 23/08, já com Vercel Pro contratado: continua
+        `422`.** Ou seja, não era limitação do plano Hobby, como se supôs na
+        primeira tentativa. `POST /v10/projects/{id}/promote/{deploymentId}`
+        devolve `unprocessable_entity` genérico para um deployment de target
+        `staging`, que é como o gate deste projeto os cria. A promoção segue
+        manual — não vale gastar outra sessão descobrindo o porquê, já que o
+        clique custa segundos e é a única barreira antes de produção.
       Até isso ser feito, o workflow existe mas não está protegendo nada:
       a Vercel ainda promove sozinha a cada push.
 - [ ] **CSP em Report-Only, nunca virou bloqueio.** Medido em 13/08 contra
