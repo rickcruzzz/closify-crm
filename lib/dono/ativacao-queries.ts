@@ -35,15 +35,47 @@ const TETO = 5000
  * media o próprio dono usando o produto.
  */
 const DOMINIOS_DESCARTAVEIS = new Set([
+  // Geradores de e-mail temporário usados nos testes desta base, conferidos um
+  // a um em 23/08 contra a lista real de contas que criaram empresa.
   'neplis.com',
   'beiwoh.com',
   'joystill.com',
+  'mrworlds.com',
+  'careney.com',
+  'rpaintel.com',
+  'hutdot.com',
+  'ittiv.com',
+  'archifun.com',
+  // Domínios que só existem dentro dos scripts de teste deste repositório.
   'exemplo-teste.com.br',
   'acmecorp.com.br',
 ])
 
-/** E-mails do próprio dono. Contam como uso interno, não como cliente. */
-const EMAILS_DO_DONO = new Set(['j4693001@gmail.com', 'henriquestn24@gmail.com'])
+/**
+ * Contas do próprio dono e de demonstração.
+ *
+ * O dono confirmou em 23/08 que **todos os cadastros até aqui foram teste
+ * dele** — inclusive os de `gmail.com`, que nenhum filtro de domínio pegaria.
+ * Por isso esta lista existe e por isso ela precisa ser mantida à mão: sem ela,
+ * o painel misturaria teste antigo com o tráfego pago que está por vir, e a
+ * primeira campanha seria avaliada contra uma linha de base falsa.
+ *
+ * Quando entrar cliente de verdade, NÃO adicione ninguém aqui — a lista só
+ * cresce com conta que você mesmo criou.
+ */
+const EMAILS_DO_DONO = new Set([
+  'j4693001@gmail.com',
+  'henriquestn24@gmail.com',
+  'henriqueprogramador590@gmail.com',
+  'pedroescobar90sb@gmail.com',
+  'jonatqpedro@gmail.com',
+  'imperioimports70@gmail.com',
+  'empresatower6@gmail.com',
+  'mbarretodacruz@gmail.com',
+  'lamopuniftc@gmail.com',
+  'fanimayara67@gmail.com',
+  'demo.pro@velofunil.com.br',
+])
 
 function ehContaDeTeste(email: string | null | undefined): boolean {
   if (!email) return true // sem e-mail não dá para afirmar que é cliente real

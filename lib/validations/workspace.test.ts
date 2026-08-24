@@ -104,7 +104,7 @@ describe('uuidSchema', () => {
 })
 
 describe('limites do plano Free', () => {
-  it('mantém 1 empresa, 2 colaboradores e 300 leads', () => {
+  it('mantém 1 empresa, 2 colaboradores e 50 contatos', () => {
     // O limite de workspaces não existia: o teto de colaboradores era por
     // empresa, então bastava criar uma empresa nova para cada dupla e ter
     // equipe ilimitada de graça. Um usuário de produção já tinha 4 workspaces
@@ -115,6 +115,11 @@ describe('limites do plano Free', () => {
     // tem o texto embutido e a Server Action casa por substring.
     expect(FREE_WORKSPACE_LIMIT).toBe(1)
     expect(FREE_MEMBER_LIMIT).toBe(2)
-    expect(FREE_LEAD_LIMIT).toBe(300)
+    // Voltou de 300 para 50 na migration 0052. O 300 veio da 0040
+    // (`free_menos_apertado`), decidido sem dado de conversão porque não havia
+    // nenhum. Com o funil de ativação medindo, ficou claro que 300 é um teto
+    // que ninguém alcança: uma clínica cadastra ~20 pacientes novos por mês.
+    // Um Free que nunca aperta não é degrau para o Pro, é o produto final.
+    expect(FREE_LEAD_LIMIT).toBe(50)
   })
 })
