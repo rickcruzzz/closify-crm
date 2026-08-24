@@ -1,13 +1,17 @@
 'use client'
 
 import * as React from 'react'
-import { Check, Copy, Eye, EyeOff } from 'lucide-react'
+import { Check, Circle, Copy, Eye, EyeOff } from 'lucide-react'
 
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { avaliarSenha, type NivelSenha } from '@/lib/password-strength'
+import {
+  avaliarSenha,
+  requisitosDaSenha,
+  type NivelSenha,
+} from '@/lib/password-strength'
 
 const CORES: Record<NivelSenha, { barra: string; texto: string }> = {
   fraca: { barra: 'bg-red-500', texto: 'text-red-500 dark:text-red-400' },
@@ -50,6 +54,7 @@ export function PasswordField({
   const [visivel, setVisivel] = React.useState(false)
   const [copiada, setCopiada] = React.useState(false)
   const forca = avaliarSenha(valor)
+  const requisitos = requisitosDaSenha(valor)
 
   async function copiar() {
     try {
@@ -119,9 +124,9 @@ export function PasswordField({
       </div>
 
       {mostrarForca && valor && (
-        // `aria-live` para leitor de tela anunciar a mudança de nível: sem
-        // isso a informação existe só como cor, e cor sozinha não comunica.
-        <div id={`${id}-forca`} aria-live="polite" className="flex flex-col gap-1">
+        // `aria-live` para leitor de tela anunciar a mudança: sem isso a
+        // informação existe só como cor, e cor sozinha não comunica.
+        <div id={`${id}-forca`} aria-live="polite" className="flex flex-col gap-2">
           <div className="bg-muted h-1 w-full overflow-hidden rounded-full">
             <div
               className={cn(
@@ -131,14 +136,49 @@ export function PasswordField({
               style={{ width: `${forca.percentual}%` }}
             />
           </div>
-          <p className="text-xs">
-            <span className={cn('font-medium', CORES[forca.nivel].texto)}>
-              {forca.rotulo}
-            </span>
-            {forca.sugestao && (
-              <span className="text-muted-foreground"> {forca.sugestao}</span>
-            )}
-          </p>
+
+          {/* ## Checklist item a item, não uma frase de sugestão
+
+              Antes havia só "Senha fraca. Adicione mais caracteres e uma
+              maiúscula." — o veredito e, no máximo, duas faltas de cada vez. A
+              pessoa corrigia uma, a frase trocava, e ela não tinha como saber
+              quantas ainda faltavam nem quando ia acabar.
+
+              A lista resolve isso mostrando tudo de uma vez e marcando o item
+              no caractere em que ele passa a valer. É o padrão que todo mundo
+              já viu (gov.br, banco), e o reconhecimento vale mais aqui do que
+              qualquer invenção.
+
+              O que este NÃO copia daquele padrão é a obrigatoriedade: só o
+              tamanho trava o cadastro. Ver `requisitosDaSenha` para o porquê —
+              regra que bloqueia produz senha anotada em papel e abandono no
+              único funil que este produto tem. */}
+          <ul className="flex flex-col gap-1">
+            {requisitos.map((r) => (
+              <li
+                key={r.id}
+                className={cn(
+                  'flex items-center gap-1.5 text-xs transition-colors',
+                  r.atendido
+                    ? 'text-emerald-600 dark:text-emerald-400'
+                    : 'text-muted-foreground',
+                )}
+              >
+                {/* Ícone E cor, nunca só cor: 8% dos homens têm alguma forma de
+                    daltonismo, e verde/cinza é justamente o par que mais some.
+                    A marca desenha a diferença; a cor reforça. */}
+                {r.atendido ? (
+                  <Check aria-hidden className="size-3.5 shrink-0" />
+                ) : (
+                  <Circle aria-hidden className="size-3.5 shrink-0 opacity-40" />
+                )}
+                <span>{r.rotulo}</span>
+                {!r.obrigatorio && (
+                  <span className="text-muted-foreground/70">(opcional)</span>
+                )}
+              </li>
+            ))}
+          </ul>
         </div>
       )}
 

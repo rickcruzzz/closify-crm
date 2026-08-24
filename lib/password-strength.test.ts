@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest'
 
-import { avaliarSenha, senhaDerivadaDoEmail } from './password-strength'
+import { avaliarSenha, senhaDerivadaDoEmail,
+  MINIMO_DE_CARACTERES,
+  requisitosDaSenha,
+} from './password-strength'
 
 describe('avaliarSenha', () => {
   it('marca como fraca o que não protege nada', () => {
@@ -85,5 +88,56 @@ describe('senhaDerivadaDoEmail', () => {
   it('não bloqueia quando o e-mail não veio', () => {
     expect(senhaDerivadaDoEmail('qualquercoisa', undefined)).toBe(false)
     expect(senhaDerivadaDoEmail('qualquercoisa', '')).toBe(false)
+  })
+})
+
+describe('requisitosDaSenha', () => {
+  const porId = (senha: string) =>
+    Object.fromEntries(requisitosDaSenha(senha).map((r) => [r.id, r.atendido]))
+
+  it('senha vazia não atende nada', () => {
+    expect(porId('')).toEqual({
+      tamanho: false,
+      maiuscula: false,
+      numero: false,
+      simbolo: false,
+    })
+  })
+
+  it('marca cada item conforme a senha ganha o caractere', () => {
+    // O caso que motivou o componente: a pessoa digita e vê o item virar
+    // verde. Cada passo aqui é um caractere a mais.
+    expect(porId('abcdefg').tamanho).toBe(false)
+    expect(porId('abcdefgh').tamanho).toBe(true)
+    expect(porId('abcdefgH').maiuscula).toBe(true)
+    expect(porId('abcdefgH1').numero).toBe(true)
+    expect(porId('abcdefgH1!').simbolo).toBe(true)
+  })
+
+  it('só o tamanho é obrigatório', () => {
+    // A decisão de produto que este arquivo carrega: exigir as quatro classes
+    // custaria cadastro, e cadastro é o único funil que o produto tem.
+    const obrigatorios = requisitosDaSenha('qualquer')
+      .filter((r) => r.obrigatorio)
+      .map((r) => r.id)
+    expect(obrigatorios).toEqual(['tamanho'])
+  })
+
+  it('o mínimo bate com o que o schema de cadastro exige', () => {
+    // Se `signUpSchema` mudar o `min()` e isto não mudar junto, a tela diria
+    // "pode cadastrar" e o servidor recusaria — o pior tipo de divergência,
+    // porque a pessoa não tem como saber quem está certo.
+    expect(MINIMO_DE_CARACTERES).toBe(8)
+    expect(requisitosDaSenha('1234567').find((r) => r.id === 'tamanho')?.atendido).toBe(false)
+    expect(requisitosDaSenha('12345678').find((r) => r.id === 'tamanho')?.atendido).toBe(true)
+  })
+
+  it('não discorda de avaliarSenha sobre a mesma senha', () => {
+    // As duas leem a senha e aparecem juntas na tela. Uma dizendo "forte"
+    // enquanto a outra mostra item vermelho faria a pessoa não saber em qual
+    // acreditar.
+    const forte = 'Kj8#mQ2vLp9x'
+    expect(avaliarSenha(forte).nivel).toBe('forte')
+    expect(requisitosDaSenha(forte).every((r) => r.atendido)).toBe(true)
   })
 })

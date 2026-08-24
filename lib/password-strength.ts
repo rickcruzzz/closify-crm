@@ -107,3 +107,77 @@ export function senhaDerivadaDoEmail(senha: string, email: string | undefined | 
 
   return usuario.length >= 4 && s.includes(usuario)
 }
+
+/**
+ * Um requisito de senha, no formato que a tela desenha.
+ *
+ * `obrigatorio` separa o que TRAVA o cadastro do que apenas melhora a senha —
+ * e essa distinção é a decisão de produto mais importante deste arquivo.
+ */
+export type RequisitoDeSenha = {
+  id: string
+  rotulo: string
+  atendido: boolean
+  obrigatorio: boolean
+}
+
+/** O mínimo que o schema de cadastro exige (`lib/validations/auth.ts`). */
+export const MINIMO_DE_CARACTERES = 8
+
+/**
+ * A lista de requisitos, para a tela mostrar item a item enquanto a pessoa
+ * digita.
+ *
+ * ## Por que só o tamanho é obrigatório
+ *
+ * O padrão que todo mundo conhece (gov.br, banco) exige maiúscula, minúscula,
+ * número e símbolo, e recusa o cadastro sem os quatro. Aqui a escolha foi
+ * outra, e é deliberada: **só o tamanho trava**.
+ *
+ * Cada regra obrigatória é uma chance a mais de a pessoa desistir no meio do
+ * cadastro — e o cadastro é o único funil que este produto tem. Regra que
+ * bloqueia produz senha anotada em papel e abandono; dica que orienta produz
+ * senha melhor sem custar ninguém.
+ *
+ * O NIST recomenda a mesma coisa desde 2017 (SP 800-63B): comprimento importa
+ * mais que composição, e exigir classes de caracteres leva a padrões
+ * previsíveis do tipo "Senha1!". A defesa que de fato pega senha ruim é a
+ * verificação contra listas de senhas vazadas, que é configuração do Supabase
+ * e não regra de formulário.
+ *
+ * Os outros quatro itens aparecem como "deixa mais segura" e ficam verdes
+ * conforme a pessoa digita: mostram o caminho sem fechar a porta.
+ *
+ * `avaliarSenha` continua existindo e não muda: ela dá o veredito único
+ * (fraca/média/forte) que a barra usa. Esta função dá o detalhe item a item.
+ * As duas leem a mesma senha e não podem discordar — por isso os mesmos testes
+ * cobrem as duas.
+ */
+export function requisitosDaSenha(senha: string): RequisitoDeSenha[] {
+  return [
+    {
+      id: 'tamanho',
+      rotulo: `Pelo menos ${MINIMO_DE_CARACTERES} caracteres`,
+      atendido: senha.length >= MINIMO_DE_CARACTERES,
+      obrigatorio: true,
+    },
+    {
+      id: 'maiuscula',
+      rotulo: 'Uma letra maiúscula',
+      atendido: /[A-Z]/.test(senha),
+      obrigatorio: false,
+    },
+    {
+      id: 'numero',
+      rotulo: 'Um número',
+      atendido: /\d/.test(senha),
+      obrigatorio: false,
+    },
+    {
+      id: 'simbolo',
+      rotulo: 'Um símbolo (! @ # $)',
+      atendido: /[^A-Za-z0-9]/.test(senha),
+      obrigatorio: false,
+    },
+  ]
+}
