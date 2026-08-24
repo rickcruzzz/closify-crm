@@ -1,3 +1,21 @@
+
+// ATENÇÃO ao interpretar o resultado deste script (nota de 24/08).
+//
+// Ele usa `/instance/status` COM O TOKEN DA INSTÂNCIA, que é a rota certa e a
+// única que devolve `LoggedIn`. Se algum dia alguém trocar por
+// `/instance/all`, o campo `LoggedIn` NÃO EXISTE lá — a leitura vira `null`
+// sempre e uma sessão perfeitamente saudável passa por morta. Já custou um
+// diagnóstico errado.
+//
+// A série histórica desta instância, para comparar:
+//   23/08  2 min .... 63% logado
+//   23/08  13 min ... 26% logado
+//   24/08  13 min ... 0%  logado  (a sessão se recuperou minutos depois)
+//   24/08  6 min .... 100% logado, 0 erro de rede
+//
+// Uma leitura isolada não decide nada: a oscilação é real e a recuperação
+// também. É a SÉRIE que separa "caiu" de "está oscilando".
+
 /**
  * Vigia a estabilidade da sessão do WhatsApp e grava um CSV.
  *

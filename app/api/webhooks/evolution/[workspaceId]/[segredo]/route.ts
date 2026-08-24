@@ -47,11 +47,24 @@ import { createAdminClient } from '@/lib/supabase/admin'
  * ## Por que o segredo vai na URL
  *
  * O Evolution não assina o payload (não há HMAC como no Asaas ou na Meta). O
- * único jeito de saber que o POST veio do nosso servidor é um segredo por
- * conexão embutido na própria URL do webhook, comparado com `timingSafeEqual`
- * — mesmo padrão de `lib/integrations/state.ts`.
+ * único jeito de saber que o POST veio do nosso servidor é um segredo
+ * embutido na própria URL do webhook, comparado com `timingSafeEqual` — mesmo
+ * padrão de `lib/integrations/state.ts`.
  *
  * A URL vira credencial, então ela nunca aparece em tela nem em log.
+ *
+ * **O segredo é ÚNICO para todas as empresas** (`EVOLUTION_WEBHOOK_SECRET`),
+ * não um por conexão — o comentário anterior aqui dizia o contrário e estava
+ * errado. A consequência precisa ser dita: quem conhecer o segredo consegue
+ * injetar mensagem falsa no funil de QUALQUER empresa, bastando saber o UUID
+ * dela. Não dá para LER nada de ninguém (a rota só escreve), e o segredo hoje
+ * só existe no `.env` e na configuração das instâncias no servidor Evolution,
+ * a que apenas o dono da plataforma tem acesso.
+ *
+ * É fraqueza de arquitetura, não buraco explorável hoje. O caminho correto
+ * quando houver muitos clientes é um segredo por conexão, gerado na hora de
+ * conectar e guardado junto do token — o que também limita o estrago se um
+ * único cliente for comprometido. Registrado em `docs/estado-atual.md`.
  */
 export const runtime = 'nodejs'
 
@@ -67,6 +80,63 @@ export const maxDuration = 15
 
 /** Prazo da tarefa de follow-up, em horas. */
 const PRAZO_DE_RESPOSTA_HORAS = 2
+
+/**
+ * Teto de mensagens processadas por chamada.
+ *
+ * O laço abaixo é SÉRIE, e cada mensagem custa 4 a 6 idas ao banco (dedupe,
+ * casar telefone, criar contato, atividade, buscar tarefa, criar tarefa). A
+ * ~80ms por ida, são ~400ms por mensagem — em `maxDuration = 15` cabem cerca
+ * de 30 com folga.
+ *
+ * O perigo não é a lentidão, é o CORTE: a função morre no meio do lote, e
+ * toda mensagem que já gravou dedupe e ainda não virou atividade some para
+ * sempre, porque o reenvio do Evolution bate no dedupe e é recusado.
+ *
+ * Com o teto, o excedente nunca chega a gravar dedupe — então continua
+ * elegível para reenvio, que é o comportamento correto: melhor processar
+ * depois do que perder.
+ */
+const MAXIMO_DE_MENSAGENS_POR_CHAMADA = 25
+
+/**
+ * Guarda a mensagem que não completou o caminho até o funil.
+ *
+ * ## Por que toda falha passa por aqui
+ *
+ * O dedupe é gravado ANTES do processamento, de propósito: sem isso, o
+ * reenvio do Evolution duplicaria a atividade. Mas isso cria uma janela onde
+ * a mensagem já é considerada "vista" e ainda não virou nada — e qualquer
+ * falha dentro dessa janela a apaga da existência, sem erro em lugar nenhum.
+ *
+ * O caminho do limite de plano já tratava disso. Os outros não: `activities`
+ * e `tasks` eram inseridos sem checar erro, e uma falha de RLS, constraint ou
+ * rede descartava a mensagem em silêncio. Num produto que promete não perder
+ * venda, perdê-la pelo próprio silêncio é a falha mais cara possível.
+ *
+ * `error_logs` guarda telefone E texto porque um sem o outro não permite
+ * decidir se aquele contato valia a venda.
+ */
+async function registrarMensagemPerdida(
+  admin: ReturnType<typeof createAdminClient>,
+  workspaceId: string,
+  telefone: string,
+  texto: string,
+  motivo: string,
+): Promise<void> {
+  try {
+    await admin.from('error_logs').insert({
+      message: `WhatsApp: mensagem recebida mas não registrada (${motivo}) de ${telefone}: ${texto}`,
+      origem: 'whatsapp',
+      url: `/api/webhooks/evolution/${workspaceId}`,
+      workspace_id: workspaceId,
+    })
+  } catch (err) {
+    // Último recurso. Se nem o registro do erro funciona, insistir só troca
+    // uma mensagem perdida por uma exceção que derruba o lote inteiro.
+    console.error('Webhook Evolution: falhei até ao registrar a perda', err)
+  }
+}
 
 /**
  * Formato de `types.MessageInfo` do `whatsmeow`, conforme o Swagger do
@@ -346,11 +416,24 @@ export async function POST(
     return NextResponse.json({ ok: true, ignorado: evento })
   }
 
-  const mensagens = Array.isArray(payload.data)
+  const todasAsMensagens = Array.isArray(payload.data)
     ? payload.data
     : payload.data
       ? [payload.data as MensagemDoEvolutionGo]
       : []
+
+  // O excedente NÃO é descartado: como o dedupe só é gravado dentro do laço,
+  // o que sobra continua elegível para reenvio pelo Evolution. Cortar aqui é
+  // o que impede a função de morrer no meio do lote e apagar mensagem que já
+  // tinha dedupe gravado.
+  const mensagens = todasAsMensagens.slice(0, MAXIMO_DE_MENSAGENS_POR_CHAMADA)
+
+  if (todasAsMensagens.length > MAXIMO_DE_MENSAGENS_POR_CHAMADA) {
+    console.warn(
+      `Webhook Evolution: lote de ${todasAsMensagens.length} mensagens, ` +
+        `processando ${MAXIMO_DE_MENSAGENS_POR_CHAMADA}; o resto volta no reenvio`,
+    )
+  }
 
   for (const mensagem of mensagens) {
     const eventId = mensagem.id
@@ -371,8 +454,24 @@ export async function POST(
       .insert({ event_id: `${workspaceId}:${eventId}` })
 
     if (erroDedupe) {
+      // `23505` é unique_violation: evento repetido, o caminho normal do
+      // reenvio. Não é erro e não vira registro.
       if (erroDedupe.code === '23505') continue
+
+      // Qualquer outro motivo (banco indisponível, permissão) significa que a
+      // mensagem chegou e não vai ser processada. Antes isso era só um
+      // `console.error`, que ninguém lê em produção — a mensagem sumia sem
+      // deixar rastro. Aqui o dedupe NÃO foi gravado, então o Evolution ainda
+      // pode reenviar; o registro existe para o caso de o reenvio também
+      // falhar.
       console.error('Webhook Evolution: falha ao gravar dedupe', erroDedupe)
+      await registrarMensagemPerdida(
+        admin,
+        workspaceId,
+        telefone,
+        textoDaMensagem(mensagem),
+        `dedupe ${erroDedupe.code ?? 'sem código'}`,
+      )
       continue
     }
 
@@ -468,13 +567,28 @@ export async function POST(
         .not('last_error', 'is', null)
     }
 
-    await admin.from('activities').insert({
+    // O erro É verificado: o dedupe já foi gravado acima, então uma falha aqui
+    // apaga a mensagem da existência — o Evolution não reenvia o que já
+    // deduplicou. Era o buraco mais caro que sobrava neste arquivo.
+    const { error: erroAtividade } = await admin.from('activities').insert({
       workspace_id: workspaceId,
       lead_id: lead,
       type: 'nota',
       description: `WhatsApp: ${textoDaMensagem(mensagem)}`,
       integration_provider: 'whatsapp',
     })
+
+    if (erroAtividade) {
+      console.error('Webhook Evolution: não consegui gravar a atividade', erroAtividade)
+      await registrarMensagemPerdida(
+        admin,
+        workspaceId,
+        telefone,
+        textoDaMensagem(mensagem),
+        `activities ${erroAtividade.code ?? 'sem código'}`,
+      )
+      continue
+    }
 
     // Cliente que responde sem tarefa aberta é exatamente a venda que se perde
     // por esquecimento. A tarefa nasce com prazo curto de propósito: dentro da
@@ -489,13 +603,21 @@ export async function POST(
       .maybeSingle()
 
     if (!tarefaAberta) {
-      await admin.from('tasks').insert({
+      const { error: erroTarefa } = await admin.from('tasks').insert({
         workspace_id: workspaceId,
         lead_id: lead,
         title: 'Responder no WhatsApp',
         type: 'nota',
         due_at: new Date(Date.now() + PRAZO_DE_RESPOSTA_HORAS * 60 * 60 * 1000).toISOString(),
       })
+
+      // Diferente dos outros: a mensagem JÁ virou atividade, então o histórico
+      // está salvo e nada se perdeu. O que falhou foi o lembrete — some o
+      // empurrão para responder, não o registro. Fica no log para investigar
+      // sem alarmar o cliente com um aviso na tela.
+      if (erroTarefa) {
+        console.error('Webhook Evolution: atividade salva, tarefa não', erroTarefa)
+      }
     }
   }
 

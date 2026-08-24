@@ -4,7 +4,11 @@ Documento de continuidade. É lido no começo de toda sessão (referenciado no
 [CLAUDE.md](../CLAUDE.md)) para que uma conversa nova, ou outra conta, comece
 sabendo o que já foi feito, o que foi decidido e onde estão as armadilhas.
 
-**Atualizado em:** 24/08/2026, noite (o site inteiro virava TELA PRETA para
+**Atualizado em:** 24/08/2026, noite (arquitetura do WhatsApp auditada ponta
+a ponta: sessão medida em 100% de disponibilidade, envio e recebimento
+provados, e quatro buracos de perda silenciosa de mensagem fechados)
+
+**Antes disso, 24/08/2026, noite** (o site inteiro virava TELA PRETA para
 quem aceitasse os cookies, por uma quebra de linha no valor do Pixel do Meta
 colado na Vercel; corrigido no painel e no código, e o pixel passou a medir
 pela primeira vez)
@@ -19,6 +23,88 @@ minutos seguidos, contra 26% da medição anterior)
 **Antes disso, 23/08/2026** (landing auditada: promessa falsa no hero, logo quebrado no telefone, banner de cookies cobrindo o CTA, e prints mostrando o jargão que a própria página baniu; PRD, schema e grafo realinhados)
 
 **Antes disso, 22/08/2026** (funções rodavam em Washington DC com o banco em São Paulo, corrigido na config do projeto e medido: /dashboard 1221ms → 400ms; modo claro sem escada de superfícies, refeito; jargão remanescente e telas de erro; WhatsApp sem QR por Postgres esgotado na VPS; migration 0049 provada desnecessária e removida)
+
+## WhatsApp: auditoria da arquitetura inteira (24/08, noite)
+
+Pedido: garantir que funcione para todos os usuários, sem cair. Auditado
+ponta a ponta, medindo contra o servidor e o banco reais.
+
+### A sessão está MUITO mais estável do que este documento dizia
+
+| medição | logado |
+|---|---|
+| 23/08, 2 min | 63% |
+| 23/08, 13 min | 26% |
+| 24/08 tarde, 13 min | 0% |
+| **24/08 noite, 6 min** | **100%, zero erro de rede** |
+
+A instância da "Consultoria Aurora" está pareada com um número real
+(`jid: 5571…`) desde 23/08 15:36 — mais de 24 horas de pé. **Envio testado e
+funcionando**: HTTP 200 em 2s, mensagem entregue com ID.
+
+O servidor responde em 70ms, e 197ms com 10 chamadas simultâneas.
+
+**Armadilha de instrumentação que quase virou diagnóstico errado:** o campo
+`LoggedIn` **só existe em `/instance/status` com o token da instância**. Em
+`/instance/all` ele não existe, e a leitura vira `null` — uma sessão saudável
+passa por morta. O script `vigiar-sessao-whatsapp.mjs` sempre usou a rota
+certa; o aviso ficou gravado nele para ninguém "simplificar" a chamada depois.
+
+**A conclusão de que "não se sustenta" era prematura.** A oscilação é real e
+a recuperação também. O que decide não é uma leitura, é a série.
+
+### Quatro buracos de perda silenciosa de mensagem, fechados
+
+O dedupe é gravado ANTES do processamento — sem isso o reenvio duplicaria a
+atividade. Mas isso abre uma janela em que a mensagem já é "vista" e ainda não
+virou nada, e qualquer falha ali a apaga da existência: o Evolution não
+reenvia o que já deduplicou.
+
+O caminho do limite de plano já tratava disso (23/08). Os outros **não**:
+
+1. `activities.insert` sem checar erro — o buraco mais caro. Falha de RLS,
+   constraint ou rede descartava a mensagem sem deixar rastro.
+2. `tasks.insert` sem checar erro.
+3. `erroDedupe` por motivo diferente de duplicata: só `console.error`, que
+   ninguém lê em produção.
+4. **Lote grande estourando `maxDuration`**: o laço é série, ~330ms por
+   mensagem (medido). Um lote de 40 levaria ~13s contra o teto de 15 — e a
+   função morrendo no meio apagaria tudo que já tinha dedupe. Teto de 25 por
+   chamada; o excedente nunca grava dedupe, então continua elegível para
+   reenvio.
+
+Agora toda falha passa por `registrarMensagemPerdida`, que guarda telefone E
+texto em `error_logs` — um sem o outro não permite decidir se aquela venda
+valia.
+
+**Provado contra produção** com workspace descartável: segredo errado dá 404;
+mensagem de número novo vira contato + atividade + tarefa em 719ms; reenvio do
+mesmo evento não duplica; lote de 40 responde 200 em 8,3s sem estourar.
+
+### O segredo do webhook é ÚNICO, não por empresa
+
+O comentário do código dizia "um segredo por conexão" e **estava errado**: é
+`EVOLUTION_WEBHOOK_SECRET`, o mesmo para todas as instâncias.
+
+Consequência, dita sem suavizar: quem conhecer o segredo consegue **injetar**
+mensagem falsa no funil de qualquer empresa, bastando saber o UUID dela. Não
+dá para LER nada (a rota só escreve), e o segredo hoje só existe no `.env` e
+na configuração das instâncias no servidor Evolution, ao qual apenas o dono
+tem acesso.
+
+É fraqueza de arquitetura, não buraco explorável hoje. O caminho correto com
+muitos clientes é segredo por conexão, gerado ao conectar e guardado junto do
+token — que também limita o estrago se um cliente for comprometido. **Não foi
+feito nesta rodada** por exigir migration e retrabalho no fluxo de conexão.
+
+### O que ainda decide se dá para vender
+
+A capacidade da VPS (KVM 2 = ~33 clientes) e o risco de a Meta restringir o
+número seguem como registrado. O proxy residencial (~R$ 18/mês) continua sendo
+a proteção mais eficaz e continua **não contratado**.
+
+O que mudou é que a base agora está provada: conecta, sustenta, envia, recebe,
+e não perde mensagem em silêncio.
 
 ## Tela preta no site inteiro, por um "
 " no ID do pixel (24/08, tarde)
