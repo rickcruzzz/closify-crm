@@ -145,7 +145,11 @@ export function LeadFormDialog({
             )}
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
+          {/* `grid-cols-1 sm:grid-cols-2`, não `grid-cols-2` fixo: em 390px de
+              largura, duas colunas sobram ~170px cada uma, e o placeholder
+              "contato@empresa.com.br" corta antes do fim ("contato@empresa.c").
+              Empilha até `sm` (640px), onde cada campo já cabe inteiro. */}
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div className="flex flex-col gap-1.5">
               {/* "ou telefone" no rótulo em vez de um asterisco de
                   obrigatório: a regra real é ter ALGUMA forma de falar com a
@@ -221,7 +225,11 @@ export function LeadFormDialog({
             )}
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
+          {/* `grid-cols-1 sm:grid-cols-2`, não `grid-cols-2` fixo: em 390px de
+              largura, duas colunas sobram ~170px cada uma, e o placeholder
+              "contato@empresa.com.br" corta antes do fim ("contato@empresa.c").
+              Empilha até `sm` (640px), onde cada campo já cabe inteiro. */}
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="status">Status</Label>
               <Controller

@@ -218,7 +218,12 @@ export function DealFormDialog({
             )}
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
+          {/* `grid-cols-1 sm:grid-cols-2`, não `grid-cols-2` fixo: mesmo
+              defeito do formulário de contato (`lead-form-dialog.tsx`) — em
+              390px de largura, duas colunas sobram ~170px cada, apertado
+              demais para um Select com opção longa ou o rótulo "· do contato,
+              dá para ajustar" do campo de valor. Empilha até `sm` (640px). */}
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="stage">Etapa</Label>
               <Controller
@@ -288,7 +293,12 @@ export function DealFormDialog({
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
+          {/* `grid-cols-1 sm:grid-cols-2`, não `grid-cols-2` fixo: mesmo
+              defeito do formulário de contato (`lead-form-dialog.tsx`) — em
+              390px de largura, duas colunas sobram ~170px cada, apertado
+              demais para um Select com opção longa ou o rótulo "· do contato,
+              dá para ajustar" do campo de valor. Empilha até `sm` (640px). */}
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="value">
                 Valor (R$)
