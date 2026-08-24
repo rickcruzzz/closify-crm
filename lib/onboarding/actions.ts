@@ -295,10 +295,38 @@ export async function finalizarOnboarding(values: unknown) {
  * Não bloqueia nada e não apaga progresso: quem respondeu duas etapas e pulou
  * mantém as respostas no `jsonb`. E `skipped` nunca volta a mostrar a tela de
  * boas-vindas, o pedido é explícito em não repetir isso a cada login.
+ *
+ * ## Por que exige empresa (24/08)
+ *
+ * Pular SEM empresa criada trancou 4 contas em produção, num loop infinito
+ * entre `/dashboard` (que não achava empresa e mandava para `/onboarding`) e
+ * `/onboarding` (que via `skipped` e mandava de volta). A pessoa via o
+ * carregamento girar para sempre e nunca conseguia entrar — sem erro em lugar
+ * nenhum, porque do ponto de vista do sistema estava tudo certo.
+ *
+ * A empresa só nasce no FIM do assistente. Antes disso não existe produto
+ * para onde pular: "pular" ali significa pedir para ir a um lugar que não
+ * existe.
+ *
+ * A tela também esconde o botão no primeiro passo, mas a regra precisa viver
+ * aqui — Server Action é endpoint HTTP, e esconder botão não impede chamada.
+ * Mesma doutrina de "regra que só vive na interface não é regra".
  */
 export async function pularOnboarding() {
   const sessao = await abrirSessao()
   if ('error' in sessao) return sessao
+
+  const { count } = await sessao.supabase
+    .from('workspace_members')
+    .select('workspace_id', { count: 'exact', head: true })
+    .eq('user_id', sessao.userId)
+
+  if (!count) {
+    return {
+      error:
+        'Informe o nome da sua empresa antes de continuar. É o único dado necessário para criar sua conta.',
+    }
+  }
 
   const r = await gravarEstado(sessao, { status: 'skipped', etapa: null, tour_status: 'skipped' })
   if ('error' in r) return r

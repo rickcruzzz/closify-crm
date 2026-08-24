@@ -34,12 +34,34 @@ export default async function OnboardingPage() {
     redirect('/login')
   }
 
-  const estado = await lerEstadoDoOnboarding()
+  const [estado, { count: empresas }] = await Promise.all([
+    lerEstadoDoOnboarding(),
+    // Contagem no banco, sem trazer linha: só interessa se é zero ou não.
+    supabase
+      .from('workspace_members')
+      .select('workspace_id', { count: 'exact', head: true })
+      .eq('user_id', user.id),
+  ])
 
   // Quem já concluiu ou pulou não volta para cá nem digitando a URL: sem isto,
   // terminar o assistente e apertar "voltar" no navegador ofereceria refazer a
   // configuração de uma empresa que já existe.
-  if (estado.status === 'completed' || estado.status === 'skipped') {
+  //
+  // **`(empresas ?? 0) > 0` não é excesso de zelo — é o que quebra um LOOP
+  // INFINITO que trancou 4 contas em produção** (achadas em 24/08, duas do
+  // mesmo dia). A empresa só nasce no FIM do assistente, mas "Pular por
+  // enquanto" marcava `skipped` e mandava para `/dashboard` sem criar nada.
+  // Lá, `app/(dashboard)/layout.tsx` não achava empresa e devolvia para cá;
+  // daqui o `skipped` devolvia para o dashboard, e assim para sempre. A pessoa
+  // via o indicador de carregamento girando eternamente e NUNCA conseguia usar
+  // o sistema — perda de cliente garantida, sem erro em lugar nenhum.
+  //
+  // Sem empresa não existe produto para onde mandar alguém. Então o assistente
+  // é mostrado mesmo com o status dizendo o contrário: o estado guardado está
+  // errado, e o caminho de saída é criar a empresa.
+  const temEmpresa = (empresas ?? 0) > 0
+
+  if (temEmpresa && (estado.status === 'completed' || estado.status === 'skipped')) {
     redirect('/dashboard')
   }
 

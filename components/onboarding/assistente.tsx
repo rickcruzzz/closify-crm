@@ -261,16 +261,31 @@ export function AssistenteDeOnboarding({
               Voltar
             </Button>
 
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              className="text-muted-foreground"
-              disabled={ocupado}
-              onClick={pular}
-            >
-              Pular por enquanto
-            </Button>
+            {/* O botão SÓ existe depois do primeiro passo.
+
+                Pular na tela do nome da empresa trancou 4 contas em produção
+                (24/08): a empresa só é criada no fim do assistente, então
+                `skipped` sem empresa punha a pessoa num laço eterno entre
+                `/dashboard` e `/onboarding`, com o carregamento girando para
+                sempre. As outras três perguntas são de personalização e podem
+                mesmo ser puladas; o nome da empresa é o único dado sem o qual
+                não há para onde ir.
+
+                A trava de verdade está em `pularOnboarding`, no servidor —
+                esconder botão não impede chamada. Aqui é para a pessoa não
+                bater numa porta fechada. */}
+            {indice > 0 && (
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="text-muted-foreground"
+                disabled={ocupado}
+                onClick={pular}
+              >
+                Pular por enquanto
+              </Button>
+            )}
           </div>
         )}
       </CardContent>
