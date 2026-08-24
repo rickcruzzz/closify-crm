@@ -5,6 +5,7 @@ import { useRouter, usePathname } from 'next/navigation'
 import {
   BellRing,
   Filter,
+  Bookmark,
   Images,
   LayoutDashboard,
   Loader2,
@@ -49,6 +50,10 @@ const SECOES = [
   { href: '/dono/ativacao', rotulo: 'Ativação', icone: Filter },
   { href: '/dono/anuncio', rotulo: 'Anúncio', icone: Megaphone },
   { href: '/dono/criativos', rotulo: 'Criativos', icone: Images },
+  // Depois de Criativos, e separado dela: aquela tela CONFERE peça antes de
+  // virar anúncio (proporção, resolução, posicionamento do Meta); esta entrega
+  // Story já pronto, e a única pergunta aqui é em que ordem subir.
+  { href: '/dono/destaques', rotulo: 'Destaques', icone: Bookmark },
 ] as const
 
 export function Navegacao({ alertas }: { alertas?: number }) {
