@@ -42,7 +42,8 @@ import { cn } from '@/lib/utils'
  * `max-w-none` é obrigatório: a folha de base do Tailwind aplica
  * `max-width:100%` em `img`, e sem anular isso o `w-[300%]` não faria nada.
  */
-const RECORTE_NO_MOBILE = 'w-[300%] max-w-none -translate-x-[17%] sm:w-full sm:translate-x-0'
+const RECORTE_NO_MOBILE =
+  'w-[300%] max-w-none -translate-x-[19%] -translate-y-[7%] sm:w-full sm:translate-x-0 sm:translate-y-0'
 
 export function ProdutoPrint({
   nome,
@@ -128,15 +129,24 @@ export function ProdutoPrint({
           é gasto provando que o produto existe sem mostrar o que ele faz.
 
           A saída não é técnica de imagem, é de enquadramento. Abaixo de `sm` o
-          print é renderizado a 300% da largura do container e deslocado 17% à
-          esquerda; o `overflow-hidden` da moldura corta o resto. A escala sobe
+          print é renderizado a 300% da largura do container e deslocado nos
+          dois eixos; o `overflow-hidden` da moldura corta o resto. A escala sobe
           de 0,21 para ~0,7 — o texto volta a ser texto —, e o pedaço que
           aparece é o que interessa: o fim da barra lateral e as primeiras
           colunas, não o vazio da direita.
 
-          Os 17% saem de medição no PNG, não de tentativa: a barra lateral
-          termina em 17,7% da largura da imagem. Com 20% o título da tela era
-          cortado ao meio ("unil"), que é pior do que não mostrá-lo.
+          Os dois valores foram calibrados contra o print real no telefone, e
+          cada um corrige um defeito da versão anterior:
+
+          - **19% na horizontal.** Com 17% passava uma lasca da barra lateral, e
+            o marcador do item ativo entrava como um risco verde cortado na
+            borda. Com 20% o título saía partido ("unil"). A janela entre os
+            dois erros é estreita porque a distância entre o fim da barra e o
+            começo do título é só o respiro do layout.
+          - **7% na vertical.** Sem ele, a faixa do topo do app entrava no
+            recorte, e o conteúdo dela (alternador de tema e avatar) mora no
+            canto direito, fora do enquadramento. Sobrava uma tira vazia entre a
+            moldura e o título, que lê como imagem quebrada.
 
           `max-h` no mobile porque largura de 300% também triplica a altura: sem
           teto, um print ocuparia três telas de rolagem.
