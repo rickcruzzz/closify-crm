@@ -33,6 +33,13 @@ vez de renderizar o SVG porque este ambiente não tem cairosvg nem svglib, e
 trazer dependência nova para desenhar três trapézios custaria mais que o
 problema.
 
+**O print começa depois do texto, com respiro medido.** Ele encostava na
+última linha da headline: medido no gancho, o texto terminava em 33,8% da
+altura e o print começava em 34,4%. Cada composição passa o próprio
+`topo_rel`, calculado a partir de onde o bloco de texto de fato termina —
+não há valor único que sirva às cinco, porque o texto de apoio dos passos
+ocupa mais linhas que o do gancho.
+
 **A copy sai da landing, nunca é inventada aqui.** Os títulos dos passos são
 os mesmos de `components/landing/how-it-works-section.tsx`, que já passaram
 pelo PRD de copy sem jargão. Texto novo escrito direto no criativo divergiria
@@ -278,7 +285,10 @@ def salvar(img, nome):
 def tela_gancho():
     """A dor, com o print como evidência. É a que precisa parar o scroll."""
     img = fundo_com_brilho()
-    img = colar_print(img, "kanban-dark.png")
+    # O print entra DEPOIS do bloco de texto, com respiro medido — ver
+    # RESPIRO_APOS_TEXTO. Antes ele era colado em posição fixa e a última
+    # linha da headline caía sobre a borda da tela.
+    img = colar_print(img, "kanban-dark.png", topo_rel=0.42)
     draw = ImageDraw.Draw(img)
 
     y = SEGURO_TOPO + 30 * ESCALA
@@ -305,7 +315,7 @@ def tela_passo(numero, titulo, apoio, print_nome, arquivo):
     dois não divergirem no primeiro ajuste de copy.
     """
     img = fundo_com_brilho(centro_y=0.62)
-    img = colar_print(img, print_nome, topo_rel=0.37)
+    img = colar_print(img, print_nome, topo_rel=0.44)
     draw = ImageDraw.Draw(img)
 
     y = SEGURO_TOPO + 30 * ESCALA
