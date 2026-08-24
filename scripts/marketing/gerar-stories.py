@@ -42,7 +42,7 @@ da página no primeiro ajuste que alguém fizesse lá.
 from pathlib import Path
 
 import numpy as np
-from PIL import Image, ImageDraw, ImageFont, ImageFilter
+from PIL import Image, ImageDraw, ImageEnhance, ImageFilter, ImageFont
 
 # ---------------------------------------------------------------- constantes
 
@@ -178,7 +178,8 @@ def _coeficientes_perspectiva(origem, destino):
     return np.array(np.dot(np.linalg.inv(A.T * A) * A.T, B)).reshape(8)
 
 
-def colar_print(img, nome_print, topo_rel=0.40, larg_rel=1.30, esq_rel=-0.08):
+def colar_print(img, nome_print, topo_rel=0.34, larg_rel=1.42, esq_rel=-0.14,
+                clarear=1.55):
     """
     Cola o print do produto em perspectiva, como uma tela inclinada no espaço.
 
@@ -190,6 +191,14 @@ def colar_print(img, nome_print, topo_rel=0.40, larg_rel=1.30, esq_rel=-0.08):
     larg = int(W * larg_rel)
     alt = int(larg * origem.height / origem.width)
     origem = origem.resize((larg, alt), Image.LANCZOS)
+
+    # O print do produto é escuro por natureza (tema escuro), e sobre um fundo
+    # #0A0A0A ele quase desaparece: medido, entrava com brilho médio 23-34
+    # contra fundo 10. No celular isso lê como foto apagada, não como
+    # interface elegante. Um leve ganho de brilho e contraste separa a tela do
+    # fundo sem clarear a ponto de descaracterizar o tema do produto.
+    origem = ImageEnhance.Brightness(origem).enhance(clarear)
+    origem = ImageEnhance.Contrast(origem).enhance(1.12)
 
     borda = 3 * ESCALA
     com_moldura = Image.new("RGB", (larg + borda * 2, alt + borda * 2), (68, 72, 76))
@@ -209,8 +218,16 @@ def colar_print(img, nome_print, topo_rel=0.40, larg_rel=1.30, esq_rel=-0.08):
     ]
     coef = _coeficientes_perspectiva([(0, 0), (bl, 0), (bl, ba), (0, ba)], destino)
     perspectiva = com_moldura.transform(
-        (bl, ba + folga * 2), Image.PERSPECTIVE, coef, Image.BICUBIC, fillcolor=FUNDO
+        (bl, ba + folga * 2), Image.PERSPECTIVE, coef, Image.BICUBIC, fillcolor=(0, 0, 0)
     )
+
+    # A `folga` existe só para a transformação não cortar os cantos — mas ela
+    # vira margem MORTA colada ao print, que viajava junto ao colar e abria um
+    # vazio entre o texto e a imagem (medido: 34% a 53% da altura em brilho de
+    # fundo puro). Recorta o que de fato tem conteúdo antes de compor.
+    caixa = perspectiva.getbbox()
+    if caixa:
+        perspectiva = perspectiva.crop(caixa)
 
     topo = int(H * topo_rel)
     esq = int(W * esq_rel)
@@ -222,7 +239,7 @@ def colar_print(img, nome_print, topo_rel=0.40, larg_rel=1.30, esq_rel=-0.08):
     sd.ellipse([W * 0.05, topo + int(alt_p * 0.55), W * 1.15, topo + int(alt_p * 0.95)],
                fill=(0, 0, 0))
     sombra = sombra.filter(ImageFilter.GaussianBlur(70 * ESCALA))
-    img = Image.blend(img, sombra, 0.5)
+    img = Image.blend(img, sombra, 0.62)
 
     img.paste(perspectiva, (esq, topo))
 
@@ -288,7 +305,7 @@ def tela_passo(numero, titulo, apoio, print_nome, arquivo):
     dois não divergirem no primeiro ajuste de copy.
     """
     img = fundo_com_brilho(centro_y=0.62)
-    img = colar_print(img, print_nome, topo_rel=0.44)
+    img = colar_print(img, print_nome, topo_rel=0.37)
     draw = ImageDraw.Draw(img)
 
     y = SEGURO_TOPO + 30 * ESCALA
