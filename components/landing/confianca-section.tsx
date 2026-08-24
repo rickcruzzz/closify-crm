@@ -134,15 +134,21 @@ export function ConfiancaSection() {
         {/* O CNPJ fecha a seção em vez de abrir: quem chegou até aqui já leu as
             quatro garantias, e esta linha é a prova de que existe uma empresa
             respondendo por elas. Sozinha no topo seria burocracia; no fim, é
-            assinatura. */}
+            assinatura.
+
+            Sem `razaoSocial`, de propósito (24/08): nome civil do titular numa
+            linha de reforço visual não ajuda confiança, só expõe. Ele continua
+            em Privacidade/Termos, onde a LGPD exige identificar o controlador,
+            e nos avisos de fatura, onde avisa o nome que vai aparecer no
+            extrato do cartão — os dois por necessidade, não por marca. */}
         <RevealOnScroll
           delay={360}
           className="text-muted-foreground mt-8 flex flex-col items-center gap-2 text-center text-sm"
         >
           <Building2 aria-hidden className="size-4" />
           <p>
-            {CONTROLADOR.nomeFantasia} é operado por {CONTROLADOR.razaoSocial}, CNPJ{' '}
-            {CONTROLADOR.cnpj}. Suporte por WhatsApp no {CONTROLADOR.whatsapp.exibicao}.
+            {CONTROLADOR.nomeFantasia}, CNPJ {CONTROLADOR.cnpj}. Suporte por WhatsApp no{' '}
+            {CONTROLADOR.whatsapp.exibicao}.
           </p>
         </RevealOnScroll>
       </div>

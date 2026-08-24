@@ -56,10 +56,16 @@ export function PublicFooter() {
               procurar, porque é onde todo site sério o coloca. Estava só nas
               páginas legais, a dois cliques de distância de quem estava
               decidindo. Vem de `lib/legal.ts`, a mesma fonte que a Política de
-              Privacidade e os Termos citam, então não há como divergirem. */}
+              Privacidade e os Termos citam, então não há como divergirem.
+
+              Sem `razaoSocial` aqui, de propósito: nome civil do titular numa
+              linha de reforço visual não ajuda confiança, só expõe. Ele
+              continua em Privacidade/Termos, onde a LGPD (Art. 9º, I) exige
+              identificar o controlador, e nos avisos de fatura, onde avisa o
+              nome que vai aparecer no extrato do cartão — os dois por
+              necessidade, não por escolha de marca. */}
           <span className="text-muted-foreground text-sm text-balance">
-            © {new Date().getFullYear()} Velo Funil · {CONTROLADOR.razaoSocial} · CNPJ{' '}
-            {CONTROLADOR.cnpj}
+            © {new Date().getFullYear()} Velo Funil · CNPJ {CONTROLADOR.cnpj}
           </span>
         </div>
 
