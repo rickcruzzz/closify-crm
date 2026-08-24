@@ -2,7 +2,14 @@
 
 import * as React from 'react'
 import { useRouter, usePathname } from 'next/navigation'
-import { BellRing, Images, LayoutDashboard, Loader2, Megaphone } from 'lucide-react'
+import {
+  BellRing,
+  Filter,
+  Images,
+  LayoutDashboard,
+  Loader2,
+  Megaphone,
+} from 'lucide-react'
 
 import { cn } from '@/lib/utils'
 
@@ -35,6 +42,11 @@ import { cn } from '@/lib/utils'
 const SECOES = [
   { href: '/dono', rotulo: 'Visão geral', icone: LayoutDashboard },
   { href: '/dono/alertas', rotulo: 'Alertas', icone: BellRing },
+  // Depois de Alertas e antes de Anúncio de propósito: a ordem é a da rotina —
+  // primeiro o que quebrou, depois se as pessoas estão usando, e só então
+  // quanto custa trazer mais gente. Olhar anúncio antes de ativação é comprar
+  // tráfego para um funil que talvez esteja furado.
+  { href: '/dono/ativacao', rotulo: 'Ativação', icone: Filter },
   { href: '/dono/anuncio', rotulo: 'Anúncio', icone: Megaphone },
   { href: '/dono/criativos', rotulo: 'Criativos', icone: Images },
 ] as const
