@@ -81,7 +81,7 @@ async function graph<T>(caminho: string, token: string): Promise<RespostaDaApi<T
  * erro natural: os dois são "da Meta" e só um serve aqui.
  */
 const SEM_TOKEN =
-  'Falta o META_ADS_TOKEN — um token da Meta com permissão ads_read (e ads_management, para os botões de pausar e orçamento). O que já existe no projeto (META_CONVERSIONS_API_TOKEN) só envia conversão, não lê gasto.'
+  'Falta o META_ADS_TOKEN, um token da Meta com permissão ads_read (e ads_management, para os botões de pausar e orçamento). O que já existe no projeto (META_CONVERSIONS_API_TOKEN) só envia conversão, não lê gasto.'
 
 /**
  * Lê tudo que a página de anúncio precisa, numa chamada.
@@ -165,8 +165,8 @@ export async function lerProntidao(): Promise<Resultado<ProntidaoDaConta>> {
       dados: {
         contaId: CONTA_DE_ANUNCIO.id,
         contaNome: dadosDaConta.name ?? CONTA_DE_ANUNCIO.nome,
-        moeda: dadosDaConta.currency ?? '—',
-        fusoHorario: dadosDaConta.timezone_name ?? '—',
+        moeda: dadosDaConta.currency ?? '-',
+        fusoHorario: dadosDaConta.timezone_name ?? '-',
         temPixelCerto: Boolean(pixel),
         pixelNome: pixel?.name ?? null,
         pixelDisparandoDesde: pixel?.last_fired_time ?? null,

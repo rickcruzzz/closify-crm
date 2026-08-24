@@ -51,7 +51,7 @@ export function SuporteEmailMenu({ email, className }: { email: string; classNam
           <button
             type="button"
             className={className}
-            aria-label={`${email} — clique para escolher onde abrir`}
+            aria-label={`${email}, clique para escolher onde abrir`}
           >
             {email}
           </button>

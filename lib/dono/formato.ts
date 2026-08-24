@@ -42,12 +42,12 @@ export function formatarDinheiro(valor: number): string {
 }
 
 export function formatarData(iso: string | null): string {
-  if (!iso) return '—'
+  if (!iso) return '-'
   return dataCurta.format(new Date(iso))
 }
 
 export function formatarDataComHora(iso: string | null): string {
-  if (!iso) return '—'
+  if (!iso) return '-'
   return dataComHora.format(new Date(iso))
 }
 

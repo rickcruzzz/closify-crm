@@ -312,7 +312,7 @@ export async function POST(
         const limiteDoPlano = erroLead?.code === '42501'
         const aviso = limiteDoPlano
           ? 'Seu plano chegou ao limite de contatos. Mensagens de números novos ' +
-            'não estão entrando no funil — só as de quem já é seu contato. ' +
+            'não estão entrando no funil, só as de quem já é seu contato. ' +
             'Faça upgrade para voltar a receber tudo.'
           : 'Não consegui registrar a mensagem de um número novo. ' +
             'As mensagens de quem já é seu contato continuam entrando.'

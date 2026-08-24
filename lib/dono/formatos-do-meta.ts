@@ -71,7 +71,7 @@ export function classificar(largura: number, altura: number): Classificacao {
       formato,
       exato,
       observacao: pequena
-        ? `${largura}×${altura} é menor que o recomendado (${formato.largura}×${formato.altura}) — pode aparecer borrada no celular.`
+        ? `${largura}×${altura} é menor que o recomendado (${formato.largura}×${formato.altura}), pode aparecer borrada no celular.`
         : exato
           ? undefined
           : `${largura}×${altura}, proporção certa. O Meta redimensiona sozinho.`,

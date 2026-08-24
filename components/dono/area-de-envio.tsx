@@ -145,7 +145,7 @@ export function AreaDeEnvio({ destino }: { destino: Destino }) {
               : 'Arraste o conteúdo do orgânico aqui'}
           </p>
           <p className="text-muted-foreground max-w-md text-sm text-pretty">
-            Fotos e vídeos. Cada arquivo é conferido antes de subir — o que não serve é recusado
+            Fotos e vídeos. Cada arquivo é conferido antes de subir. O que não serve é recusado
             na hora, com o motivo.
           </p>
         </div>

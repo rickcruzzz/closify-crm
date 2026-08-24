@@ -107,7 +107,7 @@ function Prontidao({ prontidao }: { prontidao: ProntidaoDaConta }) {
           : 'Nenhum evento chegando do site',
       detalhe: temCadastro
         ? 'Dá para otimizar por cadastro, que é bem melhor que otimizar por clique.'
-        : 'Sem evento de cadastro, a campanha só sabe otimizar por clique — mais barato por clique, pior por cliente.',
+        : 'Sem evento de cadastro, a campanha só sabe otimizar por clique: mais barato por clique, pior por cliente.',
     },
     {
       ok: prontidao.campanhas.length > 0,
@@ -115,7 +115,7 @@ function Prontidao({ prontidao }: { prontidao: ProntidaoDaConta }) {
         prontidao.campanhas.length > 0
           ? `${prontidao.campanhas.length} campanha(s) criada(s), nenhuma gastou ainda`
           : 'Nenhuma campanha criada',
-      detalhe: 'Criar campanha continua sendo pelo chat — é onde erro custa caro.',
+      detalhe: 'Criar campanha continua sendo pelo chat, que é onde erro custa caro.',
     },
     {
       ok: prontidao.podeAgir,
@@ -191,7 +191,7 @@ function Resultado({
           rotulo="Custo por cliente"
           destaque
           valor={
-            resumo.custoPorCliente === null ? '—' : formatarDinheiro(resumo.custoPorCliente)
+            resumo.custoPorCliente === null ? '-' : formatarDinheiro(resumo.custoPorCliente)
           }
           nota={
             resumo.mesesParaSePagar === null
@@ -205,14 +205,14 @@ function Resultado({
       {paybackLongo && (
         <p className="rounded-xl bg-amber-500/5 p-4 text-sm text-pretty ring-1 ring-amber-500/20">
           Cada cliente leva mais de 6 meses para pagar o que custou trazer. Em produto de PME isso
-          é apertado — o cancelamento costuma chegar antes.
+          é apertado, porque o cancelamento costuma chegar antes.
         </p>
       )}
 
       {resumo.semCampanhaIdentificada > 0 && (
         <p className="text-muted-foreground rounded-xl p-4 text-sm text-pretty ring-1 ring-white/10">
           {resumo.semCampanhaIdentificada} conta(s) vieram de clique de anúncio, mas sem dizer de
-          qual campanha — falta o <code>utm_campaign</code> na URL do anúncio. Os números por
+          qual campanha: falta o <code>utm_campaign</code> na URL do anúncio. Os números por
           campanha abaixo estão subestimados.
         </p>
       )}

@@ -166,7 +166,7 @@ export function HeroSection() {
               três lugares, nenhum deles o hero. */}
           <p className="text-muted-foreground animate-in fade-in slide-in-from-bottom-3 fill-mode-both ease-entrada duration-entrada delay-passo-4 text-sm text-balance">
             {DIAS_DE_TRIAL} dias com tudo liberado, sem cartão de crédito. Depois, R$ 49
-            por mês pela empresa inteira — não por vendedor.
+            por mês pela empresa inteira, não por vendedor.
           </p>
         </div>
 

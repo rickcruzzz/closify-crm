@@ -309,7 +309,7 @@ export function PagarDialog({
                 fantasia saiu da base do CNPJ em 15/11/2023. */}
             <p className="text-muted-foreground border-t pt-3 text-xs">
               No seu banco, o recebedor aparece como{' '}
-              <strong>{CONTROLADOR.razaoSocial}</strong> — é o CNPJ por trás do Velo Funil.
+              <strong>{CONTROLADOR.razaoSocial}</strong>, o CNPJ por trás do Velo Funil.
             </p>
           </div>
         )}

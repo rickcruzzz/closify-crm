@@ -38,7 +38,7 @@ const TIERS: { ateDias: number; tier: Tier }[] = [
       porHora: 10,
       porDia: 30,
       explicacao:
-        'Número recém-conectado. Nos primeiros dias o WhatsApp observa se o uso parece humano — enviar pouco agora é o que protege a conta depois.',
+        'Número recém-conectado. Nos primeiros dias o WhatsApp observa se o uso parece humano. Enviar pouco agora é o que protege a conta depois.',
     },
   },
   {

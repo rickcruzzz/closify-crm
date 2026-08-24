@@ -75,7 +75,7 @@ const garantias: Garantia[] = [
   {
     titulo: 'Seu cartão não passa por aqui',
     descricao:
-      'Pix, boleto e cartão são processados pelo Asaas. O número do seu cartão nunca chega ao nosso servidor — por decisão de arquitetura, não por acaso.',
+      'Pix, boleto e cartão são processados pelo Asaas. O número do seu cartão nunca chega ao nosso servidor, por decisão de arquitetura.',
     icone: CreditCard,
     accent: 'text-violet-500 dark:text-violet-400',
     delay: 180,
@@ -83,7 +83,7 @@ const garantias: Garantia[] = [
   {
     titulo: 'A porta de saída fica aberta',
     descricao:
-      'Cancele sozinho, sem multa e sem falar com ninguém. A conta volta para o plano grátis e seus contatos continuam lá — não seguramos ninguém por dificuldade.',
+      'Cancele sozinho, sem multa e sem falar com ninguém. A conta volta para o plano grátis e seus contatos continuam lá. Não seguramos ninguém por dificuldade.',
     icone: DoorOpen,
     accent: 'text-orange-500 dark:text-orange-400',
     delay: 270,

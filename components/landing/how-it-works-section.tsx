@@ -36,7 +36,7 @@ const passos = [
   {
     numero: '01',
     titulo: 'Traga quem já é seu cliente',
-    descricao: `Tem planilha? Exporte como .csv e importe de uma vez — repetidos são ignorados sozinhos. Não tem? Cadastre pelo nome e telefone em segundos, do jeito que a conversa chegou. No plano grátis cabem ${FREE_LEAD_LIMIT} contatos.`,
+    descricao: `Tem planilha? Exporte como .csv e importe de uma vez, e os repetidos são ignorados sozinhos. Não tem? Cadastre pelo nome e telefone em segundos, do jeito que a conversa chegou. No plano grátis cabem ${FREE_LEAD_LIMIT} contatos.`,
     icone: FileSpreadsheet,
     accent: 'text-blue-500 dark:text-blue-400',
     fundo: 'bg-blue-500/10 dark:bg-blue-400/10',
@@ -130,7 +130,7 @@ export function HowItWorksSection() {
               E aí é só abrir e trabalhar
             </h3>
             <p className="text-muted-foreground text-balance">
-              Todo dia o sistema já sabe com quem você precisa falar — o que venceu,
+              Todo dia o sistema já sabe com quem você precisa falar: o que venceu,
               o que é de hoje e o que vem em seguida.
             </p>
           </div>

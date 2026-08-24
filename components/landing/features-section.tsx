@@ -40,7 +40,7 @@ const features: Feature[] = [
   {
     title: 'O histórico fica com a empresa',
     description:
-      'Cada ligação, e-mail e conversa fica registrada no contato. Quando um vendedor sai, o relacionamento continua aqui — não no celular dele.',
+      'Cada ligação, e-mail e conversa fica registrada no contato. Quando um vendedor sai, o relacionamento continua aqui, e não no celular dele.',
     icon: ListChecks,
     accent: {
       text: 'text-violet-500 dark:text-violet-400',
@@ -145,7 +145,7 @@ export function FeaturesSection() {
           </h2>
           <p className="text-muted-foreground text-lg text-balance">
             Cada recurso aqui existe porque alguém estava resolvendo aquilo com
-            planilha, post-it ou memória — e perdendo venda no caminho.
+            planilha, post-it ou memória, e perdendo venda no caminho.
           </p>
         </RevealOnScroll>
 

@@ -129,7 +129,7 @@ export function analisar(candidato: Candidato): Analise {
       motivo: `${candidato.mime || 'formato desconhecido'} não é aceito pelo Meta.`,
       comoResolver:
         candidato.tipo === 'video'
-          ? 'Exporte em MP4 (H.264) ou MOV — é o padrão de qualquer editor.'
+          ? 'Exporte em MP4 (H.264) ou MOV, o padrão de qualquer editor.'
           : 'Salve como PNG, JPG ou WebP.',
     })
   }
@@ -199,7 +199,7 @@ export function analisar(candidato: Candidato): Analise {
 
     if (proporcao === '9:16') {
       ressalvas.push(
-        'Vertical: mantenha texto e rosto fora dos 14% de cima e 20% de baixo — é onde a interface do Meta cobre o vídeo.',
+        'Vertical: mantenha texto e rosto fora dos 14% de cima e 20% de baixo: é onde a interface do Meta cobre o vídeo.',
       )
     }
 

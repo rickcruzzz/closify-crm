@@ -155,7 +155,7 @@ export function TaskItem({
           descricao={
             <>
               &quot;{task.title}&quot; sai da sua lista em definitivo. Se o objetivo é
-              marcar como feita, use a caixa de seleção — assim ela fica no histórico.
+              marcar como feita, use a caixa de seleção. Assim ela fica no histórico.
             </>
           }
           pendente={pendente}

@@ -206,7 +206,7 @@ export function TabelaDeClientes({ empresas }: { empresas: EmpresaNaCentral[] })
                   <TableRow key={empresa.id}>
                     <TableCell className="font-medium">{empresa.nome}</TableCell>
                     <TableCell className="text-muted-foreground">
-                      {empresa.dono ?? '—'}
+                      {empresa.dono ?? '-'}
                     </TableCell>
                     <TableCell>
                       {empresa.email ? (
@@ -217,7 +217,7 @@ export function TabelaDeClientes({ empresas }: { empresas: EmpresaNaCentral[] })
                           {empresa.email}
                         </a>
                       ) : (
-                        '—'
+                        '-'
                       )}
                     </TableCell>
                     <TableCell>

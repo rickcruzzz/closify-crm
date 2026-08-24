@@ -51,7 +51,7 @@ export default function GlobalError({
           O Velo Funil não abriu
         </h1>
         <p style={{ color: '#a1a1a1', maxWidth: '28rem', margin: 0, lineHeight: 1.6 }}>
-          Seus dados estão salvos e seguros — a falha foi ao carregar a tela.
+          Seus dados estão salvos e seguros. A falha foi ao carregar a tela.
           Recarregue a página; se continuar, fale com a gente pelo suporte.
         </p>
         <button

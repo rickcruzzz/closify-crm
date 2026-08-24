@@ -98,7 +98,7 @@ export function PublicFooter() {
               domínio — resposta ao relato de confusão de quem clicou esperando
               abrir a própria caixa e caiu direto no Outlook. */}
           <span className="text-muted-foreground/70 block text-[11px]">
-            (você escolhe onde abrir — encaminha para nossa caixa de suporte)
+            (você escolhe onde abrir; encaminha para nossa caixa de suporte)
           </span>
         </p>
       </div>

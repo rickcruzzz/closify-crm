@@ -27,7 +27,7 @@ export default function Error({
         Esta tela não carregou
       </h1>
       <p className="text-muted-foreground max-w-sm">
-        Seus dados estão salvos e seguros. Tente abrir de novo — se continuar
+        Seus dados estão salvos e seguros. Tente abrir de novo. Se continuar
         assim, fale com a gente pelo suporte.
       </p>
       <Button onClick={() => reset()}>Tentar de novo</Button>

@@ -99,7 +99,7 @@ export function FunilDeAtivacao({
             </p>
             <p className="text-muted-foreground">
               {vazamento.perdeu} {vazamento.perdeu === 1 ? 'pessoa parou' : 'pessoas pararam'} antes
-              deste passo. É o degrau que rende mais consertar — não o de menor porcentagem, e sim
+              deste passo. É o degrau que rende mais consertar, e não o de menor porcentagem, e sim
               o que perde mais gente.
             </p>
           </div>
@@ -112,7 +112,7 @@ export function FunilDeAtivacao({
           <AlertTriangle className="mt-0.5 size-3.5 shrink-0" />
           <span>
             {excluidas} {excluidas === 1 ? 'conta interna ou de teste ficou' : 'contas internas ou de teste ficaram'}{' '}
-            de fora. Elas sempre &ldquo;ativam&rdquo; (quem cria já sabe usar) e nunca pagam — contá-las
+            de fora. Elas sempre &ldquo;ativam&rdquo; (quem cria já sabe usar) e nunca pagam, e contá-las
             inflaria a ativação e afundaria a conversão.
           </span>
         </p>

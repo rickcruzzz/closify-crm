@@ -123,7 +123,7 @@ export function PricingSection() {
               entrega, e quem criava conta descobria sozinho. */}
           <p className="text-muted-foreground text-lg text-balance">
             Sua empresa começa com o Pro completo, sem cartão. Passados os{' '}
-            {DIAS_DE_TRIAL} dias, ou você assina, ou fica no plano grátis — nunca
+            {DIAS_DE_TRIAL} dias, ou você assina, ou fica no plano grátis. Nunca
             cobramos sem você escolher.
           </p>
         </RevealOnScroll>
@@ -254,7 +254,7 @@ export function PricingSection() {
             <p className="mt-3 text-balance">
               A maioria dos CRMs cobra <strong>por vendedor</strong>. Uma equipe de cinco
               pessoas, a R$ 53 cada, custa{' '}
-              <strong className="text-foreground">R$ 265 por mês</strong> — e sobe toda
+              <strong className="text-foreground">R$ 265 por mês</strong>, e sobe toda
               vez que você contrata alguém.
             </p>
             <p className="mt-3 text-balance">

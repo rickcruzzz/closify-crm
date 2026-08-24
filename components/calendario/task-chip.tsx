@@ -77,7 +77,7 @@ export function TaskChip({
             : 'border-l-primary/50 bg-muted/60 hover:bg-muted',
       )}
       // O título completo mora aqui: some do chip, mas quem passa o mouse lê.
-      title={`${hora} · ${principal}${task.lead_name ? ` — ${task.title}` : ''}`}
+      title={`${hora} · ${principal}${task.lead_name ? ` · ${task.title}` : ''}`}
     >
       <span
         className={cn(

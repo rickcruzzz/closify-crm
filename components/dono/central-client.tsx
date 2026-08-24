@@ -52,7 +52,7 @@ export function CentralClient({ dados }: { dados: DadosDaCentral }) {
         <div className="flex flex-col gap-1">
           <h1 className="text-2xl font-semibold tracking-tight">Central do Dono</h1>
           <p className="text-muted-foreground text-sm">
-            Tudo do Velo Funil num lugar só. Roda apenas na sua máquina — esta tela não existe
+            Tudo do Velo Funil num lugar só. Roda apenas na sua máquina. Esta tela não existe
             no ar.
           </p>
         </div>
@@ -80,7 +80,7 @@ export function CentralClient({ dados }: { dados: DadosDaCentral }) {
           <AlertTriangle aria-hidden className="mt-0.5 size-4 shrink-0 text-amber-500" />
           <p className="text-pretty">
             Alguma busca bateu no limite de linhas. Os números abaixo podem estar cortados para
-            menos — o total real pode ser maior.
+            menos, e o total real pode ser maior.
           </p>
         </div>
       )}

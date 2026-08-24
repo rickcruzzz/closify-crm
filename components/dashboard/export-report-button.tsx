@@ -81,7 +81,7 @@ export function ExportReportButton({
       // Cabeçalho com contexto: workspace e período, para o PDF fazer
       // sentido fora do produto, sem precisar de legenda por fora.
       pdf.setFontSize(14)
-      pdf.text(`Velo Funil — ${nomeDoWorkspace}`, margem, margem + 4)
+      pdf.text(`Velo Funil · ${nomeDoWorkspace}`, margem, margem + 4)
       pdf.setFontSize(10)
       pdf.setTextColor(120)
       pdf.text(

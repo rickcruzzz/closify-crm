@@ -48,7 +48,7 @@ type EntradaDoCruzamento = {
   /**
    * Todo e-mail que pertence a uma conta de verdade no banco.
    *
-   * É o que separa cliente travado de lixo de script — ver o comentário do
+   * É o que separa cliente travado de lixo de script, ver o comentário do
    * filtro, mais abaixo.
    */
   emailsDeContasReais: Set<string>
@@ -137,7 +137,7 @@ export function montarPendencias({
           gravidade: 'dinheiro',
           tipo: 'assinatura-nao-entrega',
           titulo: 'Assinatura ativa que não virou Pro',
-          detalhe: `${empresa?.nome ?? noBanco.workspace_id} tem assinatura ativa no Asaas, mas aqui está como "${noBanco.status}"${noBanco.current_period_end ? '' : ' e sem data de vencimento'} — ou seja, a pessoa não está recebendo o que assinou.`,
+          detalhe: `${empresa?.nome ?? noBanco.workspace_id} tem assinatura ativa no Asaas, mas aqui está como "${noBanco.status}"${noBanco.current_period_end ? '' : ' e sem data de vencimento'}. Ou seja, a pessoa não está recebendo o que assinou.`,
           empresa: empresa?.nome,
           email: empresa?.email ?? undefined,
           acao: { tipo: 'consertar-assinatura', alvo: assinatura.id, rotulo: 'Corrigir agora' },
@@ -212,7 +212,7 @@ export function montarPendencias({
       gravidade: 'atencao',
       tipo: 'email-com-erro-de-digitacao',
       titulo: 'E-mail cadastrado com erro de digitação',
-      detalhe: `${empresa.nome} cadastrou "${empresa.email}" — provavelmente quis dizer "${sugestao}". Essa pessoa nunca vai receber confirmação de cadastro, recuperação de senha nem cobrança${empresa.telefone ? `. Dá para falar com ela pelo telefone que ela cadastrou: ${empresa.telefone}` : ', e não há telefone cadastrado para avisá-la'}.`,
+      detalhe: `${empresa.nome} cadastrou "${empresa.email}", e provavelmente quis dizer "${sugestao}". Essa pessoa nunca vai receber confirmação de cadastro, recuperação de senha nem cobrança${empresa.telefone ? `. Dá para falar com ela pelo telefone que ela cadastrou: ${empresa.telefone}` : ', e não há telefone cadastrado para avisá-la'}.`,
       empresa: empresa.nome,
       email: empresa.email ?? undefined,
     })
@@ -234,7 +234,7 @@ export function montarPendencias({
       gravidade: 'atencao',
       tipo: 'cliente-sumido',
       titulo: empresa.pagando ? 'Cliente pagante sumido' : 'Cliente sumido',
-      detalhe: `${empresa.nome} não acessa há ${dias} dias, mas tem ${empresa.quantidadeDeContatos} contato(s) cadastrado(s) — chegou a usar e parou.${empresa.pagando ? ' Está pagando e não está usando, que é o caminho mais curto para o cancelamento.' : ''}`,
+      detalhe: `${empresa.nome} não acessa há ${dias} dias, mas tem ${empresa.quantidadeDeContatos} contato(s) cadastrado(s). Chegou a usar e parou.${empresa.pagando ? ' Está pagando e não está usando, que é o caminho mais curto para o cancelamento.' : ''}`,
       empresa: empresa.nome,
       email: empresa.email ?? undefined,
     })

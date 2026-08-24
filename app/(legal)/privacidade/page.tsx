@@ -274,7 +274,7 @@ export default function PrivacidadePage() {
         <LegalP>
           Você pode, se quiser, conectar sua conta do Google em Configurações →
           Integrações para usar dois recursos opcionais. Essa conexão nunca é ativada
-          automaticamente — só existe se você mesmo clicar em &quot;Conectar&quot;.
+          automaticamente: só existe se você mesmo clicar em &quot;Conectar&quot;.
         </LegalP>
         <LegalList>
           <li>

@@ -77,7 +77,7 @@ const META: Record<
     usoSingular: 'conversa registrada',
     usoPlural: 'conversas registradas',
     ganhoNoPro:
-      'No Pro, quando o cliente responde no WhatsApp vira histórico e tarefa aqui — e continua sendo da empresa mesmo se o vendedor sair.',
+      'No Pro, quando o cliente responde no WhatsApp vira histórico e tarefa aqui, e continua sendo da empresa mesmo se o vendedor sair.',
   },
 }
 

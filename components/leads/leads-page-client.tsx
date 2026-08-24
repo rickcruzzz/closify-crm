@@ -229,7 +229,7 @@ export function LeadsPageClient({
     <EmptyState
       icon={Users}
       title="Nenhum contato ainda"
-      description="Cadastre seu primeiro contato ou traga sua planilha atual — em minutos o funil começa a trabalhar por você."
+      description="Cadastre seu primeiro contato ou traga sua planilha atual. Em minutos o funil começa a trabalhar por você."
     >
       <Button onClick={openCreateForm}>
         <Plus className="size-4" />

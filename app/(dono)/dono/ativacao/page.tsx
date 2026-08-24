@@ -58,7 +58,7 @@ export default async function PaginaDeAtivacao() {
         </div>
         <p className="text-muted-foreground text-sm">
           Este recorte é o que permite dizer se uma mudança funcionou. Compare com o número de
-          cima depois de mexer no produto — na base inteira, uma melhora recente fica diluída em
+          cima depois de mexer no produto: na base inteira, uma melhora recente fica diluída em
           meses de histórico e ninguém consegue atribuir causa a nada.
         </p>
         <FunilDeAtivacao funil={funilRecente} excluidas={0} />

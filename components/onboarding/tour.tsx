@@ -66,7 +66,7 @@ const PASSOS: Passo[] = [
     icone: PartyPopper,
     titulo: 'Tudo pronto',
     texto:
-      'Tudo pronto. Cadastre o primeiro contato — a lista em Resultados guia o resto.',
+      'Tudo pronto. Cadastre o primeiro contato. A lista em Resultados guia o resto.',
   },
 ]
 

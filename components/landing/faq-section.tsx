@@ -18,7 +18,7 @@ const faqs = [
   // começa por aí.
   {
     q: 'O que acontece depois dos 7 dias de teste?',
-    a: `Nada é cobrado sem você escolher — não pedimos cartão para começar. Durante ${DIAS_DE_TRIAL} dias sua empresa usa o Pro inteiro; depois disso, ou você assina, ou a conta passa para o plano grátis, que não expira: 1 empresa, até ${FREE_MEMBER_LIMIT} colaboradores e ${FREE_LEAD_LIMIT} contatos. Seus dados continuam lá nos dois casos.`,
+    a: `Nada é cobrado sem você escolher: não pedimos cartão para começar. Durante ${DIAS_DE_TRIAL} dias sua empresa usa o Pro inteiro; depois disso, ou você assina, ou a conta passa para o plano grátis, que não expira: 1 empresa, até ${FREE_MEMBER_LIMIT} colaboradores e ${FREE_LEAD_LIMIT} contatos. Seus dados continuam lá nos dois casos.`,
   },
   {
     q: 'Preciso instalar alguma coisa?',
