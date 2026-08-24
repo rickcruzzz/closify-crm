@@ -13,7 +13,6 @@ import {
   SheetTitle,
   SheetTrigger,
 } from '@/components/ui/sheet'
-import { ThemeToggle } from '@/components/theme-toggle'
 import { Logo } from '@/components/branding/logo'
 import { ScrollLink } from '@/components/landing/scroll-link'
 import { NavCtaLink } from '@/components/landing/nav-cta-link'
@@ -56,8 +55,20 @@ export function PublicNavbar() {
           ))}
         </nav>
 
+        {/* O seletor de tema saiu daqui em 24/08, e a medição é o argumento:
+            em 390px ele comia 48px — 13% da largura útil do cabeçalho — e em
+            320px o resultado era pior, o "Começar grátis" DESAPARECIA e o
+            botão de tema FICAVA. A landing estava priorizando escolha de
+            aparência sobre o único clique que gera receita.
+
+            Ninguém decide comprar um CRM pelo tema, e quem tem preferência já
+            é atendido: o `ThemeProvider` roda com `enableSystem`, então o
+            `prefers-color-scheme` do aparelho vale sozinho. Nenhuma landing de
+            referência auditada (Linear, Vercel, Attio, Stripe) tem esse botão.
+
+            Ele CONTINUA no produto (`components/layout/topbar.tsx`), que é
+            onde faz sentido: lá a pessoa passa horas, e a escolha é dela. */}
         <div className="flex items-center gap-2">
-          <ThemeToggle />
 
           <NavCtaLink
             href="/login"
@@ -70,9 +81,14 @@ export function PublicNavbar() {
               menu lateral já estavam em `min-h-12`; o cabeçalho ficava em 44 e
               destoava. O `h-16` do container não muda, então nada é empurrado.
 
-              Escondido abaixo de 360px: era ele que estourava a viewport em
-              320px, medido, `scrollWidth` 330 contra 320 de tela, porque logo
-              + tema + este botão + o menu não cabem nos 288px úteis.
+              Escondido abaixo de 340px. O corte era em 360 enquanto o
+              seletor de tema dividia o cabeçalho; com ele fora (24/08) sobram
+              48px, e a soma passa a ser logo 120 + este botão 123 + menu 48 =
+              291, que cabe nos ~305 úteis de uma tela de 320. Medido, sem
+              rolagem horizontal.
+
+              Continua havendo um piso: abaixo de ~340 não cabe mesmo, e aí o
+              mesmo "Começar grátis" segue disponível dentro do menu.
 
               O corte é em 360 e não mais alto de propósito: 375 e 390 são
               iPhone e Android correntes, e esconder o CTA do cabeçalho neles
@@ -81,7 +97,7 @@ export function PublicNavbar() {
               lateral e no Hero, que fica logo abaixo. */}
           <NavCtaLink
             href="/cadastro"
-            className={cn(buttonVariants(), 'hidden min-h-12 min-[360px]:inline-flex md:min-h-8')}
+            className={cn(buttonVariants(), 'hidden min-h-12 min-[340px]:inline-flex md:min-h-8')}
           >
             Começar grátis
           </NavCtaLink>

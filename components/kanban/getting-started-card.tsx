@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { KanbanSquare, Plus, UserPlus, Users, type LucideIcon } from 'lucide-react'
+import { KanbanSquare, Plus, Upload, Users, type LucideIcon } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
 import {
@@ -29,7 +29,11 @@ const STEPS: Step[] = [
     icon: Users,
     title: 'Cadastre seu primeiro contato',
     description: 'Quem é o contato e de qual empresa. É o ponto de partida do funil.',
-    action: { tipo: 'link', href: '/leads', label: 'Ir para Leads' },
+    // Dizia "Ir para Leads". A renomeação de 19/08 tirou "Leads" de 38 lugares
+    // e este escapou — o botão mandava para uma tela que o menu chama de
+    // "Contatos", e vocabulário que muda no meio do caminho faz a pessoa
+    // procurar uma seção que não existe.
+    action: { tipo: 'link', href: '/leads', label: 'Ir para Contatos' },
   },
   {
     icon: KanbanSquare,
@@ -40,10 +44,19 @@ const STEPS: Step[] = [
     action: { tipo: 'dica', label: 'Use o botão "Novo negócio" acima' },
   },
   {
-    icon: UserPlus,
-    title: 'Convide seu time',
-    description: 'Colaboradores veem o mesmo funil e assumem seus próprios negócios.',
-    action: { tipo: 'link', href: '/settings', label: 'Ir para Configurações' },
+    icon: Upload,
+    // Era "Convide seu time". Trocado porque o terceiro passo estava caro para
+    // o público errado: o cliente típico é PME de serviço com uma ou duas
+    // pessoas, e para ela "convidar o time" não é próximo passo nenhum —
+    // é uma tarefa que ela não tem. Importar a lista que já existe é o que
+    // transforma a conta vazia em funil com conteúdo, que é o momento em que
+    // o produto passa a valer alguma coisa.
+    //
+    // Convidar equipe continua a um clique em Configurações → Equipe, e
+    // aparece no checklist de ativação para quem tem mais gente.
+    title: 'Traga seus contatos de uma vez',
+    description: 'Importe a planilha ou a lista que você já tem, sem digitar um por um.',
+    action: { tipo: 'link', href: '/leads', label: 'Importar planilha' },
   },
 ]
 
@@ -52,8 +65,15 @@ export function GettingStartedCard() {
     <Card className="mb-6">
       <CardHeader>
         <CardTitle>Primeiros passos</CardTitle>
+        {/* Dizia "três passos para sair da planilha". A landing foi
+            repositionada em 24/08: o inimigo deixou de ser a planilha e passou
+            a ser o cliente que some no WhatsApp — 82% da PME brasileira vende
+            por lá, e quem controla cliente pela conversa não tem planilha
+            nenhuma para "sair". Prometer uma coisa no anúncio e outra na
+            primeira tela do produto é o tipo de emenda que faz a pessoa achar
+            que entrou no lugar errado. */}
         <CardDescription>
-          Sua empresa está pronta. Três passos para sair da planilha.
+          Sua empresa está pronta. Três passos para nenhum cliente mais se perder.
         </CardDescription>
       </CardHeader>
       <CardContent>
