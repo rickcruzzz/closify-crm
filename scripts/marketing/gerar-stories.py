@@ -280,111 +280,270 @@ def salvar(img, nome):
     print(f"  {nome}.png  ({final.width}x{final.height})  +  @4k")
 
 
-# --------------------------------------------------------------- as 5 telas
+# ================================================================ os layouts
+#
+# Três arranjos, não um. Repetir a mesma composição em todas as telas faria o
+# destaque inteiro parecer a mesma imagem, e é a variação que segura quem está
+# passando os Stories. Nenhum usa numeração de passo: quem entra num destaque
+# pelo meio não viu o "01", e número solto sem contexto atrapalha mais do que
+# ordena.
 
-def tela_gancho():
-    """A dor, com o print como evidência. É a que precisa parar o scroll."""
+
+def tela_com_print(titulo, apoio, print_nome, arquivo, eyebrow=None,
+                   destaque=None, topo_print=0.44, tam_titulo=72):
+    """
+    Headline em cima, print do produto embaixo.
+
+    O formato que mais converte em anúncio B2B SaaS ("Bold Headline + Product
+    UI"), com a regra que o faz funcionar: a headline descreve exatamente o
+    que o print mostra. Print real prova; ilustração genérica não.
+    """
     img = fundo_com_brilho()
-    # O print entra DEPOIS do bloco de texto, com respiro medido — ver
-    # RESPIRO_APOS_TEXTO. Antes ele era colado em posição fixa e a última
-    # linha da headline caía sobre a borda da tela.
-    img = colar_print(img, "kanban-dark.png", topo_rel=0.42)
+    img = colar_print(img, print_nome, topo_rel=topo_print)
     draw = ImageDraw.Draw(img)
 
     y = SEGURO_TOPO + 30 * ESCALA
-    fnt_eyebrow = fonte(REG, 29)
-    txt = "C R M   P A R A   P E Q U E N O S   N E G Ó C I O S"
-    draw.text(((W - draw.textlength(txt, font=fnt_eyebrow)) / 2, y), txt,
-              font=fnt_eyebrow, fill=TEAL)
-    y += 82 * ESCALA
+    if eyebrow:
+        fnt = fonte(REG, 29)
+        draw.text(((W - draw.textlength(eyebrow, font=fnt)) / 2, y), eyebrow,
+                  font=fnt, fill=TEAL)
+        y += 82 * ESCALA
 
-    y = escrever(draw, "O cliente pediu orçamento", fonte(BOLD, 76), y, BRANCO)
-    y = escrever(draw, "e sumiu no WhatsApp.", fonte(BOLD, 76), y, BRANCO)
-    y += 30 * ESCALA
-    escrever(draw, "Aqui ele não some.", fonte(BOLD, 76), y, TEAL)
-
-    assinar(img, draw)
-    salvar(img, "2026-08-24-demo-01-gancho")
-
-
-def tela_passo(numero, titulo, apoio, print_nome, arquivo):
-    """
-    Um passo do "como funciona": número, título e o print que o comprova.
-
-    O título vem literal da landing — mesma frase que a página usa, para os
-    dois não divergirem no primeiro ajuste de copy.
-    """
-    img = fundo_com_brilho(centro_y=0.62)
-    img = colar_print(img, print_nome, topo_rel=0.44)
-    draw = ImageDraw.Draw(img)
-
-    y = SEGURO_TOPO + 30 * ESCALA
-
-    # O número do passo, grande e em teal: é o que dá senso de sequência
-    # quando os Stories passam um atrás do outro.
-    fnt_num = fonte(BOLD, 96)
-    draw.text(((W - draw.textlength(numero, font=fnt_num)) / 2, y), numero,
-              font=fnt_num, fill=TEAL)
-    y += 118 * ESCALA
-
-    y = escrever(draw, titulo, fonte(BOLD, 72), y, BRANCO)
-    y += 22 * ESCALA
-    escrever(draw, apoio, fonte(REG, 40), y, CINZA, largura_max=int(W * 0.80), entrelinha=1.32)
+    y = escrever(draw, titulo, fonte(BOLD, tam_titulo), y, BRANCO)
+    if apoio:
+        y += 22 * ESCALA
+        y = escrever(draw, apoio, fonte(REG, 40), y, CINZA,
+                     largura_max=int(W * 0.80), entrelinha=1.32)
+    if destaque:
+        y += 26 * ESCALA
+        escrever(draw, destaque, fonte(BOLD, 60), y, TEAL)
 
     assinar(img, draw)
     salvar(img, arquivo)
 
 
-def tela_cta():
+def tela_dado(numero, unidade, explicacao, fonte_dado, arquivo):
     """
-    O fechamento: a oferta real, sem print.
+    Um número dominando a tela.
 
-    Sem imagem de produto de propósito — a última tela precisa que o olho vá
-    para a oferta, e um print competindo aqui divide a atenção justamente na
-    hora da decisão.
+    Formato "Metric-First": número específico em tipografia display, com a
+    fonte logo abaixo. A fonte não é rodapé burocrático — é o que separa dado
+    verificável de número inventado, e inventar métrica é decisão travada
+    contra neste projeto desde que a landing teve uma copiada de concorrente.
+    """
+    img = fundo_com_brilho(intensidade=0.55, centro_y=0.42)
+    draw = ImageDraw.Draw(img)
+
+    y = int(H * 0.24)
+    fnt_num = fonte(BOLD, 200)
+    draw.text(((W - draw.textlength(numero, font=fnt_num)) / 2, y), numero,
+              font=fnt_num, fill=TEAL)
+    y += 244 * ESCALA
+
+    y = escrever(draw, unidade, fonte(BOLD, 60), y, BRANCO)
+    y += 44 * ESCALA
+    y = escrever(draw, explicacao, fonte(REG, 42), y, CINZA,
+                 largura_max=int(W * 0.80), entrelinha=1.34)
+
+    y += 38 * ESCALA
+    escrever(draw, fonte_dado, fonte(REG, 28), y, CINZA_FRACO,
+             largura_max=int(W * 0.76), entrelinha=1.28)
+
+    assinar(img, draw)
+    salvar(img, arquivo)
+
+
+def tela_texto(titulo, corpo, arquivo, eyebrow=None, destaque=None, tam_titulo=80):
+    """
+    Só tipografia, sem imagem.
+
+    Para pergunta e resposta, e para o fechamento: um print competindo com a
+    oferta divide a atenção justamente na hora da decisão.
     """
     img = fundo_com_brilho(intensidade=0.5, centro_y=0.46)
     draw = ImageDraw.Draw(img)
 
-    y = int(H * 0.30)
-    y = escrever(draw, "7 dias com tudo", fonte(BOLD, 92), y, BRANCO)
-    y = escrever(draw, "liberado.", fonte(BOLD, 92), y, BRANCO)
-    y += 36 * ESCALA
-    y = escrever(draw, "Sem cartão de crédito.", fonte(BOLD, 66), y, TEAL)
+    y = int(H * 0.24)
+    if eyebrow:
+        fnt = fonte(REG, 29)
+        draw.text(((W - draw.textlength(eyebrow, font=fnt)) / 2, y), eyebrow,
+                  font=fnt, fill=TEAL)
+        y += 78 * ESCALA
 
-    y += 80 * ESCALA
-    y = escrever(draw, "Depois, R$ 49 por mês pela empresa inteira.",
-                 fonte(REG, 42), y, CINZA, largura_max=int(W * 0.78), entrelinha=1.34)
-    y = escrever(draw, "Não por vendedor.", fonte(REG, 42), y, CINZA)
+    y = escrever(draw, titulo, fonte(BOLD, tam_titulo), y, BRANCO)
+    y += 44 * ESCALA
+    y = escrever(draw, corpo, fonte(REG, 44), y, CINZA,
+                 largura_max=int(W * 0.80), entrelinha=1.36)
+    if destaque:
+        y += 44 * ESCALA
+        escrever(draw, destaque, fonte(BOLD, 54), y, TEAL)
 
     assinar(img, draw)
-    salvar(img, "2026-08-24-demo-05-cta")
+    salvar(img, arquivo)
+
+
+# ============================================================== os destaques
+
+def destaque_demo():
+    """Como funciona: a dor, o caminho, o resultado, a oferta."""
+    print("\nDEMO — Como funciona")
+
+    tela_com_print(
+        "O cliente pediu orçamento e sumiu no WhatsApp.",
+        None, "kanban-dark.png", "demo-1-gancho",
+        eyebrow="C R M   P A R A   P E Q U E N O S   N E G Ó C I O S",
+        destaque="Aqui ele não some.", topo_print=0.42,
+    )
+    tela_com_print(
+        "Traga quem já é seu cliente",
+        "Importe sua planilha ou cadastre pelo nome e telefone, do jeito que a conversa chegou.",
+        "hoje-dark.png", "demo-2-trazer",
+    )
+    tela_com_print(
+        "Arraste pelas etapas",
+        "Cada negócio vira um card. Arraste conforme a conversa avança.",
+        "kanban-dark.png", "demo-3-arrastar",
+    )
+    tela_com_print(
+        "Veja onde está o dinheiro",
+        "Quanto está em negociação, o que virou venda e o que está perto do prazo.",
+        "dashboard-dark.png", "demo-4-resultado",
+    )
+    tela_texto(
+        "7 dias com tudo liberado.",
+        "Depois, R$ 49 por mês pela empresa inteira. Não por vendedor.",
+        "demo-5-cta", destaque="Sem cartão de crédito.",
+    )
+
+
+def destaque_planos():
+    """Planos: o que é grátis, o que é pago, e por que o preço é diferente."""
+    print("\nPLANOS")
+
+    tela_texto(
+        "Comece de graça. Pague quando fizer sentido.",
+        "Sua empresa começa com o Pro completo por 7 dias, sem cartão. Depois, você escolhe.",
+        "planos-1-abertura", eyebrow="P L A N O S", tam_titulo=68,
+    )
+    tela_texto(
+        "Grátis, para sempre",
+        "1 empresa · até 2 colaboradores · até 50 contatos · funil visual e painel de resultados.",
+        "planos-2-free", eyebrow="P L A N O   G R Á T I S",
+        destaque="R$ 0", tam_titulo=76,
+    )
+    tela_com_print(
+        "Pro: R$ 49 por mês",
+        "Contatos e colaboradores ilimitados, várias empresas no mesmo login, Google Calendar e Gmail conectados.",
+        "dashboard-dark.png", "planos-3-pro", eyebrow="P L A N O   P R O",
+    )
+    # A comparação é a única vantagem que o concorrente não iguala sem mudar o
+    # próprio modelo de cobrança. Preço de tabela pública deles, por isso pode
+    # ser dito — e sem citar nome, que convida processo e ainda ensina a marca
+    # do concorrente a quem não conhecia.
+    tela_texto(
+        "A maioria cobra por vendedor.",
+        "Cinco pessoas, a R$ 53 cada, dão R$ 265 por mês. E sobe toda vez que você contrata alguém.",
+        "planos-4-comparacao", eyebrow="A   C O N T A   Q U E   N I N G U É M   F A Z",
+        destaque="Aqui são R$ 49, com a equipe que quiser.", tam_titulo=72,
+    )
+    tela_texto(
+        "Pix, boleto ou cartão.",
+        "Cobrança recorrente pelo Asaas. Cancele quando quiser, sem multa e sem falar com ninguém.",
+        "planos-5-pagamento", eyebrow="C O M O   P A G A R", tam_titulo=78,
+    )
+
+
+def destaque_dicas():
+    """
+    Dicas de venda: os números de mercado que justificam o produto.
+
+    Cada número traz a fonte no próprio criativo. São dados de pesquisa
+    pública, não medição nossa — dizer de onde vêm é o que os separa de
+    número inventado.
+    """
+    print("\nDICAS DE VENDA")
+
+    tela_dado(
+        "21x", "mais chance de fechar",
+        "Responder em 5 minutos, em vez de 30, multiplica por 21 a chance de qualificar o contato.",
+        "Estudo InsideSales / MIT", "dicas-1-resposta-rapida",
+    )
+    tela_dado(
+        "42h", "é a média do mercado",
+        "O tempo que uma empresa leva, em média, para responder o primeiro contato. Quem responde em minutos já saiu na frente.",
+        "Harvard Business Review — auditoria em 2.241 empresas",
+        "dicas-2-media-do-mercado",
+    )
+    tela_dado(
+        "82%", "vendem pelo WhatsApp",
+        "É o principal canal de venda dos pequenos negócios brasileiros. O problema não é o canal: é o que some junto com a conversa.",
+        "12ª Pesquisa Pulso dos Pequenos Negócios — Sebrae, 2026",
+        "dicas-3-whatsapp",
+    )
+    tela_com_print(
+        "Negócio sem próximo passo é o que morre calado",
+        "Ele não dá erro, não avisa, não aparece em relatório. Só para de andar.",
+        "kanban-dark.png", "dicas-4-proximo-passo",
+        eyebrow="O   S I N A L   Q U E   N I N G U É M   O L H A", tam_titulo=64,
+    )
+    tela_texto(
+        "O que você mede, você cobra.",
+        "Sem funil, a pergunta sobre quanto você tem para fechar este mês só tem resposta no chute.",
+        "dicas-5-medir", eyebrow="D I C A   F I N A L",
+        destaque="Teste 7 dias, sem cartão.", tam_titulo=74,
+    )
+
+
+def destaque_perguntas():
+    """
+    FAQ: as seis perguntas reais que a landing responde.
+
+    Texto vindo de `components/landing/faq-section.tsx` — reescrever aqui
+    faria o Story divergir da página no primeiro ajuste feito lá.
+    """
+    print("\nPERGUNTAS")
+
+    EYE = "P E R G U N T A S   F R E Q U E N T E S"
+
+    tela_texto(
+        "O que acontece depois dos 7 dias?",
+        "Nada é cobrado sem você escolher: não pedimos cartão para começar. Depois, ou você assina, ou a conta passa para o plano grátis, que não expira.",
+        "faq-1-depois-dos-7-dias", eyebrow=EYE, tam_titulo=70,
+    )
+    tela_texto(
+        "Preciso instalar alguma coisa?",
+        "Não. Roda inteiro no navegador, no computador ou no celular. Você cria a conta e já começa a usar.",
+        "faq-2-instalar", eyebrow=EYE, tam_titulo=74,
+    )
+    tela_texto(
+        "Consigo trazer os contatos da minha planilha?",
+        "Sim. Exporte como .csv com Nome, Telefone, E-mail e Valor e importe direto. Contatos repetidos são ignorados automaticamente.",
+        "faq-3-planilha", eyebrow=EYE, tam_titulo=62,
+    )
+    tela_texto(
+        "Meus dados ficam separados dos de outras empresas?",
+        "Ficam. É uma regra de segurança configurada no banco de dados, não uma tela que a gente pode esquecer de checar.",
+        "faq-4-isolamento", eyebrow=EYE, tam_titulo=58,
+    )
+    tela_texto(
+        "Quais são as formas de pagamento?",
+        "Pix, boleto e cartão de crédito, com cobrança recorrente processada pelo Asaas.",
+        "faq-5-pagamento", eyebrow=EYE,
+        destaque="R$ 49 por mês, por empresa.", tam_titulo=70,
+    )
+    tela_texto(
+        "Posso cancelar quando quiser?",
+        "Pode, sem multa e sem falar com ninguém. A conta volta para o plano grátis e seus dados continuam lá.",
+        "faq-6-cancelar", eyebrow=EYE, tam_titulo=74,
+    )
 
 
 if __name__ == "__main__":
     SAIDA.mkdir(parents=True, exist_ok=True)
-    print("gerando destaque Demo (Como funciona):")
-
-    tela_gancho()
-    # Os três passos usam print ESCURO, sem exceção. A primeira versão do
-    # passo 1 saiu com `kanban-light.png` e quebrava a sequência: quatro telas
-    # escuras com uma branca no meio lê como erro de montagem, não como
-    # variedade — e o modo escuro é o padrão do produto.
-    tela_passo(
-        "01", "Traga quem já é seu cliente",
-        "Importe sua planilha ou cadastre pelo nome e telefone, do jeito que a conversa chegou.",
-        "hoje-dark.png", "2026-08-24-demo-02-passo1",
-    )
-    tela_passo(
-        "02", "Arraste pelas etapas",
-        "Cada negócio vira um card. Arraste conforme a conversa avança.",
-        "kanban-dark.png", "2026-08-24-demo-03-passo2",
-    )
-    tela_passo(
-        "03", "Veja onde está o dinheiro",
-        "Quanto está em negociação, o que virou venda e o que está perto do prazo.",
-        "dashboard-dark.png", "2026-08-24-demo-04-passo3",
-    )
-    tela_cta()
-
-    print("\npronto. 5 telas, cada uma em 1080x1920 e @4k.")
+    destaque_demo()
+    destaque_planos()
+    destaque_dicas()
+    destaque_perguntas()
+    print("\npronto — cada tela em 1080x1920 (publicar) e @4k (reserva).")
+    print("\nBastidores fica de fora: exige conteúdo seu (rotina, processo,")
+    print("decisões), que não existe no código e não dá para inventar.")
