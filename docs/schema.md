@@ -231,7 +231,7 @@ classDiagram
         +text digest "nullable"
         +text stack "nullable"
         +text url "nullable"
-        +text origem
+        +text origem "publico|dashboard|global|webhook|whatsapp"
         +uuid workspace_id "sem FK, nullable"
         +uuid user_id "→ auth.users, sem FK, nullable"
         +timestamptz created_at
@@ -266,6 +266,14 @@ por mês. Aparecem no diagrama, sem linha de
 relação — é o que o catálogo mostra, não omissão. `error_logs` também é
 zero-policy (RLS ligada, só `service_role` acessa), mesmo padrão de
 `asaas_webhook_events`.*
+
+**`error_logs.origem` é texto livre, não enum, e os valores em uso divergem
+por origem.** `reportarErro` (cliente) só emite `publico`, `dashboard` e
+`global`; o servidor grava `webhook` e, desde 24/08, `whatsapp` — este último
+quando uma mensagem recebida não completa o caminho até o funil e precisa
+ficar recuperável. Não virou enum de propósito: é tabela de sistema, sem RLS
+e sem consumidor no produto, e um enum obrigaria migration a cada origem
+nova.
 
 ## Regras que vivem em trigger, não em coluna
 

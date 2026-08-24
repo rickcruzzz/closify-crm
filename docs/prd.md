@@ -2,6 +2,12 @@
 
 > Iniciativa de conversão Free→Pro (copy da landing, limites, checkout) tem
 > PRD próprio: [prd-conversao-pro.md](prd-conversao-pro.md).
+>
+> **Conferido contra produção em 24/08/2026, noite.** Números de tabela, RPC,
+> migration e teste vieram do catálogo real e do gate, não de memória. O estado
+> operacional do dia a dia (o que quebrou, o que foi medido, o que está
+> pendente) mora em [estado-atual.md](estado-atual.md); o diagrama de classes,
+> em [schema.md](schema.md).
 
 ## 1. Contexto e Problema
 
@@ -37,7 +43,12 @@ dado real; o que não está tem o motivo escrito ao lado.
 - [x] Landing Page — dor do WhatsApp (não planilha), 7 dias de trial vendidos,
       seção de confiança, prints reais legíveis no zoom e no mobile, sem prova
       social inventada
-- [x] Onboarding do Usuário — assistente de 4 passos + checklist derivado do estado
+- [x] Onboarding do Usuário — assistente de 4 passos + checklist derivado do
+      estado. "Pular" só a partir do 2º passo: pular no 1º deixava a conta sem
+      empresa e trancava a pessoa num laço (corrigido 24/08)
+- [x] Captura de erro — `error_logs` grava falha de tela e de webhook, e foi
+      ela que permitiu achar em uma hora a causa da tela preta reportada em
+      24/08
 - [x] Calendário — Mês, Semana e Agenda sobre as tarefas existentes
 - [x] Filtro de Período — 8 presets + intervalo customizado com range picker
 - [x] Exportação de Relatórios — PDF do painel de Resultados
@@ -194,6 +205,17 @@ páginas legais (LGPD, Art. 9º, I, exige identificar o controlador) e nos
 avisos de fatura (o nome aparece no extrato do cartão de qualquer jeito,
 avisar antes evita contestação).
 
+*Sem seletor de tema no cabeçalho, desde 24/08, e a medição decidiu.* Ele
+ocupava 48px — 13% da largura útil do cabeçalho em 390px — e em 320px o
+resultado era pior: o "Começar grátis" **desaparecia** e o botão de tema
+**ficava**, ou seja, a página priorizava escolha de aparência sobre o único
+clique que gera receita. Ninguém decide comprar um CRM pelo tema, e quem tem
+preferência já é atendido pelo `prefers-color-scheme` (o `ThemeProvider` roda
+com `enableSystem`). Nenhuma das seis landings de referência auditadas tem
+esse botão. Ele **continua no produto**, onde a pessoa passa horas e a escolha
+é dela. Ganho medido: o CTA do cabeçalho voltou a aparecer a partir de 340px,
+contra 360 antes.
+
 *Banner de consentimento (LGPD).* O Meta Pixel grava cookie de terceiro e só
 dispara depois do "Aceitar" — "Recusar" tem o mesmo tamanho e o mesmo peso
 visual, como a ANPD recomenda. Ele mora no rodapé da viewport e foi compactado
@@ -201,7 +223,26 @@ para 122px no telefone (16% da tela): a primeira versão ocupava 206px e cobria
 exatamente o botão "Começar grátis", que é o destino de todo clique de anúncio.
 
 **Onboarding do Usuário**
-Fluxo guiado para ajudar o usuário a criar workspace, cadastrar lead e começar a usar o sistema rápido.
+Fluxo guiado para ajudar o usuário a criar workspace, cadastrar lead e começar
+a usar o sistema rápido.
+
+*"Pular por enquanto" não aparece mais no primeiro passo (24/08), e isso
+corrige um defeito que trancava a conta.* A empresa só é criada no FIM do
+assistente; pular antes disso marcava `skipped` sem empresa nenhuma, e a
+pessoa entrava num laço eterno — `/dashboard` não achava empresa e mandava
+para `/onboarding`, que via `skipped` e mandava de volta. Quatro contas em
+produção ficaram assim, sem conseguir usar o sistema e sem erro em lugar
+nenhum. A trava real está no servidor (`pularOnboarding` recusa pular sem
+empresa); esconder o botão é só para ninguém bater numa porta fechada.
+
+*O card "Primeiros passos", primeira tela de quem entra, foi corrigido em três
+pontos no mesmo dia:* dizia "Ir para Leads" (jargão que a renomeação de 19/08
+tirou de 38 lugares e este escapou — o menu chama a tela de "Contatos");
+prometia "três passos para sair da planilha", contradizendo o
+reposicionamento da landing para o WhatsApp; e o terceiro passo era "Convide
+seu time", tarefa que o cliente típico — PME de serviço com uma ou duas
+pessoas — não tem. Virou **"Traga seus contatos de uma vez"**, que é o que
+transforma conta vazia em funil com conteúdo.
 
 **Navegação (sidebar)**
 Menu lateral em seções: grupo principal sem título (Hoje, Funil, Contatos,
@@ -315,10 +356,38 @@ não protegem mais. As camadas construídas (limite por idade da conexão, nenhu
 função que aceite lista de destinatários, assinatura só dos dois eventos
 necessários) reduzem muito. **Não zeram.**
 
-**Sessão que cai deixou de ser silenciosa (24/08).** Medido contra produção
-antes da correção: a sessão conectada oscilava de estado durante o uso normal,
-não só durante o pareamento — o mesmo achado de uma medição anterior (26% de
-tempo logado numa janela de 13 minutos, ver `docs/estado-atual.md`). Até então,
+**Estabilidade medida, e ela melhorou muito (24/08, noite).** A série contra a
+instância real: 63% de tempo logado (2 min, 23/08) → 26% (13 min) → 0% (13 min,
+24/08 tarde) → **100% em 36 amostras, zero erro de rede** (6 min, 24/08 noite).
+A sessão está pareada com um número real há mais de 24h, e o envio foi testado
+ponta a ponta: HTTP 200 em 2s, mensagem entregue com ID. **A conclusão anterior
+de que "não se sustenta" era prematura** — a oscilação é real, a recuperação
+também, e é a série que separa uma da outra.
+
+*Armadilha de instrumentação que vale mais que o número:* o campo `LoggedIn` só
+existe em `/instance/status` **com o token da instância**. Em `/instance/all`
+ele não existe, e a leitura vira `null` — uma sessão saudável passa por morta.
+
+**Nenhuma mensagem se perde em silêncio (24/08).** O dedupe é gravado ANTES do
+processamento, de propósito, senão o reenvio duplicaria a atividade. Isso abre
+uma janela em que a mensagem já é "vista" e ainda não virou nada, e qualquer
+falha ali a apaga da existência. Quatro caminhos estavam descobertos:
+`activities.insert` e `tasks.insert` sem checar erro, falha de dedupe por
+motivo diferente de duplicata, e lote grande estourando `maxDuration` (medido
+~330ms por mensagem; 40 mensagens dariam ~13s contra o teto de 15). Agora toda
+falha guarda **telefone e texto** em `error_logs`, e há teto de 25 mensagens por
+chamada — o excedente não grava dedupe, então segue elegível para reenvio.
+
+**O segredo do webhook é único, não por conexão.** Quem o conhecer consegue
+*injetar* mensagem falsa no funil de qualquer empresa sabendo o UUID dela. Não
+dá para ler nada (a rota só escreve), e o segredo só existe no `.env` e no
+servidor Evolution. É fraqueza de arquitetura, não buraco explorável hoje; o
+caminho correto com muitos clientes é segredo por conexão, e está registrado
+como pendência.
+
+**Sessão que cai deixou de ser silenciosa (24/08).** Antes da correção, a
+sessão conectada oscilava de estado durante o uso normal, não só durante o
+pareamento. Até então,
 uma queda virava só um `last_error` passivo na aba Integrações, que ninguém via
 a menos que abrisse a tela por acaso — para um produto que promete "não perder
 venda por esquecimento", perder a própria conexão em silêncio é o mesmo defeito
@@ -606,11 +675,12 @@ Cada item marcado tem prova, não impressão — o método está em
 `docs/estado-atual.md` ("Como verificar as coisas aqui"). Atualizado 22/08/2026.
 
 - [x] **Build local concluído sem erros.** `npx tsc --noEmit`, `npm run lint`,
-      `npm test` (436 testes) e `npm run build`, os quatro limpos, rodados
+      `npm test` (**498 testes**) e `npm run build`, os quatro limpos, rodados
       antes de cada commit.
-- [x] **Migrations aplicadas no Supabase de produção.** 47 migrations no
+- [x] **Migrations aplicadas no Supabase de produção.** 52 migrations no
       projeto `tmyeunithjqkbwvezyyn` (`sa-east-1`). Conferido contra o
-      catálogo real: 14 tabelas e 29 RPCs expostas, ver `docs/schema.md`.
+      catálogo real em 24/08: 14 tabelas e **30 RPCs** expostas (a `em_trial`
+      entrou com a 0053), ver `docs/schema.md`.
 - [x] **Webhook Asaas configurado em produção e validado.** Recebe, deduplica
       e aplica. Ganhou rede de segurança depois que um Pix real ficou preso
       por webhook não entregue: `/api/cron/reconciliar-assinaturas` roda 1×/dia
@@ -634,11 +704,31 @@ Cada item marcado tem prova, não impressão — o método está em
       banido pelo `prd-copy-sem-jargao.md` eliminado das telas (Pipeline→Funil,
       Leads→Contatos, Dashboard→Resultados), incluindo o que a renomeação de
       19/08 tinha deixado passar.
-- [x] **Testes automatizados para os fluxos críticos.** 436 testes cobrindo
+- [x] **Testes automatizados para os fluxos críticos.** 498 testes cobrindo
       lógica pura em `lib/**`; cada caso documenta o defeito que o motivou.
       Ressalva honesta: `tests/e2e/funil-completo.spec.ts` **nunca foi
       executado** (exige `.env.local` e roda contra o Asaas). Ele não falha em
       `npm test` — falha no gate de deploy.
+
+### Três defeitos que estavam no ar, achados e corrigidos em 24/08
+
+Registrados aqui porque os três compartilham a mesma característica: **nenhum
+gerava erro visível**, e todos custavam cliente em silêncio.
+
+1. **Tela preta no site inteiro.** Uma quebra de linha no valor de
+   `NEXT_PUBLIC_META_PIXEL_ID`, colado na Vercel, transformava o script inline
+   do pixel em JavaScript inválido. `next/script` injeta com `appendChild`
+   durante o commit do React, então a exceção subia até `app/global-error.tsx`,
+   de fundo `#0a0a0a`. Atingia **quem aceitasse os cookies**, em qualquer
+   lugar. Efeito colateral: o pixel nunca mediu nada. Corrigido em dois níveis
+   — `lib/analytics/pixel-id.ts` higieniza e recusa o que não for dígito, e
+   `isolar-analytics.tsx` põe cada rastreador atrás de uma cerca, para
+   **medição quebrada custar o dado, nunca a visita**.
+2. **Loop infinito no onboarding**, descrito acima. Quatro contas presas.
+3. **Perda silenciosa de mensagem no WhatsApp**, descrita acima.
+
+O que permitiu achar os três rápido foi `error_logs` estar gravando e o banco
+poder ser consultado pela condição exata do defeito — não leitura de código.
 
 **Pendências que não são de código** (dependem de painel de terceiro, ver
 `docs/estado-atual.md` → "Pendente do dono"):
@@ -652,3 +742,9 @@ Cada item marcado tem prova, não impressão — o método está em
 - [ ] Sandbox do Asaas nos testes de checkout — hoje o checkout é exercitado
       contra produção, e foi isso que deixou 2 cobranças em aberto no nome de
       uma usuária real.
+- [ ] Segredo do webhook do Evolution **por conexão**, em vez de um único para
+      todas as empresas. Não é buraco explorável hoje (só o dono tem acesso ao
+      servidor), mas limita o estrago quando houver muitos clientes.
+- [ ] Proxy residencial para o WhatsApp (~R$ 18/mês). Decisão do dono em 24/08:
+      fica para depois, com a sessão medida em 100%. Se a oscilação voltar, é a
+      primeira coisa a tentar — e aí deixa de ser opcional.
