@@ -36,6 +36,7 @@ const TELAS = [
   { rota: '/kanban', nome: 'kanban', espera: 'Novo Lead' },
   { rota: '/dashboard', nome: 'dashboard', espera: 'Funil de negócios' },
   { rota: '/hoje', nome: 'hoje', espera: 'Hoje' },
+  { rota: '/leads', nome: 'contatos', espera: 'Busque, filtre e acompanhe' },
 ]
 
 const admin = createClient(
