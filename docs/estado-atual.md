@@ -100,8 +100,19 @@ feito nesta rodada** por exigir migration e retrabalho no fluxo de conexão.
 ### O que ainda decide se dá para vender
 
 A capacidade da VPS (KVM 2 = ~33 clientes) e o risco de a Meta restringir o
-número seguem como registrado. O proxy residencial (~R$ 18/mês) continua sendo
-a proteção mais eficaz e continua **não contratado**.
+número seguem como registrado.
+
+**Decisão do dono, 24/08: o proxy residencial fica para depois.** Ele pagaria
+os ~R$ 18/mês — o custo não é o impedimento —, mas não agora. A leitura é
+defensável: com a sessão medida em 100% de disponibilidade e mais de 24h de
+pé sem proxy, gastar antes de existir cliente usando é comprar seguro para um
+risco que ainda não se materializou.
+
+O que isso implica, para não virar surpresa depois: enquanto não houver proxy,
+a conexão sai pelo IP de datacenter da Hostinger, que é o primeiro sinal que a
+Meta procura. Se a oscilação voltar (a série 63% → 26% → 0% → 100% mostra que
+ela é real), o proxy é a primeira coisa a tentar, não a última — e aí passa a
+ser urgente, não opcional.
 
 O que mudou é que a base agora está provada: conecta, sustenta, envia, recebe,
 e não perde mensagem em silêncio.
