@@ -26,7 +26,7 @@ const faqs = [
   },
   {
     q: 'Consigo trazer os contatos da minha planilha?',
-    a: 'Sim. Exporte sua planilha como .csv com as colunas Nome, Telefone, E-mail e Valor e importe direto na tela de Leads. Contatos repetidos são ignorados automaticamente, e você também pode cadastrar um por um, se preferir.',
+    a: 'Sim. Exporte sua planilha como .csv com as colunas Nome, Telefone, E-mail e Valor e importe direto na tela de Contatos. Contatos repetidos são ignorados automaticamente, e você também pode cadastrar um por um, se preferir.',
   },
   {
     q: 'Meus dados ficam separados dos de outras empresas?',

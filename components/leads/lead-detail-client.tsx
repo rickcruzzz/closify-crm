@@ -96,7 +96,7 @@ export function LeadDetailClient({
       toast.error(result.error)
       return
     }
-    toast.success('Lead atualizado com sucesso.')
+    toast.success('Contato atualizado com sucesso.')
     setFormOpen(false)
     // Sem router.refresh(): updateLead já revalida '/leads/${lead.id}',
     // a rota atual, e o Next aplica o RSC atualizado sozinho.
@@ -111,7 +111,7 @@ export function LeadDetailClient({
       toast.error(result.error)
       return
     }
-    toast.success('Lead excluído.')
+    toast.success('Contato excluído.')
     router.push('/leads')
   }
 

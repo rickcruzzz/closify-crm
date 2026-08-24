@@ -45,7 +45,7 @@ const passos = [
     numero: '02',
     titulo: 'Arraste pelas etapas',
     descricao:
-      'Cada negócio vira um card. Arraste de "Novo Lead" até "Fechado Ganho" conforme a conversa avança, e registre ligações, reuniões e notas no histórico do cliente.',
+      'Cada negócio vira um card. Arraste de "A contatar" até "Fechado Ganho" conforme a conversa avança, e registre ligações, reuniões e notas no histórico do cliente.',
     icone: LayoutGrid,
     accent: 'text-violet-500 dark:text-violet-400',
     fundo: 'bg-violet-500/10 dark:bg-violet-400/10',

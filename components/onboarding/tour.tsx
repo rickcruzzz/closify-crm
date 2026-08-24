@@ -48,7 +48,7 @@ const PASSOS: Passo[] = [
     icone: Users,
     titulo: 'Gerencie seus leads',
     texto:
-      'Cadastre seus contatos em Leads, ou importe a planilha que você já usa. Cada lead tem histórico próprio.',
+      'Cadastre seus contatos, ou importe a planilha que você já usa. Cada contato tem histórico próprio.',
   },
   {
     icone: KanbanSquare,

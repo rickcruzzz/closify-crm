@@ -6,7 +6,7 @@ export default function KanbanLoading() {
     <div>
       <PageHeader
         title="Funil"
-        description="Acompanhe seus negócios em cada etapa do funil."
+        description="Cada negócio, do primeiro contato ao fechamento. Arraste o card conforme a conversa avança."
       />
       <div className="flex gap-4 overflow-x-auto pb-4">
         {Array.from({ length: 6 }).map((_, i) => (

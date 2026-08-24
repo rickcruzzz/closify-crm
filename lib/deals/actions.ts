@@ -63,7 +63,7 @@ export async function createDeal(values: unknown) {
     .maybeSingle()
 
   if (!lead) {
-    return { error: 'Lead inválido.' }
+    return { error: 'Contato inválido.' }
   }
 
   const { error } = await supabase.from('deals').insert({

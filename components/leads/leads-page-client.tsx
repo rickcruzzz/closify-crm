@@ -187,7 +187,7 @@ export function LeadsPageClient({
       toast.error(result.error)
       return
     }
-    toast.success(id ? 'Lead atualizado com sucesso.' : 'Lead criado com sucesso.')
+    toast.success(id ? 'Contato atualizado com sucesso.' : 'Contato criado com sucesso.')
     setFormOpen(false)
     // Sem router.refresh(): create/updateLead já revalidam '/leads', a
     // rota atual.
@@ -208,7 +208,7 @@ export function LeadsPageClient({
       toast.error(result.error)
       return
     }
-    toast.success('Lead excluído.')
+    toast.success('Contato excluído.')
     setDeleteOpen(false)
     // Sem router.refresh(): deleteLead já revalida '/leads'.
   }

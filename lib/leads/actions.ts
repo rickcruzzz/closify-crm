@@ -759,7 +759,7 @@ export async function createActivity(leadId: string, values: unknown) {
     .maybeSingle()
 
   if (!lead) {
-    return { error: 'Lead não encontrado.' }
+    return { error: 'Contato não encontrado.' }
   }
 
   const { error } = await supabase.from('activities').insert({

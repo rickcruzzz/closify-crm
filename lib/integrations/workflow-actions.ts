@@ -144,7 +144,7 @@ export async function enviarEmailViaGmail(leadId: string, values: unknown) {
     .eq('workspace_id', sessao.workspaceId)
     .maybeSingle()
 
-  if (!lead) return { error: 'Lead não encontrado.' }
+  if (!lead) return { error: 'Contato não encontrado.' }
   if (!lead.email) return { error: 'Este lead não tem e-mail cadastrado.' }
 
   const token = await obterAccessTokenValido(sessao.workspaceId, 'gmail')

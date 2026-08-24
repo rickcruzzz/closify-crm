@@ -33,7 +33,7 @@ const SENHA = 'CapturaDePrints2026!'
 const VIEWPORT = { width: 1440, height: 900 }
 
 const TELAS = [
-  { rota: '/kanban', nome: 'kanban', espera: 'Novo Lead' },
+  { rota: '/kanban', nome: 'kanban', espera: 'A contatar' },
   { rota: '/dashboard', nome: 'dashboard', espera: 'Funil de negócios' },
   { rota: '/hoje', nome: 'hoje', espera: 'Hoje' },
   { rota: '/leads', nome: 'contatos', espera: 'Busque, filtre e acompanhe' },

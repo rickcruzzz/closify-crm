@@ -235,7 +235,7 @@ export function DealDetailSheet({
 
               {lead && (
                 <div>
-                  <span className="text-muted-foreground text-xs">Lead vinculado</span>
+                  <span className="text-muted-foreground text-xs">Contato vinculado</span>
                   <p className="text-sm font-medium">{lead.name}</p>
                   <p className="text-muted-foreground text-xs">{lead.email}</p>
                   <p className="text-muted-foreground text-xs">{lead.phone}</p>

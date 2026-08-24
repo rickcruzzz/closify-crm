@@ -65,7 +65,7 @@ async function conferirAlvo(
       .eq('workspace_id', sessao.workspaceId)
       .maybeSingle()
 
-    if (!data) return 'Lead não encontrado.'
+    if (!data) return 'Contato não encontrado.'
   }
 
   if (dealId) {

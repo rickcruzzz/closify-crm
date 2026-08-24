@@ -36,7 +36,7 @@ export default async function KanbanPage() {
     <div className="-mx-4 max-w-none px-4 md:-mx-6 md:px-6">
       <PageHeader
         title="Funil"
-        description="Acompanhe seus negócios em cada etapa do funil."
+        description="Cada negócio, do primeiro contato ao fechamento. Arraste o card conforme a conversa avança."
       />
 
       {/* Board completamente vazio: mostra o guia acima dele. A condição é

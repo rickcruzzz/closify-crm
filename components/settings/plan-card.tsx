@@ -34,7 +34,7 @@ import {
 const GANHOS_DO_PRO = [
   'Empresas ilimitadas no mesmo login',
   'Colaboradores ilimitados',
-  'Leads ilimitados',
+  'Contatos ilimitados',
   'Suporte prioritário',
 ]
 

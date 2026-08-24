@@ -4,7 +4,7 @@ import type { LeadStatus } from '@/lib/leads/types'
 import { getCurrentUserAndWorkspace } from '@/lib/supabase/workspace'
 import { LeadsPageClient } from '@/components/leads/leads-page-client'
 
-export const metadata: Metadata = { title: 'Leads' }
+export const metadata: Metadata = { title: 'Contatos' }
 
 export default async function LeadsPage({
   searchParams,
