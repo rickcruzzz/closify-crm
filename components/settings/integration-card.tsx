@@ -124,7 +124,25 @@ export function IntegrationCard({
   const [conectarWhatsappAberto, setConectarWhatsappAberto] = React.useState(false)
   const info = META[provider]
   const Icone = info.icone
-  const conectado = status === 'connected'
+  // ## "Conectado" só vale se o plano ainda dá direito ao recurso
+  //
+  // Achado em produção (24/08): uma empresa no Free mostrava a etiqueta
+  // "✓ Conectado" e, logo abaixo, o botão "Conhecer o plano Pro" — a tela
+  // afirmando duas coisas incompatíveis ao mesmo tempo.
+  //
+  // A causa é que conexão não expira sozinha quando o plano cai: a linha em
+  // `integration_connections` continua com `status: 'connected'` de quando a
+  // empresa ainda era Pro (ou estava em trial). O estado guardado está certo
+  // sobre o passado e errado sobre o presente.
+  //
+  // Aqui o plano tem a última palavra. Quem perdeu o Pro vê "Pausado", que é a
+  // verdade: a conexão existe, o WhatsApp segue pareado no servidor, e as
+  // mensagens NÃO estão entrando — é o que o webhook passou a fazer na mesma
+  // correção. Dizer "Não conectado" seria mentira na direção oposta e faria a
+  // pessoa tentar parear de novo à toa.
+  const temDireitoAoRecurso = plano === 'pro'
+  const conectado = status === 'connected' && temDireitoAoRecurso
+  const pausadoPorPlano = status === 'connected' && !temDireitoAoRecurso
 
   function testar() {
     startTransition(async () => {
@@ -154,12 +172,38 @@ export function IntegrationCard({
             <CardDescription>{info.descricao}</CardDescription>
           </div>
         </div>
-        <Badge variant={conectado ? 'default' : status === 'error' ? 'destructive' : 'secondary'}>
-          {conectado ? '✓ Conectado' : status === 'error' ? 'Erro' : 'Não conectado'}
+        <Badge
+          variant={
+            conectado
+              ? 'default'
+              : pausadoPorPlano || status === 'error'
+                ? 'destructive'
+                : 'secondary'
+          }
+        >
+          {conectado
+            ? '✓ Conectado'
+            : pausadoPorPlano
+              ? 'Pausado'
+              : status === 'error'
+                ? 'Erro'
+                : 'Não conectado'}
         </Badge>
       </CardHeader>
       <CardContent className="flex flex-col gap-3">
         {accountLabel && <p className="text-muted-foreground text-sm">{accountLabel}</p>}
+
+        {/* O selo "Pausado" sozinho não explica nada — e num card que também
+            mostra "Conhecer o plano Pro", a pessoa fica sem saber se perdeu a
+            conexão ou se ela nunca existiu. O texto separa as duas coisas: o
+            número segue pareado (não precisa refazer nada), o que parou foi a
+            entrada das mensagens. */}
+        {pausadoPorPlano && (
+          <p className="text-destructive text-xs text-pretty">
+            Seu número continua pareado, mas as mensagens não estão entrando no
+            funil enquanto o plano não for Pro.
+          </p>
+        )}
 
         {/* Só mostra uso pra quem já conectou, card desconectado não tem
             número nenhum pra exibir, e "0" ali só soaria vazio. */}

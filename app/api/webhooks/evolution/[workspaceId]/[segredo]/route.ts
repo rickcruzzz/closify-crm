@@ -314,6 +314,43 @@ export async function POST(
     return new NextResponse('Não encontrado.', { status: 404 })
   }
 
+  // ## O plano ainda dá direito ao recurso?
+  //
+  // Existir linha em `integration_connections` provava só que a empresa
+  // conectou UM DIA — e conexão não expira sozinha quando o plano cai. Achado
+  // em produção (24/08): a "Consultoria Aurora" estava em `pro_vigente()
+  // false`, com a conexão `connected` e sendo atualizada no mesmo dia. Ou
+  // seja, um recurso Pro rodando para quem não paga, sem erro em lugar nenhum.
+  //
+  // A checagem é `pro_vigente()`, nunca `workspaces.plan` — doutrina travada
+  // desde a 0027, porque a coluna é o último valor gravado e não sabe que o
+  // prazo venceu. Aqui isso importa em dobro: um trial que expirou deixa a
+  // coluna dizendo o que era, não o que é.
+  //
+  // Responde 200, não erro: para o Evolution a entrega funcionou, e devolver
+  // falha faria ele reenviar para sempre algo que vai ser recusado pelo mesmo
+  // motivo. O estado da conexão vira `error` com aviso na tela, que é o que
+  // leva a pessoa ao upgrade em vez de deixá-la achando que ainda funciona.
+  const { data: temPro } = await admin.rpc('pro_vigente', {
+    target_workspace_id: workspaceId,
+  })
+
+  if (!temPro) {
+    await admin
+      .from('integration_connections')
+      .update({
+        status: 'error',
+        last_error:
+          'O WhatsApp é um recurso do plano Pro. Sua conexão está pausada e as ' +
+          'mensagens não estão entrando no funil. Reative o Pro para voltar a receber.',
+      })
+      .eq('workspace_id', workspaceId)
+      .eq('provider', 'whatsapp')
+      .neq('status', 'error')
+
+    return NextResponse.json({ ok: true, ignorado: 'plano sem direito ao recurso' })
+  }
+
   let payload: PayloadDoEvolutionGo
   try {
     payload = (await requisicao.json()) as PayloadDoEvolutionGo
