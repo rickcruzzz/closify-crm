@@ -146,9 +146,22 @@ export function ConfiancaSection() {
           className="text-muted-foreground mt-8 flex flex-col items-center gap-2 text-center text-sm"
         >
           <Building2 aria-hidden className="size-4" />
+          {/* Número por extenso removido (24/08): o link já abre o WhatsApp
+              direto, escrever o número inteiro do lado do link que faz a MESMA
+              coisa é redundância, não profissionalismo — nenhum concorrente
+              auditado (Agendor, Pipedrive, Attio) expõe telefone cru na
+              página, todos usam texto de link ou botão. */}
           <p>
-            {CONTROLADOR.nomeFantasia}, CNPJ {CONTROLADOR.cnpj}. Suporte por WhatsApp no{' '}
-            {CONTROLADOR.whatsapp.exibicao}.
+            {CONTROLADOR.nomeFantasia}, CNPJ {CONTROLADOR.cnpj}.{' '}
+            <a
+              href={`https://wa.me/${CONTROLADOR.whatsapp.numero}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hover:text-foreground underline underline-offset-4 transition-colors"
+            >
+              Falar no WhatsApp
+            </a>
+            .
           </p>
         </RevealOnScroll>
       </div>
