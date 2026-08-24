@@ -26,6 +26,53 @@ código-fonte pra descobrir hex de cor ou nome de fonte.
 - **Identidade visual geral**: modo escuro como padrão, alto contraste,
   poucos elementos por tela (`CLAUDE.md`, seção Identidade Visual).
 
+## Stories dos destaques (conteúdo de dentro)
+
+Gerados por `scripts/marketing/gerar-stories.py`:
+
+```sh
+python scripts/marketing/gerar-stories.py
+```
+
+Cada tela sai em dois arquivos: a versão de publicação (**1080×1920**, que é
+o padrão de Story e o que se sobe no Instagram) e uma `@4k` (2160×3840) para
+reaproveitar em feed ou anúncio sem regerar.
+
+**Renderiza a 2x e reduz no fim.** Desenhar direto em 1080×1920 desperdiçava
+o print de origem (2880px entrando a 0,49x, metade dos pixels jogados fora) e
+rasterizava texto e selo uma única vez, sem folga de amostragem — o que
+serrilhava a borda do símbolo e embaçava o endereço, visível a olho nu em
+qualquer zoom. Com supersampling cada pixel final vira média de 4 amostras.
+
+**Não suba o `@4k` direto no Instagram.** O app recomprime para 1080 de
+largura de qualquer jeito, às vezes com resultado pior que a redução
+controlada por LANCZOS que o script já faz.
+
+### Destaque 1 — Demo (Como funciona)
+
+| # | arquivo | conteúdo |
+| --- | --- | --- |
+| 1 | `2026-08-24-demo-01-gancho.png` | A dor: "O cliente pediu orçamento e sumiu no WhatsApp. Aqui ele não some." |
+| 2 | `2026-08-24-demo-02-passo1.png` | 01 · Traga quem já é seu cliente |
+| 3 | `2026-08-24-demo-03-passo2.png` | 02 · Arraste pelas etapas |
+| 4 | `2026-08-24-demo-04-passo3.png` | 03 · Veja onde está o dinheiro |
+| 5 | `2026-08-24-demo-05-cta.png` | 7 dias com tudo liberado, sem cartão |
+
+A copy dos três passos é **literal** de
+`components/landing/how-it-works-section.tsx` — a mesma que já passou pelo PRD
+de copy sem jargão. Reescrever aqui faria o Story divergir da página no
+primeiro ajuste que alguém fizesse lá.
+
+O formato segue o padrão "Bold Headline + Product UI", o que mais converte em
+anúncio B2B SaaS: headline no terço superior, print real do produto embaixo em
+perspectiva, e a headline descreve exatamente o que o print mostra. A regra
+que isso respeita: **print real prova, ícone abstrato não**. A primeira
+tentativa usava ilustração gerada por IA e foi descartada por isso.
+
+Os três passos usam print **escuro**, sem exceção — quatro telas escuras com
+uma clara no meio lê como erro de montagem, e o modo escuro é o padrão do
+produto.
+
 ## Convenção de nome de arquivo
 
 `AAAA-MM-DD-descricao-curta.png` — pra dar pra achar por data depois.
