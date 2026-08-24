@@ -8,6 +8,7 @@ import {
   EVENTO_CONSENTIMENTO,
   lerConsentimentoDoNavegador,
 } from '@/components/analytics/banner-consentimento'
+import { pixelIdSeguro } from '@/lib/analytics/pixel-id'
 
 /**
  * Meta Pixel, só nas páginas públicas.
@@ -69,7 +70,11 @@ const DOMINIO_DE_PRODUCAO = 'www.velofunil.com.br'
 
 export function MetaPixel() {
   const pathname = usePathname()
-  const pixelId = process.env.NEXT_PUBLIC_META_PIXEL_ID
+  // NUNCA usar `process.env.NEXT_PUBLIC_META_PIXEL_ID` cru aqui: o valor é
+  // interpolado dentro de um script INLINE, e uma quebra de linha colada sem
+  // querer no painel da Vercel derrubou a produção inteira em 24/08 — tela
+  // preta para quem aceitasse os cookies. Ver `lib/analytics/pixel-id.ts`.
+  const pixelId = pixelIdSeguro(process.env.NEXT_PUBLIC_META_PIXEL_ID)
 
   const eAreaPrivada = PREFIXOS_PRIVADOS.some(
     (prefixo) => pathname === prefixo || pathname.startsWith(`${prefixo}/`),

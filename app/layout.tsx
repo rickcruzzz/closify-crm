@@ -7,6 +7,7 @@ import { ThemeProvider } from '@/components/theme-provider'
 import { Toaster } from '@/components/ui/sonner'
 import { Analytics } from '@/components/analytics'
 import { MetaPixel } from '@/components/analytics/meta-pixel'
+import { IsolarAnalytics } from '@/components/analytics/isolar-analytics'
 import { BannerConsentimento } from '@/components/analytics/banner-consentimento'
 import { UtmCapture } from '@/components/landing/utm-capture'
 import { NavigationProgress } from '@/components/layout/navigation-progress'
@@ -103,9 +104,20 @@ export default function RootLayout({
               identificar visitante. O wrapper local higieniza a URL antes do
               envio, o pacote manda o caminho REAL junto do padrão da rota, e
               `/convite/<token>` carrega uma credencial de acesso. */}
-          <Analytics />
-          <MetaPixel />
-          <UtmCapture />
+          {/* Os três vivem no layout RAIZ, então um erro em qualquer um deles
+              sobe até `app/global-error.tsx` e o visitante recebe uma tela
+              preta. Foi o que aconteceu em 24/08 com uma quebra de linha no
+              ID do pixel. A cerca garante que medição quebrada custe o DADO,
+              nunca a visita — ver `isolar-analytics.tsx`. */}
+          <IsolarAnalytics nome="Vercel Analytics">
+            <Analytics />
+          </IsolarAnalytics>
+          <IsolarAnalytics nome="Meta Pixel">
+            <MetaPixel />
+          </IsolarAnalytics>
+          <IsolarAnalytics nome="Captura de UTM">
+            <UtmCapture />
+          </IsolarAnalytics>
           {/* Depois do pixel na ordem do JSX, mas o pixel só liga com o "aceito"
               que sai daqui — ver o cabeçalho de banner-consentimento.tsx. */}
           <BannerConsentimento />
