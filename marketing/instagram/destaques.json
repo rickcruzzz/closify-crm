@@ -1,0 +1,130 @@
+{
+  "destaques": [
+    {
+      "id": "demo",
+      "nome": "Como funciona",
+      "resumo": "A porta de entrada do perfil: a dor, o caminho e a oferta. É o destaque que alguém abre primeiro, então ele responde o que é isso sem depender dos outros quatro.",
+      "telas": [
+        {
+          "ordem": 1,
+          "arquivo": "demo-1-gancho.png",
+          "arquivo4k": "demo-1-gancho@4k.png",
+          "titulo": "O cliente pediu orçamento e sumiu no WhatsApp.",
+          "layout": "produto"
+        },
+        {
+          "ordem": 2,
+          "arquivo": "demo-2-trazer.png",
+          "arquivo4k": "demo-2-trazer@4k.png",
+          "titulo": "Traga quem já é seu cliente",
+          "layout": "produto"
+        },
+        {
+          "ordem": 3,
+          "arquivo": "demo-3-arrastar.png",
+          "arquivo4k": "demo-3-arrastar@4k.png",
+          "titulo": "Arraste pelas etapas",
+          "layout": "produto"
+        },
+        {
+          "ordem": 4,
+          "arquivo": "demo-4-resultado.png",
+          "arquivo4k": "demo-4-resultado@4k.png",
+          "titulo": "Veja onde está o dinheiro",
+          "layout": "produto"
+        },
+        {
+          "ordem": 5,
+          "arquivo": "demo-5-cta.png",
+          "arquivo4k": "demo-5-cta@4k.png",
+          "titulo": "7 dias com tudo liberado.",
+          "layout": "declaracao"
+        }
+      ]
+    },
+    {
+      "id": "planos",
+      "nome": "Planos",
+      "resumo": "Abre pela OFERTA, não pelo piso. A comparação (tela 4) é a única vantagem que o concorrente não iguala sem mudar o próprio modelo de cobrança.",
+      "telas": [
+        {
+          "ordem": 1,
+          "arquivo": "planos-1-teste.png",
+          "arquivo4k": "planos-1-teste@4k.png",
+          "titulo": "7 dias com o Pro completo",
+          "layout": "lista"
+        },
+        {
+          "ordem": 2,
+          "arquivo": "planos-2-preco.png",
+          "arquivo4k": "planos-2-preco@4k.png",
+          "titulo": "R$ 49 por mês",
+          "layout": "lista"
+        },
+        {
+          "ordem": 3,
+          "arquivo": "planos-3-produto.png",
+          "arquivo4k": "planos-3-produto@4k.png",
+          "titulo": "Tudo liberado, pela empresa inteira",
+          "layout": "produto"
+        },
+        {
+          "ordem": 4,
+          "arquivo": "planos-4-comparacao.png",
+          "arquivo4k": "planos-4-comparacao@4k.png",
+          "titulo": "A maioria cobra por vendedor.",
+          "layout": "declaracao"
+        },
+        {
+          "ordem": 5,
+          "arquivo": "planos-5-pagamento.png",
+          "arquivo4k": "planos-5-pagamento@4k.png",
+          "titulo": "Cancele quando quiser.",
+          "layout": "declaracao"
+        }
+      ]
+    },
+    {
+      "id": "dicas",
+      "nome": "Dicas de venda",
+      "resumo": "Os números de mercado que justificam o produto, cada um com a FONTE no próprio criativo. Serve para quem ainda não aceitou que tem um problema.",
+      "telas": [
+        {
+          "ordem": 1,
+          "arquivo": "dicas-1-resposta-rapida.png",
+          "arquivo4k": "dicas-1-resposta-rapida@4k.png",
+          "titulo": "21x mais chance de fechar",
+          "layout": "numero"
+        },
+        {
+          "ordem": 2,
+          "arquivo": "dicas-2-media-do-mercado.png",
+          "arquivo4k": "dicas-2-media-do-mercado@4k.png",
+          "titulo": "42h é a média do mercado",
+          "layout": "numero"
+        },
+        {
+          "ordem": 3,
+          "arquivo": "dicas-3-whatsapp.png",
+          "arquivo4k": "dicas-3-whatsapp@4k.png",
+          "titulo": "82% vendem pelo WhatsApp",
+          "layout": "numero"
+        },
+        {
+          "ordem": 4,
+          "arquivo": "dicas-4-proximo-passo.png",
+          "arquivo4k": "dicas-4-proximo-passo@4k.png",
+          "titulo": "Negócio sem próximo passo é o que morre calado",
+          "layout": "produto"
+        },
+        {
+          "ordem": 5,
+          "arquivo": "dicas-5-medir.png",
+          "arquivo4k": "dicas-5-medir@4k.png",
+          "titulo": "O que você mede, você cobra.",
+          "layout": "declaracao"
+        }
+      ]
+    }
+  ]
+}
