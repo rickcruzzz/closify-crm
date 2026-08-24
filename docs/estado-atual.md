@@ -4,9 +4,115 @@ Documento de continuidade. É lido no começo de toda sessão (referenciado no
 [CLAUDE.md](../CLAUDE.md)) para que uma conversa nova, ou outra conta, comece
 sabendo o que já foi feito, o que foi decidido e onde estão as armadilhas.
 
-**Atualizado em:** 23/08/2026 (landing auditada: promessa falsa no hero, logo quebrado no telefone, banner de cookies cobrindo o CTA, e prints mostrando o jargão que a própria página baniu; PRD, schema e grafo realinhados)
+**Atualizado em:** 24/08/2026 (landing repositionada no inimigo certo: 82% da PME brasileira vende por WhatsApp, e a página atacava a planilha; seção de confiança nova; comparação de preço; e o print da tela "Hoje" AINDA tinha o jargão banido, apesar do commit de 23/08 dizer o contrário)
+
+**Antes disso, 23/08/2026** (landing auditada: promessa falsa no hero, logo quebrado no telefone, banner de cookies cobrindo o CTA, e prints mostrando o jargão que a própria página baniu; PRD, schema e grafo realinhados)
 
 **Antes disso, 22/08/2026** (funções rodavam em Washington DC com o banco em São Paulo, corrigido na config do projeto e medido: /dashboard 1221ms → 400ms; modo claro sem escada de superfícies, refeito; jargão remanescente e telas de erro; WhatsApp sem QR por Postgres esgotado na VPS; migration 0049 provada desnecessária e removida)
+
+## A landing vendia o produto errado, para o inimigo errado (24/08)
+
+Auditadas seis landings de referência com navegador e leitura de CSS: Agendor,
+Pipedrive BR, Attio, Basecamp, Tally e Page AI. **As seis sustentam a página em
+prova social** — "mais de 10 mil empresas", "30.000+ customers", logos de Scania
+e Railway, depoimento com nome e cargo. Tally é a menor da lista e ainda assim
+abre com Notion e Rakuten.
+
+Como temos zero clientes externos pagantes e inventar depoimento é decisão
+travada aqui, copiar o esqueleto delas deixaria buraco onde mais dói. O que a
+auditoria rendeu, então, não foi um layout para clonar — foram três achados.
+
+### O inimigo estava errado, e isso encarece o clique
+
+A página inteira atacava a planilha: "Da planilha ao funil em três passos",
+"Traga sua planilha". Medido na **12ª Pesquisa Pulso do Sebrae (2026): 82% dos
+pequenos negócios brasileiros têm o WhatsApp como principal canal de venda**, e
+76% vendem por lá. Quem controla cliente pelo WhatsApp e pela memória não tem
+planilha para trazer — lê "exporte seu .csv" e conclui que o produto é para
+outra pessoa.
+
+A headline anterior ("Pare de perder venda por esquecimento") era boa como
+frase e apontada para a segunda dor. A nova — **"O WhatsApp guarda a conversa.
+Não guarda o cliente."** — não compete com o WhatsApp, o complementa: "mas eu já
+uso WhatsApp" é a objeção nº 1 do público, e mandar trocar de ferramenta perde a
+discussão antes de começar.
+
+**O que ela deliberadamente NÃO promete:** nada de integração automática. A
+conexão via Evolution está construída e não ligada (26% de sessão viva na última
+medição). Prometer o que não roda é a classe do "contatos ilimitados" removido
+em 23/08.
+
+A dor com número em cima, para quem for escrever anúncio: responder em 5 minutos
+em vez de 30 dá **21x mais chance de qualificar** (InsideSales/MIT — o dado
+costuma ser creditado errado à Harvard), e a auditoria da HBR em 2.241 empresas
+achou tempo médio de primeira resposta de **42 horas**.
+
+### A landing vendia menos do que o sistema entrega
+
+Desde a 0051 toda empresa nasce com sete dias de Pro completo. **A landing não
+dizia isso em lugar nenhum** — seguia vendendo "grátis pra sempre até 50
+contatos, sem prazo pra decidir". Quem criava conta recebia mais do que a página
+prometeu, sem saber, e depois perdia recurso que não sabia que tinha.
+
+Corrigido no hero, na faixa de números, no cabeçalho de planos e na primeira
+pergunta da FAQ. A microcopy abaixo do botão seguia o padrão do Pipedrive
+("Teste grátis de 14 dias, não requer cartão de crédito"): oferta, prazo, e a
+remoção da única fricção que trava cadastro. Ela abria pelo TETO antes disso —
+copywriter não anuncia a limitação antes da promessa.
+
+### O que entrou no lugar da prova social que não temos
+
+Seção **"O que a gente garante por escrito"**, antes do preço e não depois: quem
+avalia R$ 49 desconfiando do site acha caro. Quatro garantias conferíveis
+(isolamento por RLS, dados em São Paulo, cartão que não passa pelo nosso
+servidor, cancelamento sem multa) e o **CNPJ**, que também passou a aparecer no
+rodapé. No Brasil o CNPJ é o primeiro sinal que uma PME procura antes de confiar
+num site desconhecido, e ele estava só nas páginas legais, a dois cliques de
+quem estava decidindo.
+
+E a **comparação de preço**, logo abaixo dos cards: a maioria dos CRMs cobra por
+vendedor, e cinco pessoas a R$ 53 dão R$ 265/mês. Preço de tabela pública deles,
+não prova social inventada — por isso pode ser dito. Sem essa âncora o cérebro
+compara R$ 49 com R$ 0 e qualquer preço perde. Nomes de concorrente ficam de
+fora de propósito.
+
+### O print mentiu de novo, e o commit que dizia tê-lo corrigido também
+
+O print da tela "Hoje" na landing mostrava **Pipeline · Leads · Dashboard** —
+exatamente o jargão que a página bane e que a renomeação de 19/08 removeu do
+produto. O commit `fa31af8`, de 23/08, se chama "os prints mostravam o
+vocabulário que a landing baniu" e tocou os seis arquivos.
+
+Recapturado contra build atual, **só `hoje-dark` e `hoje-light` mudaram**: os
+outros quatro saíram byte-idênticos, ou seja, já estavam certos. A tela "Hoje"
+foi capturada antes do rebuild naquela sessão e passou.
+
+**A lição, que é o que vale registrar:** o commit anterior verificou que rodou o
+script, não que o arquivo ficou certo. Este foi conferido **abrindo o PNG e
+lendo a sidebar** — que é a única prova possível, porque nenhum `tsc`, `lint` ou
+`test` olha dentro de uma imagem.
+
+### Acabamento: a escala tipográfica passou a carregar o tracking
+
+Levantado do CSS servido pelo Attio: o espaçamento entre letras fica mais
+negativo conforme o texto cresce (−0.02em em 4rem, −0.01em nos menores). É
+compensação óptica, não gosto — espaço entre letras é percebido em proporção ao
+tamanho da letra, e o mesmo `normal` que serve em 16px vira vão frouxo em 56px.
+
+Virou token (`text-titulo-xl/lg/md/sm`), com tamanho, altura de linha, peso e
+tracking casados. Antes só o h1 da landing tinha tracking, escolhido a olho, e
+os h2 repetiam `tracking-[-0.02em]` copiado de seção em seção.
+
+**Defeito achado por medição no telefone:** a frase nova tem 47 caracteres
+contra 38 da anterior e, em 390px, ocupava **cinco linhas**, empurrando o botão
+para debaixo do banner de consentimento — o mesmo defeito de 23/08 por outra
+causa. Com um degrau a mais na escala, três linhas, e o CTA fecha em 548px num
+viewport de 767.
+
+Metadata, `og:description` e a imagem de compartilhamento foram junto: elas
+ainda diziam a headline antiga, e são o que aparece no WhatsApp antes de
+qualquer clique. O contrato do teste E2E também.
+
 
 ## Verificação OAuth do Google: o escopo era largo demais (23/08)
 

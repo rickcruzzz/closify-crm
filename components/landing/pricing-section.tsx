@@ -15,6 +15,7 @@ import { cn } from '@/lib/utils'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { buttonVariants } from '@/components/ui/button'
+import { DIAS_DE_TRIAL } from '@/lib/plans/trial'
 import { RevealOnScroll } from '@/components/landing/reveal-on-scroll'
 import {
   FREE_LEAD_LIMIT,
@@ -113,11 +114,17 @@ export function PricingSection() {
             Planos
             <span aria-hidden className="bg-primary h-px w-4" />
           </span>
-          <h2 className="text-3xl font-semibold tracking-[-0.02em] md:text-4xl">
-            Comece de graça. Pague quando fizer sentido crescer.
+          <h2 className="text-titulo-md md:text-titulo-lg">
+            Teste tudo por {DIAS_DE_TRIAL} dias. Depois você decide.
           </h2>
+          {/* Dizia "Grátis pra sempre até 50 contatos", que descrevia o produto
+              anterior à migration 0051. Toda empresa nova nasce com Pro completo
+              por sete dias — a página estava vendendo menos do que o sistema
+              entrega, e quem criava conta descobria sozinho. */}
           <p className="text-muted-foreground text-lg text-balance">
-            Grátis pra sempre até {FREE_LEAD_LIMIT} contatos. Sem cartão, sem contrato.
+            Sua empresa começa com o Pro completo, sem cartão. Passados os{' '}
+            {DIAS_DE_TRIAL} dias, ou você assina, ou fica no plano grátis — nunca
+            cobramos sem você escolher.
           </p>
         </RevealOnScroll>
 
@@ -219,6 +226,43 @@ export function PricingSection() {
             </RevealOnScroll>
           ))}
         </div>
+
+        {/* ## Por que a comparação entra aqui
+
+            É a nossa única vantagem que o concorrente não consegue igualar sem
+            mudar o próprio modelo de negócio — e a landing a sussurrava numa
+            legenda, no menor tamanho de fonte da página.
+
+            Os números são de tabela pública, conferidos em 24/08: Agendor a
+            partir de R$ 53 POR USUÁRIO; PipeRun de R$ 499,90 a R$ 1.099,90/mês;
+            Ploomes a partir de ~R$ 225/mês para 3 usuários. Não é prova social
+            inventada — é preço publicado por eles, e por isso pode ser dito.
+
+            Fica logo abaixo dos cards de propósito: o número R$ 49 acabou de ser
+            lido, e é nesse instante que o cérebro procura uma âncora para saber
+            se é caro. Sem âncora, ele usa "R$ 0", e qualquer preço perde. Com
+            ela, R$ 49 é comparado com R$ 265.
+
+            Nomes de concorrente ficam de fora de propósito: comparação nominal
+            em página de venda convida processo e ainda ensina o nome deles a
+            quem não conhecia. O modelo de cobrança é o que importa. */}
+        <RevealOnScroll delay={280} className="mx-auto mt-12 max-w-2xl">
+          <div className="border-border/60 bg-muted/30 rounded-xl border p-6 text-center">
+            <p className="text-muted-foreground font-mono text-xs tracking-wide uppercase">
+              A conta que ninguém faz antes de assinar
+            </p>
+            <p className="mt-3 text-balance">
+              A maioria dos CRMs cobra <strong>por vendedor</strong>. Uma equipe de cinco
+              pessoas, a R$ 53 cada, custa{' '}
+              <strong className="text-foreground">R$ 265 por mês</strong> — e sobe toda
+              vez que você contrata alguém.
+            </p>
+            <p className="mt-3 text-balance">
+              Aqui são <strong className="text-foreground">R$ 49</strong>, com a equipe
+              que você quiser. Contratar mais gente não aumenta a mensalidade.
+            </p>
+          </div>
+        </RevealOnScroll>
       </div>
     </section>
   )

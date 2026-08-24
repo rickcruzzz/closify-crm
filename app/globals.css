@@ -317,6 +317,49 @@
   --animation-delay-passo-3: 140ms;
   --animation-delay-passo-4: 210ms;
   --animation-delay-passo-5: 280ms;
+
+  /* ## Escala de título, com o tracking dentro dela
+
+     Levantado do CSS servido pelo Attio em 23/08 — não de gosto. O padrão que
+     todo produto de acabamento caro segue: o espaçamento entre letras fica
+     MAIS NEGATIVO conforme o texto cresce.
+
+     O motivo é óptico, não estético. Espaço entre letras é percebido em
+     proporção ao tamanho da letra: o mesmo `letter-spacing: normal` que fica
+     certo em 16px vira um vão frouxo em 56px, e a headline se lê como texto
+     ampliado em vez de título desenhado. Compensar isso é o que a tipografia
+     de sinalização sempre fez à mão.
+
+     Escala do Attio, medida: 4rem/-0.02em · 3.5rem/-0.015em · 2.5rem/-0.01em.
+     A nossa acompanha a curva com os tamanhos que a landing usa.
+
+     Por que virar token em vez de continuar em `tracking-[-0.03em]` solto: hoje
+     só o h1 da landing tem tracking, e o valor foi escolhido a olho. Com a
+     escala aqui, `text-titulo-xl` já carrega tamanho, altura de linha, peso e
+     tracking casados — e um h2 novo nasce certo sem ninguém lembrar de somar
+     quatro classes.
+
+     `--text-*--line-height` e afins são a convenção do Tailwind v4 para
+     modificadores de uma escala de texto; o utilitário lê os quatro juntos. */
+  --text-titulo-xl: 3.75rem;
+  --text-titulo-xl--line-height: 1.05;
+  --text-titulo-xl--font-weight: 600;
+  --text-titulo-xl--letter-spacing: -0.02em;
+
+  --text-titulo-lg: 2.75rem;
+  --text-titulo-lg--line-height: 1.1;
+  --text-titulo-lg--font-weight: 600;
+  --text-titulo-lg--letter-spacing: -0.015em;
+
+  --text-titulo-md: 2rem;
+  --text-titulo-md--line-height: 1.2;
+  --text-titulo-md--font-weight: 600;
+  --text-titulo-md--letter-spacing: -0.01em;
+
+  --text-titulo-sm: 1.5rem;
+  --text-titulo-sm--line-height: 1.3;
+  --text-titulo-sm--font-weight: 600;
+  --text-titulo-sm--letter-spacing: -0.01em;
 }
 
 /* Hover só onde existe ponteiro de verdade.

@@ -50,8 +50,16 @@ export function PublicFooter() {
               Suporte
             </a>
           </nav>
-          <span className="text-muted-foreground text-sm">
-            © {new Date().getFullYear()} Velo Funil. Todos os direitos reservados.
+          {/* O CNPJ entra na linha de copyright, não numa linha própria.
+              No Brasil ele é o primeiro sinal que uma PME procura antes de
+              confiar num site que nunca ouviu falar — e o rodapé é onde ela vai
+              procurar, porque é onde todo site sério o coloca. Estava só nas
+              páginas legais, a dois cliques de distância de quem estava
+              decidindo. Vem de `lib/legal.ts`, a mesma fonte que a Política de
+              Privacidade e os Termos citam, então não há como divergirem. */}
+          <span className="text-muted-foreground text-sm text-balance">
+            © {new Date().getFullYear()} Velo Funil · {CONTROLADOR.razaoSocial} · CNPJ{' '}
+            {CONTROLADOR.cnpj}
           </span>
         </div>
 

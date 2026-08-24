@@ -71,11 +71,11 @@ export default function OpengraphImage() {
           maxWidth: 900,
         }}
       >
-        Pare de perder venda por esquecimento.
+        O WhatsApp guarda a conversa. Não guarda o cliente.
       </div>
 
       <div style={{ marginTop: 28, fontSize: 30, color: '#a1a1a1', maxWidth: 860 }}>
-        O CRM que mostra, numa tela só, com quem você precisa falar hoje.
+        7 dias de Pro grátis, sem cartão. Depois, R$ 49 pela empresa inteira.
       </div>
     </div>,
     size,

@@ -100,7 +100,7 @@ test.describe('funil completo: landing → cadastro → Pro → e-mail', () => {
     // que está pintado na tela.
     const h1 = pagina.locator('h1').first()
     await expect(h1).toContainText('Velo Funil')
-    await expect(h1).toContainText('Pare de perder venda por esquecimento')
+    await expect(h1).toContainText('O WhatsApp guarda a conversa')
 
     const assinar = pagina.getByRole('link', { name: /assinar pro/i }).first()
     // `?plano=pro` é o elo que faz este clique valer alguma coisa: sem ele o

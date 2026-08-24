@@ -9,10 +9,30 @@ import { cn } from '@/lib/utils'
 // A régua é simples: só entra aqui o que dá para provar hoje. Cada item abaixo
 // é um atributo verificável do produto, não uma promessa de resultado. Quando
 // existir dado real de uso (e a fonte puder ser citada), aí sim vale trocar.
+//
+// ## Por que estes quatro, e não outros (24/08)
+//
+// Esta é a faixa logo abaixo do hero — o lugar onde Agendor, Pipedrive, Attio e
+// Tally, todos, colocam logos de clientes. Nós não temos logo para exibir, e
+// inventar está fora de questão. Então a faixa passa a fazer o outro trabalho
+// que ela pode fazer bem: **matar as quatro objeções que travam quem chegou de
+// anúncio**, antes que virem motivo para fechar a aba.
+//
+// Os quatro anteriores não faziam isso. "R$ 0 / plano grátis para sempre"
+// repetia o hero E contradizia o trial de sete dias que passou a existir na
+// 0051. "100% / dados só da sua empresa" não é estatística: porcentagem sem
+// unidade não mede nada, e o argumento de isolamento ficou melhor servido na
+// seção de confiança, onde há espaço para dizer COMO. "Pix / boleto e cartão
+// também" é lista de meio de pagamento com cara de número.
+//
+// Cada valor abaixo é verificável: os sete dias vêm de `DIAS_DE_TRIAL`; os dois
+// minutos são o tempo real do cadastro ao primeiro contato; o preço é o do
+// plano Pro; e o banco roda em `sa-east-1` com as funções em `gru1` desde a
+// correção de 22/08 — São Paulo é medição, não licença poética.
 const stats = [
   {
-    value: 'R$ 0',
-    label: 'plano grátis para sempre',
+    value: '7 dias',
+    label: 'de Pro completo, sem pedir cartão',
     accent: 'text-emerald-500 dark:text-emerald-400',
     delay: 0,
   },
@@ -23,14 +43,14 @@ const stats = [
     delay: 130,
   },
   {
-    value: '100%',
-    label: 'dados só da sua empresa, nunca de outra',
+    value: 'R$ 49',
+    label: 'por mês, pela empresa toda',
     accent: 'text-violet-500 dark:text-violet-400',
     delay: 260,
   },
   {
-    value: 'Pix',
-    label: 'boleto e cartão também',
+    value: 'Brasil',
+    label: 'seus dados ficam em São Paulo',
     accent: 'text-orange-500 dark:text-orange-400',
     delay: 390,
   },

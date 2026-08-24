@@ -15,12 +15,28 @@ import { FREE_LEAD_LIMIT } from '@/lib/plans'
  * O passo 1 é a importação de CSV. Ela existia desde antes e não aparecia em
  * lugar nenhum da landing, era a resposta para "vou ter que digitar tudo de
  * novo?", a objeção que mais trava a troca da planilha.
+ *
+ * ## Por que a planilha deixou de ser o inimigo (24/08)
+ *
+ * O título desta seção era "Da planilha ao funil em três passos", e o passo 1
+ * abria com "Traga sua planilha". Escrito assim, ele **exclui a maior parte do
+ * público logo na primeira linha**: a 12ª Pesquisa Pulso do Sebrae (2026) mediu
+ * que 82% dos pequenos negócios brasileiros têm o WhatsApp como principal canal
+ * de venda, e 76% vendem por lá. Quem controla clientes pelo WhatsApp e pela
+ * memória não tem planilha nenhuma para trazer — lê "exporte seu .csv", conclui
+ * que o produto é para outra pessoa, e sai.
+ *
+ * A importação continua sendo o passo 1, porque para quem TEM planilha ela é a
+ * resposta que destrava a troca. O que mudou é que ela deixou de ser a única
+ * porta: cadastrar um a um e o contato vindo do WhatsApp entram na mesma frase,
+ * e o título passa a nomear a dor real (o combinado que se perde na conversa)
+ * em vez do formato de arquivo.
  */
 const passos = [
   {
     numero: '01',
-    titulo: 'Traga sua planilha',
-    descricao: `Exporte a planilha como .csv e importe de uma vez. Contatos repetidos são ignorados sozinhos. Se preferir, cadastre um a um. No plano grátis cabem ${FREE_LEAD_LIMIT} contatos.`,
+    titulo: 'Traga quem já é seu cliente',
+    descricao: `Tem planilha? Exporte como .csv e importe de uma vez — repetidos são ignorados sozinhos. Não tem? Cadastre pelo nome e telefone em segundos, do jeito que a conversa chegou. No plano grátis cabem ${FREE_LEAD_LIMIT} contatos.`,
     icone: FileSpreadsheet,
     accent: 'text-blue-500 dark:text-blue-400',
     fundo: 'bg-blue-500/10 dark:bg-blue-400/10',
@@ -55,12 +71,12 @@ export function HowItWorksSection() {
             Como funciona
             <span aria-hidden className="bg-primary h-px w-4" />
           </span>
-          <h2 className="text-3xl font-semibold tracking-[-0.02em] md:text-4xl">
-            Da planilha ao funil em três passos
+          <h2 className="text-titulo-md md:text-titulo-lg">
+            Do &quot;me manda o orçamento&quot; até o dinheiro na conta
           </h2>
           <p className="text-muted-foreground text-lg text-balance">
-            Sem migração complicada e sem treinamento. Você entende o sistema na primeira
-            tela.
+            O cliente chama, você responde, e a negociação anda. O que o Velo Funil faz
+            é não deixar nenhuma delas parar no meio do caminho.
           </p>
         </RevealOnScroll>
 

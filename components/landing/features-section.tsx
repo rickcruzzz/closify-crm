@@ -140,7 +140,7 @@ export function FeaturesSection() {
             Funcionalidades
             <span aria-hidden className="bg-primary h-px w-4" />
           </span>
-          <h2 className="text-3xl font-semibold tracking-[-0.02em] md:text-4xl">
+          <h2 className="text-titulo-md md:text-titulo-lg">
             O que você para de fazer na mão
           </h2>
           <p className="text-muted-foreground text-lg text-balance">

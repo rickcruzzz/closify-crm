@@ -2,7 +2,7 @@ import Link from 'next/link'
 import { ArrowRight } from 'lucide-react'
 
 import { buttonVariants } from '@/components/ui/button'
-import { FREE_LEAD_LIMIT } from '@/lib/plans'
+import { DIAS_DE_TRIAL } from '@/lib/plans/trial'
 import { cn } from '@/lib/utils'
 import { PipelinePreviewCard } from '@/components/landing/pipeline-preview-card'
 import { SegmentBadge } from '@/components/landing/segment-badge'
@@ -46,14 +46,55 @@ export function HeroSection() {
               Tracking fica mais negativo quanto maior o texto, é o que separa
               um título "de template" de um desenhado. Ver também o h2 das
               demais seções, em -0.02em. */}
-          <h1 className="animate-in fade-in slide-in-from-bottom-3 fill-mode-both ease-entrada duration-entrada delay-passo-2 text-4xl font-semibold tracking-[-0.03em] text-balance md:text-6xl">
+          {/* ## Por que a headline fala de WhatsApp
+
+              A anterior era "Pare de perder venda por esquecimento". Boa frase
+              — verbo imperativo, seis palavras, nomeia a consequência —, mas
+              apontada para o inimigo errado.
+
+              Medido na 12ª Pesquisa Pulso do Sebrae (2026): **82% dos pequenos
+              negócios brasileiros têm o WhatsApp como principal canal de
+              venda**, 76% vendem por lá. A página inteira, por outro lado,
+              atacava a planilha. Quem lê "largue a planilha" e não tem planilha
+              não se reconhece — e não clica num anúncio pago.
+
+              A dor com número em cima: responder em 5 minutos em vez de 30 dá
+              21x mais chance de qualificar (estudo InsideSales/MIT), e a
+              auditoria da HBR em 2.241 empresas achou tempo médio de PRIMEIRA
+              resposta de 42 horas.
+
+              ## O que a frase faz de propósito
+
+              Não compete com o WhatsApp — o complementa. "Mas eu já uso
+              WhatsApp" é a objeção nº 1 do nosso público, e uma headline que
+              mandasse trocar de ferramenta perderia a discussão antes de
+              começar. Esta concede o que é verdade (o WhatsApp é ótimo para
+              conversar) e nomeia o que ele não faz (lembrar).
+
+              ## O que ela NÃO promete
+
+              Nada sobre integração automática. A conexão via Evolution está
+              construída mas não ligada (26% de sessão viva na última medição),
+              e prometer o que não roda é a mesma classe de defeito que o
+              "contatos ilimitados" que saiu daqui em 23/08. */}
+          {/* Três degraus, e o primeiro existe por medição, não por gosto.
+              A frase nova tem 47 caracteres contra 38 da anterior; em 390px,
+              com `text-titulo-lg` (44px), ela ocupava CINCO linhas e empurrava
+              o botão para debaixo do banner de consentimento — exatamente o
+              defeito corrigido em 23/08, reaparecendo por outra causa.
+
+              Em telefone o título cede tamanho para o CTA caber na dobra:
+              headline grande que esconde o botão não converte ninguém. */}
+          <h1 className="animate-in fade-in slide-in-from-bottom-3 fill-mode-both ease-entrada duration-entrada delay-passo-2 text-titulo-md text-balance sm:text-titulo-lg md:text-titulo-xl">
             <span className="sr-only">Velo Funil, CRM para pequenos negócios. </span>
-            Pare de perder venda por esquecimento.
+            O WhatsApp guarda a conversa. Não guarda o cliente.
           </h1>
-          <p className="text-muted-foreground animate-in fade-in slide-in-from-bottom-3 fill-mode-both ease-entrada duration-entrada delay-passo-3 max-w-2xl text-lg text-balance">
-            Todo cliente que você esquece de responder é um cliente que você perde. O
-            Velo Funil mostra, numa tela só, com quem você precisa falar hoje, sem
-            post-it, sem aba de planilha escondida, sem depender da sua memória.
+          {/* Era de 47 palavras e terminava em três negações. Referência de
+              conversão põe a sub do hero entre 15 e 25 — acima disso ela deixa
+              de ser lida e passa a ser pulada. */}
+          <p className="text-muted-foreground animate-in fade-in slide-in-from-bottom-3 fill-mode-both ease-entrada duration-entrada delay-passo-3 max-w-xl text-lg text-balance">
+            Cada pedido de orçamento vira um contato com prazo para responder e valor
+            do negócio. Você abre o sistema e já sabe com quem falar hoje.
           </p>
           {/* `items-stretch` é o padrão do flex, e é por ser padrão que
               ninguém percebe quando some. É ele que dá aos dois botões a mesma
@@ -87,29 +128,45 @@ export function HeroSection() {
               Começar grátis
               <ArrowRight className="size-4" />
             </Link>
+            {/* `ghost`, não `outline`: página de CTA único converte 13,5%
+                contra 10,5% de página com CTAs concorrendo. Este não pode
+                sumir — é a âncora para quem quer ver o produto antes de
+                decidir —, mas dois botões com contorno na mesma dobra dividem
+                a atenção em vez de ordená-la. Sem contorno, ele lê como o
+                segundo caminho que é. */}
             <ScrollLink
               href="#como-funciona"
               className={cn(
-                buttonVariants({ variant: 'outline', size: 'lg' }),
+                buttonVariants({ variant: 'ghost', size: 'lg' }),
                 'active:translate-y-0',
               )}
             >
               Ver como funciona
             </ScrollLink>
           </div>
-          {/* Esta linha dizia "gerencie contatos ilimitados" no plano grátis.
-              Era falso: o Free comporta {FREE_LEAD_LIMIT} contatos, e o próprio
-              site diz isso em outros três lugares (planos, FAQ e "como
-              funciona"). Prometer no topo o que a página desmente embaixo não é
-              exagero de marketing — é a primeira coisa que o visitante descobre
-              que não bate, no lugar onde ele ainda está decidindo se confia.
+          {/* ## A linha embaixo do botão é onde a fricção morre ou sobrevive
 
-              O que substitui é a vantagem que o produto tem DE VERDADE e que
-              nenhum concorrente mapeado oferece: preço por empresa, não por
-              usuário. */}
+              Ela dizia "Grátis para começar, com 50 contatos" — abrindo pelo
+              TETO. Copywriter não anuncia a limitação antes da promessa, e o
+              diferencial real (preço por empresa) ficava enterrado no fim.
+
+              Pior: ela descrevia um produto que não existe mais. Desde a
+              migration 0051 toda empresa nasce com sete dias de Pro
+              COMPLETO, e a landing seguia vendendo o freemium antigo. Quem
+              criava conta recebia mais do que a página prometeu e nunca ficava
+              sabendo — depois perdia recurso que não sabia que tinha.
+
+              A ordem agora é a do Pipedrive na mesma posição ("Teste grátis de
+              14 dias, não requer cartão de crédito"): oferta, prazo, e a
+              remoção da única fricção que trava o cadastro. O cartão é a
+              objeção nº 1 de teste grátis, e não pedimos.
+
+              O preço fica na frase seguinte, curto, porque o teto do Free
+              continua dito na seção de planos e na FAQ —
+              três lugares, nenhum deles o hero. */}
           <p className="text-muted-foreground animate-in fade-in slide-in-from-bottom-3 fill-mode-both ease-entrada duration-entrada delay-passo-4 text-sm text-balance">
-            Grátis para começar, com {FREE_LEAD_LIMIT} contatos. No Pro, R$ 49 por mês
-            pela empresa inteira — não por vendedor.
+            {DIAS_DE_TRIAL} dias com tudo liberado, sem cartão de crédito. Depois, R$ 49
+            por mês pela empresa inteira — não por vendedor.
           </p>
         </div>
 

@@ -14,7 +14,7 @@ export function CtaSection() {
             aria-hidden
             className="glow-radial pointer-events-none absolute -top-24 left-1/2 -z-10 h-64 w-[32rem] -translate-x-1/2"
           />
-          <h2 className="text-3xl font-semibold tracking-[-0.02em] md:text-4xl">
+          <h2 className="text-titulo-md md:text-titulo-lg">
             Pronto para largar a planilha?
           </h2>
           <p className="text-muted-foreground max-w-xl text-lg">
