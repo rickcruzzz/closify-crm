@@ -4,7 +4,12 @@ Documento de continuidade. É lido no começo de toda sessão (referenciado no
 [CLAUDE.md](../CLAUDE.md)) para que uma conversa nova, ou outra conta, comece
 sabendo o que já foi feito, o que foi decidido e onde estão as armadilhas.
 
-**Atualizado em:** 24/08/2026, tarde (WhatsApp: loop infinito no diálogo de
+**Atualizado em:** 24/08/2026, noite (o site inteiro virava TELA PRETA para
+quem aceitasse os cookies, por uma quebra de linha no valor do Pixel do Meta
+colado na Vercel; corrigido no painel e no código, e o pixel passou a medir
+pela primeira vez)
+
+**Antes disso, 24/08/2026, tarde** (WhatsApp: loop infinito no diálogo de
 pareamento corrigido, reconexão automática + e-mail de aviso quando uma sessão
 JÁ conectada cai, e a estabilidade medida piorou — 0% de tempo logado em 13
 minutos seguidos, contra 26% da medição anterior)
@@ -14,6 +19,79 @@ minutos seguidos, contra 26% da medição anterior)
 **Antes disso, 23/08/2026** (landing auditada: promessa falsa no hero, logo quebrado no telefone, banner de cookies cobrindo o CTA, e prints mostrando o jargão que a própria página baniu; PRD, schema e grafo realinhados)
 
 **Antes disso, 22/08/2026** (funções rodavam em Washington DC com o banco em São Paulo, corrigido na config do projeto e medido: /dashboard 1221ms → 400ms; modo claro sem escada de superfícies, refeito; jargão remanescente e telas de erro; WhatsApp sem QR por Postgres esgotado na VPS; migration 0049 provada desnecessária e removida)
+
+## Tela preta no site inteiro, por um "
+" no ID do pixel (24/08, tarde)
+
+Reportado como problema regional — "meu primo em Aracaju vê tela preta". **Não
+era regional, e não era rede.** Atingia qualquer pessoa, em qualquer lugar, que
+**aceitasse os cookies**. Quem recusava ou ignorava o banner nunca viu nada, e
+foi isso que fez o defeito passar despercebido.
+
+O valor colado em `NEXT_PUBLIC_META_PIXEL_ID` na Vercel tinha uma quebra de
+linha no fim. Como o ID é interpolado num script inline, o navegador recebia:
+
+    fbq('init', '1566349361566072
+    ');
+
+String literal partida em duas linhas é `SyntaxError`. E o erro não ficava
+contido: `next/script` injeta com `appendChild` **durante o commit do React**,
+então a exceção subia até `app/global-error.tsx`, cujo fundo é `#0a0a0a`. Era
+a tela preta, sem mensagem e sem pista.
+
+**Achado de brinde, e caro:** o pixel **nunca mediu nada**. O script não
+chegava a executar — qualquer número de conversão olhado até aqui estava vazio
+por isso, não por falta de tráfego.
+
+### Como foi encontrado, que é o que vale repetir
+
+`error_logs` (migration 0046) tinha o registro: **React error #310 em
+`/onboarding`, origem `global`**, do mesmo dia. Foi o ponto de partida — sem
+essa tabela, a investigação começaria do zero.
+
+A prova veio de ler o `textContent` do script **injetado no site real** e
+rodar `new Function(txt)`: devolveu `Invalid or unexpected token`. Não foi
+deduzido do código.
+
+**Dois diagnósticos errados descartados no caminho**, os dois plausíveis: hook
+condicional no assistente de onboarding (os hooks estão todos no topo, e o
+fluxo completo foi percorrido em produção sem quebrar) e bloqueio de borda do
+Cloudflare (o próprio `error_logs` prova que o JS carregou e o React executou).
+
+### Duas defesas, porque uma não bastava
+
+`lib/analytics/pixel-id.ts` limpa espaço, quebra de linha, aspas e espaço de
+largura zero — este último é invisível até no campo do painel — e **recusa o
+que não for só dígitos**: valor estranho dentro de script inline não é
+configuração errada, é injeção de código. 7 testes.
+
+Corrigir só na Vercel resolveria hoje e reabriria amanhã: variável de ambiente
+é colada por gente.
+
+`components/analytics/isolar-analytics.tsx` fecha a **classe** do defeito.
+Pixel, Vercel Analytics e captura de UTM vivem no layout **raiz**, então erro
+em qualquer um derruba a página inteira. Cada um ganhou uma cerca:
+**medição quebrada custa o DADO, nunca a visita**. O erro segue indo para
+`error_logs` — some para o visitante, não para a investigação.
+
+### Correções de fato sobre a infraestrutura
+
+**O "Ignored Build Step" NÃO foi removido**, ao contrário do que este documento
+afirmava. Ele está ativo (`if [ "$VERCEL_GIT_COMMIT_REF" = "main" ]; then exit
+0; else exit 1; fi`) e é por isso que **todo** deployment com `target:
+production` aparece `CANCELED` e só os `staging` ficam `READY`. Não é defeito:
+é o gate funcionando — a Vercel não publica `main` sozinha, e a promoção é o
+clique manual. Redeploy via API com `target: production` é cancelado pelo mesmo
+motivo; o caminho que funciona é push (que builda staging) e promote.
+
+**`decrypt=true` não devolve valor de variável marcada `sensitive`**, que é o
+caso desde que "Enforce Sensitive Environment Variables" foi ligado em 20/08.
+Dá para **escrever** por `PATCH /v9/projects/{id}/env/{envId}`, não para ler —
+foi assim que o valor do pixel foi corrigido sem ninguém abrir o painel.
+
+**Confirmado em produção depois do promote**, com navegador real e o banner
+aceito: `fbq('init', '1566349361566072');` numa linha só, sintaxe válida,
+`window.fbq` carregado, zero erro de console, `/` e `/cadastro` renderizando.
 
 ## WhatsApp: loop infinito corrigido, mas a instabilidade piorou (24/08, tarde)
 
@@ -1537,8 +1615,10 @@ sessão.
       sem isso, o Vercel Cron chama `/api/cron/reconciliar-assinaturas` e
       toma 401 todo dia, silenciosamente (a rota não avisa ninguém, só
       responde o erro). Ver `.env.example` pra onde gerar.
-- [x] **`NEXT_PUBLIC_META_PIXEL_ID` na Vercel — resolvido, confirmado em
-      20/08.** O valor (`1566349361566072`) já está nas env vars da Vercel:
+- [x] **`NEXT_PUBLIC_META_PIXEL_ID` na Vercel — a variável existia desde
+      20/08, mas com uma QUEBRA DE LINHA no valor, que derrubava o site
+      inteiro em tela preta e impedia o pixel de medir. Corrigido em 24/08,
+      ver seção própria.** O valor (`1566349361566072`) já está nas env vars da Vercel:
       medido na própria API da Meta, o pixel dispara de
       `www.velofunil.com.br` continuamente (milhares de PageView, ~21
       `CompleteRegistration` e 6 `Purchase` em 7 dias), e a Conversions API
