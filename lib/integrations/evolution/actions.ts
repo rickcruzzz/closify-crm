@@ -9,6 +9,7 @@ import { normalizarTelefoneBrasileiro } from '@/lib/leads/whatsapp'
 import { mensagemBloqueioPro } from '@/lib/integrations/mensagem-bloqueio-pro'
 import { cifrar } from '@/lib/integrations/crypto'
 import { obterTokenDaInstancia } from '@/lib/integrations/evolution/token'
+import { baseDoWebhook, montarUrlDoWebhook } from '@/lib/integrations/evolution/webhook-url'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 
@@ -114,10 +115,13 @@ export async function conectarWhatsapp(workspaceId: string): Promise<ResultadoDa
 
     // O Evolution não assina o payload do webhook, então a URL carrega um
     // segredo que autentica a chamada. Ver o cabeçalho da rota.
-    const segredo = process.env.EVOLUTION_WEBHOOK_SECRET
-    const webhookUrl = segredo
-      ? `${appUrl()}/api/webhooks/evolution/${encodeURIComponent(workspaceId)}/${segredo}`
-      : ''
+    const destino = montarUrlDoWebhook({
+      base: baseDoWebhook(appUrl()),
+      workspaceId,
+      segredo: process.env.EVOLUTION_WEBHOOK_SECRET,
+    })
+    if (!destino.ok) return { ok: false, erro: destino.motivo }
+    const webhookUrl = destino.url
     const { qrCode, jaConectado } = await conectarInstancia(token, webhookUrl)
 
     // Sem QR e sem conexão, o motivo só existe do lado do servidor — a
@@ -208,10 +212,13 @@ export async function renovarQrCode(
     const { estado } = await obterEstado(token)
     if (estado === 'open') return { ok: true, qrCode: null, jaConectado: true }
 
-    const segredo = process.env.EVOLUTION_WEBHOOK_SECRET
-    const webhookUrl = segredo
-      ? `${appUrl()}/api/webhooks/evolution/${encodeURIComponent(workspaceId)}/${segredo}`
-      : ''
+    const destino = montarUrlDoWebhook({
+      base: baseDoWebhook(appUrl()),
+      workspaceId,
+      segredo: process.env.EVOLUTION_WEBHOOK_SECRET,
+    })
+    if (!destino.ok) return { ok: false, erro: destino.motivo }
+    const webhookUrl = destino.url
     const qrCode = await recomecarSessaoDePareamento(
       workspaceId,
       `velofunil-${workspaceId}`,
@@ -336,10 +343,13 @@ export async function conectarPorCodigo(
       token = instancia.token
     }
 
-    const segredo = process.env.EVOLUTION_WEBHOOK_SECRET
-    const webhookUrl = segredo
-      ? `${appUrl()}/api/webhooks/evolution/${encodeURIComponent(workspaceId)}/${segredo}`
-      : ''
+    const destino = montarUrlDoWebhook({
+      base: baseDoWebhook(appUrl()),
+      workspaceId,
+      segredo: process.env.EVOLUTION_WEBHOOK_SECRET,
+    })
+    if (!destino.ok) return { ok: false, erro: destino.motivo }
+    const webhookUrl = destino.url
     await conectarInstancia(token, webhookUrl)
 
     const codigo = await pedirCodigoDePareamento(token, numero)
