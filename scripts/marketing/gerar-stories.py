@@ -337,6 +337,10 @@ LUZ_DO_DESTAQUE = {
     "demo": 0.30,
     "planos": 0.44,
     "dicas": 0.22,
+    # Mais escuro que "planos" e mais claro que "dicas": o destaque de
+    # perguntas é lido depois dos dois, e repetir a luz de um deles faria a
+    # sequência inteira parecer um bloco só ao passar rápido.
+    "perguntas": 0.26,
 }
 _LUZ_ATUAL = 0.30
 
@@ -974,11 +978,89 @@ def destaque_dicas():
     )
 
 
+def destaque_perguntas():
+    """
+    As objeções que travam a venda, respondidas antes de alguém precisar
+    perguntar.
+
+    ## Por que estas cinco, e por que exatamente estas palavras
+
+    Não foram inventadas aqui: são as perguntas da FAQ da landing
+    (`components/landing/faq-section.tsx`), que já passaram pelo PRD de copy.
+    Repetir a mesma resposta nos dois lugares é o que impede a divergência que
+    este projeto já pagou em outro canal — a bio do Instagram ficou meses
+    vendendo uma oferta que o produto não tinha mais.
+
+    A de pagamento ficou de fora de propósito: ela já é a tela 5 do destaque
+    "Planos", e um destaque que repete outro ensina a pular os dois.
+
+    A ordem é a da desconfiança: primeiro o dinheiro (é grátis mesmo?), depois
+    o esforço (preciso instalar? consigo trazer o que já tenho?), depois o
+    risco (meus dados vazam? consigo sair?). Responder "cancele quando quiser"
+    antes de dizer que não cobra cartão é responder uma pergunta que ninguém
+    fez ainda.
+    """
+    abrir_destaque(
+        "perguntas", "Perguntas",
+        "As objeções que travam a venda, com a MESMA resposta da FAQ da "
+        "landing. É o destaque que alguém abre quando já gostou e está "
+        "procurando o motivo para não assinar.",
+    )
+
+    tela_declaracao(
+        "É grátis mesmo?",
+        "Nada é cobrado sem você escolher.",
+        "Não pedimos cartão para começar. São 7 dias com o Pro inteiro e, "
+        "depois, ou você assina, ou a conta passa para o plano grátis — que "
+        "não expira. Seus dados continuam lá nos dois casos.",
+        "perguntas-1-gratis", destaque="Sem cartão para começar.", tam=74,
+    )
+
+    tela_declaracao(
+        "Preciso instalar?",
+        "Não. Abre no navegador.",
+        "Funciona no computador e no celular, sem baixar nada e sem instalar "
+        "nada. Você cria a conta e já começa a usar.",
+        "perguntas-2-instalar", tam=76,
+    )
+
+    tela_lista(
+        "E o que eu já tenho?",
+        "Traga sua lista em um arquivo",
+        [
+            ("Exporte sua planilha como .csv", ".csv"),
+            ("Colunas: Nome, Telefone, E-mail e Valor", "Nome, Telefone, E-mail e Valor"),
+            ("Importe direto na tela de Contatos", "Contatos"),
+            ("Contato repetido é ignorado sozinho", "ignorado sozinho"),
+        ],
+        "perguntas-3-importar",
+    )
+
+    tela_declaracao(
+        "E a segurança?",
+        "Cada empresa só enxerga o que é dela.",
+        "É regra no banco de dados, não uma tela que alguém pode esquecer de "
+        "conferir. Nem por engano, nem por querer, o dado de uma empresa "
+        "aparece para outra.",
+        "perguntas-4-isolamento", tam=70,
+    )
+
+    tela_declaracao(
+        "E se eu quiser sair?",
+        "Cancele quando quiser.",
+        "Sem multa e sem falar com ninguém. A conta volta para o plano grátis "
+        "e seus dados continuam lá.",
+        "perguntas-5-cancelar",
+        destaque="7 dias com tudo liberado, sem cartão.", tam=78,
+    )
+
+
 if __name__ == "__main__":
     SAIDA.mkdir(parents=True, exist_ok=True)
     destaque_demo()
     destaque_planos()
     destaque_dicas()
+    destaque_perguntas()
     gravar_manifesto()
     print("\npronto — cada tela em 1080x1920 (publicar) e @4k (reserva).")
     print("\nBastidores fica de fora: exige conteúdo seu (rotina, processo,")
