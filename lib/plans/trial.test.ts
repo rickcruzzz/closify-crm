@@ -57,6 +57,31 @@ describe('estado do trial', () => {
     expect(textoDoAviso(estado)?.titulo).toBe('Faltam 3 dias do seu teste')
   })
 
+  /**
+   * A fronteira, travada com número literal de propósito.
+   *
+   * Escrever `AVISAR_A_PARTIR_DE` aqui faria o teste concordar com qualquer
+   * valor da constante, inclusive um errado — ele passaria com 2, com 4 e com
+   * 40. O número cru é o que transforma uma mudança de limiar em teste
+   * vermelho, obrigando quem muda a olhar as três telas que dependem dele.
+   *
+   * Este limiar é compartilhado com o cron de aviso e com o destaque da tela de
+   * cobrança desde 25/08 (diagnóstico, achado 7.2). Antes eram três números
+   * diferentes para a mesma ideia.
+   */
+  it('a fronteira é 4 dias: avisa em 4, ainda não avisa em 5', () => {
+    expect(estadoDoTrial(daquiA(4), false, AGORA)).toEqual({
+      tipo: 'em_trial',
+      diasRestantes: 4,
+      avisar: true,
+    })
+    expect(estadoDoTrial(daquiA(5), false, AGORA)).toEqual({
+      tipo: 'em_trial',
+      diasRestantes: 5,
+      avisar: false,
+    })
+  })
+
   it('o último dia tem texto próprio, no singular', () => {
     const estado = estadoDoTrial(daquiA(1), false, AGORA)
     expect(textoDoAviso(estado)?.titulo).toBe('Último dia do seu teste')

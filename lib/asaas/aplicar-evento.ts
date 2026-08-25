@@ -9,8 +9,19 @@ import { renderPagamentoAtrasadoEmail } from '@/lib/emails/pagamento-atrasado'
 import { enviarConversaoDeCompra } from '@/lib/analytics/meta-conversions'
 import { PRO_PLAN_PRICE } from '@/lib/plans'
 import { appUrl } from '@/lib/app-url'
+import type { SubscriptionStatus } from '@/types/supabase'
 
 export type StatusAssinatura = 'active' | 'past_due' | 'canceled'
+
+/**
+ * O que `subscriptions.status` pode ser, incluindo `trialing`.
+ *
+ * Mais largo que `StatusAssinatura`: aquele é o que um evento do Asaas pode
+ * APLICAR, este é o que a coluna pode CONTER. `trialing` nunca chega por
+ * evento, mas é o estado inicial de toda assinatura criada no checkout — e por
+ * isso aparece como `de_status` no histórico da primeira cobrança.
+ */
+type StatusDeAssinaturaNoBanco = SubscriptionStatus
 
 export type ResultadoAplicacao =
   | { ok: true; duplicate: boolean; matched: boolean }
@@ -68,6 +79,20 @@ export async function aplicarEventoAsaas(params: {
     return { ok: false }
   }
 
+  // O estado ANTES da mudança, lido aqui porque a RPC não devolve o que
+  // sobrescreveu. É o que transforma o histórico em narrativa ("estava
+  // past_due, virou active") em vez de uma lista de estados soltos.
+  //
+  // Uma ida a mais ao banco, num caminho que não é quente: o webhook processa
+  // um evento por vez e o cron roda uma vez por dia. Falha aqui não interrompe
+  // nada — o histórico é registro, não regra, e perder uma linha dele nunca
+  // pode custar a aplicação do pagamento.
+  const { data: anterior } = await supabase
+    .from('subscriptions')
+    .select('workspace_id, status')
+    .eq('asaas_subscription_id', subscriptionId)
+    .maybeSingle()
+
   // Atualizar `subscriptions.status` e `workspaces.plan` em dois round-trips
   // deixava a porta aberta pra segunda escrita falhar e o plano ficar errado
   // em silêncio. A RPC faz as duas na mesma transação.
@@ -96,6 +121,14 @@ export async function aplicarEventoAsaas(params: {
   // que também passa por esta função.
   if (matched === true) {
     revalidatePath('/settings/billing')
+    await registrarNoHistorico(supabase, {
+      workspaceId: anterior?.workspace_id ?? null,
+      de: anterior?.status ?? null,
+      para: status,
+      origem,
+      billingType: billingType ?? null,
+      eventId,
+    })
   }
 
   // Pagamento confirmado é o único momento em que o produto tinha algo a
@@ -109,6 +142,55 @@ export async function aplicarEventoAsaas(params: {
   }
 
   return { ok: true, duplicate: false, matched: matched === true }
+}
+
+/**
+ * Grava uma linha no histórico da assinatura.
+ *
+ * ## Por que só aqui, e em nenhum outro lugar
+ *
+ * Esta função é o caminho compartilhado entre o webhook do Asaas e o cron de
+ * reconciliação. Gravar o histórico nos dois separadamente criaria duas cópias
+ * da mesma regra, que divergem no primeiro dia em que uma mudar — e a regra do
+ * dinheiro é a pior de todas para divergir.
+ *
+ * ## Por que nunca derruba o chamador
+ *
+ * O histórico é registro, não regra. Se a escrita falhar, o pagamento já foi
+ * aplicado e o cliente já tem o Pro: devolver erro aqui faria o webhook
+ * responder 500, o Asaas reenviar, e o dedupe barrar sem reprocessar. Trocar
+ * uma linha de histórico por um pagamento preso é um péssimo negócio.
+ */
+async function registrarNoHistorico(
+  supabase: ReturnType<typeof createAdminClient>,
+  dados: {
+    workspaceId: string | null
+    de: StatusDeAssinaturaNoBanco | null
+    para: StatusAssinatura
+    origem: string
+    billingType: string | null
+    eventId: string
+  },
+): Promise<void> {
+  if (!dados.workspaceId) return
+
+  // Estado repetido não vira linha: o cron confere todo dia, e sem isto uma
+  // assinatura estável encheria o histórico de "active → active". Ruído mata
+  // a lista inteira, lição já paga em /dono/alertas.
+  if (dados.de === dados.para) return
+
+  const { error } = await supabase.from('assinatura_eventos').insert({
+    workspace_id: dados.workspaceId,
+    de_status: dados.de,
+    para_status: dados.para,
+    origem: dados.origem,
+    billing_type: dados.billingType,
+    asaas_event_id: dados.eventId,
+  })
+
+  if (error) {
+    console.error('Histórico de assinatura: falha ao gravar', error)
+  }
 }
 
 /**

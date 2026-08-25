@@ -14,7 +14,9 @@ import { SubscriptionCard } from '@/components/settings/subscription-card'
 import { createClient } from '@/lib/supabase/server'
 import { getCurrentUserAndWorkspace } from '@/lib/supabase/workspace'
 import { getWorkspaceSettingsData } from '@/lib/workspace/queries'
-import { getEstadoAssinatura } from '@/lib/asaas/queries'
+import { getEstadoAssinatura, getHistoricoDaAssinatura } from '@/lib/asaas/queries'
+import { AvisoDeTesteNaCobranca } from '@/components/settings/aviso-de-teste-na-cobranca'
+import { HistoricoDaAssinatura } from '@/components/settings/historico-da-assinatura'
 import { FREE_LEAD_LIMIT, FREE_MEMBER_LIMIT } from '@/lib/plans'
 import { cn } from '@/lib/utils'
 
@@ -23,9 +25,13 @@ export const metadata: Metadata = { title: 'Cobrança' }
 export default async function BillingPage({
   searchParams,
 }: {
-  searchParams: Promise<{ assinar?: string; pago?: string }>
+  searchParams: Promise<{ assinar?: string; pago?: string; pagar?: string }>
 }) {
-  const { assinar, pago } = await searchParams
+  // `assinar=1` abre o fluxo de quem NÃO tem assinatura (pede CPF/CNPJ e cria
+  // a cobrança). `pagar=1` abre o de quem JÁ tem, direto no Pix. São dois
+  // caminhos diferentes, e é por isso que o e-mail de fim de trial aponta para
+  // o primeiro e o de vencimento para o segundo.
+  const { assinar, pago, pagar } = await searchParams
   const { user, workspaceId } = await getCurrentUserAndWorkspace()
 
   const supabase = await createClient()
@@ -36,11 +42,13 @@ export default async function BillingPage({
   // (`getEstadoAssinatura`), não só o plano: sem isto, quem tinha assinatura
   // criada com fatura em aberto via "Free" e um botão de assinar de novo,
   // sem saber que já existia uma cobrança esperando pagamento.
-  const [{ workspace, members }, { count: leadCount }, assinatura] = await Promise.all([
-    getWorkspaceSettingsData(workspaceId),
-    supabase.from('leads').select('id', { count: 'exact', head: true }).eq('workspace_id', workspaceId),
-    getEstadoAssinatura(workspaceId),
-  ])
+  const [{ workspace, members }, { count: leadCount }, assinatura, historico] =
+    await Promise.all([
+      getWorkspaceSettingsData(workspaceId),
+      supabase.from('leads').select('id', { count: 'exact', head: true }).eq('workspace_id', workspaceId),
+      getEstadoAssinatura(workspaceId),
+      getHistoricoDaAssinatura(workspaceId),
+    ])
 
   const plan = workspace?.plan ?? 'free'
   const isAdmin = members.find((m) => m.user_id === user.id)?.role === 'admin'
@@ -81,6 +89,14 @@ export default async function BillingPage({
           </Badge>
         </CardHeader>
         <CardContent className="flex flex-col gap-5">
+          {/* Quando o teste termina.
+              Quem está em trial não tem linha em `subscriptions`, então o
+              SubscriptionCard nem aparece para essa pessoa — e a data só
+              existia na tarja do layout, a partir de 4 dias. Quem abre esta
+              tela no primeiro dia para entender o que ganhou não encontrava a
+              data em lugar nenhum do produto. */}
+          {!assinatura && <AvisoDeTesteNaCobranca trialAte={workspace?.trial_ate ?? null} />}
+
           {plan === 'free' && (
             <div className="grid gap-4 sm:grid-cols-2">
               <UsageBar label="Contatos" used={leadCount ?? 0} limit={FREE_LEAD_LIMIT} />
@@ -95,7 +111,19 @@ export default async function BillingPage({
           {/* A assinatura aparece sempre que existir, inclusive no plano Free:
               é justamente quem criou a cobrança e ainda não pagou que precisa
               ver a fatura em aberto. */}
-          {assinatura && <SubscriptionCard estado={assinatura} isAdmin={isAdmin} />}
+          {assinatura && (
+            <SubscriptionCard
+              estado={assinatura}
+              isAdmin={isAdmin}
+              abrirDeInicio={pagar === '1'}
+            />
+          )}
+
+          {/* O que aconteceu com a assinatura, em ordem. Fica DEPOIS do card
+              de estado porque responde uma pergunta de conferência ("o que eu
+              paguei e quando"), não de ação. Quem entrou aqui para pagar acha
+              o botão antes de chegar nele. */}
+          <HistoricoDaAssinatura eventos={historico} />
 
           {/* Só oferece assinar quem não tem cobrança em andamento, senão a
               pessoa criaria uma segunda assinatura sem perceber que a primeira

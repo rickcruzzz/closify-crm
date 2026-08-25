@@ -13,17 +13,28 @@ export const DIAS_DE_TRIAL = 7
 /**
  * A partir de quantos dias restantes o aviso aparece.
  *
- * ## Por que 3, e não desde o primeiro dia
+ * ## Por que 4, e não desde o primeiro dia
  *
  * Aviso permanente é aviso ignorado. Nos primeiros dias a pessoa está
  * *avaliando* — importando contatos, conectando WhatsApp, entendendo o
  * produto — e cobrar decisão nessa hora atrapalha exatamente a experiência que
  * precisa convencê-la.
  *
- * A partir de 3 dias ela já formou opinião, e o aviso deixa de ser interrupção
+ * A partir de 4 dias ela já formou opinião, e o aviso deixa de ser interrupção
  * para virar informação útil: o prazo existe e está perto.
+ *
+ * ## Por que esta constante mora aqui e é usada em três lugares
+ *
+ * Era 3, e o cron de aviso usava 2 — escrito cru no meio de uma expressão
+ * (`2 * 24 * 60 * 60 * 1000`), onde busca por nome não encontra. A tarja dizia
+ * ao cliente de trial que faltavam 3 dias enquanto o e-mail de Pro só saía
+ * faltando 2, e nenhum dos dois sabia do outro.
+ *
+ * Diagnóstico de 25/08, achado 7.2. Agora é um número só, lido pela tarja
+ * (`estadoDoTrial`), pelo cron de aviso e pelo destaque da tela de cobrança.
+ * Mudar aqui muda nos três.
  */
-export const AVISAR_A_PARTIR_DE = 3
+export const AVISAR_A_PARTIR_DE = 4
 
 export type EstadoDoTrial =
   /** Nunca teve trial (empresa criada antes da 0051) ou já é cliente pagando. */

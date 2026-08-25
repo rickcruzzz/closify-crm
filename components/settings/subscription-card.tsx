@@ -20,6 +20,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { cancelSubscription } from '@/lib/asaas/actions'
 import type { EstadoAssinatura } from '@/lib/asaas/queries'
+import { estadoDoVencimento, textoDeQuantoFalta } from '@/lib/plans/vencimento'
 
 const formatadorBRL = new Intl.NumberFormat('pt-BR', {
   style: 'currency',
@@ -43,17 +44,37 @@ function formatarData(iso: string) {
 export function SubscriptionCard({
   estado,
   isAdmin,
+  abrirDeInicio = false,
 }: {
   estado: EstadoAssinatura
   isAdmin: boolean
+  /**
+   * Abre o diálogo de pagamento assim que a tela monta.
+   *
+   * Ligado por `?pagar=1`, que é para onde o e-mail de vencimento aponta.
+   * Antes o e-mail levava a `/settings/billing` seco e a pessoa ainda precisava
+   * achar o botão — o clique mais caro do fluxo, porque acontece depois de ela
+   * já ter decidido pagar. Mesmo mecanismo que `SubscribeButton` já usa com
+   * `?assinar=1` para quem ainda não tem assinatura.
+   */
+  abrirDeInicio?: boolean
 }) {
   const router = useRouter()
   const [cancelarAberto, setCancelarAberto] = React.useState(false)
-  const [pagamentoAberto, setPagamentoAberto] = React.useState(false)
+  const [pagamentoAberto, setPagamentoAberto] = React.useState(abrirDeInicio)
   const [confirmacao, setConfirmacao] = React.useState('')
   const [cancelando, setCancelando] = React.useState(false)
 
   const podeCancelar = confirmacao.trim().toUpperCase() === 'CANCELAR'
+
+  // Calculado no cliente, num `useMemo` que depende só do ISO: o servidor roda
+  // em UTC e a conta é de dia de CALENDÁRIO em São Paulo. Feita no servidor,
+  // uma assinatura que vence hoje à noite apareceria como vencida para quem
+  // abrisse a tela de madrugada.
+  const vencimento = React.useMemo(
+    () => estadoDoVencimento(estado.validoAte),
+    [estado.validoAte],
+  )
 
   async function handleCancelar() {
     if (!podeCancelar) return
@@ -109,6 +130,32 @@ export function SubscriptionCard({
           </div>
           <Badge variant={visual.variante}>{visual.rotulo}</Badge>
         </div>
+
+        {/* Até quando o Pro funciona.
+            Fica no TOPO do card, antes da fatura, porque é a pergunta que faz
+            alguém abrir esta tela. Até 25/08 ela não era respondida em lugar
+            nenhum do produto: `getEstadoAssinatura` nunca lia
+            `current_period_end`, e o que aparecia era o vencimento da FATURA,
+            que responde outra coisa. */}
+        {vencimento && (
+          <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
+            <span className="text-sm">
+              {vencimento.vencido ? 'Valeu até' : 'Vale até'}{' '}
+              <span className="text-foreground font-medium">
+                {vencimento.dataPorExtenso}
+              </span>
+            </span>
+            <span
+              className={
+                vencimento.destacar || vencimento.vencido
+                  ? 'text-sm font-medium text-amber-600 dark:text-amber-500'
+                  : 'text-muted-foreground text-sm'
+              }
+            >
+              · {textoDeQuantoFalta(vencimento)}
+            </span>
+          </div>
+        )}
 
         {estado.fatura && (
           <div className="flex flex-col gap-3">

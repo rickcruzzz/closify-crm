@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { renderPlanoVencendoEmail } from './plano-vencendo'
+import { corpoDoAviso, renderPlanoVencendoEmail } from './plano-vencendo'
 import { CONTROLADOR } from '@/lib/legal'
 
 const base = {
@@ -45,10 +45,15 @@ describe('renderPlanoVencendoEmail', () => {
 
   // O botão sai duas vezes: HTML e VML, que é o único jeito de o Outlook
   // desenhar botão com canto arredondado.
-  it('aponta para a tela de cobrança nas duas versões do botão', () => {
+  //
+  // `?pagar=1` e não `/settings/billing` seco: o parâmetro abre o diálogo de
+  // pagamento já com o Pix na tela. Sem ele, a pessoa cai numa tela e ainda
+  // precisa achar o botão, justamente quando já decidiu pagar.
+  it('leva direto ao pagamento, nas duas versões do botão', () => {
     const { html } = renderPlanoVencendoEmail(base)
-    const ocorrencias = html.split('https://www.velofunil.com.br/settings/billing').length - 1
-    expect(ocorrencias).toBe(2)
+    const comParametro =
+      html.split('https://www.velofunil.com.br/settings/billing?pagar=1').length - 1
+    expect(comParametro).toBe(2)
   })
 
   it('não escapa o assunto', () => {
@@ -60,13 +65,100 @@ describe('renderPlanoVencendoEmail', () => {
     const { html } = renderPlanoVencendoEmail(base)
     expect(html).toContain(CONTROLADOR.nomeFantasia)
   })
+})
 
-  // No caminho feliz o Asaas cobra sozinho. Se este e-mail soar como "pague
-  // agora ou perde o acesso", quem tem cartão salvo entra no produto achando
-  // que algo quebrou, e o aviso vira suporte em vez de evitar churn.
-  it('deixa claro que a cobrança é automática', () => {
-    const { html } = renderPlanoVencendoEmail(base)
-    expect(html).toContain('automática')
-    expect(html).toContain('não precisa fazer nada')
+/**
+ * O aviso passou a sair todo dia na reta final (D-4 a D-1). Quatro e-mails
+ * idênticos em quatro dias lêem como robô de cobrança, e quem marca como spam
+ * perde junto o e-mail de pagamento confirmado, que sai do mesmo remetente.
+ */
+describe('corpoDoAviso, a escada de quatro dias', () => {
+  const args = { nomeEscapado: 'Acme', valorFormatado: 'R$ 49,00', quando: 'em 3 dias' }
+
+  it('os quatro dias dizem coisas diferentes', () => {
+    const corpos = [4, 3, 2, 1].map(
+      (d) => corpoDoAviso({ ...args, diasRestantes: d }).bodyHtml,
+    )
+    expect(new Set(corpos).size).toBe(4)
+  })
+
+  // No caminho feliz o Asaas cobra sozinho. Se o aviso soar como "pague agora
+  // ou perde o acesso", quem tem cartão salvo entra no produto achando que algo
+  // quebrou, e o e-mail vira suporte em vez de evitar churn.
+  it('o primeiro aviso diz que não há nada a fazer no cartão', () => {
+    const { bodyHtml } = corpoDoAviso({ ...args, diasRestantes: 4 })
+    expect(bodyHtml).toContain('automática')
+    expect(bodyHtml).toContain('não precisa fazer nada')
+  })
+
+  it('todos os dias deixam claro que a cobrança é automática no cartão', () => {
+    for (const dias of [4, 3, 2, 1]) {
+      const { bodyHtml } = corpoDoAviso({ ...args, diasRestantes: dias })
+      expect(bodyHtml.toLowerCase(), `dia ${dias}`).toMatch(/autom[áa]tic|entra sozinha/)
+    }
+  })
+
+  // A véspera é o único momento em que a pessoa ainda pode agir e precisa saber
+  // o que está em jogo. Esconder a consequência para pressionar seria o oposto
+  // da garantia de porta de saída que a landing publica.
+  it('a véspera promete por escrito que nada é apagado', () => {
+    const { bodyHtml } = corpoDoAviso({ ...args, diasRestantes: 1 })
+    expect(bodyHtml).toContain('plano gratuito')
+    expect(bodyHtml).toContain('nada é apagado')
+  })
+
+  it('só a véspera e o penúltimo falam da consequência', () => {
+    // Falar em "volta para o gratuito" no primeiro aviso transformaria um
+    // lembrete tranquilo em ameaça, e é o que faz a pessoa marcar como spam.
+    expect(corpoDoAviso({ ...args, diasRestantes: 4 }).bodyHtml).not.toContain('gratuito')
+    expect(corpoDoAviso({ ...args, diasRestantes: 3 }).bodyHtml).not.toContain('gratuito')
+    expect(corpoDoAviso({ ...args, diasRestantes: 2 }).bodyHtml).toContain('gratuito')
+    expect(corpoDoAviso({ ...args, diasRestantes: 1 }).bodyHtml).toContain('gratuito')
+  })
+
+  // Trava contra escassez inventada. Nenhum destes termos descreve algo
+  // verdadeiro sobre uma renovação mensal automática.
+  it('nenhum dia inventa urgência', () => {
+    const proibidos = [
+      'última chance',
+      'ultima chance',
+      'não perca',
+      'nao perca',
+      'agora ou nunca',
+      'urgente',
+      'atenção imediata',
+      'imperdível',
+      'expira já',
+    ]
+    for (const dias of [4, 3, 2, 1]) {
+      const texto = corpoDoAviso({ ...args, diasRestantes: dias }).bodyHtml.toLowerCase()
+      for (const termo of proibidos) {
+        expect(texto, `dia ${dias} usou "${termo}"`).not.toContain(termo)
+      }
+    }
+  })
+
+  it('nenhum dia sugere que o dado some', () => {
+    for (const dias of [4, 3, 2, 1]) {
+      const texto = corpoDoAviso({ ...args, diasRestantes: dias }).bodyHtml.toLowerCase()
+      expect(texto, `dia ${dias}`).not.toMatch(/ser[ãa]o? apagad|perder[áa] seus dados|exclu[íi]d/)
+    }
+  })
+
+  // Dia maior que o teto cai no primeiro aviso, não num corpo vazio. O cron
+  // pode chamar com 5 se a janela mudar, e e-mail sem corpo é pior que e-mail
+  // repetido.
+  it('dia acima do teto usa o texto do primeiro aviso', () => {
+    const alto = corpoDoAviso({ ...args, diasRestantes: 9 })
+    const quatro = corpoDoAviso({ ...args, diasRestantes: 4 })
+    expect(alto.bodyHtml).toBe(quatro.bodyHtml)
+  })
+
+  it('dia zero ou negativo cai na véspera, nunca em corpo vazio', () => {
+    for (const dias of [0, -3]) {
+      const { bodyHtml } = corpoDoAviso({ ...args, diasRestantes: dias })
+      expect(bodyHtml.length, `dia ${dias}`).toBeGreaterThan(100)
+      expect(bodyHtml).toContain('nada é apagado')
+    }
   })
 })

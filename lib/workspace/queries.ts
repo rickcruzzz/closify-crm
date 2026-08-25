@@ -9,7 +9,7 @@ export async function getWorkspaceSettingsData(workspaceId: string) {
     // deixa de ser literal e o resultado inteiro vira `GenericStringError`.
     supabase
       .from('workspaces')
-      .select('id, name, plan, segmento, nome_fantasia, cnpj, descricao, logo_url, email_comercial, whatsapp, telefone, site, cep, endereco, numero, complemento, bairro, cidade, estado')
+      .select('id, name, plan, trial_ate, segmento, nome_fantasia, cnpj, descricao, logo_url, email_comercial, whatsapp, telefone, site, cep, endereco, numero, complemento, bairro, cidade, estado')
       .eq('id', workspaceId)
       .single(),
     // `.limit()` explícito: sem ele, um workspace com mais de 1.000 membros

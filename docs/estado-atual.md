@@ -4,7 +4,11 @@ Documento de continuidade. É lido no começo de toda sessão (referenciado no
 [CLAUDE.md](../CLAUDE.md)) para que uma conversa nova, ou outra conta, comece
 sabendo o que já foi feito, o que foi decidido e onde estão as armadilhas.
 
-**Atualizado em:** 25/08/2026, tarde (o CNPJ que a landing exibia como prova
+**Atualizado em:** 25/08/2026, noite (diagnóstico do sistema inteiro, 15
+achados que nenhum dos quatro portões enxerga; e a assinatura passou a avisar
+4 dias antes, inclusive quem está em trial e nunca recebia e-mail nenhum)
+
+**Antes disso, 25/08/2026, tarde** (o CNPJ que a landing exibia como prova
 de confiança está BAIXADO desde 08/08; e o Business da Meta nunca foi
 submetido, apesar de este documento afirmar as duas coisas ao contrário)
 
@@ -37,6 +41,135 @@ minutos seguidos, contra 26% da medição anterior)
 **Antes disso, 23/08/2026** (landing auditada: promessa falsa no hero, logo quebrado no telefone, banner de cookies cobrindo o CTA, e prints mostrando o jargão que a própria página baniu; PRD, schema e grafo realinhados)
 
 **Antes disso, 22/08/2026** (funções rodavam em Washington DC com o banco em São Paulo, corrigido na config do projeto e medido: /dashboard 1221ms → 400ms; modo claro sem escada de superfícies, refeito; jargão remanescente e telas de erro; WhatsApp sem QR por Postgres esgotado na VPS; migration 0049 provada desnecessária e removida)
+
+## Diagnóstico do sistema, e a assinatura que avisa antes (25/08, noite)
+
+Duas frentes na mesma rodada. A primeira produziu a segunda.
+
+### O diagnóstico: 15 achados, nenhum visível pelos quatro portões
+
+[docs/diagnostico.md](diagnostico.md) varre sete classes de defeito que `tsc`,
+`lint`, `test` e `build` **não conseguem ver**. Cada achado carrega a prova
+medida; achado sem prova ou sem consequência descrita não entrou, pela lição de
+`/dono/alertas`, onde 8 de 11 alertas eram ruído.
+
+Os que ninguém esperava:
+
+**`pro_vigente()` tinha uma regressão em produção.** A 0044 fez a graça
+pós-vencimento depender da forma de pagamento (1 dia no cartão, 3 no resto). A
+**0051, ao acrescentar o trial, reescreveu a função inteira** e voltou para a
+constante de 3 dias que a própria 0044 marcou como obsoleta. `dias_de_graca()`
+ficou órfã no banco, e **cinco arquivos TS descreviam em comentário um
+comportamento que tinha deixado de existir**.
+
+Medido antes de corrigir: `dias_de_graca('CREDIT_CARD')` = 1,
+`dias_para_compensacao_bancaria()` = 3, e o cenário "cartão vencido há 2 dias"
+devolvia `true` quando deveria devolver `false`.
+
+**Reescrever uma função inteira para acrescentar uma cláusula não deixa rastro
+de que a outra metade regrediu.** É a classe mais perigosa e a mais barata de
+varrer: 16 funções deste banco foram redefinidas mais de uma vez.
+
+**`iniciarOnboarding` é Server Action viva sem nenhum chamador**, e o comentário
+dela diz "Chamado pelo botão Começar configuração". Não existe esse botão.
+Guardada por sessão, então não é buraco — mas é endpoint HTTP que ninguém
+exercita.
+
+**O webhook do WhatsApp pode duplicar contato.** `route.ts:489` lê
+`encontrar_lead_por_telefone` sem checar `error`; falhando, conclui "número
+desconhecido" e cria ficha nova para quem já existe. Único lugar do sistema
+onde leitura nula vira **escrita errada** em vez de negação. **Não corrigido
+nesta rodada**, está na fila.
+
+**Ressalva do método, dita na cara:** a comparação automática entre versões de
+função pega chamada que sumiu e número que mudou. **Não pega cláusula `where`
+removida nem condição invertida.** Classe 1 pode ter mais casos que o um achado.
+
+### A assinatura passou a avisar antes, e a avisar quem está em trial
+
+Quase tudo já existia. A mudança principal foi um número.
+
+**A janela era de 2 dias e virou 4.** A cadência diária D-4, D-3, D-2, D-1 sai
+sozinha: `avisadoHoje` compara **dia de calendário em São Paulo**, então impede
+o segundo e-mail no mesmo dia, não no dia seguinte. Não precisou de código de
+agendamento nenhum.
+
+**Os quatro e-mails dizem coisas diferentes**, e isso não é enfeite: quatro
+mensagens idênticas em quatro dias lêem como robô de cobrança, e quem marca
+como spam perde junto o e-mail de pagamento confirmado, que sai do mesmo
+remetente. A escada é informa, lembra, explica a consequência, avisa que é o
+último dia. Testes travam que nenhum inventa urgência ("última chance", "não
+perca") e que **o de véspera promete por escrito que nada é apagado**.
+
+**Quem está em trial não recebia e-mail nenhum.** A varredura filtrava
+`subscriptions` com `status = 'active'`, e **quem está em trial não tem linha
+lá** — o trial nasce em `create_workspace_with_admin` gravando
+`workspaces.trial_ate`. Ficava de fora exatamente o grupo que mais importa: 5
+empresas em trial ao mesmo tempo, e conversão de trial para pagante que nunca
+aconteceu com cliente externo. Segunda varredura no mesmo cron, e-mail próprio,
+coluna `aviso_trial_enviado_em` porque não há assinatura onde marcar.
+
+**A tela de cobrança não dizia quando o plano vence.** `getEstadoAssinatura`
+fazia `.select('status, asaas_subscription_id')` e **nunca lia
+`current_period_end`**. O que aparecia era o vencimento da FATURA, que responde
+outra pergunta:
+
+    fatura.vencimento    quando a cobrança precisa ser paga
+    current_period_end   até quando o Pro funciona          <- ninguém via
+
+**"Está acabando" tinha três números diferentes:** tarja do trial em 3 dias,
+e-mail de Pro em 2 (escrito cru no meio de `2 * 24 * 60 * 60 * 1000`, onde busca
+por nome não acha), e nada na tela. Agora é `AVISAR_A_PARTIR_DE`, um número só,
+lido pelos três. O teste trava a fronteira com número literal de propósito:
+escrever a constante faria o teste concordar com qualquer valor, inclusive um
+errado.
+
+**O e-mail passou a abrir o pagamento.** `?pagar=1` abre o diálogo com o Pix na
+tela; antes caía em `/settings/billing` seco e a pessoa ainda precisava achar o
+botão, no exato momento em que já tinha decidido pagar. O e-mail de trial usa
+`?assinar=1`, que é outro caminho — quem está em trial não tem assinatura para
+pagar.
+
+**Histórico de assinatura, que nunca existiu.** `subscriptions` guarda uma linha
+por empresa, só o estado atual. Tabela `assinatura_eventos` (0055), append-only,
+escrita num lugar só: `lib/asaas/aplicar-evento.ts`, o caminho já compartilhado
+entre webhook e cron. Estado repetido não vira linha, senão o cron diário
+encheria de "active -> active".
+
+### O que NÃO mudou, e é decisão
+
+O pedido falava em "passou de 30 dias, cancela instantaneamente". **O sistema já
+fazia isso e é mais rigoroso:** o ciclo é de 30 dias, e `pro_vigente()` é
+consultada por trigger a cada escrita, então o corte acontece na primeira
+tentativa de uso depois de vencer, sem rotina noturna. Esperar 30 dias **depois**
+de vencer daria um mês de Pro grátis a quem não pagou.
+
+Fica aberto: a assinatura vencida continua existindo no Asaas gerando cobrança
+todo mês, enquanto o produto já a trata como Free. Cancelamento automático de
+cobrança de terceiro merece rodada própria.
+
+### Provado contra o banco de produção
+
+Empresa descartável, apagada num `finally`, com o cron rodando local contra o
+banco real (o código novo ainda não estava publicado). **8 de 8 passaram:**
+
+    D-4 D-3 D-2 D-1         1 e-mail cada, assuntos diferentes
+    2a rodada no mesmo dia   0 enviados, 1 pulado
+    empresa em trial         avisada, marca gravada
+    histórico                grava e é legível
+    intruso lendo            0 linhas
+    intruso escrevendo       HTTP 403
+    sobrou                   0 empresa
+
+Os cinco e-mails confirmados `delivered` no log do Resend, em
+`delivered@resend.dev`. E `pro_vigente()` provado numa transação com
+`rollback`: cartão vencido há 2 dias devolve `false` (devolvia `true`), Pix
+continua `true` pelos 3 dias de graça.
+
+**A correção da graça não muda nada para nenhum cliente hoje:** medido, as 14
+assinaturas do banco têm `ultimo_billing_type` nulo ou `UNDEFINED`, e
+`dias_de_graca` devolve 3 para os dois. O defeito era latente. Foi o momento
+mais barato possível para consertar.
 
 ## O CNPJ da vitrine está baixado, e o Business nunca foi submetido (25/08)
 
@@ -1992,11 +2125,11 @@ sessão.
 
 ## Pendente do dono (não é código)
 
-- [ ] **`CRON_SECRET` na Vercel (13/08).** Gerado e colado no `.env.local`,
-      mas falta colar o mesmo valor nas env vars da Vercel (Production),
-      sem isso, o Vercel Cron chama `/api/cron/reconciliar-assinaturas` e
-      toma 401 todo dia, silenciosamente (a rota não avisa ninguém, só
-      responde o erro). Ver `.env.example` pra onde gerar.
+- [x] **`CRON_SECRET` na Vercel.** Esta entrada dizia que faltava colar e que
+      o cron tomava 401 todo dia em silêncio. **Falso**, medido na API da
+      Vercel em 25/08: a variável existe em `production` e `preview`, marcada
+      `sensitive`. Pendência falsa desvia atenção das reais, e é o achado 6.1
+      do [diagnóstico](diagnostico.md).
 - [x] **`NEXT_PUBLIC_META_PIXEL_ID` na Vercel — a variável existia desde
       20/08, mas com uma QUEBRA DE LINHA no valor, que derrubava o site
       inteiro em tela preta e impedia o pixel de medir. Corrigido em 24/08,

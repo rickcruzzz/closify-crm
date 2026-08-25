@@ -86,6 +86,15 @@ export type Database = {
            * Pro de graça a quem só abriu o checkout.
            */
           trial_ate: string | null
+          /**
+           * Último envio do e-mail de fim de trial (0055).
+           *
+           * Existe aqui, e não em `subscriptions`, porque quem está em trial
+           * não tem linha lá: a assinatura só nasce no primeiro checkout.
+           * Comparado por DIA DE CALENDÁRIO em São Paulo, o que permite um
+           * aviso por dia na reta final sem repetir dentro do mesmo dia.
+           */
+          aviso_trial_enviado_em: string | null
         } & DadosDaEmpresa
         Insert: {
           id?: string
@@ -112,6 +121,13 @@ export type Database = {
           utm_campaign?: string | null
           fbc?: string | null
           fbp?: string | null
+          /**
+           * Escrito só pelo cron de aviso, com service role. `trial_ate`
+           * continua fora deste Update de propósito: a trigger
+           * `proteger_trial_ate` (0051) recusa a alteração, e deixar o tipo
+           * permitir o que o banco proíbe convida ao erro.
+           */
+          aviso_trial_enviado_em?: string | null
         } & Partial<DadosDaEmpresa>
         Relationships: []
       }
@@ -380,6 +396,44 @@ export type Database = {
           event_type?: string
           processed_at?: string
         }
+        Relationships: []
+      }
+      // Histórico append-only da assinatura (0055). Diferente de
+      // `asaas_webhook_events`, que é dedupe: aqui o MEMBRO lê, porque é a
+      // tabela que responde "o que eu paguei e quando" na tela de Cobrança.
+      // Escrita só pela service role, de dentro de lib/asaas/aplicar-evento.ts.
+      //
+      // Existe porque `subscriptions` guarda UMA linha por empresa, só o estado
+      // atual. Quem assinou, cancelou e voltou não deixava rastro — foi isso
+      // que impediu, em 18/08, distinguir "Pro vencido" de "nunca teve Pro".
+      assinatura_eventos: {
+        Row: {
+          id: string
+          workspace_id: string
+          /** `null` no primeiro evento da empresa: não havia estado anterior. */
+          de_status: SubscriptionStatus | null
+          para_status: SubscriptionStatus
+          /** `webhook` ou `reconciliacao:cron`. Responde "quem aplicou isto". */
+          origem: string
+          /** Forma de pagamento no momento. Explica a graça de 1 ou 3 dias. */
+          billing_type: string | null
+          asaas_event_id: string | null
+          criado_em: string
+        }
+        Insert: {
+          id?: string
+          workspace_id: string
+          de_status?: SubscriptionStatus | null
+          para_status: SubscriptionStatus
+          origem: string
+          billing_type?: string | null
+          asaas_event_id?: string | null
+          criado_em?: string
+        }
+        // Sem Update de propósito: a tabela é append-only, e não há policy de
+        // update nem de delete no banco. Deixar o tipo permitir o que o banco
+        // proíbe convida ao erro.
+        Update: Record<string, never>
         Relationships: []
       }
       // Captura real dos erros que `app/(dashboard)/error.tsx` e
