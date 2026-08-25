@@ -8,6 +8,7 @@ import { obterTokenDaInstancia } from '@/lib/integrations/evolution/token'
 import { renderWhatsappDesconectadoEmail } from '@/lib/emails/whatsapp-desconectado'
 import { getResend } from '@/lib/resend/client'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { normalizarMensagem } from '@/lib/integrations/evolution/mensagem-recebida'
 
 /**
  * Recebe os eventos do Evolution GO.
@@ -138,33 +139,10 @@ async function registrarMensagemPerdida(
   }
 }
 
-/**
- * Formato de `types.MessageInfo` do `whatsmeow`, conforme o Swagger do
- * servidor — campos no nível raiz, diferente do `key.fromMe` aninhado da
- * Evolution API (Node) original.
- */
-type MensagemDoEvolutionGo = {
-  id?: string
-  chat?: string
-  isFromMe?: boolean
-  isGroup?: boolean
-  pushName?: string
-  /** O texto em si não está documentado no Swagger (é o corpo do evento
-   * assíncrono, não uma resposta HTTP) — tentamos os formatos mais prováveis. */
-  message?: {
-    conversation?: string
-    extendedTextMessage?: { text?: string }
-    imageMessage?: { caption?: string }
-    audioMessage?: unknown
-    documentMessage?: { fileName?: string }
-  }
-  text?: string
-}
-
 type PayloadDoEvolutionGo = {
   event?: string
   type?: string
-  data?: MensagemDoEvolutionGo | MensagemDoEvolutionGo[] | { connected?: boolean; state?: string }
+  data?: unknown | { connected?: boolean; state?: string }
 }
 
 function segredoConfere(recebido: string, esperado: string | undefined): boolean {
@@ -177,35 +155,6 @@ function segredoConfere(recebido: string, esperado: string | undefined): boolean
   if (a.length !== b.length) return false
 
   return timingSafeEqual(a, b)
-}
-
-/**
- * Extrai o texto de uma mensagem, seja qual for o tipo.
- *
- * Áudio, imagem e documento não têm texto puro; em vez de descartar (o cliente
- * mandou algo, e isso é informação), registra o tipo. Uma timeline que diz
- * "mandou um áudio" é melhor que uma que não diz nada.
- */
-function textoDaMensagem(mensagem: MensagemDoEvolutionGo): string {
-  if (mensagem.text) return mensagem.text
-
-  const m = mensagem.message
-  if (!m) return '(mensagem sem conteúdo)'
-
-  if (m.conversation) return m.conversation
-  if (m.extendedTextMessage?.text) return m.extendedTextMessage.text
-  if (m.imageMessage) return m.imageMessage.caption ?? '(enviou uma imagem)'
-  if (m.audioMessage) return '(enviou um áudio)'
-  if (m.documentMessage) return `(enviou um arquivo: ${m.documentMessage.fileName ?? 'sem nome'})`
-
-  return '(mensagem de tipo não suportado)'
-}
-
-/** `5511999998888@s.whatsapp.net` vira `5511999998888`. Grupo devolve `null`. */
-function telefoneDoRemetente(chat: string | undefined, isGroup: boolean | undefined): string | null {
-  if (!chat) return null
-  if (isGroup) return null
-  return chat.split('@')[0] || null
 }
 
 /**
@@ -456,7 +405,7 @@ export async function POST(
   const todasAsMensagens = Array.isArray(payload.data)
     ? payload.data
     : payload.data
-      ? [payload.data as MensagemDoEvolutionGo]
+      ? [payload.data]
       : []
 
   // O excedente NÃO é descartado: como o dedupe só é gravado dentro do laço,
@@ -472,15 +421,34 @@ export async function POST(
     )
   }
 
-  for (const mensagem of mensagens) {
+  for (const bruta of mensagens) {
+    // ## Por que passar por um normalizador em vez de ler os campos direto
+    //
+    // Esta rota lia `mensagem.id`, `mensagem.chat` e `mensagem.isFromMe`
+    // porque é assim que o Swagger do servidor descreve a mensagem. **O
+    // webhook não usa esse formato.** Ele entrega a estrutura nativa do
+    // `whatsmeow`: `data.Info.ID`, `data.Info.Chat`, `data.Message.conversation`
+    // — capitalizada e aninhada.
+    //
+    // Resultado, capturado em 25/08 com um ouvinte dentro da VPS: `eventId`
+    // era `undefined`, o laço fazia `continue` na primeira linha, e a rota
+    // respondia `200 {"ok":true}` sem gravar nada. Do lado do servidor o log
+    // dizia `webhook sent successfully, status: 200`. Nenhum erro em lugar
+    // nenhum, e a mensagem do cliente sumia.
+    //
+    // Nenhuma leitura de código acharia isso: o código estava coerente com a
+    // documentação, e é a documentação que não descreve o webhook.
+    const mensagem = normalizarMensagem(bruta)
+    if (!mensagem) continue
+
     const eventId = mensagem.id
     if (!eventId) continue
 
     // Mensagem que NÓS enviamos volta como evento também. Registrar viraria
     // eco: a atividade já foi criada no momento do envio.
-    if (mensagem.isFromMe) continue
+    if (mensagem.deNos) continue
 
-    const telefone = telefoneDoRemetente(mensagem.chat, mensagem.isGroup)
+    const telefone = mensagem.telefone
     if (!telefone) continue
 
     // Dedupe antes de qualquer escrita: o Evolution reenvia em caso de falha
@@ -506,7 +474,7 @@ export async function POST(
         admin,
         workspaceId,
         telefone,
-        textoDaMensagem(mensagem),
+        mensagem.texto,
         `dedupe ${erroDedupe.code ?? 'sem código'}`,
       )
       continue
@@ -531,7 +499,7 @@ export async function POST(
         .from('leads')
         .insert({
           workspace_id: workspaceId,
-          name: mensagem.pushName?.trim() || `WhatsApp ${telefone.slice(-4)}`,
+          name: mensagem.nome?.trim() || `WhatsApp ${telefone.slice(-4)}`,
           // Sem e-mail, e isso e legitimo: a migration 0025 tornou a coluna
           // nullable exatamente porque a lista do publico-alvo e de WhatsApp.
           // Com `email not null`, a importacao de planilha trazia zero linhas.
@@ -575,7 +543,7 @@ export async function POST(
           // decidir se aquele contato valia a venda.
           admin.from('error_logs').insert({
             message: `WhatsApp: mensagem não registrada (${erroLead?.code ?? 'sem código'}) ` +
-              `de ${telefone}: ${textoDaMensagem(mensagem)}`,
+              `de ${telefone}: ${mensagem.texto}`,
             origem: 'whatsapp',
             url: `/api/webhooks/evolution/${workspaceId}`,
             workspace_id: workspaceId,
@@ -611,7 +579,7 @@ export async function POST(
       workspace_id: workspaceId,
       lead_id: lead,
       type: 'nota',
-      description: `WhatsApp: ${textoDaMensagem(mensagem)}`,
+      description: `WhatsApp: ${mensagem.texto}`,
       integration_provider: 'whatsapp',
     })
 
@@ -621,7 +589,7 @@ export async function POST(
         admin,
         workspaceId,
         telefone,
-        textoDaMensagem(mensagem),
+        mensagem.texto,
         `activities ${erroAtividade.code ?? 'sem código'}`,
       )
       continue
