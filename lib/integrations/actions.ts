@@ -8,6 +8,7 @@ import { getCurrentUserAndWorkspace } from '@/lib/supabase/workspace'
 import { decifrar } from '@/lib/integrations/crypto'
 import { revogarToken as revogarTokenGoogle, testarCalendario, testarGmail } from '@/lib/integrations/google'
 import { obterAccessTokenValido } from '@/lib/integrations/token'
+import { apagarInstancia } from '@/lib/integrations/evolution/api'
 import { mensagemBloqueioPro } from '@/lib/integrations/mensagem-bloqueio-pro'
 import type { IntegrationProvider } from '@/types/supabase'
 
@@ -56,7 +57,32 @@ export async function desconectarIntegracao(provider: IntegrationProvider) {
     .eq('provider', provider)
     .maybeSingle()
 
-  if (linha?.access_token_enc) {
+  // A limpeza do lado de lá depende do provedor, e tratar todos igual custou
+  // duas coisas em produção.
+  //
+  // O token do WhatsApp estava sendo enviado para `oauth2.googleapis.com`:
+  // `access_token_enc` guarda o token da INSTÂNCIA Evolution quando o provider
+  // é `whatsapp`, e a revogação era chamada sem olhar o provider. O Google
+  // descarta o valor, mas a credencial viva da sessão de WhatsApp de um
+  // cliente saía para um terceiro que não tem nada com isso.
+  //
+  // E a instância continuava de pé no servidor Evolution depois do DELETE
+  // local. Isso deixava a empresa incapaz de reconectar: sem linha não há
+  // token, sem token o código tenta criar, e o servidor recusa com
+  // "instance already exists". `criarOuAdotarInstancia` hoje readota nesse
+  // caso, então isto aqui é a segunda camada — evitar a órfã em vez de só
+  // saber sair dela.
+  if (provider === 'whatsapp') {
+    try {
+      await apagarInstancia(workspaceId)
+    } catch (err) {
+      // Não bloqueia a desconexão local: a pessoa pediu para desconectar, e
+      // deixar a linha no banco por causa de uma falha no servidor externo
+      // daria a impressão de que o pedido não funcionou. A readoção cobre o
+      // caso de a instância ter sobrado.
+      console.error('Falha ao apagar a instância do WhatsApp na desconexão', err)
+    }
+  } else if (linha?.access_token_enc) {
     try {
       await revogarTokenGoogle(decifrar(linha.access_token_enc))
     } catch (err) {

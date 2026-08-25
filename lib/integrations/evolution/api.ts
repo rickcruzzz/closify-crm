@@ -1,6 +1,7 @@
 import 'server-only'
 
 import { EvolutionApiError, evolutionFetch } from './client'
+import { extrairTokenDaListagem } from './listagem'
 
 /**
  * As operações do Evolution GO que este produto usa.
@@ -70,6 +71,69 @@ export async function criarInstancia(
   })
 
   return { id: instanceId, nome, token }
+}
+
+/**
+ * Devolve o token de uma instância que JÁ existe no servidor, ou `null`.
+ *
+ * Usa a chave global, que é a única que abre `/instance/all` — e essa rota
+ * devolve o `token` de cada instância no corpo, conferido contra o servidor
+ * real. É o que permite readotar uma instância cujo registro se perdeu do
+ * nosso lado.
+ */
+export async function tokenDaInstanciaNoServidor(instanceId: string): Promise<string | null> {
+  return extrairTokenDaListagem(await evolutionFetch<unknown>('/instance/all'), instanceId)
+}
+
+/**
+ * Cria a instância, ou readota a que já estiver no servidor.
+ *
+ * ## O beco sem saída que isto fecha
+ *
+ * O registro da conexão vive em dois lugares: a instância no servidor
+ * Evolution e a linha em `integration_connections`. Eles podem divergir, e
+ * divergiram em produção — medido em 25/08, uma instância no servidor sem
+ * linha nenhuma no banco.
+ *
+ * A partir daí a empresa ficava presa PARA SEMPRE: sem linha, não há token;
+ * sem token, o código tenta criar; e o servidor responde
+ * `500 {"error":"instance already exists"}`. Nenhum caminho da tela saía
+ * disso, porque tentar de novo executava exatamente o mesmo passo.
+ *
+ * Duas causas conhecidas produzem a divergência, e as duas são reais:
+ * desconectar apagava a linha sem apagar a instância, e a criação não é
+ * atômica (cria no servidor, grava no banco depois — se a segunda parte
+ * falhar, sobra órfã).
+ *
+ * Fechar as duas causas ajuda e não basta: qualquer falha nova entre os dois
+ * lados recria o problema. Por isso a correção é aqui, no ponto onde a
+ * divergência é DETECTADA — readotar em vez de morrer torna o sistema
+ * capaz de se curar sozinho no próximo clique.
+ */
+export async function criarOuAdotarInstancia(
+  instanceId: string,
+  nome: string,
+  tokenNovo: string,
+): Promise<Instancia> {
+  try {
+    return await criarInstancia(instanceId, nome, tokenNovo)
+  } catch (erro) {
+    const jaExiste =
+      erro instanceof EvolutionApiError && /already exists/i.test(erro.message)
+    if (!jaExiste) throw erro
+
+    const tokenExistente = await tokenDaInstanciaNoServidor(instanceId)
+    if (!tokenExistente) {
+      // O servidor diz que existe e não devolve o token: sem ele não dá para
+      // operar a instância, e criar outra é impossível. Apagar e recriar é a
+      // única saída, e é segura aqui porque instância sem token do nosso lado
+      // já era inútil.
+      await apagarInstancia(instanceId)
+      return await criarInstancia(instanceId, nome, tokenNovo)
+    }
+
+    return { id: instanceId, nome, token: tokenExistente }
+  }
 }
 
 /**

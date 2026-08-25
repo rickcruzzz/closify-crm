@@ -14,7 +14,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 
 import {
   conectarInstancia,
-  criarInstancia,
+  criarOuAdotarInstancia,
   obterEstado,
   obterQrCode,
   pedirCodigoDePareamento,
@@ -98,10 +98,18 @@ export async function conectarWhatsapp(workspaceId: string): Promise<ResultadoDa
     // reusa o token já gravado em vez de criar instância nova (o Evolution
     // GO recusaria o mesmo instanceId com token diferente) — só gera um
     // token novo quando esta empresa nunca conectou antes.
+    // `criarOuAdotarInstancia` e não `criarInstancia`: se o servidor já tiver
+    // uma instância com este id e o banco não souber dela, readota em vez de
+    // morrer com "instance already exists". Sem isso a empresa fica presa para
+    // sempre — ver o cabeçalho da função para o defeito medido em produção.
     let token = await obterTokenDaInstancia(workspaceId)
     if (!token) {
-      token = randomBytes(24).toString('hex')
-      await criarInstancia(workspaceId, `velofunil-${workspaceId}`, token)
+      const instancia = await criarOuAdotarInstancia(
+        workspaceId,
+        `velofunil-${workspaceId}`,
+        randomBytes(24).toString('hex'),
+      )
+      token = instancia.token
     }
 
     // O Evolution não assina o payload do webhook, então a URL carrega um
@@ -314,10 +322,18 @@ export async function conectarPorCodigo(
 
     // Mesmo caminho de `conectarWhatsapp`: reusa o token já gravado e só cria
     // instância nova quando esta empresa nunca conectou antes.
+    // `criarOuAdotarInstancia` e não `criarInstancia`: se o servidor já tiver
+    // uma instância com este id e o banco não souber dela, readota em vez de
+    // morrer com "instance already exists". Sem isso a empresa fica presa para
+    // sempre — ver o cabeçalho da função para o defeito medido em produção.
     let token = await obterTokenDaInstancia(workspaceId)
     if (!token) {
-      token = randomBytes(24).toString('hex')
-      await criarInstancia(workspaceId, `velofunil-${workspaceId}`, token)
+      const instancia = await criarOuAdotarInstancia(
+        workspaceId,
+        `velofunil-${workspaceId}`,
+        randomBytes(24).toString('hex'),
+      )
+      token = instancia.token
     }
 
     const segredo = process.env.EVOLUTION_WEBHOOK_SECRET
