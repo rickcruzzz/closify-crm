@@ -81,7 +81,7 @@ export async function GET(
       // o `filename` simples ao lado atende quem não entende a forma estendida.
       'Content-Disposition':
         `attachment; filename="destaque-${destaque.id}.zip"; ` +
-        `filename*=UTF-8''${encodeURIComponent(`Velo Funil — ${destaque.nome}.zip`)}`,
+        `filename*=UTF-8''${encodeURIComponent(`Velo Funil ${destaque.nome}.zip`)}`,
       'Content-Length': String(zip.length),
       'Cache-Control': 'no-store',
     },

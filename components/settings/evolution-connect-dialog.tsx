@@ -216,7 +216,7 @@ export function EvolutionConnectDialog({
     const inicio = inicioDaTentativaRef.current
     if (inicio === null || Date.now() - inicio < TEMPO_MAXIMO_DE_TENTATIVA_MS) return false
     setErro(
-      'Não conseguimos confirmar a conexão depois de várias tentativas. O WhatsApp pode estar recusando o pareamento vindo do nosso servidor — tente de novo em alguns minutos, ou fale com o suporte se continuar.',
+      'Não conseguimos confirmar a conexão depois de várias tentativas. O WhatsApp pode estar recusando o pareamento vindo do nosso servidor. Tente de novo em alguns minutos, ou fale com o suporte se continuar.',
     )
     return true
   }, [])

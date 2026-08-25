@@ -166,7 +166,7 @@ export function acaoRecomendada(
   // manda "fale hoje" com a pessoa que você contatou ontem ensina a ignorá-lo.
   if (empresa.faladoEm && descontoPorContatoRecente(empresa, agora) > 0) {
     return dias <= 2
-      ? 'Você já falou. O prazo acaba agora — vale um último toque.'
+      ? 'Você já falou. O prazo acaba agora, vale um último toque.'
       : 'Você já falou. Espere a resposta antes de cobrar de novo.'
   }
 
@@ -222,7 +222,7 @@ export function linkDeWhatsapp(
   if (!numeroNormalizado) return null
 
   const texto = encodeURIComponent(
-    `Oi! Aqui é do Velo Funil. Vi que a ${nomeDaEmpresa} está testando o sistema — ` +
+    `Oi! Aqui é do Velo Funil. Vi que a ${nomeDaEmpresa} está testando o sistema. ` +
       'posso ajudar com alguma coisa?',
   )
   return `https://wa.me/${numeroNormalizado}?text=${texto}`

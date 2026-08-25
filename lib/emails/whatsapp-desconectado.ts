@@ -35,7 +35,7 @@ export function renderWhatsappDesconectadoEmail(params: {
           'Enquanto isso, mensagens recebidas nesse número não estão virando contato nem tarefa no CRM. Reconecte escaneando um novo código em Configurações → Integrações.',
         ),
         paragraph(
-          'Esta conexão usa o WhatsApp Web, não a API oficial da Meta, e pode cair sem aviso prévio por decisão do próprio WhatsApp — reconectar costuma resolver.',
+          'Esta conexão usa o WhatsApp Web, não a API oficial da Meta, e pode cair sem aviso prévio por decisão do próprio WhatsApp. Reconectar costuma resolver.',
         ),
       ].join('\n'),
       action: { label: 'Reconectar o WhatsApp', url: `${params.appUrl}/settings?aba=integracoes` },

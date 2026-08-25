@@ -74,7 +74,7 @@ export default async function PaginaDeTrial() {
         <p className="text-muted-foreground border-border/60 border-t pt-4 text-xs">
           A ordem põe <strong className="text-foreground">quem usou</strong> antes de quem
           está acabando: uma empresa engajada com cinco dias pela frente vale mais que uma
-          que nunca abriu o produto e vence amanhã — a segunda não tem o que decidir,
+          que nunca abriu o produto e vence amanhã. A segunda não tem o que decidir,
           porque não viu nada para decidir. Dentro do mesmo grupo, quem está mais perto do
           fim aparece primeiro.
         </p>

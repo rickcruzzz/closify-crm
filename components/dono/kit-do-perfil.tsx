@@ -114,7 +114,7 @@ export function KitDoPerfil() {
 
       <p className="text-muted-foreground max-w-3xl text-sm text-pretty">
         Cole os mesmos valores em toda conta que representar a marca. Assim elas ficam idênticas
-        por construção, e não por conferência manual — que falha na primeira alteração, quando um
+        por construção, e não por conferência manual, que falha na primeira alteração, quando um
         perfil é atualizado e o outro fica para trás sem ninguém notar.
       </p>
 

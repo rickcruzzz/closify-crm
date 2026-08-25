@@ -78,7 +78,7 @@ function NotaDoFiltro({ quantas }: { quantas: number }) {
   return (
     <p className="text-muted-foreground text-xs">
       {quantas} {quantas === 1 ? 'conta de teste' : 'contas de teste'} em trial{' '}
-      {quantas === 1 ? 'ficou' : 'ficaram'} de fora — domínio descartável ou e-mail seu, na
+      {quantas === 1 ? 'ficou' : 'ficaram'} de fora: domínio descartável ou e-mail seu, na
       lista de <code className="text-[0.9em]">lib/dono/contas-internas.ts</code>.
     </p>
   )
@@ -173,7 +173,7 @@ export function QuemEstaDecidindo({
                   </a>
                 ) : (
                   <span className="text-muted-foreground self-center text-xs">
-                    Sem e-mail do dono — conta órfã.
+                    Sem e-mail do dono, conta órfã.
                   </span>
                 )}
                 <span className="grow" />

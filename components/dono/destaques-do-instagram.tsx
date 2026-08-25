@@ -130,7 +130,7 @@ function BlocoDoDestaque({ destaque }: { destaque: Destaque }) {
                 <a
                   href={enderecoDaTela(tela.arquivo4k)}
                   download={tela.arquivo4k}
-                  title="Versão 4K — para feed ou anúncio, não para o Story"
+                  title="Versão 4K, para feed ou anúncio, não para o Story"
                   className={cn(buttonVariants({ variant: 'ghost', size: 'sm' }), 'h-8 px-2 text-xs')}
                 >
                   4K
