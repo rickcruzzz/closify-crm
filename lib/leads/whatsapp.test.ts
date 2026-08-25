@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { linkDoWhatsApp } from './whatsapp'
+import { linkDoWhatsApp, normalizarTelefoneBrasileiro } from './whatsapp'
 
 describe('linkDoWhatsApp', () => {
   // Os formatos que aparecem de verdade na planilha do público-alvo, que é
@@ -40,5 +40,34 @@ describe('linkDoWhatsApp', () => {
   it('recusa DDD que não existe', () => {
     expect(linkDoWhatsApp('(00) 98888-7777')).toBeNull()
     expect(linkDoWhatsApp('(10) 98888-7777')).toBeNull()
+  })
+})
+
+describe('o formato que o WhatsApp usa de verdade', () => {
+  it('repõe o nono dígito que o WhatsApp remove', () => {
+    // Achado em 25/08 com a primeira mensagem real: o `Chat` chega como
+    // `557193309404@s.whatsapp.net` — 55 + DDD + OITO dígitos. O WhatsApp
+    // remove o nono dígito dos celulares brasileiros.
+    //
+    // Sem isto, o contato entrava no funil e ficava inalcançável: o botão de
+    // WhatsApp sumia da tela dele, e a tarefa "Responder no WhatsApp" não
+    // tinha como abrir a conversa. Registrado e sem como falar.
+    expect(normalizarTelefoneBrasileiro('557193309404')).toBe('5571993309404')
+    expect(linkDoWhatsApp('557193309404')).toBe('https://wa.me/5571993309404')
+  })
+
+  it('não confunde com fixo, que tem 8 dígitos começando em 2 a 5', () => {
+    // Fixo de verdade continua passando intacto, sem ganhar dígito nenhum.
+    expect(normalizarTelefoneBrasileiro('557133309404')).toBe('557133309404')
+    expect(normalizarTelefoneBrasileiro('551123456789')).toBe('551123456789')
+  })
+
+  it('celular já com o nono continua igual', () => {
+    // O mesmo número nas duas formas precisa terminar no MESMO resultado,
+    // senão o produto cria dois contatos para a mesma pessoa.
+    expect(normalizarTelefoneBrasileiro('5571993309404')).toBe('5571993309404')
+    expect(normalizarTelefoneBrasileiro('557193309404')).toBe(
+      normalizarTelefoneBrasileiro('5571993309404'),
+    )
   })
 })

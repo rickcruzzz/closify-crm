@@ -18,7 +18,27 @@ export type Lead = {
   createdAt: string
 }
 
-export type ActivityType = 'ligacao' | 'email' | 'reuniao' | 'nota'
+/**
+ * Reexportado de `types/supabase`, nunca redigitado.
+ *
+ * Esta linha já foi uma cópia da lista de valores, e a cópia divergiu: quando
+ * `whatsapp` entrou no enum do banco (migration 0054), o `tsc` reprovou porque
+ * as duas listas discordavam. Reexportar faz a segunda verdade deixar de
+ * existir.
+ */
+export type { ActivityType } from '@/types/supabase'
+import type { ActivityType } from '@/types/supabase'
+
+/**
+ * Os tipos que uma PESSOA pode escolher ao registrar atividade à mão.
+ *
+ * `whatsapp` fica de fora de propósito: ele significa "esta linha nasceu de
+ * uma mensagem que o cliente enviou". Deixar alguém criar ou converter uma
+ * atividade para esse tipo tornaria o histórico indistinguível entre o que o
+ * cliente disse e o que alguém anotou depois — e é justamente essa distinção
+ * que sustenta a promessa de que a empresa é dona do histórico.
+ */
+export type ActivityTypeManual = Exclude<ActivityType, 'whatsapp'>
 
 export type Activity = {
   id: string

@@ -37,9 +37,9 @@ import {
   type ActivityFormInput,
   type ActivityFormValues,
 } from '@/lib/validations/activity'
-import type { ActivityType } from '@/lib/leads/types'
+import type { ActivityTypeManual } from '@/lib/leads/types'
 
-const TIPOS: { valor: ActivityType; rotulo: string }[] = [
+const TIPOS: { valor: ActivityTypeManual; rotulo: string }[] = [
   { valor: 'ligacao', rotulo: 'Ligação' },
   { valor: 'email', rotulo: 'E-mail' },
   { valor: 'reuniao', rotulo: 'Reunião' },
@@ -55,6 +55,12 @@ const TIPOS: { valor: ActivityType; rotulo: string }[] = [
  *
  * Quem não é autor nem admin não vê o menu. A action recusa de qualquer forma;
  * esconder aqui evita oferecer uma ação que vai falhar.
+ *
+ * `tipoAtual` é `ActivityTypeManual`, e isso é o compilador impedindo uma
+ * coisa: atividade de WhatsApp não pode ser editada por ninguém, nem pelo
+ * admin. Ela é o registro do que o CLIENTE escreveu, e editá-la falsifica o
+ * histórico — que é exatamente o que o produto promete guardar. Quem decide
+ * não renderizar é a timeline; o tipo garante que a decisão não seja esquecida.
  */
 export function ActivityActions({
   activityId,
@@ -63,7 +69,7 @@ export function ActivityActions({
   podeEditar,
 }: {
   activityId: string
-  tipoAtual: ActivityType
+  tipoAtual: ActivityTypeManual
   descricaoAtual: string
   podeEditar: boolean
 }) {

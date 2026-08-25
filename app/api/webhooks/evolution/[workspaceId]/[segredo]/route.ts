@@ -9,6 +9,8 @@ import { renderWhatsappDesconectadoEmail } from '@/lib/emails/whatsapp-desconect
 import { getResend } from '@/lib/resend/client'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { normalizarMensagem } from '@/lib/integrations/evolution/mensagem-recebida'
+import { nomeDeContato } from '@/lib/integrations/evolution/nome-do-contato'
+import { normalizarTelefoneBrasileiro } from '@/lib/leads/whatsapp'
 
 /**
  * Recebe os eventos do Evolution GO.
@@ -499,12 +501,22 @@ export async function POST(
         .from('leads')
         .insert({
           workspace_id: workspaceId,
-          name: mensagem.nome?.trim() || `WhatsApp ${telefone.slice(-4)}`,
+          // O `PushName` vem como a pessoa escreveu, e isso inclui os blocos
+          // estilizados do Unicode: a primeira mensagem real criou o contato
+          // como `𝖵𝖾𝗅𝗈 𝖥𝗎𝗇𝗂𝗅`, que nao e achavel procurando "Velo".
+          name: nomeDeContato(mensagem.nome) ?? `WhatsApp ${telefone.slice(-4)}`,
           // Sem e-mail, e isso e legitimo: a migration 0025 tornou a coluna
           // nullable exatamente porque a lista do publico-alvo e de WhatsApp.
           // Com `email not null`, a importacao de planilha trazia zero linhas.
           email: null,
-          phone: telefone,
+          // Guardado na forma canônica, com o nono dígito, e não como o
+          // WhatsApp entrega. Ele remove o nono dos celulares brasileiros
+          // (`557193309404`), e guardar assim faria o MESMO número existir de
+          // duas formas no banco: uma vinda da conversa, outra digitada por
+          // uma pessoa. `normalizarTelefoneBrasileiro` devolve `null` para o
+          // que não for telefone brasileiro — aí fica o que chegou, porque
+          // perder o número seria pior que guardá-lo torto.
+          phone: normalizarTelefoneBrasileiro(telefone) ?? telefone,
           status: 'novo',
         })
         .select('id')
@@ -578,8 +590,13 @@ export async function POST(
     const { error: erroAtividade } = await admin.from('activities').insert({
       workspace_id: workspaceId,
       lead_id: lead,
-      type: 'nota',
-      description: `WhatsApp: ${mensagem.texto}`,
+      // `whatsapp` e nao `nota` (migration 0054). O texto vai LIMPO: antes
+      // ele era prefixado por "WhatsApp: " para compensar a falta de tipo, e
+      // esse prefixo virava parte do que o cliente escreveu em toda
+      // exportacao, busca e leitura por API. Quem diz a origem agora e o
+      // proprio tipo, que e o campo feito para isso.
+      type: 'whatsapp',
+      description: mensagem.texto,
       integration_provider: 'whatsapp',
     })
 
@@ -608,11 +625,35 @@ export async function POST(
       .maybeSingle()
 
     if (!tarefaAberta) {
+      // ## Sem responsavel, a tarefa nao existe para ninguem
+      //
+      // Medido em 25/08 com a primeira mensagem real: a tarefa foi criada com
+      // `assignee_id` nulo, e a tela `/hoje` mostrou VAZIO. Ela filtra por
+      // "minhas" por padrao — decisao correta daquela tela — e tarefa sem dono
+      // cai num vao onde ninguem olha.
+      //
+      // Pior: o estado vazio diz "Coloque um cliente no funil", afirmando que
+      // nao ha nada a fazer enquanto um cliente espera resposta. O produto fez
+      // o trabalho certo e disse ao cliente que nao fez nada.
+      //
+      // O admin mais antigo e o dono por padrao: e quem criou a empresa, e a
+      // escolha nao depende de nenhum campo novo. Distribuicao por atendente e
+      // recurso da API oficial, nao desta fase (ver o cabecalho de actions.ts).
+      const { data: dono } = await admin
+        .from('workspace_members')
+        .select('user_id')
+        .eq('workspace_id', workspaceId)
+        .eq('role', 'admin')
+        .order('created_at', { ascending: true })
+        .limit(1)
+        .maybeSingle()
+
       const { error: erroTarefa } = await admin.from('tasks').insert({
         workspace_id: workspaceId,
         lead_id: lead,
         title: 'Responder no WhatsApp',
-        type: 'nota',
+        type: 'whatsapp',
+        assignee_id: dono?.user_id ?? null,
         due_at: new Date(Date.now() + PRAZO_DE_RESPOSTA_HORAS * 60 * 60 * 1000).toISOString(),
       })
 

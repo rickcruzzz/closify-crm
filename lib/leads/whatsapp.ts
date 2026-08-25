@@ -80,5 +80,25 @@ function montar(numeroComDdi: string): string | null {
     return numeroComDdi
   }
 
+  // 12 dígitos começando em 9 é celular SEM o nono dígito — a forma que o
+  // próprio WhatsApp usa.
+  //
+  // Descoberto em 25/08, com a primeira mensagem real: o `Chat` chegou como
+  // `557193309404@s.whatsapp.net`, e o número gravado no contato era esse.
+  // Toda função de telefone do produto o recusava, porque 8 dígitos começando
+  // em 9 não é fixo (fixo começa em 2-5) nem celular (celular tem 9 dígitos).
+  //
+  // O efeito era pior do que um número inválido: o contato entrava no funil, o
+  // botão "Chamar no WhatsApp" sumia da tela dele, e a tarefa "Responder no
+  // WhatsApp" não tinha como abrir a conversa. O cliente ficava registrado e
+  // inalcançável.
+  //
+  // Devolver com o 9 reposto é o que faz o número voltar a ser o mesmo em todo
+  // lugar: `wa.me` aceita as duas formas, mas o resto do produto — busca,
+  // comparação, deduplicação de contato — precisa de UMA.
+  if (numeroComDdi.length === 12 && primeiro === '9') {
+    return `${numeroComDdi.slice(0, 4)}9${numeroComDdi.slice(4)}`
+  }
+
   return null
 }

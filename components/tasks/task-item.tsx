@@ -2,7 +2,7 @@
 
 import * as React from 'react'
 import Link from 'next/link'
-import { MoreHorizontal, Undo2 } from 'lucide-react'
+import { MessageCircle, MoreHorizontal, Undo2 } from 'lucide-react'
 
 import { cn } from '@/lib/utils'
 import { Checkbox } from '@/components/ui/checkbox'
@@ -12,9 +12,10 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { Button } from '@/components/ui/button'
+import { Button, buttonVariants } from '@/components/ui/button'
 import { ConfirmarExclusao } from '@/components/comum/confirmar-exclusao'
 import { rotuloDePrazo } from '@/lib/tasks/buckets'
+import { linkDoWhatsApp } from '@/lib/leads/whatsapp'
 import { iconePorTipo, taskTypeLabels, type TaskRow } from '@/lib/tasks/types'
 
 const horaFormatada = new Intl.DateTimeFormat('pt-BR', {
@@ -58,6 +59,11 @@ export function TaskItem({
   // renderize `TaskItem` nasce protegida sem precisar lembrar disso.
   const [confirmandoExclusao, setConfirmandoExclusao] = React.useState(false)
 
+  // Só para tarefa de WhatsApp: pôr o botão em toda tarefa com telefone
+  // encheria a lista de um atalho que ninguém pediu, e diluiria o sinal
+  // justamente onde ele importa.
+  const linkWhatsapp = task.type === 'whatsapp' ? linkDoWhatsApp(task.lead_phone) : null
+
   return (
     <li className="hover:bg-accent/40 flex items-center gap-3 rounded-lg px-2 py-2 transition-colors">
       <Checkbox
@@ -92,6 +98,31 @@ export function TaskItem({
           {task.assignee_name && ` · ${task.assignee_name}`}
         </span>
       </div>
+
+      {/* ## O verbo do título precisa ter um botão embaixo
+          A tarefa se chama "Responder no WhatsApp" e, até aqui, não havia como
+          responder de lugar nenhum: a pessoa lia, saía da tela, procurava o
+          contato, abria e só então achava o link. Quatro passos para cumprir
+          uma tarefa de um passo, e cada passo é uma chance de desistir — num
+          produto cuja promessa é justamente não deixar a resposta cair.
+
+          `wa.me` abre a conversa no aplicativo instalado ou no web, sem
+          depender de sessão conectada: funciona mesmo para quem nunca ligou a
+          integração. E reusa `linkDoWhatsApp`, que já separa celular de fixo e
+          recusa número estrangeiro do mesmo tamanho — prefixar 55 num número
+          de 11 dígitos transformaria telefone dos EUA em brasileiro. */}
+      {!concluida && linkWhatsapp ? (
+        <a
+          href={linkWhatsapp}
+          target="_blank"
+          rel="noopener noreferrer"
+          onClick={(e) => e.stopPropagation()}
+          className={cn(buttonVariants({ variant: 'outline', size: 'sm' }), 'shrink-0')}
+        >
+          <MessageCircle className="size-4" />
+          <span className="hidden sm:inline">Responder</span>
+        </a>
+      ) : null}
 
       {onDesfazer && (
         <Button

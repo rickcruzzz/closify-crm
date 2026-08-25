@@ -48,8 +48,13 @@ async function enriquecer(
 
   const [leadsResult, nomesResult] = await Promise.all([
     leadIds.length > 0
-      ? supabase.from('leads').select('id, name').in('id', leadIds)
-      : Promise.resolve({ data: [] as { id: string; name: string }[] }),
+      // `phone` junto do nome, na consulta que ja existe: e o que permite o
+      // botao de responder direto na tarefa, sem uma segunda ida ao banco.
+      // Sem ele, "Responder no WhatsApp" e uma ordem sem o meio de cumpri-la —
+      // a pessoa teria que sair da tela, achar o contato e abrir para so entao
+      // ter o link.
+      ? supabase.from('leads').select('id, name, phone').in('id', leadIds)
+      : Promise.resolve({ data: [] as { id: string; name: string; phone: string | null }[] }),
     userIds.length > 0
       ? supabase.rpc('get_workspace_member_names', {
           target_workspace_id: workspaceId,
@@ -59,11 +64,13 @@ async function enriquecer(
   ])
 
   const nomeDoLead = new Map((leadsResult.data ?? []).map((l) => [l.id, l.name]))
+  const telefoneDoLead = new Map((leadsResult.data ?? []).map((l) => [l.id, l.phone ?? null]))
   const nomeDoMembro = new Map((nomesResult.data ?? []).map((m) => [m.user_id, m.name]))
 
   return linhas.map((l) => ({
     ...l,
     lead_name: l.lead_id ? nomeDoLead.get(l.lead_id) ?? null : null,
+    lead_phone: l.lead_id ? telefoneDoLead.get(l.lead_id) ?? null : null,
     assignee_name: l.assignee_id ? nomeDoMembro.get(l.assignee_id) ?? null : null,
   }))
 }

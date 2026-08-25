@@ -34,7 +34,17 @@ export const taskSchema = z
      * salvaria trocando o tipo sem ninguém pedir. Quem restringe a criação é
      * `taskTypesCriaveis`, que é o que o seletor do formulário oferece.
      */
-    type: z.enum(['ligacao', 'email', 'reuniao', 'nota'], { error: 'Selecione um tipo.' }),
+    // `whatsapp` entra aqui, mas NAO no seletor da tela. A diferenca importa:
+    // a tarefa "Responder no WhatsApp" nasce do webhook com esse tipo, e o
+    // usuario precisa poder mexer no prazo e no responsavel dela sem que o
+    // formulario recuse o proprio valor que ja estava gravado.
+    //
+    // Diferente da ATIVIDADE, que e registro do que o cliente escreveu e nao
+    // se edita: a tarefa e trabalho de quem usa o produto, e trabalho se
+    // reorganiza.
+    type: z.enum(['ligacao', 'email', 'reuniao', 'nota', 'whatsapp'], {
+      error: 'Selecione um tipo.',
+    }),
 
     // Chega da tela como texto do <input type="datetime-local">, que não tem
     // fuso. `coerce.date` interpreta no fuso do navegador, que é o fuso de

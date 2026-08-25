@@ -17,6 +17,7 @@ function tarefa(campos: { id: string; hora: string; concluida?: boolean }): Task
     deal_id: null,
     assignee_id: null,
     lead_name: null,
+    lead_phone: null,
     assignee_name: null,
   }
 }

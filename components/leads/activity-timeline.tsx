@@ -1,4 +1,4 @@
-import { FileText, History, Mail, Phone, Users } from 'lucide-react'
+import { FileText, History, Mail, MessageCircle, Phone, Users } from 'lucide-react'
 
 import { cn } from '@/lib/utils'
 import { EmptyState } from '@/components/ui/empty-state'
@@ -40,6 +40,18 @@ const activityConfig: Record<
     label: 'Nota',
     icon: FileText,
     className: 'bg-muted-foreground/10 text-muted-foreground',
+  },
+  // Verde do WhatsApp, e nao a cor do produto: aqui o reconhecimento vale mais
+  // que a coerencia de marca. Quem bate o olho precisa saber de onde veio
+  // antes de ler o rotulo.
+  //
+  // Ate a migration 0054 a conversa era gravada como `nota` com o texto
+  // prefixado por "WhatsApp: ". O prefixo virava parte do que o cliente
+  // escreveu em toda exportacao e busca; agora quem diz a origem e o tipo.
+  whatsapp: {
+    label: 'WhatsApp',
+    icon: MessageCircle,
+    className: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400',
   },
 }
 
@@ -94,17 +106,30 @@ export function ActivityTimeline({
                   <span className="text-muted-foreground text-xs whitespace-nowrap">
                     {dateTimeFormatter.format(new Date(activity.created_at))}
                   </span>
-                  <ActivityActions
-                    activityId={activity.id}
-                    tipoAtual={activity.type}
-                    descricaoAtual={activity.description}
-                    podeEditar={isAdmin || activity.author_id === currentUserId}
-                  />
+                  {/* Conversa de WhatsApp nao tem menu de acoes, nem para
+                      admin. Ela e o registro do que o CLIENTE escreveu, e
+                      editar ou apagar falsifica o historico — que e
+                      exatamente o que o produto promete guardar. O tipo
+                      `ActivityTypeManual` faz o compilador cobrar isso. */}
+                  {activity.type !== 'whatsapp' ? (
+                    <ActivityActions
+                      activityId={activity.id}
+                      tipoAtual={activity.type}
+                      descricaoAtual={activity.description}
+                      podeEditar={isAdmin || activity.author_id === currentUserId}
+                    />
+                  ) : null}
                 </div>
               </div>
               <p className="text-muted-foreground text-sm">{activity.description}</p>
+              {/* "Desconhecido" era o autor de toda mensagem de WhatsApp:
+                  ela nasce do webhook, sem usuario logado, entao `author_id`
+                  e nulo. Dizer "Desconhecido" sugere falha de registro quando
+                  na verdade a autoria e conhecida e obvia — foi o cliente. */}
               <span className="text-muted-foreground text-xs">
-                por {activity.author_name ?? 'Desconhecido'}
+                {activity.type === 'whatsapp'
+                  ? 'recebida pelo WhatsApp'
+                  : `por ${activity.author_name ?? 'Desconhecido'}`}
               </span>
             </div>
           </li>

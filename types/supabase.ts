@@ -10,7 +10,7 @@ export type DealStage =
   | 'negociacao'
   | 'fechado_ganho'
   | 'fechado_perdido'
-export type ActivityType = 'ligacao' | 'email' | 'reuniao' | 'nota'
+export type ActivityType = 'ligacao' | 'email' | 'reuniao' | 'nota' | 'whatsapp'
 export type OnboardingStatus = 'not_started' | 'in_progress' | 'skipped' | 'completed'
 export type OnboardingEtapa = 'empresa' | 'segmento' | 'venda' | 'equipe' | 'processando'
 export type TourStatus = 'not_started' | 'skipped' | 'completed'

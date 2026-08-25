@@ -1,4 +1,4 @@
-import { Mail, Phone, StickyNote, Users } from 'lucide-react'
+import { Mail, MessageCircle, Phone, StickyNote, Users } from 'lucide-react'
 
 import type { ActivityType } from '@/lib/leads/types'
 
@@ -17,6 +17,8 @@ export type TaskRow = {
   deal_id: string | null
   assignee_id: string | null
   lead_name: string | null
+  /** Para o botao de responder direto na tarefa. */
+  lead_phone: string | null
   assignee_name: string | null
 }
 
@@ -64,6 +66,7 @@ export const taskTypeLabels: Record<ActivityType, string> = {
   email: 'E-mail',
   reuniao: 'Reunião',
   nota: 'Nota',
+  whatsapp: 'WhatsApp',
 }
 
 /**
@@ -79,5 +82,6 @@ export const iconePorTipo: Record<ActivityType, typeof Phone> = {
   email: Mail,
   reuniao: Users,
   nota: StickyNote,
+  whatsapp: MessageCircle,
 }
 

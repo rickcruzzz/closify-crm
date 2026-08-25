@@ -23,14 +23,14 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
-import type { ActivityType } from '@/lib/leads/types'
+import type { ActivityTypeManual } from '@/lib/leads/types'
 import {
   activitySchema,
   type ActivityFormInput,
   type ActivityFormValues,
 } from '@/lib/validations/activity'
 
-const activityTypeLabels: Record<ActivityType, string> = {
+const activityTypeLabels: Record<ActivityTypeManual, string> = {
   ligacao: 'Ligação',
   email: 'E-mail',
   reuniao: 'Reunião',
@@ -104,11 +104,11 @@ export function ActivityFormDialog({
                 >
                   <SelectTrigger id="type" className="w-full">
                     <SelectValue placeholder="Selecione">
-                      {(value) => activityTypeLabels[value as ActivityType]}
+                      {(value) => activityTypeLabels[value as ActivityTypeManual]}
                     </SelectValue>
                   </SelectTrigger>
                   <SelectContent>
-                    {(Object.keys(activityTypeLabels) as ActivityType[]).map((type) => (
+                    {(Object.keys(activityTypeLabels) as ActivityTypeManual[]).map((type) => (
                       <SelectItem key={type} value={type}>
                         {activityTypeLabels[type]}
                       </SelectItem>
