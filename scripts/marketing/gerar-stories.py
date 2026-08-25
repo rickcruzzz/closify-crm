@@ -955,13 +955,13 @@ def destaque_dicas():
     tela_numero(
         "42h", "é a média do mercado",
         "O tempo que uma empresa leva, em média, para responder o primeiro contato.",
-        "Harvard Business Review — auditoria em 2.241 empresas",
+        "Harvard Business Review, auditoria em 2.241 empresas",
         "dicas-2-media-do-mercado",
     )
     tela_numero(
         "82%", "vendem pelo WhatsApp",
         "É o principal canal de venda dos pequenos negócios brasileiros. O problema não é o canal: é o que some junto com a conversa.",
-        "12ª Pesquisa Pulso dos Pequenos Negócios — Sebrae, 2026",
+        "12ª Pesquisa Pulso dos Pequenos Negócios / Sebrae, 2026",
         "dicas-3-whatsapp",
     )
     tela_produto(
@@ -1011,7 +1011,7 @@ def destaque_perguntas():
         "É grátis mesmo?",
         "Nada é cobrado sem você escolher.",
         "Não pedimos cartão para começar. São 7 dias com o Pro inteiro e, "
-        "depois, ou você assina, ou a conta passa para o plano grátis — que "
+        "depois, ou você assina, ou a conta passa para o plano grátis, que "
         "não expira. Seus dados continuam lá nos dois casos.",
         "perguntas-1-gratis", destaque="Sem cartão para começar.", tam=74,
     )
