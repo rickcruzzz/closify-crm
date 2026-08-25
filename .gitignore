@@ -64,6 +64,10 @@ graphify-out/
 # Preferência de uma pessoa numa máquina, não dado de produto.
 .dono-silenciados.json
 
+# Quando o dono falou com cada empresa em trial (lib/dono/contatos-do-trial.ts).
+# Mesma razão dos dois de cima, mais uma: carrega id de empresa real.
+.dono-contatos-do-trial.json
+
 # Artes de anúncio da Central (lib/dono/criativos.ts). Ficam FORA de `public/`
 # de propósito — lá elas entrariam no build, iriam para o ar e ganhariam uma
 # URL pública. E fora do Git porque criativo é iteração: dez variações de um

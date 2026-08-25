@@ -7,6 +7,7 @@ import {
   Filter,
   Bookmark,
   Images,
+  Handshake,
   LayoutDashboard,
   Loader2,
   Megaphone,
@@ -43,6 +44,11 @@ import { cn } from '@/lib/utils'
 const SECOES = [
   { href: '/dono', rotulo: 'Visão geral', icone: LayoutDashboard },
   { href: '/dono/alertas', rotulo: 'Alertas', icone: BellRing },
+  // Depois de Alertas e antes de Ativação: as duas falam de gente usando o
+  // produto, mas em prazos diferentes. Esta é acionável HOJE — cada linha é uma
+  // pessoa dentro dos sete dias de trial, com o WhatsApp a um clique. O funil
+  // agregado da tela seguinte orienta o mês.
+  { href: '/dono/trial', rotulo: 'Decidindo', icone: Handshake },
   // Depois de Alertas e antes de Anúncio de propósito: a ordem é a da rotina —
   // primeiro o que quebrou, depois se as pessoas estão usando, e só então
   // quanto custa trazer mais gente. Olhar anúncio antes de ativação é comprar
