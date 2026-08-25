@@ -170,6 +170,25 @@ export async function renovarQrCode(
 ): Promise<ResultadoDaConexao> {
   try {
     await exigirAdmin(workspaceId)
+
+    // `recomecar` APAGA e recria a instância no servidor Evolution. Sem o gate,
+    // uma empresa sem Pro conseguiria repetir o pareamento indefinidamente,
+    // consumindo recurso da VPS — o gasto é por instância viva, não por
+    // assinatura.
+    //
+    // Renovar o QR de uma sessão já em curso (`recomecar` falso) segue livre:
+    // ele só faz sentido logo depois de `conectarWhatsapp`, que já checou, e
+    // travá-lo aqui deixaria o diálogo preso com um código expirado em tela.
+    if (recomecar) {
+      const supabase = await createClient()
+      const { data: podeUsar } = await supabase.rpc('pro_vigente', {
+        target_workspace_id: workspaceId,
+      })
+      if (!podeUsar) {
+        return { ok: false, erro: await mensagemBloqueioPro(supabase, workspaceId) }
+      }
+    }
+
     const token = await obterTokenDaInstancia(workspaceId)
     if (!token) return { ok: false, erro: 'Conexão não encontrada. Tente conectar de novo.' }
 
@@ -205,6 +224,15 @@ export async function renovarQrCode(
  *
  * A tela chama isso em intervalo enquanto o QR está na frente da pessoa: é
  * assim que o diálogo fecha sozinho quando ela termina de escanear.
+ */
+/**
+ * NÃO exige Pro, e isso é decisão, não esquecimento.
+ *
+ * É leitura pura: não cria instância, não consome recurso da VPS e não dá
+ * acesso a nada. E a tela PRECISA dela justamente para quem perdeu o plano —
+ * é assim que o card mostra "Pausado" com o motivo, em vez de um estado
+ * desconhecido. Travar aqui esconderia a informação de quem mais precisa dela
+ * para decidir voltar ao Pro.
  */
 export async function estadoDaConexao(
   workspaceId: string,
@@ -257,6 +285,24 @@ export async function conectarPorCodigo(
 ): Promise<ResultadoDoCodigo> {
   try {
     const userId = await exigirAdmin(workspaceId)
+
+    // Mesma checagem de `conectarWhatsapp`, e ela precisa estar aqui também.
+    //
+    // Este é o caminho ALTERNATIVO de pareamento (código de 8 letras, para
+    // quem abre o CRM pelo próprio celular e não consegue escanear a própria
+    // tela). Ele cria instância, configura webhook e pareia — tudo que o
+    // caminho do QR faz — mas era a única das duas portas sem o gate de plano.
+    //
+    // Achado auditando o caso de 24/08 em que uma empresa Free estava com o
+    // WhatsApp ativo: a defesa existia num caminho e faltava no outro, que é
+    // como esse tipo de furo sobrevive a revisão.
+    const supabase = await createClient()
+    const { data: podeUsar } = await supabase.rpc('pro_vigente', {
+      target_workspace_id: workspaceId,
+    })
+    if (!podeUsar) {
+      return { ok: false, erro: await mensagemBloqueioPro(supabase, workspaceId) }
+    }
 
     const numero = normalizarTelefoneBrasileiro(telefone)
     if (!numero) {
