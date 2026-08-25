@@ -4,7 +4,12 @@ Documento de continuidade. É lido no começo de toda sessão (referenciado no
 [CLAUDE.md](../CLAUDE.md)) para que uma conversa nova, ou outra conta, comece
 sabendo o que já foi feito, o que foi decidido e onde estão as armadilhas.
 
-**Atualizado em:** 25/08/2026, madrugada (verificação OAuth do Google
+**Atualizado em:** 25/08/2026, madrugada (a Central passou a mostrar quem
+está decidindo AGORA; a API de anúncio da Meta ligada e a tela de Anúncio viva
+pela primeira vez; e a bio do Instagram vendia a oferta que a 0051 aposentou,
+para 3.555 seguidores)
+
+**Antes disso, 25/08/2026, madrugada** (verificação OAuth do Google
 APROVADA para `calendar.events.owned` e `gmail.send`; e o WhatsApp estava
 ativo numa empresa Free — o gate de plano faltava no webhook e em duas Server
 Actions)
@@ -28,6 +33,124 @@ minutos seguidos, contra 26% da medição anterior)
 **Antes disso, 23/08/2026** (landing auditada: promessa falsa no hero, logo quebrado no telefone, banner de cookies cobrindo o CTA, e prints mostrando o jargão que a própria página baniu; PRD, schema e grafo realinhados)
 
 **Antes disso, 22/08/2026** (funções rodavam em Washington DC com o banco em São Paulo, corrigido na config do projeto e medido: /dashboard 1221ms → 400ms; modo claro sem escada de superfícies, refeito; jargão remanescente e telas de erro; WhatsApp sem QR por Postgres esgotado na VPS; migration 0049 provada desnecessária e removida)
+
+## A Central sabia medir e operar, não sabia vender (25/08)
+
+Pedido: "quais funcionalidades adicionar no local host para deixar uma máquina
+poderosa". Auditadas as seis telas existentes. Elas respondiam **o que quebrou**
+(Alertas), **quanto entra** (Visão geral) e **se as pessoas ativam** (funil de
+Ativação). Nenhuma respondia a pergunta que gera receita: *quem está decidindo
+neste momento, e como falo com essa pessoa?*
+
+Medido no banco antes de escrever qualquer linha: **5 empresas em trial ao
+mesmo tempo**, invisíveis em toda a Central. O trial é uma janela de sete dias;
+sem vê-la, ela passa por omissão.
+
+### `/dono/trial` — "Decidindo agora"
+
+Cada empresa dentro da janela, com prazo, o que já fez no produto, e-mail,
+WhatsApp com mensagem pronta e uma frase dizendo o que fazer.
+
+**A ordem põe "usou" acima de "está acabando".** Engajado com cinco dias vale
+mais que quem nunca abriu o produto e vence amanhã — o segundo não tem o que
+decidir, porque não viu nada para decidir. A urgência entra como desempate.
+
+**"Já falei" é DATA, não interruptor.** Silenciar aqui perderia a venda: dentro
+de sete dias, o segundo toque perto do fim é o que fecha. A empresa cai um
+degrau por dois dias e volta a subir sozinha
+(`lib/dono/contatos-do-trial.ts`, fora do Git, mesmo padrão de
+`silenciados.ts`). Vai também para o diário.
+
+**Defeito achado pelo próprio teste, e vale mais que a correção:** eu tinha
+escrito que contato recente derruba abaixo de todo mundo. O teste reprovou, e
+estava certo — um engajado que vence amanhã continua sendo a melhor conversa da
+lista mesmo tendo sido procurado ontem. Corrigida a afirmação, não o número.
+
+**Defeito achado pela medição real:** classifiquei por `last_sign_in_at`. Esse
+campo **só muda em autenticação nova** — quem abre o CRM todo dia sem deslogar
+o mantém parado. Apareceu na primeira leitura: empresa criada há um dia dizendo
+"entrou há 4 dias", dois números impossíveis juntos. Trocado pela **última
+escrita no produto** (contato, negócio ou atividade), que não mente sobre uso.
+
+**O filtro de conta de teste saiu de dentro de Ativação** e virou
+`ehContaDeTeste` em `contas-internas.ts`, com teste. Sem ele, a tela nova
+mostraria quatro pessoas para contatar e **as quatro seriam teste nosso** — o
+mesmo defeito dos Alertas com 8 de 11. Duas cópias da lista divergiriam na
+primeira atualização, e as duas telas continuariam mostrando número plausível.
+
+### Meta Ads ligada: a tela de Anúncio saiu do escuro
+
+Token de **system user que não expira**, com `ads_read`, `ads_management`,
+`business_management`, `pages_show_list`, `instagram_basic` e
+`instagram_content_publish`.
+
+**Fecha uma pendência antiga:** o token enxerga **uma única** conta,
+`act_1316925630418162` "Rickdaskin Ads" — exatamente a fixada em
+`lib/dono/meta-ads.ts`. O risco de subir campanha na conta errada, registrado
+desde 20/08, deixou de existir: a conta errada não é alcançável.
+
+`/dono/anuncio` passou de bloco desligado para **5 de 5 pontos prontos**, com
+pixel certo, fuso, campanha (R$ 30/dia, pausada) e os botões de pausar, ligar e
+mudar orçamento funcionando.
+
+**Prova independente de que a correção da tela preta pegou:** a conta reporta
+`PageView (103)` e `CompleteRegistration (5)`, e `last_fired_time` de ontem.
+Até 24/08 o pixel **nunca havia disparado uma vez**.
+
+**O token NÃO vai para a Vercel.** Só é lido em `lib/dono/`, e toda a Central
+devolve 404 em produção. Colá-lo lá poria um token que gasta dinheiro no
+ambiente de um código que nunca roda ali.
+
+### A bio do Instagram vendia a oferta que a 0051 aposentou
+
+O @velofunil tem **3.555 seguidores** — ativo que nenhuma linha deste projeto
+sabia existir. E a bio dizia *"Grátis até 300 contatos, sem cartão"*, o
+freemium anterior ao reverse trial, meses depois de a landing ter sido
+corrigida. Também atacava a **planilha**, o inimigo que a repositionagem de
+24/08 abandonou por medição (82% da PME brasileira vende pelo WhatsApp).
+
+É a mesma classe dos prints que mostravam o jargão banido: **texto de marca
+fora do repositório não acompanha mudança de produto**, e ninguém descobre,
+porque nenhum `tsc`, `lint` ou `test` lê bio de rede social.
+
+`lib/dono/perfil-instagram.ts` resolve a classe: nome, bio, link, categoria e
+contatos derivam das MESMAS constantes da landing (`DIAS_DE_TRIAL`,
+`PRO_PLAN_PRICE`, `CONTROLADOR`). Mudar o plano muda a bio junto. 10 testes,
+incluindo um que reprova qualquer texto que volte a falar em "planilha" ou
+"300 contatos". A tela (`/dono/destaques` → Kit do perfil) tem botão de copiar
+por campo e contador de caracteres — o Instagram corta em silêncio no teto.
+
+**O link da bio ganhou `www` e UTM.** Medido: sem `www` custa 980ms contra
+255ms, por um redirecionamento. E as UTMs fazem a captura funcionar — provado
+em produção com `POST → 200` na Server Action de atribuição. As 24 empresas do
+banco têm `utm_source` vazio: `utm-capture.tsx` está construída desde sempre e
+**nunca foi exercitada**. Este link é o primeiro uso real dela.
+
+### Instagram: o que trava a publicação por API
+
+Existem **duas** contas: `@velofunil` (3.555 seguidores, bio antiga, pessoal) e
+`@velofunilbr` (0 seguidores, bio nova, indícios de já ser profissional).
+Nenhuma das duas está no business `Rickdaskin` — `owned_pages`,
+`owned_instagram_accounts` e `pending_owned_pages` todos vazios.
+
+Para publicar Story pela Central faltam, nesta ordem: conta profissional →
+Página do Facebook vinculada → Página adicionada ao business Rickdaskin →
+ativo atribuído ao system user. A Página não é burocracia: o caminho da API é
+`Página → instagram_business_account → publicar`, e anúncio com posicionamento
+no Instagram também a exige.
+
+**Duas contas iguais partem a audiência**, e isso ficou registrado como
+ressalva, não como decisão: 3.555 numa e 0 na outra, com a busca do Instagram
+mostrando as duas. O bloqueio que motivou a segunda (`is_professional_account:
+false`) é resolvível na original.
+
+### `suporte@velofunil.com.br` provado
+
+Envio real, `delivered` em 7 segundos. MX do Cloudflare ativo, SPF e DMARC
+presentes. Ressalva: `delivered` prova o primeiro salto — o Cloudflare aceitou
+—, e o encaminhamento para a caixa real é um segundo salto que só a leitura
+confirma. E o Email Routing **só recebe**: responder daquele endereço exige
+configurar "enviar como" no Gmail.
 
 ## WhatsApp: auditoria da arquitetura inteira (24/08, noite)
 
