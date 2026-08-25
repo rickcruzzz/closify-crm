@@ -17,6 +17,44 @@ import { montarZip } from './zip'
  * próprio Windows) extrair de verdade e compara os bytes que saem.
  */
 
+/**
+ * Extrai um zip com o descompactador do sistema, seja qual for.
+ *
+ * A primeira versão usava só `Expand-Archive` do PowerShell. Passava aqui, no
+ * Windows, e derrubava o gate: o runner do CI é Linux e não tem PowerShell.
+ *
+ * Um teste que só roda numa das duas máquinas não trava nada — ele vira uma
+ * falsa sensação de cobertura no lugar onde a cobertura mais importa, que é o
+ * CI. Por isso tenta `unzip` primeiro (Linux, macOS, Git Bash) e cai para o
+ * PowerShell no Windows.
+ */
+function extrair(arquivo: string, destino: string): void {
+  const tentativas: Array<[string, string[]]> = [
+    ['unzip', ['-q', '-o', arquivo, '-d', destino]],
+    [
+      'powershell',
+      [
+        '-NoProfile',
+        '-Command',
+        `Expand-Archive -LiteralPath '${arquivo}' -DestinationPath '${destino}' -Force`,
+      ],
+    ],
+  ]
+
+  for (const [programa, argumentos] of tentativas) {
+    try {
+      execFileSync(programa, argumentos, { stdio: 'pipe' })
+      return
+    } catch (erro) {
+      // `ENOENT` é "este programa não existe aqui": tenta o próximo. Qualquer
+      // outro erro é o zip sendo recusado de verdade, e precisa falhar o teste.
+      if ((erro as NodeJS.ErrnoException).code !== 'ENOENT') throw erro
+    }
+  }
+
+  throw new Error('Nenhum descompactador disponível (tentei unzip e powershell).')
+}
+
 function texto(s: string): Uint8Array {
   return new TextEncoder().encode(s)
 }
@@ -100,11 +138,7 @@ describe('montarZip', () => {
       writeFileSync(arquivo, z)
 
       const destino = join(pasta, 'extraido')
-      execFileSync(
-        'powershell',
-        ['-NoProfile', '-Command', `Expand-Archive -LiteralPath '${arquivo}' -DestinationPath '${destino}' -Force`],
-        { stdio: 'pipe' },
-      )
+      extrair(arquivo, destino)
 
       expect(readFileSync(join(destino, 'primeiro.txt'), 'utf8')).toBe('linha um\nlinha dois')
       expect(new Uint8Array(readFileSync(join(destino, 'segundo.bin')))).toEqual(binario)
