@@ -142,14 +142,14 @@
           "ordem": 2,
           "arquivo": "perguntas-2-instalar.png",
           "arquivo4k": "perguntas-2-instalar@4k.png",
-          "titulo": "Você cria a conta e já começa.",
+          "titulo": "Pronto no primeiro acesso.",
           "layout": "declaracao"
         },
         {
           "ordem": 3,
           "arquivo": "perguntas-3-importar.png",
           "arquivo4k": "perguntas-3-importar@4k.png",
-          "titulo": "Sua carteira inteira, num arquivo só",
+          "titulo": "A carteira inteira entra de uma vez.",
           "layout": "lista"
         },
         {

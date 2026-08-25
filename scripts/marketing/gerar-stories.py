@@ -1014,6 +1014,18 @@ def destaque_perguntas():
     Esquecer uma venda dói uma vez; perder a carteira não tem conserto. Medo
     move compra com muito menos objeção de preço do que conveniência.
 
+    ## A cadência das cinco é escolhida, não sobra
+
+    As primeiras palavras são: Você / Pronto / A carteira / Seus clientes /
+    Você. Antes eram Você / Você / Sua / Seus / Você — cinco aberturas com
+    pronome de segunda pessoa, três delas com a palavra "Você" literal. Uma
+    tela por vez ninguém nota; em SEQUÊNCIA, que é como o Instagram entrega,
+    isso lê como template e o olho para de registrar a diferença.
+
+    "Você" agora emoldura o conjunto: abre a primeira e fecha a última, com
+    três ritmos diferentes no meio. Se alguém for "padronizar" as manchetes um
+    dia, é isto que estará desfazendo.
+
     ## A ordem, e o arco que ela desenha
 
     começar -> usar onde você já está -> trazer o que já é seu -> manter o que
@@ -1050,7 +1062,7 @@ def destaque_perguntas():
     # semanas de espera e técnico marcando visita.
     tela_declaracao(
         "Preciso instalar?",
-        "Você cria a conta e já começa.",
+        "Pronto no primeiro acesso.",
         "Funciona pelo navegador, em qualquer aparelho, sem baixar e sem "
         "instalar nada. Não existe projeto de implantação nem espera por "
         "técnico.",
@@ -1059,7 +1071,7 @@ def destaque_perguntas():
 
     tela_lista(
         "E o que eu já tenho?",
-        "Sua carteira inteira, num arquivo só",
+        "A carteira inteira entra de uma vez.",
         [
             ("Exporte sua planilha como .csv", ".csv"),
             ("Colunas: Nome, Telefone, E-mail e Valor", "Nome, Telefone, E-mail e Valor"),
