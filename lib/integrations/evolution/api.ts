@@ -1,7 +1,8 @@
 import 'server-only'
 
 import { EvolutionApiError, evolutionFetch } from './client'
-import { extrairTokenDaListagem } from './listagem'
+import type { InstanciaConhecida } from './numero-em-uso'
+import { extrairTokenDaListagem, listarInstancias } from './listagem'
 
 /**
  * As operações do Evolution GO que este produto usa.
@@ -83,6 +84,16 @@ export async function criarInstancia(
  */
 export async function tokenDaInstanciaNoServidor(instanceId: string): Promise<string | null> {
   return extrairTokenDaListagem(await evolutionFetch<unknown>('/instance/all'), instanceId)
+}
+
+/**
+ * Todas as instâncias do servidor, só com o que decide conflito de número.
+ *
+ * Mesma chamada que a readoção usa. `/instance/all` é rota administrativa e
+ * exige a chave global — por isso a comparação acontece aqui e não no cliente.
+ */
+export async function instanciasDoServidor(): Promise<InstanciaConhecida[]> {
+  return listarInstancias(await evolutionFetch<unknown>('/instance/all'))
 }
 
 /**

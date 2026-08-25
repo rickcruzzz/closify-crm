@@ -293,6 +293,17 @@ export function EvolutionConnectDialog({
     const intervalo = setInterval(async () => {
       if (estourouOTempo()) return
       const resultado = await estadoDaConexao(workspaceId)
+
+      // O número pode ter parado de pé e ainda assim ser recusado: a mesma
+      // conta de WhatsApp em duas empresas faz as duas disputarem os mesmos
+      // eventos, e a mensagem do cliente vira loteria. O servidor já desfez o
+      // pareamento nesse caso — a tela precisa PARAR de girar e dizer o
+      // porquê, senão a pessoa escaneia de novo e cai no mesmo lugar.
+      if (resultado.erro) {
+        setErro(resultado.erro)
+        return
+      }
+
       if (resultado.conectado) {
         setConectado(true)
         toast.success('WhatsApp conectado.')

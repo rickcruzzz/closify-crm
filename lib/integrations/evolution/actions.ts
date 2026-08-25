@@ -10,11 +10,18 @@ import { mensagemBloqueioPro } from '@/lib/integrations/mensagem-bloqueio-pro'
 import { cifrar } from '@/lib/integrations/crypto'
 import { obterTokenDaInstancia } from '@/lib/integrations/evolution/token'
 import { baseDoWebhook, montarUrlDoWebhook } from '@/lib/integrations/evolution/webhook-url'
+import {
+  AVISO_DE_NUMERO_EM_USO,
+  conflitoDeNumero,
+} from '@/lib/integrations/evolution/numero-em-uso'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 
 import {
   conectarInstancia,
+  desconectar,
+  instanciasDoServidor,
+  tokenDaInstanciaNoServidor,
   criarOuAdotarInstancia,
   obterEstado,
   obterQrCode,
@@ -104,6 +111,14 @@ export async function conectarWhatsapp(workspaceId: string): Promise<ResultadoDa
     // morrer com "instance already exists". Sem isso a empresa fica presa para
     // sempre — ver o cabeçalho da função para o defeito medido em produção.
     let token = await obterTokenDaInstancia(workspaceId)
+
+    // A linha do banco pode sobreviver a uma instância que sumiu do servidor:
+    // apagada à mão, servidor recriado, VPS reinstalada. Usar o token guardado
+    // nesse caso falha com 401 e a tela não teria como sair — é o ESPELHO
+    // exato do beco que a readoção fecha do outro lado, e um sozinho não
+    // resolve os dois.
+    if (token && !(await tokenDaInstanciaNoServidor(workspaceId))) token = null
+
     if (!token) {
       const instancia = await criarOuAdotarInstancia(
         workspaceId,
@@ -251,7 +266,7 @@ export async function renovarQrCode(
  */
 export async function estadoDaConexao(
   workspaceId: string,
-): Promise<{ conectado: boolean; numero: string | null }> {
+): Promise<{ conectado: boolean; numero: string | null; erro?: string }> {
   try {
     await exigirAdmin(workspaceId)
     const token = await obterTokenDaInstancia(workspaceId)
@@ -261,6 +276,47 @@ export async function estadoDaConexao(
     const conectado = instancia.estado === 'open'
     if (conectado) {
       const admin = createAdminClient()
+
+      // ## O mesmo número não pode servir a duas empresas
+      //
+      // O WhatsApp permite quatro aparelhos por conta, e cada instância ocupa
+      // um. Nada impede parear o MESMO número duas vezes — aconteceu em 25/08,
+      // `...900:92` numa empresa e `:93` em outra, e nenhuma mensagem chegou a
+      // lugar nenhum: as duas instâncias disputavam os mesmos eventos.
+      //
+      // A checagem é aqui, e não antes do QR, porque não há como saber qual
+      // número vai ser escaneado antes de alguém escanear. O `jid` só existe
+      // depois do pareamento, e esta função é justamente quem o detecta.
+      //
+      // A NOVA é sempre a recusada. Derrubar a antiga faria um pareamento
+      // acidental cortar o WhatsApp de uma empresa que estava trabalhando.
+      const conhecidas = await instanciasDoServidor()
+      const conflito = conflitoDeNumero({
+        instanciaId: workspaceId,
+        jid: conhecidas.find((i) => i.id === workspaceId)?.jid,
+        conhecidas,
+      })
+
+      if (conflito) {
+        // Desconectar de verdade, não só avisar: uma instância pareada com
+        // número repetido continua roubando evento da outra enquanto estiver
+        // de pé, e o estrago acontece calado.
+        try {
+          await desconectar(token)
+        } catch (err) {
+          console.error('whatsapp: falha ao desfazer pareamento duplicado', err)
+        }
+
+        await admin
+          .from('integration_connections')
+          .update({ status: 'error', last_error: AVISO_DE_NUMERO_EM_USO })
+          .eq('workspace_id', workspaceId)
+          .eq('provider', 'whatsapp')
+        revalidatePath('/settings')
+
+        return { conectado: false, numero: null, erro: AVISO_DE_NUMERO_EM_USO }
+      }
+
       await admin
         .from('integration_connections')
         .update({
@@ -334,6 +390,14 @@ export async function conectarPorCodigo(
     // morrer com "instance already exists". Sem isso a empresa fica presa para
     // sempre — ver o cabeçalho da função para o defeito medido em produção.
     let token = await obterTokenDaInstancia(workspaceId)
+
+    // A linha do banco pode sobreviver a uma instância que sumiu do servidor:
+    // apagada à mão, servidor recriado, VPS reinstalada. Usar o token guardado
+    // nesse caso falha com 401 e a tela não teria como sair — é o ESPELHO
+    // exato do beco que a readoção fecha do outro lado, e um sozinho não
+    // resolve os dois.
+    if (token && !(await tokenDaInstanciaNoServidor(workspaceId))) token = null
+
     if (!token) {
       const instancia = await criarOuAdotarInstancia(
         workspaceId,

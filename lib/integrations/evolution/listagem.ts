@@ -39,3 +39,19 @@ function normalizarListagem(resposta: unknown): Array<Record<string, unknown>> {
 
   return []
 }
+
+/**
+ * A listagem reduzida ao que decide conflito de número: id e jid.
+ *
+ * Separada de `extrairTokenDaListagem` porque o token é segredo e não deve
+ * circular por caminho que não precise dele — quem compara número não tem o
+ * que fazer com a credencial da instância.
+ */
+export function listarInstancias(resposta: unknown): Array<{ id: string; jid: string | null }> {
+  return normalizarListagem(resposta)
+    .map((item) => ({
+      id: String(item.id ?? item.Id ?? ''),
+      jid: typeof (item.jid ?? item.Jid) === 'string' ? String(item.jid ?? item.Jid) : null,
+    }))
+    .filter((i) => i.id.length > 0)
+}
