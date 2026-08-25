@@ -110,6 +110,17 @@ escrita indevida**. Se passar, a regra não existe.
 
 ### Antes de encerrar qualquer mudança
 
-`npx tsc --noEmit`, `npm run lint`, `npm test` e `npm run build`, os quatro
-limpos. Testes cobrem lógica pura em `lib/**` (schemas, parsers, formatadores);
-cada caso documenta o defeito que o motivou, e é assim que devem continuar.
+`npx tsc --noEmit`, `npm run lint`, `npm test` e **`npm run build:check`**, os
+quatro limpos. Testes cobrem lógica pura em `lib/**` (schemas, parsers,
+formatadores); cada caso documenta o defeito que o motivou, e é assim que devem
+continuar.
+
+**Use `build:check`, não `build`, com o `npm run dev` de pé.** Os dois escrevem
+na mesma pasta `.next` por padrão, e o build sobrescreve o mapa de chunks que o
+servidor de desenvolvimento está usando: a partir daí toda rota morre com
+`MODULE_NOT_FOUND` em `webpack-runtime.js`, sem nada estar errado no código. O
+erro aponta para o arquivo da rota, então parece defeito do que você acabou de
+escrever — e derrubou a Central do dono três vezes numa sessão só, sempre pelo
+próprio gate. `build:check` escreve em `.next-check`
+(`scripts/ci/build-de-conferencia.mjs`); `npm run build` continua indo para
+`.next`, que é o que a Vercel espera.

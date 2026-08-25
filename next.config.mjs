@@ -70,6 +70,27 @@ const securityHeaders = [
 
 const nextConfig = {
   poweredByHeader: false,
+  /**
+   * Para onde o build escreve.
+   *
+   * ## Por que isto é configurável
+   *
+   * `next build` e `next dev` usam a MESMA pasta `.next` por padrão. Rodar o
+   * build com o servidor de desenvolvimento de pé sobrescreve o mapa de chunks
+   * que ele está usando, e a partir daí toda rota morre com
+   * `MODULE_NOT_FOUND` em `webpack-runtime.js` — sem que nada no código esteja
+   * errado. O sintoma é cruel: o erro aponta para o arquivo de rota, então
+   * parece defeito da última coisa que você escreveu.
+   *
+   * Aconteceu três vezes numa sessão só, porque a conferência antes de fechar
+   * qualquer mudança neste projeto inclui `npm run build` — ou seja, o próprio
+   * gate derrubava o localhost do dono.
+   *
+   * `npm run build:check` passa `BUILD_DIR=.next-check` e o build vai para
+   * outra pasta, sem encostar na do desenvolvimento. `npm run build` continua
+   * escrevendo em `.next`, que é o que a Vercel espera.
+   */
+  distDir: process.env.BUILD_DIR || '.next',
   // Cache do Router do lado do cliente, explícito. O padrão para rota
   // dinâmica mudou entre versões do Next, sem isto, voltar para uma tela do
   // dashboard recém-visitada (ex: Kanban → Leads → Kanban) refaz a busca no

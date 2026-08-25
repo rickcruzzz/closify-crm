@@ -11,6 +11,9 @@
 
 # next.js
 /.next/
+# Build de conferencia (npm run build:check). Existe para nao sobrescrever
+# o .next que o `npm run dev` esta usando — ver scripts/ci/build-de-conferencia.mjs.
+/.next-check/
 /out/
 
 # production
