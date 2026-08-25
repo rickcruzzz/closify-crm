@@ -4,7 +4,12 @@ Documento de continuidade. É lido no começo de toda sessão (referenciado no
 [CLAUDE.md](../CLAUDE.md)) para que uma conversa nova, ou outra conta, comece
 sabendo o que já foi feito, o que foi decidido e onde estão as armadilhas.
 
-**Atualizado em:** 24/08/2026, noite (arquitetura do WhatsApp auditada ponta
+**Atualizado em:** 25/08/2026, madrugada (verificação OAuth do Google
+APROVADA para `calendar.events.owned` e `gmail.send`; e o WhatsApp estava
+ativo numa empresa Free — o gate de plano faltava no webhook e em duas Server
+Actions)
+
+**Antes disso, 24/08/2026, noite** (arquitetura do WhatsApp auditada ponta
 a ponta: sessão medida em 100% de disponibilidade, envio e recebimento
 provados, e quatro buracos de perda silenciosa de mensagem fechados)
 
@@ -377,6 +382,44 @@ Metadata, `og:description` e a imagem de compartilhamento foram junto: elas
 ainda diziam a headline antiga, e são o que aparece no WhatsApp antes de
 qualquer clique. O contrato do teste E2E também.
 
+
+## Verificação OAuth do Google: APROVADA (24/08)
+
+O Google aprovou a verificação do projeto `472861929986`
+(`gen-lang-client-0317261117`) para os dois escopos pedidos:
+
+    .../auth/calendar.events.owned
+    .../auth/gmail.send
+
+Conferido: são exatamente os que `lib/integrations/google.ts` usa, e o
+`client_id` do `.env.local` é o do projeto aprovado. A tela de Branding do
+Console confirma — "Your branding has been verified and is being shown to
+users".
+
+**O que destravou foi a troca de escopo.** A submissão de 20/08 foi reprovada
+com "why narrower permissions cannot be used", e a objeção era procedente: o
+app pedia `calendar.events`, que dá acesso a eventos em TODOS os calendários,
+inclusive os que terceiros compartilharam. `criarEventoNoCalendar` escreve em
+`calendars/primary/events` e nada mais.
+
+### O que isso muda na prática
+
+Some o aviso "O Google não verificou este app" da tela de consentimento —
+aquele que obriga a clicar em "Avançado" e assusta qualquer pessoa que não seja
+desenvolvedor. Google Calendar e Gmail passam a ser conectáveis por qualquer
+cliente sem fricção nem medo.
+
+### As duas armadilhas que o próprio e-mail avisa
+
+**"You will need to submit a new verification request for access to new
+scopes, or if you make any changes to your OAuth consent screen
+configuration."** Ou seja: mexer no nome do app, no logo, no domínio, na
+política de privacidade ou acrescentar escopo **derruba a verificação** e
+exige submeter tudo de novo — com vídeo novo. Não é mudança barata.
+
+**"This verification cannot be inherited."** Um projeto novo do Google Cloud
+começa do zero, mesmo sendo da mesma conta. Se algum dia o projeto for
+recriado, a verificação não vem junto.
 
 ## Verificação OAuth do Google: o escopo era largo demais (23/08)
 

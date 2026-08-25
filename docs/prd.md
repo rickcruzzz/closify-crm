@@ -101,6 +101,19 @@ histórico.
 **Integrações (API)**
 Integração com serviços externos via API, incluindo Asaas, Resend e futuras automações.
 
+**Verificação do Google APROVADA em 24/08**, para `calendar.events.owned` e
+`gmail.send`. Some da tela de consentimento o aviso "O Google não verificou
+este app", que obrigava a clicar em "Avançado" e afastava qualquer pessoa que
+não fosse desenvolvedor. O que destravou foi trocar `calendar.events` (eventos
+em TODOS os calendários, inclusive os compartilhados por terceiros) pelo escopo
+restrito, que é o que o produto de fato usa.
+
+Duas consequências que o próprio e-mail de aprovação avisa, e que precisam ser
+respeitadas: **mudar a tela de consentimento** (nome, logo, domínio, política)
+ou **acrescentar escopo** derruba a verificação e exige submeter tudo de novo,
+com vídeo novo; e a verificação **não é herdada** por um projeto novo do Google
+Cloud, mesmo na mesma conta.
+
 Google Calendar e Gmail são conectáveis em **Configurações → Integrações**,
 OAuth próprio (`/api/integrations/google/*`), separado do OAuth de login, que
 não persiste refresh token utilizável em background. Um escopo por conexão
@@ -737,6 +750,10 @@ poder ser consultado pela condição exata do defeito — não leitura de códig
       toma 401 todo dia, em silêncio.
 - [ ] CSP em modo bloqueio — hoje está em `Report-Only`; falta decidir entre
       aceitar `'unsafe-eval'` ou isolar a dependência que o exige.
+- [x] **Verificação OAuth do Google — APROVADA em 24/08** para
+      `calendar.events.owned` e `gmail.send`. Conferido que os escopos batem
+      com `lib/integrations/google.ts` e que o `client_id` é o do projeto
+      aprovado.
 - [ ] Conta de anúncio: rodar campanha na conta que enxerga o pixel do site
       (`Rickdaskin Ads`), ou compartilhar o pixel com a outra.
 - [ ] Sandbox do Asaas nos testes de checkout — hoje o checkout é exercitado
