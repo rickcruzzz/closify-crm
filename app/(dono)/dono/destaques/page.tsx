@@ -28,6 +28,26 @@ export default async function PaginaDeDestaques() {
           eram refeitos. Primeiro o perfil funciona, depois ele é preenchido. */}
       <KitDoPerfil />
 
+      {/* A explicação vem ANTES das telas porque ela muda o que a pessoa
+          clica. Depois da grade, ela seria lida por quem já baixou errado. */}
+      <section className="border-border bg-card rounded-lg border p-4">
+        <h2 className="text-sm font-medium">Para passar as telas pro celular sem perder nada</h2>
+        <p className="text-muted-foreground mt-1 max-w-3xl text-sm text-pretty">
+          Use o <strong className="text-foreground">.zip</strong>. Enviar Story como{' '}
+          <em>foto</em> no WhatsApp estraga duas vezes: recomprime em JPEG e{' '}
+          <strong className="text-foreground">reduz a resolução</strong> — a tela é 1080×1920,
+          passa do teto do aplicativo, e chega menor. Na hora de publicar, o Instagram amplia de
+          volta e o texto sai borrado. O modo &ldquo;HD&rdquo; diminui o estrago; não o elimina.
+        </p>
+        <p className="text-muted-foreground mt-2 max-w-3xl text-sm text-pretty">
+          Arquivo enviado como <strong className="text-foreground">documento</strong> chega
+          intacto, e um .zip não pode ser mandado como foto — o WhatsApp não sabe abri-lo, então
+          só oferece o caminho de documento. É por isso que a saída é um arquivo em vez de um
+          aviso: instrução depende de você lembrar; formato, não. Os arquivos dentro dele já vêm
+          numerados na ordem de subir.
+        </p>
+      </section>
+
       <DestaquesDoInstagram destaques={destaques} />
 
       {/*

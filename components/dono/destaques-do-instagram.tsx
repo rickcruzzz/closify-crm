@@ -1,7 +1,7 @@
 'use client'
 
 import * as React from 'react'
-import { Download, DownloadCloud } from 'lucide-react'
+import { Download, DownloadCloud, FileArchive } from 'lucide-react'
 import { toast } from 'sonner'
 
 import { Badge } from '@/components/ui/badge'
@@ -44,6 +44,32 @@ export function DestaquesDoInstagram({ destaques }: { destaques: Destaque[] }) {
   )
 }
 
+/**
+ * O caminho que sobrevive ao WhatsApp.
+ *
+ * Mandar as telas como FOTO degrada duas vezes: recomprime em JPEG e reduz a
+ * resolução de imagem acima do teto do aplicativo. O Story é 1080×1920, chega
+ * menor do lado de lá, o Instagram amplia de volta na hora de publicar, e o
+ * texto sai borrado. Não há ajuste que desligue isso — "HD" reduz o estrago e
+ * ainda depende de alguém lembrar de ligá-lo a cada envio.
+ *
+ * Documento o WhatsApp não toca. E `.zip` **não pode** ser enviado como foto:
+ * o aplicativo não sabe abri-lo, então só oferece o caminho de documento. É
+ * por isso que a saída é um arquivo, e não um aviso na tela: instrução depende
+ * de alguém lembrar; formato, não.
+ */
+function BaixarZipParaWhatsapp({ destaque }: { destaque: Destaque }) {
+  return (
+    <a
+      href={`/api/dono/destaque-zip/${encodeURIComponent(destaque.id)}`}
+      className={cn(buttonVariants({ variant: 'outline', size: 'sm' }), 'h-8 gap-1.5 text-xs')}
+    >
+      <FileArchive aria-hidden className="size-3.5" />
+      .zip para WhatsApp
+    </a>
+  )
+}
+
 function BlocoDoDestaque({ destaque }: { destaque: Destaque }) {
   return (
     <section className="flex flex-col gap-4">
@@ -52,6 +78,7 @@ function BlocoDoDestaque({ destaque }: { destaque: Destaque }) {
           <h2 className="text-lg font-semibold tracking-tight">{destaque.nome}</h2>
           <Badge variant="secondary">{destaque.telas.length} telas</Badge>
           <BaixarTudo destaque={destaque} />
+          <BaixarZipParaWhatsapp destaque={destaque} />
         </div>
         <p className="text-muted-foreground max-w-2xl text-sm text-pretty">{destaque.resumo}</p>
       </header>
