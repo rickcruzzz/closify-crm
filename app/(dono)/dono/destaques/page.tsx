@@ -1,4 +1,5 @@
 import { DestaquesDoInstagram } from '@/components/dono/destaques-do-instagram'
+import { KitDoPerfil } from '@/components/dono/kit-do-perfil'
 import { listarDestaques } from '@/lib/dono/destaques-queries'
 import { exigirAmbienteLocal } from '@/lib/dono/somente-local'
 
@@ -20,6 +21,12 @@ export default async function PaginaDeDestaques() {
           postados, e não dá para reordenar depois sem apagar e repostar.
         </p>
       </header>
+
+      {/* O kit vem ANTES das telas de propósito. Story em destaque sem bio
+          nem link correto é arte bonita levando a lugar nenhum — e a bio foi
+          justamente o que ficou meses desatualizada enquanto os criativos
+          eram refeitos. Primeiro o perfil funciona, depois ele é preenchido. */}
+      <KitDoPerfil />
 
       <DestaquesDoInstagram destaques={destaques} />
 
