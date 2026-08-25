@@ -11,6 +11,10 @@
     {
       "path": "/api/cron/limpar-eventos",
       "schedule": "0 6 * * *"
+    },
+    {
+      "path": "/api/cron/vigiar-whatsapp",
+      "schedule": "0 * * * *"
     }
   ]
 }

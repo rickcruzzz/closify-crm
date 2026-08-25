@@ -1,0 +1,37 @@
+# Timer do systemd para o vigia do Evolution.
+#
+# Instalação na VPS (as duas seções vão em arquivos separados):
+#
+#   /etc/systemd/system/vigiar-evolution.service   <- seção [Unit] + [Service]
+#   /etc/systemd/system/vigiar-evolution.timer     <- seção [Unit] + [Timer] + [Install]
+#
+#   systemctl daemon-reload
+#   systemctl enable --now vigiar-evolution.timer
+#   systemctl list-timers vigiar-evolution
+#
+# Os registros ficam em `journalctl -u vigiar-evolution -f`.
+
+# ============================ vigiar-evolution.service
+[Unit]
+Description=Reinicia o Evolution quando o laco de eventos morre
+After=docker.service
+Requires=docker.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/vigiar-evolution.sh
+
+# ============================ vigiar-evolution.timer
+# [Unit]
+# Description=Roda o vigia do Evolution a cada 5 minutos
+#
+# [Timer]
+# # 5 minutos e o suficiente: o limite de silencio do script e 15 minutos,
+# # entao a queda dura no maximo 20 antes do reinicio. Rodar mais amiude nao
+# # detecta mais rapido, so gasta ciclo.
+# OnBootSec=2min
+# OnUnitActiveSec=5min
+# AccuracySec=30s
+#
+# [Install]
+# WantedBy=timers.target
