@@ -129,41 +129,41 @@
     {
       "id": "perguntas",
       "nome": "Perguntas",
-      "resumo": "As objeções que travam a venda, com a MESMA resposta da FAQ da landing. É o destaque que alguém abre quando já gostou e está procurando o motivo para não assinar.",
+      "resumo": "As objeções que travam a venda, respondidas pelo que a pessoa GANHA em vez do que ela deixa de perder. É o destaque que alguém abre quando já gostou e está procurando o motivo para não assinar.",
       "telas": [
         {
           "ordem": 1,
           "arquivo": "perguntas-1-gratis.png",
           "arquivo4k": "perguntas-1-gratis@4k.png",
-          "titulo": "Nada é cobrado sem você escolher.",
+          "titulo": "Você começa com tudo ligado.",
           "layout": "declaracao"
         },
         {
           "ordem": 2,
           "arquivo": "perguntas-2-instalar.png",
           "arquivo4k": "perguntas-2-instalar@4k.png",
-          "titulo": "Não. Abre no navegador.",
+          "titulo": "Abre no celular, onde você já vende.",
           "layout": "declaracao"
         },
         {
           "ordem": 3,
           "arquivo": "perguntas-3-importar.png",
           "arquivo4k": "perguntas-3-importar@4k.png",
-          "titulo": "Traga sua lista em um arquivo",
+          "titulo": "Sua carteira inteira, num arquivo só",
           "layout": "lista"
         },
         {
           "ordem": 4,
           "arquivo": "perguntas-4-isolamento.png",
           "arquivo4k": "perguntas-4-isolamento@4k.png",
-          "titulo": "Cada empresa só enxerga o que é dela.",
+          "titulo": "Seus clientes ficam com a empresa.",
           "layout": "declaracao"
         },
         {
           "ordem": 5,
           "arquivo": "perguntas-5-cancelar.png",
           "arquivo4k": "perguntas-5-cancelar@4k.png",
-          "titulo": "Cancele quando quiser.",
+          "titulo": "Você sai com tudo o que colocou.",
           "layout": "declaracao"
         }
       ]

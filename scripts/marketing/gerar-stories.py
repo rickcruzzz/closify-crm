@@ -980,53 +980,76 @@ def destaque_dicas():
 
 def destaque_perguntas():
     """
-    As objeções que travam a venda, respondidas antes de alguém precisar
-    perguntar.
+    As objeções que travam a venda, respondidas pelo GANHO.
 
-    ## Por que estas cinco, e por que exatamente estas palavras
+    ## O defeito da primeira versão, e ele é de produto, não de texto
 
-    Não foram inventadas aqui: são as perguntas da FAQ da landing
-    (`components/landing/faq-section.tsx`), que já passaram pelo PRD de copy.
-    Repetir a mesma resposta nos dois lugares é o que impede a divergência que
-    este projeto já pagou em outro canal — a bio do Instagram ficou meses
-    vendendo uma oferta que o produto não tinha mais.
+    As cinco manchetes eram negações: "Nada é cobrado", "Não. Abre no
+    navegador", "Cada empresa só enxerga o que é dela", "Cancele quando
+    quiser". Lidas em sequência, ensinavam que **nada de ruim acontece** — e
+    nada de bom. É a armadilha clássica de FAQ: trata objeção e nunca vende.
 
-    A de pagamento ficou de fora de propósito: ela já é a tela 5 do destaque
-    "Planos", e um destaque que repete outro ensina a pular os dois.
+    A correção não é adjetivo. É trocar o que cada CAMADA carrega:
 
-    A ordem é a da desconfiança: primeiro o dinheiro (é grátis mesmo?), depois
-    o esforço (preciso instalar? consigo trazer o que já tenho?), depois o
-    risco (meus dados vazam? consigo sair?). Responder "cancele quando quiser"
-    antes de dizer que não cobra cartão é responder uma pergunta que ninguém
-    fez ainda.
+      a pergunta (cápsula)  continua sendo a objeção, porque é ela que faz
+                            alguém abrir o destaque
+      a manchete            passa a carregar o GANHO, não a ausência de perda
+      o corpo               continua com o fato honesto que remove a objeção
+
+    Nenhuma promessa nova entrou. "Você sai com tudo o que colocou" e "Cancele
+    quando quiser" descrevem exatamente a mesma regra; a primeira diz o que a
+    pessoa ganha, a segunda o que ela deixa de perder.
+
+    ## Por que a de segurança mudou de ângulo
+
+    A pergunta continua sendo "e a segurança?", e o isolamento entre empresas
+    continua no corpo. Mas a manchete passou a ser a dor que a pesquisa deste
+    projeto achou como a mais forte da PME brasileira: **o vendedor sai e leva
+    a carteira junto**, porque o histórico mora no celular dele.
+
+    É verdade conferível no código, não retórica: `activities` pertence ao
+    workspace e guarda `author_id`. A empresa é dona do histórico e sabe quem
+    atendeu, independentemente de quem saiu.
+
+    Esquecer uma venda dói uma vez; perder a carteira não tem conserto. Medo
+    move compra com muito menos objeção de preço do que conveniência.
+
+    ## A ordem, e o arco que ela desenha
+
+    começar -> usar onde você já está -> trazer o que já é seu -> manter o que
+    é seu -> sair com tudo. Cada tela entrega uma coisa a mais, e a última
+    fecha no CTA.
+
+    A de pagamento fica fora de propósito: já é a tela 5 de Planos, e destaque
+    que repete outro ensina a pular os dois.
     """
     abrir_destaque(
         "perguntas", "Perguntas",
-        "As objeções que travam a venda, com a MESMA resposta da FAQ da "
-        "landing. É o destaque que alguém abre quando já gostou e está "
-        "procurando o motivo para não assinar.",
+        "As objeções que travam a venda, respondidas pelo que a pessoa GANHA "
+        "em vez do que ela deixa de perder. É o destaque que alguém abre "
+        "quando já gostou e está procurando o motivo para não assinar.",
     )
 
     tela_declaracao(
         "É grátis mesmo?",
-        "Nada é cobrado sem você escolher.",
-        "Não pedimos cartão para começar. São 7 dias com o Pro inteiro e, "
-        "depois, ou você assina, ou a conta passa para o plano grátis, que "
-        "não expira. Seus dados continuam lá nos dois casos.",
+        "Você começa com tudo ligado.",
+        "Sete dias com o Pro inteiro, sem pedir cartão. Depois, ou você "
+        "assina, ou a conta passa para o plano grátis, que não expira. Seus "
+        "dados continuam lá nos dois casos.",
         "perguntas-1-gratis", destaque="Sem cartão para começar.", tam=74,
     )
 
     tela_declaracao(
         "Preciso instalar?",
-        "Não. Abre no navegador.",
-        "Funciona no computador e no celular, sem baixar nada e sem instalar "
-        "nada. Você cria a conta e já começa a usar.",
-        "perguntas-2-instalar", tam=76,
+        "Abre no celular, onde você já vende.",
+        "Nada para baixar e nada para instalar. Você cria a conta e, no mesmo "
+        "minuto, já cadastra o primeiro cliente.",
+        "perguntas-2-instalar", tam=64,
     )
 
     tela_lista(
         "E o que eu já tenho?",
-        "Traga sua lista em um arquivo",
+        "Sua carteira inteira, num arquivo só",
         [
             ("Exporte sua planilha como .csv", ".csv"),
             ("Colunas: Nome, Telefone, E-mail e Valor", "Nome, Telefone, E-mail e Valor"),
@@ -1038,20 +1061,20 @@ def destaque_perguntas():
 
     tela_declaracao(
         "E a segurança?",
-        "Cada empresa só enxerga o que é dela.",
-        "É regra no banco de dados, não uma tela que alguém pode esquecer de "
-        "conferir. Nem por engano, nem por querer, o dado de uma empresa "
-        "aparece para outra.",
-        "perguntas-4-isolamento", tam=70,
+        "Seus clientes ficam com a empresa.",
+        "O histórico fica na conta, não no aparelho de quem atendeu. E cada "
+        "empresa só enxerga os próprios dados, por regra no banco, não por "
+        "tela que alguém pode esquecer de conferir.",
+        "perguntas-4-isolamento", tam=68,
     )
 
     tela_declaracao(
         "E se eu quiser sair?",
-        "Cancele quando quiser.",
-        "Sem multa e sem falar com ninguém. A conta volta para o plano grátis "
-        "e seus dados continuam lá.",
+        "Você sai com tudo o que colocou.",
+        "Sem multa e sem falar com ninguém. A conta volta para o plano "
+        "grátis, e contatos, negócios e histórico continuam lá.",
         "perguntas-5-cancelar",
-        destaque="7 dias com tudo liberado, sem cartão.", tam=78,
+        destaque="7 dias com tudo liberado, sem cartão.", tam=72,
     )
 
 
