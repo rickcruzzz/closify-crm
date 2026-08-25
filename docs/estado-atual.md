@@ -4,7 +4,11 @@ Documento de continuidade. É lido no começo de toda sessão (referenciado no
 [CLAUDE.md](../CLAUDE.md)) para que uma conversa nova, ou outra conta, comece
 sabendo o que já foi feito, o que foi decidido e onde estão as armadilhas.
 
-**Atualizado em:** 25/08/2026, madrugada (a Central passou a mostrar quem
+**Atualizado em:** 25/08/2026, tarde (o CNPJ que a landing exibia como prova
+de confiança está BAIXADO desde 08/08; e o Business da Meta nunca foi
+submetido, apesar de este documento afirmar as duas coisas ao contrário)
+
+**Antes disso, 25/08/2026, madrugada** (a Central passou a mostrar quem
 está decidindo AGORA; a API de anúncio da Meta ligada e a tela de Anúncio viva
 pela primeira vez; e a bio do Instagram vendia a oferta que a 0051 aposentou,
 para 3.555 seguidores)
@@ -33,6 +37,121 @@ minutos seguidos, contra 26% da medição anterior)
 **Antes disso, 23/08/2026** (landing auditada: promessa falsa no hero, logo quebrado no telefone, banner de cookies cobrindo o CTA, e prints mostrando o jargão que a própria página baniu; PRD, schema e grafo realinhados)
 
 **Antes disso, 22/08/2026** (funções rodavam em Washington DC com o banco em São Paulo, corrigido na config do projeto e medido: /dashboard 1221ms → 400ms; modo claro sem escada de superfícies, refeito; jargão remanescente e telas de erro; WhatsApp sem QR por Postgres esgotado na VPS; migration 0049 provada desnecessária e removida)
+
+## O CNPJ da vitrine está baixado, e o Business nunca foi submetido (25/08)
+
+Pedido: verificar o caminho de Tech Provider da Meta para conseguir análise.
+A investigação parou antes disso, num degrau que ninguém tinha conferido.
+
+### Os dois fatos, medidos
+
+`GET /v23.0/{business-id}` com o `META_ADS_TOKEN`:
+
+    Rickdaskin   verification_status: pending_submission
+
+**`pending_submission` significa que a verificação nunca foi enviada.** Este
+documento afirmava "Meta Business verificado" desde a entrada do MEI.
+
+E o CNPJ, consultado em **duas fontes independentes** (BrasilAPI e
+minhareceita.org, as duas espelhando a Receita):
+
+    64.543.748/0001-13
+    situação   BAIXADA desde 08/08/2026
+    motivo     1 — EXTINÇÃO POR ENCERRAMENTO, LIQUIDAÇÃO VOLUNTÁRIA
+    MEI        excluído em 08/08/2026
+
+Baixa a pedido do titular, confirmada por ele. Aberto em 16/01, encerrado em
+08/08: sete meses.
+
+### Por que isso é mais grave que uma pendência de verificação
+
+O CNPJ aparecia em **seis lugares**, e o pior deles é a seção
+**"O que a gente garante por escrito"** da landing, cujo texto de abertura diz
+*"em vez de pedir confiança, mostramos onde ela pode ser conferida"*. A página
+convidava a conferir, e a consulta desmentia a página.
+
+Estava também no rodapé da landing, no rodapé de todo e-mail transacional, nas
+duas páginas legais e em dois avisos de fatura.
+
+**Nenhum `tsc`, `lint` ou `test` consulta a Receita.** Mesma classe dos prints
+que mostravam o jargão banido e da bio do Instagram vendendo a oferta
+aposentada: dado externo que não acompanha mudança de estado, e ninguém
+descobre porque nada olha.
+
+### Por que nenhuma mudança de código resolve
+
+A verificação de negócio da Meta bate o número contra a Receita. CNPJ baixado
+reprova, e não existe caminho pelo site. Foi por isso que a tentativa anterior
+do dono falhou.
+
+Três coisas foram confirmadas antes de decidir:
+
+1. **Baixa de MEI é irreversível.** Não reativa, não reabre com o mesmo número.
+   Inscrição nova sai com CNPJ diferente, então `64.543.748/0001-13` está morto
+   para sempre.
+2. **Software não cabe em MEI.** O CNAE 6202-3/00 (desenvolvimento e
+   licenciamento de programas customizáveis) está fora da lista permitida. O
+   MEI antigo estava em "Reparação e manutenção de computadores", que é
+   permitido e **não cobre vender assinatura de software** — foi por isso que
+   passou.
+3. **Débito do MEI encerrado migra para o CPF** e não some com a abertura nova.
+
+**Decisão do dono: abrir ME na Contabilizei**, CNAE 6202-3/00, Simples
+Nacional. MEI novo foi descartado com motivo: daria um número que reprovaria
+pelo mesmo defeito mais adiante.
+
+### O que mudou no código
+
+`CONTROLADOR.cnpj` e `CONTROLADOR.endereco` viraram `string | null`, e duas
+funções puras decidem o texto (`lib/legal.ts`, 9 testes):
+
+| função | onde | sem inscrição |
+|---|---|---|
+| `identificacaoDoControlador` | páginas legais, avisos de fatura | só a razão social |
+| `assinaturaPublica` | rodapé, seção de confiança, e-mails | só o nome fantasia |
+
+**O responsável não some junto com a inscrição.** O art. 9º, I da LGPD pede
+identificação clara de quem responde pelo dado; devolver string vazia deixaria
+a Política de Privacidade sem controlador nomeado, que é pior que a ausência do
+número. Some a inscrição, fica o nome.
+
+Um teste trava especificamente que a palavra "CNPJ" nunca é escrita sem um
+número ao lado — o defeito literal seria `CNPJ null` na tela — e outro trava
+que o separador não vaza (`© 2026 Velo Funil ·` com o ponto solto no fim).
+
+**Preencher os dois campos reacende tudo sozinho.** Rodapé, seção de confiança,
+e-mails e as duas páginas legais voltam a citar o número sem ninguém precisar
+reabrir cada componente. É a única edição necessária quando o CNPJ novo sair.
+
+`CONTROLADOR.endereco` nasce junto e vazio porque a verificação da Meta compara
+o endereço do formulário com o publicado no site, e endereço sem inscrição não
+identifica ninguém — publicá-lo sozinho exporia a casa do titular sem entregar
+nada. Um teste trava que os dois andam juntos.
+
+O número segue em `lib/documento-br.test.ts` como exemplo de dígito verificador
+válido. Isso continua verdadeiro: o algoritmo não sabe nem precisa saber se a
+inscrição está ativa.
+
+### A ordem que a Meta exige, para não tentar fora de hora
+
+1. CNPJ ativo na Receita
+2. Site exibindo **razão social, endereço e telefone** iguais aos da Receita
+   (hoje o site tem o telefone e mais nada; o resto sai da mesma `lib/legal.ts`)
+3. Verificação do negócio no Business Manager, 1 a 5 dias úteis
+4. App do tipo Business com o produto WhatsApp, número dedicado numa WABA
+5. App Review de `whatsapp_business_messaging` + `whatsapp_business_management`
+6. Tech Provider, só se for atender WhatsApp de vários clientes
+
+Os passos 1 a 5 valem mesmo para um número só. O 6 é o que vira SaaS, e cada
+cliente faria a própria verificação de negócio — essa fricção é o motivo de a
+maioria dos CRMs pequenos ficar no não oficial, e é o que sustenta a decisão de
+24/08 de blindar o Evolution em vez de migrar.
+
+### Fica em aberto, e não é código
+
+A conta do Asaas foi cadastrada com o CNPJ baixado, e é por ela que o Pix de
+R$ 49 entrou. Se o Asaas revalidar o cadastro, a cobrança para. Não foi medido
+nesta rodada.
 
 ## A Central sabia medir e operar, não sabia vender (25/08)
 
@@ -1957,10 +2076,12 @@ sessão.
       produção apontando pro projeto novo), SMTP customizado corrigido
       (usuário `resend`, não `rezende`), Site URL/Redirect URLs corrigidos,
       reset de senha testado ponta a ponta com sucesso.
-- [x] **MEI baixado.** Confirmado pelo dono nos canais oficiais (gov.br +
-      Meta Business Manager), CNPJ ativo, Meta Business verificado. Tinha
-      aberto a trava do WhatsApp Cloud API, removida em 13/08 (decisão de
-      produto, sem relação com o MEI em si).
+- [ ] **CNPJ novo (ME, CNAE 6202-3/00).** Esta entrada dizia "CNPJ ativo, Meta
+      Business verificado". As duas afirmações estavam **erradas**, medido em
+      25/08 e detalhado em seção própria: o `64.543.748/0001-13` está BAIXADO
+      desde 08/08 e o business `Rickdaskin` está `pending_submission`. Baixa de
+      MEI não tem volta, e software não cabe em MEI. Decisão do dono: abrir ME
+      na Contabilizei. Enquanto não sair, o site não exibe CNPJ nenhum.
 - [ ] **Cobrança da Fani Mayara** (`fanimayara67@gmail.com`): usuária real
       (logou em 11/08, 1 lead), plano `free`, começou o checkout e nunca pagou.
       Tem 2 cobranças de R$ 49 em aberto que vão virar aviso de vencimento.

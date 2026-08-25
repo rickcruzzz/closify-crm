@@ -1,4 +1,4 @@
-import { CONTROLADOR } from '@/lib/legal'
+import { assinaturaPublica, CONTROLADOR } from '@/lib/legal'
 
 /**
  * Layout base de todos os e-mails do Velo Funil.
@@ -217,7 +217,7 @@ function rodape(): string {
 
   return `<tr><td style="padding:0 40px;"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr><td height="1" bgcolor="${BORDA}" style="height:1px;line-height:1px;font-size:0;background-color:${BORDA};">&nbsp;</td></tr></table></td></tr>
 <tr><td style="padding:20px 40px 32px;${estilo}">
-<div style="${estilo}">${escapeHtml(CONTROLADOR.nomeFantasia)} · CNPJ ${escapeHtml(CONTROLADOR.cnpj)}</div>
+<div style="${estilo}">${escapeHtml(assinaturaPublica())}</div>
 <div style="${estilo}">Precisa de ajuda? Escreva para <a href="mailto:${escapeAttr(CONTROLADOR.email)}" style="${link}">${escapeHtml(CONTROLADOR.email)}</a></div>
 <div style="${estilo}"><a href="${escapeAttr(CONTROLADOR.site)}" style="${link}">${escapeHtml(CONTROLADOR.site.replace(/^https?:\/\//, ''))}</a></div>
 </td></tr>`

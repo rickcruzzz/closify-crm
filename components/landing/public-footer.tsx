@@ -3,7 +3,7 @@ import { MessageCircle } from 'lucide-react'
 
 import { Logo } from '@/components/branding/logo'
 import { SuporteEmailMenu } from '@/components/landing/suporte-email-menu'
-import { CONTROLADOR } from '@/lib/legal'
+import { assinaturaPublica, CONTROLADOR } from '@/lib/legal'
 
 // O rodapé repetia os links do menu do topo (Funcionalidades, Planos, Entrar,
 // Começar grátis), que já estão visíveis na navbar fixa. Espaço de rodapé
@@ -64,8 +64,11 @@ export function PublicFooter() {
               identificar o controlador, e nos avisos de fatura, onde avisa o
               nome que vai aparecer no extrato do cartão — os dois por
               necessidade, não por escolha de marca. */}
+          {/* `assinaturaPublica()` some com a parte do CNPJ enquanto não houver
+              inscrição ativa (25/08). Sem isso o rodapé exibiria `CNPJ null`,
+              ou pior, um número baixado que qualquer consulta desmente. */}
           <span className="text-muted-foreground text-sm text-balance">
-            © {new Date().getFullYear()} Velo Funil · CNPJ {CONTROLADOR.cnpj}
+            © {new Date().getFullYear()} {assinaturaPublica()}
           </span>
         </div>
 

@@ -1,6 +1,6 @@
 import { Building2, CreditCard, DoorOpen, Lock, MapPin, type LucideIcon } from 'lucide-react'
 
-import { CONTROLADOR } from '@/lib/legal'
+import { assinaturaPublica, CONTROLADOR } from '@/lib/legal'
 import { RevealOnScroll } from '@/components/landing/reveal-on-scroll'
 import { cn } from '@/lib/utils'
 
@@ -151,8 +151,12 @@ export function ConfiancaSection() {
               coisa é redundância, não profissionalismo — nenhum concorrente
               auditado (Agendor, Pipedrive, Attio) expõe telefone cru na
               página, todos usam texto de link ou botão. */}
+          {/* Enquanto não houver inscrição ativa, `assinaturaPublica` devolve
+              só o nome (25/08). Exibir um CNPJ baixado é pior aqui do que em
+              qualquer outro lugar da página: esta seção convida a conferir, e
+              a consulta responde BAIXADA. */}
           <p>
-            {CONTROLADOR.nomeFantasia}, CNPJ {CONTROLADOR.cnpj}.{' '}
+            {assinaturaPublica(CONTROLADOR, ', ')}.{' '}
             <a
               href={`https://wa.me/${CONTROLADOR.whatsapp.numero}`}
               target="_blank"

@@ -22,7 +22,7 @@ import { PagarDialog } from '@/components/settings/pagar-dialog'
 import { checkoutSchema, type CheckoutValues } from '@/lib/validations/billing'
 import { PRO_PLAN_PRICE } from '@/lib/plans'
 import { formatarCpfCnpj } from '@/lib/documento-br'
-import { CONTROLADOR } from '@/lib/legal'
+import { CONTROLADOR, identificacaoDoControlador } from '@/lib/legal'
 import { cn } from '@/lib/utils'
 
 /**
@@ -157,8 +157,8 @@ export function SubscribeButton({
                 disso estranha ver um nome de pessoa física na cobrança e
                 desiste de pagar, achando que errou de site. */}
             <p className="text-muted-foreground text-xs">
-              A cobrança é emitida por {CONTROLADOR.razaoSocial} (CNPJ{' '}
-              {CONTROLADOR.cnpj}), razão social do {CONTROLADOR.nomeFantasia}.
+              A cobrança é emitida por {identificacaoDoControlador()}, razão social do{' '}
+              {CONTROLADOR.nomeFantasia}.
             </p>
 
             <DialogFooter>

@@ -1,7 +1,7 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 
-import { ATUALIZADO_EM, CONTROLADOR } from '@/lib/legal'
+import { ATUALIZADO_EM, CONTROLADOR, identificacaoDoControlador } from '@/lib/legal'
 import { FREE_LEAD_LIMIT, FREE_MEMBER_LIMIT, PRO_PLAN_PRICE } from '@/lib/plans'
 import {
   LegalBackLink,
@@ -32,8 +32,8 @@ export default function TermosPage() {
           representá-la. Caso não concorde, não utilize a plataforma.
         </LegalP>
         <LegalP>
-          Contratante: {CONTROLADOR.razaoSocial}, CNPJ {CONTROLADOR.cnpj}, sob o nome
-          fantasia {CONTROLADOR.nomeFantasia}. Contato:{' '}
+          Contratante: {identificacaoDoControlador()}, sob o nome fantasia{' '}
+          {CONTROLADOR.nomeFantasia}. Contato:{' '}
           <a
             href={`mailto:${CONTROLADOR.email}`}
             className="text-foreground underline underline-offset-4"

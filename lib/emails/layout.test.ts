@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { CONTROLADOR } from '@/lib/legal'
+import { assinaturaPublica, CONTROLADOR } from '@/lib/legal'
 import {
   escapeAttr,
   escapeHtml,
@@ -131,9 +131,19 @@ describe('renderEmail', () => {
 
   it('monta o rodapé a partir do CONTROLADOR, sem literal duplicada', () => {
     const html = renderEmail(base)
-    expect(html).toContain(CONTROLADOR.cnpj)
+    // `assinaturaPublica` no lugar de `CONTROLADOR.cnpj` direto (25/08): sem
+    // inscrição ativa o campo é nulo, e afirmar aqui que o número aparece
+    // travaria o teste num estado que o projeto não tem.
+    expect(html).toContain(assinaturaPublica())
     expect(html).toContain(CONTROLADOR.email)
     expect(html).toContain(CONTROLADOR.nomeFantasia)
+  })
+
+  it('não escreve CNPJ no rodapé enquanto não houver inscrição ativa', () => {
+    // O e-mail transacional é o lugar mais fácil de esquecer: ninguém abre um
+    // para conferir depois de mexer na landing.
+    if (CONTROLADOR.cnpj) return
+    expect(renderEmail(base)).not.toContain('CNPJ')
   })
 
   // Os links do rodapé (mailto e site) existem sempre, o que precisa sumir

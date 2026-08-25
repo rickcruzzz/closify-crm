@@ -4,6 +4,7 @@ import Link from 'next/link'
 import {
   ATUALIZADO_EM,
   CONTROLADOR,
+  identificacaoDoControlador,
   PRAZO_RESPOSTA_TITULAR_DIAS,
   SUBOPERADORES,
 } from '@/lib/legal'
@@ -32,10 +33,9 @@ export default function PrivacidadePage() {
 
       <LegalSection titulo="1. Quem é o controlador">
         <LegalP>
-          {CONTROLADOR.razaoSocial}, inscrita no CNPJ sob o nº {CONTROLADOR.cnpj},
-          operando sob o nome fantasia {CONTROLADOR.nomeFantasia}, é a controladora dos
-          dados pessoais tratados nesta plataforma, nos termos do art. 5º, VI da Lei
-          nº 13.709/2018 (LGPD).
+          {identificacaoDoControlador()}, operando sob o nome fantasia{' '}
+          {CONTROLADOR.nomeFantasia}, é a controladora dos dados pessoais tratados nesta
+          plataforma, nos termos do art. 5º, VI da Lei nº 13.709/2018 (LGPD).
         </LegalP>
         <LegalP>
           Contato do encarregado pelo tratamento de dados (DPO):{' '}
