@@ -1039,12 +1039,22 @@ def destaque_perguntas():
         "perguntas-1-gratis", destaque="Sem cartão para começar.", tam=74,
     )
 
+    # Sem dizer em qual aparelho é melhor, de propósito. A versão anterior
+    # dizia "abre no celular, onde você já vende": verdade sobre o canal de
+    # venda, mas empurrava para a experiência PIOR — arrastar cartão no funil,
+    # ler tabela e comparar gráfico rendem mais no computador. Uma peça de
+    # venda que direciona para o lado fraco do produto trabalha contra ele.
+    #
+    # O ganho aqui é TEMPO ATÉ COMEÇAR, que independe de aparelho, e a objeção
+    # real da PME não é "instalar": é o medo de projeto de implantação, com
+    # semanas de espera e técnico marcando visita.
     tela_declaracao(
         "Preciso instalar?",
-        "Abre no celular, onde você já vende.",
-        "Nada para baixar e nada para instalar. Você cria a conta e, no mesmo "
-        "minuto, já cadastra o primeiro cliente.",
-        "perguntas-2-instalar", tam=64,
+        "Você cria a conta e já começa.",
+        "Funciona pelo navegador, em qualquer aparelho, sem baixar e sem "
+        "instalar nada. Não existe projeto de implantação nem espera por "
+        "técnico.",
+        "perguntas-2-instalar", tam=72,
     )
 
     tela_lista(
