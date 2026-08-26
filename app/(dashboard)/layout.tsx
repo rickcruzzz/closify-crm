@@ -9,6 +9,7 @@ import { situacaoDoPlanoDaEmpresaAtiva } from '@/lib/plans/trial-queries'
 import { AvisoDeTrial } from '@/components/layout/aviso-de-trial'
 import { lerEstadoDoOnboarding, precisaDeBoasVindas } from '@/lib/onboarding/estado'
 import { contarTarefasDoDiaDoUsuario } from '@/lib/tasks/queries'
+import { contarConversasEsperandoDoUsuario } from '@/lib/conversas/queries'
 
 // Tudo aqui dentro é área logada: nada deve ser indexado. As páginas filhas
 // só sobrescrevem o title; este robots vale para todas.
@@ -31,11 +32,21 @@ export default async function DashboardLayout({
   // rede a TODA navegação — precisamente o defeito que já custou caro aqui e
   // está registrado em `docs/estado-atual.md` (196ms por consulta, vezes 8-10
   // por navegação). Um badge não vale isso.
-  const [{ user, workspaceId, workspaces }, estadoOnboarding, tarefasDoDia, situacaoDoPlano] =
+  const [
+    { user, workspaceId, workspaces },
+    estadoOnboarding,
+    tarefasDoDia,
+    conversasEsperando,
+    situacaoDoPlano,
+  ] =
     await Promise.all([
       getCurrentUserAndWorkspace(),
       lerEstadoDoOnboarding(),
       contarTarefasDoDiaDoUsuario(),
+      // Mesma onda, mesmo motivo: `count: exact, head: true`, o banco devolve
+      // o numero e nao as linhas. Contador que custa uma ida de rede por
+      // navegacao nao vale o que informa.
+      contarConversasEsperandoDoUsuario(),
       // Entra na MESMA onda pelo mesmo motivo da contagem de tarefas: depende
       // do `workspaceId`, mas obtém-no de `getCurrentUserAndWorkspace()`, que é
       // `cache()` — a segunda chamada devolve a promise da primeira, sem nova
@@ -84,6 +95,7 @@ export default async function DashboardLayout({
           activeWorkspaceId={workspaceId}
           currentUser={currentUser}
           tarefasDoDia={tarefasDoDia}
+            conversasEsperando={conversasEsperando}
         />
         {/* `overflow-x-hidden` explícito ao lado do `overflow-y-auto`: pela
             própria especificação CSS, `overflow-y` diferente de `visible`
@@ -97,6 +109,7 @@ export default async function DashboardLayout({
             activeWorkspaceId={workspaceId}
             currentUser={currentUser}
             tarefasDoDia={tarefasDoDia}
+            conversasEsperando={conversasEsperando}
           />
           {/* Entre a barra e o conteúdo: não empurra a navegação para baixo e
               aparece antes de qualquer tela do produto. Só renderiza algo nos

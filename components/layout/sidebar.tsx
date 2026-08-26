@@ -7,11 +7,13 @@ export function Sidebar({
   activeWorkspaceId,
   currentUser,
   tarefasDoDia,
+  conversasEsperando,
 }: {
   workspaces: WorkspaceSummary[]
   activeWorkspaceId: string
   currentUser: CurrentUser
   tarefasDoDia: number
+  conversasEsperando: number
 }) {
   return (
     <aside className="bg-sidebar border-sidebar-border hidden w-64 shrink-0 border-r md:block">
@@ -20,6 +22,7 @@ export function Sidebar({
         activeWorkspaceId={activeWorkspaceId}
         currentUser={currentUser}
         tarefasDoDia={tarefasDoDia}
+        conversasEsperando={conversasEsperando}
       />
     </aside>
   )

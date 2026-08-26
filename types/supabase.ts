@@ -436,6 +436,98 @@ export type Database = {
         Update: Record<string, never>
         Relationships: []
       }
+      // Uma conversa por contato por canal (0056). `respondida_em` nulo é o
+      // estado que ordena a tela inteira: significa ESPERANDO RESPOSTA.
+      //
+      // Coluna e não subconsulta em `mensagens`: a lista é lida a cada
+      // carregamento da tela mais aberta do produto.
+      conversas: {
+        Row: {
+          id: string
+          workspace_id: string
+          lead_id: string
+          canal: string
+          ultimo_recebido_em: string | null
+          ultimo_enviado_em: string | null
+          /** `null` = ninguém respondeu ainda. É o que alimenta o relógio. */
+          respondida_em: string | null
+          dono_id: string | null
+          assumida_em: string | null
+          arquivada_em: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          workspace_id: string
+          lead_id: string
+          canal?: string
+          ultimo_recebido_em?: string | null
+          ultimo_enviado_em?: string | null
+          respondida_em?: string | null
+          dono_id?: string | null
+          assumida_em?: string | null
+          arquivada_em?: string | null
+          created_at?: string
+        }
+        Update: {
+          ultimo_recebido_em?: string | null
+          ultimo_enviado_em?: string | null
+          respondida_em?: string | null
+          dono_id?: string | null
+          assumida_em?: string | null
+          arquivada_em?: string | null
+        }
+        Relationships: []
+      }
+      // Mensagens de uma conversa (0056), recebidas e enviadas.
+      //
+      // `external_id` é único por empresa e é o dedupe do reenvio do Evolution.
+      // Anulável porque mensagem ENVIADA nasce antes de o WhatsApp devolver o
+      // id, e o índice único é parcial por isso.
+      mensagens: {
+        Row: {
+          id: string
+          workspace_id: string
+          conversa_id: string
+          direcao: 'recebida' | 'enviada'
+          tipo: 'texto' | 'audio' | 'imagem' | 'video' | 'documento' | 'figurinha' | 'outro'
+          texto: string
+          /** Chave da mídia no Evolution. Buscada sob demanda, nunca no webhook. */
+          midia_chave: string | null
+          midia_mime: string | null
+          midia_segundos: number | null
+          external_id: string | null
+          enviada_por: string | null
+          status: 'pendente' | 'enviada' | 'falhou'
+          erro: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          workspace_id: string
+          conversa_id: string
+          direcao: 'recebida' | 'enviada'
+          tipo?: 'texto' | 'audio' | 'imagem' | 'video' | 'documento' | 'figurinha' | 'outro'
+          texto?: string
+          midia_chave?: string | null
+          midia_mime?: string | null
+          midia_segundos?: number | null
+          external_id?: string | null
+          enviada_por?: string | null
+          status?: 'pendente' | 'enviada' | 'falhou'
+          erro?: string | null
+          created_at?: string
+        }
+        // Só o envio atualiza, para marcar `enviada`/`falhou` depois da
+        // resposta do Evolution. Não há delete: apagar mensagem de conversa é
+        // reescrever história com o cliente.
+        Update: {
+          external_id?: string | null
+          status?: 'pendente' | 'enviada' | 'falhou'
+          erro?: string | null
+        }
+        Relationships: []
+      }
       // Captura real dos erros que `app/(dashboard)/error.tsx` e
       // `app/global-error.tsx` recebem, gravada por app/api/log-erro/route.ts.
       // Mesmo padrão de asaas_webhook_events: RLS ligada, sem policy, só a

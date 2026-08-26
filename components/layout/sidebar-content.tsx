@@ -10,6 +10,7 @@ export function SidebarContent({
   activeWorkspaceId,
   currentUser,
   tarefasDoDia,
+  conversasEsperando,
   onNavigate,
 }: {
   workspaces: WorkspaceSummary[]
@@ -17,6 +18,7 @@ export function SidebarContent({
   currentUser: CurrentUser
   /** Quantas tarefas minhas vencem hoje ou já venceram — o badge do "Hoje". */
   tarefasDoDia: number
+  conversasEsperando: number
   onNavigate?: () => void
 }) {
   return (
@@ -25,7 +27,11 @@ export function SidebarContent({
         <Logo size="sm" />
       </Link>
       <WorkspaceSwitcher workspaces={workspaces} activeId={activeWorkspaceId} />
-      <SidebarNav onNavigate={onNavigate} tarefasDoDia={tarefasDoDia} />
+      <SidebarNav
+        onNavigate={onNavigate}
+        tarefasDoDia={tarefasDoDia}
+        conversasEsperando={conversasEsperando}
+      />
       {/* `mt-auto`: empurra o rodapé de conta pro fim físico do sidebar, não
           logo depois do último item do menu, em telas com poucos itens
           (a maioria) sobrava um vão vazio grande entre o menu e o rodapé.

@@ -9,10 +9,12 @@ import { navGroups } from '@/lib/nav-items'
 export function SidebarNav({
   onNavigate,
   tarefasDoDia,
+  conversasEsperando,
 }: {
   onNavigate?: () => void
   /** Quantas tarefas minhas vencem hoje ou já venceram — o badge do "Hoje". */
   tarefasDoDia: number
+  conversasEsperando: number
 }) {
   const pathname = usePathname()
   const searchParams = useSearchParams()
@@ -82,6 +84,29 @@ export function SidebarNav({
                     `aria-label` completo porque "3" sozinho, lido em
                     sequência com "Hoje", sai como "Hoje 3" — que soa como
                     parte do nome do item, não como uma pendência. */}
+                {/* Conversas esperando resposta.
+                    Mesma regra do contador de Hoje, e pelo mesmo motivo:
+                    aparece só quando há o que cobrar. Um "0" permanente vira
+                    paisagem e treina a pessoa a não olhar o lugar — aí ele não
+                    funciona no dia em que houver alguém esperando.
+
+                    A cor é a de alerta, não a do primary: aqui o número não é
+                    uma pendência do dia, é um cliente parado sem resposta, e
+                    40% deles desistem em 10 minutos. */}
+                {item.href === '/conversas' && conversasEsperando > 0 && (
+                  <span
+                    aria-label={`${conversasEsperando} ${conversasEsperando === 1 ? 'conversa esperando' : 'conversas esperando'} resposta`}
+                    className={cn(
+                      'flex min-w-5 shrink-0 items-center justify-center rounded-full px-1.5 text-xs font-semibold tabular-nums',
+                      active
+                        ? 'bg-primary-foreground/20 text-primary-foreground'
+                        : 'bg-amber-500/15 text-amber-600 dark:text-amber-500',
+                    )}
+                  >
+                    {conversasEsperando > 99 ? '99+' : conversasEsperando}
+                  </span>
+                )}
+
                 {item.href === '/hoje' && tarefasDoDia > 0 && (
                   <span
                     aria-label={`${tarefasDoDia} ${tarefasDoDia === 1 ? 'tarefa' : 'tarefas'} para hoje`}

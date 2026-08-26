@@ -52,7 +52,36 @@ export type MensagemNormalizada = {
   /** Mensagem que NÓS enviamos volta como evento; não deve virar atividade. */
   deNos: boolean
   ehGrupo: boolean
+  /**
+   * Que tipo de mensagem é.
+   *
+   * O Brasil envia 4x mais áudio que qualquer outro país, e 8 em cada 10
+   * brasileiros mandam áudio. Uma caixa de entrada que só entende texto está
+   * quebrada para a maioria das conversas do público-alvo: o cliente manda 40
+   * segundos perguntando preço e a tela mostra "não suportado".
+   */
+  tipo: TipoDeMensagem
+  /**
+   * Chave da mídia no servidor, para buscar sob demanda.
+   *
+   * Não é baixada aqui de propósito: o `maxDuration` do webhook é 15s e o laço
+   * já gasta ~330ms por mensagem. Baixar áudio no meio disso estouraria o teto
+   * e apagaria mensagens que já tinham dedupe gravado.
+   */
+  midiaChave: string | null
+  midiaMime: string | null
+  /** Duração do áudio ou vídeo, quando o WhatsApp informa. */
+  midiaSegundos: number | null
 }
+
+export type TipoDeMensagem =
+  | 'texto'
+  | 'audio'
+  | 'imagem'
+  | 'video'
+  | 'documento'
+  | 'figurinha'
+  | 'outro'
 
 type Bruta = Record<string, unknown>
 
@@ -99,6 +128,47 @@ function textoDaMensagem(conteudo: Bruta | null, raiz: Bruta): string {
   return '(mensagem de tipo não suportado)'
 }
 
+/**
+ * Que tipo de mensagem é, e onde está a mídia dela.
+ *
+ * O `mediaKey` sozinho não basta para baixar: o Evolution pede o ID da
+ * mensagem. Guardamos o que ele dá e a rota de mídia resolve o resto — se um
+ * dia o servidor mudar de contrato, muda só aqui.
+ */
+function midiaDaMensagem(conteudo: Bruta | null): {
+  tipo: TipoDeMensagem
+  midiaChave: string | null
+  midiaMime: string | null
+  midiaSegundos: number | null
+} {
+  const nada = { tipo: 'texto' as TipoDeMensagem, midiaChave: null, midiaMime: null, midiaSegundos: null }
+  if (!conteudo) return nada
+
+  const candidatos: Array<[TipoDeMensagem, string]> = [
+    ['audio', 'audioMessage'],
+    ['imagem', 'imageMessage'],
+    ['video', 'videoMessage'],
+    ['figurinha', 'stickerMessage'],
+    ['documento', 'documentMessage'],
+  ]
+
+  for (const [tipo, chave] of candidatos) {
+    const bloco = objeto(conteudo[chave])
+    if (!bloco) continue
+    const segundos = bloco.seconds
+    return {
+      tipo,
+      midiaChave: texto(bloco.mediaKey) ?? texto(bloco.url) ?? null,
+      midiaMime: texto(bloco.mimetype) ?? null,
+      midiaSegundos: typeof segundos === 'number' && segundos > 0 ? Math.round(segundos) : null,
+    }
+  }
+
+  if (conteudo.conversation || conteudo.extendedTextMessage) return nada
+
+  return { ...nada, tipo: 'outro' }
+}
+
 /** `5511999998888@s.whatsapp.net` vira `5511999998888`. Grupo devolve `null`. */
 function telefoneDoChat(chat: string | null, ehGrupo: boolean): string | null {
   if (!chat || ehGrupo) return null
@@ -136,6 +206,7 @@ export function normalizarMensagem(bruta: unknown): MensagemNormalizada | null {
       texto: textoDaMensagem(objeto(dados.Message), dados),
       deNos: info.IsFromMe === true,
       ehGrupo,
+      ...midiaDaMensagem(objeto(dados.Message)),
     }
   }
 
@@ -151,5 +222,6 @@ export function normalizarMensagem(bruta: unknown): MensagemNormalizada | null {
     texto: textoDaMensagem(objeto(dados.message), dados),
     deNos: dados.isFromMe === true,
     ehGrupo,
+    ...midiaDaMensagem(objeto(dados.message)),
   }
 }

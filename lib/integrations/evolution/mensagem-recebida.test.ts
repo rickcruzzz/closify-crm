@@ -140,3 +140,72 @@ describe('entrada inesperada', () => {
     expect(m!.telefone).toBe('557193309404')
   })
 })
+
+/**
+ * O Brasil envia 4x mais áudio que qualquer outro país, e 8 em cada 10
+ * brasileiros mandam áudio. Uma caixa de entrada que só entende texto está
+ * quebrada para a maioria das conversas do público-alvo.
+ */
+describe('tipo e mídia', () => {
+  function comConteudo(Message: Record<string, unknown>) {
+    return normalizarMensagem({
+      Info: { ID: 'x1', Chat: '5571999998888@s.whatsapp.net', IsFromMe: false },
+      Message,
+    })
+  }
+
+  it('texto continua sendo texto, sem mídia', () => {
+    const m = comConteudo({ conversation: 'bom dia' })
+    expect(m?.tipo).toBe('texto')
+    expect(m?.midiaChave).toBeNull()
+    expect(m?.midiaSegundos).toBeNull()
+  })
+
+  it('áudio traz tipo, mime e duração', () => {
+    const m = comConteudo({
+      audioMessage: { mediaKey: 'abc123', mimetype: 'audio/ogg; codecs=opus', seconds: 38 },
+    })
+    expect(m?.tipo).toBe('audio')
+    expect(m?.midiaChave).toBe('abc123')
+    expect(m?.midiaMime).toBe('audio/ogg; codecs=opus')
+    expect(m?.midiaSegundos).toBe(38)
+  })
+
+  it('imagem com legenda mantém a legenda como texto', () => {
+    const m = comConteudo({ imageMessage: { mediaKey: 'k', caption: 'olha isso' } })
+    expect(m?.tipo).toBe('imagem')
+    expect(m?.texto).toBe('olha isso')
+  })
+
+  it('figurinha, vídeo e documento são reconhecidos', () => {
+    expect(comConteudo({ stickerMessage: { mediaKey: 'k' } })?.tipo).toBe('figurinha')
+    expect(comConteudo({ videoMessage: { mediaKey: 'k', seconds: 12 } })?.tipo).toBe('video')
+    expect(comConteudo({ documentMessage: { mediaKey: 'k', fileName: 'nota.pdf' } })?.tipo).toBe(
+      'documento',
+    )
+  })
+
+  // Duração ausente ou zero vira null, não 0: "áudio de 0 segundos" na tela é
+  // pior que não mostrar duração nenhuma.
+  it('duração ausente ou zero vira null', () => {
+    expect(comConteudo({ audioMessage: { mediaKey: 'k' } })?.midiaSegundos).toBeNull()
+    expect(comConteudo({ audioMessage: { mediaKey: 'k', seconds: 0 } })?.midiaSegundos).toBeNull()
+  })
+
+  // Tipo que o WhatsApp inventar depois cai em `outro` em vez de virar `texto`.
+  // Rotular localização como texto faria a tela mostrar "(não suportado)" como
+  // se fosse o que o cliente escreveu.
+  it('tipo desconhecido vira "outro", não "texto"', () => {
+    expect(comConteudo({ locationMessage: { degreesLatitude: -12.9 } })?.tipo).toBe('outro')
+  })
+
+  it('o formato antigo do Swagger também traz mídia', () => {
+    const m = normalizarMensagem({
+      id: 'y1',
+      chat: '5571999998888@s.whatsapp.net',
+      message: { audioMessage: { mediaKey: 'zzz', seconds: 5 } },
+    })
+    expect(m?.tipo).toBe('audio')
+    expect(m?.midiaChave).toBe('zzz')
+  })
+})

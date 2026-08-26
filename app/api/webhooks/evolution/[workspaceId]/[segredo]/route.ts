@@ -612,6 +612,79 @@ export async function POST(
       continue
     }
 
+    // A conversa, que é o que a tela de Conversas lê.
+    //
+    // `activities` acima continua recebendo a mensagem: a linha do tempo do
+    // contato não muda e `/hoje` continua cobrando a resposta. Isto ACRESCENTA,
+    // e a diferença é que `activities` não tem direção, não tem id da mensagem
+    // no WhatsApp e não sabe se alguém já respondeu.
+    //
+    // `upsert` por `(workspace_id, lead_id, canal)`: a chave única existe para
+    // esta linha não precisar ler antes de escrever.
+    //
+    // `respondida_em: null` a cada mensagem nova, de propósito: mensagem que
+    // chega DEPOIS de a pessoa ter respondido volta a esperar. Sem isso a
+    // conversa cairia para o fim da lista e a segunda pergunta do cliente ficaria
+    // invisível — o defeito mais fácil de introduzir aqui.
+    const agoraIso = new Date().toISOString()
+    const { data: conversa, error: erroConversa } = await admin
+      .from('conversas')
+      .upsert(
+        {
+          workspace_id: workspaceId,
+          lead_id: lead,
+          canal: 'whatsapp',
+          ultimo_recebido_em: agoraIso,
+          respondida_em: null,
+        },
+        { onConflict: 'workspace_id,lead_id,canal' },
+      )
+      .select('id')
+      .single()
+
+    if (erroConversa || !conversa) {
+      console.error('Webhook Evolution: não consegui gravar a conversa', erroConversa)
+      await registrarMensagemPerdida(
+        admin,
+        workspaceId,
+        telefone,
+        mensagem.texto,
+        `conversas ${erroConversa?.code ?? 'sem código'}`,
+      )
+      continue
+    }
+
+    // A mensagem em si. `external_id` é único por empresa e é o que impede a
+    // mesma mensagem de entrar duas vezes se o Evolution reenviar o evento —
+    // segunda rede além do dedupe de `whatsapp_webhook_events`.
+    const { error: erroMensagem } = await admin.from('mensagens').insert({
+      workspace_id: workspaceId,
+      conversa_id: conversa.id,
+      direcao: 'recebida',
+      tipo: mensagem.tipo,
+      texto: mensagem.texto,
+      midia_chave: mensagem.midiaChave,
+      midia_mime: mensagem.midiaMime,
+      midia_segundos: mensagem.midiaSegundos,
+      external_id: eventId,
+      status: 'enviada',
+    })
+
+    // `23505` é a mesma mensagem chegando de novo: não é erro, é o dedupe
+    // funcionando. Qualquer outro código apaga a mensagem da existência, e o
+    // Evolution não reenvia o que já deduplicou.
+    if (erroMensagem && erroMensagem.code !== '23505') {
+      console.error('Webhook Evolution: não consegui gravar a mensagem', erroMensagem)
+      await registrarMensagemPerdida(
+        admin,
+        workspaceId,
+        telefone,
+        mensagem.texto,
+        `mensagens ${erroMensagem.code ?? 'sem código'}`,
+      )
+      continue
+    }
+
     // Cliente que responde sem tarefa aberta é exatamente a venda que se perde
     // por esquecimento. A tarefa nasce com prazo curto de propósito: dentro da
     // janela em que responder ainda parece atendimento, não desculpa.

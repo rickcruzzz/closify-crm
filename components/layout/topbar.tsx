@@ -8,11 +8,13 @@ export function Topbar({
   activeWorkspaceId,
   currentUser,
   tarefasDoDia,
+  conversasEsperando,
 }: {
   workspaces: WorkspaceSummary[]
   activeWorkspaceId: string
   currentUser: CurrentUser
   tarefasDoDia: number
+  conversasEsperando: number
 }) {
   return (
     <header className="bg-background/80 sticky top-0 z-40 flex h-14 shrink-0 items-center gap-3 border-b px-4 backdrop-blur-sm">
@@ -21,6 +23,7 @@ export function Topbar({
         activeWorkspaceId={activeWorkspaceId}
         currentUser={currentUser}
         tarefasDoDia={tarefasDoDia}
+        conversasEsperando={conversasEsperando}
       />
       <div className="flex-1" />
       <ThemeToggle />

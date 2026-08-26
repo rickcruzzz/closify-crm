@@ -3,6 +3,7 @@ import {
   CalendarCheck,
   KanbanSquare,
   LayoutDashboard,
+  MessageCircle,
   Plug,
   Settings,
   User,
@@ -41,6 +42,11 @@ export const navGroups: NavGroup[] = [
       // "Funil", não "Pipeline". A rota segue `/kanban` de propósito: renomear
       // quebraria link salvo e favorito para trocar uma palavra que ninguém
       // digita. O que a pessoa lê muda; o endereço não.
+      // Logo depois de Hoje, e antes do Funil: é a segunda pergunta da manhã,
+      // "quem está esperando resposta agora". Fica acima do Funil porque
+      // conversa sem resposta vira venda perdida em minutos, enquanto negócio
+      // parado no funil espera dias sem piorar.
+      { title: 'Conversas', href: '/conversas', icon: MessageCircle },
       { title: 'Funil', href: '/kanban', icon: KanbanSquare },
       // "Contatos", não "Leads". O PRD de copy adiou esta troca temendo
       // prometer "contatos" na landing e a pessoa encontrar "Leads" depois de
