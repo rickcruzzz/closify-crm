@@ -65,10 +65,18 @@ export function PublicNavbar() {
             botão de tema FICAVA. A landing estava priorizando escolha de
             aparência sobre o único clique que gera receita.
 
-            Ninguém decide comprar um CRM pelo tema, e quem tem preferência já
-            é atendido: o `ThemeProvider` roda com `enableSystem`, então o
-            `prefers-color-scheme` do aparelho vale sozinho. Nenhuma landing de
+            Ninguém decide comprar um CRM pelo tema, e nenhuma landing de
             referência auditada (Linear, Vercel, Attio, Stripe) tem esse botão.
+
+            RESSALVA, medida em 26/08, porque este comentário afirmava o
+            contrário: o `prefers-color-scheme` do aparelho NÃO é seguido aqui.
+            `app/layout.tsx` roda com `defaultTheme="dark"` e `enableSystem`, e
+            no `next-themes` o `enableSystem` só torna `"system"` um valor
+            possível — quem decide sem nada salvo é o `defaultTheme`. Navegador
+            limpo em `prefers-color-scheme: light`, contra produção, renderiza
+            escuro. Escuro é o padrão por decisão de identidade (CLAUDE.md), e
+            fica; o que era falso era a justificativa de que o aparelho já
+            resolvia.
 
             Ele CONTINUA no produto (`components/layout/topbar.tsx`), que é
             onde faz sentido: lá a pessoa passa horas, e a escolha é dela. */}

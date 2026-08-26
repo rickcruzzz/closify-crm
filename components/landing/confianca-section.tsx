@@ -2,7 +2,6 @@ import { Building2, CreditCard, DoorOpen, Lock, MapPin, type LucideIcon } from '
 
 import { assinaturaPublica, CONTROLADOR } from '@/lib/legal'
 import { RevealOnScroll } from '@/components/landing/reveal-on-scroll'
-import { cn } from '@/lib/utils'
 
 /**
  * Por que confiar, para quem ainda não tem cliente para exibir.
@@ -51,7 +50,6 @@ type Garantia = {
   titulo: string
   descricao: string
   icone: LucideIcon
-  accent: string
   delay: number
 }
 
@@ -61,7 +59,6 @@ const garantias: Garantia[] = [
     descricao:
       'O isolamento é uma regra dentro do banco de dados, não uma tela que alguém pode esquecer de conferir. Mesmo com a interface burlada, o dado da sua empresa não sai.',
     icone: Lock,
-    accent: 'text-emerald-500 dark:text-emerald-400',
     delay: 0,
   },
   {
@@ -69,7 +66,6 @@ const garantias: Garantia[] = [
     descricao:
       'Servidores em São Paulo. Nada de cliente seu atravessa fronteira para ser processado, e o tempo de resposta agradece junto.',
     icone: MapPin,
-    accent: 'text-blue-500 dark:text-blue-400',
     delay: 90,
   },
   {
@@ -77,7 +73,6 @@ const garantias: Garantia[] = [
     descricao:
       'Pix, boleto e cartão são processados pelo Asaas. O número do seu cartão nunca chega ao nosso servidor, por decisão de arquitetura.',
     icone: CreditCard,
-    accent: 'text-violet-500 dark:text-violet-400',
     delay: 180,
   },
   {
@@ -85,7 +80,6 @@ const garantias: Garantia[] = [
     descricao:
       'Cancele sozinho, sem multa e sem falar com ninguém. A conta volta para o plano grátis e seus contatos continuam lá. Não seguramos ninguém por dificuldade.',
     icone: DoorOpen,
-    accent: 'text-orange-500 dark:text-orange-400',
     delay: 270,
   },
 ]
@@ -115,11 +109,11 @@ export function ConfiancaSection() {
             <RevealOnScroll
               key={garantia.titulo}
               delay={garantia.delay}
-              className="bg-background border-border/60 flex gap-4 rounded-xl border p-5"
+              className="bg-card border-border superficie-elevada flex gap-4 rounded-xl border p-5"
             >
               <garantia.icone
                 aria-hidden
-                className={cn('mt-0.5 size-5 shrink-0', garantia.accent)}
+                className="text-primary mt-0.5 size-5 shrink-0"
               />
               <div className="flex flex-col gap-1.5">
                 <h3 className="font-medium">{garantia.titulo}</h3>

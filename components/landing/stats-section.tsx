@@ -33,25 +33,21 @@ const stats = [
   {
     value: '7 dias',
     label: 'de Pro completo, sem pedir cartão',
-    accent: 'text-emerald-500 dark:text-emerald-400',
     delay: 0,
   },
   {
     value: '2 min',
     label: 'do cadastro ao primeiro contato',
-    accent: 'text-blue-500 dark:text-blue-400',
     delay: 130,
   },
   {
     value: 'R$ 49',
     label: 'por mês, pela empresa toda',
-    accent: 'text-violet-500 dark:text-violet-400',
     delay: 260,
   },
   {
     value: 'Brasil',
     label: 'seus dados ficam em São Paulo',
-    accent: 'text-orange-500 dark:text-orange-400',
     delay: 390,
   },
 ]
@@ -69,7 +65,10 @@ export function StatsSection() {
             <span
               className={cn(
                 'text-3xl font-semibold tracking-tighter md:text-4xl',
-                stat.accent,
+                // Um acento so, o da marca. Quatro matizes diferentes aqui
+                // nao codificavam nada — "2 min", "R$ 49" e "Brasil" nao sao
+                // categorias — e no claro leem como grafico de template.
+                'text-primary',
               )}
             >
               {stat.value}

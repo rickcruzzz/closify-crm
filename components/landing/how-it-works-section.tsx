@@ -38,8 +38,6 @@ const passos = [
     titulo: 'Traga quem já é seu cliente',
     descricao: `Tem planilha? Exporte como .csv e importe de uma vez, e os repetidos são ignorados sozinhos. Não tem? Cadastre pelo nome e telefone em segundos, do jeito que a conversa chegou. No plano grátis cabem ${FREE_LEAD_LIMIT} contatos.`,
     icone: FileSpreadsheet,
-    accent: 'text-blue-500 dark:text-blue-400',
-    fundo: 'bg-blue-500/10 dark:bg-blue-400/10',
   },
   {
     numero: '02',
@@ -47,8 +45,6 @@ const passos = [
     descricao:
       'Cada negócio vira um card. Arraste de "A contatar" até "Fechado Ganho" conforme a conversa avança, e registre ligações, reuniões e notas no histórico do cliente.',
     icone: LayoutGrid,
-    accent: 'text-violet-500 dark:text-violet-400',
-    fundo: 'bg-violet-500/10 dark:bg-violet-400/10',
   },
   {
     numero: '03',
@@ -56,8 +52,6 @@ const passos = [
     descricao:
       'O painel mostra quanto você tem em negociação, quantos clientes viraram venda e quais negócios estão perto do prazo, sem montar fórmula nenhuma.',
     icone: TrendingUp,
-    accent: 'text-emerald-500 dark:text-emerald-400',
-    fundo: 'bg-emerald-500/10 dark:bg-emerald-400/10',
   },
 ]
 
@@ -83,12 +77,16 @@ export function HowItWorksSection() {
         <ol className="grid gap-4 md:grid-cols-3">
           {passos.map((passo, i) => (
             <RevealOnScroll key={passo.numero} delay={i * 130}>
-              <li className="ring-border bg-card flex h-full flex-col gap-3 rounded-xl p-6 ring-1">
+              <li className="ring-border bg-card superficie-elevada flex h-full flex-col gap-3 rounded-xl p-6 ring-1">
                 <div className="flex items-center gap-3">
-                  <span
-                    className={`flex size-10 shrink-0 items-center justify-center rounded-lg ${passo.fundo}`}
-                  >
-                    <passo.icone aria-hidden className={`size-5 ${passo.accent}`} />
+                  {/* Um acento so, o da marca.
+                      Ate 26/08 cada passo tinha uma cor propria (azul, roxo,
+                      verde) e nenhuma delas codificava informacao: passo 1 nao
+                      e "categoria azul". Cor sem significado le como template,
+                      e no modo claro isso fica gritante. O que diferencia os
+                      tres continua sendo o icone, que ja e diferente. */}
+                  <span className="bg-primary/10 flex size-10 shrink-0 items-center justify-center rounded-lg">
+                    <passo.icone aria-hidden className="text-primary size-5" />
                   </span>
                   <span className="text-muted-foreground font-mono text-xs tracking-wide">
                     {passo.numero}

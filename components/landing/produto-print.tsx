@@ -107,11 +107,21 @@ export function ProdutoPrint({
       className={cn(
         // Mesma moldura de "janela do app" dos mocks: o print entra como parte
         // da linguagem visual da página, não como captura colada por cima.
-        'border-border/50 bg-card overflow-hidden rounded-2xl border shadow-2xl',
+        // `border-border` e nao `border-border/50`: a meia opacidade dava 1,16:1
+        // contra o card branco, ou seja, moldura invisivel no claro — o
+        // anti-padrao que a skill ui-ux-pro-max marca por nome, e que desfaz a
+        // correcao de 22/08, quando `--border` subiu para 0.893 justamente
+        // para desenhar contra branco.
+        //
+        // `superficie-elevada` no lugar de `shadow-2xl`: aquela era
+        // `0 25px 50px -12px rgba(0,0,0,0.25)`, invisivel no escuro e um borrao
+        // pesado no claro. O comentario da propria regra de elevacao ja dizia
+        // que sombra longa le como cartao de marketing.
+        'border-border bg-card superficie-elevada overflow-hidden rounded-2xl border',
         className,
       )}
     >
-      <div className="border-border/50 flex items-center gap-2 border-b px-4 py-3">
+      <div className="border-border flex items-center gap-2 border-b px-4 py-3">
         <div className="flex gap-1.5">
           <span className="size-2.5 rounded-full bg-red-500/70" />
           <span className="size-2.5 rounded-full bg-amber-500/70" />

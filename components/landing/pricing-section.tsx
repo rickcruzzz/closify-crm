@@ -247,7 +247,7 @@ export function PricingSection() {
             em página de venda convida processo e ainda ensina o nome deles a
             quem não conhecia. O modelo de cobrança é o que importa. */}
         <RevealOnScroll delay={280} className="mx-auto mt-12 max-w-2xl">
-          <div className="border-border/60 bg-muted/30 rounded-xl border p-6 text-center">
+          <div className="border-border bg-muted/30 rounded-xl border p-6 text-center">
             <p className="text-muted-foreground font-mono text-xs tracking-wide uppercase">
               A conta que ninguém faz antes de assinar
             </p>

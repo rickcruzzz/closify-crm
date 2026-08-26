@@ -19,7 +19,6 @@ type Feature = {
   title: string
   description: string
   icon: LucideIcon
-  accent: { text: string; bg: string; hover: string }
   /** Stagger em milissegundos, aplicado pelo RevealOnScroll. */
   delay: number
 }
@@ -30,11 +29,6 @@ const features: Feature[] = [
     description:
       'Veja cada cliente em potencial numa etapa da venda e arraste o card conforme a conversa avança, sem montar tabela, sem fórmula.',
     icon: KanbanSquare,
-    accent: {
-      text: 'text-blue-500 dark:text-blue-400',
-      bg: 'bg-blue-500/10 dark:bg-blue-400/10',
-      hover: 'pointer:hover:bg-blue-500/[0.04] dark:pointer:hover:bg-blue-400/[0.04]',
-    },
     delay: 0,
   },
   {
@@ -42,11 +36,6 @@ const features: Feature[] = [
     description:
       'Cada ligação, e-mail e conversa fica registrada no contato. Quando um vendedor sai, o relacionamento continua aqui, e não no celular dele.',
     icon: ListChecks,
-    accent: {
-      text: 'text-violet-500 dark:text-violet-400',
-      bg: 'bg-violet-500/10 dark:bg-violet-400/10',
-      hover: 'pointer:hover:bg-violet-500/[0.04] dark:pointer:hover:bg-violet-400/[0.04]',
-    },
     delay: 130,
   },
   {
@@ -57,11 +46,6 @@ const features: Feature[] = [
     description:
       'Traga seus contatos de uma vez com um arquivo .csv, sem redigitar nada. Duplicados são ignorados sozinhos.',
     icon: FileSpreadsheet,
-    accent: {
-      text: 'text-cyan-500 dark:text-cyan-400',
-      bg: 'bg-cyan-500/10 dark:bg-cyan-400/10',
-      hover: 'pointer:hover:bg-cyan-500/[0.04] dark:pointer:hover:bg-cyan-400/[0.04]',
-    },
     delay: 260,
   },
   {
@@ -69,12 +53,6 @@ const features: Feature[] = [
     description:
       'O valor que está em jogo, o que já virou venda e o que travou no caminho. Sem montar fórmula, sem esperar alguém consolidar planilha.',
     icon: BarChart3,
-    accent: {
-      text: 'text-emerald-500 dark:text-emerald-400',
-      bg: 'bg-emerald-500/10 dark:bg-emerald-400/10',
-      hover:
-        'pointer:hover:bg-emerald-500/[0.04] dark:pointer:hover:bg-emerald-400/[0.04]',
-    },
     delay: 0,
   },
   {
@@ -82,11 +60,6 @@ const features: Feature[] = [
     description:
       'Gerencie mais de uma empresa com a mesma conta e troque entre elas sem perder nada de vista.',
     icon: Building2,
-    accent: {
-      text: 'text-orange-500 dark:text-orange-400',
-      bg: 'bg-orange-500/10 dark:bg-orange-400/10',
-      hover: 'pointer:hover:bg-orange-500/[0.04] dark:pointer:hover:bg-orange-400/[0.04]',
-    },
     delay: 130,
   },
   {
@@ -94,11 +67,6 @@ const features: Feature[] = [
     description:
       'Abriu o sistema, já sabe com quem falar: o que venceu, o que é de hoje e o que vem nos próximos dias, em ordem de urgência.',
     icon: Bell,
-    accent: {
-      text: 'text-amber-500 dark:text-amber-400',
-      bg: 'bg-amber-500/10 dark:bg-amber-400/10',
-      hover: 'pointer:hover:bg-amber-500/[0.04] dark:pointer:hover:bg-amber-400/[0.04]',
-    },
     delay: 260,
   },
   {
@@ -121,11 +89,6 @@ const features: Feature[] = [
     description:
       'Abra a conversa direto do contato, sem procurar o número na agenda. Em breve, pela API oficial da Meta, a mensagem que chega vira contato e tarefa sozinha.',
     icon: MessageCircle,
-    accent: {
-      text: 'text-emerald-500 dark:text-emerald-400',
-      bg: 'bg-emerald-500/10 dark:bg-emerald-400/10',
-      hover: 'pointer:hover:bg-emerald-500/[0.04] dark:pointer:hover:bg-emerald-400/[0.04]',
-    },
     delay: 0,
   },
   {
@@ -133,11 +96,6 @@ const features: Feature[] = [
     description:
       'Dono acompanha a operação inteira; colaborador trabalha na parte dele. Sem planilha compartilhada onde qualquer um apaga a linha errada.',
     icon: ShieldCheck,
-    accent: {
-      text: 'text-red-500 dark:text-red-400',
-      bg: 'bg-red-500/10 dark:bg-red-400/10',
-      hover: 'pointer:hover:bg-red-500/[0.04] dark:pointer:hover:bg-red-400/[0.04]',
-    },
     delay: 0,
   },
 ]
@@ -200,7 +158,7 @@ export function FeaturesSection() {
                   className={cn(
                     'bg-card h-full rounded-none border-0 shadow-none ring-0',
                     'transition-colors duration-200',
-                    feature.accent.hover,
+                    'pointer:hover:bg-primary/[0.04]',
                   )}
                 >
                   <CardContent
@@ -220,10 +178,10 @@ export function FeaturesSection() {
                     <div
                       className={cn(
                         'flex size-10 shrink-0 items-center justify-center rounded-lg',
-                        feature.accent.bg,
+                        'bg-primary/10',
                       )}
                     >
-                      <feature.icon className={cn('size-5', feature.accent.text)} />
+                      <feature.icon className="text-primary size-5" />
                     </div>
                     <div className={cn(ultimo && 'sm:flex sm:max-w-md sm:flex-col sm:gap-1')}>
                       <h3 className="text-base font-semibold">{feature.title}</h3>

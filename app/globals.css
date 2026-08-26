@@ -199,13 +199,46 @@
      luminosidade, então a regra é anulada em vez de herdada.
      Duas camadas curtas e fracas de propósito: sombra longa em app de trabalho
      lê como cartão de marketing. */
-  [data-slot='card'] {
-    box-shadow:
-      0 1px 2px oklch(0.145 0.02 205 / 0.05),
-      0 2px 6px oklch(0.145 0.02 205 / 0.04);
+  /* `.superficie-elevada` e a irma de `[data-slot='card']`, e existe porque a
+     landing NAO usa o componente `Card`: ela monta as superficies a mao
+     (`<li className="ring-border bg-card ring-1">`, `<details>`), por razoes
+     de layout que o `Card` nao atende.
+
+     Consequencia medida em 26/08, em producao: no modo claro a pagina e
+     rgb(246,248,249) e o cartao e rgb(255,255,255) — 1,10:1 entre as duas
+     superficies —, e nenhuma secao da landing recebia esta sombra. Branco
+     sobre branco, separados por um fio de 1,38:1 e nenhuma profundidade. No
+     escuro o defeito nao aparece: la a escada de luminosidade separa sozinha.
+
+     Um seletor a mais na MESMA regra, e nao uma regra nova com os mesmos
+     valores copiados: duas copias divergem na primeira manutencao. */
+  /* Escrita em `--tw-shadow`, e NAO em `box-shadow` direto.
+     Medido em 26/08, e o motivo e o defeito que isto conserta: no Tailwind v4
+     a utility `ring-*` declara
+
+         box-shadow: var(--tw-ring-offset-shadow), var(--tw-ring-shadow), var(--tw-shadow)
+
+     na camada de utilities, que vence `@layer base`. Como o `Card` deste
+     projeto tem `ring-1`, a versao anterior desta regra era simplesmente
+     descartada: `--tw-shadow` ficava em `0 0 #0000` e o cartao saia sem
+     elevacao nenhuma. Ou seja, a correcao escrita em 22/08 nunca chegou a
+     nenhum cartao COM ring — nem na landing, nem no produto —, e o unico
+     lugar onde ela funcionava era superficie sem `ring`.
+
+     Alimentando a variavel, a elevacao COMPOE com o anel em vez de brigar com
+     ele, que e como o Tailwind foi desenhado. O `box-shadow` abaixo cobre o
+     caso oposto, superficie sem `ring`, que nao recebe declaracao nenhuma da
+     utility e portanto precisa da propria. */
+  [data-slot='card'],
+  .superficie-elevada {
+    --tw-shadow:
+      0 1px 2px oklch(0.145 0.02 205 / 0.05), 0 2px 6px oklch(0.145 0.02 205 / 0.04);
+    box-shadow: var(--tw-shadow);
   }
 
-  .dark [data-slot='card'] {
+  .dark [data-slot='card'],
+  .dark .superficie-elevada {
+    --tw-shadow: 0 0 #0000;
     box-shadow: none;
   }
 

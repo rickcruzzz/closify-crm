@@ -16,10 +16,20 @@ const stageSummary = dealStages.map((stage) => {
 const maxCount = Math.max(...stageSummary.map((s) => s.count))
 const totalValue = stageSummary.reduce((sum, s) => sum + s.value, 0)
 
+/**
+ * O funil do hero, em HTML puro.
+ *
+ * A moldura segue o mesmo padrao do `produto-print`, e pelas mesmas razoes
+ * medidas em 26/08: a borda a meia opacidade dava 1,16:1 contra o card branco,
+ * ou seja, moldura invisivel no modo claro; e `shadow-2xl`
+ * (`0 25px 50px -12px rgba(0,0,0,0.25)`) sumia no escuro e virava borrao
+ * pesado no claro. `superficie-elevada` resolve os dois: sombra curta no
+ * claro, nenhuma no escuro.
+ */
 export function PipelinePreviewCard() {
   return (
-    <div className="border-border/50 bg-card overflow-hidden rounded-2xl border shadow-2xl">
-      <div className="border-border/50 flex items-center gap-2 border-b px-4 py-3">
+    <div className="border-border bg-card superficie-elevada overflow-hidden rounded-2xl border">
+      <div className="border-border flex items-center gap-2 border-b px-4 py-3">
         <div className="flex gap-1.5">
           <span className="size-2.5 rounded-full bg-red-500/70" />
           <span className="size-2.5 rounded-full bg-amber-500/70" />
@@ -69,7 +79,7 @@ export function PipelinePreviewCard() {
         ))}
       </div>
 
-      <div className="border-border/50 flex items-center justify-between border-t px-5 py-4 md:px-6">
+      <div className="border-border flex items-center justify-between border-t px-5 py-4 md:px-6">
         <span className="text-muted-foreground font-mono text-xs">total no funil</span>
         <span className="text-base font-semibold">{formatCompactBRL(totalValue)}</span>
       </div>

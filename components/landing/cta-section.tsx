@@ -9,7 +9,7 @@ export function CtaSection() {
   return (
     <section className="px-4 py-20 md:px-6 md:py-28">
       <RevealOnScroll>
-        <div className="bg-card ring-foreground/10 relative mx-auto flex max-w-4xl flex-col items-center gap-6 overflow-hidden rounded-2xl p-10 text-center ring-1 md:p-16">
+        <div className="bg-card ring-foreground/10 superficie-elevada relative mx-auto flex max-w-4xl flex-col items-center gap-6 overflow-hidden rounded-2xl p-10 text-center ring-1 md:p-16">
           <div
             aria-hidden
             className="glow-radial pointer-events-none absolute -top-24 left-1/2 -z-10 h-64 w-[32rem] -translate-x-1/2"
