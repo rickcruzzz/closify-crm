@@ -28,6 +28,7 @@ import {
   reabrirTarefa,
 } from '@/lib/tasks/actions'
 import type { TaskFormValues } from '@/lib/validations/task'
+import { mesclarSaindo, type EmSaida } from '@/lib/tasks/mesclar-saindo'
 
 /**
  * Quanto tempo a tarefa concluída fica visível, riscada, antes de sair.
@@ -57,12 +58,27 @@ export function HojeClient({
 }) {
   const router = useRouter()
   const [tasks, setTasks] = React.useState(tasksIniciais)
+  /**
+   * Quem esta na janela de "riscada", com a posicao de onde saiu.
+   *
+   * NAO e so um Set de ids: o servidor ja removeu essas tarefas da lista dele,
+   * entao guardar so o id nao bastaria para desenha-las. E a posicao evita que
+   * a linha riscada pule para o fim, onde o olho a perde e o "Desfazer" fica
+   * impossivel de acertar.
+   */
+  const [saindo, setSaindo] = React.useState<Map<string, EmSaida<TaskRow>>>(new Map())
   const [emEdicao, setEmEdicao] = React.useState<TarefaEmEdicao | null>(null)
   const [trocandoEscopo, startTransitionEscopo] = React.useTransition()
 
   // O servidor manda a lista nova depois de cada revalidação; sem isto o
   // estado local ficaria preso na primeira renderização e a tarefa criada
   // noutra tela nunca apareceria aqui.
+  //
+  // Sobrescrever aqui e SEGURO desde que `saindo` virou estado separado. Antes
+  // nao era: esta linha apagava a tarefa que acabara de ser concluida, poucos
+  // milissegundos depois do clique, porque `concluirTarefa` revalida `/hoje` e
+  // a lista nova ja vem sem ela. A janela de desfazer nunca chegou a existir
+  // para o usuario por causa deste efeito.
   React.useEffect(() => {
     setTasks(tasksIniciais)
   }, [tasksIniciais])
@@ -84,9 +100,22 @@ export function HojeClient({
     return () => clearInterval(timer)
   }, [])
 
+  /**
+   * A lista que a tela mostra: o servidor mais quem ainda esta saindo.
+   *
+   * Derivada, nao estado. Enquanto ela era estado, a revalidacao que
+   * `concluirTarefa` dispara substituia a lista inteira e a linha riscada
+   * evaporava em milissegundos — o "Desfazer" nunca chegou a ser clicavel em
+   * producao.
+   */
+  const lista = React.useMemo(() => mesclarSaindo(tasks, saindo), [tasks, saindo])
+
   const grupos = React.useMemo(
-    () => (agora ? agruparPorPrazo(tasks, agora) : null),
-    [tasks, agora],
+    // As chaves de `saindo` sao as que continuam agrupadas mesmo concluidas:
+    // sem isso o agrupamento descarta a tarefa no instante em que ela ganha
+    // `done_at`, e a janela de desfazer nao chega a aparecer.
+    () => (agora ? agruparPorPrazo(lista, agora, new Set(saindo.keys())) : null),
+    [lista, agora, saindo],
   )
 
   function trocarEscopo(valor: string | null) {
@@ -107,7 +136,6 @@ export function HojeClient({
    * gesto mais repetido do produto, e um "tem certeza?" a cada clique viraria
    * imposto diário — o que se ganha aqui é ver o erro, não evitá-lo com atrito.
    */
-  const [saindo, setSaindo] = React.useState<Set<string>>(new Set())
   const timers = React.useRef(new Map<string, ReturnType<typeof setTimeout>>())
 
   // Um timer que dispara depois de a tela trocar tentaria atualizar estado de
@@ -121,20 +149,30 @@ export function HojeClient({
   }, [])
 
   async function concluir(taskId: string) {
-    const anterior = tasks
-    // Marca como concluída SEM tirar da lista: é isso que deixa a linha
-    // riscada no lugar em vez de evaporar.
-    setTasks((atual) =>
-      atual.map((t) => (t.id === taskId ? { ...t, done_at: new Date().toISOString() } : t)),
-    )
-    setSaindo((atual) => new Set(atual).add(taskId))
+    const indice = lista.findIndex((t) => t.id === taskId)
+    const alvo = indice >= 0 ? lista[indice] : undefined
+    if (!alvo) return
+
+    // A tarefa entra em `saindo` JA concluida, com a posicao de onde saiu.
+    // `tasks` nao e tocado de proposito: ele e espelho do servidor, e a
+    // revalidacao que vem daqui a pouco vai sobrescreve-lo de qualquer jeito.
+    //
+    // Era exatamente essa mistura que fazia a linha evaporar: o estado tentava
+    // ser espelho e rascunho ao mesmo tempo, e a revalidacao ganhava sempre.
+    setSaindo((atual) => {
+      const novo = new Map(atual)
+      novo.set(taskId, {
+        task: { ...alvo, done_at: new Date().toISOString() },
+        indice,
+      })
+      return novo
+    })
 
     const resultado = await concluirTarefa(taskId)
 
     if ('error' in resultado) {
-      setTasks(anterior)
       setSaindo((atual) => {
-        const novo = new Set(atual)
+        const novo = new Map(atual)
         novo.delete(taskId)
         return novo
       })
@@ -145,9 +183,10 @@ export function HojeClient({
     timers.current.set(
       taskId,
       setTimeout(() => {
-        setTasks((atual) => atual.filter((t) => t.id !== taskId))
+        // So limpa `saindo`. A lista volta a ser o que o servidor ja mandou,
+        // sem a tarefa — nao ha mais nada para filtrar nem corrida para perder.
         setSaindo((atual) => {
-          const novo = new Set(atual)
+          const novo = new Map(atual)
           novo.delete(taskId)
           return novo
         })
@@ -171,11 +210,10 @@ export function HojeClient({
       return
     }
 
-    setTasks((atual) =>
-      atual.map((t) => (t.id === taskId ? { ...t, done_at: null } : t)),
-    )
+    // Tirar de `saindo` basta: `reabrirTarefa` ja revalidou, e a lista do
+    // servidor volta a trazer a tarefa aberta na posicao dela.
     setSaindo((atual) => {
-      const novo = new Set(atual)
+      const novo = new Map(atual)
       novo.delete(taskId)
       return novo
     })
@@ -213,7 +251,7 @@ export function HojeClient({
     router.refresh()
   }
 
-  const total = tasks.length
+  const total = lista.length
 
   return (
     <div className="flex flex-col gap-6">
@@ -355,8 +393,8 @@ export function HojeClient({
         onSubmit={salvarEdicao}
         members={members}
         currentUserId={currentUserId}
-        leadId={tasks.find((t) => t.id === emEdicao?.id)?.lead_id ?? null}
-        dealId={tasks.find((t) => t.id === emEdicao?.id)?.deal_id ?? null}
+        leadId={lista.find((t) => t.id === emEdicao?.id)?.lead_id ?? null}
+        dealId={lista.find((t) => t.id === emEdicao?.id)?.deal_id ?? null}
         tarefa={emEdicao}
       />
     </div>

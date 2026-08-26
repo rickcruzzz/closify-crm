@@ -148,3 +148,65 @@ describe('rotuloDePrazo', () => {
     )
   })
 })
+
+/**
+ * A janela de "desfazer" de `/hoje`.
+ *
+ * Para riscar a linha, o item precisa de `done_at`; para aparecer, precisa
+ * estar num grupo. As duas coisas se anulavam aqui, e o resultado era a linha
+ * sumir no instante do clique.
+ */
+describe('agruparPorPrazo, a exceção de manterConcluidas', () => {
+  const AGORA = new Date('2026-08-25T15:00:00Z')
+
+  function tarefa(id: string, done: boolean) {
+    return {
+      id,
+      title: id,
+      type: 'nota' as const,
+      due_at: '2026-08-25T18:00:00Z',
+      done_at: done ? '2026-08-25T14:59:00Z' : null,
+      lead_id: null,
+      deal_id: null,
+      assignee_id: null,
+      lead_name: null,
+      lead_phone: null,
+      conversa_id: null,
+      assignee_name: null,
+    }
+  }
+
+  function todas(grupos: ReturnType<typeof agruparPorPrazo>) {
+    return Object.values(grupos).flat().map((t) => t.id)
+  }
+
+  it('sem a exceção, concluída continua fora', () => {
+    const grupos = agruparPorPrazo([tarefa('a', false), tarefa('b', true)], AGORA)
+    expect(todas(grupos)).toEqual(['a'])
+  })
+
+  it('com a exceção, a concluída fica no grupo', () => {
+    const grupos = agruparPorPrazo(
+      [tarefa('a', false), tarefa('b', true)],
+      AGORA,
+      new Set(['b']),
+    )
+    expect(todas(grupos).sort()).toEqual(['a', 'b'])
+  })
+
+  // A exceção vale só para quem foi nomeado: outra tarefa concluída que não
+  // esteja na janela continua fora, senão a lista viraria cemitério.
+  it('a exceção não vale para quem não foi nomeado', () => {
+    const grupos = agruparPorPrazo(
+      [tarefa('a', true), tarefa('b', true)],
+      AGORA,
+      new Set(['b']),
+    )
+    expect(todas(grupos)).toEqual(['b'])
+  })
+
+  it('conjunto vazio se comporta como não passar nada', () => {
+    const grupos = agruparPorPrazo([tarefa('a', true)], AGORA, new Set())
+    expect(todas(grupos)).toEqual([])
+  })
+})

@@ -91,10 +91,24 @@ export function classificar(task: TaskRow, agora: Date): TaskBucket {
  * Tarefa concluída não pertence a grupo nenhum e é descartada aqui também,
  * apesar de a consulta já filtrar, esta função é a única regra escrita sobre
  * o assunto, e quem chamar com a lista errada merece o resultado certo.
+ *
+ * ## A exceção, e por que ela precisa existir
+ *
+ * `/hoje` deixa a tarefa recém-concluída visível por alguns segundos, riscada,
+ * com um "Desfazer" ao lado. Para riscar, o item precisa de `done_at`; para
+ * aparecer, precisa estar num grupo. As duas coisas se anulavam aqui, e o
+ * resultado era a linha sumir no instante do clique — reportado pelo dono como
+ * "clico e some instantaneamente".
+ *
+ * `manterConcluidas` é a exceção dita em voz alta, em vez de a tela contornar
+ * a regra por fora. Quem não passa nada continua tendo o comportamento de
+ * sempre.
  */
 export function agruparPorPrazo(
   tasks: TaskRow[],
   agora: Date,
+  /** Ids que continuam agrupados mesmo concluídos. */
+  manterConcluidas?: ReadonlySet<string>,
 ): Record<TaskBucket, TaskRow[]> {
   const grupos: Record<TaskBucket, TaskRow[]> = {
     atrasada: [],
@@ -104,7 +118,7 @@ export function agruparPorPrazo(
   }
 
   for (const task of tasks) {
-    if (task.done_at) continue
+    if (task.done_at && !manterConcluidas?.has(task.id)) continue
     grupos[classificar(task, agora)].push(task)
   }
 
