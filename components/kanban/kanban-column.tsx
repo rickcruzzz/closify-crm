@@ -25,6 +25,7 @@ export const KanbanColumn = React.memo(function KanbanColumn({
   onAgendarDeal,
   filtered = false,
   compact = false,
+  emFoco = false,
   agora,
 }: {
   stage: DealStage
@@ -40,6 +41,14 @@ export const KanbanColumn = React.memo(function KanbanColumn({
   filtered?: boolean
   /** Board inteiro sem nenhum negócio: encolhe a coluna. */
   compact?: boolean
+  /**
+   * Esta e a etapa pedida por `/kanban?etapa=<stage>`.
+   *
+   * Quem clicou numa barra do funil no dashboard precisa reconhecer onde
+   * caiu: sem marca nenhuma, o board parece o mesmo de sempre e o clique
+   * parece nao ter funcionado.
+   */
+  emFoco?: boolean
   /** Relógio do cliente, repassado ao card para o cálculo de "parado há N". */
   agora: Date | null
 }) {
@@ -54,7 +63,17 @@ export const KanbanColumn = React.memo(function KanbanColumn({
     // `bg-muted/30`: antes a coluna era só espaço vazio (medido, `border: 0px`
     // e fundo transparente), então os cards flutuavam sem pertencer a lugar
     // nenhum e não se lia onde uma etapa terminava e a outra começava.
-    <div className="bg-muted/30 flex w-72 shrink-0 snap-start flex-col rounded-xl">
+    <div
+      // O id e o ancora do `scrollIntoView` que traz a coluna para a tela.
+      id={`etapa-${stage}`}
+      className={cn(
+        'bg-muted/30 flex w-72 shrink-0 snap-start flex-col rounded-xl',
+        // Anel em vez de trocar o fundo: o fundo da coluna ja carrega
+        // significado (e o que separa uma etapa da outra), e mexer nele faria
+        // a coluna em foco parecer de outro tipo em vez de destacada.
+        emFoco && 'ring-primary/60 ring-2',
+      )}
+    >
       {/* Duas linhas, tudo à esquerda, e não `justify-between` numa linha só.
           O `justify-between` empurrava nome e valor para as pontas opostas de
           uma coluna de 288px fixos, e como cada etapa tem nome de comprimento

@@ -1,11 +1,17 @@
 import Link from 'next/link'
-import { CalendarClock } from 'lucide-react'
+import { CalendarClock, CalendarPlus } from 'lucide-react'
 
 import { cn } from '@/lib/utils'
 import { dealStageLabels } from '@/lib/deals/types'
 import type { UpcomingDeal } from '@/lib/dashboard/queries'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card'
 import { EmptyState } from '@/components/ui/empty-state'
 import {
   Table,
@@ -17,6 +23,7 @@ import {
 } from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
 import { formatBRL } from '@/lib/deals/metrics'
+import { FUNIL, hrefDoNegocio } from '@/lib/dashboard/destinos'
 
 // Devolve `null` sempre que não há prazo confiável para mostrar, quem chama
 // exibe "Sem prazo". Antes a função aceitava qualquer string e calculava em
@@ -66,24 +73,61 @@ function dueDateInfo(dueDate: string | null | undefined) {
   return { label: `vence em ${diffDays} dias`, className: 'text-muted-foreground' }
 }
 
-export function UpcomingDealsTable({ deals }: { deals: UpcomingDeal[] }) {
+export function UpcomingDealsTable({
+  deals,
+  abertosSemPrazo = 0,
+}: {
+  deals: UpcomingDeal[]
+  /**
+   * Quantos negócios abertos existem sem prazo marcado.
+   *
+   * Só faz diferença quando `deals` sai vazio, e é ele que impede a tela de
+   * mentir: ver a seção do estado vazio abaixo.
+   */
+  abertosSemPrazo?: number
+}) {
   return (
     <Card>
       <CardHeader>
         <CardTitle>Negócios mais próximos do prazo</CardTitle>
+        {/* O filtro de período do topo NÃO se aplica a este painel, e está
+            certo: o período filtra `created_at` (quando o negócio nasceu) e
+            aqui a pergunta é `due_date` (o que vence à frente). Recortar o que
+            vem pela frente pela data de nascimento seria o defeito. O que
+            faltava era a tela dizer isso, em vez de parecer que ignora o
+            filtro em silêncio. */}
+        <CardDescription>Sempre o que vem à frente, independente do período acima.</CardDescription>
       </CardHeader>
       <CardContent>
         {deals.length === 0 ? (
-          <EmptyState
-            icon={CalendarClock}
-            title="Nenhum negócio em aberto"
-            description="Assim que você criar negócios no funil, os prazos mais próximos aparecem aqui."
-          >
-            <Button
-              variant="outline"
-              render={<Link href="/kanban">Ir para o funil</Link>}
-            />
-          </EmptyState>
+          // Dois estados diferentes, que a versão anterior tratava como um.
+          //
+          // A lista sai vazia tanto para quem não tem negócio nenhum quanto
+          // para quem tem vários e nenhum com prazo — e a tela dizia "Nenhum
+          // negócio em aberto" nos dois casos, mandando criar o que já existe.
+          // Medido em 26/08/2026: 4 negócios abertos no card ao lado, zero com
+          // `due_date`, e esta caixa afirmando que não havia nenhum.
+          abertosSemPrazo > 0 ? (
+            <EmptyState
+              icon={CalendarPlus}
+              title={
+                abertosSemPrazo === 1
+                  ? 'Seu negócio em aberto está sem prazo'
+                  : `Seus ${abertosSemPrazo} negócios em aberto estão sem prazo`
+              }
+              description="Marque uma data de fechamento em cada um e eles passam a aparecer aqui, do mais urgente para o menos."
+            >
+              <Button variant="outline" render={<Link href={FUNIL}>Definir prazos</Link>} />
+            </EmptyState>
+          ) : (
+            <EmptyState
+              icon={CalendarClock}
+              title="Nenhum negócio em aberto"
+              description="Assim que você criar negócios no funil, os prazos mais próximos aparecem aqui."
+            >
+              <Button variant="outline" render={<Link href={FUNIL}>Ir para o funil</Link>} />
+            </EmptyState>
+          )
         ) : (
           <>
             {/* Mesmos dados em cards abaixo de `lg`: cinco colunas com
@@ -92,30 +136,40 @@ export function UpcomingDealsTable({ deals }: { deals: UpcomingDeal[] }) {
               {deals.map((deal) => {
                 const due = dueDateInfo(deal.due_date)
                 return (
-                  <li key={deal.id} className="flex flex-col gap-2 py-3 first:pt-0">
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="flex min-w-0 flex-col">
-                        <span className="truncate font-medium">{deal.title}</span>
-                        {deal.lead_company && (
-                          <span className="text-muted-foreground truncate text-xs">
-                            {deal.lead_company}
-                          </span>
-                        )}
+                  <li key={deal.id}>
+                    {/* O bloco INTEIRO é o link, não o título.
+                        Ver "vence em 2 dias" e não conseguir abrir o negócio
+                        era o beco sem saída que este trabalho fecha. As
+                        margens negativas devolvem a área de toque até a borda
+                        do cartão, sem mexer no alinhamento do texto. */}
+                    <Link
+                      href={hrefDoNegocio(deal.id)}
+                      className="hover:bg-accent/40 focus-visible:ring-ring/50 -mx-2 flex flex-col gap-2 rounded-lg px-2 py-3 transition-colors outline-none focus-visible:ring-3"
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex min-w-0 flex-col">
+                          <span className="truncate font-medium">{deal.title}</span>
+                          {deal.lead_company && (
+                            <span className="text-muted-foreground truncate text-xs">
+                              {deal.lead_company}
+                            </span>
+                          )}
+                        </div>
+                        <span className="shrink-0 font-medium tabular-nums">
+                          {formatBRL(deal.value)}
+                        </span>
                       </div>
-                      <span className="shrink-0 font-medium">
-                        {formatBRL(deal.value)}
-                      </span>
-                    </div>
 
-                    <div className="flex flex-wrap items-center gap-2 text-xs">
-                      <Badge variant="secondary">{dealStageLabels[deal.stage]}</Badge>
-                      <span className={cn('font-medium', due?.className)}>
-                        {due?.label ?? 'Sem prazo'}
-                      </span>
-                      <span className="text-muted-foreground">
-                        · {deal.owner_name ?? 'Sem responsável'}
-                      </span>
-                    </div>
+                      <div className="flex flex-wrap items-center gap-2 text-xs">
+                        <Badge variant="secondary">{dealStageLabels[deal.stage]}</Badge>
+                        <span className={cn('font-medium', due?.className)}>
+                          {due?.label ?? 'Sem prazo'}
+                        </span>
+                        <span className="text-muted-foreground">
+                          · {deal.owner_name ?? 'Sem responsável'}
+                        </span>
+                      </div>
+                    </Link>
                   </li>
                 )
               })}
@@ -136,10 +190,25 @@ export function UpcomingDealsTable({ deals }: { deals: UpcomingDeal[] }) {
                   {deals.map((deal) => {
                     const due = dueDateInfo(deal.due_date)
                     return (
-                      <TableRow key={deal.id}>
+                      // `relative` na linha + `after:inset-0` no link: um
+                      // único link cobre a linha inteira, então clicar na
+                      // coluna "Prazo" abre o mesmo negócio que clicar no
+                      // nome. Continua sendo um `<a>` de verdade — abre em
+                      // nova aba, é alcançável por Tab e o leitor de tela
+                      // anuncia o nome do negócio, o que `onClick` na linha
+                      // não daria.
+                      <TableRow
+                        key={deal.id}
+                        className="hover:bg-accent/40 relative cursor-pointer transition-colors"
+                      >
                         <TableCell>
                           <div className="flex flex-col">
-                            <span className="font-medium">{deal.title}</span>
+                            <Link
+                              href={hrefDoNegocio(deal.id)}
+                              className="focus-visible:ring-ring/50 rounded-sm font-medium outline-none after:absolute after:inset-0 focus-visible:ring-3"
+                            >
+                              {deal.title}
+                            </Link>
                             {deal.lead_company && (
                               <span className="text-muted-foreground text-xs">
                                 {deal.lead_company}
@@ -150,7 +219,7 @@ export function UpcomingDealsTable({ deals }: { deals: UpcomingDeal[] }) {
                         <TableCell>
                           <Badge variant="secondary">{dealStageLabels[deal.stage]}</Badge>
                         </TableCell>
-                        <TableCell>{formatBRL(deal.value)}</TableCell>
+                        <TableCell className="tabular-nums">{formatBRL(deal.value)}</TableCell>
                         <TableCell>{deal.owner_name ?? 'Sem responsável'}</TableCell>
                         <TableCell className={cn('font-medium', due?.className)}>
                           {due?.label ?? 'Sem prazo'}

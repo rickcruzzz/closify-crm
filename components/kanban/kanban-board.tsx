@@ -69,6 +69,8 @@ export function KanbanBoard({
   currentUserId,
   proximasAcoes,
   calendarConectado,
+  negocioInicial = null,
+  etapaEmFoco = null,
 }: {
   initialDeals: DealRow[]
   /**
@@ -92,10 +94,27 @@ export function KanbanBoard({
   proximasAcoes: [string, ProximaAcaoRow][]
   /** Se dá pra oferecer "mandar pro Google Calendar" no painel do negócio. */
   calendarConectado: boolean
+  /**
+   * Negócio a abrir de cara, vindo de `/kanban?negocio=<id>`.
+   *
+   * É o que faz uma linha de "Negócios mais próximos do prazo" abrir o
+   * negócio em vez de largar a pessoa no quadro inteiro para procurá-lo.
+   */
+  negocioInicial?: string | null
+  /**
+   * Etapa a trazer para a tela, vinda de `/kanban?etapa=<stage>`.
+   *
+   * Clicar numa barra do funil no dashboard cai aqui. Sem isso o clique
+   * levaria ao board sem foco nenhum, e em telas estreitas a coluna em que a
+   * pessoa clicou nem estaria visível.
+   */
+  etapaEmFoco?: DealStage | null
 }) {
   const [deals, setDeals] = React.useState(initialDeals)
   const [activeId, setActiveId] = React.useState<string | null>(null)
-  const [selectedDealId, setSelectedDealId] = React.useState<string | null>(null)
+  // Semeado pela URL: `?negocio=<id>` abre o painel já na primeira pintura,
+  // sem piscar o quadro antes.
+  const [selectedDealId, setSelectedDealId] = React.useState<string | null>(negocioInicial)
   /**
    * Abrir o painel já no agendamento, quando veio do aviso do card.
    *
@@ -278,6 +297,22 @@ export function KanbanBoard({
     }
     toast.success('Negócio criado com sucesso.')
   }
+
+  /**
+   * Traz para a tela a coluna pedida pela URL.
+   *
+   * O board rola na horizontal e, em tela estreita, a etapa em que a pessoa
+   * clicou no funil pode estar inteiramente fora do campo de visão: sem isto,
+   * o clique "funcionaria" e ainda assim pareceria não ter feito nada.
+   *
+   * `block: 'nearest'` de propósito — sem ele o navegador rola a PÁGINA para
+   * centralizar a coluna, e o cabeçalho do funil sai de vista.
+   */
+  React.useEffect(() => {
+    if (!etapaEmFoco) return
+    const coluna = document.getElementById(`etapa-${etapaEmFoco}`)
+    coluna?.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' })
+  }, [etapaEmFoco])
 
   const selectedDeal = deals.find((deal) => deal.id === selectedDealId)
   const activeDeal = deals.find((deal) => deal.id === activeId)
@@ -473,6 +508,7 @@ export function KanbanBoard({
               leadsById={leadsById}
               proximaAcaoPorNegocio={proximaAcaoPorNegocio}
               totalNaEtapa={totalPorEtapa[stage] ?? 0}
+              emFoco={stage === etapaEmFoco}
               onOpenDeal={setSelectedDealId}
               onAgendarDeal={abrirDealNoAgendamento}
               agora={agora}

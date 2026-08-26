@@ -112,6 +112,58 @@ export async function getBoardDeals(workspaceId: string): Promise<BoardDoKanban>
 }
 
 /**
+ * Um negócio só, pelo id, para quando o link aponta para fora do board.
+ *
+ * `getBoardDeals` traz no máximo `CARDS_POR_ETAPA` por coluna. Um link como
+ * `/kanban?negocio=<id>` que aponte para um negócio fora desse corte abriria
+ * um painel vazio — exatamente o beco sem saída que os links do dashboard
+ * existem para fechar.
+ *
+ * Só é chamada quando o parâmetro está presente E o id não veio no board, ou
+ * seja: nunca no caminho normal de abrir o funil.
+ */
+export async function getDealAvulso(
+  workspaceId: string,
+  dealId: string,
+): Promise<DealRow | null> {
+  const supabase = await createClient()
+
+  const { data, error } = await supabase
+    .from('deals')
+    .select(
+      'id, title, lead_id, value, stage, due_date, created_at, stage_changed_at, owner_id',
+    )
+    .eq('workspace_id', workspaceId)
+    .eq('id', dealId)
+    .maybeSingle()
+
+  // Id inexistente, de outra empresa (a RLS recusa) ou erro de leitura: nos
+  // três casos não há negócio para abrir, e o board renderiza normalmente.
+  if (error) {
+    console.error('getDealAvulso falhou', error)
+    return null
+  }
+  if (!data) return null
+
+  const ownerNames = data.owner_id
+    ? await getMemberNames(workspaceId, [data.owner_id])
+    : new Map<string, string>()
+
+  return {
+    id: data.id,
+    title: data.title,
+    lead_id: data.lead_id,
+    value: data.value,
+    stage: data.stage,
+    due_date: data.due_date,
+    created_at: data.created_at,
+    stage_changed_at: data.stage_changed_at,
+    owner_id: data.owner_id,
+    owner_name: data.owner_id ? ownerNames.get(data.owner_id) ?? null : null,
+  }
+}
+
+/**
  * Teto do seletor de leads do formulário de negócio.
  *
  * Não é paginação: um `<select>` com mais de algumas centenas de itens já é

@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
-import { getBoardDeals, getWorkspaceLeadsForSelect } from '@/lib/deals/queries'
+import { getBoardDeals, getDealAvulso, getWorkspaceLeadsForSelect } from '@/lib/deals/queries'
+import { dealStages, type DealStage } from '@/lib/deals/types'
 import { getWorkspaceMembers } from '@/lib/leads/queries'
 import { getProximaAcaoPorNegocio } from '@/lib/tasks/queries'
 import { getIntegrationConnections } from '@/lib/integrations/queries'
@@ -10,7 +11,22 @@ import { GettingStartedCard } from '@/components/kanban/getting-started-card'
 
 export const metadata: Metadata = { title: 'Funil' }
 
-export default async function KanbanPage() {
+/**
+ * O funil, opcionalmente com uma etapa em foco ou um negocio aberto.
+ *
+ * Ate 26/08/2026 esta pagina nao aceitava parametro nenhum, e era por isso que
+ * o dashboard nao conseguia abrir nada: os paineis mostravam numero de negocio
+ * e prazo, e nao existia endereco para o qual mandar quem clicasse.
+ *
+ *     /kanban?etapa=proposta_enviada   a coluna entra na tela, destacada
+ *     /kanban?negocio=<id>             o painel do negocio abre de cara
+ */
+export default async function KanbanPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ etapa?: string; negocio?: string }>
+}) {
+  const params = await searchParams
   const { user, workspaceId } = await getCurrentUserAndWorkspace()
 
   // Quinta consulta no mesmo `Promise.all`, não uma por card: o board já
@@ -23,6 +39,34 @@ export default async function KanbanPage() {
     getProximaAcaoPorNegocio(workspaceId),
     getIntegrationConnections(workspaceId),
   ])
+
+  // Valor fora do enum vira "sem foco" em vez de erro: o parametro vem da
+  // URL, e URL e digitavel por qualquer um.
+  const etapaEmFoco = (dealStages as readonly string[]).includes(params.etapa ?? '')
+    ? (params.etapa as DealStage)
+    : null
+
+  // O board traz no maximo 200 por etapa. Um link para um negocio fora desse
+  // corte abriria painel vazio, que e o mesmo beco sem saida por outro
+  // caminho. A consulta extra so acontece quando o parametro existe E o
+  // negocio nao veio no board.
+  const negocioPedido = params.negocio ?? null
+  let deals = board.deals
+
+  if (negocioPedido && !deals.some((d) => d.id === negocioPedido)) {
+    const avulso = await getDealAvulso(workspaceId, negocioPedido)
+    if (avulso) deals = [...deals, avulso]
+  }
+
+  // So abre o painel se o negocio EXISTE de verdade.
+  //
+  // Sem esta linha, `?negocio=<id-que-nao-existe>` abria um painel em branco:
+  // o board so testa se ha id selecionado, nao se ele casa com algum negocio.
+  // Link velho, negocio apagado ou id de outra empresa (que a RLS recusa)
+  // caem todos aqui, e um painel vazio e o mesmo beco sem saida por outro
+  // caminho. Achado pelo proprio roteiro de prova.
+  const negocioParaAbrir =
+    negocioPedido && deals.some((d) => d.id === negocioPedido) ? negocioPedido : null
 
   // Só pra saber se dá pra oferecer "mandar pro Google Calendar" no painel
   // do negócio, mesma função que a aba Integrações usa, uma consulta leve.
@@ -46,7 +90,7 @@ export default async function KanbanPage() {
       {board.deals.length === 0 && <GettingStartedCard />}
 
       <KanbanBoard
-        initialDeals={board.deals}
+        initialDeals={deals}
         totalPorEtapa={board.totalPorEtapa}
         leads={leads}
         members={members}
@@ -54,6 +98,8 @@ export default async function KanbanPage() {
         // `Map` não sobrevive à serialização servidor→cliente; vai como pares.
         proximasAcoes={Array.from(proximasAcoes)}
         calendarConectado={calendarConectado}
+        negocioInicial={negocioParaAbrir}
+        etapaEmFoco={etapaEmFoco}
       />
     </div>
   )

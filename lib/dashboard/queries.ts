@@ -5,7 +5,31 @@ export type DashboardMetrics = {
   totalLeads: number
   openDeals: number
   pipelineValue: number
-  conversionRate: number
+  /**
+   * Fechados e ganhos vêm CRUS, em vez de já divididos.
+   *
+   * A versão anterior devolvia só `conversionRate` e descartava os dois
+   * números que a produziram. Com um único negócio fechado o card exibia
+   * "100%", que é verdade aritmética e mentira de leitura. Quem monta o texto
+   * é `textoDaConversao` (`lib/dashboard/conversao.ts`), que não consegue
+   * mostrar o percentual sem a base ao lado.
+   */
+  closedDeals: number
+  wonDeals: number
+}
+
+/**
+ * O que "Negócios mais próximos do prazo" precisa saber para não mentir.
+ *
+ * A lista sozinha não bastava: ela sai vazia tanto quando a empresa não tem
+ * negócio nenhum quanto quando tem vários e nenhum com prazo marcado — e o
+ * estado vazio dizia "Nenhum negócio em aberto" nos dois casos, ao lado de um
+ * card informando quatro negócios abertos (medido em 26/08/2026).
+ */
+export type ProximosPrazos = {
+  deals: UpcomingDeal[]
+  /** Quantos negócios abertos existem sem prazo marcado. Só é contado quando a lista sai vazia. */
+  abertosSemPrazo: number
 }
 
 export type FunnelStageCount = {
@@ -64,7 +88,8 @@ export async function getDashboardMetrics(
     totalLeads: counts?.total_leads ?? 0,
     openDeals: counts?.open_deals ?? 0,
     pipelineValue: pipelineValueResult.data ?? 0,
-    conversionRate: closedCount > 0 ? (wonCount / closedCount) * 100 : 0,
+    closedDeals: closedCount,
+    wonDeals: wonCount,
   }
 }
 
@@ -106,10 +131,13 @@ export async function getFunnelCounts(
   }))
 }
 
-export async function getUpcomingDeals(workspaceId: string, limit = 5): Promise<UpcomingDeal[]> {
+export async function getUpcomingDeals(
+  workspaceId: string,
+  limit = 5,
+): Promise<ProximosPrazos> {
   const supabase = await createClient()
 
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from('deals')
     .select('id, title, stage, value, due_date, owner_id, lead_id')
     .eq('workspace_id', workspaceId)
@@ -118,7 +146,29 @@ export async function getUpcomingDeals(workspaceId: string, limit = 5): Promise<
     .order('due_date', { ascending: true })
     .limit(limit)
 
-  if (!data || data.length === 0) return []
+  // Erro não checado vira `data` nulo, que aqui é indistinguível de "nenhum
+  // prazo" — a tela mostraria estado vazio para uma falha de leitura.
+  if (error) {
+    console.error('getUpcomingDeals falhou', error)
+  }
+
+  if (!data || data.length === 0) {
+    // Só agora, e só neste caminho: a pergunta "existe negócio aberto sem
+    // prazo?" só importa quando a lista saiu vazia. Contagem agregada no
+    // banco, sem trazer linha.
+    const { count, error: erroContagem } = await supabase
+      .from('deals')
+      .select('id', { count: 'exact', head: true })
+      .eq('workspace_id', workspaceId)
+      .not('stage', 'in', `(${CLOSED_STAGES.join(',')})`)
+      .is('due_date', null)
+
+    if (erroContagem) {
+      console.error('getUpcomingDeals: contagem de abertos sem prazo falhou', erroContagem)
+    }
+
+    return { deals: [], abertosSemPrazo: count ?? 0 }
+  }
 
   const leadIds = Array.from(new Set(data.map((d) => d.lead_id).filter((id): id is string => !!id)))
   const ownerIds = Array.from(new Set(data.map((d) => d.owner_id).filter((id): id is string => !!id)))
@@ -132,15 +182,18 @@ export async function getUpcomingDeals(workspaceId: string, limit = 5): Promise<
 
   const companyById = new Map((leadsResult.data ?? []).map((l) => [l.id, l.company]))
 
-  return data.map((deal) => ({
-    id: deal.id,
-    title: deal.title,
-    stage: deal.stage,
-    value: deal.value,
-    due_date: deal.due_date,
-    lead_company: deal.lead_id ? companyById.get(deal.lead_id) ?? null : null,
-    owner_name: deal.owner_id ? ownerNames.get(deal.owner_id) ?? null : null,
-  }))
+  return {
+    deals: data.map((deal) => ({
+      id: deal.id,
+      title: deal.title,
+      stage: deal.stage,
+      value: deal.value,
+      due_date: deal.due_date,
+      lead_company: deal.lead_id ? companyById.get(deal.lead_id) ?? null : null,
+      owner_name: deal.owner_id ? ownerNames.get(deal.owner_id) ?? null : null,
+    })),
+    abertosSemPrazo: 0,
+  }
 }
 
 async function getMemberNames(
