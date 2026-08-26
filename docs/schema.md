@@ -7,6 +7,26 @@ Migrations novas mudam este arquivo com o tempo; ao suspeitar de
 desatualização, reconsulte o catálogo em vez de confiar cegamente nele (mesma
 regra de `docs/estado-atual.md`).
 
+**Reconferido em 26/08/2026 — três tabelas novas, e nenhuma RPC nova.** As
+migrations 0054-0056 acrescentaram `assinatura_eventos` (0055) e o par
+`conversas`/`mensagens` (0056), levando a contagem de **14 para 17 tabelas**, e
+as foreign keys entre tabelas do `public` de **12 para 17**. Mais
+`workspaces.aviso_trial_enviado_em` (0055) e um valor novo no enum
+`activity_type` (`whatsapp`, 0054).
+
+**O número de RPCs não mudou: continua 30.** É o detalhe que este documento
+existe para expor. A 0055 criou tabela e reescreveu `pro_vigente()` **por
+dentro** — restaurando a graça por forma de pagamento que a 0051 havia
+revertido sem querer; a 0056 criou uma função `returns trigger`
+(`checar_teto_de_mensagens`), que o PostgREST não expõe. **Quem monitorasse só
+a lista de RPCs não teria detectado nenhuma das duas.** Ver **Regras que vivem
+em trigger**, abaixo.
+
+Conferido pelo documento OpenAPI que o PostgREST de produção serve — a mesma
+fonte que o app consome —, não pela leitura das migrations. `tasks.type` foi
+verificado e usa o **mesmo** `public.activity_type` de `activities.type`, então
+o valor novo do enum vale para os dois.
+
 **Reconferido em 24/08/2026 — coluna nova, RPC nova.** As migrations 0051-0053
 (reverse trial) acrescentaram `workspaces.trial_ate` (`timestamptz`,
 nullable) e a RPC `em_trial(workspace_id)`. Contagem de tabelas continua em
@@ -68,8 +88,10 @@ tabelas expostas pelo PostgREST em produção continua nas mesmas 13
 Versão renderizada, imagem única com todas as tabelas, chaves e legendas:
 [schema.svg](schema.svg).
 
-**`schema.svg` está um campo atrás do Mermaid abaixo desde 24/08/2026**
-(falta `trial_ate` em `workspaces`). Tentativa de regeneração nesta sessão:
+**`schema.svg` está três tabelas e dois campos atrás do Mermaid abaixo, desde
+26/08/2026** (faltam `conversas`, `mensagens`, `assinatura_eventos`,
+`workspaces.trial_ate` e `workspaces.aviso_trial_enviado_em`). A distância
+cresce a cada rodada porque a regeneração não roda nesta máquina:
 `chrome-headless-shell` baixa mas falha ao subir no Windows local (dois erros
 distintos de lançamento, sem sandbox funcional). Comando pra regenerar em
 ambiente com Chromium headless de verdade (Linux/Mac, ou WSL):
@@ -95,6 +117,7 @@ classDiagram
         +text cnpj
         +text logo_url
         +timestamptz trial_ate "nullable, migration 0051"
+        +timestamptz aviso_trial_enviado_em "nullable, migration 0055"
         +uuid created_by "→ auth.users, sem FK"
         +timestamptz created_at
     }
@@ -237,6 +260,48 @@ classDiagram
         +timestamptz created_at
     }
 
+    class conversas {
+        +uuid id PK
+        +uuid workspace_id FK
+        +uuid lead_id FK
+        +text canal "check: whatsapp"
+        +timestamptz ultimo_recebido_em "nullable"
+        +timestamptz ultimo_enviado_em "nullable"
+        +timestamptz respondida_em "nullable, zera o relogio de espera"
+        +uuid dono_id "→ auth.users, FK declarada, SET NULL"
+        +timestamptz assumida_em "nullable"
+        +timestamptz arquivada_em "nullable"
+        +timestamptz created_at
+    }
+
+    class mensagens {
+        +uuid id PK
+        +uuid workspace_id FK
+        +uuid conversa_id FK
+        +text direcao "check: recebida, enviada"
+        +text tipo "check: texto, audio, imagem, video, documento, figurinha, outro"
+        +text texto "nullable"
+        +text midia_chave "nullable"
+        +text midia_mime "nullable"
+        +int midia_segundos "nullable"
+        +text external_id "nullable, unico por workspace quando nao nulo"
+        +uuid enviada_por "→ auth.users, FK declarada, SET NULL"
+        +text status "check: pendente, enviada, falhou"
+        +text erro "nullable"
+        +timestamptz created_at
+    }
+
+    class assinatura_eventos {
+        +uuid id PK
+        +uuid workspace_id FK
+        +subscription_status de_status "nullable"
+        +subscription_status para_status
+        +text origem
+        +text billing_type "nullable"
+        +text asaas_event_id "nullable"
+        +timestamptz criado_em
+    }
+
     workspaces "1" --> "many" workspace_members : CASCADE
     workspaces "1" --> "many" leads : CASCADE
     workspaces "1" --> "many" deals : CASCADE
@@ -245,12 +310,18 @@ classDiagram
     workspaces "1" --> "many" subscriptions : CASCADE
     workspaces "1" --> "many" workspace_invites : CASCADE
     workspaces "1" --> "many" integration_connections : CASCADE
+    workspaces "1" --> "many" conversas : CASCADE
+    workspaces "1" --> "many" mensagens : CASCADE
+    workspaces "1" --> "many" assinatura_eventos : CASCADE
 
     leads "1" --> "many" deals : SET NULL
     leads "1" --> "many" activities : CASCADE
     leads "1" --> "0..many" tasks : CASCADE
 
     deals "1" --> "0..many" tasks : CASCADE
+
+    leads "1" --> "0..many" conversas : CASCADE
+    conversas "1" --> "many" mensagens : CASCADE
 ```
 
 *Tabelas soltas, sem FK para nenhuma outra do schema `public`:
@@ -287,6 +358,12 @@ projeto já pagou cinco vezes a lição de descobrir isso tarde.
 | `leads` | `validar_limite_de_leads` (0023, corrigida na 0026) | 301º contato num workspace Free |
 | `workspace_members` | `validar_limite_de_membros` (**0050**, 23/08) | 3º colaborador num workspace Free |
 | `deals`, `tasks` | validação de alvo (0038) | `lead_id`/`deal_id` de outra empresa |
+| `mensagens` | `checar_teto_de_mensagens` (**0056**, 26/08) | passar de 200 mil mensagens por empresa |
+
+O teto de `mensagens` é defesa contra abuso, não limite de plano — mesma
+doutrina do teto de 5.000 tarefas da 0029, e pelo mesmo motivo: cobrar por
+mensagem recebida empurraria a pessoa de volta para o WhatsApp do celular, que
+é exatamente o hábito que o produto existe para substituir.
 
 A **0050** é a mais recente e nasceu de um furo medido em produção: a trava de
 2 membros existia, mas só dentro da RPC `accept_workspace_invite` — e ninguém é
@@ -324,6 +401,35 @@ isola o caso — o trial libera o *uso* de funcionalidades Pro, nunca a
 *permanência* de estoque (empresas extras, colaboradores extras) além do
 plano Free.
 
+### A graça pós-vencimento, perdida e restaurada (0044 → 0051 → 0055)
+
+O caso mais caro desta seção, e o que melhor justifica ela existir.
+
+A **0044** fez a graça depois do vencimento depender da forma de pagamento:
+1 dia no cartão (a cobrança é instantânea, atraso é inadimplência) e 3 nos
+demais (Pix e boleto levam para compensar). A regra virou a função
+`dias_de_graca(billing_type)`.
+
+A **0051**, ao acrescentar o reverse trial, **reescreveu `pro_vigente()`
+inteira** e voltou para a constante de 3 dias que a própria 0044 tinha marcado
+como obsoleta. `dias_de_graca()` ficou órfã no banco: existia, e nenhuma
+função, trigger, policy ou índice a chamava. Cinco arquivos TypeScript seguiam
+descrevendo em comentário um comportamento que tinha deixado de existir.
+
+Medido antes de corrigir, numa transação com `rollback`: cartão vencido há 2
+dias devolvia `true` quando deveria devolver `false`. A **0055** restaurou a
+chamada.
+
+**Nada disso aparece no catálogo.** Nome, assinatura e tipo de retorno de
+`pro_vigente()` foram idênticos nas três versões. Reescrever uma função inteira
+para acrescentar uma cláusula não deixa rastro de que a outra metade regrediu —
+e 16 funções deste banco já foram redefinidas mais de uma vez.
+
+Ressalva honesta: o defeito era **latente**. As 14 assinaturas do banco têm
+`ultimo_billing_type` nulo ou `UNDEFINED`, e `dias_de_graca` devolve 3 para os
+dois. Nenhum cliente foi afetado — foi o momento mais barato possível para
+consertar.
+
 ## Achado da inspeção: colunas que apontam para `auth.users` sem FK declarada
 
 `deals.owner_id`, `leads.owner_id`, `tasks.assignee_id`, `tasks.created_by`,
@@ -341,7 +447,7 @@ integridade referencial para essas colunas é garantida pela aplicação
 
 | Enum | Valores |
 |---|---|
-| `activity_type` | `ligacao`, `email`, `reuniao`, `nota` |
+| `activity_type` | `ligacao`, `email`, `reuniao`, `nota`, `whatsapp` |
 | `deal_stage` | `novo`, `contato_realizado`, `proposta_enviada`, `negociacao`, `fechado_ganho`, `fechado_perdido` |
 | `integration_provider` | `google_calendar`, `gmail`, `whatsapp` |
 | `integration_status` | `connected`, `error`, `disconnected` |
@@ -350,16 +456,42 @@ integridade referencial para essas colunas é garantida pela aplicação
 | `workspace_plan` | `free`, `pro` |
 | `workspace_role` | `admin`, `membro` |
 
+`activity_type` ganhou `whatsapp` na migration 0054, e o valor vale para
+**duas** colunas: `activities.type` e `tasks.type` compartilham o mesmo enum,
+verificado no catálogo e não deduzido pelos valores coincidirem. Antes disso a
+mensagem recebida era gravada como `nota` com o texto prefixado por
+"WhatsApp: " — o prefixo virava parte do que o cliente escreveu para quem
+exportasse, buscasse ou lesse por API.
+
+**`conversas` e `mensagens` não usam enum nenhum.** `canal`, `direcao`, `tipo`
+e `status` são `text` com `check constraint`. É escolha: são vocabulários que
+ainda vão crescer (um canal novo, um tipo de mídia novo), e `alter type ... add
+value` não roda dentro de transação no Postgres, enquanto trocar um `check`
+roda. Enum se paga quando o conjunto está estável, que é o caso de
+`deal_stage`.
+
 ## Resumo do catálogo
 
-**14 tabelas** no schema `public`, todas com Row Level Security ligada
-(`rls_enabled: true` em `list_tables`, confirmado, não suposto). Este número
-dizia 12 até 23/08/2026 — ficou para trás quando a 0046 (`error_logs`) e a
-0047 (`whatsapp_webhook_events`) entraram. **30 RPCs** desde 24/08/2026 (era
-29): a `em_trial`, da migration 0053, é a única função nova — `trial_ate` é
-coluna, não RPC, e por isso não conta aqui. Reconferido lendo o documento
-OpenAPI que o PostgREST de produção serve, que é a mesma fonte que o app
-consome. 12 relações de foreign key entre tabelas do schema (reconferidas na
-mesma leitura, este número continua certo); a maioria com `ON DELETE CASCADE`
-a partir de `workspaces`, exceto `deals.lead_id` (`SET NULL` — um negócio
-sobrevive à exclusão do lead vinculado).
+**17 tabelas** no schema `public`, todas com Row Level Security ligada
+(`rls_enabled: true` em `list_tables`, confirmado, não suposto). O número já
+disse 12 (até 23/08) e 14 (até 25/08); subiu para 17 em 26/08 com
+`assinatura_eventos` (0055) e o par `conversas`/`mensagens` (0056).
+
+**30 RPCs**, e este número **não mudou** desde 24/08 — as duas migrations que
+acrescentaram tabela não acrescentaram função exposta. `checar_teto_de_mensagens`
+(0056) é `returns trigger`, que o PostgREST não lista, e a 0055 alterou
+`pro_vigente()` por dentro sem tocar na assinatura.
+
+**17 relações de foreign key** entre tabelas do schema, contra 12 até 25/08:
+entraram `conversas.workspace_id`, `conversas.lead_id`, `mensagens.workspace_id`,
+`mensagens.conversa_id` e `assinatura_eventos.workspace_id`. A maioria com
+`ON DELETE CASCADE` a partir de `workspaces`, exceto `deals.lead_id` (`SET
+NULL` — um negócio sobrevive à exclusão do lead vinculado).
+
+`conversas.dono_id` e `mensagens.enviada_por` **têm FK declarada**, para
+`auth.users`, com `ON DELETE SET NULL` — diferente das dez colunas listadas na
+seção acima, que apontam para lá sem FK nenhuma. Elas não entram na contagem de
+17 porque `auth` é outro schema.
+
+Tudo reconferido lendo o documento OpenAPI que o PostgREST de produção serve,
+que é a mesma fonte que o app consome — não a leitura das migrations.

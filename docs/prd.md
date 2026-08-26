@@ -3,8 +3,10 @@
 > Iniciativa de conversão Free→Pro (copy da landing, limites, checkout) tem
 > PRD próprio: [prd-conversao-pro.md](prd-conversao-pro.md).
 >
-> **Conferido contra produção em 24/08/2026, noite.** Números de tabela, RPC,
-> migration e teste vieram do catálogo real e do gate, não de memória. O estado
+> **Conferido contra produção em 26/08/2026.** Números de tabela, RPC,
+> migration e teste vieram do catálogo real e do gate, não de memória:
+> **17 tabelas**, **30 RPCs**, **17 foreign keys**, 55 arquivos de migration
+> (a maior é `0056`) e **715 testes**. O estado
 > operacional do dia a dia (o que quebrou, o que foi medido, o que está
 > pendente) mora em [estado-atual.md](estado-atual.md); o diagrama de classes,
 > em [schema.md](schema.md).
@@ -38,7 +40,14 @@ dado real; o que não está tem o motivo escrito ao lado.
 - [x] Permissões por usuário — checadas em RLS **e** na UI
 - [x] Parte premium (paga) — Asaas, reverse trial de 7 dias, checkout de
       Pix/boleto dentro do produto, webhook + reconciliação diária
-- [x] Integrações (API) — Google Calendar, Gmail, WhatsApp pelo Evolution
+- [x] Integrações (API) — Google Calendar e Gmail, com verificação OAuth do
+      Google aprovada
+- [x] Conversas — caixa de entrada do WhatsApp dentro do produto, ordenada por
+      quem espera há mais tempo. **A tela está pronta; o transporte, não** (ver
+      o item abaixo)
+- [ ] WhatsApp conectável — sinalizado **"Em breve"** no produto, nos dois
+      planos. A conexão pela VPS (Evolution) foi construída e está desligada; o
+      destino é a **Cloud API oficial**, que exige CNPJ ativo antes de tudo
 - [x] Busca e Filtros — nome, e-mail, empresa, status, responsável, data
 - [x] Landing Page — dor do WhatsApp (não planilha), 7 dias de trial vendidos,
       seção de confiança, prints reais legíveis no zoom e no mobile, sem prova
@@ -122,11 +131,18 @@ não persiste refresh token utilizável em background. Um escopo por conexão
 Google Calendar" na próxima ação do negócio, "Enviar e-mail" no painel do
 lead, os dois registram atividade na timeline.
 
-WhatsApp tem **dois mecanismos independentes**: o link `wa.me` (ver
-**WhatsApp por link**, abaixo), que nunca dependeu de token nenhum, e a
-integração pelo **Evolution GO** numa VPS própria (ver **WhatsApp pelo
-Evolution**, abaixo). A Cloud API oficial da Meta foi implementada e depois
-removida em 13/08, decisão de produto — nunca teve conexão real em produção.
+WhatsApp tem **dois mecanismos independentes**, e só um deles funciona hoje:
+o link `wa.me` (ver **WhatsApp por link**, abaixo), que nunca dependeu de token
+nenhum e continua ativo; e a conexão do número da empresa, construída sobre
+Evolution GO numa VPS própria e **desligada desde 26/08** (ver **WhatsApp: o
+que existe, e por que está desligado**, abaixo).
+
+A **Cloud API oficial** já foi implementada uma vez e removida em 13/08, quando
+a decisão foi não usá-la — nunca teve conexão real em produção. Ela voltou a
+ser o destino em 26/08, por motivo diferente do de então: não é mais "vale a
+pena?", é o que a fase 1 estruturalmente não entrega (fila com dono, relatório
+por atendente) somado ao risco de a Meta restringir um número não oficial. O
+que trava não é código, é o CNPJ.
 
 **Busca e Filtros**
 Busca por nome, e-mail, empresa, status, responsável e data.
@@ -170,7 +186,20 @@ Basecamp, Tally, Page AI): todas sustentam a página em "N mil empresas" ou
 depoimento com nome — com zero cliente externo pagante, copiar isso deixaria
 buraco onde mais dói. Em vez disso, quatro garantias conferíveis (isolamento
 por RLS, dados em `sa-east-1`, cartão que nunca passa pelo nosso servidor,
-cancelamento sem multa) e o CNPJ, antes preso só nas páginas legais.
+cancelamento sem multa).
+
+*O CNPJ saiu da vitrine em 25/08, e a ausência dele é deliberada.* A seção
+exibia a inscrição como prova conferível — e a consulta à Receita desmentia a
+página: `64.543.748/0001-13` está **baixado desde 08/08/2026**. Numa seção que
+abre dizendo "em vez de pedir confiança, mostramos onde ela pode ser
+conferida", exibir número morto é pior que não exibir nenhum.
+`CONTROLADOR.cnpj` virou `string | null`, e duas funções puras decidem o texto
+(`lib/legal.ts`): `identificacaoDoControlador` para as páginas legais e avisos
+de fatura, `assinaturaPublica` para rodapé, confiança e e-mails. Sem inscrição,
+some o número e **fica o nome** — a LGPD (Art. 9º, I) exige controlador
+identificado, e string vazia deixaria a Política de Privacidade sem ninguém
+respondendo pelo dado. Preencher os dois campos reacende os seis lugares de uma
+vez.
 
 *As funcionalidades são nomeadas pelo problema, não pelo recurso.* "Painel de
 resultados" virou "Quanto você tem para fechar este mês"; "Controle por
@@ -258,8 +287,8 @@ pessoas — não tem. Virou **"Traga seus contatos de uma vez"**, que é o que
 transforma conta vazia em funil com conteúdo.
 
 **Navegação (sidebar)**
-Menu lateral em seções: grupo principal sem título (Hoje, Funil, Contatos,
-Resultados, Calendário) e "CONFIGURAÇÕES" (Perfil, Equipe, Integrações,
+Menu lateral em seções: grupo principal sem título (Hoje, **Conversas**, Funil,
+Contatos, Resultados, Calendário) e "CONFIGURAÇÕES" (Perfil, Equipe, Integrações,
 Preferências). Perfil já existia como rota, só não tinha entrada própria no
 menu, vivia escondido no menu do rodapé. "Preferências" é o antigo item
 "Configurações", renomeado pra descrever melhor a aba de dados da empresa,
@@ -280,6 +309,22 @@ Timeline cronológica vinculada a cada lead.
 Tarefa com prazo, responsável e conclusão, presa a um lead ou a um negócio.
 Tela **Hoje**, primeira do menu, agrupa em Atrasadas, Hoje, Próximos 7 dias e
 Depois, com filtro entre "minhas" e "da equipe".
+
+*Concluir tem uma janela de 4 segundos para desfazer.* A tarefa fica riscada no
+próprio lugar, com "Desfazer" ao lado, e só depois some. Não pede confirmação:
+concluir é o gesto mais repetido do produto, e um "tem certeza?" a cada clique
+viraria imposto diário — o que se ganha é **ver** o erro, não evitá-lo com
+atrito. A janela existia no código desde sempre e **nunca chegou ao usuário**:
+a revalidação do servidor apagava a linha em milissegundos, e depois de
+corrigido isso a cópia riscada ainda perdia para a versão antiga do servidor
+por 1,5 segundo. Corrigido em 26/08.
+
+*O filtro "minhas / da equipe" é lembrado.* Ele vivia só na URL, e o item
+"Hoje" da barra lateral aponta para `/hoje` fixo: escolher "Da equipe",
+trabalhar um pouco e voltar pelo menu devolvia "Minhas", sem ninguém ter
+clicado em nada. A escolha virou cookie lido pelo **servidor**
+(`lib/tasks/escopo.ts`); "minhas" continua sendo o piso de quem nunca escolheu,
+porque a tela responde "o que EU faço agora".
 
 No card do Kanban a próxima ação ocupa o lugar do prazo do negócio: prazo é
 previsão de fechamento, próxima ação é o que dá para cumprir hoje, e duas datas
@@ -344,93 +389,111 @@ API oficial exige Meta Business verificado, que exige CNPJ ativo, mais aprovaç�
 de template e custo por mensagem, o link resolve o que a pessoa quer, que é
 abrir a conversa, sem nenhuma dessas dependências.
 
-**WhatsApp pelo Evolution (fase 1: o laço fechado)**
-Conexão do número da empresa por QR Code em **Configurações → Integrações**,
-sobre Evolution GO hospedado em VPS própria. Toda mensagem recebida vira
-atividade no histórico do contato e, se não houver tarefa aberta, uma tarefa
-"Responder no WhatsApp" com prazo de 2h. Número desconhecido **cria contato
-novo** — quem chega pelo WhatsApp entra no funil sozinho.
+**WhatsApp: o que existe, e por que está desligado**
+A conexão do número da empresa por QR Code, sobre **Evolution GO** numa VPS
+própria, foi construída e provada ponta a ponta em 21-24/08: mensagem recebida
+virava atividade no histórico do contato e, sem tarefa aberta, uma tarefa
+"Responder no WhatsApp" com prazo de 2h; número desconhecido criava contato
+novo, colocando quem chega pelo WhatsApp dentro do funil sozinho.
 
-A dor que isso resolve é maior que "esquecer de responder": **o vendedor sai e
-leva a carteira junto**. O histórico mora no celular dele, e na saída a empresa
-perde contato, negociação e histórico de uma vez, além de ficar exposta na
-LGPD. Esquecer uma venda dói uma vez; perder a carteira não tem conserto.
+**Desde 26/08 ela está desligada, e o produto diz isso.**
+`lib/integrations/whatsapp-estado.ts` tem uma única fonte de verdade
+(`FASE_DO_WHATSAPP = 'migrando'`), e dela saem o selo "Em breve" e o aviso na
+tela de Integrações — **nos dois planos**, Free e Pro. Vender como pronto o que
+não conecta seria a mesma classe do "contatos ilimitados" removido do hero em
+22/08.
 
-**O que a fase 1 não resolve, e precisa ser dito na venda:** uma instância é
-uma sessão de WhatsApp Web, então todos veem a **mesma** caixa de entrada. Não
-há fila com dono definido nem relatório por atendente — isso é recurso da API
-oficial. Resolve "a empresa é dona do histórico", não "cinco vendedores
-dividindo a fila".
-
-**Risco declarado na própria tela, antes do QR:** não é API oficial, e a Meta
-pode restringir o número sem aviso. Desde janeiro/2026 a detecção olha
-fingerprint de comportamento, não só volume, então número antigo e volume baixo
-não protegem mais. As camadas construídas (limite por idade da conexão, nenhuma
+*Por que sair da VPS, e não ajustá-la.* Não é API oficial, e a Meta pode
+restringir o número sem aviso; desde janeiro/2026 a detecção olha fingerprint
+de comportamento, não só volume, então número antigo e volume baixo não
+protegem mais. As camadas construídas (limite por idade da conexão, nenhuma
 função que aceite lista de destinatários, assinatura só dos dois eventos
-necessários) reduzem muito. **Não zeram.**
+necessários) reduzem muito, e **não zeram**. Some a isso o que a fase 1 nunca
+resolveu e é recurso da oficial: uma instância é uma sessão de WhatsApp Web,
+então todos veem a **mesma** caixa de entrada, sem fila com dono definido nem
+relatório por atendente.
 
-**Estabilidade medida, e ela melhorou muito (24/08, noite).** A série contra a
-instância real: 63% de tempo logado (2 min, 23/08) → 26% (13 min) → 0% (13 min,
-24/08 tarde) → **100% em 36 amostras, zero erro de rede** (6 min, 24/08 noite).
-A sessão está pareada com um número real há mais de 24h, e o envio foi testado
-ponta a ponta: HTTP 200 em 2s, mensagem entregue com ID. **A conclusão anterior
-de que "não se sustenta" era prematura** — a oscilação é real, a recuperação
-também, e é a série que separa uma da outra.
+*A restrição que decide o prazo, e não é de código.* A **Cloud API oficial**
+exige, nesta ordem: CNPJ ativo na Receita → site exibindo razão social,
+endereço e telefone iguais aos da Receita → verificação do negócio no Business
+Manager → App Review de `whatsapp_business_messaging`. O CNPJ do projeto está
+**baixado desde 08/08/2026** e baixa de MEI não tem volta; a decisão do dono é
+abrir ME. O detalhe e o estado dessa fila estão em
+[estado-atual.md](estado-atual.md).
 
-*Armadilha de instrumentação que vale mais que o número:* o campo `LoggedIn` só
-existe em `/instance/status` **com o token da instância**. Em `/instance/all`
-ele não existe, e a leitura vira `null` — uma sessão saudável passa por morta.
+*O que fica pronto enquanto isso.* A tela **Conversas** (abaixo) e o objeto
+`Remetente`, que isola o transporte — a migração vira escrever uma segunda
+implementação, não reescrever a tela. E a arquitetura foi provada: 85 de 85
+requisições sem falha a 15 simultâneas, com 16× de folga sobre o pico projetado
+de 100 clientes; Vercel e Supabase não são o gargalo.
 
-**Nenhuma mensagem se perde em silêncio (24/08).** O dedupe é gravado ANTES do
-processamento, de propósito, senão o reenvio duplicaria a atividade. Isso abre
-uma janela em que a mensagem já é "vista" e ainda não virou nada, e qualquer
-falha ali a apaga da existência. Quatro caminhos estavam descobertos:
-`activities.insert` e `tasks.insert` sem checar erro, falha de dedupe por
-motivo diferente de duplicata, e lote grande estourando `maxDuration` (medido
-~330ms por mensagem; 40 mensagens dariam ~13s contra o teto de 15). Agora toda
-falha guarda **telefone e texto** em `error_logs`, e há teto de 25 mensagens por
-chamada — o excedente não grava dedupe, então segue elegível para reenvio.
+*Duas coisas medidas que vale carregar adiante, uma linha cada.* A estabilidade
+da sessão oscilou entre 0% e 100% de tempo logado em janelas de minutos — é a
+**série** que separa oscilação de queda, nunca uma leitura isolada. E o campo
+`LoggedIn` só existe em `/instance/status` **com o token da instância**; em
+`/instance/all` ele vira `null`, e uma sessão saudável passa por morta.
 
-**O segredo do webhook é único, não por conexão.** Quem o conhecer consegue
-*injetar* mensagem falsa no funil de qualquer empresa sabendo o UUID dela. Não
-dá para ler nada (a rota só escreve), e o segredo só existe no `.env` e no
-servidor Evolution. É fraqueza de arquitetura, não buraco explorável hoje; o
-caminho correto com muitos clientes é segredo por conexão, e está registrado
-como pendência.
+*Fraqueza de arquitetura registrada, não escondida:* o segredo do webhook é
+**único**, não por conexão. Quem o conhecer consegue injetar mensagem falsa no
+funil de qualquer empresa sabendo o UUID dela. Não dá para ler nada (a rota só
+escreve), e o segredo só existe no `.env` e no servidor. Segredo por conexão é
+o caminho certo com muitos clientes, e está na fila.
 
-**Sessão que cai deixou de ser silenciosa (24/08).** Antes da correção, a
-sessão conectada oscilava de estado durante o uso normal, não só durante o
-pareamento. Até então,
-uma queda virava só um `last_error` passivo na aba Integrações, que ninguém via
-a menos que abrisse a tela por acaso — para um produto que promete "não perder
-venda por esquecimento", perder a própria conexão em silêncio é o mesmo defeito
-ao contrário.
+**Conversas**
+Caixa de entrada do WhatsApp dentro do produto, em três colunas: a lista de
+conversas, a conversa aberta e o painel do negócio ligado àquele contato. O
+ponto da tela não é ler mensagem — é **não deixar ninguém esperando**.
 
-O webhook (`app/api/webhooks/evolution/[workspaceId]/[segredo]/route.ts`) agora
-distingue os dois motivos de queda que o `whatsmeow` reporta: `LoggedOut` é a
-pessoa desvinculando o aparelho pelo próprio celular — só um pareamento novo
-resolve, então vai direto para o aviso. `Disconnected`/`StreamReplaced` costumam
-ser queda de rede ou o processo do Evolution reiniciando — para esses dois, o
-webhook **tenta reconectar sozinho**, reaproveitando o token já gravado (o
-mesmo caminho que `conectarWhatsapp` usa quando um humano clica "Conectar"),
-antes de admitir que caiu. Só manda e-mail para quem criou a empresa
-(`lib/emails/whatsapp-desconectado.ts`) quando essa tentativa automática
-falha — e só uma vez por queda: a checagem de `status === 'connected'` antes de
-agir garante que webhooks repetidos do mesmo evento não reenviem o aviso.
+*A ordenação é a regra de negócio da tela.* Quem está esperando resposta vem
+primeiro, e **o mais antigo no topo**, não o mais recente
+(`lib/conversas/ordenar.ts`). Caixa de entrada ordenada por "última mensagem"
+premia quem escreveu agora e enterra quem escreveu há duas horas — que é
+exatamente a pessoa prestes a desistir. O relógio ao lado de cada conversa
+muda de tom aos 5 e aos 10 minutos.
 
-O diálogo de conexão (`components/settings/evolution-connect-dialog.tsx`) tinha
-o defeito irmão do lado do pareamento: três dos quatro laços de repetição
-(renovar QR a cada 20s, recriar sessão a cada 110s, checar conexão a cada 3s)
-rodavam para sempre sem nunca desistir, reportado como "loop infinito" — o
-sintoma real era o WhatsApp recusando a leitura com a própria mensagem dele,
-"verifique sua conexão e tente mais tarde", nunca gerada por este código.
-Ganharam um teto de 5 minutos, depois do qual a tela admite que não conseguiu e
-nomeia a causa mais provável (IP de datacenter da VPS) em vez de girar QR novo
-para sempre.
+*Responder marca a conversa como respondida e fecha a tarefa junto.* Sem isso a
+tarefa "Responder no WhatsApp" continuaria cobrando algo já feito, e o produto
+passaria a mentir sobre o próprio trabalho.
+
+*O transporte é trocável de propósito.* `lib/conversas/remetente.ts` define um
+objeto `Remetente` com `enviarTexto`, `tetoPorHora` e `explicacaoDoTeto`. Hoje
+existe uma implementação (Evolution) e ela está desligada; trocar para a Cloud
+API oficial é escrever um segundo objeto, sem tocar na tela. **É a peça que
+torna a migração de WhatsApp uma troca, e não uma reescrita.**
 
 **Resultados (métricas)**
-Cards com Contatos, Negócios abertos, Valor no funil e Viraram venda.
-Gráfico de funil feito com Recharts.
+Quatro cards (Contatos, Negócios abertos, Valor no funil, Viraram venda),
+gráfico de funil em Recharts e a tabela de negócios mais próximos do prazo.
+
+*Cada painel abre o que descreve, desde 26/08.* Até então a tela era quase toda
+beco sem saída: dos quatro cards só dois tinham link, e era um texto de 12px no
+rodapé; as barras do funil não clicavam; nenhuma linha da tabela abria o
+negócio. O alvo passou a ser o **card inteiro**, a barra do funil leva à etapa
+dela (`/kanban?etapa=`) e a linha da tabela abre o painel do negócio
+(`/kanban?negocio=`) — clicar na coluna "Prazo" abre o mesmo negócio que clicar
+no nome. Isso exigiu o Funil passar a aceitar parâmetro, que antes não aceitava
+nenhum.
+
+*O percentual não aparece mais sem a base.* "Viraram venda" mostrava **100%**
+com um único negócio fechado, e **0%** quando nada tinha fechado — o primeiro
+lê como desempenho excepcional, o segundo como fracasso, e os dois são leitura
+errada do mesmo dado. `textoDaConversao` (`lib/dashboard/conversao.ts`) devolve
+valor e base juntos, e o tipo não permite um sem o outro: `100% · 1 de 1
+negócio fechado`, ou um travessão quando não há o que calcular.
+
+*O painel de prazos distingue "sem negócio" de "sem prazo".* Ele dizia "Nenhum
+negócio em aberto" nos dois casos — inclusive com quatro negócios abertos no
+card ao lado, mandando criar o que já existia. Agora conta os abertos sem prazo
+e oferece o passo que falta.
+
+*O número mora na barra, não no hover.* O gráfico entra no PDF do "Exportar
+relatório", e **no PDF não existe hover**: até 26/08 o relatório que o cliente
+recebia saía com barras sem valor legível.
+
+*Sem variação inventada, e é decisão travada.* Nada de "+18% vs mês anterior":
+não existe tabela de snapshot mensal, e número forjado ao lado de dado real é
+pior que a ausência dele. A base do percentual entrou porque é dado que já
+existia no banco e estava sendo descartado.
 
 **Exportação de Relatórios**
 Botão "Exportar relatório" em Resultados captura a área de métricas em PDF
@@ -576,9 +639,10 @@ Empresário que já vende bem, mas sente que perdeu controle da operação comer
 - Dev / IA: Cursor + Claude Code.
 - Analytics: Vercel Analytics. PostHog não está instalado, não existe nada
   medindo ativação hoje.
-- Automação futura: n8n, Notion API, Linear API. WhatsApp Business Cloud API
-  foi implementada e removida (13/08), decisão de produto; ver **WhatsApp por
-  link**, acima.
+- WhatsApp: Evolution GO em VPS própria, **desligado desde 26/08**; o destino
+  é a WhatsApp Business Cloud API oficial, bloqueada por CNPJ. O link `wa.me`
+  segue ativo e não depende de nenhum dos dois.
+- Automação futura: n8n, Notion API, Linear API.
 
 Selecione/adicione no formulário: Next.js, React, Tailwind CSS, shadcn/ui, Supabase, Vercel, Claude Code, Node.js, PostgreSQL, TypeScript, Resend (e-mails).
 
@@ -688,12 +752,19 @@ Cada item marcado tem prova, não impressão — o método está em
 `docs/estado-atual.md` ("Como verificar as coisas aqui"). Atualizado 22/08/2026.
 
 - [x] **Build local concluído sem erros.** `npx tsc --noEmit`, `npm run lint`,
-      `npm test` (**498 testes**) e `npm run build`, os quatro limpos, rodados
-      antes de cada commit.
-- [x] **Migrations aplicadas no Supabase de produção.** 52 migrations no
-      projeto `tmyeunithjqkbwvezyyn` (`sa-east-1`). Conferido contra o
-      catálogo real em 24/08: 14 tabelas e **30 RPCs** expostas (a `em_trial`
-      entrou com a 0053), ver `docs/schema.md`.
+      `npm test` (**715 testes**) e `npm run build:check`, os quatro limpos,
+      rodados antes de cada commit. É `build:check` e não `build`: os dois
+      escrevem em `.next` por padrão, e o build sobrescreve o mapa de chunks
+      que o `npm run dev` está usando — a rota morre com `MODULE_NOT_FOUND` e
+      o erro aponta para o arquivo recém-editado, parecendo defeito dele.
+- [x] **Migrations aplicadas no Supabase de produção.** 55 arquivos de
+      migration (a maior é `0056`) no projeto `tmyeunithjqkbwvezyyn`
+      (`sa-east-1`). Conferido contra o catálogo real em 26/08: **17 tabelas**,
+      **30 RPCs** e **17 foreign keys**, ver [schema.md](schema.md). As tabelas
+      subiram de 14 para 17 (`assinatura_eventos`, `conversas`, `mensagens`) e
+      as RPCs **não mudaram** — a 0055 reescreveu `pro_vigente()` por dentro e
+      a 0056 criou uma função `returns trigger`, e nenhuma das duas aparece
+      numa lista de RPCs.
 - [x] **Webhook Asaas configurado em produção e validado.** Recebe, deduplica
       e aplica. Ganhou rede de segurança depois que um Pix real ficou preso
       por webhook não entregue: `/api/cron/reconciliar-assinaturas` roda 1×/dia
@@ -717,7 +788,7 @@ Cada item marcado tem prova, não impressão — o método está em
       banido pelo `prd-copy-sem-jargao.md` eliminado das telas (Pipeline→Funil,
       Leads→Contatos, Dashboard→Resultados), incluindo o que a renomeação de
       19/08 tinha deixado passar.
-- [x] **Testes automatizados para os fluxos críticos.** 498 testes cobrindo
+- [x] **Testes automatizados para os fluxos críticos.** 715 testes cobrindo
       lógica pura em `lib/**`; cada caso documenta o defeito que o motivou.
       Ressalva honesta: `tests/e2e/funil-completo.spec.ts` **nunca foi
       executado** (exige `.env.local` e roda contra o Asaas). Ele não falha em
@@ -746,8 +817,15 @@ poder ser consultado pela condição exata do defeito — não leitura de códig
 **Pendências que não são de código** (dependem de painel de terceiro, ver
 `docs/estado-atual.md` → "Pendente do dono"):
 
-- [ ] `CRON_SECRET` nas variáveis da Vercel — sem ele o cron de reconciliação
-      toma 401 todo dia, em silêncio.
+- [x] ~~`CRON_SECRET` nas variáveis da Vercel~~ — **esta pendência era falsa.**
+      Medido na API da Vercel em 25/08: a variável existe em `production` e
+      `preview`, marcada `sensitive`. Ficou aqui por meses afirmando que o cron
+      tomava 401 todo dia. Pendência falsa desvia atenção das reais, e por isso
+      a linha fica registrada em vez de apagada.
+- [ ] **CNPJ novo (ME, CNAE 6202-3/00).** É o que bloqueia a Cloud API oficial
+      do WhatsApp, e nenhuma linha de código contorna: a verificação da Meta
+      bate o número contra a Receita. O anterior está baixado desde 08/08/2026
+      e baixa de MEI não tem volta.
 - [ ] CSP em modo bloqueio — hoje está em `Report-Only`; falta decidir entre
       aceitar `'unsafe-eval'` ou isolar a dependência que o exige.
 - [x] **Verificação OAuth do Google — APROVADA em 24/08** para
