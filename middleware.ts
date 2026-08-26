@@ -20,6 +20,7 @@ export const config = {
     '/kanban/:path*',
     '/leads/:path*',
     '/hoje/:path*',
+    '/conversas/:path*',
     '/calendario/:path*',
     '/settings/:path*',
     '/perfil',

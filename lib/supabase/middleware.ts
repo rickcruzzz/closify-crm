@@ -67,6 +67,12 @@ export async function updateSession(request: NextRequest) {
     pathname.startsWith('/kanban') ||
     pathname.startsWith('/leads') ||
     pathname.startsWith('/hoje') ||
+    // Sem esta linha o teto de sessao e a checagem de e-mail confirmado nao
+    // valem para quem navega so por Conversas. Mesmo defeito que /hoje e
+    // /calendario ja tiveram, corrigido em 19/08 e repetido aqui ao criar a
+    // rota nova: o comentario deste arquivo credita tres incidentes pagos a
+    // essa classe, e este e o quarto.
+    pathname.startsWith('/conversas') ||
     pathname.startsWith('/calendario') ||
     pathname.startsWith('/settings') ||
     pathname.startsWith('/perfil') ||
