@@ -4,7 +4,11 @@ Documento de continuidade. É lido no começo de toda sessão (referenciado no
 [CLAUDE.md](../CLAUDE.md)) para que uma conversa nova, ou outra conta, comece
 sabendo o que já foi feito, o que foi decidido e onde estão as armadilhas.
 
-**Atualizado em:** 25/08/2026, noite (diagnóstico do sistema inteiro, 15
+**Atualizado em:** 26/08/2026, madrugada (três telas que pareciam funcionar e
+não funcionavam: o clique na tarefa ficava 1,5s sem sinal nenhum, o dashboard
+mostrava tudo e não abria nada, e o filtro de /hoje se desfazia sozinho)
+
+**Antes disso, 25/08/2026, noite** (diagnóstico do sistema inteiro, 15
 achados que nenhum dos quatro portões enxerga; e a assinatura passou a avisar
 4 dias antes, inclusive quem está em trial e nunca recebia e-mail nenhum)
 
@@ -41,6 +45,138 @@ minutos seguidos, contra 26% da medição anterior)
 **Antes disso, 23/08/2026** (landing auditada: promessa falsa no hero, logo quebrado no telefone, banner de cookies cobrindo o CTA, e prints mostrando o jargão que a própria página baniu; PRD, schema e grafo realinhados)
 
 **Antes disso, 22/08/2026** (funções rodavam em Washington DC com o banco em São Paulo, corrigido na config do projeto e medido: /dashboard 1221ms → 400ms; modo claro sem escada de superfícies, refeito; jargão remanescente e telas de erro; WhatsApp sem QR por Postgres esgotado na VPS; migration 0049 provada desnecessária e removida)
+
+## O que a tela mostrava, e o que ela fazia (26/08)
+
+Cinco commits, três telas. A ligação entre eles é a classe de defeito: **código
+escrito, testado no papel, e que nunca chegou ao usuário.** Nenhum dos quatro
+portões vê nada disso — só navegador contra produção vê.
+
+### A janela de desfazer de `/hoje` nunca existiu
+
+O dono clicou no checkbox e a tarefa sumiu na hora. A tela foi construída para
+riscar a linha por 4 segundos com um "Desfazer" ao lado; nada disso acontecia.
+
+`concluirTarefa` chama `revalidatePath('/hoje')`, e o efeito que sincroniza
+props com estado substituía a lista inteira poucos milissegundos depois do
+clique. A correção separou as duas coisas que um `useState` só tentava ser:
+`tasks` espelha o servidor, `saindo` guarda quem está na janela, e a lista da
+tela virou **derivada** — derivada não tem corrida.
+
+**Corrigido isso, o defeito seguinte ficou visível, e ele é o que vale.** A
+cópia local riscada era DESCARTADA enquanto o servidor ainda mandasse a tarefa
+aberta, o que dura toda a viagem de revalidação. Medido meio segundo a meio
+segundo:
+
+    t(s)  linhas  riscadas  botao-Desfazer
+    0.0      8       0            1        <- clicou, linha intacta
+    1.0      8       0            1        <- um segundo depois, nada
+    1.6      8       1            1        <- so agora risca
+    5.1      7       0            0        <- sai sozinha
+
+Um segundo e meio sem risco e sem checkbox marcado. O único elemento que reagia
+era o botão "Desfazer" aparecendo ao lado de uma linha intacta — e o dono leu
+exatamente assim: *"só sai quando aperta em Desfazer"*.
+
+A cópia local passou a **substituir** a do servidor em vez de perder para ela.
+E com `done_at` nulo na tela, `task-item.tsx` aceitava um segundo clique, que
+montava um timer por cima do primeiro e deixava o primeiro órfão e vivo.
+
+**O espelho do mesmo defeito, achado ao medir a correção:** ao desfazer, a linha
+sumia por 1s e voltava (`6 -> 5 -> 6`). `reabrirTarefa` retorna ANTES de a lista
+revalidada chegar, e nesse intervalo a tarefa não existia nem na janela nem no
+servidor. A poda saiu de `desfazerConclusao` e foi para o efeito de sincronia: a
+entrada só deixa a janela quando o servidor CONCORDA.
+
+### O dashboard mostrava tudo e não abria nada
+
+Um usuário tentou clicar num painel para ver o detalhe. Não foi azar de mira: a
+tela era beco sem saída por três caminhos. Dos 4 cards só 2 tinham link, e era
+um texto de 12px no rodapé; as barras do funil não clicavam; nenhuma linha de
+"próximos do prazo" abria o negócio.
+
+**A peça que faltava era de arquitetura:** `/kanban` não aceitava `searchParams`
+NENHUM, então não existia endereço para o qual mandar quem clicasse. Agora
+aceita `?etapa=` (coluna entra na tela, destacada) e `?negocio=` (painel abre de
+cara). Fora dos 200 por etapa que o board carrega, a página busca o negócio
+sozinho — uma consulta a mais só quando o parâmetro existe.
+
+O alvo virou o **card inteiro**. Na tabela, `relative` na linha +
+`after:inset-0` no link faz um `<a>` cobrir a linha toda: clicar em "Prazo" abre
+o mesmo negócio que clicar no nome, e continua abrindo em nova aba e respondendo
+ao Tab, o que `onClick` na linha não daria.
+
+**Três defeitos achados junto, dois visíveis no print do dono:**
+
+**O painel de prazos mentia.** Os 5 negócios da empresa não têm prazo,
+`getUpcomingDeals` filtra `due_date not null`, e a tela dizia "Nenhum negócio em
+aberto" — com 4 negócios abertos no card ao lado, mandando criar o que já
+existe. Confundia *sem negócio* com *sem prazo*.
+
+**"Viraram venda 100%"** era 1 ganho de 1 fechado, denominador 1 no card mais
+visível. E com nada fechado mostrava `0%`, que afirma fracasso onde a verdade é
+que nenhuma venda chegou ao fim. `get_dashboard_counts` **já devolvia**
+`closed_deals`/`won_deals`, e `getDashboardMetrics` jogava os dois fora depois de
+dividir. O tipo passou a carregar a base, e `textoDaConversao` não consegue
+devolver percentual sem ela.
+
+**O gráfico só tinha número no hover**, e ele entra no PDF do "Exportar
+relatório". **No PDF não existe hover**: o relatório que o cliente recebia saía
+com barras sem valor legível.
+
+**Defeito achado pelo próprio roteiro de prova**, antes do commit:
+`?negocio=<id-inexistente>` abria um painel VAZIO, porque o board só testava se
+havia id selecionado, não se ele casava com algum negócio. Link velho ou negócio
+apagado caíam no mesmo beco por outro caminho.
+
+**Não entrou, e é decisão:** variação inventada ("+18% vs mês anterior"). Não
+existe tabela de snapshot mensal. A BASE do percentual entrou porque é dado que
+já existia.
+
+### O filtro de `/hoje` se desfazia sozinho, por DUAS causas
+
+Relato: *"seleciono, passa um tempo e sai"*. O escopo vivia só no `?escopo=` da
+URL, e o item "Hoje" da barra lateral aponta para `/hoje` fixo: escolher "Da
+equipe", ir ao Funil e voltar pelo menu devolvia "Minhas".
+
+**Quatro cenários que NÃO reproduziram**, medidos antes de achar o certo, e
+registrados para ninguém refazer: o seletor sozinho; a lista aberta parada por
+76s (o relógio de 60s da tela não a fecha); empresa Free com zero tarefas, igual
+à do print; e o seletor de empresa.
+
+A escolha virou cookie lido pelo **servidor** (`lib/tasks/escopo.ts`) —
+`localStorage` chegaria tarde e a tela piscaria com a lista errada.
+
+**O cookie sozinho não bastou, e a segunda metade é a lição:**
+
+    escolheu "Da equipe"   cookie=equipe   tela: Da equipe
+    voltou pelo menu       cookie=equipe   tela: Minhas    <- cache
+    recarregou de verdade  cookie=equipe   tela: Da equipe <- servidor certo
+
+**O App Router GUARDA o RSC de cada URL e o replica ao voltar por `<Link>`, sem
+perguntar ao servidor.** Com o escopo na URL havia duas chaves de cache
+(`/hoje` e `/hoje?escopo=equipe`) e o menu aponta para a primeira. O escopo saiu
+da URL e `push` virou `replace` + `refresh`: com uma chave só, o refresh invalida
+ELA. Sem piscar, e **sem mexer em `staleTimes`**, que mudaria a navegação do
+produto inteiro por causa de um filtro.
+
+`?escopo=` continua aceito e VENCE o cookie: link compartilhado e botão "voltar"
+precisam mostrar o que dizem.
+
+### Provado no navegador, contra produção
+
+    janela de desfazer   riscada em 0.0s, sai aos 4.6s, sem piscar ao desfazer
+    dashboard            18/18, cliques dados na BORDA do card e na ultima celula
+    filtro de escopo      9/9, incluindo link antigo e historico que nao empilha
+    375px                sem rolagem horizontal, cards 136px, linha 72px
+
+**O método que rendeu:** os cliques do roteiro são dados na borda do card e na
+célula mais distante do título. É o que separa *"tem link"* de *"é clicável"*, e
+foi assim que o painel vazio do id inexistente apareceu.
+
+**Ressalva dita na cara:** `?negocio=` de um negócio **fora dos 200 por etapa**
+não foi exercitado — exigiria 201 negócios numa coluna só. O caminho de falha do
+mesmo código foi provado (id inexistente abre o funil normal, sem painel).
 
 ## Diagnóstico do sistema, e a assinatura que avisa antes (25/08, noite)
 
@@ -2327,6 +2463,30 @@ registrado como próximo passo se a base provar valor.
 | **Tarefa não entra no limite de plano**     | Travar follow-up empurra a pessoa de volta para o WhatsApp e mata o hábito diário que faz ela pagar. O teto de 5.000 abertas é defesa contra abuso, não regra de negócio |
 
 ## Armadilhas já pagas, não repetir
+
+**O App Router GUARDA o RSC de cada URL e o replica quando se volta por
+`<Link>`, sem perguntar ao servidor.** Custou meia investigação em 26/08: o
+filtro de `/hoje` já estava correto no cookie e no servidor — recarregar a
+página mostrava o valor certo — e voltar pelo menu lateral continuava mostrando
+o antigo. Duas chaves de cache (`/hoje` e `/hoje?escopo=equipe`) e o menu
+apontando para a primeira. Estado que precisa sobreviver a ir-e-voltar não pode
+depender de a URL mudar: com **uma** chave só, `router.refresh()` invalida ELA.
+`staleTimes` resolveria também, e foi descartado — muda a navegação do produto
+inteiro por causa de um filtro.
+
+**A cópia otimista tem que VENCER a do servidor, não ser descartada por ela.**
+`mesclarSaindo` filtrava fora a tarefa riscada sempre que o servidor ainda
+mandasse a versão aberta — o que dura toda a viagem de `revalidatePath`, 1,5s
+medido. O filtro existia para não duplicar a linha, e o efeito colateral foi um
+segundo e meio de clique sem sinal nenhum na tela. Sempre que houver as duas
+cópias, a regra é substituir por id, nunca ignorar a local. E o espelho vale
+junto: **não tire a cópia local antes de o servidor concordar** — desfazer
+tirava na hora e a linha sumia por 1s até a revalidação chegar.
+
+**Contar clique não prova que é clicável.** Os roteiros do dashboard clicam na
+BORDA do card e na célula mais distante do título, de propósito: é o que separa
+"tem link" de "é clicável", e foi assim que apareceu o painel que abria vazio
+com id inexistente. Clicar no texto teria passado nos dois casos.
 
 **`cache()` do React deduplica a MESMA função, não duas que fazem a mesma
 coisa.** `getCurrentUserAndWorkspace` e `lerEstadoDoOnboarding` (chamadas em
