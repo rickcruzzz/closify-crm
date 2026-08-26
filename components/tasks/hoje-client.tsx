@@ -149,6 +149,11 @@ export function HojeClient({
   }, [])
 
   async function concluir(taskId: string) {
+    // Ja esta na janela. Sem esta linha, um segundo clique montaria um timer
+    // novo por cima do primeiro em `timers.current`, deixando o primeiro orfao
+    // e vivo — ele dispararia sozinho e apagaria a linha antes da hora.
+    if (saindo.has(taskId)) return
+
     const indice = lista.findIndex((t) => t.id === taskId)
     const alvo = indice >= 0 ? lista[indice] : undefined
     if (!alvo) return
@@ -196,6 +201,22 @@ export function HojeClient({
     )
   }
 
+  /**
+   * Troca o `done_at` de quem esta na janela, sem tirar da janela.
+   *
+   * E o que permite a linha desmarcar na hora do clique e continuar visivel no
+   * lugar dela ate a lista do servidor alcancar.
+   */
+  function marcarNaJanela(taskId: string, doneAt: string | null) {
+    setSaindo((atual) => {
+      const anterior = atual.get(taskId)
+      if (!anterior) return atual
+      const novo = new Map(atual)
+      novo.set(taskId, { ...anterior, task: { ...anterior.task, done_at: doneAt } })
+      return novo
+    })
+  }
+
   /** Reabre a tarefa que ainda está na tela, antes de ela sair. */
   async function desfazerConclusao(taskId: string) {
     const timer = timers.current.get(taskId)
@@ -204,14 +225,25 @@ export function HojeClient({
       timers.current.delete(taskId)
     }
 
+    // Desmarca AGORA, antes de falar com o servidor.
+    //
+    // Medido em producao: `reabrirTarefa` leva ~3s. Enquanto ela corria, a
+    // linha continuava riscada e o proprio botao "Desfazer" seguia na tela —
+    // tres segundos em que o clique parecia nao ter funcionado. A tarefa
+    // continua em `saindo` de proposito: tira-la aqui faria a linha sumir,
+    // porque a lista do servidor ainda nao tem a tarefa reaberta.
+    marcarNaJanela(taskId, null)
+
     const resultado = await reabrirTarefa(taskId)
     if ('error' in resultado) {
+      // Volta a riscar: no banco ela continua concluida.
+      marcarNaJanela(taskId, new Date().toISOString())
       toast.error(resultado.error)
       return
     }
 
-    // Tirar de `saindo` basta: `reabrirTarefa` ja revalidou, e a lista do
-    // servidor volta a trazer a tarefa aberta na posicao dela.
+    // Agora sim: `reabrirTarefa` revalidou, e a lista do servidor voltou a
+    // trazer a tarefa aberta na posicao dela.
     setSaindo((atual) => {
       const novo = new Map(atual)
       novo.delete(taskId)

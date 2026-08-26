@@ -51,6 +51,17 @@ export function mesclarSaindo<T extends { id: string }>(
 ): T[] {
   if (saindo.size === 0) return [...doServidor]
 
+  // A cópia local SUBSTITUI a do servidor, não é descartada por ela.
+  //
+  // Medido em produção: `concluirTarefa` leva ~1,5s entre o clique e a lista
+  // revalidada chegar. Durante todo esse tempo o servidor ainda manda a tarefa
+  // ABERTA, e a versão anterior deste arquivo descartava a cópia riscada por
+  // causa disso — o clique ficava um segundo e meio sem produzir sinal nenhum:
+  // nem risco, nem checkbox marcado, só o botão "Desfazer" aparecendo ao lado
+  // de uma linha intacta. O dono leu isso como "só acontece alguma coisa
+  // quando aperto em Desfazer".
+  const resultado = doServidor.map((t) => saindo.get(t.id)?.task ?? t)
+
   const jaEstao = new Set(doServidor.map((t) => t.id))
 
   // Ordem crescente de índice: inserir de trás para frente empurraria as
@@ -58,8 +69,6 @@ export function mesclarSaindo<T extends { id: string }>(
   const paraInserir = Array.from(saindo.values())
     .filter((s) => !jaEstao.has(s.task.id))
     .sort((a, b) => a.indice - b.indice)
-
-  const resultado = [...doServidor]
 
   for (const { task, indice } of paraInserir) {
     // Índice fora do intervalo acontece quando o servidor devolve uma lista

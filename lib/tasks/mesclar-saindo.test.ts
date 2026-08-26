@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 
 import { mesclarSaindo, type EmSaida } from './mesclar-saindo'
 
-type Item = { id: string }
+type Item = { id: string; done_at?: string | null }
 
 const item = (id: string): Item => ({ id })
 
@@ -74,6 +74,33 @@ describe('mesclarSaindo', () => {
     const servidor = [item('x')]
     const lista = mesclarSaindo(servidor, saindo(['a', -3]))
     expect(lista.map((t) => t.id)).toEqual(['a', 'x'])
+  })
+
+  /**
+   * O defeito de 26/08, medido em produção.
+   *
+   * `concluirTarefa` leva ~1,5s. Durante esse tempo o servidor ainda manda a
+   * tarefa ABERTA, e a versão anterior descartava a cópia local por causa
+   * disso: o clique ficava um segundo e meio sem risco e sem checkbox marcado.
+   */
+  it('a cópia local vence a do servidor, em vez de ser descartada', () => {
+    const servidor: Item[] = [{ id: 'a', done_at: null }, { id: 'b', done_at: null }]
+    const janela = new Map<string, EmSaida<Item>>([
+      ['a', { task: { id: 'a', done_at: '2026-08-26T12:00:00Z' }, indice: 0 }],
+    ])
+    const lista = mesclarSaindo(servidor, janela)
+    expect(lista.map((t) => t.id)).toEqual(['a', 'b'])
+    expect(lista[0]?.done_at).toBe('2026-08-26T12:00:00Z')
+  })
+
+  // O caminho do "Desfazer": a cópia local volta a `done_at: null` e continua
+  // vencendo, para a linha desmarcar na hora em vez de esperar a viagem.
+  it('a cópia local também vence quando ela é a reaberta', () => {
+    const servidor: Item[] = [{ id: 'a', done_at: '2026-08-26T12:00:00Z' }]
+    const janela = new Map<string, EmSaida<Item>>([
+      ['a', { task: { id: 'a', done_at: null }, indice: 0 }],
+    ])
+    expect(mesclarSaindo(servidor, janela)[0]?.done_at).toBeNull()
   })
 
   it('não muta a lista do servidor', () => {
