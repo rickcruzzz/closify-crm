@@ -106,8 +106,20 @@ const features: Feature[] = [
     // nenhum desta página. É a feature mais reconhecível do produto para
     // quem chega de anúncio, e estava invisível.
     title: 'Fala com o cliente pelo WhatsApp',
+    // A segunda frase prometia que a mensagem recebida vira contato e tarefa
+    // sozinha. Isso funcionou pela ponte nao oficial e parou de funcionar
+    // quando ela saiu de operacao — hoje nao vale para NINGUEM, nem no Pro.
+    //
+    // Prometer o que o produto nao entrega e a classe de defeito que esta
+    // pagina ja pagou duas vezes: os "contatos ilimitados" com o Free em 300, e
+    // o CNPJ baixado exibido como prova de confianca. Nos dois casos a promessa
+    // era conferivel, e quem conferiu descobriu a mentira.
+    //
+    // O que sobrou e verdade hoje: o link `wa.me` abre a conversa a partir do
+    // contato, sem procurar numero na agenda. O resto vira "em breve", com o
+    // motivo dito — API oficial soa como melhoria, e e.
     description:
-      'Abra a conversa direto do contato, sem procurar o número na agenda. Conectando o WhatsApp da empresa, a mensagem que chega vira contato e tarefa sozinha.',
+      'Abra a conversa direto do contato, sem procurar o número na agenda. Em breve, pela API oficial da Meta, a mensagem que chega vira contato e tarefa sozinha.',
     icon: MessageCircle,
     accent: {
       text: 'text-emerald-500 dark:text-emerald-400',

@@ -22,7 +22,9 @@ import { EvolutionConnectDialog } from '@/components/settings/evolution-connect-
 import type { IntegrationProvider, IntegrationStatus } from '@/types/supabase'
 import {
   AVISO_DE_MIGRACAO,
+  AVISO_PARA_QUEM_NAO_TEM_PRO,
   podeConectarWhatsapp,
+  seloDoWhatsapp,
 } from '@/lib/integrations/whatsapp-estado'
 
 const META: Record<
@@ -144,6 +146,10 @@ export function IntegrationCard({
   // mensagens NÃO estão entrando — é o que o webhook passou a fazer na mesma
   // correção. Dizer "Não conectado" seria mentira na direção oposta e faria a
   // pessoa tentar parear de novo à toa.
+  // `null` para Google Calendar e Gmail, e para o WhatsApp quando a API
+  // oficial estiver ligada. So existe enquanto a migracao dura.
+  const seloWhatsapp = provider === 'whatsapp' ? seloDoWhatsapp() : null
+
   const temDireitoAoRecurso = plano === 'pro'
   const conectado = status === 'connected' && temDireitoAoRecurso
   const pausadoPorPlano = status === 'connected' && !temDireitoAoRecurso
@@ -176,22 +182,30 @@ export function IntegrationCard({
             <CardDescription>{info.descricao}</CardDescription>
           </div>
         </div>
+        {/* Durante a migracao o WhatsApp nao funciona para NINGUEM, nem no
+            Free nem no Pro. "Nao conectado" ou "Erro" fariam a pessoa tentar
+            conectar; "Pausado" implicaria que pagar resolve. Nenhum dos tres e
+            verdade agora — o selo diz o que de fato acontece. */}
         <Badge
           variant={
-            conectado
-              ? 'default'
-              : pausadoPorPlano || status === 'error'
-                ? 'destructive'
-                : 'secondary'
+            seloWhatsapp
+              ? 'secondary'
+              : conectado
+                ? 'default'
+                : pausadoPorPlano || status === 'error'
+                  ? 'destructive'
+                  : 'secondary'
           }
         >
-          {conectado
-            ? '✓ Conectado'
-            : pausadoPorPlano
-              ? 'Pausado'
-              : status === 'error'
-                ? 'Erro'
-                : 'Não conectado'}
+          {seloWhatsapp
+            ? seloWhatsapp.texto
+            : conectado
+              ? '✓ Conectado'
+              : pausadoPorPlano
+                ? 'Pausado'
+                : status === 'error'
+                  ? 'Erro'
+                  : 'Não conectado'}
         </Badge>
       </CardHeader>
       <CardContent className="flex flex-col gap-3">
@@ -202,7 +216,7 @@ export function IntegrationCard({
             conexão ou se ela nunca existiu. O texto separa as duas coisas: o
             número segue pareado (não precisa refazer nada), o que parou foi a
             entrada das mensagens. */}
-        {pausadoPorPlano && (
+        {pausadoPorPlano && !seloWhatsapp && (
           <p className="text-destructive text-xs text-pretty">
             Seu número continua pareado, mas as mensagens não estão entrando no
             funil enquanto o plano não for Pro.
@@ -246,7 +260,20 @@ export function IntegrationCard({
             recusava e ela voltava com um toast cinza: uma viagem inteira ao
             servidor para dizer não. Aqui ela sabe antes de gastar o clique, e
             tem para onde ir. */}
-        {plano === 'free' ? (
+        {/* O WhatsApp vem antes do gate de plano durante a migracao.
+            "Integracoes sao um recurso Pro, faca upgrade para conectar"
+            implicaria que pagar resolve — e nao resolve: o Pro tambem nao tem
+            WhatsApp agora. Cobrar por algo que nao entrega e a classe de
+            defeito que este projeto ja pagou duas vezes, com os "contatos
+            ilimitados" e com o CNPJ baixado na vitrine. */}
+        {seloWhatsapp ? (
+          <div className="border-border/60 flex flex-col gap-1 rounded-lg border p-3">
+            <span className="text-sm font-medium">{AVISO_DE_MIGRACAO.titulo}</span>
+            <p className="text-muted-foreground text-xs leading-relaxed">
+              {plano === 'free' ? AVISO_PARA_QUEM_NAO_TEM_PRO : AVISO_DE_MIGRACAO.detalhe}
+            </p>
+          </div>
+        ) : plano === 'free' ? (
           <div className="flex flex-col gap-2">
             <p className="text-muted-foreground text-xs">
               {info.ganhoNoPro}

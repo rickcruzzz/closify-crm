@@ -59,3 +59,33 @@ export const AVISO_DE_MIGRACAO = {
   /** Texto curto, para caber em `last_error` e em linha de card. */
   curto: 'WhatsApp em migração para a API oficial da Meta.',
 } as const
+
+/**
+ * O selo que o card de WhatsApp mostra em Configurações.
+ *
+ * ## Por que "Em breve" e não "Recurso Pro"
+ *
+ * Durante a migração o WhatsApp não funciona para NINGUÉM — nem no Free, nem
+ * no Pro. Dizer "é um recurso Pro" para quem está no Free implica que pagar
+ * resolve, e não resolve: quem pagar hoje descobre depois que não funciona
+ * para ele também.
+ *
+ * Prometer o que o produto não entrega é a classe de defeito que este projeto
+ * já pagou duas vezes: os "contatos ilimitados" que a landing anunciava com o
+ * Free em 300, e o CNPJ baixado exibido como prova de confiança. Nos dois casos
+ * a promessa era conferível, e quem conferiu descobriu a mentira.
+ */
+export function seloDoWhatsapp(): { texto: string; tom: 'espera' | 'normal' } | null {
+  if (FASE_DO_WHATSAPP !== 'migrando') return null
+  return { texto: 'Em breve', tom: 'espera' }
+}
+
+/**
+ * O que o card diz para quem está no Free, durante a migração.
+ *
+ * Sem isto o Free veria "Integrações são um recurso Pro. Faça upgrade para
+ * conectar" — uma cobrança por algo que o Pro também não entrega agora.
+ */
+export const AVISO_PARA_QUEM_NAO_TEM_PRO =
+  'O WhatsApp vai fazer parte do plano Pro, e ainda não está disponível para ninguém: ' +
+  'estamos migrando para a API oficial da Meta. Avisaremos quando abrir.'
