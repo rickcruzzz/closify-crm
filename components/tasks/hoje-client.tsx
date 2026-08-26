@@ -29,6 +29,7 @@ import {
 } from '@/lib/tasks/actions'
 import type { TaskFormValues } from '@/lib/validations/task'
 import { mesclarSaindo, type EmSaida } from '@/lib/tasks/mesclar-saindo'
+import { COOKIE_ESCOPO, MAX_AGE_ESCOPO, type EscopoDeTarefas } from '@/lib/tasks/escopo'
 
 /**
  * Quanto tempo a tarefa concluída fica visível, riscada, antes de sair.
@@ -50,7 +51,7 @@ export function HojeClient({
   tasks: TaskRow[]
   members: WorkspaceMember[]
   currentUserId: string
-  escopo: 'minhas' | 'equipe'
+  escopo: EscopoDeTarefas
   /** A empresa já tem negócio no funil? Decide o que a tela vazia diz. */
   temNegocio: boolean
   /** E já tem ao menos um contato? */
@@ -137,8 +138,28 @@ export function HojeClient({
   )
 
   function trocarEscopo(valor: string | null) {
+    const novo: EscopoDeTarefas = valor === 'equipe' ? 'equipe' : 'minhas'
+
+    // Guarda a escolha ANTES de recarregar: quem le este cookie e o servidor,
+    // em `app/(dashboard)/hoje/page.tsx`.
+    document.cookie = `${COOKIE_ESCOPO}=${novo}; path=/; max-age=${MAX_AGE_ESCOPO}; samesite=lax`
+
     startTransitionEscopo(() => {
-      router.push(valor === 'equipe' ? '/hoje?escopo=equipe' : '/hoje')
+      // `refresh`, e nao `push('?escopo=...')`. Duas razoes, as duas medidas.
+      //
+      // 1. O App Router guarda o RSC de cada URL e o REPLICA quando se volta
+      //    por `<Link>`, sem perguntar ao servidor. Com o escopo na URL
+      //    existiam duas chaves de cache — `/hoje` e `/hoje?escopo=equipe` —
+      //    e o item "Hoje" da barra lateral aponta para a primeira: voltar
+      //    pelo menu servia o payload antigo, gravado antes de a escolha
+      //    existir. Medido: cookie certo no navegador, tela em "Minhas".
+      //    Com uma chave so, o `refresh` invalida ELA, e o payload guardado
+      //    ja passa a ser o da escolha nova.
+      //
+      // 2. Sem `push`, nao ha entrada nova no historico: o botao "voltar"
+      //    do navegador sai de /hoje, em vez de desfazer a troca de filtro.
+      router.replace('/hoje')
+      router.refresh()
     })
   }
 
