@@ -81,6 +81,24 @@ export function HojeClient({
   // para o usuario por causa deste efeito.
   React.useEffect(() => {
     setTasks(tasksIniciais)
+
+    // Quem foi reaberto so sai da janela quando o servidor CONCORDA que ela
+    // esta aberta de novo. Tirar antes fazia a linha sumir por ~1s e voltar
+    // (medido): `reabrirTarefa` retorna antes de a lista revalidada chegar, e
+    // nesse intervalo a tarefa nao existia nem na janela nem no servidor.
+    setSaindo((atual) => {
+      if (atual.size === 0) return atual
+      const doServidor = new Set(tasksIniciais.map((t) => t.id))
+      const novo = new Map(atual)
+      let mudou = false
+      for (const [id, entrada] of Array.from(atual.entries())) {
+        if (entrada.task.done_at === null && doServidor.has(id)) {
+          novo.delete(id)
+          mudou = true
+        }
+      }
+      return mudou ? novo : atual
+    })
   }, [tasksIniciais])
 
   /**
@@ -242,13 +260,9 @@ export function HojeClient({
       return
     }
 
-    // Agora sim: `reabrirTarefa` revalidou, e a lista do servidor voltou a
-    // trazer a tarefa aberta na posicao dela.
-    setSaindo((atual) => {
-      const novo = new Map(atual)
-      novo.delete(taskId)
-      return novo
-    })
+    // NAO tira de `saindo` aqui: o efeito de sincronia faz isso quando a lista
+    // revalidada chegar trazendo a tarefa aberta. Ate la, a copia local com
+    // `done_at: null` e o que mantem a linha na tela, no lugar dela.
     router.refresh()
   }
 
@@ -395,7 +409,13 @@ export function HojeClient({
                           agora={agora}
                           atrasada={atrasado}
                           onConcluir={concluir}
-                          onDesfazer={saindo.has(task.id) ? desfazerConclusao : undefined}
+                          // Presenca na janela nao basta: depois de reaberta a tarefa
+                          // fica ali mais um instante, esperando o servidor, e
+                          // um "Desfazer" ao lado de uma tarefa ABERTA nao
+                          // desfaz coisa nenhuma.
+                          onDesfazer={
+                            saindo.get(task.id)?.task.done_at ? desfazerConclusao : undefined
+                          }
                           onEditar={(t) =>
                             setEmEdicao({
                               id: t.id,
