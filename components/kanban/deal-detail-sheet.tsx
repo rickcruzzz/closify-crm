@@ -42,19 +42,11 @@ import {
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
+import { iniciais } from '@/lib/leads/iniciais'
 
 function formatDate(date: string | null) {
   if (!date) return 'Sem data'
   return new Date(date).toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' })
-}
-
-function initials(name: string) {
-  return name
-    .split(' ')
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((part) => part[0]!.toUpperCase())
-    .join('')
 }
 
 export function DealDetailSheet({
@@ -246,7 +238,7 @@ export function DealDetailSheet({
                 <span className="text-muted-foreground text-xs">Responsável</span>
                 <div className="mt-1 flex items-center gap-2">
                   <Avatar size="sm">
-                    <AvatarFallback>{initials(deal.owner_name ?? '?')}</AvatarFallback>
+                    <AvatarFallback>{iniciais(deal.owner_name ?? '?')}</AvatarFallback>
                   </Avatar>
                   <span className="text-sm">{deal.owner_name ?? 'Sem responsável'}</span>
                 </div>

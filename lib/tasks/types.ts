@@ -19,6 +19,15 @@ export type TaskRow = {
   lead_name: string | null
   /** Para o botao de responder direto na tarefa. */
   lead_phone: string | null
+  /**
+   * Conversa de WhatsApp deste contato, quando existe.
+   *
+   * E o que faz o botao "Responder" abrir a tela de Conversas em vez de jogar
+   * a pessoa para fora do produto. `null` em contato cadastrado a mao, sem
+   * historico de WhatsApp — nesse caso o `wa.me` continua sendo a saida
+   * honesta, porque mandar para uma tela vazia e pior.
+   */
+  conversa_id: string | null
   assignee_name: string | null
 }
 

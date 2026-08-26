@@ -79,6 +79,59 @@ function revalidar(leadId?: string) {
 }
 
 /**
+ * Conclui a tarefa aberta de "Responder no WhatsApp" daquele contato.
+ *
+ * ## O defeito que isto fecha, visto num print com dado real
+ *
+ * A barra lateral dizia "Conversas 3" enquanto `/hoje` dizia 5. A pessoa tinha
+ * respondido duas conversas, e o produto continuava cobrando as cinco.
+ *
+ * Lista que cobra o que ja foi feito treina a pessoa a ignorar a lista — a
+ * mesma licao de `/dono/alertas`, onde 8 de 11 alertas eram ruido e o efeito
+ * foi ninguem mais olhar. Num produto cuja promessa e nao perder venda por
+ * esquecimento, matar a confianca em `/hoje` e o pior desfecho possivel.
+ *
+ * ## Por que nunca derruba quem chamou
+ *
+ * A mensagem ja saiu para o cliente quando esta funcao roda. Devolver erro aqui
+ * faria a pessoa mandar de novo, achando que falhou. Registra alto e segue.
+ *
+ * Espelha em `activities` como `concluirTarefa` faz, para o historico do
+ * contato registrar que a resposta aconteceu.
+ */
+async function concluirTarefaDeResposta(sessao: Sessao, leadId: string): Promise<void> {
+  const { data: concluidas, error } = await sessao.supabase
+    .from('tasks')
+    .update({ done_at: new Date().toISOString() })
+    .eq('workspace_id', sessao.workspaceId)
+    .eq('lead_id', leadId)
+    .eq('type', 'whatsapp')
+    // `is('done_at', null)` e o que torna isto idempotente: responder duas
+    // vezes nao gera duas atividades, porque a segunda nao casa com linha
+    // nenhuma. Mesmo desenho de `concluirTarefa`.
+    .is('done_at', null)
+    .select('id, title, type, lead_id')
+
+  if (error) {
+    console.error('concluirTarefaDeResposta: falha ao concluir', error)
+    return
+  }
+
+  for (const tarefa of concluidas ?? []) {
+    const { error: erroAtividade } = await sessao.supabase.from('activities').insert({
+      workspace_id: sessao.workspaceId,
+      lead_id: leadId,
+      author_id: sessao.userId,
+      type: tarefa.type,
+      description: tarefa.title,
+    })
+    if (erroAtividade) {
+      console.error('concluirTarefaDeResposta: atividade nao registrada', erroAtividade)
+    }
+  }
+}
+
+/**
  * Envia uma mensagem e registra o envio.
  *
  * ## A ordem importa, e por quê
@@ -205,6 +258,8 @@ export async function enviarMensagem(
     // "esperando", e a pessoa responde de novo achando que falhou.
     console.error('enviarMensagem: mensagem enviada mas a conversa não foi marcada', erroConversa)
   }
+
+  await concluirTarefaDeResposta(sessao, alvo.leadId)
 
   revalidar(alvo.leadId)
   return { success: true }
@@ -348,6 +403,12 @@ export async function marcarComoRespondida(
     console.error('marcarComoRespondida: falha ao gravar', error)
     return { error: 'Não foi possível marcar a conversa.' }
   }
+
+  // "Já respondi pelo celular" precisa fechar a cobrança em `/hoje` tanto
+  // quanto responder por aqui. Sem isto, quem usa o celular ficaria com a
+  // tarefa aberta para sempre — e é justamente essa pessoa que a tela precisa
+  // conquistar.
+  await concluirTarefaDeResposta(sessao, alvo.leadId)
 
   revalidar(alvo.leadId)
   return { success: true }

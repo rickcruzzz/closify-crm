@@ -15,6 +15,7 @@ function tarefa(dueAt: string, extra: Partial<TaskRow> = {}): TaskRow {
     assignee_id: 'user-1',
     lead_name: 'Studio Vega',
     lead_phone: null,
+  conversa_id: null,
     assignee_name: 'Orlando',
     ...extra,
   }

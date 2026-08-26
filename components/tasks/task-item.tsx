@@ -62,7 +62,21 @@ export function TaskItem({
   // Só para tarefa de WhatsApp: pôr o botão em toda tarefa com telefone
   // encheria a lista de um atalho que ninguém pediu, e diluiria o sinal
   // justamente onde ele importa.
-  const linkWhatsapp = task.type === 'whatsapp' ? linkDoWhatsApp(task.lead_phone) : null
+  /**
+   * Para onde o botao "Responder" leva.
+   *
+   * Ate a tela de Conversas existir, so havia o `wa.me`: mandava a pessoa para
+   * fora do produto porque nao havia dentro. Agora ha, e continuar exportando
+   * contradiz a tela que acabou de subir.
+   *
+   * Quando existe conversa daquele contato, vai para ela. Quando NAO existe —
+   * contato cadastrado a mao, sem historico de WhatsApp — cai no `wa.me`,
+   * porque mandar para uma tela vazia e pior que mandar para o aplicativo.
+   */
+  const ehWhatsapp = task.type === 'whatsapp'
+  const linkDaConversa = ehWhatsapp && task.conversa_id ? `/conversas?c=${task.conversa_id}` : null
+  const linkWhatsapp = ehWhatsapp && !linkDaConversa ? linkDoWhatsApp(task.lead_phone) : null
+  const destinoDeResposta = linkDaConversa ?? linkWhatsapp
 
   return (
     <li className="hover:bg-accent/40 flex items-center gap-3 rounded-lg px-2 py-2 transition-colors">
@@ -111,11 +125,15 @@ export function TaskItem({
           integração. E reusa `linkDoWhatsApp`, que já separa celular de fixo e
           recusa número estrangeiro do mesmo tamanho — prefixar 55 num número
           de 11 dígitos transformaria telefone dos EUA em brasileiro. */}
-      {!concluida && linkWhatsapp ? (
+      {!concluida && destinoDeResposta ? (
         <a
-          href={linkWhatsapp}
-          target="_blank"
-          rel="noopener noreferrer"
+          href={destinoDeResposta}
+          // Aba nova SO quando sai do produto. Abrir `/conversas` em aba nova
+          // duplicaria a aplicacao inteira, e a pessoa acabaria com duas
+          // sessoes do mesmo CRM abertas sem saber por que.
+          {...(linkDaConversa
+            ? {}
+            : { target: '_blank', rel: 'noopener noreferrer' })}
           onClick={(e) => e.stopPropagation()}
           className={cn(buttonVariants({ variant: 'outline', size: 'sm' }), 'shrink-0')}
         >

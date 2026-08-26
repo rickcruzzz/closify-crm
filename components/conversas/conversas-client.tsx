@@ -13,7 +13,6 @@ import {
   MessageCircle,
   Mic,
   Send,
-  User,
 } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
@@ -21,6 +20,7 @@ import { Badge } from '@/components/ui/badge'
 import { Textarea } from '@/components/ui/textarea'
 import { Separator } from '@/components/ui/separator'
 import { EmptyState } from '@/components/ui/empty-state'
+import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet'
 import {
   minutosEsperando,
@@ -35,6 +35,7 @@ import {
   marcarComoRespondida,
 } from '@/lib/conversas/actions'
 import type { ConversaNaLista, MensagemNaTela } from '@/lib/conversas/queries'
+import { iniciais } from '@/lib/leads/iniciais'
 import { cn } from '@/lib/utils'
 import {
   AVISO_DE_MIGRACAO,
@@ -60,9 +61,27 @@ import {
  * ## A terceira coluna é o produto
  *
  * Sem ela isto é um chat pior que o WhatsApp — e competir com o WhatsApp em
- * chat é perder. O que o WhatsApp não sabe, e nenhum chat sabe: quanto vale
- * esta conversa, em que etapa está o negócio, e o que era para acontecer
- * depois.
+ * chat é perder. O que o WhatsApp não sabe: quanto vale esta conversa, em que
+ * etapa está o negócio, e o que era para acontecer depois.
+ *
+ * ## A escada de superfícies, e o erro que o primeiro corte cometeu
+ *
+ * O projeto tem uma escada no modo escuro, documentada em `globals.css`:
+ * fundo 0.17, sidebar 0.195, card 0.215. A regra é "a navegação recua, o
+ * conteúdo avança".
+ *
+ * A primeira versão desta tela pôs as TRÊS colunas em `--background`, o degrau
+ * mais baixo, três vezes. O resultado foi um bloco só de preto, sem nenhuma
+ * pista de que as colunas são coisas diferentes além do contorno de 1px.
+ *
+ * Agora cada coluna assume o papel que tem:
+ *
+ *     lista       bg-sidebar   é navegação: recua
+ *     conversa    bg-card      é conteúdo: avança
+ *     negócio     bg-sidebar   é apoio: recua
+ *
+ * Sem sombra, de propósito: `globals.css:208` anula a sombra do card no escuro,
+ * porque sombra preta sobre fundo escuro não desenha profundidade, só suja.
  *
  * ## A régua que decide se a tela será usada
  *
@@ -72,13 +91,20 @@ import {
  * de enviar. Abrir, ler, responder.
  */
 
-const CORES: Record<Urgencia, { texto: string; ponto: string }> = {
-  // Sem cor: quem já foi respondido não é problema, e pintar tudo faz nada
-  // chamar atenção.
-  respondida: { texto: 'text-muted-foreground', ponto: 'bg-transparent' },
-  tranquila: { texto: 'text-muted-foreground', ponto: 'bg-muted-foreground/40' },
-  atencao: { texto: 'text-amber-600 dark:text-amber-500', ponto: 'bg-amber-500' },
-  urgente: { texto: 'text-destructive', ponto: 'bg-destructive' },
+/**
+ * A cor de cada urgência.
+ *
+ * O relógio é o único número desta tela que decide dinheiro, e na primeira
+ * versão ele era texto de 12px na cor `muted` — o elemento MENOS visível da
+ * linha. Virou pastilha com fundo, que é o que o olho encontra primeiro.
+ */
+const CORES: Record<Urgencia, string> = {
+  // Sem pastilha: quem já foi respondido não é problema, e pintar tudo faz
+  // nada chamar atenção.
+  respondida: 'text-muted-foreground',
+  tranquila: 'text-muted-foreground bg-muted/60',
+  atencao: 'text-amber-700 dark:text-amber-400 bg-amber-500/15',
+  urgente: 'text-red-700 dark:text-red-400 bg-red-500/15',
 }
 
 const formatadorBRL = new Intl.NumberFormat('pt-BR', {
@@ -106,8 +132,10 @@ export function ConversasClient({
    * O relógio nasce no cliente e anda de minuto em minuto.
    *
    * O servidor roda em UTC e renderiza uma vez; sem isto, "esperando há 3 min"
-   * ficaria congelado até a próxima navegação, que é exatamente o oposto do
-   * que a tela promete.
+   * ficaria congelado até a próxima navegação, que é o oposto do que a tela
+   * promete. Antes do primeiro tick não há relógio nenhum: renderizar com a
+   * hora do servidor causaria descasamento de hidratação, defeito que já pegou
+   * o calendário deste projeto.
    */
   const [agora, setAgora] = React.useState<Date | null>(null)
   React.useEffect(() => {
@@ -125,9 +153,7 @@ export function ConversasClient({
     return (
       <EmptyState
         icon={MessageCircle}
-        title={
-          podeConectarWhatsapp() ? 'Nenhuma conversa ainda' : AVISO_DE_MIGRACAO.titulo
-        }
+        title={podeConectarWhatsapp() ? 'Nenhuma conversa ainda' : AVISO_DE_MIGRACAO.titulo}
         description={
           podeConectarWhatsapp()
             ? 'Quando um cliente mandar mensagem no WhatsApp, ela aparece aqui com o negócio dele do lado. Conecte o WhatsApp em Configurações, Integrações.'
@@ -138,11 +164,12 @@ export function ConversasClient({
   }
 
   return (
-    <div className="border-border/60 flex h-[calc(100vh-11rem)] overflow-hidden rounded-xl border">
+    <div className="border-border/60 bg-card flex h-[calc(100vh-11rem)] overflow-hidden rounded-xl border">
       {/* ─────────────────────────── coluna 1: quem espera ─────────────── */}
       <aside
         className={cn(
-          'border-border/60 flex w-full flex-col border-r md:w-80 lg:w-96',
+          'border-border/60 bg-sidebar flex w-full flex-col border-r',
+          'md:w-80 lg:w-96',
           // No telefone a lista some quando uma conversa está aberta: duas
           // colunas em 390px não cabem, e meia lista ao lado de meia conversa
           // deixa as duas inúteis.
@@ -159,7 +186,7 @@ export function ConversasClient({
       </aside>
 
       {/* ─────────────────────────── coluna 2: a conversa ───────────────── */}
-      <section className={cn('flex flex-1 flex-col', !aberta && 'hidden md:flex')}>
+      <section className={cn('bg-card flex flex-1 flex-col', !aberta && 'hidden md:flex')}>
         {aberta ? (
           <Conversa
             conversa={aberta}
@@ -169,15 +196,13 @@ export function ConversasClient({
             onAbrirDetalhe={() => setDetalheAberto(true)}
           />
         ) : (
-          <div className="text-muted-foreground flex flex-1 items-center justify-center p-8 text-center text-sm">
-            Escolha uma conversa à esquerda.
-          </div>
+          <NadaEscolhido conversas={ordenadas} agora={agora} />
         )}
       </section>
 
       {/* ─────────────────────────── coluna 3: o negócio ────────────────── */}
       {aberta && (
-        <aside className="border-border/60 hidden w-72 flex-col border-l lg:flex">
+        <aside className="border-border/60 bg-sidebar hidden w-72 flex-col border-l lg:flex">
           <PainelDoNegocio conversa={aberta} />
         </aside>
       )}
@@ -192,6 +217,51 @@ export function ConversasClient({
           {aberta && <PainelDoNegocio conversa={aberta} />}
         </SheetContent>
       </Sheet>
+    </div>
+  )
+}
+
+/**
+ * O que aparece antes de escolher uma conversa.
+ *
+ * A primeira versão era uma linha cinza dizendo "Escolha uma conversa à
+ * esquerda" — instrução óbvia ocupando a maior área da tela. Agora responde a
+ * pergunta que trouxe a pessoa aqui: quantas esperam, e há quanto tempo a
+ * mais antiga espera.
+ */
+function NadaEscolhido({
+  conversas,
+  agora,
+}: {
+  conversas: ConversaNaLista[]
+  agora: Date | null
+}) {
+  const esperando = conversas.filter((c) => c.ultimoRecebidoEm && !c.respondidaEm)
+  const maisAntiga = esperando[0]
+  const minutos = agora && maisAntiga ? minutosEsperando(maisAntiga, agora) : null
+
+  return (
+    <div className="flex flex-1 flex-col items-center justify-center gap-3 p-8 text-center">
+      <MessageCircle aria-hidden className="text-muted-foreground/40 size-8" />
+
+      {esperando.length === 0 ? (
+        <p className="text-muted-foreground text-sm">
+          Ninguém está esperando resposta agora.
+        </p>
+      ) : (
+        <>
+          <p className="text-titulo-sm">
+            {esperando.length}{' '}
+            {esperando.length === 1 ? 'pessoa esperando' : 'pessoas esperando'}
+          </p>
+          {minutos !== null && (
+            <p className="text-muted-foreground max-w-xs text-sm text-balance">
+              A mais antiga espera há {textoDoRelogio(minutos)}. Comece por ela: é
+              quem está mais perto de desistir.
+            </p>
+          )}
+        </>
+      )}
     </div>
   )
 }
@@ -214,7 +284,7 @@ function ListaDeConversas({
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
-      <div className="border-border/60 flex items-center justify-between border-b px-4 py-3">
+      <div className="border-border/60 flex items-center justify-between gap-2 border-b px-4 py-3">
         <span className="text-sm font-medium">Quem está esperando</span>
         {esperando.length > 0 && (
           <Badge variant="secondary" className="tabular-nums">
@@ -236,7 +306,7 @@ function ListaDeConversas({
         ))}
 
         {respondidas.length > 0 && (
-          <div className="text-muted-foreground border-border/60 border-y px-4 py-1.5 text-xs">
+          <div className="text-muted-foreground bg-sidebar/60 border-border/60 sticky top-0 border-y px-4 py-1.5 text-xs font-medium">
             Respondidas
           </div>
         )}
@@ -269,57 +339,88 @@ function LinhaDaConversa({
   usuarioId: string
   nomesPorUsuario: Record<string, string>
 }) {
-  // Antes do primeiro tick do cliente não há relógio: renderizar com a hora do
-  // servidor causaria descasamento de hidratação, e é o defeito que já pegou o
-  // calendário deste projeto.
   const minutos = agora ? minutosEsperando(conversa, agora) : null
   const urgencia = agora ? urgenciaDaConversa(conversa, agora) : 'respondida'
-  const cor = CORES[urgencia]
 
   const colisao = quemEstaRespondendo(conversa, usuarioId, nomesPorUsuario, agora)
 
   return (
     <Link
       href={`/conversas?c=${conversa.id}`}
-      // `min-h-16`: alvo de toque acima dos 44px mínimos, e a linha tem três
+      // `min-h-16`: acima dos 44px mínimos de alvo de toque, e a linha tem três
       // informações empilhadas que precisam caber sem apertar.
       className={cn(
-        'border-border/60 flex min-h-16 flex-col gap-1 border-b px-4 py-3 transition-colors',
-        'hover:bg-muted/50 focus-visible:ring-ring focus-visible:ring-2 focus-visible:outline-none',
-        ativa && 'bg-muted',
+        'border-border/60 flex min-h-16 items-start gap-3 border-b px-3 py-3 transition-colors',
+        'hover:bg-card/60 focus-visible:ring-ring focus-visible:ring-2 focus-visible:outline-none',
+        // A conversa ativa sobe um degrau na escada, para o lado esquerdo
+        // apontar o que está aberto à direita sem precisar de barra colorida.
+        ativa && 'bg-card',
       )}
     >
-      <div className="flex items-baseline justify-between gap-2">
-        <span className="truncate text-sm font-medium">{conversa.nome}</span>
-        <span className={cn('flex shrink-0 items-center gap-1 text-xs', cor.texto)}>
+      <Avatar size="sm" className="mt-0.5">
+        <AvatarFallback>{iniciais(conversa.nome)}</AvatarFallback>
+      </Avatar>
+
+      <div className="flex min-w-0 flex-1 flex-col gap-1">
+        <div className="flex items-baseline justify-between gap-2">
+          <span className="truncate text-sm font-medium">{conversa.nome}</span>
+
           {minutos !== null && (
-            <>
-              <span className={cn('size-1.5 rounded-full', cor.ponto)} aria-hidden />
+            <span
+              className={cn(
+                'flex shrink-0 items-center gap-1 rounded-full px-1.5 py-0.5 text-xs font-medium tabular-nums',
+                CORES[urgencia],
+              )}
+            >
               <Clock aria-hidden className="size-3" />
               {textoDoRelogio(minutos)}
-            </>
+            </span>
           )}
-        </span>
-      </div>
+        </div>
 
-      {conversa.previa && (
-        <p className="text-muted-foreground truncate text-xs">{conversa.previa}</p>
-      )}
+        {conversa.previa && (
+          <p className="text-muted-foreground truncate text-xs">{conversa.previa}</p>
+        )}
 
-      <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
-        {conversa.valorDoNegocio != null && (
-          <span className="text-xs tabular-nums">
-            {formatadorBRL.format(conversa.valorDoNegocio)}
-          </span>
-        )}
-        {conversa.etapaDoNegocio && (
-          <span className="text-muted-foreground text-xs">{conversa.etapaDoNegocio}</span>
-        )}
-        {colisao && (
-          <span className="text-xs text-amber-600 dark:text-amber-500">{colisao}</span>
+        {(conversa.valorDoNegocio != null || conversa.etapaDoNegocio || colisao) && (
+          <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
+            {conversa.valorDoNegocio != null && (
+              <span className="text-xs font-medium tabular-nums">
+                {formatadorBRL.format(conversa.valorDoNegocio)}
+              </span>
+            )}
+            {conversa.etapaDoNegocio && (
+              <span className="text-muted-foreground text-xs">
+                {rotuloDaEtapa(conversa.etapaDoNegocio)}
+              </span>
+            )}
+            {colisao && (
+              <span className="text-xs text-amber-700 dark:text-amber-400">{colisao}</span>
+            )}
+          </div>
         )}
       </div>
     </Link>
+  )
+}
+
+/**
+ * O nome da etapa em português.
+ *
+ * O enum do banco é `proposta_enviada`; o cliente lê "Proposta enviada". A
+ * tradução mora aqui e não no banco porque a coluna precisa continuar sendo o
+ * enum, que é o que as regras leem.
+ */
+function rotuloDaEtapa(etapa: string): string {
+  return (
+    {
+      novo: 'Novo',
+      contato_realizado: 'Contato feito',
+      proposta_enviada: 'Proposta enviada',
+      negociacao: 'Negociação',
+      fechado_ganho: 'Ganho',
+      fechado_perdido: 'Perdido',
+    }[etapa] ?? etapa
   )
 }
 
@@ -402,6 +503,7 @@ function Conversa({
   }
 
   const minutos = agora ? minutosEsperando(conversa, agora) : null
+  const urgencia = agora ? urgenciaDaConversa(conversa, agora) : 'respondida'
 
   return (
     <>
@@ -416,10 +518,23 @@ function Conversa({
           <ArrowLeft className="size-4" />
         </Button>
 
+        <Avatar size="sm" className="hidden sm:flex">
+          <AvatarFallback>{iniciais(conversa.nome)}</AvatarFallback>
+        </Avatar>
+
         <div className="min-w-0 flex-1">
           <p className="truncate text-sm font-medium">{conversa.nome}</p>
           {minutos !== null && (
-            <p className="text-muted-foreground text-xs">
+            <p
+              className={cn(
+                'text-xs',
+                urgencia === 'urgente'
+                  ? 'text-red-700 dark:text-red-400'
+                  : urgencia === 'atencao'
+                    ? 'text-amber-700 dark:text-amber-400'
+                    : 'text-muted-foreground',
+              )}
+            >
               esperando há {textoDoRelogio(minutos)}
             </p>
           )}
@@ -440,10 +555,19 @@ function Conversa({
         </Button>
       </header>
 
+      {/* `justify-end` no contêiner: com poucas mensagens elas ficam coladas no
+          campo de resposta, e não flutuando no topo de um vazio enorme — que é
+          como a primeira versão desenhava e ficou evidente no primeiro print.
+          Conversa se lê de baixo para cima. */}
       <div className="min-h-0 flex-1 overflow-y-auto px-3 py-4">
-        <div className="mx-auto flex max-w-2xl flex-col gap-2">
-          {mensagens.map((m) => (
-            <Balao key={m.id} mensagem={m} />
+        <div className="mx-auto flex min-h-full max-w-2xl flex-col justify-end gap-2">
+          {mensagens.map((m, i) => (
+            <React.Fragment key={m.id}>
+              {precisaDeSeparador(mensagens, i) && (
+                <SeparadorDeData iso={m.criadaEm} />
+              )}
+              <Balao mensagem={m} />
+            </React.Fragment>
           ))}
           <div ref={fim} />
         </div>
@@ -493,6 +617,53 @@ function Conversa({
   )
 }
 
+/**
+ * Precisa de separador de data antes desta mensagem?
+ *
+ * Sem ele, uma mensagem de terça cola na de hoje e a pessoa não sabe se aquele
+ * "quanto fica?" foi agora ou semana passada — que é exatamente a informação
+ * que decide o tom da resposta.
+ */
+function precisaDeSeparador(mensagens: MensagemNaTela[], i: number): boolean {
+  if (i === 0) return true
+  return diaDe(mensagens[i]!.criadaEm) !== diaDe(mensagens[i - 1]!.criadaEm)
+}
+
+/** O dia em São Paulo, como `2026-08-25`. O servidor roda em UTC. */
+function diaDe(iso: string): string {
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'America/Sao_Paulo',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(new Date(iso))
+}
+
+function SeparadorDeData({ iso }: { iso: string }) {
+  const hoje = diaDe(new Date().toISOString())
+  const ontem = diaDe(new Date(Date.now() - 86400000).toISOString())
+  const dia = diaDe(iso)
+
+  const rotulo =
+    dia === hoje
+      ? 'Hoje'
+      : dia === ontem
+        ? 'Ontem'
+        : new Intl.DateTimeFormat('pt-BR', {
+            timeZone: 'America/Sao_Paulo',
+            day: 'numeric',
+            month: 'long',
+          }).format(new Date(iso))
+
+  return (
+    <div className="my-2 flex items-center gap-3">
+      <div className="border-border/60 h-px flex-1 border-t" />
+      <span className="text-muted-foreground text-xs">{rotulo}</span>
+      <div className="border-border/60 h-px flex-1 border-t" />
+    </div>
+  )
+}
+
 function Balao({ mensagem }: { mensagem: MensagemNaTela }) {
   const nossa = mensagem.direcao === 'enviada'
   const hora = new Intl.DateTimeFormat('pt-BR', {
@@ -506,12 +677,14 @@ function Balao({ mensagem }: { mensagem: MensagemNaTela }) {
       <div
         className={cn(
           'flex max-w-[85%] flex-col gap-0.5 rounded-xl px-3 py-2 text-sm',
+          // A mensagem do cliente vai em `muted`, um degrau ACIMA do card em
+          // que ela está: é o que a separa do fundo sem precisar de contorno.
           nossa ? 'bg-primary text-primary-foreground' : 'bg-muted',
           mensagem.status === 'falhou' && 'border-destructive border',
         )}
       >
         {mensagem.tipo === 'audio' ? (
-          // O áudio ainda não toca aqui: baixar mídia depende do servidor de
+          // O áudio ainda não toca: baixar mídia depende do servidor de
           // WhatsApp, e o contrato dele é o que está mudando. Até lá a tela diz
           // a verdade em vez de fingir um player que não funciona.
           <span className="flex items-center gap-2">
@@ -548,33 +721,41 @@ function Balao({ mensagem }: { mensagem: MensagemNaTela }) {
 function PainelDoNegocio({ conversa }: { conversa: ConversaNaLista }) {
   return (
     <div className="flex flex-col gap-4 overflow-y-auto p-4">
-      <div className="flex flex-col gap-1">
-        <span className="text-muted-foreground text-xs">Contato</span>
-        <Link
-          href={`/leads/${conversa.leadId}`}
-          className="flex items-center gap-2 text-sm underline-offset-4 hover:underline"
-        >
-          <User aria-hidden className="size-4 shrink-0" />
-          {conversa.nome}
-        </Link>
-        {conversa.telefone && (
-          <span className="text-muted-foreground text-xs tabular-nums">{conversa.telefone}</span>
-        )}
+      <div className="flex items-center gap-3">
+        <Avatar>
+          <AvatarFallback>{iniciais(conversa.nome)}</AvatarFallback>
+        </Avatar>
+        <div className="flex min-w-0 flex-col">
+          <Link
+            href={`/leads/${conversa.leadId}`}
+            className="truncate text-sm font-medium underline-offset-4 hover:underline"
+          >
+            {conversa.nome}
+          </Link>
+          {conversa.telefone && (
+            <span className="text-muted-foreground text-xs tabular-nums">
+              {conversa.telefone}
+            </span>
+          )}
+        </div>
       </div>
 
       <Separator />
 
       {conversa.valorDoNegocio != null || conversa.etapaDoNegocio ? (
-        <div className="flex flex-col gap-1">
+        <div className="flex flex-col gap-2">
           <span className="text-muted-foreground text-xs">Negócio em aberto</span>
           {conversa.valorDoNegocio != null && (
-            <span className="text-lg font-medium tabular-nums">
+            // O valor é a informação mais forte desta coluna: é ele que diz o
+            // que está em jogo naquela conversa, e precisa ser lido antes do
+            // resto.
+            <span className="text-titulo-sm tabular-nums">
               {formatadorBRL.format(conversa.valorDoNegocio)}
             </span>
           )}
           {conversa.etapaDoNegocio && (
             <Badge variant="secondary" className="w-fit">
-              {conversa.etapaDoNegocio}
+              {rotuloDaEtapa(conversa.etapaDoNegocio)}
             </Badge>
           )}
         </div>

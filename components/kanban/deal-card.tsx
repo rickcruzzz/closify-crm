@@ -13,6 +13,7 @@ import type { ProximaAcaoRow } from '@/lib/tasks/types'
 import { formatarValorDeNegocio } from '@/lib/deals/metrics'
 import { estadoDeMovimento, rotuloDeParado } from '@/lib/deals/parado'
 import { corDaUrgencia, urgenciaSemProximaAcao } from '@/lib/kanban/urgencia'
+import { iniciais } from '@/lib/leads/iniciais'
 
 const stageAccent: Record<DealStage, string> = {
   novo: 'border-l-blue-500 dark:border-l-blue-400',
@@ -21,15 +22,6 @@ const stageAccent: Record<DealStage, string> = {
   negociacao: 'border-l-orange-500 dark:border-l-orange-400',
   fechado_ganho: 'border-l-emerald-500 dark:border-l-emerald-400',
   fechado_perdido: 'border-l-red-500 dark:border-l-red-400',
-}
-
-function initials(name: string) {
-  return name
-    .split(' ')
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((part) => part[0]!.toUpperCase())
-    .join('')
 }
 
 // `React.memo`: `handleDragOver` (kanban-board.tsx) só troca o objeto do
@@ -142,7 +134,7 @@ export const DealCard = React.memo(function DealCard({
           )}
           <div className="mt-1 flex items-center justify-between gap-2">
             <Avatar size="sm">
-              <AvatarFallback>{initials(deal.owner_name ?? '?')}</AvatarFallback>
+              <AvatarFallback>{iniciais(deal.owner_name ?? '?')}</AvatarFallback>
             </Avatar>
             <ProximaAcao
               task={proximaAcao}

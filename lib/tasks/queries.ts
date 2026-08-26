@@ -12,6 +12,16 @@ import type { ProximaAcaoRow, TaskRow } from '@/lib/tasks/types'
  */
 const MAX_TAREFAS = 500
 
+/**
+ * Teto explícito nas consultas que buscam por `in`.
+ *
+ * O PostgREST corta em 1.000 linhas e **não avisa**. Aqui o conjunto já vem
+ * limitado por `MAX_TAREFAS`, então o teto é redundante na prática — existe
+ * para a consulta não herdar o corte silencioso se algum chamador futuro
+ * passar uma lista maior. Classe 5 do diagnóstico de 25/08.
+ */
+const TETO_DE_LEADS = 1000
+
 type LinhaCrua = {
   id: string
   title: string
@@ -46,7 +56,7 @@ async function enriquecer(
     new Set(linhas.map((l) => l.assignee_id).filter((id): id is string => !!id)),
   )
 
-  const [leadsResult, nomesResult] = await Promise.all([
+  const [leadsResult, nomesResult, conversasResult] = await Promise.all([
     leadIds.length > 0
       // `phone` junto do nome, na consulta que ja existe: e o que permite o
       // botao de responder direto na tarefa, sem uma segunda ida ao banco.
@@ -61,16 +71,32 @@ async function enriquecer(
           target_user_ids: userIds,
         })
       : Promise.resolve({ data: [] as { user_id: string; name: string }[] }),
+    // A conversa de cada contato, na MESMA onda das outras duas. Em serie
+    // seria mais uma ida de rede na tela que a pessoa abre de manha; aqui e de
+    // graca, porque as tres esperam juntas.
+    leadIds.length > 0
+      ? supabase
+          .from('conversas')
+          .select('id, lead_id')
+          .eq('workspace_id', workspaceId)
+          .in('lead_id', leadIds)
+          .is('arquivada_em', null)
+          .limit(TETO_DE_LEADS)
+      : Promise.resolve({ data: [] as { id: string; lead_id: string }[] }),
   ])
 
   const nomeDoLead = new Map((leadsResult.data ?? []).map((l) => [l.id, l.name]))
   const telefoneDoLead = new Map((leadsResult.data ?? []).map((l) => [l.id, l.phone ?? null]))
   const nomeDoMembro = new Map((nomesResult.data ?? []).map((m) => [m.user_id, m.name]))
+  const conversaDoLead = new Map(
+    (conversasResult.data ?? []).map((c) => [c.lead_id, c.id]),
+  )
 
   return linhas.map((l) => ({
     ...l,
     lead_name: l.lead_id ? nomeDoLead.get(l.lead_id) ?? null : null,
     lead_phone: l.lead_id ? telefoneDoLead.get(l.lead_id) ?? null : null,
+    conversa_id: l.lead_id ? conversaDoLead.get(l.lead_id) ?? null : null,
     assignee_name: l.assignee_id ? nomeDoMembro.get(l.assignee_id) ?? null : null,
   }))
 }

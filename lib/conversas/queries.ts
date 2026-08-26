@@ -82,14 +82,30 @@ export async function getConversas(workspaceId: string): Promise<ConversaNaLista
 
   // O negócio em aberto de cada contato, numa ida só. É a coluna da direita da
   // tela, e é o que nenhum chat sabe mostrar.
+  //
+  // Os nomes das etapas fechadas são `fechado_ganho` e `fechado_perdido`, e o
+  // primeiro corte deste arquivo escreveu `ganho` e `perdido`. Valor fora do
+  // enum não filtra errado: faz o PostgREST **recusar a consulta inteira**, e
+  // como o `error` não era checado, `negocios` vinha indefinido e a coluna da
+  // direita dizia "sem negócio em aberto" para todo mundo.
+  //
+  // Achado abrindo a tela com dado real: a empresa tinha 5 negócios no banco e
+  // a tela mostrava zero. Classe 4 do diagnóstico de 25/08.
   const leadIds = linhas.map((l) => l.lead_id)
-  const { data: negocios } = await supabase
+  const { data: negocios, error: erroNegocios } = await supabase
     .from('deals')
     .select('lead_id, value, stage')
     .eq('workspace_id', workspaceId)
     .in('lead_id', leadIds)
-    .not('stage', 'in', '("ganho","perdido")')
+    .not('stage', 'in', '("fechado_ganho","fechado_perdido")')
     .limit(TETO_DE_CONVERSAS)
+
+  if (erroNegocios) {
+    // A lista ainda vale sem o valor do negócio — some a coluna da direita, não
+    // a tela. Mas o erro precisa aparecer em algum lugar, senão a próxima falha
+    // volta a virar "sem negócio" em silêncio, que foi exatamente o defeito.
+    console.error('getConversas: falha ao ler os negócios em aberto', erroNegocios)
+  }
 
   const porLead = new Map<string, { valor: number | null; etapa: string }>()
   for (const n of negocios ?? []) {
