@@ -20,6 +20,10 @@ import { desconectarIntegracao, testarConexaoIntegracao } from '@/lib/integratio
 import { ProUpsellDialog } from '@/components/settings/pro-upsell-dialog'
 import { EvolutionConnectDialog } from '@/components/settings/evolution-connect-dialog'
 import type { IntegrationProvider, IntegrationStatus } from '@/types/supabase'
+import {
+  AVISO_DE_MIGRACAO,
+  podeConectarWhatsapp,
+} from '@/lib/integrations/whatsapp-estado'
 
 const META: Record<
   IntegrationProvider,
@@ -285,14 +289,27 @@ export function IntegrationCard({
             Conectar {info.titulo}
           </Button>
         ) : provider === 'whatsapp' ? (
-          <Button
-            className="w-fit"
-            size="sm"
-            onClick={() => setConectarWhatsappAberto(true)}
-          >
-            <Plug className="size-4" />
-            Conectar {info.titulo}
-          </Button>
+          // A ponte nao oficial saiu de operacao e a API oficial ainda nao foi
+          // aprovada. Oferecer o botao aqui chamaria um servidor que nem
+          // resolve no DNS, e o cliente tomaria erro de rede sem entender o
+          // que fez de errado. Melhor dizer a verdade.
+          podeConectarWhatsapp() ? (
+            <Button
+              className="w-fit"
+              size="sm"
+              onClick={() => setConectarWhatsappAberto(true)}
+            >
+              <Plug className="size-4" />
+              Conectar {info.titulo}
+            </Button>
+          ) : (
+            <div className="border-border/60 flex flex-col gap-1 rounded-lg border p-3">
+              <span className="text-sm font-medium">{AVISO_DE_MIGRACAO.titulo}</span>
+              <p className="text-muted-foreground text-xs leading-relaxed">
+                {AVISO_DE_MIGRACAO.detalhe}
+              </p>
+            </div>
+          )
         ) : (
           <p className="text-muted-foreground text-xs">Em breve.</p>
         )}
@@ -304,7 +321,7 @@ export function IntegrationCard({
         recurso={info.titulo}
       />
 
-      {provider === 'whatsapp' && (
+      {provider === 'whatsapp' && podeConectarWhatsapp() && (
         <EvolutionConnectDialog
           open={conectarWhatsappAberto}
           onOpenChange={setConectarWhatsappAberto}

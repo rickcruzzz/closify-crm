@@ -11,6 +11,7 @@ import {
   conexoesQueParaamDeReceber,
   type ConexaoObservada,
 } from '@/lib/integrations/evolution/saude-do-fluxo'
+import { FASE_DO_WHATSAPP } from '@/lib/integrations/whatsapp-estado'
 
 /**
  * Vigia o FLUXO do WhatsApp, não o estado da conexão.
@@ -131,6 +132,17 @@ export async function GET(requisicao: Request) {
   if (erroConexoes) {
     console.error('Vigia do WhatsApp: falha ao ler conexões', erroConexoes)
     return NextResponse.json({ erro: 'Falha ao ler conexões.' }, { status: 500 })
+  }
+
+  // Durante a migração para a API oficial não existe ponte nenhuma de pé: o
+  // vigia acusaria TODAS as conexões como paradas, e o e-mail mandaria a pessoa
+  // "desconectar e conectar de novo em Integrações" — instrução que hoje não
+  // leva a lugar nenhum, porque o servidor saiu de operação.
+  //
+  // Alarme que manda fazer o impossível é pior que alarme nenhum: ele gasta a
+  // confiança na fila inteira, lição já paga em /dono/alertas.
+  if (FASE_DO_WHATSAPP === 'migrando') {
+    return NextResponse.json({ ok: true, pausado: 'migracao', conectadas: 0, paradas: 0 })
   }
 
   const ativas = (conexoes ?? []).filter((c) => c.status === 'connected')

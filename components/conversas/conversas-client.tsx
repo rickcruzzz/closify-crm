@@ -36,6 +36,10 @@ import {
 } from '@/lib/conversas/actions'
 import type { ConversaNaLista, MensagemNaTela } from '@/lib/conversas/queries'
 import { cn } from '@/lib/utils'
+import {
+  AVISO_DE_MIGRACAO,
+  podeConectarWhatsapp,
+} from '@/lib/integrations/whatsapp-estado'
 
 /**
  * A tela de Conversas.
@@ -121,8 +125,14 @@ export function ConversasClient({
     return (
       <EmptyState
         icon={MessageCircle}
-        title="Nenhuma conversa ainda"
-        description="Quando um cliente mandar mensagem no WhatsApp, ela aparece aqui com o negócio dele do lado. Conecte o WhatsApp em Configurações, Integrações."
+        title={
+          podeConectarWhatsapp() ? 'Nenhuma conversa ainda' : AVISO_DE_MIGRACAO.titulo
+        }
+        description={
+          podeConectarWhatsapp()
+            ? 'Quando um cliente mandar mensagem no WhatsApp, ela aparece aqui com o negócio dele do lado. Conecte o WhatsApp em Configurações, Integrações.'
+            : `${AVISO_DE_MIGRACAO.detalhe} Esta tela já está pronta: assim que a aprovação sair, as conversas aparecem aqui com o negócio de cada cliente do lado.`
+        }
       />
     )
   }
