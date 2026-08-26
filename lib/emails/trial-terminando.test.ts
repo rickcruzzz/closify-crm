@@ -122,15 +122,28 @@ describe('corpoDoTrial, a escada de quatro dias', () => {
  * o teste trava que os fatos batem.
  */
 describe('e-mail e tarja do produto contam a mesma história', () => {
-  it('os dois citam WhatsApp e o teto de 50 contatos', () => {
-    const daTela = textoDoAviso(estadoDoTrial(daquiADias(1), false))
-    expect(daTela).not.toBeNull()
+  /**
+   * Relógio FIXO, e o `agora` passado por parâmetro.
+   *
+   * A primeira versão deste bloco usava `new Date()` com `setHours(12)`, e
+   * passou aqui às 23h de São Paulo enquanto reprovava no CI, que roda em UTC:
+   * meio-dia local vira 15h UTC, a diferença dá 1,5 dia e `Math.ceil` devolve
+   * 2 — caindo no texto plural em vez do texto de véspera.
+   *
+   * Teste que depende da hora em que roda não é teste, é sorteio.
+   */
+  const AGORA = new Date('2026-08-25T15:00:00Z')
+  const VESPERA = new Date(AGORA.getTime() + 24 * 60 * 60 * 1000).toISOString()
 
-    const doEmail = corpoDoTrial({
-      nomeEscapado: 'Acme',
-      valorFormatado: 'R$ 49,00',
-      diasRestantes: 1,
-    }).bodyHtml
+  const doEmail = corpoDoTrial({
+    nomeEscapado: 'Acme',
+    valorFormatado: 'R$ 49,00',
+    diasRestantes: 1,
+  }).bodyHtml
+
+  it('os dois citam WhatsApp e o teto de 50 contatos', () => {
+    const daTela = textoDoAviso(estadoDoTrial(VESPERA, false, AGORA))
+    expect(daTela).not.toBeNull()
 
     for (const fato of ['WhatsApp', '50']) {
       expect(daTela!.detalhe, `tarja, ${fato}`).toContain(fato)
@@ -138,22 +151,22 @@ describe('e-mail e tarja do produto contam a mesma história', () => {
     }
   })
 
-  it('os dois prometem que nada é apagado', () => {
-    const daTela = textoDoAviso(estadoDoTrial(daquiADias(1), false))
-    expect(daTela!.detalhe).toContain('Nada é apagado')
+  /**
+   * Os dois prometem que o dado fica, e é isso que precisa bater — não a
+   * redação. A tarja diz "Nada é apagado" na véspera e "O que você já
+   * cadastrou continua aqui" nos outros dias; as duas cumprem a garantia de
+   * porta de saída que a landing publica, e travar a frase exata quebraria o
+   * teste em toda melhoria de texto.
+   */
+  it('os dois prometem que o dado continua com o cliente', () => {
+    const daTela = textoDoAviso(estadoDoTrial(VESPERA, false, AGORA))
+    expect(daTela!.detalhe.toLowerCase()).toMatch(/nada é apagado|continua aqui/)
+    expect(doEmail.toLowerCase()).toMatch(/nada é apagado|continua aqui/)
+  })
 
-    const doEmail = corpoDoTrial({
-      nomeEscapado: 'Acme',
-      valorFormatado: 'R$ 49,00',
-      diasRestantes: 1,
-    }).bodyHtml
-    expect(doEmail).toContain('nada é apagado')
+  it('a véspera da tarja tem texto próprio, no singular', () => {
+    const daTela = textoDoAviso(estadoDoTrial(VESPERA, false, AGORA))
+    expect(daTela!.titulo).toBe('Último dia do seu teste')
+    expect(daTela!.detalhe).toContain('Nada é apagado')
   })
 })
-
-function daquiADias(dias: number): string {
-  // Meio-dia para a fração de hora não empurrar `Math.ceil` para o dia seguinte.
-  const d = new Date()
-  d.setHours(12, 0, 0, 0)
-  return new Date(d.getTime() + dias * 24 * 60 * 60 * 1000).toISOString()
-}
