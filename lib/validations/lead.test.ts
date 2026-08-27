@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { leadSchema } from './lead'
+import { leadSchema, planilhaSchema } from './lead'
 
 /**
  * Regressão do contato que não podia ser editado.
@@ -65,5 +65,76 @@ describe('leadSchema, contato mínimo', () => {
   it('telefone preenchido continua tendo que ter tamanho plausível', () => {
     const r = leadSchema.safeParse({ ...base, email: '', phone: '123' })
     expect(r.success).toBe(false)
+  })
+})
+
+/**
+ * Regressão da planilha que não importava.
+ *
+ * `mapeamento` era `z.record(campoDestino, ...)`. No Zod v4, `z.record` com
+ * chave de enum virou EXAUSTIVO: passou a exigir as seis colunas. Quem subisse
+ * uma planilha só com nome, e-mail e telefone recebia três `invalid_type` de
+ * uma vez, e a tela mostrava o toast "Invalid input" — que não diz o que está
+ * errado nem o que fazer.
+ *
+ * A quebra é silenciosa por construção: nenhuma linha de código mudou, só a
+ * versão de uma dependência, e não havia teste desta parte do schema nem E2E
+ * que exercitasse a importação. Foi achado em 27/08/2026 pelo primeiro teste
+ * que subiu um CSV de verdade contra produção.
+ */
+describe('planilhaSchema, mapeamento parcial', () => {
+  const matriz = [
+    ['nome', 'email', 'telefone'],
+    ['José Antônio', 'jose@exemplo.com.br', '11987654321'],
+  ]
+
+  // O caso que estava quebrado, e é o principal deste produto: a planilha do
+  // público-alvo é lista de WhatsApp. A 0025 tornou `email` opcional
+  // exatamente por isso.
+  it('aceita planilha só com nome e telefone', () => {
+    const r = planilhaSchema.safeParse({
+      matriz,
+      mapeamento: { name: 0, phone: 2 },
+      duplicados: 'ignorar',
+    })
+    expect(r.success).toBe(true)
+  })
+
+  it('aceita as seis colunas mapeadas', () => {
+    const r = planilhaSchema.safeParse({
+      matriz,
+      mapeamento: { name: 0, email: 1, phone: 2, company: 3, value: 4, status: 5 },
+      duplicados: 'ignorar',
+    })
+    expect(r.success).toBe(true)
+  })
+
+  // As duas defesas que `partialRecord` NÃO pode ter afrouxado junto: esta
+  // Server Action é endpoint HTTP e aceita qualquer coisa de quem a chame sem
+  // passar pela tela.
+  it('recusa campo de destino que não existe', () => {
+    const r = planilhaSchema.safeParse({
+      matriz,
+      mapeamento: { name: 0, cpf: 1 },
+      duplicados: 'ignorar',
+    })
+    expect(r.success).toBe(false)
+  })
+
+  it('recusa índice de coluna fora da faixa', () => {
+    const r = planilhaSchema.safeParse({
+      matriz,
+      mapeamento: { name: 999 },
+      duplicados: 'ignorar',
+    })
+    expect(r.success).toBe(false)
+  })
+
+  // `duplicados` tem `.default('ignorar')`: quem não escolheu nada não pode
+  // ter a base sobrescrita.
+  it('sem `duplicados`, o padrão é ignorar quem já existe', () => {
+    const r = planilhaSchema.safeParse({ matriz, mapeamento: { name: 0 } })
+    expect(r.success).toBe(true)
+    expect(r.success && r.data.duplicados).toBe('ignorar')
   })
 })

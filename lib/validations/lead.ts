@@ -81,7 +81,30 @@ export const planilhaSchema = z.object({
       (m) => m.reduce((total, linha) => total + linha.length, 0) <= MAX_CELULAS,
       'Planilha grande demais.',
     ),
-  mapeamento: z.record(campoDestino, z.number().int().min(0).max(MAX_COLUNAS - 1)),
+  /**
+   * Que coluna da planilha alimenta que campo. **Parcial de propósito.**
+   *
+   * Era `z.record(campoDestino, ...)`, e no Zod v4 (aqui 4.4.3) `z.record` com
+   * chave de enum passou a ser **exaustivo**: exigia as seis chaves. Quem
+   * subisse uma planilha de nome, e-mail e telefone recebia três
+   * `invalid_type` de uma vez, que a tela mostrava como o toast **"Invalid
+   * input"** — mensagem que não diz nada e não sugere nada.
+   *
+   * Medido em produção em 27/08/2026, pelo primeiro E2E que exercitou a
+   * importação:
+   *
+   *     { name, email, phone }              RECUSA  (company, value, status)
+   *     { name, email, phone, company, value, status }   ACEITA
+   *
+   * O caso quebrado é o principal deste produto: a planilha do público-alvo é
+   * lista de WhatsApp, nome e telefone — foi por isso que a 0025 tornou
+   * `email` opcional. A importação só funcionava para quem mapeasse tudo.
+   *
+   * `partialRecord` mantém as duas defesas que importam: chave fora do enum
+   * continua recusada ("Invalid key in record") e índice fora da faixa
+   * também. O que sai é só a exigência de estarem todas presentes.
+   */
+  mapeamento: z.partialRecord(campoDestino, z.number().int().min(0).max(MAX_COLUNAS - 1)),
   /**
    * O que fazer com quem já está cadastrado.
    *
