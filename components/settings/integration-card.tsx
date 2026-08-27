@@ -19,6 +19,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { desconectarIntegracao, testarConexaoIntegracao } from '@/lib/integrations/actions'
 import { ProUpsellDialog } from '@/components/settings/pro-upsell-dialog'
 import { EvolutionConnectDialog } from '@/components/settings/evolution-connect-dialog'
+import { PrepararConexaoGoogle } from '@/components/settings/preparar-conexao-google'
 import type { IntegrationProvider, IntegrationStatus } from '@/types/supabase'
 import {
   AVISO_DE_MIGRACAO,
@@ -128,6 +129,7 @@ export function IntegrationCard({
   const [pendente, startTransition] = React.useTransition()
   const [upsellAberto, setUpsellAberto] = React.useState(false)
   const [conectarWhatsappAberto, setConectarWhatsappAberto] = React.useState(false)
+  const [prepararGoogleAberto, setPrepararGoogleAberto] = React.useState(false)
   const info = META[provider]
   const Icone = info.icone
   // ## "Conectado" só vale se o plano ainda dá direito ao recurso
@@ -311,7 +313,12 @@ export function IntegrationCard({
             </Button>
           </div>
         ) : info.conectarHref ? (
-          <Button className="w-fit" size="sm" render={<a href={info.conectarHref} />}>
+          /* Era um `<a>` direto para a rota de conexão. O problema não está
+             aqui, está na tela seguinte: a de consentimento do Google mostra
+             uma caixa de permissão DESMARCADA, e continuar sem marcar devolve
+             um token sem a permissão. O produto não alcança ninguém depois que
+             a pessoa sai daqui, então o aviso tem que vir antes do clique. */
+          <Button className="w-fit" size="sm" onClick={() => setPrepararGoogleAberto(true)}>
             <Plug className="size-4" />
             Conectar {info.titulo}
           </Button>
@@ -347,6 +354,15 @@ export function IntegrationCard({
         onOpenChange={setUpsellAberto}
         recurso={info.titulo}
       />
+
+      {info.conectarHref && (
+        <PrepararConexaoGoogle
+          open={prepararGoogleAberto}
+          onOpenChange={setPrepararGoogleAberto}
+          titulo={info.titulo}
+          href={info.conectarHref}
+        />
+      )}
 
       {provider === 'whatsapp' && podeConectarWhatsapp() && (
         <EvolutionConnectDialog

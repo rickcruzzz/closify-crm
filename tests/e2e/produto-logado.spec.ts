@@ -801,6 +801,73 @@ test.describe('produto logado: senha, planilha, equipe, calendário, Google', ()
       .eq('lead_id', contato!.id)
     expect(count, 'Cancelar criou tarefa').toBe(0)
   })
+
+  // ------------------------------------------------ conexão com o Google
+  test('8. conectar o Google avisa da caixa de permissão antes de sair da tela', async () => {
+    await entrar(pagina, dono)
+    await pagina.goto('/settings?aba=integracoes')
+    await pagina.waitForTimeout(2_500)
+
+    const conectar = pagina.getByRole('button', { name: 'Conectar Google Calendar' })
+    await expect(conectar, 'o botão de conectar não apareceu').toBeVisible({ timeout: 30_000 })
+
+    await conectar.click()
+
+    // O ponto todo: antes isto era um `<a>` que saía do produto na hora. O
+    // erro acontece NA tela do Google, e de lá não dá para avisar ninguém.
+    const tutorial = pagina.getByRole('dialog').filter({ hasText: 'Conectar Google Calendar' })
+    await expect(
+      tutorial,
+      'clicar em Conectar saiu direto para o Google, sem explicar nada',
+    ).toBeVisible({ timeout: 20_000 })
+
+    expect(pagina.url(), 'a página navegou quando deveria só abrir o diálogo').toContain(
+      '/settings',
+    )
+
+    // O passo que carrega o peso. Sem este aviso, a pessoa clica em Continuar
+    // com a caixa desmarcada e recebe um token sem permissão nenhuma.
+    await expect(tutorial.getByText('Marcar a caixa de permissão')).toBeVisible()
+    await expect(tutorial.getByText(/aparece desmarcada/i)).toBeVisible()
+
+    // O botão precisa ser um link de verdade: a rota responde com redirect
+    // para FORA do domínio, e navegação do App Router não sai do site.
+    const irParaGoogle = tutorial.getByRole('link', { name: /Ir para o Google/ })
+    await expect(irParaGoogle).toBeVisible()
+    expect(await irParaGoogle.getAttribute('href')).toBe(
+      '/api/integrations/google/connect?provider=google_calendar',
+    )
+
+    // Saída visível, como todo diálogo committal deste produto.
+    await tutorial.getByRole('button', { name: 'Agora não' }).click()
+    await pagina.waitForTimeout(1_200)
+    await expect(tutorial).toBeHidden()
+  })
+
+  test('9. voltar do Google sem a permissão explica a causa e o conserto', async () => {
+    await entrar(pagina, dono)
+
+    // O código que o callback passou a emitir quando o escopo não vem. Um
+    // código sem texto no mapa devolveria a pessoa a uma tela em branco, que é
+    // pior que o defeito original: ela saberia que algo falhou e nada mais.
+    await pagina.goto('/settings?aba=integracoes&erro=permissao_faltando')
+    await pagina.waitForTimeout(2_500)
+
+    const aviso = pagina.locator('[role="alert"]').first()
+    await expect(aviso, 'o erro novo não tem mensagem no mapa da tela').toBeVisible({
+      timeout: 20_000,
+    })
+
+    const texto = (await aviso.innerText()).replace(/\s+/g, ' ')
+    expect(texto, `a mensagem não nomeia a causa: ${texto}`).toMatch(/permiss/i)
+    expect(texto, `a mensagem não diz o que fazer: ${texto}`).toMatch(/marque a caixa/i)
+
+    // E o card continua dizendo a verdade: não conectado, com o caminho de
+    // volta ao lado. Antes desta rodada este caso mostrava "✓ Conectado".
+    await expect(
+      pagina.getByRole('button', { name: 'Conectar Google Calendar' }),
+    ).toBeVisible()
+  })
 })
 
 /** Dia de hoje no fuso de São Paulo, que é o que o produto usa. */
