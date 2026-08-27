@@ -483,49 +483,58 @@
  * distinguir sem ler, e discreto o bastante para nao competir com a tela.
  *
  * `data-type` e posto pelo proprio sonner no elemento do toast. */
-.cn-toast {
-  position: relative;
-}
-
-/* ## Sem `overflow: hidden`, e o motivo importa
+/* ## A barra de estado e BORDA, nao pseudo-elemento
  *
- * A primeira versao usava `overflow: hidden` para a barra respeitar o canto
- * arredondado. Medido depois, isso CORTAVA o botao de fechar: o sonner o
- * posiciona 6px para fora da caixa do toast, e o recorte comia a ponta do
- * icone junto com parte da area de toque.
+ * A primeira versao desenhava a barra num `::before`. Reportado com print: ao
+ * SEGURAR o toast aparecia uma barra verde alta, solta, longe dele.
  *
- *     toast   left 1060  top 876
- *     fechar  left 1054  top 870   <- 6px fora, cortados
+ * A causa esta na folha do proprio sonner:
  *
- * A barra arredonda as proprias pontas em vez de depender de recorte. Com
- * 3px de largura, seguir a curva do cartao assim e indistinguivel do
- * recorte — e nao mutila o vizinho. */
-.cn-toast::before {
-  content: '';
-  position: absolute;
-  inset-block: 0;
-  inset-inline-start: 0;
-  width: 3px;
-  border-start-start-radius: var(--border-radius);
-  border-end-start-radius: var(--border-radius);
+ *     [data-sonner-toast][data-swiping=true]::before {
+ *       height: calc(var(--initial-height) + 20%)
+ *     }
+ *
+ * Ele JA USA o `::before` do toast — como area invisivel para manter a
+ * captura do ponteiro enquanto se arrasta, e cresce essa area ao segurar.
+ * Pintar esse pseudo-elemento foi sequestrar geometria de interacao de uma
+ * biblioteca: enquanto o toast so aparecia e sumia, a barra tinha o tamanho
+ * certo; no instante em que alguem segurava, ela virava outra coisa.
+ *
+ * Borda nao disputa nada, respeita o raio do cartao sozinha, e some do
+ * caminho de qualquer interacao futura que a biblioteca invente. Custa 2px de
+ * deslocamento no conteudo, que e o preco de nao brigar. */
+/* ## Os tres atributos existem para VENCER a folha do sonner
+ *
+ * Ele declara a borda em `[data-sonner-toast][data-styled=true]`, que tem
+ * especificidade 0,2,0 — e injeta a folha em tempo de execucao, DEPOIS do
+ * `globals.css`. Em empate de especificidade, quem vem depois ganha.
+ *
+ * Medido em duas rodadas: com `.cn-toast` (0,1,0) a borda saia 1px na cor
+ * dele; com `.cn-toast[data-sonner-toast]` (0,2,0) a COR passou, porque as
+ * regras de tipo tem 0,3,0, mas a largura continuou 1px, porque a regra base
+ * empatava. Acrescentar `[data-styled=true]` poe a base em 0,3,0 e as de tipo
+ * em 0,4,0.
+ *
+ * Nao e `!important` de proposito: a especificidade descreve POR QUE a regra
+ * vence, e continua deixando qualquer coisa mais especifica sobrescrever. */
+.cn-toast[data-sonner-toast][data-styled='true'] {
+  border-inline-start-width: 3px;
   /* Neutro por padrao: um toast sem tipo nao finge ter estado. */
-  background: var(--border);
+  border-inline-start-color: var(--border);
 }
 
-.cn-toast[data-type='success']::before {
-  background: var(--success);
+.cn-toast[data-sonner-toast][data-styled='true'][data-type='success'] {
+  border-inline-start-color: var(--success);
 }
 
-.cn-toast[data-type='error']::before {
-  background: var(--destructive);
+.cn-toast[data-sonner-toast][data-styled='true'][data-type='error'] {
+  border-inline-start-color: var(--destructive);
 }
 
-.cn-toast[data-type='warning']::before {
-  background: var(--warning);
+.cn-toast[data-sonner-toast][data-styled='true'][data-type='warning'] {
+  border-inline-start-color: var(--warning);
 }
 
-/* O icone tambem, senao a barra sozinha vira enfeite: duas pistas na mesma
-   direcao sao lidas mais rapido que uma. */
 .cn-toast[data-type='success'] [data-icon] {
   color: var(--success);
 }
