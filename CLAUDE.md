@@ -149,6 +149,12 @@ branch. É AST puro, determinístico, sem LLM e sem custo, e escreve só dentro 
 `graphify-out/`, que está no `.gitignore`. Arquivo apagado é podado junto, então
 o grafo não acumula referência morta.
 
+Logo depois do rebuild, `scripts/grafo/nomear-comunidades.py` devolve os nomes
+de domínio às comunidades. Ele existe porque o graphify renomeia cada uma pelo
+nó mais central sempre que o agrupamento muda, e "Central do Dono" virava
+`galeria-de-criativos.tsx`. A rotulagem é derivada da pasta dominante, sem LLM
+e sem custo, então cabe dentro do hook.
+
 O que o hook **não** cobre: documento e imagem, que exigem leitura semântica.
 Depois de mexer em `docs/**` ou trocar um print, rode `/graphify . --update`.
 O cache guarda o que já foi extraído, então só o que mudou custa alguma coisa.
