@@ -124,3 +124,39 @@ escrever — e derrubou a Central do dono três vezes numa sessão só, sempre p
 próprio gate. `build:check` escreve em `.next-check`
 (`scripts/ci/build-de-conferencia.mjs`); `npm run build` continua indo para
 `.next`, que é o que a Vercel espera.
+
+## O mapa do projeto (grafo do graphify)
+
+`graphify-out/graph.json` é um índice navegável de todo este repositório: 3.512
+nós ligando arquivo, função, componente, tabela e conceito de documentação.
+Serve para achar coisa rápido, e **é a primeira parada antes de sair lendo
+arquivo atrás de arquivo** para perguntas do tipo "quem chama X", "onde isso é
+usado", "o que quebra se eu mexer aqui".
+
+```sh
+graphify query "onde o limite de contatos do plano Free e aplicado"
+graphify path "pro_vigente" "checar_teto_de_mensagens"
+graphify explain "textoDaConversao"
+```
+
+`GRAPH_REPORT.md` e `graph.html` (abre no navegador, sem servidor) mostram o
+mesmo grafo agrupado por domínio: Central do Dono, Conversas do WhatsApp,
+Tarefas e próxima ação, e assim por diante.
+
+**Ele se atualiza sozinho.** Um hook de `post-commit` reextrai o código
+alterado a cada commit, e um de `post-checkout` faz o mesmo ao trocar de
+branch. É AST puro, determinístico, sem LLM e sem custo, e escreve só dentro de
+`graphify-out/`, que está no `.gitignore`. Arquivo apagado é podado junto, então
+o grafo não acumula referência morta.
+
+O que o hook **não** cobre: documento e imagem, que exigem leitura semântica.
+Depois de mexer em `docs/**` ou trocar um print, rode `/graphify . --update`.
+O cache guarda o que já foi extraído, então só o que mudou custa alguma coisa.
+
+**A regra de corte, aprendida caro em 27/08:** só entra no grafo o nó cujo
+arquivo existe no disco **e mora dentro deste repositório**. O grafo chegou a
+ter 17.014 nós, dos quais **13.502 apontavam para outro projeto** — herança de
+uma rodada antiga —, e nada na resposta de uma consulta avisava disso. Só
+"existe no disco" não basta: 35 nós apontavam para um plugin do Claude Code
+instalado na pasta pessoal do usuário, fora daqui. O que foi retirado está
+inteiro em `graphify-out/arquivo/`, nada foi descartado.
