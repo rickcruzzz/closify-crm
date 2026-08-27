@@ -19,7 +19,7 @@ import {
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { FREE_WORKSPACE_LIMIT } from '@/lib/plans'
+import type { DecisaoDeNovaEmpresa } from '@/lib/plans/multi-empresa'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -39,10 +39,23 @@ export type WorkspaceSummary = {
 export function WorkspaceSwitcher({
   workspaces,
   activeId,
+  novaEmpresa,
 }: {
   workspaces: WorkspaceSummary[]
   /** Empresa em uso agora, resolvida no servidor a partir do cookie. */
   activeId: string
+  /**
+   * Se esta pessoa pode criar outra empresa, decidido no SERVIDOR.
+   *
+   * Chega pronto de propósito. A versão anterior deduzia aqui, de
+   * `workspaces.some((w) => w.plan === 'pro')` — lendo a COLUNA, que a
+   * doutrina da 0027 proíbe para regra de plano. E o caso que mais doía nem
+   * era coluna velha: durante o trial ela vale `'pro'` de verdade, enquanto a
+   * trigger da 0053 exige `pro_vigente and not em_trial`. Medido em produção
+   * em 27/08/2026, com 4 empresas nesse estado: a pessoa via "Nova empresa",
+   * digitava o nome, enviava, e o banco recusava.
+   */
+  novaEmpresa: DecisaoDeNovaEmpresa
 }) {
   const router = useRouter()
   const [enviando, setEnviando] = React.useState(false)
@@ -128,12 +141,11 @@ export function WorkspaceSwitcher({
     })
   }
 
-  // Espelha `canAddWorkspace` no servidor: uma empresa Pro libera multi-empresa,
-  // e quem já passou do limite antes da regra existir continua enxergando as
-  // que criou, só não cria mais. Isto é conveniência de interface; quem
-  // decide de verdade é a RPC no banco.
-  const temPro = workspaces.some((w) => w.plan === 'pro')
-  const podeCriarEmpresa = temPro || workspaces.length < FREE_WORKSPACE_LIMIT
+  // A decisão vem pronta do servidor (`decidirNovaEmpresa`, no layout), que a
+  // calcula com `pro_vigente`/`em_trial` — as mesmas funções da trigger. Isto
+  // continua sendo conveniência de interface; quem decide de verdade é a RPC
+  // no banco. O que mudou é que agora os dois concordam.
+  const podeCriarEmpresa = novaEmpresa.pode
 
   if (!active) {
     return null
@@ -209,7 +221,7 @@ export function WorkspaceSwitcher({
             <span className="flex flex-col">
               <span>Nova empresa</span>
               <span className="text-muted-foreground text-xs">
-                Disponível no plano Pro
+                {novaEmpresa.motivo}
               </span>
             </span>
           </DropdownMenuItem>

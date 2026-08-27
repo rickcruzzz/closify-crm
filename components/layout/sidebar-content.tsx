@@ -4,6 +4,7 @@ import { SidebarNav } from '@/components/layout/sidebar-nav'
 import { WorkspaceSwitcher, type WorkspaceSummary } from '@/components/layout/workspace-switcher'
 import { UserMenu, type CurrentUser } from '@/components/layout/user-menu'
 import { Logo } from '@/components/branding/logo'
+import type { DecisaoDeNovaEmpresa } from '@/lib/plans/multi-empresa'
 
 export function SidebarContent({
   workspaces,
@@ -11,6 +12,7 @@ export function SidebarContent({
   currentUser,
   tarefasDoDia,
   conversasEsperando,
+  novaEmpresa,
   onNavigate,
 }: {
   workspaces: WorkspaceSummary[]
@@ -19,6 +21,14 @@ export function SidebarContent({
   /** Quantas tarefas minhas vencem hoje ou já venceram — o badge do "Hoje". */
   tarefasDoDia: number
   conversasEsperando: number
+  /**
+   * Se esta pessoa pode criar outra empresa, decidido no SERVIDOR.
+   *
+   * Vem de `decidirNovaEmpresa`, que usa `pro_vigente`/`em_trial` — as mesmas
+   * funcoes da trigger. Antes o seletor deduzia da coluna `plan`, e durante o
+   * trial ela diz 'pro' enquanto o banco recusa a criacao.
+   */
+  novaEmpresa: DecisaoDeNovaEmpresa
   onNavigate?: () => void
 }) {
   return (
@@ -26,7 +36,11 @@ export function SidebarContent({
       <Link href="/dashboard" className="px-2.5 py-2">
         <Logo size="sm" />
       </Link>
-      <WorkspaceSwitcher workspaces={workspaces} activeId={activeWorkspaceId} />
+      <WorkspaceSwitcher
+        workspaces={workspaces}
+        activeId={activeWorkspaceId}
+        novaEmpresa={novaEmpresa}
+      />
       <SidebarNav
         onNavigate={onNavigate}
         tarefasDoDia={tarefasDoDia}

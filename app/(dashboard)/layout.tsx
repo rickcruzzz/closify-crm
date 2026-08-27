@@ -10,6 +10,7 @@ import { AvisoDeTrial } from '@/components/layout/aviso-de-trial'
 import { lerEstadoDoOnboarding, precisaDeBoasVindas } from '@/lib/onboarding/estado'
 import { contarTarefasDoDiaDoUsuario } from '@/lib/tasks/queries'
 import { contarConversasEsperandoDoUsuario } from '@/lib/conversas/queries'
+import { decidirNovaEmpresa } from '@/lib/plans/multi-empresa'
 
 // Tudo aqui dentro é área logada: nada deve ser indexado. As páginas filhas
 // só sobrescrevem o title; este robots vale para todas.
@@ -66,6 +67,19 @@ export default async function DashboardLayout({
     redirect('/bem-vindo')
   }
 
+  // Quem pode criar outra empresa, decidido AQUI e não no cliente.
+  //
+  // `situacaoDoPlano` já veio na onda acima e consulta `pro_vigente`/`em_trial`,
+  // as mesmas funções que a trigger da 0053 usa — então esta decisão e a do
+  // banco não têm como divergir. O seletor deduzia da coluna `plan`, que
+  // durante o trial vale 'pro' enquanto o banco recusa a criação: a pessoa
+  // preenchia o formulário inteiro para tomar erro.
+  const novaEmpresa = decidirNovaEmpresa({
+    temAssinaturaPaga: situacaoDoPlano.temAssinaturaPaga,
+    emTrial: situacaoDoPlano.emTrial,
+    quantidadeDeEmpresas: workspaces.length,
+  })
+
   const currentUser = {
     name: (user.user_metadata?.name as string | undefined) ?? user.email ?? 'Usuário',
     email: user.email ?? '',
@@ -95,7 +109,8 @@ export default async function DashboardLayout({
           activeWorkspaceId={workspaceId}
           currentUser={currentUser}
           tarefasDoDia={tarefasDoDia}
-            conversasEsperando={conversasEsperando}
+          conversasEsperando={conversasEsperando}
+          novaEmpresa={novaEmpresa}
         />
         {/* `overflow-x-hidden` explícito ao lado do `overflow-y-auto`: pela
             própria especificação CSS, `overflow-y` diferente de `visible`
@@ -110,6 +125,7 @@ export default async function DashboardLayout({
             currentUser={currentUser}
             tarefasDoDia={tarefasDoDia}
             conversasEsperando={conversasEsperando}
+            novaEmpresa={novaEmpresa}
           />
           {/* Entre a barra e o conteúdo: não empurra a navegação para baixo e
               aparece antes de qualquer tela do produto. Só renderiza algo nos

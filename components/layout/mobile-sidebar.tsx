@@ -8,6 +8,7 @@ import { Sheet, SheetContent, SheetTitle, SheetTrigger } from '@/components/ui/s
 import { SidebarContent } from '@/components/layout/sidebar-content'
 import type { WorkspaceSummary } from '@/components/layout/workspace-switcher'
 import type { CurrentUser } from '@/components/layout/user-menu'
+import type { DecisaoDeNovaEmpresa } from '@/lib/plans/multi-empresa'
 
 export function MobileSidebar({
   workspaces,
@@ -15,12 +16,15 @@ export function MobileSidebar({
   currentUser,
   tarefasDoDia,
   conversasEsperando,
+  novaEmpresa,
 }: {
   workspaces: WorkspaceSummary[]
   activeWorkspaceId: string
   currentUser: CurrentUser
   tarefasDoDia: number
   conversasEsperando: number
+  /** Se pode criar outra empresa, decidido no servidor. */
+  novaEmpresa: DecisaoDeNovaEmpresa
 }) {
   const [open, setOpen] = React.useState(false)
 
@@ -41,6 +45,7 @@ export function MobileSidebar({
           currentUser={currentUser}
           tarefasDoDia={tarefasDoDia}
           conversasEsperando={conversasEsperando}
+          novaEmpresa={novaEmpresa}
           onNavigate={() => setOpen(false)}
         />
       </SheetContent>
