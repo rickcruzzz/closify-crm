@@ -395,7 +395,22 @@ test.describe('produto logado: senha, planilha, equipe, calendário, Google', ()
         `membro conseguiu se promover a admin pelo PostgREST (erro devolvido: ${recusa?.code ?? 'nenhum'})`,
       ).toBe('membro')
     } finally {
-      await doConvidado.close()
+      /**
+       * Erro ao FECHAR o contexto não é sinal do produto.
+       *
+       * Contra produção esta linha estourou uma vez com
+       * `browserContext.close: Target page, context or browser has been
+       * closed`, e derrubou uma execução que já tinha provado tudo que
+       * importa — o convite, o papel e a recusa do RLS. A causa é a
+       * navegação do aceite ainda em voo quando o `finally` fecha; contra o
+       * servidor local, mais rápido, nunca aconteceu.
+       *
+       * Teste que falha às vezes é pior que teste que falha sempre: ensina a
+       * reexecutar até passar, e aí ninguém olha mais o resultado. O contexto
+       * é descartável e o processo do Playwright morre logo depois, então o
+       * que sobra de um close mal sucedido é nada.
+       */
+      await doConvidado.close().catch(() => {})
     }
 
     // Remoção, de volta na sessão do dono.
