@@ -93,7 +93,20 @@ function DialogContent({
           <DialogPrimitive.Close
             data-slot="dialog-close"
             render={
-              <Button variant="ghost" className="absolute top-2 right-2" size="icon-sm" />
+              /* `size-11` no telefone: medido em 390px, o X saía com 36px de
+                 altura, abaixo do alvo de toque de 44px que o resto do produto
+                 respeita em 27 lugares. É o controle de sair de um diálogo —
+                 errar o toque nele deixa a pessoa presa numa tela modal.
+
+                 Exceção consciente à regra de não editar `components/ui` à
+                 mão, como já foi feito no `Separator`: regenerar pelo CLI
+                 traria o tamanho antigo de volta, e o `size-*` do `icon-sm` é
+                 o que precisa ser vencido. */
+              <Button
+                variant="ghost"
+                className="absolute top-2 right-2 size-11 md:size-8"
+                size="icon-sm"
+              />
             }
           >
             <XIcon />

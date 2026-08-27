@@ -524,11 +524,27 @@ test.describe('produto logado: senha, planilha, equipe, calendário, Google', ()
     // passou. Cada desvio abaixo é uma das guardas do `GET`.
     await entrar(pagina, dono)
 
+    /**
+     * As quatro guardas são lidas pelo cabeçalho `Location`, sem navegar.
+     *
+     * `page.goto` numa rota que só redireciona é frágil: a navegação pode
+     * abortar no meio da cadeia (`net::ERR_ABORTED; maybe frame was
+     * detached?`), e este teste passou duas vezes antes de falhar assim, o que
+     * é pior que falhar sempre — vira ruído que ensina a reexecutar até passar.
+     *
+     * `page.request` compartilha os cookies do contexto, então a sessão do
+     * dono vai junto e as guardas continuam sendo exercitadas de verdade.
+     */
+    const portao = async (query: string) => {
+      const resposta = await pagina.request.get(
+        `/api/integrations/google/connect?${query}`,
+        { maxRedirects: 0 },
+      )
+      return decodeURIComponent(resposta.headers()['location'] ?? '')
+    }
+
     // Provider inventado não pode virar `state` nenhum.
-    const provedorInvalido = await pagina.goto(
-      '/api/integrations/google/connect?provider=facebook',
-    )
-    expect(provedorInvalido?.url() ?? '').toContain('erro=provider_invalido')
+    expect(await portao('provider=facebook')).toContain('erro=provider_invalido')
 
     // Sem Pro não conecta. A empresa nasce em TRIAL (0053), que `pro_vigente`
     // aceita — para provar a recusa, o trial é encurtado no banco e desfeito
@@ -546,9 +562,8 @@ test.describe('produto logado: senha, planilha, equipe, calendário, Google', ()
       .eq('id', rastros.workspaceId!)
 
     try {
-      const semPro = await pagina.goto('/api/integrations/google/connect?provider=google_calendar')
       expect(
-        semPro?.url() ?? '',
+        await portao('provider=google_calendar'),
         'empresa sem Pro conseguiu passar do portão do OAuth',
       ).toContain('erro=plano_free')
     } finally {
@@ -561,11 +576,10 @@ test.describe('produto logado: senha, planilha, equipe, calendário, Google', ()
     // Sem sessão, vai para o login e não para o Google.
     const anonimo = await navegador.browser()!.newContext({ baseURL: URL_BASE })
     try {
-      const abaAnonima = await anonimo.newPage()
-      const semSessao = await abaAnonima.goto(
-        '/api/integrations/google/connect?provider=gmail',
-      )
-      expect(semSessao?.url() ?? '').toMatch(/\/login/)
+      const semSessao = await anonimo
+        .request
+        .get('/api/integrations/google/connect?provider=gmail', { maxRedirects: 0 })
+      expect(semSessao.headers()['location'] ?? '').toMatch(/\/login/)
     } finally {
       await anonimo.close()
     }
@@ -587,11 +601,7 @@ test.describe('produto logado: senha, planilha, equipe, calendário, Google', ()
       //
       // `page.request` compartilha os cookies do contexto, então a sessão do
       // dono vai junto e as guardas acima continuam valendo.
-      const resposta = await pagina.request.get(
-        `/api/integrations/google/connect?provider=${provider}`,
-        { maxRedirects: 0 },
-      )
-      const destino = decodeURIComponent(resposta.headers()['location'] ?? '')
+      const destino = await portao(`provider=${provider}`)
 
       expect(destino, `${provider} não foi redirecionado ao Google`).toContain(
         'accounts.google.com',
@@ -602,6 +612,179 @@ test.describe('produto logado: senha, planilha, equipe, calendário, Google', ()
         'o escopo largo `calendar.events` foi o motivo da reprovação de 20/08, não pode voltar',
       ).not.toMatch(/calendar\.events(?!\.owned)/)
     }
+  })
+
+  // ------------------------------------------------------- próxima ação
+  test('6. Próxima ação oferece a tarefa que já existe em vez de criar a segunda', async () => {
+    const admin = bancoAdmin()
+
+    // Cenário próprio, e não o dos testes anteriores: eles pegam contato com
+    // `.limit(1)` sem `order`, e depender disso amarraria este teste à ordem
+    // que o Postgres devolveu por acaso.
+    const { data: contato, error: erroContato } = await admin
+      .from('leads')
+      .insert({
+        workspace_id: rastros.workspaceId!,
+        name: `Cliente da Proxima Acao ${dono.carimbo.slice(-5)}`,
+        email: `proxima.acao.${dono.carimbo}@exemplo.com.br`,
+        // `owner_id`, nao `created_by`: quem guarda `created_by` e `tasks`.
+        owner_id: rastros.donoId!,
+      })
+      .select('id, name')
+      .single()
+    expect(erroContato, 'não deu para criar o contato do teste').toBeNull()
+
+    const { data: negocio, error: erroNegocio } = await admin
+      .from('deals')
+      .insert({
+        workspace_id: rastros.workspaceId!,
+        lead_id: contato!.id,
+        title: `Negocio da Proxima Acao ${dono.carimbo.slice(-5)}`,
+        value: 1000,
+        stage: 'novo',
+        owner_id: rastros.donoId!,
+      })
+      .select('id')
+      .single()
+    expect(erroNegocio, 'não deu para criar o negócio do teste').toBeNull()
+
+    // A tarefa que o defeito escondia: aberta, do contato, SEM `deal_id`. É
+    // exatamente o que a página do Contato produzia, e o painel do negócio
+    // nunca mostrava.
+    const tituloDaTarefaSolta = `Ligar antes da proposta ${dono.carimbo.slice(-5)}`
+    const { error: erroTarefa } = await admin.from('tasks').insert({
+      workspace_id: rastros.workspaceId!,
+      lead_id: contato!.id,
+      deal_id: null,
+      title: tituloDaTarefaSolta,
+      type: 'ligacao',
+      due_at: `${hojeEmSaoPaulo()}T14:00:00-03:00`,
+      created_by: rastros.donoId!,
+      assignee_id: rastros.donoId!,
+    })
+    expect(erroTarefa, 'não deu para criar a tarefa solta').toBeNull()
+
+    await entrar(pagina, dono)
+    await pagina.goto(`/kanban?negocio=${negocio!.id}`)
+    await pagina.waitForTimeout(3_000)
+
+    const painel = pagina.locator('[data-slot="sheet-content"]')
+    await expect(painel, 'o painel do negócio não abriu').toBeVisible({ timeout: 30_000 })
+
+    // O texto que contradizia o produto: dizia "Nenhuma agendada" enquanto o
+    // contato tinha tarefa aberta. Agora nomeia o escopo.
+    await expect(painel.getByText('Nada marcado para este negócio.')).toBeVisible()
+
+    await painel.getByRole('button', { name: 'Agendar' }).click()
+
+    // O ponto do pedido: antes isto abria o formulário de tarefa nova direto.
+    const diálogo = pagina.getByRole('dialog').filter({ hasText: 'Próxima ação' })
+    await expect(
+      diálogo,
+      'o diálogo abriu direto no formulário, sem oferecer a tarefa que já existe',
+    ).toBeVisible({ timeout: 30_000 })
+
+    const escolher = diálogo.getByRole('button', {
+      name: new RegExp(`Usar "${tituloDaTarefaSolta}"`),
+    })
+    await expect(escolher, 'a tarefa aberta do contato não apareceu como opção').toBeVisible({
+      timeout: 15_000,
+    })
+
+    await escolher.click()
+    await pagina.waitForTimeout(4_000)
+
+    // A prova é o banco: UMA tarefa, agora ligada ao negócio. Duas significaria
+    // que o defeito continua, só que atrás de um clique a mais.
+    const { data: tarefas } = await admin
+      .from('tasks')
+      .select('id, title, deal_id, done_at')
+      .eq('workspace_id', rastros.workspaceId!)
+      .eq('lead_id', contato!.id)
+
+    expect(tarefas?.length, 'deveria continuar existindo UMA tarefa, não duas').toBe(1)
+    expect(tarefas![0].deal_id, 'a tarefa não foi ligada ao negócio').toBe(negocio!.id)
+  })
+
+  test('7. sem tarefa para escolher, "Agendar" abre o formulário direto', async () => {
+    const admin = bancoAdmin()
+
+    // Contato sem tarefa nenhuma: não há o que escolher, e uma tela dizendo
+    // "não há nada aqui" seria um clique a mais cobrado de todo mundo para
+    // servir a minoria.
+    const { data: contato } = await admin
+      .from('leads')
+      .insert({
+        workspace_id: rastros.workspaceId!,
+        name: `Cliente Sem Tarefa ${dono.carimbo.slice(-5)}`,
+        email: `sem.tarefa.${dono.carimbo}@exemplo.com.br`,
+        owner_id: rastros.donoId!,
+      })
+      .select('id')
+      .single()
+
+    const { data: negocio } = await admin
+      .from('deals')
+      .insert({
+        workspace_id: rastros.workspaceId!,
+        lead_id: contato!.id,
+        title: `Negocio Sem Tarefa ${dono.carimbo.slice(-5)}`,
+        value: 500,
+        stage: 'novo',
+        owner_id: rastros.donoId!,
+      })
+      .select('id')
+      .single()
+
+    await entrar(pagina, dono)
+    await pagina.goto(`/kanban?negocio=${negocio!.id}`)
+    await pagina.waitForTimeout(3_000)
+
+    const painel = pagina.locator('[data-slot="sheet-content"]')
+    await painel.getByRole('button', { name: 'Agendar' }).click()
+
+    const formulario = pagina.getByRole('dialog').filter({ hasText: 'Nova tarefa' })
+    await expect(
+      formulario,
+      'sem candidata, o formulário deveria abrir direto, sem etapa de escolha',
+    ).toBeVisible({ timeout: 30_000 })
+
+    // Este era o único diálogo committal do produto sem saída visível: só
+    // `Esc` ou o X, e nenhum dos dois é descobrível.
+    await expect(formulario.getByRole('button', { name: 'Cancelar' })).toBeVisible()
+
+    // O atalho existe para ninguém precisar operar o campo segmentado de data
+    // com teclado ou leitor de tela.
+    const atalho = formulario.getByRole('button', { name: /^Amanhã, / })
+    await expect(atalho, 'o atalho de prazo não apareceu').toBeVisible()
+
+    await formulario.locator('#task-due').fill('')
+    await atalho.click()
+    const prazo = await formulario.locator('#task-due').inputValue()
+    expect(prazo, 'o atalho não preencheu o campo de prazo').toMatch(
+      /^[0-9]{4}-[0-9]{2}-[0-9]{2}T09:00$/,
+    )
+
+    // O erro tem que ficar LIGADO ao campo: `role="alert"` anuncia uma vez, e
+    // quem volta com Tab depois não ouve mais nada.
+    await formulario.locator('#task-title').fill('a')
+    await formulario.getByRole('button', { name: 'Criar tarefa' }).click()
+    await pagina.waitForTimeout(1_500)
+
+    const descrito = await formulario.locator('#task-title').getAttribute('aria-describedby')
+    expect(descrito, 'o campo com erro não aponta para a mensagem de erro').toBe('task-title-erro')
+    await expect(formulario.locator('#task-title-erro')).toBeVisible()
+
+    // Cancelar fecha sem criar nada.
+    await formulario.getByRole('button', { name: 'Cancelar' }).click()
+    await pagina.waitForTimeout(1_500)
+
+    const { count } = await admin
+      .from('tasks')
+      .select('id', { count: 'exact', head: true })
+      .eq('workspace_id', rastros.workspaceId!)
+      .eq('lead_id', contato!.id)
+    expect(count, 'Cancelar criou tarefa').toBe(0)
   })
 })
 

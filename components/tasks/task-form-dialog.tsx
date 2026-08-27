@@ -33,28 +33,28 @@ import {
   type TaskTypeCriavel,
 } from '@/lib/tasks/tipo-sugerido'
 import type { DealStage } from '@/lib/deals/types'
+import {
+  atalhosDePrazo,
+  paraCampoLocal,
+  sugestaoDePrazo,
+  type AtalhoDePrazo,
+} from '@/lib/tasks/atalhos-de-prazo'
+import {
+  negocioSugerido,
+  textoDoCampoDeNegocio,
+  type NegocioParaTarefa,
+} from '@/lib/tasks/negocio-sugerido'
 import { taskSchema, type TaskFormInput, type TaskFormValues } from '@/lib/validations/task'
 
 /**
- * O valor que o `<input type="datetime-local">` espera: `YYYY-MM-DDTHH:mm` no
- * fuso de quem está olhando.
+ * O valor do item "nenhum" do seletor de negócio.
  *
- * `toISOString()` aqui daria o horário em UTC e o campo abriria três horas
- * adiantado. A conta com `getTimezoneOffset` desloca o instante para que o
- * corte da string caia no horário local.
+ * `SelectItem` não aceita string vazia (o Base UI a trata como "sem seleção" e
+ * o item viraria inclicável), e "nenhum" precisa ser escolhível de verdade:
+ * tarefa só do contato é uso legítimo. A sentinela é convertida de volta para
+ * `null` antes de chegar ao schema.
  */
-function paraCampoLocal(data: Date): string {
-  const local = new Date(data.getTime() - data.getTimezoneOffset() * 60_000)
-  return local.toISOString().slice(0, 16)
-}
-
-/** Amanhã às 9h, o padrão que quase todo follow-up de venda quer. */
-function sugestaoDePrazo(): string {
-  const amanha = new Date()
-  amanha.setDate(amanha.getDate() + 1)
-  amanha.setHours(9, 0, 0, 0)
-  return paraCampoLocal(amanha)
-}
+const SEM_NEGOCIO = '__sem_negocio__'
 
 export type TarefaEmEdicao = {
   id: string
@@ -74,6 +74,7 @@ export function TaskFormDialog({
   dealId,
   tarefa,
   stage,
+  negociosDoLead,
 }: {
   open: boolean
   onOpenChange: (open: boolean) => void
@@ -87,8 +88,26 @@ export function TaskFormDialog({
   tarefa?: TarefaEmEdicao | null
   /** A etapa do negócio, quando há um: decide o tipo que já vem escolhido. */
   stage?: DealStage
+  /**
+   * Os negócios abertos do contato, quando o diálogo é aberto pela página dele.
+   *
+   * Faz aparecer o campo "Negócio". Sem ele, a tarefa nascia só com `lead_id` e
+   * o painel do negócio — que só enxerga `deal_id` — jamais a mostraria,
+   * levando a pessoa a criar uma segunda para o mesmo compromisso.
+   */
+  negociosDoLead?: NegocioParaTarefa[]
 }) {
   const [isSubmitting, setIsSubmitting] = React.useState(false)
+
+  /**
+   * Os atalhos nascem vazios e só são calculados quando o diálogo abre.
+   *
+   * Eles dependem do relógio, e o servidor da Vercel roda em UTC: calcular na
+   * renderização daria um conjunto no servidor e outro no cliente, que é
+   * descasamento de hidratação. É a mesma razão de o relógio das telas de
+   * tarefa nascer num `useEffect`.
+   */
+  const [atalhos, setAtalhos] = React.useState<AtalhoDePrazo[]>([])
 
   const {
     register,
@@ -96,6 +115,7 @@ export function TaskFormDialog({
     control,
     reset,
     watch,
+    setValue,
     formState: { errors },
   } = useForm<TaskFormInput, unknown, TaskFormValues>({
     resolver: zodResolver(taskSchema),
@@ -108,17 +128,24 @@ export function TaskFormDialog({
   React.useEffect(() => {
     if (!open) return
 
+    // Um relógio só para os dois: os atalhos e o prazo inicial não podem
+    // divergir por causa de duas leituras em instantes diferentes.
+    const agora = new Date()
+    setAtalhos(atalhosDePrazo(agora))
+
     reset({
       title: tarefa?.title ?? '',
       // Editar uma tarefa antiga preserva o tipo dela, inclusive `nota`, que
       // não se cria mais mas existe em produção. Só a criação usa a sugestão.
       type: tarefa?.type ?? tipoSugerido(stage),
-      dueAt: tarefa ? paraCampoLocal(new Date(tarefa.due_at)) : sugestaoDePrazo(),
+      dueAt: tarefa ? paraCampoLocal(new Date(tarefa.due_at)) : sugestaoDePrazo(agora),
       assigneeId: tarefa?.assignee_id ?? currentUserId,
       leadId: leadId ?? null,
-      dealId: dealId ?? null,
+      // `dealId` explícito vence a sugestão: quem abriu pelo painel do negócio
+      // já disse de qual negócio se trata.
+      dealId: dealId ?? negocioSugerido(negociosDoLead ?? []),
     })
-  }, [open, reset, tarefa, currentUserId, leadId, dealId, stage])
+  }, [open, reset, tarefa, currentUserId, leadId, dealId, stage, negociosDoLead])
 
   async function submeter(values: TaskFormValues) {
     setIsSubmitting(true)
@@ -150,11 +177,16 @@ export function TaskFormDialog({
               // proposta", ele ficava sugerindo ligar com o Tipo já em E-mail.
               placeholder={exemploDeTitulo(tipoEscolhido)}
               aria-invalid={!!errors.title}
+              // `role="alert"` anuncia o erro UMA vez, quando ele aparece.
+              // Quem volta ao campo depois, com Tab, não ouve mais nada — o
+              // campo não sabe que tem erro. `aria-describedby` é o que liga os
+              // dois, e o formulário inteiro não tinha nenhum.
+              aria-describedby={errors.title ? 'task-title-erro' : undefined}
               disabled={isSubmitting}
               {...register('title')}
             />
             {errors.title && (
-              <p role="alert" className="text-destructive text-xs">
+              <p id="task-title-erro" role="alert" className="text-destructive text-xs">
                 {errors.title.message}
               </p>
             )}
@@ -202,16 +234,59 @@ export function TaskFormDialog({
                 id="task-due"
                 type="datetime-local"
                 aria-invalid={!!errors.dueAt}
+                aria-describedby={errors.dueAt ? 'task-due-erro' : undefined}
                 disabled={isSubmitting}
                 {...register('dueAt')}
               />
               {errors.dueAt && (
-                <p role="alert" className="text-destructive text-xs">
+                <p id="task-due-erro" role="alert" className="text-destructive text-xs">
                   {errors.dueAt.message}
                 </p>
               )}
             </div>
           </div>
+
+          {/* Os atalhos ficam FORA da grade de duas colunas e abaixo dela: em
+              390px eles seriam espremidos ao lado do Tipo, e alvo de toque
+              apertado é pior que atalho nenhum.
+
+              Existem porque `<input type="datetime-local">` é o controle mais
+              difícil da tela — campo segmentado, que exige navegar dia, mês,
+              ano, hora e minuto um a um, com teclado ou com leitor de tela. O
+              caso comum de um CRM de venda é sempre "amanhã de manhã", e isso
+              cabe num toque. O campo continua ali, intacto, para data qualquer.
+
+              `type="button"` explícito: dentro de um `<form>`, botão sem tipo
+              é `submit` e enviaria a tarefa em vez de preencher o prazo. */}
+          {atalhos.length > 0 && (
+            <div className="flex flex-col gap-1.5">
+              <span id="task-atalhos" className="text-muted-foreground text-xs">
+                Ou escolha um horário comum
+              </span>
+              <div className="flex flex-wrap gap-2" role="group" aria-labelledby="task-atalhos">
+                {atalhos.map((atalho) => (
+                  <Button
+                    key={atalho.id}
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    // 44px de alvo no telefone, a regra de toque já aplicada em
+                    // 27 lugares do projeto; no desktop volta ao compacto.
+                    className="min-h-11 md:min-h-9"
+                    disabled={isSubmitting}
+                    onClick={() =>
+                      setValue('dueAt', atalho.valor, {
+                        shouldValidate: true,
+                        shouldDirty: true,
+                      })
+                    }
+                  >
+                    {atalho.rotulo}
+                  </Button>
+                ))}
+              </div>
+            </div>
+          )}
 
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="task-assignee">Responsável</Label>
@@ -224,7 +299,12 @@ export function TaskFormDialog({
                   onValueChange={field.onChange}
                   disabled={isSubmitting}
                 >
-                  <SelectTrigger id="task-assignee" className="w-full">
+                  <SelectTrigger
+                    id="task-assignee"
+                    className="w-full"
+                    aria-invalid={!!errors.assigneeId}
+                    aria-describedby={errors.assigneeId ? 'task-assignee-erro' : undefined}
+                  >
                     <SelectValue placeholder="Selecione">
                       {(value) =>
                         members.find((m) => m.id === value)?.name ?? 'Selecione'
@@ -242,11 +322,61 @@ export function TaskFormDialog({
               )}
             />
             {errors.assigneeId && (
-              <p role="alert" className="text-destructive text-xs">
+              <p id="task-assignee-erro" role="alert" className="text-destructive text-xs">
                 {errors.assigneeId.message}
               </p>
             )}
           </div>
+
+          {/* O campo que fecha a causa raiz.
+
+              A página do Contato criava tarefa passando só `leadId`, e o painel
+              do negócio só enxerga `deal_id` — a tarefa nascia invisível para
+              ele, que então oferecia criar outra. Duas tarefas para o mesmo
+              compromisso, e a pessoa descobre quando as duas cobram.
+
+              Só aparece quando há negócio aberto: um seletor vazio num contato
+              sem negócio é campo que só serve para confundir. */}
+          {negociosDoLead && negociosDoLead.length > 0 && (
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="task-deal">Negócio</Label>
+              <Controller
+                name="dealId"
+                control={control}
+                render={({ field }) => (
+                  <Select
+                    // `SEM_NEGOCIO` porque `SelectItem` não aceita valor vazio,
+                    // e "nenhum" precisa ser escolhível: tarefa só do contato é
+                    // uso legítimo (`tasks_alvo_minimo`, 0029, exige lead OU
+                    // negócio, não os dois).
+                    value={field.value ?? SEM_NEGOCIO}
+                    onValueChange={(v) => field.onChange(v === SEM_NEGOCIO ? null : v)}
+                    disabled={isSubmitting}
+                  >
+                    <SelectTrigger id="task-deal" className="w-full">
+                      <SelectValue placeholder="Nenhum">
+                        {(value) =>
+                          negociosDoLead.find((n) => n.id === value)?.title ??
+                          'Nenhum, só para o contato'
+                        }
+                      </SelectValue>
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value={SEM_NEGOCIO}>Nenhum, só para o contato</SelectItem>
+                      {negociosDoLead.map((negocio) => (
+                        <SelectItem key={negocio.id} value={negocio.id}>
+                          {negocio.title}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+              />
+              <p className="text-muted-foreground text-xs">
+                {textoDoCampoDeNegocio(negociosDoLead)}
+              </p>
+            </div>
+          )}
 
           {/* O erro do refine `tasks_alvo_minimo` pousa em `leadId`. Ele só
               aparece se a tarefa chegar sem lead e sem negócio, o que a tela
@@ -258,7 +388,18 @@ export function TaskFormDialog({
             </p>
           )}
 
+          {/* Este era o ÚNICO diálogo committal do produto sem saída visível:
+              só dava para sair por `Esc` ou pelo X, e nenhum dos dois é
+              descobrível. Outros treze componentes já ofereciam "Cancelar". */}
           <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => onOpenChange(false)}
+              disabled={isSubmitting}
+            >
+              Cancelar
+            </Button>
             <Button type="submit" disabled={isSubmitting}>
               {isSubmitting && <Loader2 className="size-4 animate-spin" />}
               {tarefa ? 'Salvar' : 'Criar tarefa'}
