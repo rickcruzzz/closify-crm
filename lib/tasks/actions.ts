@@ -321,3 +321,99 @@ export async function excluirTarefa(taskId: unknown) {
   revalidarTelasDeTarefa(data?.lead_id)
   return { success: true }
 }
+
+/**
+ * As tarefas do contato que ainda podem virar a próxima ação de um negócio.
+ *
+ * ## Por que esta lista existe
+ *
+ * `getProximaAcaoPorNegocio` só enxerga tarefa com `deal_id`. Uma tarefa
+ * criada na página do Contato não tinha esse campo, então o painel do negócio
+ * dizia "Nenhuma agendada" e oferecia o único caminho que conhecia: criar
+ * outra. Duas tarefas para o mesmo compromisso, e a pessoa descobre quando as
+ * duas cobram.
+ *
+ * ## O filtro `deal_id is null` é a parte que importa
+ *
+ * Tarefa já ligada a OUTRO negócio não entra. Sem isso, vincular aqui a
+ * roubaria de lá — o outro negócio passaria a dizer "Nenhuma agendada" e
+ * ninguém saberia por quê. Só entra o que não pertence a negócio nenhum.
+ */
+export async function listarTarefasVinculaveis(leadId: unknown) {
+  const id = z.uuid().safeParse(leadId)
+  if (!id.success) return { tarefas: [] }
+
+  const sessao = await abrirSessao()
+  if ('error' in sessao) return { tarefas: [] }
+
+  const { data, error } = await sessao.supabase
+    .from('tasks')
+    .select('id, title, type, due_at')
+    .eq('workspace_id', sessao.workspaceId)
+    .eq('lead_id', id.data)
+    .is('deal_id', null)
+    .is('done_at', null)
+    .order('due_at', { ascending: true })
+    // Teto explícito: o PostgREST corta em 1.000 e não avisa. Aqui a lista é
+    // para escolher com o olho, então o teto é bem menor — vinte tarefas
+    // abertas do mesmo contato já é mais do que qualquer diálogo comporta.
+    .limit(20)
+
+  if (error) {
+    console.error('listarTarefasVinculaveis falhou', error)
+    return { tarefas: [] }
+  }
+
+  return { tarefas: data ?? [] }
+}
+
+/**
+ * Amarra uma tarefa que já existe a um negócio, tornando-a a próxima ação.
+ *
+ * O `update` é escopado por `workspace_id` **e** por `deal_id is null`, além
+ * da RLS. O segundo não é redundância: entre a tela listar a tarefa e alguém
+ * clicar nela, outra pessoa pode tê-la vinculado a outro negócio. Sem essa
+ * condição, o último clique venceria em silêncio e o primeiro negócio perderia
+ * a próxima ação sem nenhum aviso.
+ */
+export async function vincularTarefaAoNegocio(taskId: unknown, dealId: unknown) {
+  const tarefa = idSchema.safeParse(taskId)
+  if (!tarefa.success) return { error: 'Tarefa inválida.' }
+
+  const negocio = z.uuid('Negócio inválido.').safeParse(dealId)
+  if (!negocio.success) return { error: 'Negócio inválido.' }
+
+  const sessao = await abrirSessao()
+  if ('error' in sessao) return sessao
+
+  // Mesma checagem que `criarTarefa` faz: Server Action é endpoint HTTP e o
+  // `deal_id` pode chegar de outra empresa sem passar pela tela.
+  const problema = await conferirAlvo(sessao, null, negocio.data, null)
+  if (problema) return { error: problema }
+
+  const { data, error } = await sessao.supabase
+    .from('tasks')
+    .update({ deal_id: negocio.data })
+    .eq('id', tarefa.data)
+    .eq('workspace_id', sessao.workspaceId)
+    .is('deal_id', null)
+    .is('done_at', null)
+    .select('id, lead_id')
+    .maybeSingle()
+
+  if (error) {
+    console.error('vincularTarefaAoNegocio falhou', error)
+    return { error: 'Não foi possível usar esta tarefa.' }
+  }
+
+  // `update` que não casa com nenhuma linha devolve sucesso com zero linhas —
+  // armadilha já paga neste projeto quando um PATCH sem alvo foi lido como
+  // "passou". Aqui isso significa que a tarefa foi concluída ou vinculada por
+  // outra pessoa enquanto o diálogo estava aberto.
+  if (!data) {
+    return { error: 'Essa tarefa mudou enquanto você decidia. Atualize e tente de novo.' }
+  }
+
+  revalidarTelasDeTarefa(data.lead_id)
+  return { success: true }
+}

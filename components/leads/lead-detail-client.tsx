@@ -57,6 +57,7 @@ export function LeadDetailClient({
   currentUserId,
   isAdmin,
   remetenteGmail,
+  negociosAbertos,
 }: {
   lead: LeadRow
   activities: ActivityRow[]
@@ -66,6 +67,15 @@ export function LeadDetailClient({
   isAdmin: boolean
   /** E-mail da conta Gmail conectada, mostrado como remetente no diálogo de envio. `null` se ninguém conectou. */
   remetenteGmail: string | null
+  /**
+   * Os negócios em andamento deste contato.
+   *
+   * Faz aparecer o campo "Negócio" no formulário de tarefa. Sem ele, a tarefa
+   * nascia só com `lead_id`, e o painel do negócio — que só enxerga `deal_id`
+   * — jamais a mostraria: dizia "Nada marcado" e oferecia criar outra, gerando
+   * duas tarefas para o mesmo compromisso.
+   */
+  negociosAbertos: { id: string; title: string }[]
 }) {
   const router = useRouter()
   const [formOpen, setFormOpen] = React.useState(false)
@@ -434,6 +444,11 @@ export function LeadDetailClient({
         currentUserId={currentUserId}
         leadId={lead.id}
         tarefa={tarefaEmEdicao}
+        // Só na CRIAÇÃO. Editar uma tarefa antiga trazendo o seletor faria o
+        // campo aparecer vazio e, ao salvar, desligá-la do negócio a que já
+        // pertencia — perda silenciosa, que é o defeito oposto ao que este
+        // campo veio consertar.
+        negociosDoLead={tarefaEmEdicao ? undefined : negociosAbertos}
       />
     </div>
   )

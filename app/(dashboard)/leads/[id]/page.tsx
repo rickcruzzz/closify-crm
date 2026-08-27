@@ -2,6 +2,7 @@ import { notFound } from 'next/navigation'
 
 import { getLeadById, getWorkspaceMembers } from '@/lib/leads/queries'
 import { getTasksDoLead } from '@/lib/tasks/queries'
+import { getNegociosAbertosDoLead } from '@/lib/deals/queries'
 import { getIntegrationConnections } from '@/lib/integrations/queries'
 import { createClient } from '@/lib/supabase/server'
 import { getCurrentUserAndWorkspace } from '@/lib/supabase/workspace'
@@ -15,13 +16,17 @@ export default async function LeadDetailPage({ params }: { params: Promise<{ id:
   // Quem pode corrigir atividade: o autor dela ou um admin. A action refaz
   // essa checagem no servidor, aqui é só para não exibir um menu de ações
   // que resultaria em erro.
-  const [result, members, tasks, { data: isAdmin }, integracoes] = await Promise.all([
-    getLeadById(workspaceId, id),
-    getWorkspaceMembers(workspaceId),
-    getTasksDoLead(workspaceId, id),
-    supabase.rpc('is_workspace_admin', { target_workspace_id: workspaceId }),
-    getIntegrationConnections(workspaceId),
-  ])
+  const [result, members, tasks, { data: isAdmin }, integracoes, negociosAbertos] =
+    await Promise.all([
+      getLeadById(workspaceId, id),
+      getWorkspaceMembers(workspaceId),
+      getTasksDoLead(workspaceId, id),
+      supabase.rpc('is_workspace_admin', { target_workspace_id: workspaceId }),
+      getIntegrationConnections(workspaceId),
+      // Entra no MESMO `Promise.all`: encadear seria mais uma ida de rede em
+      // série até São Paulo, na página que a pessoa mais abre depois do funil.
+      getNegociosAbertosDoLead(workspaceId, id),
+    ])
   if (!result) {
     notFound()
   }
@@ -42,6 +47,7 @@ export default async function LeadDetailPage({ params }: { params: Promise<{ id:
       currentUserId={user.id}
       isAdmin={!!isAdmin}
       remetenteGmail={remetenteGmail}
+      negociosAbertos={negociosAbertos}
     />
   )
 }

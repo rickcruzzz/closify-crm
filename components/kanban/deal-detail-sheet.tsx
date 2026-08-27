@@ -14,7 +14,7 @@ import { agendarReuniaoNoGoogleCalendar } from '@/lib/integrations/workflow-acti
 import { deleteDeal } from '@/lib/deals/actions'
 import { estadoDeMovimento, rotuloDeParado } from '@/lib/deals/parado'
 import { ProximaAcao } from '@/components/kanban/proxima-acao'
-import { TaskFormDialog } from '@/components/tasks/task-form-dialog'
+import { EscolherProximaAcao } from '@/components/tasks/escolher-proxima-acao'
 import {
   Dialog,
   DialogContent,
@@ -327,8 +327,13 @@ export function DealDetailSheet({
                 ) : (
                   <div className="mt-1 flex flex-col gap-1.5">
                     <div className="flex items-center justify-between gap-2">
+                      {/* "Nenhuma agendada." era a raiz da confusão relatada:
+                          lida como "não há tarefa", quando significa "não há
+                          tarefa NESTE negócio" — o contato podia ter várias. A
+                          frase que nomeia o escopo deixa de contradizer o que a
+                          pessoa acabou de ver na página do contato. */}
                       <span className="text-muted-foreground text-sm">
-                        Nenhuma agendada.
+                        Nada marcado para este negócio.
                       </span>
                       <Button
                         variant="outline"
@@ -377,18 +382,29 @@ export function DealDetailSheet({
         )}
       </SheetContent>
 
-      {/* A tarefa nasce presa ao negócio E ao lead dele. Só ao negócio faria
-          ela sumir da página do cliente, que é onde a pessoa vai procurar. */}
-      <TaskFormDialog
-        open={agendando}
-        onOpenChange={setAgendando}
-        onSubmit={agendar}
-        members={members}
-        currentUserId={currentUserId}
-        dealId={deal?.id ?? null}
-        leadId={deal?.lead_id ?? null}
-        stage={deal?.stage}
-      />
+      {/* Antes isto abria o formulário direto, e era o defeito relatado: o
+          contato podia já ter tarefa aberta e o painel oferecia criar outra,
+          porque `getProximaAcaoPorNegocio` só enxerga tarefa com `deal_id`.
+
+          `EscolherProximaAcao` mostra as candidatas primeiro e cai no mesmo
+          formulário quando não há nenhuma — sem clique a mais no caso comum.
+
+          A tarefa continua nascendo presa ao negócio E ao lead dele: só ao
+          negócio faria ela sumir da página do cliente, que é onde a pessoa vai
+          procurar. */}
+      {deal && (
+        <EscolherProximaAcao
+          open={agendando}
+          onOpenChange={setAgendando}
+          onCriar={agendar}
+          members={members}
+          currentUserId={currentUserId}
+          dealId={deal.id}
+          leadId={deal.lead_id}
+          leadNome={lead?.name}
+          stage={deal.stage}
+        />
+      )}
 
       <Dialog open={confirmando} onOpenChange={setConfirmando}>
         <DialogContent className="sm:max-w-md">

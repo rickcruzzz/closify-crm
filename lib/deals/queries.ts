@@ -218,3 +218,45 @@ async function getMemberNames(
   }
   return map
 }
+
+/**
+ * Os negócios em andamento de um contato, para a tarefa poder nascer ligada.
+ *
+ * Existe porque a página do Contato criava tarefa passando só `leadId`: a
+ * tarefa nascia invisível para o painel do negócio, que só enxerga `deal_id`
+ * (`getProximaAcaoPorNegocio`). O resultado era o painel dizer "Nenhuma
+ * agendada" e oferecer criar outra — duas tarefas para o mesmo compromisso.
+ *
+ * **Só etapa aberta.** Ligar tarefa a negócio já ganho ou perdido agenda
+ * trabalho para algo que terminou; a próxima ação dele não é lida por
+ * ninguém, e o compromisso sumiria da vista.
+ *
+ * O `.limit()` é explícito porque o PostgREST corta em 1.000 linhas **sem
+ * avisar** — armadilha que este projeto já pagou três vezes. Aqui o teto é bem
+ * menor: é lista para escolher com o olho, num seletor.
+ */
+export async function getNegociosAbertosDoLead(
+  workspaceId: string,
+  leadId: string,
+): Promise<{ id: string; title: string }[]> {
+  const supabase = await createClient()
+
+  const { data, error } = await supabase
+    .from('deals')
+    .select('id, title')
+    .eq('workspace_id', workspaceId)
+    .eq('lead_id', leadId)
+    .not('stage', 'in', '(fechado_ganho,fechado_perdido)')
+    .order('created_at', { ascending: false })
+    .limit(50)
+
+  if (error) {
+    // Consulta acessória: sem ela o formulário perde o campo "Negócio" e
+    // continua criando a tarefa do contato, que é o comportamento antigo.
+    // Derrubar a página do contato por causa disso seria pior.
+    console.error('getNegociosAbertosDoLead falhou', error)
+    return []
+  }
+
+  return data ?? []
+}
