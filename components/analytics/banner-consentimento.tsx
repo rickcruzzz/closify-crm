@@ -95,20 +95,45 @@ export function BannerConsentimento() {
       // Medido, não resolve — aquilo protege o FIM DO DOCUMENTO, e o problema
       // é a dobra, que o elemento fixo cobre de qualquer jeito.
       //
-      // O que resolve é ele deixar de ocupar a largura inteira. Como card
-      // ancorado à esquerda com largura limitada, a faixa inferior continua
-      // livre à direita, e o conteúdo centralizado do hero (título, CTA,
-      // preço) deixa de ficar sistematicamente atrás dele. É o padrão que
-      // Vercel, Linear e Stripe usam, e não custa nada em conformidade: o
-      // aviso segue inevitável, com "Recusar" do mesmo tamanho de "Aceitar".
+      // O que resolve é ele deixar de ocupar a largura inteira. Como card de
+      // largura limitada num canto, a faixa inferior continua livre do outro
+      // lado, e o conteúdo centralizado do hero (título, CTA, preço) deixa de
+      // ficar sistematicamente atrás dele. É o padrão que Vercel, Linear e
+      // Stripe usam, e não custa nada em conformidade: o aviso segue
+      // inevitável, com "Recusar" do mesmo tamanho de "Aceitar".
+      //
+      // ## E o canto é o DIREITO, não o esquerdo
+      //
+      // Ancorado à esquerda, este card **engolia o clique em "Criar conta"**.
+      // Medido em produção em 27/08/2026, com `elementFromPoint` no centro do
+      // botão:
+      //
+      //     notebook 1280x720   /cadastro   BLOQUEADO   cobre 79%
+      //     notebook 1366x768   /cadastro   BLOQUEADO   cobre 74%
+      //
+      // As duas resoluções de notebook mais comuns do Brasil. Quem chegava de
+      // anúncio preenchia o cadastro inteiro, clicava, e nada acontecia — sem
+      // erro, sem aviso. Achado pelo `funil-completo.spec.ts`, que morreu ali
+      // com "subtree intercepts pointer events".
+      //
+      // A correção anterior raciocinou sobre conteúdo CENTRALIZADO, e valia
+      // para a landing. `/cadastro` e `/login` são tela dividida com o
+      // formulário à ESQUERDA — o card caiu em cima dele. No dashboard é pior:
+      // o canto inferior esquerdo é o menu do usuário na barra lateral.
+      //
+      // À direita não há nada clicável em nenhuma das três: na entrada é o
+      // `PipelinePreviewCard`, que é `aria-hidden` e decorativo; na landing o
+      // conteúdo é centralizado com largura máxima; no dashboard é área de
+      // conteúdo. Cobrir enfeite não custa clique nenhum.
       //
       // No TELEFONE não existe canto: `max-w-md` (448px) é maior que a tela,
-      // e o card ocupa a largura toda de qualquer jeito. Ali o que resta é
-      // comprimir. Decomposto em 390×844: 121px totais = 48 de padding + 32 de
-      // texto + 28 de botão + gaps. O padding externo caiu para `p-2` e o gap
-      // interno para `gap-2`; o texto encurtou. O piso é o alvo de toque de
-      // 44px dos botões, que não se mexe.
-      className="fixed bottom-0 left-0 z-50 w-full max-w-md p-2 sm:p-4"
+      // e o card ocupa a largura toda de qualquer jeito — por isso o
+      // `left-auto` só entra a partir de `sm`. Ali o que resta é comprimir.
+      // Decomposto em 390×844: 121px totais = 48 de padding + 32 de texto +
+      // 28 de botão + gaps. O padding externo caiu para `p-2` e o gap interno
+      // para `gap-2`; o texto encurtou. O piso é o alvo de toque de 44px dos
+      // botões, que não se mexe.
+      className="fixed right-0 bottom-0 left-0 z-50 w-full max-w-md p-2 sm:left-auto sm:p-4"
     >
       <div className="bg-card border-border flex flex-col gap-2 rounded-xl border p-3 shadow-lg">
         {/* O texto encurtou pelo mesmo motivo da altura: três linhas de
