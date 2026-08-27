@@ -1,4 +1,5 @@
 import { appUrl } from '@/lib/app-url'
+import { escopoAtendido, listaDeEscopos } from '@/lib/integrations/escopo-concedido'
 import type { IntegrationProvider } from '@/types/supabase'
 
 export class GoogleApiError extends Error {
@@ -280,7 +281,10 @@ export async function enviarEmailGmail(
 // `tokeninfo` valida o token sem exigir escopo nenhum de API específica,
 // serve pros dois provedores. Confirmar que `scope` inclui o escopo exigido
 // garante que não é só um token válido de OUTRA finalidade.
-async function testarEscopoConcedido(accessToken: string, escopoExigido: string): Promise<boolean> {
+export async function testarEscopoConcedido(
+  accessToken: string,
+  escopoExigido: string,
+): Promise<boolean> {
   // Header, não query string, token de acesso não deve viajar em URL (fica
   // em log de acesso). Confirmado contra o endpoint real que ele aceita
   // Authorization: Bearer (erro muda de "token ausente" pra "token
@@ -290,9 +294,12 @@ async function testarEscopoConcedido(accessToken: string, escopoExigido: string)
   })
   if (!res.ok) return false
   const info = (await res.json()) as { scope?: string }
-  // Comparação exata contra a lista de escopos, não substring, evita casar
-  // por acidente com um escopo diferente que só contenha o mesmo texto.
-  return (info.scope ?? '').split(/\s+/).includes(escopoExigido)
+  // A regra mora em `escopo-concedido.ts` porque é o MESMO julgamento que o
+  // callback precisa fazer, e porque tem uma sutileza que merece teste: a
+  // comparação exata reprova quem concedeu um escopo mais AMPLO. Medido em
+  // produção, uma conexão de antes de 23/08 carrega `calendar.events`, que
+  // contém `calendar.events.owned` e funciona — e esta função dizia que não.
+  return escopoAtendido(listaDeEscopos(info.scope), escopoExigido)
 }
 
 export async function testarGmail(accessToken: string): Promise<boolean> {

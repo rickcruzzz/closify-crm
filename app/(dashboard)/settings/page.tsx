@@ -38,6 +38,16 @@ const MENSAGEM_DE_ERRO_DA_INTEGRACAO: Record<string, string> = {
   parametros_ausentes: 'O Google não devolveu os dados esperados. Tente conectar de novo.',
   state_invalido: 'O link de conexão expirou ou é inválido. Tente conectar de novo.',
   falha_ao_conectar: 'Não foi possível concluir a conexão. Tente de novo em instantes.',
+  /**
+   * A caixa de permissão da tela do Google não foi marcada.
+   *
+   * A mensagem nomeia a CAUSA e o CONSERTO, e não manda "tentar de novo" seco:
+   * repetir o mesmo caminho sem saber o que mudar dá o mesmo resultado. Antes
+   * desta guarda, este caso nem chegava a ser um erro — a conexão era gravada
+   * e a tela dizia "conectado com sucesso".
+   */
+  permissao_faltando:
+    'Sua conta foi escolhida, mas a permissão não foi marcada na tela do Google. Conecte de novo e marque a caixa de permissão antes de continuar.',
   // Continua existindo para quem chega por link direto na rota de conexão. O
   // caminho normal nem produz mais este erro: o card já mostra o estado Pro
   // antes do clique, em vez de mandar a pessoa ao servidor para ouvir não.

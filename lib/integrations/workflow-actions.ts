@@ -6,6 +6,7 @@ import { createClient } from '@/lib/supabase/server'
 import { resolverWorkspaceAtivo } from '@/lib/workspace/ativo'
 import { obterAccessTokenValido } from '@/lib/integrations/token'
 import { criarEventoDeCalendario, enviarEmailGmail } from '@/lib/integrations/google'
+import { GoogleApiError } from '@/lib/integrations/google'
 import { mensagemBloqueioPro } from '@/lib/integrations/mensagem-bloqueio-pro'
 import { emailMessageSchema } from '@/lib/validations/email'
 
@@ -59,6 +60,27 @@ async function exigirProVigente(sessao: Sessao): Promise<{ error: string } | nul
  * de novo aqui seria o mesmo dado duas vezes. Duração fixa de 30 minutos,
  * ajustável depois no próprio Google Calendar se precisar de mais tempo.
  */
+/**
+ * Traduz a falha da API do Google para o que a pessoa pode FAZER.
+ *
+ * O 403 aqui quase sempre tem uma causa só: a caixa de permissão da tela de
+ * consentimento não foi marcada, e a conexão existe sem poder agir. Mandar
+ * "tente novamente" nesse caso é cruel — repetir o mesmo caminho dá o mesmo
+ * resultado, para sempre, e a pessoa não tem como adivinhar que precisa
+ * RECONECTAR.
+ *
+ * Conexões criadas a partir de 27/08/2026 não caem mais aqui: o callback
+ * recusa antes de gravar. Esta mensagem cobre as que já existiam e o caso de
+ * alguém revogar a permissão pelo painel do Google depois de conectar.
+ */
+function mensagemDeFalhaDoGoogle(err: unknown, generica: string): string {
+  const status = err instanceof GoogleApiError ? err.status : null
+  if (status === 401 || status === 403) {
+    return 'A permissão do Google expirou ou não foi concedida. Reconecte em Configurações → Integrações e marque a caixa de permissão.'
+  }
+  return generica
+}
+
 export async function agendarReuniaoNoGoogleCalendar(taskId: string) {
   const sessao = await abrirSessao()
   if ('error' in sessao) return sessao
@@ -114,7 +136,9 @@ export async function agendarReuniaoNoGoogleCalendar(taskId: string) {
     return { success: true, htmlLink: evento.htmlLink }
   } catch (err) {
     console.error('agendarReuniaoNoGoogleCalendar falhou', err)
-    return { error: 'Não foi possível criar o evento no Google Calendar.' }
+    return {
+      error: mensagemDeFalhaDoGoogle(err, 'Não foi possível criar o evento no Google Calendar.'),
+    }
   }
 }
 
@@ -175,6 +199,8 @@ export async function enviarEmailViaGmail(leadId: string, values: unknown) {
     return { success: true }
   } catch (err) {
     console.error('enviarEmailViaGmail falhou', err)
-    return { error: 'Não foi possível enviar o e-mail. Tente novamente.' }
+    return {
+      error: mensagemDeFalhaDoGoogle(err, 'Não foi possível enviar o e-mail. Tente novamente.'),
+    }
   }
 }

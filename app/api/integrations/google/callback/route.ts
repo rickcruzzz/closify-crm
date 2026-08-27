@@ -2,7 +2,13 @@ import { NextResponse, type NextRequest } from 'next/server'
 
 import { createAdminClient } from '@/lib/supabase/admin'
 import { verificarEstado } from '@/lib/integrations/state'
-import { trocarCodigoPorToken, obterEmailDaConta } from '@/lib/integrations/google'
+import {
+  trocarCodigoPorToken,
+  obterEmailDaConta,
+  escopoGoogle,
+  revogarToken,
+} from '@/lib/integrations/google'
+import { escopoAtendido, listaDeEscopos } from '@/lib/integrations/escopo-concedido'
 import { cifrar } from '@/lib/integrations/crypto'
 import { appUrl } from '@/lib/app-url'
 
@@ -43,6 +49,36 @@ export async function GET(request: NextRequest) {
 
   try {
     const token = await trocarCodigoPorToken(code)
+
+    /**
+     * A permissão foi mesmo concedida?
+     *
+     * A tela de consentimento do Google mostra **uma caixa por permissão**, e
+     * ela não vem marcada. Quem clica em "Continuar" sem marcar recebe um
+     * `code` válido e um token válido — só que sem `calendar.events.owned` nem
+     * `gmail.send`. Nada na resposta do Google avisa.
+     *
+     * Sem esta checagem, a linha era gravada como `status: 'connected'`, a
+     * tela mostrava a faixa verde "conectado com sucesso" e o selo "✓
+     * Conectado", e a falha só aparecia dias depois, ao tentar agendar, como
+     * um genérico "Não foi possível criar o evento". Duas afirmações falsas na
+     * tela e nenhum caminho de volta.
+     *
+     * Lê do PRÓPRIO token (`token.scope`), não do `tokeninfo`: o dado já está
+     * na mão e uma ida de rede a mais no meio do redirect é tempo que a pessoa
+     * passa numa tela em branco.
+     */
+    const exigido = escopoGoogle(estado.provider)
+    if (!escopoAtendido(listaDeEscopos(token.scope), exigido)) {
+      // Descartar o token sem revogar deixaria uma autorização pendurada na
+      // conta Google de quem tentou — concedida por engano, invisível para o
+      // produto e que só ela consegue remover, num painel que não conhece.
+      await revogarToken(token.access_token).catch((err) => {
+        console.error('Callback OAuth Google: falha ao revogar token sem escopo', err)
+      })
+      return NextResponse.redirect(`${destino}&erro=permissao_faltando`)
+    }
+
     const email = await obterEmailDaConta(token.access_token)
 
     const admin = createAdminClient()
