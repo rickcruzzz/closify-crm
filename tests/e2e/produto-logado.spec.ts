@@ -868,6 +868,49 @@ test.describe('produto logado: senha, planilha, equipe, calendário, Google', ()
       pagina.getByRole('button', { name: 'Conectar Google Calendar' }),
     ).toBeVisible()
   })
+
+  test('10. o aviso de conectado sai sozinho, o de erro não', async () => {
+    await entrar(pagina, dono)
+
+    await pagina.goto('/settings?aba=integracoes&conectado=gmail')
+    const aviso = pagina.locator('[role="status"]').filter({ hasText: 'Gmail conectado' })
+    await expect(aviso).toBeVisible({ timeout: 20_000 })
+    const nasceu = Date.now()
+
+    // Diz o que MUDA, não só que conectou: o selo "✓ Conectado" do card já
+    // afirma o estado, com o e-mail junto.
+    await expect(aviso).toContainText(/enviar e-mail direto/)
+
+    // O endereço perde `?conectado=` na hora. Sem isso, recarregar dias depois
+    // traria a faixa de volta anunciando algo que já aconteceu.
+    expect(pagina.url()).not.toContain('conectado=')
+
+    // Sai sozinho. A faixa larga: 4s de espera + 320ms de transição, e a
+    // execução do teste custa alguns milissegundos a cada leitura.
+    await expect(aviso).toBeHidden({ timeout: 9_000 })
+    const saiuEm = (Date.now() - nasceu) / 1000
+    expect(saiuEm, `saiu cedo demais (${saiuEm.toFixed(1)}s)`).toBeGreaterThan(3.5)
+
+    // O X fecha antes disso, para quem não quer esperar.
+    await pagina.goto('/settings?aba=integracoes&conectado=google_calendar')
+    const outro = pagina.locator('[role="status"]').filter({ hasText: 'Google Calendar conectado' })
+    await expect(outro).toBeVisible({ timeout: 20_000 })
+    await pagina.getByRole('button', { name: 'Fechar aviso' }).click()
+    await expect(outro).toBeHidden({ timeout: 3_000 })
+
+    /**
+     * O erro NÃO some sozinho, e a diferença é deliberada.
+     *
+     * O aviso de sucesso é redundante — o card mostra o selo e a conta. O erro
+     * carrega a ÚNICA cópia da explicação e do que fazer, e some enquanto a
+     * pessoa lê seria pior do que não avisar.
+     */
+    await pagina.goto('/settings?aba=integracoes&erro=permissao_faltando')
+    const erro = pagina.locator('[role="alert"]').first()
+    await expect(erro).toBeVisible({ timeout: 20_000 })
+    await pagina.waitForTimeout(6_000)
+    await expect(erro, 'o erro sumiu sozinho, e não devia').toBeVisible()
+  })
 })
 
 /** Dia de hoje no fuso de São Paulo, que é o que o produto usa. */

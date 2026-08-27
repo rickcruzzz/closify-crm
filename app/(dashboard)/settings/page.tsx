@@ -6,6 +6,7 @@ import { MembersCard } from '@/components/settings/members-card'
 import { PlanCard } from '@/components/settings/plan-card'
 import { DeleteAccountCard } from '@/components/settings/delete-account-card'
 import { IntegrationsTab } from '@/components/settings/integrations-tab'
+import { AvisoDeConexao } from '@/components/settings/aviso-de-conexao'
 import {
   SettingsTabs,
   type AbaDeConfiguracoes,
@@ -53,6 +54,21 @@ const MENSAGEM_DE_ERRO_DA_INTEGRACAO: Record<string, string> = {
   // antes do clique, em vez de mandar a pessoa ao servidor para ouvir não.
   plano_free:
     'Google Calendar e Gmail fazem parte do plano Pro. Veja o que muda em Configurações → Plano.',
+}
+
+/**
+ * O que a pessoa passa a poder fazer, por integração.
+ *
+ * "Conectado com sucesso" afirma um estado que o selo do card já afirma logo
+ * abaixo, com o e-mail da conta junto. A frase que vale é a que diz o que
+ * mudou para ela — o mesmo motivo pelo qual a descrição da tela de Resultados
+ * deixou de ser "Métricas do seu funil" e virou o que ela responde.
+ */
+const O_QUE_PASSA_A_DAR: Record<string, string> = {
+  google_calendar:
+    'Agora dá para agendar reunião direto do painel do negócio, e ela aparece na sua agenda com convite para o cliente.',
+  gmail:
+    'Agora dá para enviar e-mail direto da página do contato, e ele fica registrado no histórico dele.',
 }
 
 const NOME_DA_INTEGRACAO: Record<string, string> = {
@@ -137,12 +153,10 @@ export default async function SettingsPage({
       <SettingsTabs ativa={aba} />
 
       {aba === 'integracoes' && nomeConectado && (
-        <p
-          role="status"
-          className="rounded-md bg-emerald-500/10 px-3 py-2 text-sm text-emerald-600 dark:text-emerald-400"
-        >
-          {nomeConectado} conectado com sucesso.
-        </p>
+        <AvisoDeConexao
+          titulo={`${nomeConectado} conectado.`}
+          detalhe={O_QUE_PASSA_A_DAR[params.conectado!] ?? ''}
+        />
       )}
 
       {aba === 'integracoes' && mensagemDeErro && (
