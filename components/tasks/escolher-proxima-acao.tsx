@@ -118,13 +118,26 @@ export function EscolherProximaAcao({
     let cancelado = false
     setCarregando(true)
 
-    void listarTarefasVinculaveis(leadId).then(({ tarefas }) => {
-      if (cancelado) return
-      setCandidatas(tarefas as TarefaVinculavel[])
-      // Nada para escolher: o formulário abre sozinho, sem clique a mais.
-      setCriando(tarefas.length === 0)
-      setCarregando(false)
-    })
+    void listarTarefasVinculaveis(leadId)
+      .then(({ tarefas }) => {
+        if (cancelado) return
+        setCandidatas(tarefas as TarefaVinculavel[])
+        // Nada para escolher: o formulário abre sozinho, sem clique a mais.
+        setCriando(tarefas.length === 0)
+        setCarregando(false)
+      })
+      // Rejeição deixava "Procurando tarefas abertas…" para sempre. Cair no
+      // formulário é a saída certa: a pessoa clicou em Agendar querendo
+      // agendar, e não poder LISTAR o que já existe não pode impedi-la de
+      // criar. O aviso diz por que a lista não veio.
+      .catch((err) => {
+        if (cancelado) return
+        console.error('listarTarefasVinculaveis falhou', err)
+        setCandidatas([])
+        setCarregando(false)
+        setCriando(true)
+        toast.error('Não deu para ver as tarefas que já existem. Você pode criar uma nova.')
+      })
 
     return () => {
       cancelado = true

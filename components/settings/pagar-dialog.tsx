@@ -92,6 +92,14 @@ export function PagarDialog({
           setMetodo(resultado.pagamento.pix ? 'pix' : resultado.pagamento.boleto ? 'boleto' : 'cartao')
         }
       })
+      // O `finally` ja parava o spinner, mas `setErro` so era preenchido no
+      // caminho feliz: rejeicao deixava o dialogo VAZIO E MUDO — na tela do
+      // dinheiro, com a pessoa querendo pagar.
+      .catch((err) => {
+        if (cancelado) return
+        console.error('obterFormasDePagamento falhou', err)
+        setErro('Não foi possível carregar as formas de pagamento. Tente de novo em instantes.')
+      })
       .finally(() => {
         if (!cancelado) setCarregando(false)
       })

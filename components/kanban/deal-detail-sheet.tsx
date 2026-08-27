@@ -13,6 +13,7 @@ import { criarTarefa, concluirTarefa } from '@/lib/tasks/actions'
 import { agendarReuniaoNoGoogleCalendar } from '@/lib/integrations/workflow-actions'
 import { deleteDeal } from '@/lib/deals/actions'
 import { estadoDeMovimento, rotuloDeParado } from '@/lib/deals/parado'
+import { processando } from '@/lib/ui/estado-assincrono'
 import { ProximaAcao } from '@/components/kanban/proxima-acao'
 import { EscolherProximaAcao } from '@/components/tasks/escolher-proxima-acao'
 import {
@@ -100,7 +101,16 @@ export function DealDetailSheet({
     onAgendamentoAberto?.()
   }, [open, abrirAgendamento, onAgendamentoAberto])
   const [agendandoNoCalendario, setAgendandoNoCalendario] = React.useState(false)
-  const [concluindo, setConcluindo] = React.useState(false)
+  /**
+   * A tarefa QUE ESTÁ SENDO concluída, não um "está concluindo".
+   *
+   * Um booleano só sabe que algo está em voo, e nada pode invalidá-lo — nem o
+   * próprio dado que ele descrevia. Guardando o id, o sinal para de valer
+   * sozinho quando outra tarefa assume a próxima ação. Ver
+   * `lib/ui/estado-assincrono.ts` para o defeito medido.
+   */
+  const [concluindoId, setConcluindoId] = React.useState<string | null>(null)
+  const concluindo = processando(concluindoId, proximaAcao?.id)
 
   // Relógio do cliente: o servidor roda em UTC e erraria a virada do dia.
   const [agora, setAgora] = React.useState<Date | null>(null)
@@ -142,23 +152,42 @@ export function DealDetailSheet({
 
   async function concluir() {
     if (!proximaAcao || concluindo) return
-    setConcluindo(true)
-    const resultado = await concluirTarefa(proximaAcao.id)
+    const alvo = proximaAcao.id
+    setConcluindoId(alvo)
+
+    let resultado
+    try {
+      resultado = await concluirTarefa(alvo)
+    } catch (err) {
+      // Server Action rejeitada — queda de rede é o caminho comum de quem usa
+      // CRM no celular. Sem este `catch`, a promessa rejeitava, o `setState`
+      // seguinte nunca rodava, e o botão ficava girando sem nada ter sido
+      // gravado.
+      console.error('concluir falhou', err)
+      setConcluindoId(null)
+      toast.error('Sem conexão para concluir agora. Tente de novo.')
+      return
+    }
 
     if ('error' in resultado) {
-      setConcluindo(false)
+      setConcluindoId(null)
       toast.error(resultado.error)
       return
     }
 
     toast.success('Tarefa concluída.')
-    // Idem: concluirTarefa já revalida '/kanban'.
-    // Não limpa `concluindo` aqui de propósito: entre a Server Action
-    // resolver e o RSC revalidado chegar (o que vai trocar/esconder este
-    // botão), existe uma janela real onde um segundo clique reabriria o
-    // envio, medido com clique duplo real, que disparou a action duas
-    // vezes. Deixar travado até a revalidação chegar é seguro; travar para
-    // sempre em caso de erro não seria, por isso só limpa no erro.
+    // `concluirTarefa` já revalida '/kanban'.
+    //
+    // O id continua guardado de propósito: entre a Server Action resolver e o
+    // RSC revalidado chegar existe uma janela real em que um segundo clique
+    // dispara tudo de novo — medido com clique duplo real, 908ms de
+    // intervalo. Enquanto a próxima ação for ESTA tarefa, o botão segue
+    // travado.
+    //
+    // O que mudou é que agora ele se destrava sozinho: assim que outra tarefa
+    // assume (ou o bloco vira o estado vazio), `processando` deixa de casar o
+    // id e o botão volta. Antes disso, com um booleano, o spinner ficava para
+    // sempre — foi o defeito que o dono viu.
   }
 
   async function handleExcluir() {

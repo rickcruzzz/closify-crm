@@ -108,6 +108,16 @@ export function CalendarioClient({
         return Array.from(porId.values())
       })
     })
+    // Sem este `catch`, a promessa rejeitada nunca chegava ao
+    // `setBuscandoSemana(false)` — e a Semana girava SEM FIM. Server Action
+    // rejeita por queda de rede, que e o caminho comum de quem usa CRM no
+    // celular, nao hipotese remota.
+    .catch((err) => {
+      if (cancelado) return
+      console.error('buscarTarefasNoIntervalo falhou', err)
+      setBuscandoSemana(false)
+      toast.error('Sem conexão para carregar esta semana. Tente de novo.')
+    })
 
     return () => {
       cancelado = true

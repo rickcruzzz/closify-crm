@@ -911,6 +911,83 @@ test.describe('produto logado: senha, planilha, equipe, calendário, Google', ()
     await pagina.waitForTimeout(6_000)
     await expect(erro, 'o erro sumiu sozinho, e não devia').toBeVisible()
   })
+
+  test('11. concluir com outra tarefa aberta não trava o botão', async () => {
+    const admin = bancoAdmin()
+
+    const { data: contato } = await admin
+      .from('leads')
+      .insert({
+        workspace_id: rastros.workspaceId!,
+        name: `Cliente Duas Tarefas ${dono.carimbo.slice(-5)}`,
+        email: `duas.tarefas.${dono.carimbo}@exemplo.com.br`,
+        owner_id: rastros.donoId!,
+      })
+      .select('id')
+      .single()
+
+    const { data: negocio } = await admin
+      .from('deals')
+      .insert({
+        workspace_id: rastros.workspaceId!,
+        lead_id: contato!.id,
+        title: `Negocio Duas Tarefas ${dono.carimbo.slice(-5)}`,
+        value: 300,
+        stage: 'novo',
+        owner_id: rastros.donoId!,
+      })
+      .select('id')
+      .single()
+
+    /**
+     * DUAS tarefas abertas no mesmo negócio: o cenário exato do print.
+     *
+     * Concluir a primeira faz a segunda assumir a próxima ação. O botão
+     * continua renderizado — e era aí que o sinal booleano ficava ligado para
+     * sempre, porque nada podia invalidá-lo.
+     */
+    const primeira = `Primeira ${dono.carimbo.slice(-5)}`
+    const segunda = `Segunda ${dono.carimbo.slice(-5)}`
+    for (const [titulo, hora] of [
+      [primeira, '10:00'],
+      [segunda, '16:00'],
+    ] as const) {
+      const { error } = await admin.from('tasks').insert({
+        workspace_id: rastros.workspaceId!,
+        lead_id: contato!.id,
+        deal_id: negocio!.id,
+        title: titulo,
+        type: 'ligacao',
+        due_at: `${hojeEmSaoPaulo()}T${hora}:00-03:00`,
+        created_by: rastros.donoId!,
+        assignee_id: rastros.donoId!,
+      })
+      expect(error, `não deu para criar a tarefa ${titulo}`).toBeNull()
+    }
+
+    await entrar(pagina, dono)
+    await pagina.goto(`/kanban?negocio=${negocio!.id}`)
+    await pagina.waitForTimeout(3_000)
+
+    const painel = pagina.locator('[data-slot="sheet-content"]')
+    await expect(painel.getByText(primeira)).toBeVisible({ timeout: 30_000 })
+
+    await painel.getByRole('button', { name: 'Concluir' }).click()
+
+    // A segunda assume.
+    await expect(painel.getByText(segunda)).toBeVisible({ timeout: 30_000 })
+
+    // E o botão volta a funcionar. Antes ficava desabilitado, com spinner,
+    // até fechar e reabrir o painel.
+    const concluir = painel.getByRole('button', { name: 'Concluir' })
+    await expect(concluir, 'o botão ficou travado depois de concluir').toBeEnabled({
+      timeout: 15_000,
+    })
+    expect(
+      await concluir.locator('.animate-spin').count(),
+      'sobrou spinner no botão',
+    ).toBe(0)
+  })
 })
 
 /** Dia de hoje no fuso de São Paulo, que é o que o produto usa. */
