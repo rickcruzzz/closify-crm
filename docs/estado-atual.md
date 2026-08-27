@@ -4,7 +4,11 @@ Documento de continuidade. É lido no começo de toda sessão (referenciado no
 [CLAUDE.md](../CLAUDE.md)) para que uma conversa nova, ou outra conta, comece
 sabendo o que já foi feito, o que foi decidido e onde estão as armadilhas.
 
-**Atualizado em:** 26/08/2026, madrugada (três telas que pareciam funcionar e
+**Atualizado em:** 26/08/2026, tarde (a elevação do modo claro nunca chegou a
+nenhum cartão do sistema, desde 22/08, porque `ring` e sombra disputam o mesmo
+`box-shadow` no Tailwind v4; e o PRD e o diagrama voltaram a bater com o banco)
+
+**Antes disso, 26/08/2026, madrugada** (três telas que pareciam funcionar e
 não funcionavam: o clique na tarefa ficava 1,5s sem sinal nenhum, o dashboard
 mostrava tudo e não abria nada, e o filtro de /hoje se desfazia sozinho)
 
@@ -45,6 +49,106 @@ minutos seguidos, contra 26% da medição anterior)
 **Antes disso, 23/08/2026** (landing auditada: promessa falsa no hero, logo quebrado no telefone, banner de cookies cobrindo o CTA, e prints mostrando o jargão que a própria página baniu; PRD, schema e grafo realinhados)
 
 **Antes disso, 22/08/2026** (funções rodavam em Washington DC com o banco em São Paulo, corrigido na config do projeto e medido: /dashboard 1221ms → 400ms; modo claro sem escada de superfícies, refeito; jargão remanescente e telas de erro; WhatsApp sem QR por Postgres esgotado na VPS; migration 0049 provada desnecessária e removida)
+
+## O modo claro da landing, e a sombra que nunca existiu (26/08, tarde)
+
+Pedido: auditar a landing em modo claro. Ela nunca tinha sido conferida nele —
+o acabamento do claro, refeito em 22/08, só chegou ao produto logado.
+
+### A causa é do sistema inteiro, não da landing
+
+Medido no navegador, contra produção:
+
+    .superficie-elevada  SEM ring   ->  elevacao aplica
+    .superficie-elevada  COM ring   ->  --tw-shadow: 0 0 #0000, some
+    [data-slot=card]     (tem ring) ->  --tw-shadow: 0 0 #0000, some
+
+No Tailwind v4 a utility `ring-*` declara
+
+    box-shadow: var(--tw-ring-offset-shadow), var(--tw-ring-shadow), var(--tw-shadow)
+
+na **camada de utilities**, que vence `@layer base`. O `Card` deste projeto tem
+`ring-1`. Portanto **a elevação do modo claro escrita em 22/08 nunca chegou a
+nenhum cartão com anel — nem na landing, nem no produto.** Ela só funcionava
+onde não havia `ring`, que é onde ninguém tinha olhado.
+
+Corrigido alimentando `--tw-shadow` em vez de `box-shadow` direto: a elevação
+**compõe** com o anel em vez de brigar com ele, que é como o Tailwind foi
+desenhado. Medido depois, em produção: `/dashboard` no claro passou de 0 para
+**6 de 6 cartões elevados**, e no escuro segue em 0.
+
+### O que a landing tinha, além disso
+
+**Branco sobre branco.** Página `rgb(246,248,249)` e cartão `rgb(255,255,255)`
+dão **1,10:1** entre as superfícies. Sem elevação, o cartão não existia.
+
+**As duas molduras de print sumiam:**
+
+    border-border/50 sobre card branco    1,16:1
+    shadow-2xl   0 25px 50px -12px rgba(0,0,0,0.25)
+
+A meia opacidade desfazia a própria correção de 22/08, quando `--border` subiu
+para 0.893 justamente para desenhar contra branco. E `shadow-2xl` contradizia o
+comentário duas linhas acima da regra de elevação: sombra longa lê como cartão
+de marketing, e ainda some no escuro.
+
+**Cor que não significava nada.** Oito cards de funcionalidade, três passos,
+quatro garantias e quatro métricas usavam oito matizes que não codificavam
+informação: "Funil visual" não é a categoria azul. No escuro passavam como
+acento neon; no claro liam como template. Ficou um acento só, o da marca. Os
+pontinhos da barra de janela **continuam coloridos** (imitam o cromo do
+sistema, ali a cor É o significado), e as barras do funil também (`stageAccent`,
+a mesma do produto).
+
+**A landing não usa `Card`.** Ela monta as superfícies à mão (`<li>`,
+`<details>`) por razões de layout, então a elevação ganhou uma classe irmã,
+`.superficie-elevada`, no MESMO seletor — não uma regra nova com os valores
+copiados, que divergiria na primeira manutenção.
+
+### Um comentário que registrava como fato algo falso
+
+`public-navbar.tsx` justificava ter tirado o seletor de tema em 24/08 dizendo
+que *"o `prefers-color-scheme` do aparelho vale sozinho"*.
+
+**Não vale.** `layout.tsx` roda com `defaultTheme="dark"`, e no `next-themes` o
+`enableSystem` só torna `"system"` um valor possível — quem decide sem nada
+salvo é o `defaultTheme`. Navegador limpo em `prefers-color-scheme: light`
+renderiza escuro. Escuro segue sendo o padrão por decisão de identidade
+(`CLAUDE.md`); o que era falso era a justificativa de que o aparelho já
+resolvia, e foi ela que sustentou a remoção do botão.
+
+### O PRD e o diagrama voltaram a bater com o banco
+
+Na mesma rodada. O PRD dizia "conferido em 24/08" e tinha 39 commits de
+atraso; o `schema.md` afirmava 14 tabelas. Lido do OpenAPI do PostgREST de
+produção:
+
+    tabelas          14 -> 17   assinatura_eventos, conversas, mensagens
+    foreign keys     12 -> 17
+    RPCs             30 -> 30   NAO mudou
+    testes          498 -> 715
+    activity_type     4 -> 5 valores, ganhou whatsapp
+
+**As tabelas mudaram e as RPCs não** — a 0055 reescreveu `pro_vigente()` por
+dentro e a 0056 criou uma função `returns trigger`, e nenhuma das duas aparece
+numa lista de RPCs. Quem monitorasse só RPC não teria visto nada.
+
+Quatro afirmações do PRD que tinham deixado de ser verdade: WhatsApp constava
+como integração entregue (está desligado, "Em breve" nos dois planos); a seção
+de confiança "exibe o CNPJ" (não exibe, está baixado); `/conversas` não existia
+no documento; e `CRON_SECRET` constava como pendência, sendo falsa desde 25/08.
+
+### Provado
+
+    landing, dois temas        4/4   elevacao no claro, nenhuma no escuro,
+                                     nenhuma sombra >= 20px, so cor com sentido
+    produto /dashboard         6/6   cartoes elevados no claro, 0 no escuro
+    documentos vs catalogo    29/29  cada numero, cada tabela no Mermaid,
+                                     cada enum, e nenhum link quebrado
+
+E os PNGs foram **abertos e olhados**, nos dois temas — a única prova possível
+para "está feio", e a lição de 23/08, quando um commit verificou que o script
+rodou e não que a imagem ficou certa.
 
 ## O que a tela mostrava, e o que ela fazia (26/08)
 
@@ -2463,6 +2567,18 @@ registrado como próximo passo se a base provar valor.
 | **Tarefa não entra no limite de plano**     | Travar follow-up empurra a pessoa de volta para o WhatsApp e mata o hábito diário que faz ela pagar. O teto de 5.000 abertas é defesa contra abuso, não regra de negócio |
 
 ## Armadilhas já pagas, não repetir
+
+**`ring` e sombra disputam o mesmo `box-shadow`, e o `ring` ganha.** No
+Tailwind v4 a utility `ring-*` declara `box-shadow: var(--tw-ring-offset-shadow),
+var(--tw-ring-shadow), var(--tw-shadow)` na camada de **utilities**, que vence
+qualquer regra em `@layer base`. Uma regra de elevação escrita como
+`box-shadow:` direto é simplesmente descartada em todo elemento com `ring`, e
+`--tw-shadow` fica em `0 0 #0000`. Foi assim que a sombra do modo claro,
+escrita em 22/08, passou quatro dias sem chegar a **nenhum** cartão do produto
+— o `Card` tem `ring-1`. A forma que funciona é alimentar `--tw-shadow`, para
+compor com o anel em vez de brigar com ele; o `box-shadow` direto continua
+necessário só para superfície SEM `ring`, que não recebe declaração nenhuma da
+utility. Vale para qualquer coisa que se queira empilhar sobre `ring`.
 
 **O App Router GUARDA o RSC de cada URL e o replica quando se volta por
 `<Link>`, sem perguntar ao servidor.** Custou meia investigação em 26/08: o
