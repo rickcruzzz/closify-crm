@@ -485,15 +485,29 @@
  * `data-type` e posto pelo proprio sonner no elemento do toast. */
 .cn-toast {
   position: relative;
-  overflow: hidden;
 }
 
+/* ## Sem `overflow: hidden`, e o motivo importa
+ *
+ * A primeira versao usava `overflow: hidden` para a barra respeitar o canto
+ * arredondado. Medido depois, isso CORTAVA o botao de fechar: o sonner o
+ * posiciona 6px para fora da caixa do toast, e o recorte comia a ponta do
+ * icone junto com parte da area de toque.
+ *
+ *     toast   left 1060  top 876
+ *     fechar  left 1054  top 870   <- 6px fora, cortados
+ *
+ * A barra arredonda as proprias pontas em vez de depender de recorte. Com
+ * 3px de largura, seguir a curva do cartao assim e indistinguivel do
+ * recorte — e nao mutila o vizinho. */
 .cn-toast::before {
   content: '';
   position: absolute;
   inset-block: 0;
   inset-inline-start: 0;
   width: 3px;
+  border-start-start-radius: var(--border-radius);
+  border-end-start-radius: var(--border-radius);
   /* Neutro por padrao: um toast sem tipo nao finge ter estado. */
   background: var(--border);
 }
