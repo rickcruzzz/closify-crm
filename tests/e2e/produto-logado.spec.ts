@@ -1,0 +1,631 @@
+/**
+ * As cinco áreas do produto logado que nenhum teste exercitava.
+ *
+ * `funil-completo.spec.ts` cobre a entrada e o dinheiro: landing, cadastro,
+ * checkout, webhook do Asaas, e-mail. Daqui pra frente ficava tudo sem rede:
+ * recuperação de senha, importação de planilha, convite e papéis, calendário e
+ * o OAuth do Google. Todas construídas, nenhuma provada de ponta a ponta.
+ *
+ * ## Por que este arquivo é separado, e roda em CI
+ *
+ * `funil-completo` cria **cobrança real de R$49 no Asaas** e por isso fica fora
+ * do gate. Nada aqui toca em dinheiro: nenhuma chamada ao Asaas, nenhuma
+ * assinatura. O que ele cria é uma empresa descartável no Supabase, apagada no
+ * `afterAll` aconteça o que acontecer.
+ *
+ * ## A empresa nasce pelo caminho real, não por insert
+ *
+ * A conta é criada com `auth.admin.createUser` (e-mail já confirmado, para
+ * pular a caixa de entrada), mas a EMPRESA sai de
+ * `create_workspace_with_admin` chamada com **sessão autenticada de verdade**.
+ * Isso importa: a RPC é `security definer` e carrega a trava de plano da 0018,
+ * e o trial de 7 dias da 0053 nasce ali dentro. Criar por `insert` com service
+ * role testaria um estado que o produto nunca produz.
+ */
+import { createClient } from '@supabase/supabase-js'
+import { expect, test, type BrowserContext, type Page } from '@playwright/test'
+
+import { bancoAdmin, emailsEnviados, URL_BASE } from './helpers/ambiente'
+import { criarIdentidade, type IdentidadeDeTeste } from './helpers/identidade'
+
+test.describe.configure({ mode: 'serial' })
+
+let navegador: BrowserContext
+let pagina: Page
+
+const dono = criarIdentidade()
+
+/**
+ * O convidado precisa de e-mail DIFERENTE, e `criarIdentidade` sozinha não
+ * garante isso: ela carimba com `Date.now()`, e as duas chamadas acontecem no
+ * mesmo milissegundo na carga do módulo. A primeira execução falhou com "A
+ * user with this email address has already been registered" — as duas
+ * identidades eram a mesma pessoa.
+ *
+ * O sufixo entra antes do `@` para o Gmail continuar entregando na caixa do
+ * dono (o `+` já está lá) e para a busca por `velofunil-teste` continuar
+ * achando os dois se a limpeza falhar.
+ */
+const convidado = (() => {
+  const base = criarIdentidade()
+  return { ...base, email: base.email.replace('@', '-convidado@') }
+})()
+
+/** O que precisa sumir no fim, na ordem em que dá para apagar. */
+const rastros: {
+  workspaceId?: string
+  donoId?: string
+  convidadoId?: string
+} = {}
+
+test.describe('produto logado: senha, planilha, equipe, calendário, Google', () => {
+  test.beforeAll(async ({ browser }) => {
+    const admin = bancoAdmin()
+
+    // As duas contas nascem com o e-mail já confirmado: confirmar por link é o
+    // que `funil-completo` prova, e repetir aqui só tornaria este arquivo lento
+    // e dependente do Resend para começar.
+    for (const [quem, guardar] of [
+      [dono, (id: string) => (rastros.donoId = id)],
+      [convidado, (id: string) => (rastros.convidadoId = id)],
+    ] as const) {
+      const { data, error } = await admin.auth.admin.createUser({
+        email: quem.email,
+        password: quem.senha,
+        email_confirm: true,
+        user_metadata: { name: quem.nome },
+      })
+      if (error) throw new Error(`não deu para criar ${quem.email}: ${error.message}`)
+      guardar(data.user!.id)
+    }
+
+    // Sessão de verdade para criar a empresa: a RPC é `authenticated`, e o
+    // service role não tem `auth.uid()` — chamá-la com ele devolveria erro ou,
+    // pior, um estado que nenhum cliente real produz.
+    const comoDono = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    )
+    const { error: erroLogin } = await comoDono.auth.signInWithPassword({
+      email: dono.email,
+      password: dono.senha,
+    })
+    if (erroLogin) throw new Error(`sessão do dono falhou: ${erroLogin.message}`)
+
+    const { data: workspaceId, error: erroEmpresa } = await comoDono.rpc(
+      'create_workspace_with_admin',
+      { workspace_name: dono.empresa },
+    )
+    if (erroEmpresa) throw new Error(`create_workspace_with_admin: ${erroEmpresa.message}`)
+    rastros.workspaceId = workspaceId as string
+
+    // O onboarding fica marcado como concluído: senão toda navegação é
+    // devolvida para as boas-vindas e nenhum dos cinco testes chega na tela.
+    //
+    // `tour_status: 'skipped'` junto, senão o tour de 5 passos abre por cima
+    // da tela e os cliques dos testes caem no overlay dele.
+    //
+    // O `error` é conferido de propósito. A primeira versão gravava um campo
+    // `completed_at` que **não existe nesta tabela** — o PostgREST recusou, o
+    // código seguiu em frente sem olhar, e o sintoma apareceu três telas
+    // adiante como `GET /leads 307` seguido de `GET /bem-vindo`. É a armadilha
+    // que o próprio projeto documenta: escrita que não é conferida vira
+    // diagnóstico errado em outro lugar.
+    const { error: erroOnboarding } = await admin.from('onboarding_state').upsert(
+      {
+        user_id: rastros.donoId!,
+        status: 'completed',
+        etapa: null,
+        tour_status: 'skipped',
+      },
+      { onConflict: 'user_id' },
+    )
+    if (erroOnboarding) {
+      throw new Error(`não deu para concluir o onboarding do dono: ${erroOnboarding.message}`)
+    }
+
+    navegador = await browser.newContext({ baseURL: URL_BASE })
+    pagina = await navegador.newPage()
+  })
+
+  test.afterAll(async () => {
+    await navegador?.close()
+
+    const admin = bancoAdmin()
+    const removidos: string[] = []
+    const sobraram: string[] = []
+
+    // Cada passo no seu try: se um falhar, os outros ainda precisam rodar.
+    // Parar no meio deixa lixo com aparência de limpeza.
+    if (rastros.workspaceId) {
+      try {
+        const { error } = await admin.from('workspaces').delete().eq('id', rastros.workspaceId)
+        if (error) throw new Error(error.message)
+        removidos.push('empresa (cascata leva contatos, tarefas, convites e membros)')
+      } catch (e) {
+        sobraram.push(`workspace ${rastros.workspaceId}: ${(e as Error).message}`)
+      }
+    }
+
+    for (const [rotulo, id] of [
+      ['dono', rastros.donoId],
+      ['convidado', rastros.convidadoId],
+    ] as const) {
+      if (!id) continue
+      try {
+        const { error } = await admin.auth.admin.deleteUser(id)
+        if (error) throw new Error(error.message)
+        removidos.push(`conta do ${rotulo}`)
+      } catch (e) {
+        sobraram.push(`usuário ${id}: ${(e as Error).message}`)
+      }
+    }
+
+    console.log(`\n[limpeza] removido: ${removidos.join(' | ') || '(nada)'}`)
+    if (sobraram.length) {
+      // Alto e claro: lixo silencioso em produção é o defeito que
+      // `docs/estado-atual.md` já registra no caso das cobranças órfãs.
+      console.error(`[limpeza] SOBROU, apagar à mão: ${sobraram.join(' | ')}`)
+    }
+  })
+
+  // ---------------------------------------------------------------- senha
+  test('1. recuperação de senha envia o e-mail e não revela quem existe', async () => {
+    // A decisão travada do projeto: a tela não pode distinguir "conta não
+    // existe" de "e-mail enviado", senão vira ferramenta de enumeração de
+    // e-mail e alimenta phishing. Prova: os dois casos têm que terminar igual.
+    const respostas: string[] = []
+
+    for (const email of [dono.email, `nao-existe-${dono.carimbo}@velofunil.com.br`]) {
+      await pagina.goto('/esqueci-senha')
+      await pagina.locator('#email').fill(email)
+      await pagina.getByRole('button', { name: /enviar|recuperar/i }).first().click()
+
+      // O que aparece depois do envio, seja confirmação ou erro.
+      await pagina.waitForTimeout(4_000)
+      const texto = (await pagina.locator('main, body').first().innerText())
+        .replace(/\s+/g, ' ')
+        .trim()
+      respostas.push(texto)
+    }
+
+    // Compara o texto SEM o e-mail dentro: a tela pode ecoar o endereço
+    // digitado, e isso não revela nada — quem digitou já sabe o que digitou.
+    const semEmail = (t: string) => t.replace(/[\w.+-]+@[\w.-]+/g, '<email>')
+    expect(
+      semEmail(respostas[0]),
+      'a tela responde diferente para e-mail que existe e e-mail que não existe, o que permite enumerar contas',
+    ).toBe(semEmail(respostas[1]))
+
+    // E o e-mail tem que ter saído de verdade para quem existe.
+    await expect
+      .poll(
+        async () => {
+          const enviados = await emailsEnviados()
+          return enviados.find((e) => e.to.includes(dono.email))?.last_event ?? null
+        },
+        {
+          timeout: 60_000,
+          intervals: [3_000, 5_000],
+          message: 'nenhum e-mail de recuperação chegou ao Resend',
+        },
+      )
+      .not.toBeNull()
+  })
+
+  // ------------------------------------------------------------- planilha
+  test('2. importar CSV cria os contatos, com acento vindo de Windows-1252', async () => {
+    await entrar(pagina, dono)
+    await pagina.goto('/leads')
+
+    // Windows-1252 de propósito: é o que o Excel em português salva, e o
+    // defeito medido em 11/08 gravava "Jos� Ant�nio" em silêncio porque
+    // `File.text()` decodifica sempre em UTF-8. `latin1` no Buffer produz
+    // exatamente os bytes que o Excel produziria para estes caracteres.
+    const csv = [
+      'nome,email,telefone',
+      'José Antônio,jose.antonio@exemplo.com.br,11987654321',
+      'Conceição Gonçalves,conceicao@exemplo.com.br,11912345678',
+    ].join('\r\n')
+
+    await pagina.getByRole('button', { name: /importar/i }).first().click()
+
+    await pagina.locator('input[type="file"]').setInputFiles({
+      name: `contatos-${dono.carimbo}.csv`,
+      mimeType: 'text/csv',
+      buffer: Buffer.from(csv, 'latin1'),
+    })
+
+    // O diálogo avança sozinho para o mapeamento assim que lê o arquivo.
+    await expect(
+      pagina.getByText('Conferir as colunas'),
+      'o arquivo não foi lido: o diálogo não passou para o mapeamento',
+    ).toBeVisible({ timeout: 30_000 })
+
+    await pagina.getByRole('button', { name: /^Importar 2$/ }).click()
+
+    // A recusa da importação sai em TOAST, fora do diálogo (`enviar()` chama
+    // `toast.error` e o diálogo fica parado no mapeamento). Uma asserção presa
+    // ao diálogo fica cega exatamente no caso que interessa: ela reporta
+    // "element not found" enquanto o motivo está escrito na tela, num portal
+    // ao lado. Por isso o desfecho é lido dos dois lugares.
+    const avisoDeErro = pagina.locator('[data-sonner-toast], [role="status"], [role="alert"]')
+    let desfecho = ''
+
+    await expect
+      .poll(
+        async () => {
+          if (await pagina.getByText('Importação concluída').count()) {
+            desfecho = 'Importação concluída'
+            return desfecho
+          }
+          const reclamacao = (await avisoDeErro.allInnerTexts()).join(' | ').replace(/\s+/g, ' ').trim()
+          if (reclamacao) {
+            desfecho = reclamacao
+            return desfecho
+          }
+          return null
+        },
+        {
+          timeout: 60_000,
+          intervals: [1_000, 2_000],
+          message: 'a importação não concluiu nem reclamou: ficou parada',
+        },
+      )
+      .not.toBeNull()
+
+    expect(desfecho, `a importação não concluiu. A tela diz: ${desfecho}`).toContain(
+      'Importação concluída',
+    )
+
+    // A prova real é o banco, não a tela de sucesso.
+    const admin = bancoAdmin()
+    const { data: contatos } = await admin
+      .from('leads')
+      .select('name, email, phone')
+      .eq('workspace_id', rastros.workspaceId!)
+      .order('name')
+
+    expect(contatos?.length, 'as duas linhas da planilha deveriam ter virado contato').toBe(2)
+    expect(
+      contatos?.map((c) => c.name),
+      'acento corrompido: o CSV foi lido como UTF-8 em vez de Windows-1252',
+    ).toEqual(['Conceição Gonçalves', 'José Antônio'])
+  })
+
+  // ---------------------------------------------------------------- equipe
+  test('3. convite: aceite entra como membro, e membro não vira admin', async () => {
+    await entrar(pagina, dono)
+    await pagina.goto('/settings?aba=equipe')
+
+    await pagina.getByRole('button', { name: /^Convidar/ }).first().click()
+
+    // Espera o diálogo ABRIR antes de digitar. Sem isto o `fill` corre contra
+    // a montagem e escreve num campo que ainda não existe; o clique seguinte
+    // envia um formulário vazio, a Server Action recusa, e o sintoma aparece
+    // 45 segundos depois como "o convite não foi gravado" — apontando para o
+    // banco, que não tem nada a ver.
+    const dialogoDeConvite = pagina
+      .getByRole('dialog')
+      .filter({ hasText: 'Convidar colaborador' })
+    await expect(dialogoDeConvite).toBeVisible({ timeout: 30_000 })
+
+    await dialogoDeConvite.locator('#email').fill(convidado.email)
+    await dialogoDeConvite.getByRole('button', { name: 'Enviar convite' }).click()
+
+    // `workspace_invites`, e o nome importa: a primeira versão consultava uma
+    // tabela `invitations` que não existe. O PostgREST devolveu erro, o
+    // `data` veio `null`, e o teste esperou 45 segundos para reportar "o
+    // convite não foi gravado" — culpando o produto por um erro de digitação
+    // do teste. Por isso o `error` é lido e jogado para cima na hora.
+    const admin = bancoAdmin()
+    await expect
+      .poll(
+        async () => {
+          const { data, error } = await admin
+            .from('workspace_invites')
+            .select('status, role')
+            .eq('workspace_id', rastros.workspaceId!)
+            .eq('email', convidado.email)
+            .maybeSingle()
+          if (error) throw new Error(`consulta a workspace_invites falhou: ${error.message}`)
+          return data?.status ?? null
+        },
+        { timeout: 45_000, intervals: [1_000, 2_000], message: 'o convite não foi gravado' },
+      )
+      .toBe('pending')
+
+    // O aceite acontece na sessão do CONVIDADO, em contexto próprio: reusar a
+    // aba do dono trocaria a sessão no meio e o teste passaria a medir outra
+    // coisa.
+    const doConvidado = await navegador.browser()!.newContext({ baseURL: URL_BASE })
+    const abaDele = await doConvidado.newPage()
+    try {
+      const { data: convite } = await admin
+        .from('workspace_invites')
+        .select('token')
+        .eq('workspace_id', rastros.workspaceId!)
+        .eq('email', convidado.email)
+        .single()
+
+      await entrar(abaDele, convidado)
+      await abaDele.goto(`/convite/${convite!.token}`)
+      await abaDele
+        .getByRole('button', { name: /aceitar|entrar/i })
+        .first()
+        .click()
+      await abaDele.waitForTimeout(6_000)
+
+      const { data: vinculo } = await admin
+        .from('workspace_members')
+        .select('role')
+        .eq('workspace_id', rastros.workspaceId!)
+        .eq('user_id', rastros.convidadoId!)
+        .maybeSingle()
+
+      expect(vinculo?.role, 'quem aceitou convite deveria entrar como membro').toBe('membro')
+
+      // A parte que só o banco decide. "Regra que só vive na Server Action não
+      // é regra": um membro que chame o PostgREST direto com a chave pública
+      // (que está no HTML por desenho) tem que ser recusado pelo RLS, não pela
+      // interface. Aqui ele tenta se promover a admin.
+      const comoMembro = createClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      )
+      await comoMembro.auth.signInWithPassword({
+        email: convidado.email,
+        password: convidado.senha,
+      })
+      const { error: recusa } = await comoMembro
+        .from('workspace_members')
+        .update({ role: 'admin' })
+        .eq('workspace_id', rastros.workspaceId!)
+        .eq('user_id', rastros.convidadoId!)
+
+      const { data: depois } = await admin
+        .from('workspace_members')
+        .select('role')
+        .eq('workspace_id', rastros.workspaceId!)
+        .eq('user_id', rastros.convidadoId!)
+        .maybeSingle()
+
+      expect(
+        depois?.role,
+        `membro conseguiu se promover a admin pelo PostgREST (erro devolvido: ${recusa?.code ?? 'nenhum'})`,
+      ).toBe('membro')
+    } finally {
+      await doConvidado.close()
+    }
+
+    // Remoção, de volta na sessão do dono.
+    const { error: erroRemocao } = await admin
+      .from('workspace_members')
+      .delete()
+      .eq('workspace_id', rastros.workspaceId!)
+      .eq('user_id', rastros.convidadoId!)
+    expect(erroRemocao, 'remover colaborador falhou').toBeNull()
+
+    const { count } = await admin
+      .from('workspace_members')
+      .select('user_id', { count: 'exact', head: true })
+      .eq('workspace_id', rastros.workspaceId!)
+    expect(count, 'depois da remoção só o dono deveria continuar na empresa').toBe(1)
+  })
+
+  // ------------------------------------------------------------ calendário
+  test('4. calendário abre nos três modos e mostra a tarefa', async () => {
+    const admin = bancoAdmin()
+    const { data: contato } = await admin
+      .from('leads')
+      .select('id, name')
+      .eq('workspace_id', rastros.workspaceId!)
+      .limit(1)
+      .maybeSingle()
+
+    const tituloDaTarefa = `Ligar para o cliente ${dono.carimbo.slice(-5)}`
+    const { error: erroTarefa } = await admin.from('tasks').insert({
+      workspace_id: rastros.workspaceId!,
+      lead_id: contato?.id ?? null,
+      title: tituloDaTarefa,
+      // `due_at`, não `due_date`: o nome errado devolve `PGRST204` do
+      // PostgREST, que só aparece porque o `error` é conferido.
+      //
+      // Meio-dia evita a fronteira de fuso: o servidor da Vercel roda em UTC e
+      // uma tarefa marcada para 23h em São Paulo cai no dia seguinte lá — é a
+      // armadilha que `lib/tasks/buckets.ts` existe para tratar.
+      due_at: `${hojeEmSaoPaulo()}T12:00:00-03:00`,
+      created_by: rastros.donoId!,
+    })
+    expect(erroTarefa, 'não deu para criar a tarefa do teste').toBeNull()
+
+    await entrar(pagina, dono)
+
+    // Cada modo mostra uma coisa diferente, e isso é decisão registrada, não
+    // acaso. Mês e Semana desenham `TaskChip`, cujo texto é
+    // `task.lead_name ?? task.title`: num chip de uma linha, quem ligar vale
+    // mais que o que fazer, e o comentário do componente traz a medição que
+    // levou a isso (`09:00 Cl… t`, com o nome do cliente cortado). Agenda usa
+    // `TaskItem`, que tem espaço para o título inteiro.
+    //
+    // O teste afirma o que cada uma promete. Exigir o título nos três
+    // reprovaria o produto por fazer a coisa certa — foi o que a primeira
+    // versão fez.
+    const oQueApareceEmCada: Record<string, string> = {
+      Mês: contato!.name,
+      Semana: contato!.name,
+      Agenda: tituloDaTarefa,
+    }
+
+    for (const [modo, esperado] of Object.entries(oQueApareceEmCada)) {
+      await pagina.goto('/calendario')
+      await pagina.waitForTimeout(2_500)
+
+      await pagina.getByRole('button', { name: modo, exact: true }).first().click()
+      await pagina.waitForTimeout(2_500)
+
+      const achou = await pagina
+        .getByText(esperado, { exact: false })
+        .first()
+        .isVisible()
+        .catch(() => false)
+
+      if (!achou) {
+        // Mostra o que a tela DE FATO tem. Sem isto o relatório é só
+        // "element not found", que manda investigar o lugar errado — e foi
+        // exatamente assim que a versão anterior acusou o calendário de não
+        // mostrar a tarefa, quando ela estava lá com outro rótulo.
+        const naTela = (await pagina.locator('main').first().innerText())
+          .replace(/\s+/g, ' ')
+          .slice(0, 600)
+        throw new Error(
+          `no modo ${modo} a tarefa de hoje deveria aparecer como "${esperado}". A tela mostra: ${naTela}`,
+        )
+      }
+    }
+
+    // O título não pode simplesmente sumir onde o chip mostra o cliente: ele
+    // continua no `title` nativo, que é o que aparece no hover.
+    await pagina.goto('/calendario')
+    await pagina.waitForTimeout(2_500)
+    const dicaDoChip = await pagina
+      .locator(`[title*="${contato!.name}"]`)
+      .first()
+      .getAttribute('title')
+    expect(
+      dicaDoChip ?? '',
+      'o título da tarefa sumiu do chip: nem no texto, nem no `title` do hover',
+    ).toContain(tituloDaTarefa)
+
+    // O defeito medido em 18/08: `useMediaQuery` devolve `false` no primeiro
+    // render sempre (evita descasamento de hidratação), e o modo inicial lia
+    // esse falso positivo de telefone uma única vez — travando todo desktop na
+    // Agenda em vez do Mês. Numa tela larga, o padrão tem que ser Mês.
+    await pagina.setViewportSize({ width: 1440, height: 900 })
+    await pagina.goto('/calendario')
+    await pagina.waitForTimeout(3_000)
+    const modoInicial = await pagina
+      .getByRole('button', { name: 'Mês', exact: true })
+      .first()
+      .getAttribute('data-state')
+      .catch(() => null)
+    // `data-state` pode não existir; o sinal que sempre existe é a grade do mês.
+    const temGradeDoMes = await pagina.getByText(/segunda|seg\b/i).count()
+    expect(
+      temGradeDoMes > 0 || modoInicial === 'active',
+      'no desktop o calendário deveria abrir no modo Mês, não na Agenda',
+    ).toBe(true)
+  })
+
+  // --------------------------------------------------------------- Google
+  test('5. OAuth do Google recusa nos quatro casos e só então vai ao Google', async () => {
+    // Esta rota é o portão inteiro do fluxo: o callback grava com service role
+    // confiando no `state` assinado, então quem consegue um `state` válido já
+    // passou. Cada desvio abaixo é uma das guardas do `GET`.
+    await entrar(pagina, dono)
+
+    // Provider inventado não pode virar `state` nenhum.
+    const provedorInvalido = await pagina.goto(
+      '/api/integrations/google/connect?provider=facebook',
+    )
+    expect(provedorInvalido?.url() ?? '').toContain('erro=provider_invalido')
+
+    // Sem Pro não conecta. A empresa nasce em TRIAL (0053), que `pro_vigente`
+    // aceita — para provar a recusa, o trial é encurtado no banco e desfeito
+    // logo em seguida.
+    const admin = bancoAdmin()
+    const { data: antes } = await admin
+      .from('workspaces')
+      .select('trial_ate')
+      .eq('id', rastros.workspaceId!)
+      .single()
+
+    await admin
+      .from('workspaces')
+      .update({ trial_ate: '2020-01-01T00:00:00Z', plan: 'free' })
+      .eq('id', rastros.workspaceId!)
+
+    try {
+      const semPro = await pagina.goto('/api/integrations/google/connect?provider=google_calendar')
+      expect(
+        semPro?.url() ?? '',
+        'empresa sem Pro conseguiu passar do portão do OAuth',
+      ).toContain('erro=plano_free')
+    } finally {
+      await admin
+        .from('workspaces')
+        .update({ trial_ate: antes!.trial_ate, plan: 'pro' })
+        .eq('id', rastros.workspaceId!)
+    }
+
+    // Sem sessão, vai para o login e não para o Google.
+    const anonimo = await navegador.browser()!.newContext({ baseURL: URL_BASE })
+    try {
+      const abaAnonima = await anonimo.newPage()
+      const semSessao = await abaAnonima.goto(
+        '/api/integrations/google/connect?provider=gmail',
+      )
+      expect(semSessao?.url() ?? '').toMatch(/\/login/)
+    } finally {
+      await anonimo.close()
+    }
+
+    // E o caminho feliz: com Pro e admin, sai para o Google pedindo EXATAMENTE
+    // os dois escopos que a verificação aprovou em 24/08. `calendar.events`
+    // (sem `.owned`) foi o que reprovou a submissão anterior, por dar acesso a
+    // agenda que terceiros compartilharam.
+    for (const [provider, escopo] of [
+      ['google_calendar', 'calendar.events.owned'],
+      ['gmail', 'gmail.send'],
+    ] as const) {
+      // Lê o `Location` da NOSSA rota, sem seguir. Navegar de verdade cai na
+      // tela de login do Google (o navegador do teste não tem conta lá), e
+      // ela reembrulha o pedido original dentro de `continue=`, codificado
+      // outra vez — o escopo continua lá, mas some de uma leitura simples da
+      // URL final. A primeira versão fez isso e acusou o produto de "pedir
+      // escopo diferente do aprovado", que era falso.
+      //
+      // `page.request` compartilha os cookies do contexto, então a sessão do
+      // dono vai junto e as guardas acima continuam valendo.
+      const resposta = await pagina.request.get(
+        `/api/integrations/google/connect?provider=${provider}`,
+        { maxRedirects: 0 },
+      )
+      const destino = decodeURIComponent(resposta.headers()['location'] ?? '')
+
+      expect(destino, `${provider} não foi redirecionado ao Google`).toContain(
+        'accounts.google.com',
+      )
+      expect(destino, `${provider} pediu escopo diferente do aprovado`).toContain(escopo)
+      expect(
+        destino,
+        'o escopo largo `calendar.events` foi o motivo da reprovação de 20/08, não pode voltar',
+      ).not.toMatch(/calendar\.events(?!\.owned)/)
+    }
+  })
+})
+
+/** Dia de hoje no fuso de São Paulo, que é o que o produto usa. */
+function hojeEmSaoPaulo(): string {
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'America/Sao_Paulo',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(new Date())
+}
+
+async function entrar(page: Page, quem: IdentidadeDeTeste) {
+  await page.goto('/login')
+
+  const jaEntrou = await page
+    .waitForURL((url) => !url.pathname.startsWith('/login'), { timeout: 5_000 })
+    .then(() => true)
+    .catch(() => false)
+  if (jaEntrou) return
+
+  await page.locator('#email').fill(quem.email)
+  await page.locator('#password').fill(quem.senha)
+  await page.getByRole('button', { name: 'Entrar' }).click()
+  await page.waitForURL((url) => !url.pathname.startsWith('/login'), { timeout: 60_000 })
+}

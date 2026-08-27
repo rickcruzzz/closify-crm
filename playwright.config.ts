@@ -37,5 +37,32 @@ export default defineConfig({
       // e outra cobrança no Asaas.
       retries: 0,
     },
+    {
+      // O produto por dentro: recuperação de senha, importação de planilha,
+      // convite e papéis, calendário e o portão do OAuth do Google. Cinco
+      // áreas que existiam sem nenhuma prova ponta a ponta.
+      //
+      // Separado do `funil` porque **não toca em dinheiro**: nenhuma chamada
+      // ao Asaas, nenhuma cobrança. O que cria é uma empresa descartável no
+      // Supabase, apagada no `afterAll`. É o que torna seguro rodá-lo com
+      // frequência, ao contrário do `funil`.
+      //
+      // Fora do CI mesmo assim, por um motivo diferente: ele escreve no banco
+      // de PRODUÇÃO (é o único que existe), e o gate roda a cada push. Uma
+      // falha de rede no meio deixaria empresa órfã sem ninguém olhando.
+      // Chamado à mão por `npm run test:produto`.
+      name: 'produto',
+      testMatch: /produto-logado\.spec\.ts/,
+      // Os 30s padrão não cabem aqui: cada teste faz login de verdade e
+      // atravessa telas que consultam o banco em São Paulo, e contra `npm run
+      // dev` ainda paga a compilação da rota na primeira visita. Medido, o
+      // teste da planilha sozinho passa de 30s só entre entrar e abrir
+      // `/leads`.
+      timeout: 120_000,
+      // Serial pelo mesmo motivo do funil: os cinco compartilham uma empresa.
+      fullyParallel: false,
+      // Retry recriaria a empresa e reenviaria convite; a falha é mais barata.
+      retries: 0,
+    },
   ],
 })

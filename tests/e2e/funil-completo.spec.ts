@@ -214,12 +214,7 @@ test.describe('funil completo: landing → cadastro → Pro → e-mail', () => {
 
     await campoDocumento.fill(identidade.cpf)
 
-    // O botão abre a fatura em outra aba (window.open dentro do gesto do
-    // clique, senão o bloqueador de pop-up mata). Espera a aba nova.
-    const novaAba = navegador.waitForEvent('page', { timeout: 60_000 })
     await pagina.getByRole('button', { name: /continuar para pagamento/i }).click()
-
-    const abaDaFatura = await novaAba
 
     // ANTES de qualquer asserção: a cobrança no Asaas já existe neste ponto, e
     // um `expect` que falhe daqui pra frente aborta o teste sem que a limpeza
@@ -227,6 +222,30 @@ test.describe('funil completo: landing → cadastro → Pro → e-mail', () => {
     // aba falhou, o `afterAll` imprimiu "assinatura Asaas: (não criada)" e
     // ficou uma cobrança de R$49 viva em produção, tendo que ser removida à
     // mão. Registrar primeiro, afirmar depois.
+    //
+    // ## E aconteceu DE NOVO, em 27/08/2026, pelo mesmo motivo
+    //
+    // O que estava aqui era `navegador.waitForEvent('page')`, esperando a aba
+    // que o Asaas abria — e o produto **deixou de abrir aba**. O comentário de
+    // `subscribe-button.tsx` diz por quê: Pix e boleto passaram a acontecer no
+    // `PagarDialog`, dentro do produto, porque a página do Asaas exibe o nome
+    // civil do titular em destaque e quem clicava em "Assinar o Velo Funil"
+    // caía numa tela com o nome de um desconhecido no topo.
+    //
+    // O teste continuou esperando os 60s pela aba, estourou, e abortou entre
+    // "a cobrança existe" e "a limpeza sabe o que cancelar". Restou
+    // `cus_000196523658` com assinatura ATIVA e R$49 pendente em produção,
+    // removido à mão depois.
+    //
+    // A lição não é sobre este seletor. **Este arquivo nunca tinha sido
+    // executado** — está registrado em `estado-atual.md` — e um teste que não
+    // roda não avisa quando o contrato que ele afirma deixa de existir. Ele
+    // também exigia `?pago=1` na URL, um marcador que hoje não aparece em
+    // nenhum arquivo do produto.
+    //
+    // Por isso o registro dos rastros vem AGORA, colado no clique, antes de
+    // qualquer `expect`: a ordem é o que separa "teste falhou" de "teste
+    // falhou e deixou dinheiro cobrando alguém".
     const supabase = bancoAdmin()
 
     // Espera a linha aparecer em vez de ler uma vez: `createCheckout` ainda
@@ -261,18 +280,40 @@ test.describe('funil completo: landing → cadastro → Pro → e-mail', () => {
     rastros.asaasCustomerId = assinatura!.asaas_customer_id ?? undefined
     rastros.asaasSubscriptionId = assinatura!.asaas_subscription_id ?? undefined
 
-    // `window.open('', '_blank')` abre a aba VAZIA dentro do gesto do clique
-    // (senão o bloqueador de pop-up mata) e só depois aponta o `location.href`
-    // pro Asaas, quando a Server Action responde. Esperar só o
-    // `domcontentloaded` pega a aba ainda em `about:blank`.
-    await abaDaFatura.waitForURL(/asaas/, { timeout: 60_000 })
+    // O pagamento acontece DENTRO do produto, com a nossa marca. A pessoa não
+    // troca de site entre decidir pagar e pagar.
+    const dialogoDePagamento = pagina.getByRole('dialog').filter({
+      hasText: 'Assinar o Plano Pro',
+    })
+    await expect(
+      dialogoDePagamento,
+      'o diálogo de pagamento deveria abrir sozinho depois do CPF',
+    ).toBeVisible({ timeout: 60_000 })
 
-    // A fatura precisa mostrar o valor certo. Se o Asaas mudar o layout, o
-    // teste falha aqui e não em produção, com o cliente na frente.
-    await expect(abaDaFatura.locator('body')).toContainText(/49/, { timeout: 30_000 })
+    // As três formas da MESMA cobrança. Faltar uma não quebra a compra, mas
+    // tira a opção de quem só usa aquela — e é silencioso.
+    //
+    // `button` e não `tab`: a faixa de seleção é feita de `<button>` comuns,
+    // sem `role="tab"` nem `aria-selected`. Funciona no clique e no teclado; o
+    // que falta é o leitor de tela anunciar qual está escolhida. Fica
+    // registrado aqui porque foi medido, não corrigido nesta rodada.
+    //
+    // `exact` porque o diálogo tem outros botões que contêm as mesmas
+    // palavras: "Copiar código Pix" casaria com /Pix/ e o teste passaria
+    // achando a coisa errada.
+    for (const forma of ['Pix', 'Boleto', 'Cartão']) {
+      await expect(
+        dialogoDePagamento.getByRole('button', { name: forma, exact: true }),
+        `a forma de pagamento "${forma}" sumiu do diálogo`,
+      ).toBeVisible({ timeout: 30_000 })
+    }
 
-    // A aba de trás fica no produto avisando que a cobrança está a caminho.
-    await expect(pagina).toHaveURL(/pago=1/, { timeout: 30_000 })
+    // O QR só existe se o Asaas devolveu os dados do Pix para uma cobrança de
+    // verdade: é a prova de que a cobrança saiu, não só a assinatura.
+    await expect(
+      dialogoDePagamento.getByAltText(/QR Code do Pix/i),
+      'o QR do Pix não carregou, então a cobrança não chegou a existir no Asaas',
+    ).toBeVisible({ timeout: 60_000 })
 
     expect(assinatura!.status, 'antes de pagar o status não pode ser active').not.toBe('active')
 
