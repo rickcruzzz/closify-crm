@@ -295,7 +295,7 @@ export function KanbanBoard({
       toast.error(result.error)
       return
     }
-    toast.success('Negócio criado com sucesso.')
+    toast.success('Negócio criado.')
   }
 
   /**

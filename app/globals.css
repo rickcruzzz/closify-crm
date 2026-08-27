@@ -20,6 +20,14 @@
   --color-accent-foreground: var(--accent-foreground);
   --color-destructive: var(--destructive);
   --color-destructive-foreground: var(--destructive-foreground);
+  /* Sem estas linhas o token existe mas a UTILITY nao: `text-success` nao e
+     gerada, a classe some no build e o elemento fica com a cor herdada. E o
+     mesmo tipo de silencio que fez `--ease-entrada` passar quatro dias sem
+     chegar ao CSS neste projeto. */
+  --color-success: var(--success);
+  --color-success-foreground: var(--success-foreground);
+  --color-warning: var(--warning);
+  --color-warning-foreground: var(--warning-foreground);
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
@@ -110,6 +118,20 @@
   --accent-foreground: oklch(0.205 0 0);
   --destructive: oklch(0.577 0.245 27.325);
   --destructive-foreground: oklch(0.985 0 0);
+  /* ## Sucesso e aviso viram TOKEN, como o destrutivo sempre foi
+   *
+   * Antes disto so `--destructive` existia. Sucesso e aviso eram cor solta do
+   * Tailwind (`emerald-500/10`, `amber-500/10`) escrita a mao em 20 lugares —
+   * e cor repetida a mao diverge na primeira manutencao: o verde do aviso de
+   * conexao e o verde do toast eram dois verdes diferentes esperando para
+   * discordar.
+   *
+   * Mesma logica de luminosidade do `--destructive`: no claro a cor e mais
+   * escura para contrastar com fundo branco; no escuro ela sobe. */
+  --success: oklch(0.596 0.145 163.2);
+  --success-foreground: oklch(0.985 0 0);
+  --warning: oklch(0.666 0.179 58.3);
+  --warning-foreground: oklch(0.145 0 0);
   /* Borda precisa desenhar contra CARD BRANCO, não contra a página. Em 0.922
      sobre 1.0 o traço praticamente não existia, e era isso que fazia a grade
      do calendário sumir no claro. */
@@ -159,6 +181,10 @@
   --accent-foreground: oklch(0.985 0 0);
   --destructive: oklch(0.704 0.191 22.216);
   --destructive-foreground: oklch(0.145 0 0);
+  --success: oklch(0.765 0.145 163.2);
+  --success-foreground: oklch(0.145 0 0);
+  --warning: oklch(0.828 0.16 84.4);
+  --warning-foreground: oklch(0.145 0 0);
   --border: oklch(1 0 0 / 10%);
   --input: oklch(1 0 0 / 15%);
   --ring: oklch(0.72 0.14 195);
@@ -440,4 +466,102 @@
     animation-duration: 2s !important;
     animation-iteration-count: infinite !important;
   }
+}
+
+/* ## O toast passa a dizer o que aconteceu antes de ser lido
+ *
+ * `cn-toast` era aplicada em TODO toast do produto e nao existia em lugar
+ * nenhum do CSS. Com so `--normal-bg` definido, sucesso e erro sairam
+ * identicos: mesmo fundo, mesma cor de texto, e a unica diferenca era o
+ * icone. Numa tela de trabalho, onde o toast e visto de canto de olho
+ * enquanto a pessoa olha outra coisa, isso significa que a diferenca entre
+ * "deu certo" e "deu errado" so existia se ela parasse e lesse.
+ *
+ * O fundo continua escuro e sobrio de proposito — a identidade do produto e
+ * alto contraste com poucos elementos, nao caixa colorida. Quem carrega o
+ * significado e a barra de estado e o icone, que e o suficiente para
+ * distinguir sem ler, e discreto o bastante para nao competir com a tela.
+ *
+ * `data-type` e posto pelo proprio sonner no elemento do toast. */
+.cn-toast {
+  position: relative;
+  overflow: hidden;
+}
+
+.cn-toast::before {
+  content: '';
+  position: absolute;
+  inset-block: 0;
+  inset-inline-start: 0;
+  width: 3px;
+  /* Neutro por padrao: um toast sem tipo nao finge ter estado. */
+  background: var(--border);
+}
+
+.cn-toast[data-type='success']::before {
+  background: var(--success);
+}
+
+.cn-toast[data-type='error']::before {
+  background: var(--destructive);
+}
+
+.cn-toast[data-type='warning']::before {
+  background: var(--warning);
+}
+
+/* O icone tambem, senao a barra sozinha vira enfeite: duas pistas na mesma
+   direcao sao lidas mais rapido que uma. */
+.cn-toast[data-type='success'] [data-icon] {
+  color: var(--success);
+}
+
+.cn-toast[data-type='error'] [data-icon] {
+  color: var(--destructive);
+}
+
+.cn-toast[data-type='warning'] [data-icon] {
+  color: var(--warning);
+}
+
+/* Titulo em peso medio e descricao apagada: hierarquia dentro do toast, para
+   ele poder dizer o que aconteceu E o que fazer sem virar paragrafo. */
+.cn-toast [data-title] {
+  font-weight: 500;
+}
+
+.cn-toast [data-description] {
+  color: var(--muted-foreground);
+  line-height: 1.45;
+}
+
+/* O botao de fechar herda a cor apagada e so acende no hover — ele existe
+   para quem quer dispensar, nao para disputar atencao com a mensagem. */
+.cn-toast [data-close-button] {
+  color: var(--muted-foreground);
+  background: transparent;
+  border-color: var(--border);
+  transition: color 150ms ease;
+}
+
+.cn-toast [data-close-button]:hover {
+  color: var(--foreground);
+}
+
+/* O alvo de toque, sem inchar o desenho.
+ *
+ * O botao do sonner mede 20px, contra os 44 que este produto respeita em 27
+ * lugares. Aumentar o botao em si o transformaria numa mancha grande num
+ * elemento pequeno, disputando atencao com a mensagem — que e o oposto do que
+ * um "fechar" deve fazer. A area clicavel cresce por um pseudo-elemento
+ * invisivel: 20px de botao + 12px de folga de cada lado = 44px de alvo, e o
+ * icone continua com 20. */
+.cn-toast [data-close-button] {
+  position: relative;
+}
+
+.cn-toast [data-close-button]::after {
+  content: '';
+  position: absolute;
+  inset: -12px;
 }

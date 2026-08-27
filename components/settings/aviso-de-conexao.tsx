@@ -84,7 +84,9 @@ export function AvisoDeConexao({
       role="status"
       className={[
         'flex items-start gap-3 rounded-lg border p-3 transition-[opacity,transform]',
-        'border-emerald-500/25 bg-emerald-500/10',
+        // Token, nao `emerald-500/10` solto: o verde daqui e o verde do
+        // toast passam a ser o MESMO verde, e mudam juntos.
+        'border-success/25 bg-success/10',
         'duration-estado',
         // Saída com `ease-in`, entrada com `ease-out`: é a convenção que a
         // própria auditoria de UX aponta, e o olho lê como o elemento indo
@@ -94,11 +96,11 @@ export function AvisoDeConexao({
     >
       <CheckCircle2
         aria-hidden
-        className="mt-0.5 size-5 shrink-0 text-emerald-600 dark:text-emerald-400"
+        className="text-success mt-0.5 size-5 shrink-0"
       />
 
       <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-        <span className="text-sm font-medium text-emerald-700 dark:text-emerald-300">
+        <span className="text-success text-sm font-medium">
           {titulo}
         </span>
         {/* O que MUDA para a pessoa. "Conectado com sucesso" afirma um estado
