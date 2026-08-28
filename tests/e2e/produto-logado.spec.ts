@@ -988,6 +988,113 @@ test.describe('produto logado: senha, planilha, equipe, calendário, Google', ()
       'sobrou spinner no botão',
     ).toBe(0)
   })
+
+  // ------------------------------------------------------- isolamento
+  test('12. empresa nenhuma enxerga ou escreve na empresa de outra', async () => {
+    const admin = bancoAdmin()
+
+    /**
+     * O teste que faltava, e o motivo de ele existir.
+     *
+     * A prova de RLS registrada em `estado-atual.md` é de 19/08, e desde
+     * então nasceram TRÊS tabelas: `conversas`, `mensagens` (0056) e
+     * `assinatura_eventos` (0055). Nenhuma tinha sido exercitada com sessão
+     * de verdade.
+     *
+     * `signInWithPassword`, nunca `service_role`: ele não tem `auth.uid()`,
+     * a RLS o ignora por completo, e toda leitura voltaria vazia — dando um
+     * "isolado" que não prova nada. Esse alarme falso já foi produzido neste
+     * projeto uma vez.
+     */
+    const intruso = criarIdentidade()
+    const emailIntruso = intruso.email.replace('@', '-intruso@')
+    const { data: conta, error: erroConta } = await admin.auth.admin.createUser({
+      email: emailIntruso,
+      password: intruso.senha,
+      email_confirm: true,
+    })
+    expect(erroConta, 'não deu para criar o intruso').toBeNull()
+    const intrusoId = conta!.user!.id
+
+    try {
+      const comoIntruso = createClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      )
+      await comoIntruso.auth.signInWithPassword({
+        email: emailIntruso,
+        password: intruso.senha,
+      })
+      const { data: wsIntruso } = await comoIntruso.rpc('create_workspace_with_admin', {
+        workspace_name: `Intruso ${intruso.carimbo.slice(-6)}`,
+      })
+
+      try {
+        // A empresa alvo precisa TER dado, senão "0 linhas" seria zero por
+        // estar vazia, não por estar protegida.
+        const { count: temDado } = await admin
+          .from('leads')
+          .select('id', { count: 'exact', head: true })
+          .eq('workspace_id', rastros.workspaceId!)
+        expect(temDado ?? 0, 'a empresa alvo está vazia: o teste não provaria nada').toBeGreaterThan(0)
+
+        // LER, incluindo as três tabelas que nunca tinham sido testadas.
+        for (const tabela of [
+          'leads',
+          'deals',
+          'activities',
+          'tasks',
+          'conversas',
+          'mensagens',
+          'assinatura_eventos',
+          'subscriptions',
+          'workspace_invites',
+        ]) {
+          const { data } = await comoIntruso
+            .from(tabela)
+            .select('id')
+            .eq('workspace_id', rastros.workspaceId!)
+            .limit(5)
+          expect(data?.length ?? 0, `o intruso leu ${tabela} de outra empresa`).toBe(0)
+        }
+
+        // ESCREVER. Ler zero pode ser RLS de leitura funcionando com escrita
+        // aberta — são policies diferentes, e o `insert` é o que prova a outra.
+        for (const [tabela, linha] of [
+          ['leads', { name: 'INVASOR', email: `invasor.${intruso.carimbo}@x.com` }],
+          ['deals', { title: 'INVASOR', value: 1, stage: 'novo' }],
+          ['conversas', {}],
+        ] as const) {
+          const { error } = await comoIntruso
+            .from(tabela)
+            .insert({ ...linha, workspace_id: rastros.workspaceId! })
+          expect(error, `o intruso ESCREVEU em ${tabela} de outra empresa`).not.toBeNull()
+        }
+
+        // O token cifrado não pode sair nem para quem tem sessão.
+        const { data: tokens, error: erroToken } = await comoIntruso
+          .from('integration_connections')
+          .select('access_token_enc')
+          .limit(1)
+        expect(
+          !!erroToken || (tokens?.length ?? 0) === 0,
+          'o token cifrado ficou legível para um autenticado qualquer',
+        ).toBe(true)
+
+        // Controle: sem isto, tudo acima passaria com uma sessão quebrada.
+        const { error: erroProprio } = await comoIntruso.from('leads').insert({
+          workspace_id: wsIntruso as string,
+          name: 'Contato legítimo',
+          email: `legitimo.${intruso.carimbo}@exemplo.com.br`,
+        })
+        expect(erroProprio, 'a sessão do intruso não funciona nem na própria empresa').toBeNull()
+      } finally {
+        if (wsIntruso) await admin.from('workspaces').delete().eq('id', wsIntruso as string)
+      }
+    } finally {
+      await admin.auth.admin.deleteUser(intrusoId)
+    }
+  })
 })
 
 /** Dia de hoje no fuso de São Paulo, que é o que o produto usa. */
