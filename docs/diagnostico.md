@@ -351,3 +351,108 @@ O número do cron nem é constante — está escrito no meio da expressão
 o limite do banco a cada carregamento, pagando rede para saber um número que
 muda uma vez por ano. O caminho proporcional é um teste que leia as duas fontes
 e falhe quando divergirem — não existe hoje.
+
+---
+
+# Auditoria de segurança, 27/08/2026
+
+Sondagem contra **produção**, de fora para dentro, não leitura de código com
+suposição. O resultado geral vem antes das ressalvas: **nenhum vazamento de
+dado, nenhuma rota desprotegida, nenhum segredo exposto.**
+
+## As 15 camadas, e o que cada uma respondeu
+
+```
+ 1  Cloudflare (WAF, Bot Fight, rate limit em /login)    Server: cloudflare
+ 2  HSTS preload 2 anos, nosniff, frame-ancestors none   todos presentes
+ 3  CSP                                                  LIGADA nesta rodada
+ 4  Middleware de sessao (30d absoluto, 14d inatividade) 8/8 rotas cobertas
+ 5  Supabase Auth, cookie httpOnly+secure+sameSite       confirmado
+ 6  RLS por empresa, 17 tabelas                          0 vazam para anonimo
+ 7  Grant por COLUNA em integration_connections          401 ate para anonimo
+ 8  Triggers de limite de plano (pro_vigente)            cadeia 0023 -> 0053
+ 9  Server Actions com sessao                            77/77 com gate
+10  Rate limit da aplicacao                              login, cadastro,
+                                                         reset, convite, log-erro
+11  Webhooks: segredo em tempo constante                 timingSafeEqual nos 3
+12  Token OAuth cifrado (AES-256-GCM) + state com HMAC   validade de 10 min
+13  Gate de ambiente da Central do Dono                  /dono 404 em producao
+14  Storage privado, 2MB, so 3 tipos de imagem           anonimo lista 0
+15  Gate de deploy (auditoria E2E antes de promover)     13/13
+```
+
+## O isolamento entre empresas, provado com sessao real
+
+24 de 24. Empresa descartavel contra a de demonstracao, que tem 6 contatos
+reais — sem isso, "0 linhas" seria zero por vazio, nao por protegido.
+
+```
+LER leads, deals, activities, tasks, conversas,
+    mensagens, assinatura_eventos, subscriptions,
+    workspace_invites de outra empresa                   0 linhas em todas
+ESCREVER em leads, deals, tasks, conversas de outra      42501 nas quatro
+renomear a empresa alheia                                nao pega
+autoupgrade de plano                                     0 assinatura criada
+error_logs, asaas_webhook_events, whatsapp_webhook_events fechadas
+access_token_enc / refresh_token_enc                     42501
+CONTROLE: criar e ler na PROPRIA empresa                 funciona
+```
+
+O controle importa tanto quanto o resto: sem ele, uma sessao quebrada faria
+tudo acima "passar". E `signInWithPassword`, nunca `service_role` — ele nao tem
+`auth.uid()`, a RLS o ignora, e a leitura voltaria vazia dando um isolamento
+que nao existe. Este projeto ja produziu esse alarme falso.
+
+**Tres tabelas nunca tinham sido testadas**: `conversas` e `mensagens` (0056) e
+`assinatura_eventos` (0055) nasceram depois da prova de 19/08. Agora estao na
+suite `produto` como teste 12, para nao dependerem de alguem lembrar.
+
+## Achado A: 4 vulnerabilidades de producao, e por que NAO atualizar
+
+```
+4 vulnerabilities (1 moderate, 3 high)
+todas em node_modules/next/node_modules/postcss
+correcao so via next@16.3.3 — mudanca de versao maior
+```
+
+XSS no stringify e leitura de arquivo por `sourceMappingURL` controlado por
+atacante. **O PostCSS roda em tempo de BUILD**, processando o CSS deste
+repositorio: as falhas exigem CSS de terceiro entrando no pipeline, o que aqui
+nao acontece.
+
+Subir para Next 16 num SaaS com cliente pagante, por falha nao alcancavel,
+troca risco teorico por risco real de quebra.
+
+**A condicao que muda a decisao**, escrita para nao virar esquecimento: passa a
+valer atualizar se o build passar a processar CSS vindo de fora, ou se sair
+correcao sem mudanca de versao maior.
+
+## Achado B: o segredo do webhook do WhatsApp e unico, nao por empresa
+
+Um `EVOLUTION_WEBHOOK_SECRET` para todas as instancias. Quem o conhecer
+consegue **injetar** mensagem falsa no funil de qualquer empresa, bastando
+saber o UUID dela. Nao da para LER nada (a rota so escreve), e o segredo hoje
+so existe no `.env` e na configuracao das instancias na VPS.
+
+Fraqueza de arquitetura, nao buraco exploravel hoje. Fora desta rodada com
+motivo: segredo por conexao exige migration e retrabalho no fluxo de conexao, e
+o WhatsApp esta desligado ("Em breve" nos dois planos) enquanto a API oficial
+nao sai. Seria trabalho sobre um caminho que ninguem percorre.
+
+## O que esta auditoria NAO cobriu
+
+Dito na cara, para ninguem ler "auditado" como "tudo garantido":
+
+- **A VPS do Evolution** e a **conta do Asaas** — infraestrutura de terceiro,
+  fora do alcance de sondagem daqui.
+- **Abuso por quem ja tem acesso legitimo** (um membro exportando a base da
+  propria empresa). E permitido por desenho; virar problema e questao de
+  contrato, nao de RLS.
+- **O Pixel sob CSP em bloqueio**: ele so monta em `www.velofunil.com.br`, por
+  decisao de 20/08, entao nao ha como exercita-lo em build local. A politica
+  ja permite as tres coisas que o `fbq` usa (`connect.facebook.net` em
+  script-src, `www.facebook.com` em img-src e connect-src) e
+  `isolar-analytics.tsx` cerca o pixel para erro dele nao derrubar a pagina —
+  mas isso e raciocinio, nao medicao. **Conferir logo depois de promover**,
+  aceitando os cookies: e exatamente a combinacao que derrubou o site inteiro
+  em 24/08.
