@@ -9,14 +9,12 @@ export function IntegrationsTab({
   connections,
   uso,
   plano,
-  workspaceId,
 }: {
   isAdmin: boolean
   connections: IntegrationConnectionRow[]
   uso: Record<IntegrationProvider, number>
   /** Só decide o que o card mostra; a regra real está no servidor. */
   plano: 'free' | 'pro'
-  workspaceId: string
 }) {
   return (
     <div className="grid gap-4 md:grid-cols-2">
@@ -32,7 +30,6 @@ export function IntegrationsTab({
             lastError={conexao?.lastError ?? null}
             uso={uso[provider]}
             plano={plano}
-            workspaceId={workspaceId}
           />
         )
       })}

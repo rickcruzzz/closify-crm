@@ -73,10 +73,11 @@ export function HeroSection() {
 
               ## O que ela NÃO promete
 
-              Nada sobre integração automática. A conexão via Evolution está
-              construída mas não ligada (26% de sessão viva na última medição),
-              e prometer o que não roda é a mesma classe de defeito que o
-              "contatos ilimitados" que saiu daqui em 23/08. */}
+              Nada sobre integração automática. A ponte não oficial (Evolution)
+              foi REMOVIDA do produto em 28/08, junto com a VPS, e a API
+              oficial da Meta depende de App Review. Prometer o que não roda é
+              a mesma classe de defeito que o "contatos ilimitados" que saiu
+              daqui em 23/08 — e agora não há nem o que ligar. */}
           {/* Três degraus, e o primeiro existe por medição, não por gosto.
               A frase nova tem 47 caracteres contra 38 da anterior; em 390px,
               com `text-titulo-lg` (44px), ela ocupava CINCO linhas e empurrava

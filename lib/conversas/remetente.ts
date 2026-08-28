@@ -1,8 +1,6 @@
 import 'server-only'
+import { AVISO_DE_MIGRACAO } from '@/lib/integrations/whatsapp-estado'
 
-import { obterTokenDaInstancia } from '@/lib/integrations/evolution/token'
-import { enviarTexto } from '@/lib/integrations/evolution/api'
-import { tierDaConexao } from '@/lib/integrations/evolution/aquecimento'
 
 /**
  * Quem entrega a mensagem no WhatsApp.
@@ -53,36 +51,38 @@ export type Remetente = {
 }
 
 /**
- * Evolution GO, a ponte não oficial.
+ * Nenhum remetente, enquanto a API oficial não sai.
  *
- * Sai de cena quando a Cloud API entrar. O que precisa continuar verdadeiro
- * depois disso é só o formato deste objeto.
+ * Aqui vivia o `Remetente` do Evolution GO. A ponte não oficial saiu do
+ * produto em 28/08/2026 junto com a VPS, e a Cloud API da Meta ainda depende
+ * de App Review.
+ *
+ * O objeto continua existindo em vez de a função devolver `null` porque é a
+ * **costura**: todo chamador já trata `{ ok: false, motivo }`, e trocar isso
+ * por um caminho de "não há remetente" espalharia a condição por cada tela
+ * que envia. Quando a Cloud API entrar, ela nasce aqui do lado e
+ * `escolherRemetente` passa a decidir entre as duas.
+ *
+ * O teto por hora vira 0 de propósito: qualquer código que pergunte quanto
+ * ainda dá para enviar recebe a resposta certa em vez de um número que não
+ * significa nada.
  */
-const evolution: Remetente = {
-  nome: 'Evolution',
+const emMigracao: Remetente = {
+  nome: 'Em migração',
 
-  tetoPorHora(conectadoEm) {
-    return tierDaConexao(conectadoEm ? new Date(conectadoEm) : new Date()).porHora
+  tetoPorHora() {
+    return 0
   },
 
-  explicacaoDoTeto(conectadoEm) {
-    return tierDaConexao(conectadoEm ? new Date(conectadoEm) : new Date()).explicacao
+  explicacaoDoTeto() {
+    return AVISO_DE_MIGRACAO.curto
   },
 
-  async enviarTexto(workspaceId, numero, texto) {
-    const token = await obterTokenDaInstancia(workspaceId)
-    if (!token) {
-      return { ok: false, motivo: 'A conexão do WhatsApp precisa ser refeita em Configurações.' }
-    }
-
-    try {
-      const { id } = await enviarTexto(token, numero, texto)
-      return { ok: true, externalId: id }
-    } catch (err) {
-      const motivo = err instanceof Error ? err.message : 'Falha desconhecida'
-      console.error('Remetente Evolution: envio recusado', err)
-      return { ok: false, motivo }
-    }
+  async enviarTexto() {
+    // Diz o que está acontecendo e não promete data — prazo de App Review não
+    // depende daqui, e prometer semana que não se cumpre custa mais do que não
+    // prometer nada.
+    return { ok: false, motivo: AVISO_DE_MIGRACAO.detalhe }
   },
 }
 
@@ -101,5 +101,5 @@ export function escolherRemetente(workspaceId: string): Remetente {
   // entrar, a escolha passa a sair de `integration_connections` desta empresa,
   // e acrescentar um parâmetro depois obrigaria a tocar em todo chamador.
   void workspaceId
-  return evolution
+  return emMigracao
 }

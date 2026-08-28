@@ -8,7 +8,6 @@ import { getCurrentUserAndWorkspace } from '@/lib/supabase/workspace'
 import { decifrar } from '@/lib/integrations/crypto'
 import { revogarToken as revogarTokenGoogle, testarCalendario, testarGmail } from '@/lib/integrations/google'
 import { obterAccessTokenValido } from '@/lib/integrations/token'
-import { apagarInstancia } from '@/lib/integrations/evolution/api'
 import { mensagemBloqueioPro } from '@/lib/integrations/mensagem-bloqueio-pro'
 import type { IntegrationProvider } from '@/types/supabase'
 
@@ -66,23 +65,18 @@ export async function desconectarIntegracao(provider: IntegrationProvider) {
   // descarta o valor, mas a credencial viva da sessão de WhatsApp de um
   // cliente saía para um terceiro que não tem nada com isso.
   //
-  // E a instância continuava de pé no servidor Evolution depois do DELETE
-  // local. Isso deixava a empresa incapaz de reconectar: sem linha não há
-  // token, sem token o código tenta criar, e o servidor recusa com
-  // "instance already exists". `criarOuAdotarInstancia` hoje readota nesse
-  // caso, então isto aqui é a segunda camada — evitar a órfã em vez de só
-  // saber sair dela.
-  if (provider === 'whatsapp') {
-    try {
-      await apagarInstancia(workspaceId)
-    } catch (err) {
-      // Não bloqueia a desconexão local: a pessoa pediu para desconectar, e
-      // deixar a linha no banco por causa de uma falha no servidor externo
-      // daria a impressão de que o pedido não funcionou. A readoção cobre o
-      // caso de a instância ter sobrado.
-      console.error('Falha ao apagar a instância do WhatsApp na desconexão', err)
-    }
-  } else if (linha?.access_token_enc) {
+  // Havia aqui uma chamada a `apagarInstancia`, que removia a sessão no
+  // servidor do Evolution ao desconectar. A ponte não oficial saiu do produto
+  // em 28/08/2026 junto com a VPS: não há mais servidor onde apagar nada.
+  //
+  // A desconexão local continua inteira — apaga a linha de
+  // `integration_connections`, que é o que decide se a empresa tem WhatsApp.
+  // O `provider === 'whatsapp'` some daqui, mas a distinção que ele protegia
+  // continua valendo abaixo, e é a mais importante das duas: o
+  // `access_token_enc` de uma conexão de WhatsApp NÃO é token do Google, e
+  // mandá-lo para `oauth2.googleapis.com` entregava credencial de cliente a
+  // um terceiro que não tem nada com ela.
+  if (provider !== 'whatsapp' && linha?.access_token_enc) {
     try {
       await revogarTokenGoogle(decifrar(linha.access_token_enc))
     } catch (err) {

@@ -18,7 +18,6 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { desconectarIntegracao, testarConexaoIntegracao } from '@/lib/integrations/actions'
 import { ProUpsellDialog } from '@/components/settings/pro-upsell-dialog'
-import { EvolutionConnectDialog } from '@/components/settings/evolution-connect-dialog'
 import { PrepararConexaoGoogle } from '@/components/settings/preparar-conexao-google'
 import type { IntegrationProvider, IntegrationStatus } from '@/types/supabase'
 import {
@@ -103,7 +102,6 @@ export function IntegrationCard({
   lastError,
   uso,
   plano,
-  workspaceId,
 }: {
   provider: IntegrationProvider
   isAdmin: boolean
@@ -112,7 +110,6 @@ export function IntegrationCard({
   lastError: string | null
   /** Quantas vezes essa integração foi usada nos últimos 30 dias. */
   uso: number
-  workspaceId: string
   /**
    * O plano do workspace, só para decidir o que o card MOSTRA.
    *
@@ -128,7 +125,6 @@ export function IntegrationCard({
 }) {
   const [pendente, startTransition] = React.useTransition()
   const [upsellAberto, setUpsellAberto] = React.useState(false)
-  const [conectarWhatsappAberto, setConectarWhatsappAberto] = React.useState(false)
   const [prepararGoogleAberto, setPrepararGoogleAberto] = React.useState(false)
   const info = META[provider]
   const Icone = info.icone
@@ -328,14 +324,15 @@ export function IntegrationCard({
           // resolve no DNS, e o cliente tomaria erro de rede sem entender o
           // que fez de errado. Melhor dizer a verdade.
           podeConectarWhatsapp() ? (
-            <Button
-              className="w-fit"
-              size="sm"
-              onClick={() => setConectarWhatsappAberto(true)}
-            >
-              <Plug className="size-4" />
-              Conectar {info.titulo}
-            </Button>
+            // A ponte nao oficial saiu do produto em 28/08/2026. Quando a
+            // Cloud API for aprovada, o botao de conectar volta AQUI — com o
+            // fluxo dela, que e OAuth pela Meta e nao leitura de QR Code.
+            <div className="border-border/60 flex flex-col gap-1 rounded-lg border p-3">
+              <span className="text-sm font-medium">{AVISO_DE_MIGRACAO.titulo}</span>
+              <p className="text-muted-foreground text-xs leading-relaxed">
+                {AVISO_DE_MIGRACAO.detalhe}
+              </p>
+            </div>
           ) : (
             <div className="border-border/60 flex flex-col gap-1 rounded-lg border p-3">
               <span className="text-sm font-medium">{AVISO_DE_MIGRACAO.titulo}</span>
@@ -364,13 +361,6 @@ export function IntegrationCard({
         />
       )}
 
-      {provider === 'whatsapp' && podeConectarWhatsapp() && (
-        <EvolutionConnectDialog
-          open={conectarWhatsappAberto}
-          onOpenChange={setConectarWhatsappAberto}
-          workspaceId={workspaceId}
-        />
-      )}
     </Card>
   )
 }
