@@ -1,4 +1,4 @@
-import { z } from 'zod'
+import { z } from '@/lib/validations/zod'
 
 export const dealSchema = z.object({
   title: z.string().min(2, 'Informe o título do negócio.'),

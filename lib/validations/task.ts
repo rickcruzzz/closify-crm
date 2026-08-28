@@ -1,4 +1,4 @@
-import { z } from 'zod'
+import { z } from '@/lib/validations/zod'
 
 /**
  * Faixa aceita para o prazo da tarefa.

@@ -1,4 +1,4 @@
-import { z } from 'zod'
+import { z } from '@/lib/validations/zod'
 
 export const memberRoleSchema = z.enum(['admin', 'membro'])
 

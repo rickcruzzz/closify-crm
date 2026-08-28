@@ -2,7 +2,7 @@
 
 import { revalidatePath } from 'next/cache'
 import { headers } from 'next/headers'
-import { z } from 'zod'
+import { z } from '@/lib/validations/zod'
 
 import { createClient } from '@/lib/supabase/server'
 import {

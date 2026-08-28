@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { z } from 'zod'
+import { z } from '@/lib/validations/zod'
 
 import { createAdminClient } from '@/lib/supabase/admin'
 import { createClient } from '@/lib/supabase/server'

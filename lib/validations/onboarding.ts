@@ -1,4 +1,4 @@
-import { z } from 'zod'
+import { z } from '@/lib/validations/zod'
 
 import type { ModeloVenda, OnboardingEtapa, TamanhoEquipe } from '@/types/supabase'
 

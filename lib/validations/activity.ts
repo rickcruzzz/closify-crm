@@ -1,4 +1,4 @@
-import { z } from 'zod'
+import { z } from '@/lib/validations/zod'
 
 export const activitySchema = z.object({
   type: z.enum(['ligacao', 'email', 'reuniao', 'nota'], { error: 'Selecione um tipo.' }),

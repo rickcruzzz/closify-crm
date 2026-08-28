@@ -1,4 +1,4 @@
-import { z } from 'zod'
+import { z } from '@/lib/validations/zod'
 
 import { CSV_MAX_LINHAS } from '@/lib/leads/csv'
 

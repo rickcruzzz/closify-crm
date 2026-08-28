@@ -1,4 +1,4 @@
-import { z } from 'zod'
+import { z } from '@/lib/validations/zod'
 
 import { senhaDerivadaDoEmail } from '@/lib/password-strength'
 

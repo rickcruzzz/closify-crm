@@ -1,6 +1,6 @@
 /** @type {import('next').NextConfig} */
 
-// Content Security Policy, em modo Report-Only.
+// Content Security Policy, em modo BLOQUEIO desde 27/08/2026.
 //
 // A abordagem "correta" no papel é nonce por requisição gerado no middleware,
 // com `strict-dynamic`. Foi tentada e medida: como as páginas públicas são
@@ -15,8 +15,8 @@
 // injeta HTML de terceiros em lugar nenhum.
 //
 // Esta política entrega o que dá para entregar sem regressão, e, diferente da
-// versão com nonce, pode virar bloqueio de verdade depois, trocando o header
-// para `Content-Security-Policy`.
+// versão com nonce, virou bloqueio de verdade — ver o comentário do header,
+// mais abaixo, para o que travava e como foi medido antes de ligar.
 //
 // Estado medido com esta política: 1 violação por página, sempre a mesma,
 // `eval` num chunk de dependência (o bundle onde ela aparece carrega zod,
@@ -54,10 +54,33 @@ const csp = [
   .trim()
 
 const securityHeaders = [
-  // Report-Only: nesta fase o objetivo é enxergar o que a política quebraria,
-  // sem quebrar nada. `upgrade-insecure-requests` fica de fora porque o
-  // navegador ignora essa diretiva em Report-Only e emite aviso no console.
-  { key: 'Content-Security-Policy-Report-Only', value: csp },
+  /**
+   * BLOQUEIO de verdade, desde 27/08/2026. Antes disso viveu em Report-Only.
+   *
+   * O que travava era UMA violação por página, sempre a mesma, sempre
+   * `script-src`/`eval`. Rastreada até a origem em produção:
+   *
+   *     chunks/6058-….js:62
+   *     try { return Function(""), true } catch (e) { return false }
+   *
+   * O `allowsEval` do Zod v4 — sondagem de recurso, não uso: uma chamada
+   * dentro de `try/catch` só para descobrir se o ambiente compila validador
+   * com JIT. O `catch` já engolia a falha e o Zod seguia pelo caminho
+   * interpretado; o navegador reportava assim mesmo, porque a tentativa
+   * aconteceu. `lib/validations/zod.ts` desliga a sondagem, e ela sumiu.
+   *
+   * Medido ANTES de trocar este header, ainda em Report-Only: 15 rotas
+   * (públicas e logadas) mais o envio de um formulário real, onde o Zod
+   * constrói e roda schema no cliente. Zero violações em todas.
+   *
+   * A ordem era o que tornava isto seguro. Ligar antes de medir é como este
+   * projeto já derrubou o site inteiro uma vez, com a quebra de linha no ID
+   * do Pixel: tela preta para todo mundo que aceitasse os cookies.
+   *
+   * `upgrade-insecure-requests` entra agora — o navegador a ignora em
+   * Report-Only, então em modo bloqueio ela passa a ter efeito.
+   */
+  { key: 'Content-Security-Policy', value: csp },
   {
     key: 'Strict-Transport-Security',
     value: 'max-age=63072000; includeSubDomains; preload',

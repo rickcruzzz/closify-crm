@@ -1,4 +1,4 @@
-import { z } from 'zod'
+import { z } from '@/lib/validations/zod'
 
 /** Tira máscara. O banco guarda só dígitos, ele recusa o resto. */
 export function somenteDigitos(valor: string): string {

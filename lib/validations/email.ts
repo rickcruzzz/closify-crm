@@ -1,4 +1,4 @@
-import { z } from 'zod'
+import { z } from '@/lib/validations/zod'
 
 export const emailMessageSchema = z.object({
   assunto: z.string().min(1, 'Escreva um assunto.').max(200, 'Assunto muito longo.'),
