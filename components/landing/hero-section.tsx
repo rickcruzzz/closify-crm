@@ -2,7 +2,7 @@ import Link from 'next/link'
 import { ArrowRight } from 'lucide-react'
 
 import { buttonVariants } from '@/components/ui/button'
-import { DIAS_DE_TRIAL } from '@/lib/plans/trial'
+import { FREE_LEAD_LIMIT } from '@/lib/plans'
 import { cn } from '@/lib/utils'
 import { PipelinePreviewCard } from '@/components/landing/pipeline-preview-card'
 import { SegmentBadge } from '@/components/landing/segment-badge'
@@ -225,7 +225,7 @@ export function HeroSection() {
               o mesmo sentido, e a conta completa (cinco pessoas a R$ 53 = R$
               265) vive na seção de planos, onde há espaço para ela. */}
           <p className="text-muted-foreground animate-in fade-in slide-in-from-bottom-3 fill-mode-both ease-entrada duration-entrada delay-passo-4 text-sm text-balance">
-            {DIAS_DE_TRIAL} dias com tudo liberado, sem cartão. Depois,{' '}
+            Grátis até {FREE_LEAD_LIMIT} contatos, sem cartão. Pro por{' '}
             <span className="text-foreground font-semibold">R$ 49/mês</span>{' '}
             <span className="text-primary font-medium">pela empresa inteira</span>.
           </p>

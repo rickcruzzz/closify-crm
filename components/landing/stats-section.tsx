@@ -1,5 +1,6 @@
 import { RevealOnScroll } from '@/components/landing/reveal-on-scroll'
 import { cn } from '@/lib/utils'
+import { FREE_LEAD_LIMIT } from '@/lib/plans'
 
 // NÃO coloque métrica de resultado aqui ("+47% de conversão", "1.200+ times",
 // "3.2x mais leads"). Esta seção já teve exatamente esses números, copiados de
@@ -25,14 +26,22 @@ import { cn } from '@/lib/utils'
 // seção de confiança, onde há espaço para dizer COMO. "Pix / boleto e cartão
 // também" é lista de meio de pagamento com cara de número.
 //
-// Cada valor abaixo é verificável: os sete dias vêm de `DIAS_DE_TRIAL`; os dois
+// Cada valor abaixo é verificável: o limite do Free vem de `FREE_LEAD_LIMIT`; os dois
 // minutos são o tempo real do cadastro ao primeiro contato; o preço é o do
 // plano Pro; e o banco roda em `sa-east-1` com as funções em `gru1` desde a
 // correção de 22/08 — São Paulo é medição, não licença poética.
 const stats = [
   {
-    value: '7 dias',
-    label: 'de Pro completo, sem pedir cartão',
+    // Era "7 dias / de Pro completo, sem pedir cartao", verdade enquanto a
+    // empresa nascia com trial. A 0057 tirou isso, e numero que descreve o
+    // produto vira mentira no instante em que o produto muda — este arquivo ja
+    // teve metrica inventada removida por copia de concorrente, e o comentario
+    // acima existe justamente para isso nao voltar.
+    //
+    // O limite do Free e o numero equivalente: e o que a pessoa ganha sem
+    // pagar, e ele sai da constante, nao escrito a mao.
+    value: String(FREE_LEAD_LIMIT),
+    label: 'contatos no plano grátis, sem pedir cartão',
     delay: 0,
   },
   {

@@ -2,7 +2,6 @@ import Link from 'next/link'
 import { ChevronDown } from 'lucide-react'
 
 import { RevealOnScroll } from '@/components/landing/reveal-on-scroll'
-import { DIAS_DE_TRIAL } from '@/lib/plans/trial'
 import { FREE_LEAD_LIMIT, FREE_MEMBER_LIMIT, PRO_PLAN_PRICE } from '@/lib/plans'
 
 // Respostas honestas sobre o produto COMO ELE É HOJE. Nada aqui promete
@@ -10,15 +9,24 @@ import { FREE_LEAD_LIMIT, FREE_MEMBER_LIMIT, PRO_PLAN_PRICE } from '@/lib/plans'
 // quando a importação por CSV foi construída, negar um recurso que existe é
 // tão danoso quanto prometer um que não existe.
 const faqs = [
-  // Esta resposta dizia "sem prazo para expirar" e descrevia o produto anterior
-  // à migration 0051. Hoje a empresa nasce com Pro completo por sete dias, e
-  // depois cai para o Free — que continua sem prazo e sem cartão. As duas
-  // coisas são verdade ao mesmo tempo, e a ordem importa: quem lê a pergunta
-  // "é grátis mesmo?" quer saber se vai ser cobrado de surpresa. A resposta
-  // começa por aí.
+  /**
+   * Esta resposta já mudou duas vezes, e a ordem dela nunca muda: quem lê "é
+   * grátis mesmo?" quer saber se vai ser cobrado de surpresa. A resposta
+   * começa por aí, sempre.
+   *
+   * Dizia "sem prazo para expirar" até 24/08, quando a 0051 fez a empresa
+   * nascer com Pro por sete dias e a página passou a estar desatualizada.
+   * Depois anunciou os sete dias. Com a 0057, empresa nova volta a nascer no
+   * Free, e a promessa do teste saiu daqui junto — anunciar o que o produto
+   * não dá mais é a mesma classe de defeito das duas outras corrigidas nesta
+   * semana.
+   *
+   * O limite de contatos é citado com o número: "plano grátis" sem número
+   * obriga a pessoa a procurar na tabela para saber se cabe nela.
+   */
   {
-    q: 'O que acontece depois dos 7 dias de teste?',
-    a: `Nada é cobrado sem você escolher: não pedimos cartão para começar. Durante ${DIAS_DE_TRIAL} dias sua empresa usa o Pro inteiro; depois disso, ou você assina, ou a conta passa para o plano grátis, que não expira: 1 empresa, até ${FREE_MEMBER_LIMIT} colaboradores e ${FREE_LEAD_LIMIT} contatos. Seus dados continuam lá nos dois casos.`,
+    q: 'O plano grátis é grátis mesmo?',
+    a: `É, e não pede cartão para começar. O grátis não expira: 1 empresa, até ${FREE_MEMBER_LIMIT} colaboradores e ${FREE_LEAD_LIMIT} contatos, com o funil e o painel de resultados inteiros. Chegando aos ${FREE_LEAD_LIMIT} contatos nada some — você só não cadastra novos até assinar o Pro. Nada é cobrado sem você escolher.`,
   },
   {
     q: 'Preciso instalar alguma coisa?',

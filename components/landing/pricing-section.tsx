@@ -16,7 +16,6 @@ import { cn } from '@/lib/utils'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { buttonVariants } from '@/components/ui/button'
-import { DIAS_DE_TRIAL } from '@/lib/plans/trial'
 import { RevealOnScroll } from '@/components/landing/reveal-on-scroll'
 import {
   FREE_LEAD_LIMIT,
@@ -135,11 +134,15 @@ const plans: Plan[] = [
        */
       { texto: 'Suporte direto com quem faz o produto', icone: Headset },
     ],
-    // Toda empresa nasce com Pro completo por 7 dias (0051), entao quem le
-    // isto durante o trial nao precisa imaginar o beneficio: esta usando. E o
-    // argumento mais forte disponivel, porque nao pede imaginacao, pede
-    // continuidade.
-    fecho: `Você já está usando tudo isso nos seus ${DIAS_DE_TRIAL} dias.`,
+    // Dizia "Voce ja esta usando tudo isso nos seus 7 dias", verdade enquanto
+    // a empresa nascia com trial. Com a 0057 deixou de ser, e frase que
+    // descreve estado vira mentira no momento em que o estado muda.
+    //
+    // O que ficou e o argumento que nao depende de trial nenhum: cancelar sem
+    // multa tira o risco da decisao, que e a objecao real de quem hesita em
+    // por o cartao. E verdade — `cancelarAssinatura` encerra no Asaas e o
+    // acesso segue ate o fim do ciclo ja pago.
+    fecho: 'Cancela quando quiser, sem multa. O acesso vai até o fim do mês pago.',
     cta: 'Assinar Pro',
     // O `?plano=pro` é o que faz o clique valer alguma coisa. Sem ele, este
     // botão levava ao MESMO destino do plano Free, e a intenção de compra
@@ -170,16 +173,28 @@ export function PricingSection() {
             <span aria-hidden className="bg-primary h-px w-4" />
           </span>
           <h2 className="text-titulo-md md:text-titulo-lg">
-            Teste tudo por {DIAS_DE_TRIAL} dias. Depois você decide.
+            Comece de graça. Assine quando fizer sentido.
           </h2>
-          {/* Dizia "Grátis pra sempre até 50 contatos", que descrevia o produto
-              anterior à migration 0051. Toda empresa nova nasce com Pro completo
-              por sete dias — a página estava vendendo menos do que o sistema
-              entrega, e quem criava conta descobria sozinho. */}
+          {/* Esta página já vendeu duas histórias diferentes, e as duas
+              estavam certas na época.
+
+              Até 24/08 dizia "Grátis pra sempre até 50 contatos" — e estava
+              ERRADA desde a 0051, que fez toda empresa nascer com Pro por sete
+              dias: a página vendia menos do que o sistema entregava.
+
+              Em 29/08 o dono cortou o trial (migration 0057): empresa nova
+              volta a nascer no Free. A promessa dos sete dias saiu daqui na
+              mesma leva — anunciar o que o produto não dá mais é a mesma
+              classe do "contatos ilimitados" e do "suporte prioritário"
+              corrigidos nesta semana.
+
+              As empresas que JÁ estavam em avaliação terminam os sete dias
+              delas. Isso não aparece na página de propósito: é regra de
+              transição, não oferta. */}
           <p className="text-muted-foreground text-lg text-balance">
-            Sua empresa começa com o Pro completo, sem cartão. Passados os{' '}
-            {DIAS_DE_TRIAL} dias, ou você assina, ou fica no plano grátis. Nunca
-            cobramos sem você escolher.
+            O grátis não expira e não pede cartão: {FREE_LEAD_LIMIT} contatos,
+            funil e resultados. Quando a empresa crescer, o Pro custa o mesmo
+            para uma pessoa ou para dez.
           </p>
         </RevealOnScroll>
 
