@@ -38,13 +38,16 @@ export function HeroSection() {
               A caixa cinza mantinha este texto subordinado ao h1. Tirando a
               caixa sem baixar a cor, um quase-branco de 18,97:1 passaria a
               competir com a manchete, que é a tese da página.
-              `text-muted-foreground` dá 9,55:1: legível com folga sobre o
-              mínimo de 4,5, e claramente secundário.
+              A cor da marca dá 8,37:1 no escuro e 4,96:1 no claro, os dois
+              acima do mínimo de 4,5. E a hierarquia continua vindo do
+              TAMANHO — 12px contra 60px do h1, cinco vezes maior —, não da
+              cor: o título segue sendo a tese. O claro é o ponto mais
+              apertado da página, com 0,46 de folga.
 
               O mono e as maiúsculas FICAM: a barra da janela do mock, logo ao
               lado, diz `funil de vendas · Acme Corp` em mono. A letra rima com
               a página — a caixa é que não rimava. */}
-          <SegmentBadge className="animate-in fade-in slide-in-from-bottom-3 fill-mode-both ease-entrada duration-entrada delay-passo-1 text-muted-foreground font-mono text-xs tracking-wide uppercase" />
+          <SegmentBadge className="animate-in fade-in slide-in-from-bottom-3 fill-mode-both ease-entrada duration-entrada delay-passo-1 text-primary font-mono text-xs tracking-wide uppercase" />
           {/* Nome e categoria continuam DENTRO do h1, mas só para quem lê por
               texto: leitor de tela e o verificador de marca do Google, que
               compara o nome do app no consent screen com o heading principal

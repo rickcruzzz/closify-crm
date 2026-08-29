@@ -35,7 +35,21 @@ const GANHOS_DO_PRO = [
   'Empresas ilimitadas no mesmo login',
   'Colaboradores ilimitados',
   'Contatos ilimitados',
-  'Suporte prioritário',
+  /**
+   * Era "Suporte prioritário", e era FALSO.
+   *
+   * Não existe fila, SLA nem sistema de chamado no produto: suporte é
+   * `suporte@velofunil.com.br` encaminhando para uma caixa pessoal. Free e Pro
+   * escrevem para o mesmo endereço e chegam na mesma pessoa — não há o que
+   * priorizar.
+   *
+   * Mesma classe do "contatos ilimitados" removido da landing em 23/08 e do
+   * CNPJ exibido como prova de confiança estando baixado.
+   *
+   * Corrigido nos TRÊS lugares onde aparecia, não só na landing: deixar a
+   * promessa viva aqui dentro seria pior — é o que quem JÁ PAGOU lê.
+   */
+  'Suporte direto com quem faz o produto',
 ]
 
 export function PlanCard({

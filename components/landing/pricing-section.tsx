@@ -7,6 +7,7 @@ import {
   Headset,
   Infinity as InfinityIcon,
   LayoutDashboard,
+  Mail,
   Users,
   type LucideIcon,
 } from 'lucide-react'
@@ -44,6 +45,17 @@ type Plan = {
    */
   features: { texto: string; icone: LucideIcon }[]
   cta: string
+  /**
+   * A ultima frase antes do botao.
+   *
+   * Existe nos DOIS cartoes por medida, nao por simetria: o Pro cresceu com a
+   * lista nova e o Free ficou com 144px de vao morto contra 16px do Pro,
+   * medido. Vao desse tamanho le como cartao inacabado.
+   *
+   * O que preenche e verdade, nao enchimento — cada um responde a objecao do
+   * seu plano.
+   */
+  fecho?: string
   href: string
   highlighted?: boolean
   delay: number
@@ -64,6 +76,11 @@ const plans: Plan[] = [
       { texto: 'Funil visual, arrasta e solta', icone: Filter },
       { texto: 'Painel de resultados', icone: LayoutDashboard },
     ],
+    // A pergunta que trava quem considera um plano gratis e sempre a mesma:
+    // "e se eu bater no limite, perco o que ja cadastrei?". A trigger da 0023
+    // recusa o INSERT novo com 42501 e nao apaga nada — dizer isso remove a
+    // objecao com a verdade, em vez de deixar a pessoa supor o pior.
+    fecho: `Chegando aos ${FREE_LEAD_LIMIT} contatos, nada some: você só não cadastra novos.`,
     cta: 'Começar grátis',
     href: '/cadastro',
     delay: 0,
@@ -75,16 +92,54 @@ const plans: Plan[] = [
     precoLegenda: 'Da empresa inteira, nunca por vendedor a mais.',
     description:
       'Menos de R$2 por dia. Um cliente perdido por esquecimento custa mais que isso no ano inteiro.',
+    /**
+     * Ordenada pelo que o Free NAO FAZ, e nao pelo que ele faz menos.
+     *
+     * A lista anterior comecava por limites — "colaboradores ilimitados",
+     * "contatos ilimitados" — contra o "ate 50" do Free. Isso diz *voce vai
+     * bater num muro*, nao *voce ganha algo*: descreve o mesmo produto com
+     * numero maior, e numero maior nao move quem ainda nem chegou perto do
+     * teto.
+     *
+     * Calendar e Gmail sobem ao topo porque sao a UNICA coisa que o Free
+     * simplesmente nao tem. E nao e promessa nova: os dois foram verificados
+     * funcionando em producao, com o OAuth aprovado pelo Google em 24/08.
+     *
+     * Os dois primeiros dizem o que a pessoa FAZ ("marcar reuniao", "responder
+     * o cliente"), nao o nome da integracao — o nome so importa depois de a
+     * pessoa querer a coisa.
+     */
     features: [
+      { texto: 'Marque a reunião no Google Calendar sem sair do funil', icone: CalendarDays },
+      { texto: 'Responda o cliente por e-mail, e fica no histórico dele', icone: Mail },
+      // Os dois "ilimitados" na mesma linha: separados, gastavam duas das
+      // cinco linhas para dizer a mesma ideia, e empurravam para baixo o que
+      // o Free nao tem. O simbolo de infinito carrega o beneficio sem repetir
+      // os icones de Users e Contact que o cartao do Free ja usa.
+      { texto: 'Contatos e colaboradores ilimitados', icone: InfinityIcon },
       { texto: 'Várias empresas no mesmo login', icone: Building2 },
-      { texto: 'Colaboradores ilimitados', icone: Users },
-      // Os dois "ilimitados" seguidos ganhariam ícones repetidos do Free
-      // (Users e Contact) e a diferença entre os planos sumiria justamente na
-      // linha que mais importa. O símbolo de infinito carrega o benefício.
-      { texto: 'Contatos ilimitados', icone: InfinityIcon },
-      { texto: 'Google Calendar e Gmail conectados', icone: CalendarDays },
-      { texto: 'Suporte prioritário', icone: Headset },
+      /**
+       * Era "Suporte prioritário", e era FALSO.
+       *
+       * Nao existe fila, SLA nem sistema de chamado no produto: suporte e
+       * `suporte@velofunil.com.br` encaminhando para uma caixa pessoal. Free
+       * e Pro escrevem para o mesmo endereco e chegam na mesma pessoa — nao
+       * ha o que priorizar.
+       *
+       * Mesma classe do "contatos ilimitados" removido daqui em 23/08 e do
+       * CNPJ exibido como prova estando baixado. E esta pagina tem uma secao
+       * chamada "O que a gente garante por escrito", que convida a conferir.
+       *
+       * O que ficou e verdade E mais forte: quem responde e quem faz o
+       * produto. Concorrente grande nao consegue prometer isso.
+       */
+      { texto: 'Suporte direto com quem faz o produto', icone: Headset },
     ],
+    // Toda empresa nasce com Pro completo por 7 dias (0051), entao quem le
+    // isto durante o trial nao precisa imaginar o beneficio: esta usando. E o
+    // argumento mais forte disponivel, porque nao pede imaginacao, pede
+    // continuidade.
+    fecho: `Você já está usando tudo isso nos seus ${DIAS_DE_TRIAL} dias.`,
     cta: 'Assinar Pro',
     // O `?plano=pro` é o que faz o clique valer alguma coisa. Sem ele, este
     // botão levava ao MESMO destino do plano Free, e a intenção de compra
@@ -139,11 +194,32 @@ export function PricingSection() {
             <RevealOnScroll key={plan.name} delay={plan.delay}>
               <Card
                 className={cn(
-                  'h-full transition-[transform,box-shadow] duration-300',
-                  'pointer:hover:-translate-y-1 pointer:hover:shadow-lg',
+                  // ## Por que o cartao NAO se move no hover
+                  //
+                  // Era `pointer:hover:-translate-y-1`: o cartao subia 4px,
+                  // medido. Reportado pelo dono como "fica mexendo estranho
+                  // quando clica no desktop", e o mecanismo explica: o botao
+                  // que ele esta mirando vai junto, entao o alvo se desloca
+                  // enquanto a mao ja esta a caminho.
+                  //
+                  // Cartao de plano e superficie de COMPARACAO, nao alvo
+                  // clicavel — o que se clica e o botao dentro. Elevar o
+                  // cartao inteiro o trata como botao, que ele nao e.
+                  //
+                  // Medido em cinco paginas de preco de referencia, com as
+                  // media features de mouse real emuladas (sem isso a
+                  // variante `pointer:` nem aplica e a medicao mente):
+                  //
+                  //     Linear, Attio, Vercel, Resend   deslocam 0px
+                  //
+                  // Nenhuma move o cartao. O feedback de clique fica onde o
+                  // clique acontece: o botao ja tem `active:translate-y-px`.
+                  'h-full transition-colors duration-200',
                   plan.highlighted
                     ? 'ring-primary shadow-primary/10 shadow-lg ring-2'
-                    : 'ring-border ring-1',
+                    // Cor da borda em vez de deslocamento: da o sinal de
+                    // "isto responde" sem mexer em um pixel de layout.
+                    : 'ring-border pointer:hover:ring-muted-foreground/40 ring-1',
                 )}
               >
                 <CardHeader className="flex flex-col gap-1">
@@ -210,13 +286,23 @@ export function PricingSection() {
                       </li>
                     ))}
                   </ul>
+                  {plan.fecho && (
+                    <p className="text-muted-foreground mt-auto text-sm text-pretty">
+                      {plan.fecho}
+                    </p>
+                  )}
                   <Link
                     href={plan.href}
                     className={cn(
                       buttonVariants({
                         variant: plan.highlighted ? 'default' : 'outline',
                       }),
-                      'mt-auto min-h-11 w-full',
+                      // `mt-auto` so quando nao ha o fecho: com os dois, o
+                      // espaco sobraria entre a frase e o botao em vez de
+                      // acima dela, e os dois cartoes deixariam de alinhar.
+                      // `mt-auto` so quando NAO ha fecho: com os dois, o espaco
+                      // sobraria entre a frase e o botao em vez de acima dela.
+                      plan.fecho ? 'min-h-11 w-full' : 'mt-auto min-h-11 w-full',
                     )}
                   >
                     {plan.cta}
