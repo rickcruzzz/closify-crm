@@ -1,5 +1,6 @@
 import {
   BarChart3,
+  Calendar,
   MessageCircle,
   KanbanSquare,
   ListChecks,
@@ -70,6 +71,28 @@ const features: Feature[] = [
     delay: 260,
   },
   {
+    // Vizinho de "A tela que diz o que fazer hoje" de propósito: os dois
+    // falam de tempo, e a distância entre eles é o que cada um responde.
+    //
+    //     Hoje         o que fazer AGORA
+    //     Calendário   o que vem nas próximas semanas
+    //
+    // Sem essa separação no texto, os dois cards viram o mesmo card.
+    //
+    // Não cita Google: a sincronia com o Google Calendar é integração do Pro
+    // e vive na seção de planos. Prometê-la aqui, na grade que descreve o
+    // produto inteiro, ofereceria no Free o que só existe no Pro — a classe
+    // de defeito que esta página já pagou com os "contatos ilimitados".
+    title: 'O que vem pela frente, por dia',
+    description:
+      'Veja tudo o que está marcado por mês, semana ou lista. O compromisso que você agendou aparece no dia certo, sem depender de você lembrar dele.',
+    // `Calendar`, o mesmo da barra lateral. `CalendarCheck` já é o ícone de
+    // "Hoje" no produto, e repeti-lo aqui anularia a função do ícone, que é
+    // dar um segundo caminho de reconhecimento além do texto.
+    icon: Calendar,
+    delay: 0,
+  },
+  {
     // O canal onde a PME brasileira realmente vende não aparecia em lugar
     // nenhum desta página. É a feature mais reconhecível do produto para
     // quem chega de anúncio, e estava invisível.
@@ -89,14 +112,14 @@ const features: Feature[] = [
     description:
       'Abra a conversa direto do contato, sem procurar o número na agenda. Em breve, pela API oficial da Meta, a mensagem que chega vira contato e tarefa sozinha.',
     icon: MessageCircle,
-    delay: 0,
+    delay: 130,
   },
   {
     title: 'Cada um vê o que precisa ver',
     description:
       'Dono acompanha a operação inteira; colaborador trabalha na parte dele. Sem planilha compartilhada onde qualquer um apaga a linha errada.',
     icon: ShieldCheck,
-    delay: 0,
+    delay: 260,
   },
 ]
 
@@ -130,23 +153,63 @@ export function FeaturesSection() {
             // quanto sobra depende de quantos cards existem, então a conta é
             // feita, não fixada.
             //
-            // Com 8 cards: em 2 colunas fecha exato (nada a esticar); em 3
-            // colunas sobra uma célula, e o último ocupa duas. Se a lista
-            // mudar de tamanho de novo, isto continua certo sozinho.
+            // Com 9 cards: em 3 colunas fecha exato, 3x3, nada a esticar; em 2
+            // colunas sobra uma célula, e o último ocupa a linha inteira. Se a
+            // lista mudar de tamanho de novo, isto continua certo sozinho.
+            //
+            // Eram 8, e 8 % 3 = 2 punha `lg:col-span-2` no último — o card
+            // saía com o DOBRO da largura dos outros (682px contra 341px,
+            // medido em produção), e o texto travado em `max-w-md` deixava
+            // 186px de vazio dentro dele. Ler como proposital dependia de o
+            // card usar o tamanho, e ele não usava. O 9º card fecha a conta em
+            // vez de tratar a sobra.
             const ultimo = i === features.length - 1
             const sobramEm2 = features.length % 2
             const sobramEm3 = features.length % 3
+            // Cada faixa declara o próprio span, e `lg` declara SEMPRE, mesmo
+            // quando é 1. Utility de breakpoint no Tailwind vale dali para
+            // cima: `sm:col-span-2` continua valendo em 1440px, e sem um
+            // `lg:col-span-1` explícito para desfazê-lo o card fica esticado
+            // numa grade que já fechava exata.
+            //
+            // Isso passou despercebido enquanto a lista tinha 8 cards, porque
+            // `8 % 2 = 0` nunca ligava o span de `sm` — o de `lg` era o único
+            // que existia, e não havia o que vazar. Com 9 o vazamento
+            // apareceu na primeira medição.
             const spanUltimo = ultimo
               ? cn(
                   sobramEm2 === 1 && 'sm:col-span-2',
+                  sobramEm3 === 0 && 'lg:col-span-1',
                   sobramEm3 === 1 && 'lg:col-span-3',
                   sobramEm3 === 2 && 'lg:col-span-2',
                 )
               : undefined
-            // O card só vira faixa horizontal quando de fato atravessa a
-            // linha inteira; esticado por uma coluna, o layout de coluna
-            // continua sendo o certo.
-            const viraFaixa = ultimo && sobramEm2 === 1
+            // O card só vira faixa horizontal quando de fato atravessa a linha
+            // INTEIRA; esticado por uma coluna, o layout de coluna continua
+            // sendo o certo. E isso é decidido por breakpoint, pelo mesmo
+            // motivo do span acima: `sm:flex-row` sozinho seguiria valendo em
+            // 1440px, deitando um card de 341px que não tem largura para isso.
+            const faixaEmSm = ultimo && sobramEm2 === 1
+            const faixaEmLg = ultimo && sobramEm3 === 1
+            const layoutDoConteudo = cn(
+              'flex flex-col gap-3',
+              // Deitado, mas ancorado no mesmo canto que todos os outros
+              // cards. `justify-center` empurrava ícone e texto para o meio da
+              // faixa, e a coluna da esquerda deixava de alinhar com a grade
+              // inteira logo acima — o olho procura essa linha vertical antes
+              // de ler qualquer coisa. `items-center` tinha efeito parecido no
+              // outro eixo: com três linhas de texto, o ícone caía na altura
+              // da segunda, longe do título que ele identifica.
+              faixaEmSm && 'sm:flex-row sm:items-start sm:gap-4',
+              // Desfaz a faixa de `sm` quando em 3 colunas o card volta a ser
+              // uma célula normal. Sem este reset o vazamento é silencioso: o
+              // layout fica errado só no tamanho de tela que ninguém abriu.
+              faixaEmSm && !faixaEmLg && 'lg:flex-col lg:gap-3',
+            )
+            const tetoDoTexto = cn(
+              faixaEmSm && 'sm:flex sm:max-w-md sm:flex-col sm:gap-1',
+              faixaEmSm && !faixaEmLg && 'lg:max-w-none lg:gap-0',
+            )
 
             return (
               <RevealOnScroll
@@ -161,20 +224,19 @@ export function FeaturesSection() {
                     'pointer:hover:bg-primary/[0.04]',
                   )}
                 >
-                  <CardContent
-                    className={cn(
-                      'flex flex-col gap-3',
-                      viraFaixa && 'sm:flex-row sm:items-center sm:justify-center sm:gap-4',
-                    )}
-                  >
-                    {/* Sem o `01`–`07` que ficava ao lado do ícone.
+                  <CardContent className={layoutDoConteudo}>
+                    {/* Sem a numeração que ficava ao lado do ícone.
                         Numeração é um device estrutural: comunica que a ORDEM
                         carrega informação. Em "Como funciona" isso é verdade
                         (traga a planilha → arraste → veja o dinheiro é uma
                         sequência real, e lá os números ficam). Aqui não: são
-                        sete recursos independentes, e numerar sugere um passo
-                        a passo que não existe — além de dividir a atenção com
-                        o ícone, que é o que de fato identifica cada um. */}
+                        recursos independentes, e numerar sugere um passo a
+                        passo que não existe — além de dividir a atenção com o
+                        ícone, que é o que de fato identifica cada um.
+
+                        A contagem saiu do texto de propósito: dizia "sete"
+                        desde que o oitavo card entrou, e voltaria a mentir no
+                        décimo. Comentário que afirma número envelhece sozinho. */}
                     <div
                       className={cn(
                         'flex size-10 shrink-0 items-center justify-center rounded-lg',
@@ -183,7 +245,13 @@ export function FeaturesSection() {
                     >
                       <feature.icon className="text-primary size-5" />
                     </div>
-                    <div className={cn(ultimo && 'sm:flex sm:max-w-md sm:flex-col sm:gap-1')}>
+                    {/* O teto de largura acompanha a faixa, não o "último":
+                        ele existe para o texto não atravessar uma linha
+                        inteira, e num card de coluna normal não há o que
+                        limitar. Presas ao card errado, as duas condições
+                        divergem na próxima vez que a lista mudar de tamanho —
+                        que é exatamente o que acabou de acontecer. */}
+                    <div className={tetoDoTexto}>
                       <h3 className="text-base font-semibold">{feature.title}</h3>
                       <p className="text-muted-foreground text-sm">{feature.description}</p>
                     </div>
