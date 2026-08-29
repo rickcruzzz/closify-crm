@@ -75,7 +75,7 @@ export default function OpengraphImage() {
       </div>
 
       <div style={{ marginTop: 28, fontSize: 30, color: '#a1a1a1', maxWidth: 860 }}>
-        7 dias de Pro grátis, sem cartão. Depois, R$ 49 pela empresa inteira.
+        Grátis até 50 contatos, sem cartão. Pro por R$ 49 pela empresa inteira.
       </div>
     </div>,
     size,

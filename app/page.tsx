@@ -17,14 +17,14 @@ import { MobileStickyCta } from '@/components/landing/mobile-sticky-cta'
 export const metadata: Metadata = {
   title: 'Velo Funil: o WhatsApp guarda a conversa, não guarda o cliente',
   description:
-    'CRM para pequenos negócios brasileiros. Cada pedido de orçamento vira um contato com prazo para responder. 7 dias de Pro grátis, sem cartão. Depois, R$ 49 por mês pela empresa inteira, não por vendedor.',
+    'CRM para pequenos negócios brasileiros. Cada pedido de orçamento vira um contato com prazo para responder. Grátis até 50 contatos, sem cartão. Pro por R$ 49 por mês pela empresa inteira, não por vendedor.',
   alternates: { canonical: '/' },
   // Sem repetir aqui, o preview de link herdaria o openGraph genérico do
   // layout raiz em vez do texto de conversão da landing.
   openGraph: {
     title: 'Velo Funil: o WhatsApp guarda a conversa, não guarda o cliente',
     description:
-      'CRM para pequenos negócios brasileiros. Cada pedido de orçamento vira um contato com prazo para responder. 7 dias de Pro grátis, sem cartão. Depois, R$ 49 por mês pela empresa inteira, não por vendedor.',
+      'CRM para pequenos negócios brasileiros. Cada pedido de orçamento vira um contato com prazo para responder. Grátis até 50 contatos, sem cartão. Pro por R$ 49 por mês pela empresa inteira, não por vendedor.',
     // Next.js não mescla `openGraph` entre layout e página, definir aqui
     // sobrescreve o do layout raiz por inteiro, e sem `siteName` a home
     // ficava sem `og:site_name`. É provavelmente o que o verificador de
