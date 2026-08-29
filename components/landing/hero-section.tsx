@@ -29,7 +29,22 @@ export function HeroSection() {
               Uma distância só (12px) para a sequência inteira: variar o
               percurso além do atraso faz os elementos parecerem brigar, em vez
               de uma tela entrando junto. */}
-          <SegmentBadge className="animate-in fade-in slide-in-from-bottom-3 fill-mode-both ease-entrada duration-entrada delay-passo-1 font-mono text-xs tracking-wide uppercase" />
+          {/* Sem pílula, e a COR é o que a substitui no trabalho dela.
+              Medido em 29/08: das oito landings de referência abertas no
+              navegador, NENHUMA usa pílula acima do h1 — Linear, Pipedrive,
+              Vercel, Notion e Clay não têm eyebrow nenhum; Attio, Stripe e
+              Resend usam só texto.
+
+              A caixa cinza mantinha este texto subordinado ao h1. Tirando a
+              caixa sem baixar a cor, um quase-branco de 18,97:1 passaria a
+              competir com a manchete, que é a tese da página.
+              `text-muted-foreground` dá 9,55:1: legível com folga sobre o
+              mínimo de 4,5, e claramente secundário.
+
+              O mono e as maiúsculas FICAM: a barra da janela do mock, logo ao
+              lado, diz `funil de vendas · Acme Corp` em mono. A letra rima com
+              a página — a caixa é que não rimava. */}
+          <SegmentBadge className="animate-in fade-in slide-in-from-bottom-3 fill-mode-both ease-entrada duration-entrada delay-passo-1 text-muted-foreground font-mono text-xs tracking-wide uppercase" />
           {/* Nome e categoria continuam DENTRO do h1, mas só para quem lê por
               texto: leitor de tela e o verificador de marca do Google, que
               compara o nome do app no consent screen com o heading principal
