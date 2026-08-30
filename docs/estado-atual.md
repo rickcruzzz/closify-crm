@@ -4,9 +4,9 @@ Documento de continuidade. É lido no começo de toda sessão (referenciado no
 [CLAUDE.md](../CLAUDE.md)) para que uma conversa nova, ou outra conta, comece
 sabendo o que já foi feito, o que foi decidido e onde estão as armadilhas.
 
-**Atualizado em:** 30/08/2026 (o funil da Meta tinha 3 eventos e 3 vãos, e
-agora tem 7; e o `test_event_code` NÃO protege o dataset quando o código é
-inventado — quatro eventos de teste entraram em produção provando isto)
+**Atualizado em:** 30/08/2026 (a Central declarava R$ 490/mes de receita e o
+real era R$ 0,00 — trial gratuito contava como dinheiro; o cliente ganhou canal
+de suporte com anexo; e o funil da Meta foi de 3 para 7 eventos)
 
 **Antes disso, 26/08/2026, tarde** (a elevação do modo claro nunca chegou a
 nenhum cartão do sistema, desde 22/08, porque `ring` e sombra disputam o mesmo
@@ -53,6 +53,122 @@ minutos seguidos, contra 26% da medição anterior)
 **Antes disso, 23/08/2026** (landing auditada: promessa falsa no hero, logo quebrado no telefone, banner de cookies cobrindo o CTA, e prints mostrando o jargão que a própria página baniu; PRD, schema e grafo realinhados)
 
 **Antes disso, 22/08/2026** (funções rodavam em Washington DC com o banco em São Paulo, corrigido na config do projeto e medido: /dashboard 1221ms → 400ms; modo claro sem escada de superfícies, refeito; jargão remanescente e telas de erro; WhatsApp sem QR por Postgres esgotado na VPS; migration 0049 provada desnecessária e removida)
+
+## A Central declarava R$ 490/mes, e o real era R$ 0,00 (30/08)
+
+Reportado com print: os numeros da Central se contradizem. Auditado contra o
+banco E contra o Asaas — estava errado, e era dinheiro.
+
+### Tres numeros da mesma tela discordando
+
+    Entra por mes          R$ 490,00, "10 clientes pagando"
+    Ja recebido            R$ 49,00, 1 pagamento
+    Assinaturas no Asaas   7, "mas so 10 com Pro aqui"
+
+O card do "ja recebido" dizia a verdade desde sempre. Ninguem confrontou os
+dois.
+
+### A causa: `pro_vigente()` responde "pode usar?", nao "pagou?"
+
+`lib/dono/queries.ts` fazia `(empresas com pro_vigente()) * R$ 49`. A funcao e
+`assinatura viva OU trial valido` — e esta correta nisso. Usa-la para medir
+DINHEIRO funde tres coisas:
+
+    quem paga              receita
+    quem esta em trial     acesso gratis, receita ZERO
+    quem ganhou cortesia   acesso de brinde, receita ZERO
+
+**A propria Central tem botao de liberar Pro de cortesia** — e o brinde virava
+R$ 49/mes. O sistema cobrando de si mesmo.
+
+Medido: 12 empresas com `pro_vigente()`, **nenhuma pagante**. Duas internas,
+cinco de dominio descartavel, quatro em trial, e uma com assinatura ACTIVE no
+Asaas e zero pagamento confirmado.
+
+### O unico pagamento, confirmado pelo dono
+
+R$ 49 em 13/08, da empresa "Orne" (`wixese9814@neplis.com`). O dono confirmou
+em 30/08: **foi ele mesmo, para testar o checkout.** A evidencia independente
+bate — conta criada 23:04:08, empresa 52 segundos depois, pagou, e nunca
+voltou: zero contato, zero negocio, zero atividade.
+
+Isto ja estava registrado aqui desde 22/08 e continua valendo: o "primeiro Pix
+real" e verdadeiro como prova tecnica e falso como receita.
+
+### Quatro defeitos, e o quarto e o mais silencioso
+
+1. **Trial contava como receita.**
+2. **Cortesia contava como receita.**
+3. **O filtro era `ehContaInterna`** (4 enderecos fixos) em vez de
+   `ehContaDeTeste`. A MESMA armadilha registrada nesta mesma manha — e desta
+   vez inflando dinheiro em vez de retencao.
+4. **`teste-pro-1787589892727@velofunil.com.br` passava como cliente
+   EXTERNO.** A lista de internos nomeia enderecos um a um e nunca acompanharia
+   conta de teste nova, que nasce com carimbo de tempo. Agora o dominio do
+   proprio produto e sempre interno: ninguem compra o produto pelo e-mail do
+   produto.
+
+### A correcao e de arquitetura, nao de calculo
+
+`lib/dono/dinheiro.ts` ja registrava a doutrina — *"o banco sabe o que o
+webhook conseguiu gravar; o Asaas sabe o que de fato aconteceu com o
+dinheiro"*. `entraPorMes` vivia no arquivo do BANCO, contradizendo isso.
+
+    lib/dono/receita.ts     NOVO. `classificarAcesso()` decide o estado:
+                            pagante | assinou_sem_pagar | trial | cortesia |
+                            interna | sem_pro
+    dinheiro.ts             `assinaturasComPagamento()`, do gateway
+    central.ts              o cruzamento, onde as duas fontes se encontram
+    queries.ts              para de calcular receita
+
+**`assinou_sem_pagar` e estado proprio, nao "cortesia":** cortesia e decisao do
+dono, aquilo e venda travada que da para recuperar.
+
+E `EmpresaComEstado` e tipo SEPARADO de `EmpresaNaCentral`: uma funcao que so
+leu o banco nao consegue mais afirmar quem paga. O tipo passou a impedir o
+defeito, nao so a documenta-lo.
+
+### A tela agora
+
+    Entra por mes      R$ 0,00   "ninguem paga ainda"
+    Usando sem pagar   4         "3 em trial · 1 assinou e nao pagou"
+    Assinaturas Asaas  7         "mas so 0 pagando de fato"
+
+O trial saiu de DENTRO da receita e ganhou card proprio. Esconde-lo seria
+trocar um numero inflado por um numero mudo — e ele e o que decide quanto PODE
+virar dinheiro nos proximos dias.
+
+Com o Asaas fora do ar a receita fica `null` e a tela mostra "—", nao R$ 0,00:
+"nao sei quem paga" e diferente de "ninguem paga".
+
+## O cliente ganhou canal de suporte, e a Central passou a acompanhar (30/08)
+
+Ate hoje o cliente logado precisava **sair do produto** e ir a landing para
+achar o e-mail de suporte. A unica mencao interna estava no dialogo de
+pagamento, visivel so para quem tentou pagar e viu dar errado.
+
+    barra lateral   "Ajuda e sugestoes" no rodape, acima da conta
+    dialogo         problema ou sugestao, SEM sair da pagina (a URL nao muda)
+    anexo           ate 3 arquivos, 10 MB, PNG/JPEG/WEBP/PDF
+    contexto        tela, empresa, plano e navegador, capturados no servidor
+    /dono/suporte   nome E e-mail de quem escreveu, filtros, busca, anexos,
+                    e registro do que foi feito
+
+**So "problema" manda e-mail.** Sugestao espera dias sem custo; problema e
+cliente travado e pagando. E-mail para tudo vira ruido — a licao de 20/08.
+
+**A validacao de anexo e pelos BYTES INICIAIS**, nunca pela extensao. Provado:
+`.exe` renomeado para `.png` e recusado no servidor, mesmo passando pelo
+`accept` do input, pelo tamanho e pelo `allowed_mime_types` do bucket (que
+compara com o que o CLIENTE declara).
+
+**Defeito achado pela propria prova:** o SDK do Resend **nao lanca** em falha
+de envio — devolve `{ error }`. Com so `try/catch`, um 401 ou dominio nao
+verificado passaria em silencio absoluto: o relato ficaria na tabela e o dono
+nunca saberia. Mesma classe do `activities.insert` sem checagem de 24/08.
+
+Provado ponta a ponta contra producao por `tests/e2e/suporte.spec.ts`, com o
+e-mail SAINDO de verdade e a entrega conferida na API do Resend.
 
 ## O funil da Meta tinha três eventos e três vãos (30/08)
 
