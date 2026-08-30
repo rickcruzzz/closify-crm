@@ -2,6 +2,7 @@
 
 import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
+import { headers } from 'next/headers'
 
 import { createClient } from '@/lib/supabase/server'
 import {
@@ -14,7 +15,13 @@ import {
 import { appUrl } from '@/lib/app-url'
 import { excedeuLimite, limparTentativas } from '@/lib/rate-limit'
 import { ipDaRequisicao } from '@/lib/request-ip'
-import { guardarIntencao, lerConvitePendente, lerEmailPendente } from '@/lib/auth/intencao'
+import {
+  guardarIntencao,
+  lerAtribuicaoUtm,
+  lerConvitePendente,
+  lerEmailPendente,
+} from '@/lib/auth/intencao'
+import { enviarConversaoDeLead } from '@/lib/analytics/meta-conversions'
 
 export async function signIn(values: unknown) {
   const parsed = loginSchema.safeParse(values)
@@ -123,6 +130,60 @@ export async function signUp(values: unknown) {
   // diferenciar mensagem, pra não vazar quais e-mails já têm conta.
   if (data.user && data.user.identities?.length === 0) {
     redirect('/verifique-email')
+  }
+
+  // "Lead" pro Meta: a conta nasceu de verdade. É o evento de MAIOR volume
+  // deste funil, e por isso o único por onde uma campanha nova consegue
+  // aprender — `Purchase` fez 7 em 17 dias, longe das ~50/semana que a Meta
+  // pede para sair da fase de aprendizado.
+  //
+  // ## A posição aqui é metade da regra, e o `event_id` é a outra metade
+  //
+  // Fica **depois** da guarda de `identities: []` acima e **antes** dos
+  // `redirect()` abaixo, que lançam e não deixariam nada rodar depois.
+  //
+  // Só que a guarda sozinha NÃO cobre recadastro. Medido contra o Supabase de
+  // produção em 30/08, com os três casos que existem:
+  //
+  //     cadastro novo                user=1c6691e4  identities=1
+  //     repetido, e-mail NAO confirmado  user=1c6691e4  identities=1
+  //     repetido, e-mail CONFIRMADO      user=78fe97c2  identities=0
+  //
+  // O caso do meio passa direto pela guarda — `identities` vem preenchido, e a
+  // função chega aqui de novo. Quem impede o Lead de dobrar ali é o
+  // `event_id`: o id do usuário é o MESMO, então a Meta recebe
+  // `lead:1c6691e4` duas vezes e deduplica.
+  //
+  // E o de baixo mostra por que a guarda continua indispensável: quando o
+  // e-mail já foi confirmado, o Supabase devolve um id DIFERENTE a cada
+  // tentativa (anti-enumeration), então o `event_id` seria novo toda vez e
+  // nada deduplicaria. As duas defesas cobrem buracos distintos.
+  //
+  // `fbc`/`fbp` saem do cookie de atribuição gravado na landing
+  // (`components/landing/utm-capture.tsx`); IP e user agent são desta
+  // requisição, que é a pessoa real preenchendo o formulário. Engole falha
+  // pelo mesmo motivo do CompleteRegistration: telemetria não trava cadastro.
+  if (data.user) {
+    try {
+      const atribuicao = await lerAtribuicaoUtm()
+      const cabecalhos = await headers()
+      await enviarConversaoDeLead({
+        email: parsed.data.email,
+        // Determinístico, não UUID novo — ver a medição no bloco acima: é o
+        // que impede o recadastro de e-mail não confirmado de virar um
+        // segundo Lead.
+        eventId: `lead:${data.user.id}`,
+        userId: data.user.id,
+        fbc: atribuicao?.fbc,
+        fbp: atribuicao?.fbp,
+        actionSource: 'website',
+        clientIp: await ipDaRequisicao(),
+        clientUserAgent: cabecalhos.get('user-agent'),
+        eventSourceUrl: `${appUrl()}/cadastro`,
+      })
+    } catch (err) {
+      console.error('Falha ao enviar Lead pro Meta', err)
+    }
   }
 
   // Com confirmação de e-mail ativa, signUp não retorna sessão, o usuário só

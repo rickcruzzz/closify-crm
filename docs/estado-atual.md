@@ -4,10 +4,9 @@ Documento de continuidade. É lido no começo de toda sessão (referenciado no
 [CLAUDE.md](../CLAUDE.md)) para que uma conversa nova, ou outra conta, comece
 sabendo o que já foi feito, o que foi decidido e onde estão as armadilhas.
 
-**Atualizado em:** 29/08/2026 (o reverse trial acabou e as 10 empresas em
-avaliação mantiveram o prazo; o `META_ADS_TOKEN` está morto e a Central de
-anúncio com ele; e o Instagram nunca teve conexão nenhuma por API, apesar de
-ter sido informado que tinha)
+**Atualizado em:** 30/08/2026 (o funil da Meta tinha 3 eventos e 3 vãos, e
+agora tem 7; e o `test_event_code` NÃO protege o dataset quando o código é
+inventado — quatro eventos de teste entraram em produção provando isto)
 
 **Antes disso, 26/08/2026, tarde** (a elevação do modo claro nunca chegou a
 nenhum cartão do sistema, desde 22/08, porque `ring` e sombra disputam o mesmo
@@ -54,6 +53,124 @@ minutos seguidos, contra 26% da medição anterior)
 **Antes disso, 23/08/2026** (landing auditada: promessa falsa no hero, logo quebrado no telefone, banner de cookies cobrindo o CTA, e prints mostrando o jargão que a própria página baniu; PRD, schema e grafo realinhados)
 
 **Antes disso, 22/08/2026** (funções rodavam em Washington DC com o banco em São Paulo, corrigido na config do projeto e medido: /dashboard 1221ms → 400ms; modo claro sem escada de superfícies, refeito; jargão remanescente e telas de erro; WhatsApp sem QR por Postgres esgotado na VPS; migration 0049 provada desnecessária e removida)
+
+## O funil da Meta tinha três eventos e três vãos (30/08)
+
+Auditoria de rastreamento pedida antes de investir em tráfego pago. Medido dos
+dois lados — o código e o que a Meta de fato recebeu.
+
+**Nada estava quebrado.** O pixel dispara (70 PageView no dia), a Conversions
+API funciona (29 `CompleteRegistration` e 7 `Purchase` em 17 dias), e o Event
+Match Quality é **6.2 de 10** com e-mail, IP, user agent e `external_id` em
+100% de cobertura.
+
+O problema era **cobertura de funil**:
+
+    PageView               visitou                  existia, navegador
+       ???                 comecou o cadastro       BURACO
+    CompleteRegistration   terminou o onboarding    existia, servidor
+       ???                 abriu o checkout         BURACO
+       ???                 gerou o Pix              BURACO
+    Purchase               pagou                    existia, servidor
+
+**Por que isso custa dinheiro:** a Meta pede ~50 conversões por semana do
+evento otimizado para sair da fase de aprendizado. Com 7 Purchase em 17 dias,
+otimizar por Purchase é pagar o algoritmo para chutar.
+
+### Os quatro eventos novos, e por que cada um mora onde mora
+
+| evento | onde | origem |
+|---|---|---|
+| `Lead` | `signUp` deu certo | CAPI |
+| `InitiateCheckout` | assinatura criada no Asaas | CAPI |
+| `AddPaymentInfo` | Pix/boleto carregados | CAPI |
+| `ViewContent` | seção de planos entra na tela | pixel |
+
+**A divisão não é gosto, é arquitetura.** `meta-pixel.tsx` bloqueia o pixel em
+toda área logada (decisão de 21/08, motivada por erro #418/#423 do React em
+`/hoje` e `/calendario`), então os três eventos de compra **só podem ser
+servidor**. `ViewContent` é o inverso: acontece na landing, onde o servidor não
+sabe de nada.
+
+### O achado que mais vale: recadastro tem TRÊS casos, não dois
+
+A guarda do `signUp` assume que e-mail repetido volta com `identities: []`.
+Medido contra o Supabase de produção:
+
+    cadastro novo                    user=1c6691e4  identities=1
+    repetido, e-mail NAO confirmado  user=1c6691e4  identities=1
+    repetido, e-mail CONFIRMADO      user=78fe97c2  identities=0
+
+**O caso do meio passa direto pela guarda.** Quem impede o Lead de dobrar ali é
+o `event_id` determinístico (`lead:<id>`): o id do usuário é o MESMO, então a
+Meta deduplica. E o de baixo mostra por que a guarda continua indispensável —
+com e-mail confirmado o Supabase devolve um id DIFERENTE a cada tentativa
+(anti-enumeration), e nada deduplicaria.
+
+**As duas defesas cobrem buracos distintos**, e nenhuma das duas sozinha
+resolve. Provado no navegador contra build de produção: 1 Lead, 1 Lead
+deduplicado, 0 Leads.
+
+### O `test_event_code` NÃO protege o dataset, e quatro eventos provaram isso
+
+Este é o erro da rodada, e ele é do tipo que este documento existe para
+registrar.
+
+A implementação ganhou suporte a `META_TEST_EVENT_CODE` justamente para
+exercitar o funil sem escrever no conjunto com que o algoritmo aprende — a
+lição dos 18.192 PageViews de `localhost` de 13/08. **Com um código
+inventado (`TEST00000`), a Meta responde `events_received: 1` e grava no
+dataset de produção do mesmo jeito.** Sem erro, sem aviso.
+
+Somado a isso, uma rodada de prova subiu o servidor sem os `export` de token
+inválido. Resultado: **`Lead`, `InitiateCheckout`, `AddPaymentInfo` e
+`Purchase`, um de cada, entraram no dataset real** e não há API para removê-los.
+
+O método que de fato funciona, e que provou os eventos depois: rodar o servidor
+com `META_CONVERSIONS_API_TOKEN` **inválido**. A Meta recusa, o `console.error`
+prova que a linha foi alcançada, e nada é gravado. Sucesso seria silencioso e
+não provaria nada.
+
+### O controle negativo achou um defeito que o caminho feliz não acharia
+
+O `ViewContent` disparava **sem consentimento**. A única cerca era
+`typeof fbq === 'function'`, e a proteção real vinha de outro componente
+(`meta-pixel.tsx` não injeta o script antes do aceite) — efeito colateral, não
+regra deste caminho. Bastaria uma extensão de navegador definir `fbq` para o
+consentimento deixar de valer, sem nada falhar.
+
+Agora `podeRastrearEsteEvento` exige as duas coisas. Provado nos três casos:
+sem rolar 0, rolando 1, sem aceite 0.
+
+### Duas coisas do ambiente, achadas de passagem
+
+**A CSP quebra a hidratação no `next dev`.** Ela virou bloqueio em 27/08 sem
+`unsafe-eval`, e o webpack de desenvolvimento usa `eval` para os módulos:
+`EvalError` no console, React nunca hidrata, e o formulário de cadastro submete
+nativamente (`GET /cadastro?name=…&email=…`). Em produção não acontece — o
+build não usa `eval`. Toda prova de navegador precisa rodar contra `next start`.
+
+**`TaskStop` não mata o `next dev`.** O processo filho sobrevive, continua
+escrevendo em `.next`, e reescreveu o mapa de chunks logo depois de um `npm run
+build` — o `MODULE_NOT_FOUND` em `webpack-runtime.js` que o `CLAUDE.md`
+documenta, na direção inversa da registrada. Matar pela porta
+(`Get-NetTCPConnection -LocalPort N`) é o que funciona.
+
+### Gestão de tráfego: o que nenhum código resolve
+
+A única campanha da conta é **`OUTCOME_TRAFFIC`**, pausada, R$ 30/dia. Objetivo
+de tráfego otimiza por clique, não usa o pixel para conversão. Para aquisição
+de SaaS é `OUTCOME_SALES`, e a escada é:
+
+    semana 1-2   otimizar por Lead                volume para aprender
+    depois       subir para CompleteRegistration  quando passar de ~50/semana
+    so entao     Purchase                         quando houver volume real
+
+**A atribuição se resolve sozinha no primeiro dia de campanha.** Hoje 39
+empresas têm 1 `fbc` e 0 `utm_campaign`, porque nenhuma campanha rodou — a
+captura funciona e nunca foi exercitada. Com tráfego, o `fbclid` entra na URL,
+`utm-capture.tsx` grava, e a CAPI passa a mandar o clique junto. O EMQ de 6.2
+sobe a partir daí.
 
 ## O trial acabou, o token da Meta morreu, e o Instagram nunca esteve ligado (29/08)
 

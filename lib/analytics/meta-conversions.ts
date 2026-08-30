@@ -80,22 +80,44 @@ function sha256(valor: string): string {
   return createHash('sha256').update(valor).digest('hex')
 }
 
-async function enviarEventoParaMeta(
-  eventName: 'CompleteRegistration' | 'Purchase',
+/**
+ * Os eventos que este projeto manda, na ordem do funil.
+ *
+ * `Lead` e `ViewContent` são de topo e existem por uma razão de mídia, não de
+ * completude: a Meta precisa de ~50 conversões por semana do evento otimizado
+ * para sair da fase de aprendizado, e este produto fez **7 Purchase em 17
+ * dias** (medido na API em 30/08). Otimizar campanha por Purchase com esse
+ * volume é pagar o algoritmo para chutar. O evento de topo é por onde a
+ * campanha começa; os de baixo entram quando houver volume.
+ *
+ * `ViewContent` não aparece aqui porque é o único disparado pelo navegador —
+ * ver `lib/analytics/pixel-evento.ts`.
+ */
+type EventoDaMeta =
+  | 'Lead'
+  | 'CompleteRegistration'
+  | 'InitiateCheckout'
+  | 'AddPaymentInfo'
+  | 'Purchase'
+
+/**
+ * Monta o corpo que vai para a Graph API.
+ *
+ * Separada do envio porque é a parte que dá para testar sem rede: o que
+ * hasheia, o que entra só quando existe, e o `test_event_code`. Testar isso
+ * mockando `fetch` provaria que o mock foi chamado, não que o payload está
+ * certo — e é o payload que a Meta lê.
+ */
+export function montarCorpoDoEvento(
+  eventName: EventoDaMeta,
   params: EventoDeAtribuicao & { customData?: Record<string, unknown> },
-): Promise<void> {
-  const pixelId = process.env.NEXT_PUBLIC_META_PIXEL_ID
-  const token = process.env.META_CONVERSIONS_API_TOKEN
-
-  // Sem as duas credenciais, não tem o que mandar, mesmo padrão do resto
-  // do projeto: falta de env var não quebra nada, só não faz o efeito.
-  if (!pixelId || !token) return
-
+  testEventCode?: string,
+) {
   const emailHash = sha256(params.email.trim().toLowerCase())
   const telefoneHash = params.telefone ? sha256(normalizarTelefone(params.telefone)) : null
   const externalIdHash = params.userId ? sha256(params.userId) : null
 
-  const corpo = {
+  return {
     data: [
       {
         event_name: eventName,
@@ -117,7 +139,40 @@ async function enviarEventoParaMeta(
         ...(params.customData ? { custom_data: params.customData } : {}),
       },
     ],
+    // Manda o evento para o painel "Testar eventos" da Meta. **Existe só para
+    // a prova, e nunca é definida em produção.**
+    //
+    // Exercitar o funil para conferir que um evento dispara escreve no MESMO
+    // conjunto com que o algoritmo aprende quem perseguir — o defeito que
+    // custou caro em 20/08, com 18.192 PageViews de `localhost` ensinando a
+    // Meta a procurar gente que não existe.
+    //
+    // **O código precisa ser o REAL, copiado de Gerenciador de Eventos →
+    // Testar eventos.** Medido em 30/08, e ao contrário do que este comentário
+    // afirmava antes: com um código inventado (`TEST00000`) a Meta responde
+    // `events_received: 1` e **grava no dataset de produção assim mesmo**.
+    // Não há erro, não há aviso — o payload parece certo e o evento entra.
+    //
+    // Por isso a forma segura de provar um evento novo não é esta variável, e
+    // sim rodar o servidor com `META_CONVERSIONS_API_TOKEN` inválido: a Meta
+    // recusa, o `console.error` abaixo prova que a linha foi alcançada, e nada
+    // é gravado. Esta variável só ajuda quem tiver o código real em mãos.
+    ...(testEventCode ? { test_event_code: testEventCode } : {}),
   }
+}
+
+async function enviarEventoParaMeta(
+  eventName: EventoDaMeta,
+  params: EventoDeAtribuicao & { customData?: Record<string, unknown> },
+): Promise<void> {
+  const pixelId = process.env.NEXT_PUBLIC_META_PIXEL_ID
+  const token = process.env.META_CONVERSIONS_API_TOKEN
+
+  // Sem as duas credenciais, não tem o que mandar, mesmo padrão do resto
+  // do projeto: falta de env var não quebra nada, só não faz o efeito.
+  if (!pixelId || !token) return
+
+  const corpo = montarCorpoDoEvento(eventName, params, process.env.META_TEST_EVENT_CODE)
 
   try {
     const res = await fetch(
@@ -162,4 +217,70 @@ export async function enviarConversaoDeCompra(
  */
 export async function enviarConversaoDeRegistro(params: EventoDeAtribuicao): Promise<void> {
   await enviarEventoParaMeta('CompleteRegistration', params)
+}
+
+/**
+ * "Lead", disparado quando o cadastro cria a conta de verdade
+ * (`lib/supabase/actions.ts`, `signUp`).
+ *
+ * ## Por que ele é o evento mais importante desta lista
+ *
+ * É o de MAIOR volume real do funil, e volume é o que falta. A Meta precisa de
+ * ~50 conversões por semana do evento otimizado para sair da fase de
+ * aprendizado; este produto fez 7 Purchase em 17 dias. A campanha começa
+ * otimizando por aqui e sobe para `CompleteRegistration` e `Purchase` quando
+ * cada um tiver volume próprio.
+ *
+ * ## A guarda que o chamador PRECISA aplicar
+ *
+ * Com "Confirm email" ativo, e-mail já cadastrado **não volta como erro**: o
+ * Supabase devolve sucesso com `identities: []`, de propósito, para não
+ * permitir enumerar quem tem conta. Disparar sem checar isso faria toda
+ * tentativa de recadastro virar um Lead — e o número que a Meta usa para
+ * aprender ficaria inflado justamente por quem JÁ é cliente, que é o oposto
+ * do público a perseguir.
+ */
+export async function enviarConversaoDeLead(params: EventoDeAtribuicao): Promise<void> {
+  await enviarEventoParaMeta('Lead', params)
+}
+
+/**
+ * "InitiateCheckout", disparado quando a assinatura nasce no Asaas com
+ * cobrança gerada (`lib/asaas/actions.ts`, `createCheckout`).
+ *
+ * É o sinal mais próximo da compra que existe sem ter havido pagamento, e
+ * preenchia um vão de dias: entre o registro e o Purchase há Pix e boleto, que
+ * levam horas ou não acontecem nunca.
+ *
+ * `event_id` determinístico (`checkout:<subscriptionId>`) e não um UUID novo:
+ * o diálogo de pagamento pode ser fechado e reaberto, e cada reabertura
+ * contaria como uma intenção de compra a mais. Com id estável a Meta
+ * deduplica sozinha.
+ */
+export async function enviarConversaoDeInicioDeCheckout(
+  params: EventoDeAtribuicao & { valor: number },
+): Promise<void> {
+  await enviarEventoParaMeta('InitiateCheckout', {
+    ...params,
+    customData: { currency: 'BRL', value: params.valor },
+  })
+}
+
+/**
+ * "AddPaymentInfo", disparado quando o Pix e o boleto daquela cobrança
+ * carregam na tela (`lib/asaas/actions.ts`, `obterFormasDePagamento`).
+ *
+ * É o último passo antes do pagamento: a pessoa está com o QR Code na frente.
+ * Quem chega aqui e não paga é o público de remarketing mais valioso que este
+ * funil produz.
+ *
+ * Mesmo cuidado de `event_id` do irmão acima, por `pagamento:<cobrancaId>`.
+ */
+export async function enviarConversaoDeFormaDePagamento(
+  params: EventoDeAtribuicao & { valor: number },
+): Promise<void> {
+  await enviarEventoParaMeta('AddPaymentInfo', {
+    ...params,
+    customData: { currency: 'BRL', value: params.valor },
+  })
 }

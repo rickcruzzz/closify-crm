@@ -17,6 +17,7 @@ import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { buttonVariants } from '@/components/ui/button'
 import { RevealOnScroll } from '@/components/landing/reveal-on-scroll'
+import { EventoAoVer } from '@/components/analytics/evento-ao-ver'
 import {
   FREE_LEAD_LIMIT,
   FREE_MEMBER_LIMIT,
@@ -158,9 +159,17 @@ const plans: Plan[] = [
 
 export function PricingSection() {
   return (
-    // `overflow-x-clip` segura o brilho decorativo abaixo, que é mais largo
-    // que a viewport no mobile e gerava scroll horizontal na página inteira.
-    <section id="planos" className="relative overflow-x-clip px-4 py-20 md:px-6 md:py-28">
+    // "Viu o preço" é o sinal de intenção mais barato que esta página produz,
+    // e o único de topo com volume suficiente para uma campanha nova aprender
+    // — `Purchase` fez 7 em 17 dias, e a Meta pede ~50/semana para sair da
+    // fase de aprendizado.
+    //
+    // O wrapper fica FORA da `<section>` para não mexer no `id="planos"`, que
+    // é destino de âncora (`#planos`) em três lugares da landing.
+    <EventoAoVer evento="ViewContent">
+      {/* `overflow-x-clip` segura o brilho decorativo abaixo, que é mais largo
+          que a viewport no mobile e gerava scroll horizontal na página inteira. */}
+      <section id="planos" className="relative overflow-x-clip px-4 py-20 md:px-6 md:py-28">
       <div
         aria-hidden
         className="glow-radial pointer-events-none absolute top-1/3 left-1/2 -z-10 h-72 w-[36rem] -translate-x-1/2"
@@ -364,7 +373,8 @@ export function PricingSection() {
             </p>
           </div>
         </RevealOnScroll>
-      </div>
-    </section>
+        </div>
+      </section>
+    </EventoAoVer>
   )
 }

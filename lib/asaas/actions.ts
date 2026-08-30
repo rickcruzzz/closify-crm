@@ -1,8 +1,15 @@
 'use server'
 
 import { revalidatePath } from 'next/cache'
+import { headers } from 'next/headers'
 
 import { asaasFetch, AsaasApiError } from '@/lib/asaas/client'
+import { appUrl } from '@/lib/app-url'
+import { ipDaRequisicao } from '@/lib/request-ip'
+import {
+  enviarConversaoDeFormaDePagamento,
+  enviarConversaoDeInicioDeCheckout,
+} from '@/lib/analytics/meta-conversions'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getCurrentUserAndWorkspace } from '@/lib/supabase/workspace'
@@ -33,9 +40,13 @@ export async function createCheckout(values: unknown) {
     return { error: 'Apenas administradores podem assinar o plano Pro.' }
   }
 
+  // `fbc`/`fbp` entram no mesmo `select` que já busca o nome: são as âncoras
+  // de atribuição gravadas por `finalizarOnboarding` e a diferença entre o
+  // Meta saber que este checkout veio de um anúncio ou não. Mesmo dado que
+  // `buscarAssinante` lê no caminho do Purchase.
   const { data: workspace } = await supabase
     .from('workspaces')
-    .select('name')
+    .select('name, fbc, fbp')
     .eq('id', workspaceId)
     .single()
 
@@ -192,6 +203,37 @@ export async function createCheckout(values: unknown) {
     return { error: 'Assinatura criada, mas não foi possível gerar o link de pagamento.' }
   }
 
+  // "InitiateCheckout" pro Meta, e a posição é a regra: só DEPOIS do
+  // `invoiceUrl` confirmado. Antes daqui a assinatura pode existir sem
+  // cobrança nenhuma — foi exatamente o estado em que o workspace "pedro eee"
+  // ficou preso —, e avisar "iniciou o pagamento" de quem não tem o que pagar
+  // ensina o algoritmo a perseguir um passo que não acontece.
+  //
+  // É o sinal mais próximo de compra que existe sem ter havido pagamento. O
+  // vão que ele fecha é de DIAS: Pix e boleto demoram horas, cartão pode ser
+  // recusado, e sem este evento o clique original podia sair da janela de
+  // atribuição antes de o Purchase chegar.
+  try {
+    const cabecalhos = await headers()
+    await enviarConversaoDeInicioDeCheckout({
+      email: user.email ?? '',
+      // `checkout:` + id da assinatura, não UUID novo: quem clica em "Assinar"
+      // de novo depois de fechar o diálogo cairia como segunda intenção de
+      // compra, inflando o número que a campanha usa para otimizar.
+      eventId: `checkout:${subscriptionId}`,
+      valor: PRO_PLAN_PRICE,
+      userId: user.id,
+      fbc: workspace.fbc,
+      fbp: workspace.fbp,
+      actionSource: 'website',
+      clientIp: await ipDaRequisicao(),
+      clientUserAgent: cabecalhos.get('user-agent'),
+      eventSourceUrl: `${appUrl()}/settings/billing`,
+    })
+  } catch (err) {
+    console.error('Falha ao enviar InitiateCheckout pro Meta', err)
+  }
+
   // Confirma que a cobrança existe, mas NÃO devolve mais a URL da fatura.
   //
   // Até 23/08 esta função devolvia `{ url }` e quem chamava abria a página do
@@ -336,7 +378,7 @@ export async function cancelSubscription(values: unknown) {
  * ficar sem nenhum caminho porque um endpoint oscilou.
  */
 export async function obterFormasDePagamento() {
-  const { workspaceId } = await getCurrentUserAndWorkspace()
+  const { user, workspaceId } = await getCurrentUserAndWorkspace()
   const supabase = await createClient()
 
   const { data: isAdmin } = await supabase.rpc('is_workspace_admin', {
@@ -386,6 +428,40 @@ export async function obterFormasDePagamento() {
       },
     ),
   ])
+
+  // "AddPaymentInfo" pro Meta: a pessoa está com a forma de pagamento na
+  // frente. É o último passo antes do dinheiro, e quem chega aqui e não paga
+  // é o público de remarketing mais valioso que este funil produz.
+  //
+  // **Conferido que isto não vira laço**, que era o risco óbvio numa tela que
+  // fica aberta esperando o Pix cair: o `PagarDialog` chama esta função uma
+  // vez por abertura (efeito com dependência `[open]`); quem roda a cada 5s é
+  // `pagamentoFoiConfirmado`, logo abaixo, que é outra função. Ainda assim o
+  // `event_id` é preso ao id da cobrança, então fechar e reabrir o diálogo
+  // manda o mesmo evento e a Meta deduplica em vez de contar de novo.
+  try {
+    const { data: workspace } = await supabase
+      .from('workspaces')
+      .select('fbc, fbp')
+      .eq('id', workspaceId)
+      .maybeSingle()
+
+    const cabecalhos = await headers()
+    await enviarConversaoDeFormaDePagamento({
+      email: user.email ?? '',
+      eventId: `pagamento:${cobranca.id}`,
+      valor: cobranca.value ?? PRO_PLAN_PRICE,
+      userId: user.id,
+      fbc: workspace?.fbc,
+      fbp: workspace?.fbp,
+      actionSource: 'website',
+      clientIp: await ipDaRequisicao(),
+      clientUserAgent: cabecalhos.get('user-agent'),
+      eventSourceUrl: `${appUrl()}/settings/billing`,
+    })
+  } catch (err) {
+    console.error('Falha ao enviar AddPaymentInfo pro Meta', err)
+  }
 
   return {
     pagamento: {
