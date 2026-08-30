@@ -139,8 +139,9 @@ de uso real deste produto — **não de um número escolhido**.
 medido            15 simultaneas -> 28,4 req/s sustentadas
 
 uso real          1 CRM de PME e usado em rajadas curtas, algumas vezes
-                  ao dia. O banco mostra 255 escritas em agosto INTEIRO,
-                  de 23 empresas externas.
+                  ao dia. O banco mostra 255 escritas em agosto INTEIRO —
+                  mas TODAS de contas de teste do dono. Nao ha uso de
+                  cliente para observar (ver dor-de-mercado.md).
 
 perfil suposto    1.000 clientes, 100 acoes/dia cada = 100.000 acoes/dia
                   media:  100.000 / 86.400s = 1,2 req/s
@@ -156,9 +157,11 @@ pico** — desde que "simultâneos" signifique *cadastrados e ativos no dia*.
 segundo, a resposta é: não sei, e a folga acima não se aplica.** Esse número é
 ordem de grandeza de rede social, não de CRM de PME, e exigiria a suíte k6.
 
-O `100 ações/dia por cliente` é a suposição mais frágil desta conta. O dado
-real da base é muito menor (255 escritas em 30 dias, 23 empresas), mas ele
-mede um produto sem retenção — não serve de base para projetar uso saudável.
+O `100 ações/dia por cliente` é a suposição mais frágil desta conta, e não há
+como calibrá-la: as 255 escritas de agosto são todas de contas de teste do
+dono. **Não existe um único cliente externo com um contato cadastrado**, então
+não há uso real de que derivar o perfil. O número veio de uso típico de CRM de
+PME, não desta base.
 
 ---
 
@@ -192,11 +195,17 @@ mede um produto sem retenção — não serve de base para projetar uso saudáve
 2. so entao afirmar um numero
 ```
 
-Enquanto isso: a base tem **39 empresas** e nenhum cliente externo pagante. O
-risco de capacidade é hipotético; o de retenção é medido — 6 de 9 empresas
-externas usaram o produto por zero dia e nunca voltaram.
+Enquanto isso: a base tem **39 empresas**, das quais **33 são teste ou conta
+interna** pela função oficial `ehContaDeTeste`, e as 6 restantes têm zero
+contato cada uma.
 
-Capacidade não é o que trava a venda hoje.
+O risco de capacidade é hipotético. E o de retenção **não é medido** — não há
+cliente externo para medir. A versão anterior deste parágrafo afirmava "6 de 9
+usaram por zero dia", número que veio de uma classificação errada minha e foi
+retirado em 30/08 (ver `dor-de-mercado.md`).
+
+Capacidade não é o que trava a venda hoje. O que falta é tráfego, que ainda
+não rodou.
 
 ---
 

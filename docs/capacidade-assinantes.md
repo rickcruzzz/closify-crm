@@ -98,18 +98,20 @@ vencendo + 5% em trial):
 **O teto da função é 300s** (`functionDefaultTimeout: 300` na config do
 projeto, com Fluid Compute ligado).
 
-### O detalhe frágil, que vale corrigir antes de crescer
+### O detalhe frágil, CORRIGIDO nesta rodada
 
-`reconciliar-assinaturas` **não declara `maxDuration`**. Ele herda o padrão da
-plataforma. `limpar-eventos`, ao lado, declara `maxDuration = 60`
-explicitamente.
+`reconciliar-assinaturas` **não declarava `maxDuration`** — herdava o padrão da
+plataforma, enquanto `limpar-eventos`, ao lado, declara `60` e justifica no
+comentário.
 
-Herdar funciona hoje. Mas o padrão é configuração de projeto, e configuração
-muda — inclusive por engano, e sem ninguém relacionar a mudança com um cron
-que passou a morrer no meio. **Um cron que morre no meio deixa metade dos
-assinantes sem reconciliar e sem aviso, em silêncio.**
+Herdar funcionava. Mas o padrão é configuração de projeto, e configuração muda
+— inclusive por engano, e sem ninguém relacionar a mudança com um cron que
+passou a morrer no meio. **Um cron que morre no meio deixa metade dos
+assinantes sem reconciliar e sem aviso, em silêncio, e só volta no dia
+seguinte.**
 
-Declarar `export const maxDuration = 300` custa uma linha.
+Agora declara `export const maxDuration = 300`, com a medição e o motivo
+escritos ao lado.
 
 ## 3. Banco — 8 GB do Supabase Pro
 
@@ -159,12 +161,13 @@ por que a medição de máquina local não substitui.
 
 ```
 1. descobrir o plano do Resend          5 minutos, e o teto mais proximo
-2. declarar maxDuration no cron         1 linha, evita morte silenciosa
-3. paralelizar os lacos do cron         so se passar de 2.000 assinantes
-4. rodar a suite k6                     so quando concorrencia importar
+2. paralelizar os lacos do cron         so se passar de 2.000 assinantes
+3. rodar a suite k6                     so quando concorrencia importar
 ```
 
-Os itens 3 e 4 são para um problema que ainda não existe.
+(declarar `maxDuration` era o item 2 e foi feito nesta rodada)
+
+Os itens 2 e 3 são para um problema que ainda não existe.
 
 ---
 
@@ -174,9 +177,13 @@ Este diagnóstico dimensiona para **1.000+ assinantes**. A base hoje tem **39
 empresas e zero clientes externos pagantes** — as duas assinaturas ativas são
 a conta de teste do dono e a cortesia do Google Review.
 
-Nenhum dos tetos acima é o que impede vender. O que impede está medido em
-[dor-de-mercado.md](dor-de-mercado.md): 6 de 9 empresas externas usaram o
-produto por zero dia e nunca voltaram.
+Nenhum dos tetos acima é o que impede vender — e **também não há retenção
+ruim medida**, ao contrário do que a primeira versão deste documento afirmava.
+Das 39 empresas, 33 são teste ou conta interna pela função oficial, e as 6
+restantes têm zero contato cada uma. Não existe cliente externo para medir
+nada (correção de 30/08, ver `dor-de-mercado.md`).
+
+O que falta é tráfego pago, que ainda não rodou.
 
 Dimensionar para 2.500 assinantes é resolver um problema 60× maior que o
 maior número que este produto já teve.
@@ -193,5 +200,5 @@ GET api.resend.com/domains                3 chamadas, media 458ms
 select avg(pg_column_size(x)) por tabela  152/151/128/160 bytes
 select pg_database_size()                 14,5 MB
 vercel.json                               2 crons, sem `functions`
-app/api/cron/reconciliar-assinaturas/     3 lacos em serie, sem maxDuration
+app/api/cron/reconciliar-assinaturas/     3 lacos em serie; maxDuration declarado aqui
 ```

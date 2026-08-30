@@ -177,15 +177,28 @@ o CNPJ novo saiu, e é o degrau que destrava a verificação de negócio da Meta
 **Não confirmado na Receita nesta rodada**, e `lib/legal.ts` segue com
 `cnpj: null`.
 
-### Dor de mercado, com evidência de quatro classes
+### Dor de mercado, com evidência de TRÊS classes
+
+> **Corrigido em 30/08.** Esta seção dizia "quatro classes" e a primeira era o
+> banco de produção. Ela caiu: eu classifiquei "empresa externa" com um filtro
+> escrito na hora em vez de `ehContaDeTeste` (`lib/dono/contas-internas.ts`),
+> a função oficial do projeto. Refeito com ela: **33 das 39 empresas são teste
+> ou conta interna**, e as 6 restantes têm **zero contato cada uma**.
+>
+> Não existe cliente externo que tenha usado este produto — logo não existe
+> retenção ruim medida, ao contrário do que eu vinha afirmando aqui e em mais
+> três documentos. O `estado-atual.md` já registrava isso desde 22/08 ("todos
+> os cadastros até aqui foram teste do dono") e eu passei por cima.
+>
+> A dor selecionada continua de pé: as três evidências externas — pesquisa,
+> reclamação pública e demanda — são independentes desta base.
 
 [docs/dor-de-mercado.md](dor-de-mercado.md) analisa 5 candidatas e seleciona
 uma: **todo CRM cobra um pedágio de digitação que quem vende pelo WhatsApp não
 tem como pagar.**
 
-    banco de producao   96% concluem o onboarding, 39% criam o 1o contato
-                        (perde 13 de 22 num degrau so)
-                        6 de 9 usaram por 0 dia e nunca voltaram
+    banco de producao   RETIRADA — 33 das 39 empresas sao teste, e as 6
+                        restantes tem zero contato. Nao ha o que medir.
     publicada           3,4h/semana digitando; 55% das implantacoes falham,
                         e 60% disso e adocao, nao plataforma
     reclamacao          3 min por interacao x 30/dia = 90 min/dia
@@ -197,14 +210,18 @@ contato — função nativa do aplicativo, gera `.txt`, não depende de API. O
 caminho de importar arquivo já existe desde 11/08; muda o parser, não a
 arquitetura.
 
-**A ressalva que mais pesa, registrada junto:** o banco mostra ONDE as pessoas
-param, não POR QUÊ. Nenhuma das 23 empresas foi perguntada. Cinco conversas de
-dez minutos com esses usuários valem mais que o documento inteiro.
+**A ressalva que mais pesa, corrigida em 30/08:** o banco não mostra nem onde
+as pessoas param — não há pessoa. A dor vem inteiramente de evidência externa,
+é plausível e bem sustentada, e segue **sem uma única confirmação de alguém que
+usou este produto**. O que produz esse dado é o tráfego pago, que ainda não
+rodou.
 
-**Achado do próprio método:** minha primeira leitura deu "0% concluiu
-onboarding" porque eu media uma coluna (`concluido_em`) que não existe — é
-`status`. O real é 96%, e isso **move a queda** do onboarding para o cadastro
-do primeiro contato, que é outro diagnóstico e outra solução.
+**Dois achados do próprio método, e o segundo anula o primeiro.** A leitura
+inicial deu "0% concluiu onboarding" porque eu media uma coluna
+(`concluido_em`) que não existe — é `status`; o real era 96%. Em 30/08
+descobriu-se que a base inteira daquela leitura estava errada: as "empresas
+externas" eram teste. **Escrever o próprio filtro em vez de usar a função que
+o projeto já tinha foi o erro que produziu os dois.**
 
 ### PRD, diagrama e grafo realinhados
 
@@ -2772,6 +2789,27 @@ registrado como próximo passo se a base provar valor.
 | **Tarefa não entra no limite de plano**     | Travar follow-up empurra a pessoa de volta para o WhatsApp e mata o hábito diário que faz ela pagar. O teto de 5.000 abertas é defesa contra abuso, não regra de negócio |
 
 ## Armadilhas já pagas, não repetir
+
+**Nunca escreva o próprio filtro de "conta de teste".** `ehContaDeTeste`
+(`lib/dono/contas-internas.ts`) existe desde 25/08 exatamente para isso, é
+usada por duas telas da Central, e carrega no comentário o aviso de que a
+lista precisa ser mantida à mão — porque contas de `gmail.com` do dono nenhum
+filtro de domínio pega.
+
+Em 29/08 eu escrevi uma expressão regular sobre o e-mail em vez de importá-la,
+e ela classificou **23 empresas como externas quando são 6** — e mesmo essas 6
+têm zero contato. O número errado virou "6 de 9 clientes abandonaram no
+primeiro dia" e foi repetido em **quatro documentos**, incluindo a evidência
+nº 1 de `dor-de-mercado.md` e a conclusão de dois documentos de capacidade.
+
+O que torna esse erro caro é que ele **produz um número plausível**: 39%, 6 de
+9, tudo parece medição. Não há sinal de que está errado até alguém conferir a
+classificação — e nesse intervalo a conclusão errada se espalha por todo texto
+que cita o documento.
+
+A regra geral: quando existir função no projeto para uma classificação, use-a
+mesmo que escrever uma na hora pareça mais rápido. Duas cópias divergem, e a
+que diverge em silêncio é a que você escreveu.
 
 **Utility de breakpoint vale do breakpoint PARA CIMA, então `sm:` continua
 ativo em 1440px.** Parece óbvio escrito assim, e custou meia correção em 29/08:

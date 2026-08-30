@@ -17,64 +17,76 @@ critério de escolha.
 
 | # | dor candidata | evidência que tem | por que não foi escolhida |
 |---|---|---|---|
-| 1 | **Encher o CRM na mão** | banco + publicada + reclamação + demanda | **selecionada** — única com as 4 classes convergindo |
+| 1 | **Encher o CRM na mão** | publicada + reclamação + demanda | **selecionada** — 3 classes externas convergindo (a 4ª, do banco, foi retirada; ver abaixo) |
 | 2 | Vendedor sai e leva a carteira | nenhuma medida nesta rodada | ver ressalva abaixo |
-| 3 | Demora para responder o cliente | publicada forte | é dor de atendimento, não de CRM; o banco não a mede |
-| 4 | Negócio para sem próxima ação | banco forte | é **consequência** da nº 1, não causa independente |
+| 3 | Demora para responder o cliente | publicada forte | é dor de atendimento, não de CRM |
+| 4 | Negócio para sem próxima ação | só dado de teste | é **consequência** da nº 1 — e o banco só tem dado nosso |
 | 5 | Não sabe quanto tem para fechar | nenhuma direta | nenhuma evidência levantada a sustenta |
 
 **Sobre a nº 2, dita na cara:** ela está registrada no `estado-atual.md` desde
 21/08 como achado de pesquisa e virou promessa da landing ("O histórico fica
 com a empresa"). **Nesta rodada não levantei nenhuma evidência dela** — nem no
 banco nem fora. Isso não a torna falsa; torna-a não comprovada aqui. E há um
-sinal contrário que precisa ser dito: as empresas externas da base têm 1 a 2
-pessoas, e empresa de uma pessoa só não tem vendedor para sair.
+sinal contrário que precisa ser dito, e agora com a ressalva certa: não há
+empresa externa nenhuma na base para observar (ver Evidência 1).
 
-**Sobre a nº 4:** 55 de 70 negócios do banco não têm nenhuma próxima ação, e
-21 de 70 nunca mudaram de etapa. É evidência real e forte. Não foi escolhida
-porque um negócio sem próxima ação é o que acontece **depois** de ninguém
-alimentar o sistema — tratá-la como dor separada seria atacar o sintoma.
+**Sobre a nº 4:** 55 de 70 negócios do banco não têm próxima ação e 21 nunca
+mudaram de etapa. **Mas esses 70 negócios são todos de contas de teste**, então
+o número descreve como nós usamos o produto, não como um cliente usaria. Não
+foi escolhida por isso, e porque um negócio sem próxima ação é o que acontece
+**depois** de ninguém alimentar o sistema.
 
 ---
 
 ## A dor selecionada: o custo de pôr o dado dentro
 
-### Evidência 1 — comportamento no banco de produção (a mais forte, e a mais limitada)
+### Evidência 1 — RETIRADA. A classificação estava errada
 
-Lido em 29/08/2026 do banco real, com contas de teste e do dono excluídas pela
-regra de `lib/dono/ativacao.ts`:
+**Esta seção afirmava que 23 empresas externas usavam o produto e que 6 de 9
+o abandonavam no primeiro dia. Nenhum dos dois números resiste.**
 
-```
-empresas no banco        38
-externas (nao teste)     23   <- a base desta leitura
+O erro foi meu e é de método: eu classifiquei "externa" com um filtro escrito
+na hora — uma expressão regular sobre o e-mail — em vez de usar
+`ehContaDeTeste` (`lib/dono/contas-internas.ts`), que existe exatamente para
+isso e é a função que a Central do Dono usa em duas telas.
 
-criou conta              23  100%
-concluiu onboarding      22   96%
-1o contato                9   39%   <- PERDE 13 de 22 num degrau so
-1o negocio                7   30%
-criou tarefa              5   22%
-conectou canal            0    0%
-```
-
-**A queda não está na entrada.** 96% concluem o onboarding, 74% respondem o
-assistente de 4 perguntas e 65% completam o tour. As pessoas entendem o
-produto e passam por ele.
-
-Elas param exatamente onde precisam **digitar o primeiro cliente**.
-
-E das 9 que passaram desse degrau, o padrão de volta é pior que a queda:
+Refeito em 30/08 com a função oficial:
 
 ```
-6 de 9 usaram por 0 dia    tudo no mesmo dia em que criaram a conta,
-                           e nunca mais voltaram
+empresas no banco                                39
+teste ou interna (pela funcao oficial)           33
+"externas"                                        6
 ```
 
-Só uma (Fani RRH) usou por mais de 9 dias. Todas estão paradas há 2 a 27 dias.
+E as 6 restantes, uma a uma:
 
-**Limite desta evidência, dito antes de qualquer conclusão:** 23 empresas, das
-quais 9 passaram do primeiro degrau. **Não há significância estatística
-nenhuma nisso.** É sinal de direção, não prova de proporção — e a proporção
-exata (39%) não deve ser citada como se fosse taxa estável.
+```
+bajan63256@fanzher.com            dominio descartavel
+lakero3045@dd2car.com             dominio descartavel
+teste-pro-1787589892727@velofunil "teste" no nome E no dominio do dono
+enem85568@gmail.com               0 contatos, 0 negocios, 0 atividades
+imperium.business7i@gmail.com     0 contatos, 0 negocios, 0 atividades
+estefanymayara56@gmail.com        0 contatos, 0 negocios, 0 atividades
+```
+
+**Nenhuma das seis tem um único contato ou negócio.** Não existe uma só
+empresa externa que tenha usado este produto.
+
+**A conclusão correta é que não há dado de retenção — porque não há cliente.**
+Não que a retenção seja ruim. São afirmações diferentes, e eu vinha fazendo a
+errada.
+
+O `estado-atual.md` já registrava isso desde 22/08 ("todos os cadastros até
+aqui foram teste do dono"), e a própria `contas-internas.ts` avisa no
+comentário que a lista precisa ser mantida à mão justamente porque contas de
+`gmail.com` do dono nenhum filtro de domínio pega. Escrevi um filtro de
+domínio mesmo assim.
+
+**O que isso faz com este documento:** a dor selecionada continua sustentada
+pelas três evidências seguintes — pesquisa publicada, reclamação de usuário e
+demanda de mercado —, que são externas e independentes desta base. O que cai é
+a alegação de que o comportamento no banco a confirmava. Ele não confirma nada:
+o banco não tem usuário para confirmar.
 
 ### Evidência 2 — pesquisa publicada
 
@@ -92,7 +104,7 @@ não tem:
   ([LOW/CODE](https://www.lowcode.agency/blog/crm-implementation-failure-rate)).
 
 A última linha é a que importa para a escolha: **o CRM não falha por ser ruim,
-falha porque ninguém o alimenta.** É o mesmo desenho que o banco mostra aqui.
+falha porque ninguém o alimenta.**
 
 ### Evidência 3 — reclamação pública, com as palavras de quem sente
 
@@ -136,9 +148,11 @@ pelos percentuais de uso, não por volume medido.
 A pessoa que vende por WhatsApp (82%) precisa transcrever a conversa para o
 CRM (3 min por interação, 90 min/dia), não faz isso (23% apontam como
 obstáculo, 3,4h/semana quando fazem), e o CRM morre por adoção (55% falham,
-60% por usuário). No Velo Funil isso aparece como 13 de 22 empresas parando no
-degrau de cadastrar o primeiro contato, e 6 de 9 nunca voltando depois do
-primeiro dia.
+60% por usuário).
+
+**As três evidências são externas, e é só isso que sustenta a escolha.** A
+quarta, do banco, foi retirada — este produto ainda não teve um cliente
+externo que criasse um contato sequer.
 
 **A dor não é "falta um CRM". É que todo CRM cobra um pedágio de digitação que
 quem vende pelo WhatsApp não tem como pagar.**
@@ -200,11 +214,11 @@ conversa exportada é o "traga o que você já tem" para quem não tem planilha.
 
 | evidência | o que ela mostra | o que a solução faz |
 |---|---|---|
-| 13 de 22 param no 1º contato | o pedágio é digitar o primeiro cliente | o primeiro contato entra de um arquivo |
+| ~~13 de 22 param no 1º contato~~ | RETIRADO — a classificacao estava errada | — |
 | 3,4h/semana, 90 min/dia | transcrever conversa é o custo | não há transcrição |
 | 55% falham, 60% por adoção | CRM morre sem alimentação | o funil nasce cheio |
 | 82% vendem por WhatsApp | o dado já existe, no WhatsApp | é de lá que ele é lido |
-| 6 de 9 usaram por 0 dia | não há motivo para voltar no dia 2 | com funil cheio, existe o que fazer |
+| ~~6 de 9 usaram por 0 dia~~ | RETIRADO — nao ha cliente externo para medir | — |
 
 ---
 
@@ -213,15 +227,23 @@ conversa exportada é o "traga o que você já tem" para quem não tem planilha.
 Registrado com o mesmo peso do resto, porque documento que só afirma é
 propaganda:
 
-1. **A causa do abandono é inferida, não confirmada.** O banco mostra ONDE as
-   pessoas param. Ele não diz POR QUÊ. Nenhuma das 23 empresas foi
-   perguntada. A explicação "o custo é digitar" é a que as outras três
-   evidências sustentam, e continua sendo uma inferência até alguém falar com
-   um desses usuários. **É o próximo passo mais barato e mais valioso deste
-   documento** — cinco conversas de dez minutos valem mais que esta página.
+1. **Não existe abandono medido, porque não existe usuário.** A versão
+   anterior deste item dizia que o banco mostrava ONDE as pessoas param. Ele
+   não mostra: as 39 empresas são de teste do dono, e as 6 que meu filtro
+   errado chamou de externas têm zero contato cada uma.
 
-2. **A base é pequena demais para taxa.** 23 empresas externas, 9 além do
-   primeiro degrau. Direção, não proporção.
+   A dor selecionada vem inteiramente de evidência EXTERNA — pesquisa,
+   reclamação pública e demanda. Ela é plausível e bem sustentada, e continua
+   sem uma única confirmação vinda de alguém que usou este produto.
+
+   **O que produz esse dado é o tráfego pago**, que ainda não rodou. Enquanto
+   ele não rodar, qualquer conclusão sobre comportamento de cliente aqui é
+   sobre um cliente que não existe.
+
+2. **Não há base nenhuma.** Corrigido em 30/08: são 6 "externas", todas com
+   zero contato e zero negócio, e pelo menos 3 delas também são teste. A
+   afirmação anterior (23 empresas, 9 ativas) veio de um filtro meu escrito na
+   hora em vez da função oficial do projeto.
 
 3. **A solução não foi testada.** Nenhuma linha foi escrita, nenhum `.txt` de
    conversa real foi processado. O formato de exportação do WhatsApp varia por
