@@ -22,7 +22,18 @@
  */
 
 /** E-mails de contas internas. Comparado em minúsculas. */
-const EMAILS_INTERNOS = new Set(['google.review@velofunil.com.br'])
+const EMAILS_INTERNOS = new Set([
+  'google.review@velofunil.com.br',
+  // Conta de demonstração das Conversas. Faltava aqui, e por isso 4 dos
+  // erros de produção de `error_logs` pareciam ser de cliente quando eram de
+  // uma sessão de teste — achado em 30/08 ao ler a tabela pela primeira vez.
+  'demo.conversas@velofunil.com.br',
+  // As duas contas usadas para gravar o vídeo de verificação OAuth do Google
+  // (20/08 e 24/08). Zero empresa, zero contato, um login cada — conferido no
+  // banco, não deduzido do nome. Juntas geraram 11 dos 21 erros de produção.
+  'oauthtestks@gmail.com',
+  'oauthtestmsn@gmail.com',
+])
 
 /**
  * Verdadeiro quando a conta existe por razão operacional nossa.

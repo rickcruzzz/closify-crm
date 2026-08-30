@@ -540,10 +540,16 @@ export type Database = {
           message: string
           digest: string | null
           stack: string | null
+          // A árvore de componentes por nome (0058). É o que torna um stack
+          // minificado diagnosticável — ver `CapturaDeComponente`.
+          component_stack: string | null
           url: string | null
           origem: string
           workspace_id: string | null
           user_id: string | null
+          // Erro de conta nossa, não de cliente (0058). Gravado de propósito,
+          // separado de propósito.
+          interno: boolean
           created_at: string
         }
         Insert: {
@@ -551,10 +557,12 @@ export type Database = {
           message: string
           digest?: string | null
           stack?: string | null
+          component_stack?: string | null
           url?: string | null
           origem: string
           workspace_id?: string | null
           user_id?: string | null
+          interno?: boolean
           created_at?: string
         }
         Update: {
@@ -562,10 +570,12 @@ export type Database = {
           message?: string
           digest?: string | null
           stack?: string | null
+          component_stack?: string | null
           url?: string | null
           origem?: string
           workspace_id?: string | null
           user_id?: string | null
+          interno?: boolean
           created_at?: string
         }
         Relationships: []

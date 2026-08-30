@@ -8,6 +8,15 @@
 export function reportarErro(
   error: Error & { digest?: string },
   origem: 'dashboard' | 'global' | 'publico',
+  /**
+   * A árvore de componentes React, por NOME.
+   *
+   * Só quem chama daqui é `CapturaDeComponente`, o boundary de classe — o
+   * `error.tsx` do App Router recebe apenas `{ error, reset }` e não tem
+   * acesso a isto. É a diferença entre um stack minificado que não nomeia
+   * arquivo nenhum e saber qual componente entrou em loop.
+   */
+  componentStack?: string,
 ) {
   try {
     fetch('/api/log-erro', {
@@ -18,6 +27,7 @@ export function reportarErro(
         message: error.message,
         digest: error.digest,
         stack: error.stack,
+        componentStack,
         url: typeof window !== 'undefined' ? window.location.href : undefined,
         origem,
       }),

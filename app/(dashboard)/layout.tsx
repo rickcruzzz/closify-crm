@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import { redirect } from 'next/navigation'
 
 import { Sidebar } from '@/components/layout/sidebar'
+import { CapturaDeComponente } from '@/components/erros/captura-de-componente'
 import { Topbar } from '@/components/layout/topbar'
 import { TooltipProvider } from '@/components/ui/tooltip'
 import { getCurrentUserAndWorkspace } from '@/lib/supabase/workspace'
@@ -144,7 +145,12 @@ export default async function DashboardLayout({
               O Kanban rola na horizontal por conta própria e é a exceção, ele
               passa por cima com `max-w-none`. */}
           <div className="mx-auto w-full max-w-[1160px]">
-            {children}
+            {/* Invisível: reporta o NOME do componente que quebrou e relança
+                para o `error.tsx` desenhar a tela de sempre. Existe porque o
+                boundary do App Router recebe só `{ error, reset }`, e foi
+                essa lacuna que deixou os dois "React #185" do /kanban sem
+                diagnóstico — stack minificado que não nomeia arquivo nenhum. */}
+            <CapturaDeComponente origem="dashboard">{children}</CapturaDeComponente>
           </div>
           </main>
         </div>
