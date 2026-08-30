@@ -20,6 +20,15 @@ export type TamanhoEquipe = 'so_eu' | '2_5' | '6_20' | '21_mais'
 // pela lição de `deal_stage`: enum não aceita `drop value`, então um terceiro
 // tipo aqui custaria recriar o tipo inteiro em vez de editar uma linha.
 export type TipoDeFeedback = 'problema' | 'sugestao'
+// O acompanhamento do relato (0061). `descartado` e `resolvido` sao destinos
+// DIFERENTES de proposito: "consertei" e "decidi nao fazer" sao decisoes
+// distintas, e guardar as duas como "fechado" apagaria justamente a informacao
+// que interessa reler quando a mesma coisa for relatada de novo.
+export type StatusDeFeedback = 'aberto' | 'em_andamento' | 'resolvido' | 'descartado'
+// Um anexo do relato. Guardado em `jsonb` e nao em tabela filha: sao no maximo
+// tres itens que nascem e morrem com o relato, e nenhuma pergunta deste
+// produto comeca com "quais relatos tem PDF".
+export type AnexoDeFeedback = { caminho: string; nome: string; tamanho: number }
 
 /**
  * Os campos de empresa acrescentados em 0030.
@@ -607,6 +616,10 @@ export type Database = {
           user_id: string | null
           // Relato de conta nossa, não de cliente. Vem de `ehContaDeTeste`.
           interno: boolean
+          anexos: AnexoDeFeedback[]
+          status: StatusDeFeedback
+          solucao: string | null
+          resolvido_em: string | null
           created_at: string
         }
         Insert: {
@@ -619,6 +632,10 @@ export type Database = {
           workspace_id?: string | null
           user_id?: string | null
           interno?: boolean
+          anexos?: AnexoDeFeedback[]
+          status?: StatusDeFeedback
+          solucao?: string | null
+          resolvido_em?: string | null
           created_at?: string
         }
         Update: {
@@ -631,6 +648,10 @@ export type Database = {
           workspace_id?: string | null
           user_id?: string | null
           interno?: boolean
+          anexos?: AnexoDeFeedback[]
+          status?: StatusDeFeedback
+          solucao?: string | null
+          resolvido_em?: string | null
           created_at?: string
         }
         Relationships: []

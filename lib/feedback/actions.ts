@@ -11,6 +11,12 @@ import { ehContaDeTeste } from '@/lib/dono/contas-internas'
 import { getResend } from '@/lib/resend/client'
 import { renderFeedbackRecebidoEmail } from '@/lib/emails/feedback-recebido'
 import { CONTROLADOR } from '@/lib/legal'
+import {
+  ANEXO_BUCKET,
+  ANEXO_QUANTIDADE_MAXIMA,
+  caminhoDoAnexo,
+  validarAnexo,
+} from '@/lib/storage/anexo-de-feedback'
 
 /**
  * O relato do cliente, enviado de dentro do produto.
@@ -30,10 +36,26 @@ import { CONTROLADOR } from '@/lib/legal'
  * poderia reler o que enviou — recurso que não foi pedido e que traria uma
  * segunda doutrina de autorização para uma tabela de sistema.
  */
-export async function enviarFeedback(values: unknown) {
-  const parsed = feedbackSchema.safeParse(values)
+export async function enviarFeedback(formulario: FormData) {
+  // `FormData` e não objeto: é o único jeito de um arquivo atravessar de uma
+  // Server Action. Os campos de texto vêm daqui e passam pelo MESMO schema de
+  // antes — o formato do transporte mudou, a validação não.
+  const parsed = feedbackSchema.safeParse({
+    tipo: formulario.get('tipo'),
+    mensagem: formulario.get('mensagem'),
+    rota: formulario.get('rota') ?? undefined,
+  })
   if (!parsed.success) {
     return { error: parsed.error.issues[0]?.message ?? 'Não foi possível enviar.' }
+  }
+
+  const arquivos = formulario.getAll('anexos').filter((a): a is File => a instanceof File)
+
+  // O teto é checado ANTES de ler byte nenhum. Ler três arquivos de 10 MB para
+  // então recusar o quarto seria gastar 30 MB de memória do servidor por uma
+  // decisão que não depende do conteúdo.
+  if (arquivos.length > ANEXO_QUANTIDADE_MAXIMA) {
+    return { error: `Envie no máximo ${ANEXO_QUANTIDADE_MAXIMA} arquivos.` }
   }
 
   const { user, workspaceId, workspaces } = await getCurrentUserAndWorkspace()
@@ -69,7 +91,64 @@ export async function enviarFeedback(values: unknown) {
   const interno = ehContaDeTeste(user.email)
 
   const admin = createAdminClient()
+
+  // O id é gerado AQUI, antes do insert, porque o caminho do anexo precisa
+  // dele (`<workspace>/<relato>/<arquivo>`) e os arquivos sobem antes da linha
+  // existir. A alternativa — inserir, subir, e dar update — deixaria uma linha
+  // sem anexo visível na Central caso o upload falhasse no meio.
+  const feedbackId = crypto.randomUUID()
+
+  // ## Os bytes são lidos e validados no SERVIDOR, sempre
+  //
+  // O navegador já recusou o que dava para recusar sem subir nada — mas
+  // medição do cliente é INFORMAÇÃO, não permissão. Isso foi provado em 20/08:
+  // um arquivo de 720×720 declarado como 1080×1080 passou pela validação de
+  // tela e entrou na biblioteca de criativos.
+  //
+  // Aqui a decisão é pelos bytes iniciais, então `.exe` renomeado para `.png`
+  // com `Content-Type: image/png` é recusado mesmo tendo passado por tudo
+  // antes.
+  const anexos: { caminho: string; nome: string; tamanho: number }[] = []
+
+  for (const arquivo of arquivos) {
+    const bytes = new Uint8Array(await arquivo.arrayBuffer())
+    const veredito = validarAnexo(bytes)
+
+    if ('erro' in veredito) {
+      // Limpa o que já subiu: metade dos anexos num relato que não existe é
+      // lixo no bucket que ninguém encontraria depois.
+      if (anexos.length > 0) {
+        await admin.storage.from(ANEXO_BUCKET).remove(anexos.map((a) => a.caminho))
+      }
+      return { error: `${arquivo.name}: ${veredito.erro}` }
+    }
+
+    const caminho = caminhoDoAnexo(workspaceId, feedbackId, veredito.extensao)
+    const { error: erroUpload } = await admin.storage
+      .from(ANEXO_BUCKET)
+      .upload(caminho, bytes, { contentType: veredito.tipoMime, upsert: false })
+
+    if (erroUpload) {
+      console.error('enviarFeedback: upload de anexo falhou', erroUpload)
+      if (anexos.length > 0) {
+        await admin.storage.from(ANEXO_BUCKET).remove(anexos.map((a) => a.caminho))
+      }
+      return { error: 'Não foi possível enviar o anexo. Tente de novo em instantes.' }
+    }
+
+    // O nome ORIGINAL é guardado à parte porque o caminho no bucket é
+    // aleatório de propósito (dois anexos podem se chamar "Captura de
+    // tela.png"). Cortado em 200: nome de arquivo não tem limite no sistema
+    // operacional, e um nome de 4 KB entraria inteiro no JSON.
+    anexos.push({
+      caminho,
+      nome: arquivo.name.slice(0, 200),
+      tamanho: bytes.length,
+    })
+  }
+
   const { error } = await admin.from('feedback').insert({
+    id: feedbackId,
     tipo: parsed.data.tipo,
     mensagem: parsed.data.mensagem,
     rota: parsed.data.rota ?? null,
@@ -78,10 +157,16 @@ export async function enviarFeedback(values: unknown) {
     workspace_id: workspaceId,
     user_id: user.id,
     interno,
+    anexos,
   })
 
   if (error) {
     console.error('enviarFeedback: insert falhou', error)
+    // Sem a linha, os arquivos ficariam órfãos: a purga acha anexo pela coluna
+    // `anexos` do relato, então nada apontaria para eles nunca mais.
+    if (anexos.length > 0) {
+      await admin.storage.from(ANEXO_BUCKET).remove(anexos.map((a) => a.caminho))
+    }
     return { error: 'Não foi possível enviar agora. Tente de novo em instantes.' }
   }
 
@@ -103,6 +188,11 @@ export async function enviarFeedback(values: unknown) {
         plano,
         rota: parsed.data.rota ?? null,
         mensagem: parsed.data.mensagem,
+        // Só a CONTAGEM, não os arquivos. Anexar 3 imagens de 10 MB num
+        // e-mail é 30 MB que o Gmail recusa (teto de 25 MB) e que o Resend
+        // cobra — e o dono precisa dos arquivos na Central, onde estão com
+        // link assinado, não na caixa de entrada.
+        quantidadeDeAnexos: anexos.length,
       })
 
       // O retorno é `{ data, error }` — o SDK do Resend **não lança** em

@@ -2,68 +2,110 @@ import 'server-only'
 
 import { createAdminClient } from '@/lib/supabase/admin'
 import { exigirAmbienteLocal } from '@/lib/dono/somente-local'
-import type { TipoDeFeedback } from '@/types/supabase'
+import { ANEXO_BUCKET } from '@/lib/storage/anexo-de-feedback'
+import type { AnexoDeFeedback, StatusDeFeedback, TipoDeFeedback } from '@/types/supabase'
+
+export type AnexoNaTela = AnexoDeFeedback & {
+  /** URL assinada, validade curta. O bucket é privado e não tem URL fixa. */
+  url: string | null
+  ehImagem: boolean
+}
 
 export type RelatoNaTela = {
   id: string
   tipo: TipoDeFeedback
+  status: StatusDeFeedback
   mensagem: string
+  solucao: string | null
   rota: string | null
   plano: string | null
+  userAgent: string | null
   criadoEm: string
+  resolvidoEm: string | null
   /** Nome da empresa, resolvido aqui — a tabela guarda só o id. */
   empresa: string
-  /** Para responder. É a ação que a tela existe para provocar. */
-  email: string
+  /**
+   * Quem escreveu, com nome E e-mail.
+   *
+   * O nome vem de `user_metadata.name`, gravado no cadastro. Sem ele a fila
+   * seria uma lista de endereços — e responder a "wixese9814@neplis.com" é
+   * outra conversa que responder a "Marcos, da Consultoria Ribeiro".
+   */
+  pessoa: { nome: string; email: string }
+  anexos: AnexoNaTela[]
 }
 
 export type FilaDeFeedback = {
   relatos: RelatoNaTela[]
-  /** Quantos foram silenciados, para o contador de "mostrar de novo". */
-  silenciados: number
+  /** Contagem por status, para os filtros mostrarem quanto há em cada. */
+  contagem: Record<StatusDeFeedback, number> & { total: number; problemas: number }
   /**
    * Quantos relatos internos existem, dito à parte.
    *
    * Não entram na fila — misturá-los é o defeito que a Central pagou em 20/08,
    * quando 8 de 11 alertas eram teste do próprio dono e a fila inteira virou
-   * algo a ignorar. Mas esconder o número por completo faria parecer que
-   * ninguém testou, então ele aparece como nota de rodapé.
+   * algo a ignorar. Mas esconder o número faria parecer que ninguém testou.
    */
   internos: number
+  /**
+   * A leitura bateu no teto?
+   *
+   * O `.limit()` existe porque o PostgREST corta em 1.000 linhas e **não
+   * devolve erro** — defeito que já custou três funções deste projeto (0032,
+   * 0033). Devolver este sinal é o que impede a tela de mentir por omissão,
+   * que era a lacuna registrada na verificação de 30/08.
+   */
+  bateuNoTeto: boolean
   lidoEm: string
 }
 
+const TETO = 300
+
+const VAZIO: FilaDeFeedback['contagem'] = {
+  aberto: 0,
+  em_andamento: 0,
+  resolvido: 0,
+  descartado: 0,
+  total: 0,
+  problemas: 0,
+}
+
 /**
- * A fila de relatos, para a Central do Dono.
+ * A fila de relatos, para a Central de Suporte.
  *
  * Lê com `createAdminClient()` porque `feedback` tem RLS ligada e ZERO policy
- * (migration 0060) — nenhum papel de usuário enxerga a tabela, e a Central já
- * roda fora da RLS e só em localhost.
+ * (0060) — nenhum papel de usuário enxerga a tabela, e a Central já roda fora
+ * da RLS e só em localhost.
  *
- * ## Duas consultas, não um join
+ * ## Devolve TODOS, e filtra na tela
  *
- * `feedback` não tem FK para `workspaces` de propósito (apagar a empresa não
- * pode apagar a evidência do problema que ela relatou), então o PostgREST não
- * consegue embutir o nome. As duas leituras são pequenas e a fila é curta.
+ * Antes esta função escondia o que estava silenciado, e a tela só oferecia
+ * "reexibir tudo" — não havia como ver um item já tratado isoladamente. Agora
+ * o status vive no BANCO (0061) e a fila inteira vem; quem escolhe o que ver é
+ * quem está olhando.
  */
-export async function lerFilaDeFeedback(silenciados: Set<string>): Promise<FilaDeFeedback> {
+export async function lerFilaDeFeedback(): Promise<FilaDeFeedback> {
   await exigirAmbienteLocal()
 
   const admin = createAdminClient()
 
-  // `.limit()` explícito: o PostgREST corta em 1.000 linhas e NÃO devolve erro
-  // — o defeito que já custou três funções deste projeto (0032, 0033). 200 é
-  // mais do que qualquer fila que uma pessoa lê, e o teto é declarado em vez
-  // de herdado.
   const { data: linhas, error } = await admin
     .from('feedback')
-    .select('id, tipo, mensagem, rota, plano, workspace_id, user_id, interno, created_at')
+    .select(
+      'id, tipo, status, mensagem, solucao, rota, plano, user_agent, workspace_id, user_id, interno, anexos, created_at, resolvido_em',
+    )
     .order('created_at', { ascending: false })
-    .limit(200)
+    .limit(TETO)
 
   if (error) {
     console.error('lerFilaDeFeedback falhou', error)
-    return { relatos: [], silenciados: 0, internos: 0, lidoEm: new Date().toISOString() }
+    return {
+      relatos: [],
+      contagem: VAZIO,
+      internos: 0,
+      bateuNoTeto: false,
+      lidoEm: new Date().toISOString(),
+    }
   }
 
   const todos = linhas ?? []
@@ -78,31 +120,82 @@ export async function lerFilaDeFeedback(silenciados: Set<string>): Promise<FilaD
 
   const nomePorId = new Map((empresas ?? []).map((w) => [w.id, w.name]))
 
-  // Um `getUserById` por relato seria uma ida por linha. A fila é curta e a
-  // Central roda local, mas o padrão do projeto é não escrever laço de rede
-  // sem necessidade — então busca uma página de usuários e casa em memória.
+  // Uma página de usuários e casamento em memória, em vez de um
+  // `getUserById` por relato — que seria uma ida de rede por linha.
   const { data: usuarios } = await admin.auth.admin.listUsers({ page: 1, perPage: 1000 })
-  const emailPorId = new Map((usuarios?.users ?? []).map((u) => [u.id, u.email ?? '']))
+  const pessoaPorId = new Map(
+    (usuarios?.users ?? []).map((u) => [
+      u.id,
+      {
+        // `user_metadata.name` é o que o cadastro grava. Sem ele, o e-mail
+        // serve de nome — é feio, mas é melhor que "Sem nome" para quem
+        // precisa reconhecer a pessoa.
+        nome: (u.user_metadata?.name as string | undefined)?.trim() || (u.email ?? 'Sem nome'),
+        email: u.email ?? 'sem e-mail',
+      },
+    ]),
+  )
 
-  const relatos: RelatoNaTela[] = deCliente
-    .filter((l) => !silenciados.has(l.id))
-    .map((l) => ({
-      id: l.id,
-      tipo: l.tipo,
-      mensagem: l.mensagem,
-      rota: l.rota,
-      plano: l.plano,
-      criadoEm: l.created_at,
-      // A empresa pode ter sido apagada — e é justamente o caso que mais
-      // interessa ler, porque o relato pode explicar por que ela saiu.
-      empresa: (l.workspace_id && nomePorId.get(l.workspace_id)) || 'Empresa apagada',
-      email: (l.user_id && emailPorId.get(l.user_id)) || 'sem e-mail',
-    }))
+  // As URLs assinadas de TODOS os anexos, numa chamada por relato com anexo.
+  // Uma hora de validade: a Central é aberta e usada na hora, e link longo de
+  // arquivo com print de cliente é superfície que não precisa existir.
+  const relatos: RelatoNaTela[] = await Promise.all(
+    deCliente.map(async (l) => {
+      const lista = (l.anexos ?? []) as AnexoDeFeedback[]
+      let anexos: AnexoNaTela[] = []
+
+      if (lista.length > 0) {
+        const { data: assinadas } = await admin.storage
+          .from(ANEXO_BUCKET)
+          .createSignedUrls(
+            lista.map((a) => a.caminho),
+            3600,
+          )
+
+        anexos = lista.map((a, i) => ({
+          ...a,
+          url: assinadas?.[i]?.signedUrl ?? null,
+          // Pelo caminho, não pelo nome original: o nome vem de quem enviou e
+          // pode não ter extensão nenhuma. O caminho é montado pelo servidor
+          // a partir do formato detectado nos bytes.
+          ehImagem: !a.caminho.endsWith('.pdf'),
+        }))
+      }
+
+      return {
+        id: l.id,
+        tipo: l.tipo,
+        status: l.status,
+        mensagem: l.mensagem,
+        solucao: l.solucao,
+        rota: l.rota,
+        plano: l.plano,
+        userAgent: l.user_agent,
+        criadoEm: l.created_at,
+        resolvidoEm: l.resolvido_em,
+        // A empresa pode ter sido apagada — e é justamente o caso que mais
+        // interessa ler, porque o relato pode explicar por que ela saiu.
+        empresa: (l.workspace_id && nomePorId.get(l.workspace_id)) || 'Empresa apagada',
+        pessoa: (l.user_id && pessoaPorId.get(l.user_id)) || {
+          nome: 'Conta apagada',
+          email: 'sem e-mail',
+        },
+        anexos,
+      }
+    }),
+  )
+
+  const contagem = { ...VAZIO, total: relatos.length }
+  for (const r of relatos) {
+    contagem[r.status] += 1
+    if (r.tipo === 'problema') contagem.problemas += 1
+  }
 
   return {
     relatos,
-    silenciados: deCliente.filter((l) => silenciados.has(l.id)).length,
+    contagem,
     internos: todos.length - deCliente.length,
+    bateuNoTeto: todos.length === TETO,
     lidoEm: new Date().toISOString(),
   }
 }

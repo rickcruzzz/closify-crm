@@ -55,7 +55,7 @@ const SECOES = [
   // é o que o cliente DISSE — e é a única fonte de "por quê" que este produto
   // tem. Ativação, logo abaixo, diz onde as pessoas param; só o relato diz o
   // motivo.
-  { href: '/dono/feedback', rotulo: 'Feedback', icone: MessageSquareText },
+  { href: '/dono/suporte', rotulo: 'Suporte', icone: MessageSquareText },
   // Depois de Alertas e antes de Anúncio de propósito: a ordem é a da rotina —
   // primeiro o que quebrou, depois se as pessoas estão usando, e só então
   // quanto custa trazer mais gente. Olhar anúncio antes de ativação é comprar

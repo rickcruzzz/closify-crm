@@ -40,8 +40,18 @@ export function renderFeedbackRecebidoEmail(params: {
   /** A tela de onde o relato saiu. */
   rota: string | null
   mensagem: string
+  /**
+   * Quantos arquivos vieram junto — só o NÚMERO, nunca os arquivos.
+   *
+   * Anexar três imagens de 10 MB seria 30 MB num e-mail: o Gmail recusa acima
+   * de 25 MB, e o Resend cobra por volume. O destinatário precisa dos arquivos
+   * na Central, onde abrem por link assinado, não na caixa de entrada. O que o
+   * e-mail precisa dizer é que EXISTEM, para valer a pena abrir a Central.
+   */
+  quantidadeDeAnexos?: number
 }): { subject: string; html: string } {
   const { emailDoCliente, empresa, plano, rota, mensagem } = params
+  const anexos = params.quantidadeDeAnexos ?? 0
 
   // O plano entra no ASSUNTO, não só no corpo: cliente pagante travado é outra
   // urgência, e o assunto é a única parte lida na notificação do celular.
@@ -68,6 +78,13 @@ export function renderFeedbackRecebidoEmail(params: {
           `<span style="display:block;border-left:3px solid #e5e5e5;padding-left:12px;color:#404040;">` +
             `${escapeHtml(mensagem).replace(/\n/g, '<br />')}</span>`,
         ),
+        ...(anexos > 0
+          ? [
+              rawParagraph(
+                `Veio com <strong style="color:#171717;font-weight:600;">${anexos} ${anexos === 1 ? 'anexo' : 'anexos'}</strong>, que abrem na Central.`,
+              ),
+            ]
+          : []),
         rawParagraph(
           `Responda direto para <strong style="color:#171717;font-weight:600;">${escapeHtml(emailDoCliente)}</strong>.`,
         ),
