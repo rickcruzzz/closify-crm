@@ -7,11 +7,24 @@ export function PageHeader({
   className,
 }: {
   title: string
-  description?: string
+  /**
+   * Texto de apoio, ou um espaço reservado.
+   *
+   * Aceita `ReactNode` e não só `string` por causa de uma tela: em
+   * `/settings` a descrição depende da ABA, que vem de `searchParams` — e
+   * `loading.tsx` não recebe `searchParams` no App Router. O esqueleto não
+   * tem como saber qual frase virá, então ele passa um `Skeleton` daqui em
+   * vez de afirmar a de uma aba qualquer.
+   */
+  description?: React.ReactNode
   /** Botões da página. Empilham abaixo do título no mobile. */
   actions?: React.ReactNode
   className?: string
 }) {
+  // `<p>` só quando o conteúdo é texto de verdade. Um `Skeleton` é um `<div>`,
+  // e `<p><div/></p>` é HTML inválido — o navegador fecha o parágrafo antes da
+  // div e o resultado é um `<p>` vazio com a div solta ao lado.
+  const Descricao = typeof description === 'string' ? 'p' : 'div'
   return (
     // O cabeçalho de toda tela do produto entra com o mesmo movimento das
     // telas de login: `duration-entrada` com `delay-passo-*` crescente, os
@@ -40,9 +53,9 @@ export function PageHeader({
           {title}
         </h1>
         {description && (
-          <p className="text-muted-foreground animate-in fade-in slide-in-from-bottom-2 fill-mode-both ease-entrada duration-entrada delay-passo-2 text-sm text-pretty">
+          <Descricao className="text-muted-foreground animate-in fade-in slide-in-from-bottom-2 fill-mode-both ease-entrada duration-entrada delay-passo-2 text-sm text-pretty">
             {description}
-          </p>
+          </Descricao>
         )}
       </div>
 

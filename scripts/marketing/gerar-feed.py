@@ -103,46 +103,18 @@ def salvar(img, nome):
     print(f"  {nome}.png  ({final.width}x{final.height})  +  @4k")
 
 
-def capsula_vazia(draw, texto, y, x=None):
-    """
-    A cápsula de categoria, sem ícone por dentro.
-
-    É `pill()` do gerador de Stories menos uma linha: lá um ponto teal abre a
-    etiqueta, aqui não abre nada. A moldura é idêntica de propósito — mesmo
-    raio, mesma borda `(0,122,123)`, mesmo preenchimento, mesmo tracking —,
-    porque as duas famílias aparecem no mesmo perfil, e uma cápsula com
-    proporção diferente leria como peça de outra marca.
-
-    **O espaço do ponto sai junto com o ponto.** Manter o recuo produziria uma
-    etiqueta com vão à esquerda e o texto empurrado, que lê como imagem que
-    não carregou — pior do que o ícone que se queria remover.
-    """
-    texto = texto.upper()
-    fnt = g.fonte(g.ROTULO, 26)
-    tracking = 3.2 * g.ESCALA
-    pad_x, pad_y = 30 * g.ESCALA, 17 * g.ESCALA
-
-    larg_texto = draw.textlength(texto, font=fnt) + tracking * (len(texto) - 1)
-    larg = larg_texto + pad_x * 2
-    alt = fnt.size + pad_y * 2
-    if x is None:
-        x = g.MARGEM_ESQ
-
-    draw.rounded_rectangle(
-        [x, y, x + larg, y + alt], radius=int(alt / 2),
-        fill=(8, 40, 41), outline=(0, 122, 123), width=max(1, int(1.5 * g.ESCALA)),
-    )
-
-    # Letra a letra: o Pillow não tem `letter-spacing`, e a string inteira
-    # sairia sem o espaçamento que faz o rótulo ler como sinalização em vez
-    # de frase.
-    tx = x + pad_x
-    ty = y + pad_y - 2 * g.ESCALA
-    for letra in texto:
-        draw.text((tx, ty), letra, font=fnt, fill=(150, 236, 236))
-        tx += draw.textlength(letra, font=fnt) + tracking
-
-    return y + alt
+# A cápsula de categoria vem do gerador de Stories, não de uma cópia daqui.
+#
+# Existiu uma `capsula_vazia()` neste arquivo, idêntica à `pill()` de lá menos
+# o ponto teal que ela desenhava antes do texto. Em 30/08 o ponto saiu do
+# gerador de Stories também, e as duas funções passaram a ser a mesma coisa
+# escrita duas vezes — que é exatamente o defeito que este projeto acabou de
+# pagar em `loading.tsx` contra `page.tsx`, onde duas cópias da mesma string
+# divergiram por dez dias sem nenhum portão perceber.
+#
+# Agora existe uma cápsula só. Mudar borda, raio ou tracking muda o Story e o
+# feed juntos, que é o que mantém as duas famílias parecendo a mesma marca.
+capsula_vazia = g.pill
 
 
 def arte_numero(numero, unidade, explicacao, fonte_dado, arquivo, categoria, luz):

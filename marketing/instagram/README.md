@@ -117,6 +117,15 @@ mesma imagem, e é a variação que segura quem está passando os Stories.
 | `tela_numero` | dado de mercado | o número dominando, com a FONTE dele logo abaixo |
 | `tela_declaracao` | pergunta, fechamento | só tipografia, sem imagem competindo |
 
+**A cápsula não tem ícone dentro, desde 30/08.** Havia um ponto teal antes do
+texto, emprestado dos indicadores do Kanban. Num criativo de rede social ele
+não codifica estado nenhum — ali não há item para estar ativo ou parado —,
+então era enfeite, e enfeite dentro de etiqueta é o que faz peça parecer
+template. O espaço do ponto saiu junto com ele: manter o recuo deixaria um vão
+à esquerda que lê como imagem não carregada. **Story e feed usam a MESMA
+`pill()`** — enquanto o feed tinha a própria cópia sem ponto, eram duas
+funções idênticas esperando divergir.
+
 **A cápsula de categoria não é âncora de topo, é a primeira linha do bloco.**
 Fixá-la no alto deixava uma etiqueta solta a 14% da altura e o título só a
 33%, com um vão morto entre os dois que lia como erro de montagem — e a
@@ -327,14 +336,60 @@ Todos em `marketing/instagram/`, 1080×1920px PNG, exportados direto do
 Canva (`export-design`, PNG lossless). Link do Canva fica pra quem quiser
 editar depois (trocar cor, recortar pro círculo do destaque, etc.).
 
-Os 5 ícones foram gerados via Canva MCP (`generate-design`, design_type
-`your_story`), mesmo prompt-base pros 5 (fundo `#0A0A0A` sólido, 1 glifo
-`#00BFC0` centralizado, sem texto, sem gradiente, sem sombra) — só troca o
-ícone central. **Um candidato do selo "Bastidores" saiu com template
-promocional errado** ("Unlock Amazing Deals", 20% off) — descartado antes
-de aprovar, usado o 2º candidato do mesmo job, que bateu certinho. Todos
-os 5 abaixo já foram conferidos visualmente (não só pelo título gerado)
-antes de entrar nesta tabela.
+**Os 5 selos foram refeitos em 30/08, e não vêm mais do Canva.** Agora saem de
+`scripts/marketing/gerar-selos.py`:
+
+```sh
+python scripts/marketing/gerar-selos.py
+```
+
+Os anteriores tinham **um ícone de banco em cada**: lâmpada para "Dicas",
+engrenagem para "Bastidores", ponto de interrogação para "FAQ", etiqueta de
+preço para "Planos". Só o de "Demo" era o funil da marca. Lâmpada-igual-a-ideia
+e engrenagem-igual-a-bastidores são o clichê mais gasto do gênero — qualquer
+empresa do mundo pode assinar aquele conjunto —, e quatro ilustrações de
+origens diferentes não formam série nenhuma.
+
+**Entrou o símbolo da própria marca, nos cinco.** Trocar um ícone genérico por
+outro não resolveria nada. O funil não é ícone de banco: é o logotipo, o mesmo
+desenho de `components/branding/logo.tsx`, desenhado a partir das coordenadas
+do `viewBox` em vez de copiado à mão — copiar faria o selo divergir do produto
+sem ninguém notar.
+
+Repetir a marca cinco vezes não confunde os destaques porque **não é o círculo
+que distingue**: o rótulo aparece logo abaixo dele, e essa é a função do
+rótulo. O círculo responde *de quem é este perfil*, e cinco respostas
+diferentes para essa pergunta é o que produz um perfil sem cara.
+
+**A série se distingue pelo tom, e o piso foi medido.** A primeira tentativa
+descia até `rgb(0,101,104)`, que dá **2,48:1** contra o fundo — e o halo, mais
+claro que o fundo, derruba ainda mais. O quinto selo sumia na fila do perfil.
+Os cinco degraus agora vão de 13,8:1 a 4,4:1.
+
+Duas correções que só apareceram ao olhar o arquivo no tamanho real:
+
+- **34% da largura era pequeno demais.** No círculo de 64px da fila do perfil
+  — que é o tamanho em que o selo de fato é visto, não os 1080px em que ele é
+  desenhado — o funil virava um risco. Agora ocupa 54%.
+- **O centro geométrico lê como acima do centro.** A massa do desenho está no
+  trapézio de cima e o bico quase não pesa, então o símbolo desce 2,2% da
+  largura. É a mesma correção de centro óptico que `centrar()` faz nos Stories,
+  no sentido contrário.
+
+| # | Rótulo no perfil | Conteúdo | Arquivo | Tom |
+| --- | --- | --- | --- | --- |
+| 1 | **Demo** | Como funciona | `2026-08-15-selo-01-como-funciona.png` | `rgb(168,245,246)` |
+| 2 | **Planos** | Planos | `2026-08-15-selo-02-planos.png` | `rgb(94,232,233)` |
+| 3 | **Dicas** | Dicas de venda | `2026-08-15-selo-03-dicas-de-venda.png` | `rgb(0,191,192)` |
+| 4 | **Bastidores** | Bastidores | `2026-08-15-selo-04-bastidores.png` | `rgb(0,168,170)` |
+| 5 | **FAQ** | Perguntas | `2026-08-15-selo-05-perguntas.png` | `rgb(0,146,148)` |
+
+O nome do arquivo mantém a data da primeira versão de propósito: os destaques
+já estão publicados, e renomear quebraria a referência da ordem de publicação
+registrada aqui.
+
+Sem emoji nos rótulos — tom premium B2B, mesmo padrão de perfis SaaS sérios (o
+próprio Pipedrive usa palavra única sem ícone: "Events", "Swag", "Office").
 
 Cada destaque só publica no perfil quando tiver pelo menos 1 Story real
 dentro — destaque vazio parece pior que não ter destaque nenhum.

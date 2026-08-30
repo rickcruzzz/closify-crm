@@ -396,9 +396,15 @@ def pill(draw, texto, y, x=None):
     shadcn se comporta no tema escuro. Contorno delimita sem pesar; bloco
     preto disputa contraste com a headline que vem logo abaixo.
 
-    **Marcador de estado.** Um ponto teal antes do texto, o mesmo vocabulário
-    dos indicadores do Kanban. Ele transforma a etiqueta de "caixa com texto"
-    em "rótulo de um item", que é o que ela de fato é.
+    **Sem marcador dentro.** Havia um ponto teal antes do texto, emprestado
+    dos indicadores do Kanban. Ele saiu em 30/08 por pedido do dono: num
+    criativo de rede social o ponto não codifica estado nenhum — ali não há
+    item para estar ativo ou parado —, então ele era enfeite, e enfeite dentro
+    de uma etiqueta é o que faz uma peça parecer template.
+
+    **O espaço do ponto saiu junto com o ponto.** Manter o recuo produziria
+    uma cápsula com vão à esquerda e o texto empurrado, que lê como imagem que
+    não carregou — pior do que o ponto que se queria remover.
 
     **Caixa alta com tracking.** Rótulo em corpo baixo compete com a headline
     pela mesma leitura; em maiúsculas espaçadas ele vira sinalização, não
@@ -409,11 +415,9 @@ def pill(draw, texto, y, x=None):
     tracking = 3.2 * ESCALA
 
     pad_x, pad_y = 30 * ESCALA, 17 * ESCALA
-    raio_ponto = 5 * ESCALA
-    espaco_ponto = 18 * ESCALA
 
     larg_texto = draw.textlength(texto, font=fnt) + tracking * (len(texto) - 1)
-    larg = larg_texto + pad_x * 2 + raio_ponto * 2 + espaco_ponto
+    larg = larg_texto + pad_x * 2
     alt = fnt.size + pad_y * 2
     if x is None:
         x = MARGEM_ESQ
@@ -423,15 +427,10 @@ def pill(draw, texto, y, x=None):
         fill=(8, 40, 41), outline=(0, 122, 123), width=max(1, int(1.5 * ESCALA)),
     )
 
-    cx = x + pad_x + raio_ponto
-    cy = y + alt / 2
-    draw.ellipse([cx - raio_ponto, cy - raio_ponto, cx + raio_ponto, cy + raio_ponto],
-                 fill=TEAL)
-
     # Letra a letra: o Pillow não tem `letter-spacing`, e escrever a string
     # inteira devolveria o rótulo sem o espaçamento que o faz ler como
     # sinalização.
-    tx = cx + raio_ponto + espaco_ponto
+    tx = x + pad_x
     ty = y + pad_y - 2 * ESCALA
     for letra in texto:
         draw.text((tx, ty), letra, font=fnt, fill=(150, 236, 236))
