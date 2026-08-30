@@ -54,7 +54,11 @@ describe('montarPendencias', () => {
     expect(
       montarPendencias({
         ...base,
-        empresas: [empresa({ pagando: true, statusAssinatura: 'active' })],
+        // `estadoDoAcesso: 'pagante'` e não só `pagando`: desde 30/08 é ele
+        // que decide, porque `pagando` é `pro_vigente()` e inclui trial.
+        empresas: [
+          empresa({ pagando: true, estadoDoAcesso: 'pagante', statusAssinatura: 'active' }),
+        ],
         assinaturasNoBanco: [
           {
             workspace_id: 'w1',

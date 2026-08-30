@@ -131,7 +131,18 @@ export function montarPendencias({
       }
 
       const empresa = empresaPorId.get(noBanco.workspace_id)
-      if (empresa?.pagando !== true) {
+
+      // Conta nossa não é "pessoa que não está recebendo o que assinou".
+      // Medido em 30/08: o único alerta deste tipo era da empresa "Agência",
+      // `cafin50100@joystill.com` — domínio descartável, e que nunca pagou um
+      // centavo. Terceiro lugar da mesma classe nesta tela.
+      if (empresa?.interna) continue
+
+      // `estadoDoAcesso === 'pagante'` e não `pagando`: aquele é
+      // `pro_vigente()`, que inclui trial. Uma empresa em trial COM assinatura
+      // ativa no gateway não dispararia o alerta, mesmo sem estar recebendo o
+      // que assinou — o trial mascararia o problema até vencer.
+      if (empresa?.estadoDoAcesso !== 'pagante') {
         pendencias.push({
           id: `naoentrega:${assinatura.id}`,
           gravidade: 'dinheiro',
