@@ -38,6 +38,30 @@ describe('ehContaInterna', () => {
 })
 
 describe('ehContaDeTeste', () => {
+
+  /**
+   * Achado auditando a receita em 30/08: `teste-pro-1787589892727@
+   * velofunil.com.br`, criada por script, aparecia como cliente EXTERNO com
+   * Pro e entrava na conta de "R$ 490,00/mês".
+   *
+   * A lista `EMAILS_INTERNOS` cobre quatro endereços fixos e não acompanha
+   * conta de teste nova, que nasce com carimbo de tempo no nome — nomear uma a
+   * uma nunca daria conta. Ninguém compra o próprio produto pelo e-mail do
+   * produto, então o domínio inteiro resolve.
+   */
+  it('trata o domínio do próprio produto como interno, com nome qualquer', () => {
+    expect(ehContaDeTeste('teste-pro-1787589892727@velofunil.com.br')).toBe(true)
+    expect(ehContaDeTeste('qualquer.coisa@velofunil.com.br')).toBe(true)
+    expect(ehContaDeTeste('SUPORTE@VeloFunil.com.br')).toBe(true)
+  })
+
+  // A regra é do domínio EXATO: um domínio que apenas termina com o nosso não
+  // é nosso, e tratá-lo como interno esconderia um cliente de verdade.
+  it('não confunde domínio parecido com o nosso', () => {
+    expect(ehContaDeTeste('alguem@naovelofunil.com.br')).toBe(false)
+    expect(ehContaDeTeste('alguem@velofunil.com')).toBe(false)
+  })
+
   it('trata e-mail ausente como teste, não como cliente', () => {
     // Sem e-mail não dá para AFIRMAR que é cliente real, e o erro barato é
     // esconder uma conta órfã do painel; o caro é mandar o dono perseguir uma.

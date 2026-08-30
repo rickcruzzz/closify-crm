@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
 import { agruparPendencias, montarPendencias } from './pendencias'
-import type { EmpresaNaCentral } from './tipos'
+import type { EmpresaComEstado } from './tipos'
 
 /**
  * Os casos abaixo não são inventados: são o estado real da produção em
@@ -9,7 +9,7 @@ import type { EmpresaNaCentral } from './tipos'
  * erro em lugar nenhum — do ponto de vista do sistema, estava tudo certo.
  */
 
-function empresa(sobrescrever: Partial<EmpresaNaCentral> = {}): EmpresaNaCentral {
+function empresa(sobrescrever: Partial<EmpresaComEstado> = {}): EmpresaComEstado {
   return {
     id: 'w1',
     nome: 'Empresa Teste',
@@ -17,6 +17,11 @@ function empresa(sobrescrever: Partial<EmpresaNaCentral> = {}): EmpresaNaCentral
     email: 'fulano@empresa.com.br',
     telefone: null,
     pagando: false,
+    emTrial: false,
+    interna: false,
+    // O estado de dinheiro não é decidido por `montarPendencias`, e por isso
+    // o padrão aqui é `sem_pro`: os casos que precisam de outro o declaram.
+    estadoDoAcesso: 'sem_pro',
     statusAssinatura: null,
     proVenceEm: null,
     criadoEm: '2026-08-01T00:00:00Z',

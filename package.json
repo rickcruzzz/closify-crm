@@ -14,7 +14,8 @@
     "test:watch": "vitest",
     "test:security": "playwright test --project=security",
     "test:funil": "node --env-file=.env.local node_modules/@playwright/test/cli.js test --project=funil",
-    "test:produto": "node --env-file=.env.local node_modules/@playwright/test/cli.js test --project=produto"
+    "test:produto": "node --env-file=.env.local node_modules/@playwright/test/cli.js test --project=produto",
+    "test:suporte": "node --env-file=.env.local node_modules/@playwright/test/cli.js test --project=suporte"
   },
   "dependencies": {
     "@base-ui/react": "^1.6.0",

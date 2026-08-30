@@ -87,7 +87,7 @@ export function CentralClient({ dados }: { dados: DadosDaCentral }) {
 
 
       <PrecisaDeAtencao pendencias={dados.pendencias} />
-      <Numeros numeros={dados.numeros} dinheiro={dados.dinheiro} />
+      <Numeros numeros={dados.numeros} receita={dados.receita} dinheiro={dados.dinheiro} />
       <TabelaDeClientes empresas={dados.empresas} />
       <BlocoDeSaude emails={dados.emails} />
 

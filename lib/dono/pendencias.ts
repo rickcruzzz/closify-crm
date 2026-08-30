@@ -6,7 +6,7 @@ import { dominioProvavelmenteErrado } from './dominios'
 import type {
   AssinaturaNoAsaas,
   EmailEnviado,
-  EmpresaNaCentral,
+  EmpresaComEstado,
   Pendencia,
   Resultado,
 } from './tipos'
@@ -35,7 +35,7 @@ const DIAS_ATE_SUMIR = 14
 const PREFIXO_DE_TESTE = 'sub_teste'
 
 type EntradaDoCruzamento = {
-  empresas: EmpresaNaCentral[]
+  empresas: EmpresaComEstado[]
   assinaturasNoBanco: {
     workspace_id: string
     status: string

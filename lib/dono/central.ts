@@ -1,6 +1,9 @@
 import 'server-only'
 
-import { lerDinheiro, listarAssinaturasDoAsaas } from './dinheiro'
+import { PRO_PLAN_PRICE } from '@/lib/plans'
+
+import { assinaturasComPagamento, lerDinheiro, listarAssinaturasDoAsaas } from './dinheiro'
+import { classificarAcesso, montarQuadroDeReceita, type EstadoDoAcesso } from './receita'
 import { lerEmails } from './emails'
 import { montarPendencias } from './pendencias'
 import { lerBanco } from './queries'
@@ -31,16 +34,63 @@ export async function lerCentral(): Promise<DadosDaCentral> {
   // leitura dele custa quatro chamadas à Meta. Fazer a Visão geral pagar isso
   // a cada abertura, para mostrar um bloco que o dono vai olhar uma vez por
   // dia, é o tipo de peso que só aparece quando a tela já está lenta.
-  const [banco, dinheiro, assinaturasNoAsaas, emails, silenciados] = await Promise.all([
+  const [banco, dinheiro, assinaturasNoAsaas, pagas, emails, silenciados] = await Promise.all([
     lerBanco(),
     lerDinheiro(),
     listarAssinaturasDoAsaas(),
+    // Quais assinaturas de fato RECEBERAM dinheiro. É o que separa receita de
+    // intenção: a empresa "rththn" tem assinatura ACTIVE no Asaas e zero
+    // pagamento confirmado, e contava como R$ 49/mês antes desta correção.
+    assinaturasComPagamento(),
     lerEmails(),
     lerSilenciados(),
   ])
 
+  // ## Onde o banco e o gateway se encontram
+  //
+  // A classificação acontece AQUI, e não em `queries.ts`, porque ela precisa
+  // das duas fontes. `queries.ts` só conhece o banco, e decidir "é receita?"
+  // sem o gateway foi exatamente o defeito de 30/08: `pro_vigente()` é
+  // `assinatura viva OU trial válido`, então 10 empresas em trial gratuito
+  // apareciam como R$ 490,00/mês.
+  //
+  // Quando o Asaas está fora do ar, `estadoDoAcesso` fica `null` em vez de
+  // chutar: "não sei quem paga" é diferente de "ninguém paga", e a segunda é
+  // uma afirmação falsa com aparência de dado.
+  const vivasNoGateway = new Set(
+    assinaturasNoAsaas.ok
+      ? assinaturasNoAsaas.dados.filter((a) => a.status === 'ACTIVE' && !a.deleted).map((a) => a.id)
+      : [],
+  )
+  const idsPagas = pagas.ok ? pagas.dados : new Set<string>()
+  const gatewayDisponivel = assinaturasNoAsaas.ok && pagas.ok
+
+  const empresas = banco.empresas.map((empresa) => {
+    const assinatura = banco.assinaturas.find((a) => a.workspace_id === empresa.id)
+    const idNoAsaas = assinatura?.asaas_subscription_id ?? null
+
+    return {
+      ...empresa,
+      estadoDoAcesso: gatewayDisponivel
+        ? classificarAcesso({
+            interna: empresa.interna,
+            temProVigente: empresa.pagando,
+            emTrial: empresa.emTrial,
+            assinaturaNoAsaas: idNoAsaas,
+            assinaturaVivaNoGateway: Boolean(idNoAsaas && vivasNoGateway.has(idNoAsaas)),
+            temPagamentoConfirmado: Boolean(idNoAsaas && idsPagas.has(idNoAsaas)),
+          })
+        : null,
+    }
+  })
+
+  const receita = montarQuadroDeReceita(
+    empresas.map((e) => e.estadoDoAcesso).filter((e): e is EstadoDoAcesso => e !== null),
+    PRO_PLAN_PRICE,
+  )
+
   const pendencias = montarPendencias({
-    empresas: banco.empresas,
+    empresas,
     assinaturasNoBanco: banco.assinaturas,
     assinaturasNoAsaas,
     emails,
@@ -53,7 +103,10 @@ export async function lerCentral(): Promise<DadosDaCentral> {
 
   return {
     numeros: banco.numeros,
-    empresas: banco.empresas,
+    // `null` quando o Asaas não respondeu: a tela precisa saber a diferença
+    // entre "receita zero" e "não consegui perguntar".
+    receita: gatewayDisponivel ? receita : null,
+    empresas,
     podeEstarCortado: banco.podeEstarCortado,
     dinheiro,
     emails,

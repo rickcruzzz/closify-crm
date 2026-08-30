@@ -38,6 +38,27 @@ export default defineConfig({
       retries: 0,
     },
     {
+      // O canal de suporte, ponta a ponta, com o e-mail SAINDO de verdade.
+      //
+      // Fora do CI por DOIS motivos, e o segundo é o que o separa do `produto`:
+      // escreve no banco de produção (como aquele), e **dispara e-mail real**
+      // para a caixa do dono. Rodar a cada push encheria a caixa de aviso de
+      // teste — que é exatamente o ruído que faz alguém parar de olhar a caixa.
+      //
+      // A prova de entrega é a API do Resend, não um mock: mock provaria que o
+      // mock foi chamado. Chamado à mão por `npm run test:suporte`.
+      name: 'suporte',
+      testMatch: /suporte\.spec\.ts/,
+      // Mesmo motivo do `produto`: login real, telas que consultam o banco em
+      // São Paulo, e upload de anexo no meio.
+      timeout: 120_000,
+      // Serial: os quatro testes compartilham a mesma conta descartável, e o
+      // último confere um e-mail que o segundo disparou.
+      fullyParallel: false,
+      // Retry recriaria a conta e mandaria outro e-mail.
+      retries: 0,
+    },
+    {
       // O produto por dentro: recuperação de senha, importação de planilha,
       // convite e papéis, calendário e o portão do OAuth do Google. Cinco
       // áreas que existiam sem nenhuma prova ponta a ponta.

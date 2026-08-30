@@ -1,9 +1,19 @@
 import type { LucideIcon } from 'lucide-react'
-import { AlertCircle, Banknote, Clock, TrendingUp, UserPlus, Users, Wallet } from 'lucide-react'
+import {
+  AlertCircle,
+  Banknote,
+  Clock,
+  Gift,
+  TrendingUp,
+  UserPlus,
+  Users,
+  Wallet,
+} from 'lucide-react'
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { formatarDinheiro } from '@/lib/dono/formato'
 import type { DinheiroNoAsaas, NumerosDaCentral, Resultado } from '@/lib/dono/tipos'
+import type { QuadroDeReceita } from '@/lib/dono/receita'
 import { cn } from '@/lib/utils'
 
 /**
@@ -24,23 +34,66 @@ import { cn } from '@/lib/utils'
  */
 export function Numeros({
   numeros,
+  receita,
   dinheiro,
 }: {
   numeros: NumerosDaCentral
+  /** `null` quando o Asaas não respondeu. Ver `lib/dono/receita.ts`. */
+  receita: QuadroDeReceita | null
   dinheiro: Resultado<DinheiroNoAsaas>
 }) {
   return (
     <section className="flex flex-col gap-4">
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        {/* ## O card que mentia, e o que mudou
+            Até 30/08 ele fazia `pro_vigente() * R$ 49` e dizia
+            "R$ 490,00 · 10 clientes pagando". `pro_vigente()` é
+            `assinatura viva OU trial válido` — 10 empresas estavam em TRIAL
+            gratuito, e o Asaas registrava um único pagamento de R$ 49, feito
+            pelo próprio dono para provar o checkout.
+
+            Agora só entra aqui quem tem assinatura viva no gateway COM
+            pagamento confirmado. O resto aparece como o que é, no card ao
+            lado — esconder o trial seria trocar um número inflado por um
+            número mudo. */}
         <NumeroCard
           rotulo="Entra por mês"
-          valor={formatarDinheiro(numeros.entraPorMes)}
+          valor={receita ? formatarDinheiro(receita.entraPorMes) : '—'}
           icone={TrendingUp}
           destaque
+          // `—` e não R$ 0,00 quando o Asaas não responde: "não sei" é
+          // diferente de "ninguém paga", e a segunda é afirmação falsa com
+          // cara de dado.
+          tom={!receita ? 'atencao' : undefined}
           nota={
-            numeros.clientesPagando === 1
-              ? '1 cliente pagando'
-              : `${numeros.clientesPagando} clientes pagando`
+            !receita
+              ? 'Asaas fora do ar, não dá para afirmar'
+              : receita.pagantes === 0
+                ? 'ninguém paga ainda'
+                : receita.pagantes === 1
+                  ? '1 cliente pagando de verdade'
+                  : `${receita.pagantes} clientes pagando de verdade`
+          }
+        />
+        {/* Acesso sem receita, num card próprio. É o número que decide quanto
+            PODE virar dinheiro nos próximos dias — e que antes estava
+            escondido DENTRO da receita, inflando-a. */}
+        <NumeroCard
+          rotulo="Usando sem pagar"
+          valor={receita ? String(receita.emTrial + receita.cortesias + receita.assinaramSemPagar) : '—'}
+          icone={Gift}
+          nota={
+            receita
+              ? [
+                  receita.emTrial > 0 ? `${receita.emTrial} em trial` : null,
+                  receita.cortesias > 0 ? `${receita.cortesias} de cortesia` : null,
+                  receita.assinaramSemPagar > 0
+                    ? `${receita.assinaramSemPagar} assinou e não pagou`
+                    : null,
+                ]
+                  .filter(Boolean)
+                  .join(' · ') || 'ninguém'
+              : 'Asaas fora do ar'
           }
         />
         <NumeroCard
@@ -97,13 +150,20 @@ export function Numeros({
             // A comparação que expôs o problema: o gateway sabe quantas
             // assinaturas estão vivas, e o nosso banco pode discordar. Mostrar
             // os dois lado a lado torna a divergência impossível de não ver.
+            // A comparação certa é contra quem PAGA, não contra quem tem
+            // acesso: assinatura viva no gateway sem pagamento é uma venda
+            // travada, e era isso que o número antigo escondia.
             tom={
-              dinheiro.dados.assinaturasAtivas !== numeros.clientesPagando ? 'atencao' : undefined
+              receita && dinheiro.dados.assinaturasAtivas !== receita.pagantes
+                ? 'atencao'
+                : undefined
             }
             nota={
-              dinheiro.dados.assinaturasAtivas !== numeros.clientesPagando
-                ? `mas só ${numeros.clientesPagando} com Pro aqui`
-                : 'bate com o sistema'
+              !receita
+                ? 'sem comparação'
+                : dinheiro.dados.assinaturasAtivas !== receita.pagantes
+                  ? `mas só ${receita.pagantes} pagando de fato`
+                  : 'bate com o dinheiro'
             }
           />
         </div>

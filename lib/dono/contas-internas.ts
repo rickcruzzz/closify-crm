@@ -122,6 +122,20 @@ export function ehContaDeTeste(email: string | null | undefined): boolean {
   const limpo = email.trim().toLowerCase()
   if (ehContaInterna(limpo)) return true
   if (EMAILS_DO_DONO.has(limpo)) return true
+
   const dominio = limpo.split('@')[1] ?? ''
+
+  // **O domínio do próprio produto nunca é cliente.**
+  //
+  // Achado em 30/08 auditando a receita: `teste-pro-1787589892727@
+  // velofunil.com.br` — uma conta criada por script de teste — aparecia como
+  // cliente externo com Pro, e entrava na conta de "R$ 490,00/mês". Ninguém
+  // compra o próprio produto pelo e-mail do produto.
+  //
+  // A lista `EMAILS_INTERNOS` cobria quatro endereços específicos e não
+  // acompanhava conta nova de teste, que nasce com carimbo de tempo no nome —
+  // então nomear uma a uma nunca daria conta. O domínio dá.
+  if (dominio === 'velofunil.com.br') return true
+
   return DOMINIOS_DESCARTAVEIS.has(dominio)
 }

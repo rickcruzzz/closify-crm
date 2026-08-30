@@ -10,6 +10,10 @@ type ListaDeAssinaturas = {
   totalCount: number
   data: { id: string; status: string; deleted: boolean }[]
 }
+type ListaDePagamentos = {
+  totalCount: number
+  data: { value: number; subscription: string | null }[]
+}
 
 /**
  * O que o Asaas diz sobre o dinheiro, sem passar pelo nosso banco.
@@ -82,6 +86,52 @@ export async function listarAssinaturasDoAsaas(): Promise<Resultado<AssinaturaNo
     return {
       ok: false,
       erro: err instanceof Error ? err.message : 'Não consegui listar assinaturas no Asaas.',
+    }
+  }
+}
+
+/**
+ * Quais assinaturas do Asaas de fato RECEBERAM dinheiro.
+ *
+ * ## Por que uma chamada só, e não uma por assinatura
+ *
+ * A alternativa seria `GET /payments?subscription=<id>` para cada uma — sete
+ * idas de rede hoje, e uma por cliente amanhã, numa tela que já leva 1,7s.
+ * Uma lista de pagamentos confirmados e o cruzamento em memória custa duas
+ * chamadas e não cresce com o número de clientes.
+ *
+ * ## RECEIVED **e** CONFIRMED, os dois
+ *
+ * `CONFIRMED` é cartão aprovado com o repasse ainda a caminho; `RECEIVED` é
+ * dinheiro na conta. Para "esta assinatura é receita?" os dois valem — deixar
+ * o CONFIRMED de fora faria toda assinatura no cartão sumir do MRR nos dias
+ * entre a aprovação e o repasse.
+ *
+ * `OVERDUE` e `PENDING` ficam de fora de propósito: cobrança gerada não é
+ * dinheiro, e contá-la seria a mesma confusão entre intenção e receita que
+ * esta correção existe para desfazer.
+ */
+export async function assinaturasComPagamento(): Promise<Resultado<Set<string>>> {
+  await exigirAmbienteLocal()
+
+  try {
+    const [recebidos, confirmados] = await Promise.all([
+      asaasFetch<ListaDePagamentos>('/payments?status=RECEIVED&limit=100'),
+      asaasFetch<ListaDePagamentos>('/payments?status=CONFIRMED&limit=100'),
+    ])
+
+    const ids = new Set<string>()
+    for (const pagamento of [...recebidos.data, ...confirmados.data]) {
+      // Cobrança avulsa não tem `subscription`, e é o caso de todo pagamento
+      // que não veio de assinatura — ignorá-lo aqui é correto.
+      if (pagamento.subscription) ids.add(pagamento.subscription)
+    }
+
+    return { ok: true, dados: ids }
+  } catch (err) {
+    return {
+      ok: false,
+      erro: err instanceof Error ? err.message : 'Não consegui ler os pagamentos no Asaas.',
     }
   }
 }

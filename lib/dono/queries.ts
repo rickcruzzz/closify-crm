@@ -1,9 +1,8 @@
 import 'server-only'
 
 import { createAdminClient } from '@/lib/supabase/admin'
-import { PRO_PLAN_PRICE } from '@/lib/plans'
 
-import { ehContaInterna } from './contas-internas'
+import { ehContaDeTeste } from './contas-internas'
 import { exigirAmbienteLocal } from './somente-local'
 import type { EmpresaNaCentral, NumerosDaCentral } from './tipos'
 
@@ -31,6 +30,12 @@ type LinhaDeEmpresa = {
   whatsapp: string | null
   utm_campaign: string | null
   fbc: string | null
+  /**
+   * Fim do trial. É o que separa "tem Pro porque paga" de "tem Pro porque
+   * ganhou sete dias" — e `pro_vigente()` devolve `true` para os dois, porque
+   * ela responde "pode usar?", não "pagou?".
+   */
+  trial_ate: string | null
 }
 
 type LinhaDeAssinatura = {
@@ -93,7 +98,9 @@ export async function lerBanco(): Promise<LeituraDoBanco> {
       supabase.auth.admin.listUsers({ page: 1, perPage: 1000 }),
       supabase
         .from('workspaces')
-        .select('id, name, created_at, created_by, telefone, whatsapp, utm_campaign, fbc')
+        .select(
+          'id, name, created_at, created_by, telefone, whatsapp, utm_campaign, fbc, trial_ate',
+        )
         .order('created_at', { ascending: false })
         .limit(TETO),
       supabase.from('workspace_members').select('workspace_id, user_id').limit(TETO),
@@ -157,6 +164,15 @@ export async function lerBanco(): Promise<LeituraDoBanco> {
       email: dono?.email ?? null,
       telefone: empresa.whatsapp ?? empresa.telefone ?? null,
       pagando: proVigentePorEmpresa.get(empresa.id) ?? false,
+      // Os sinais crus, para `central.ts` cruzar com o Asaas e classificar.
+      // A classificação NÃO acontece aqui de propósito: este arquivo só
+      // conhece o banco, e decidir "é receita?" sem o gateway foi exatamente
+      // o defeito de 30/08.
+      emTrial: Boolean(empresa.trial_ate && new Date(empresa.trial_ate) > new Date()),
+      // `ehContaDeTeste`, a função OFICIAL — inclui os e-mails do dono e os
+      // domínios descartáveis, que `ehContaInterna` (4 endereços) deixava
+      // passar como cliente.
+      interna: ehContaDeTeste(dono?.email),
       statusAssinatura: assinatura?.status ?? null,
       proVenceEm: assinatura?.current_period_end ?? null,
       criadoEm: empresa.created_at,
@@ -171,18 +187,21 @@ export async function lerBanco(): Promise<LeituraDoBanco> {
     }
   })
 
-  // Contas internas (a de revisão do Google, por exemplo) têm Pro de cortesia
-  // e inflariam a receita: a Central diria R$98/mês quando entraram R$49.
-  // Elas continuam na lista de empresas — existem de verdade —, só não contam
-  // como dinheiro. Ver `contas-internas.ts`.
-  const pagantesDeVerdade = lista.filter((e) => e.pagando && !ehContaInterna(e.email))
-  const pagando = pagantesDeVerdade.length
+  // ## A receita NÃO é calculada aqui, e essa é a correção de 30/08
+  //
+  // Este arquivo só conhece o banco. Até hoje ele fazia
+  // `pro_vigente() * R$ 49` e chamava isso de receita — mas `pro_vigente()`
+  // é `assinatura viva OU trial válido`, então 10 empresas em trial gratuito
+  // viravam R$ 490,00/mês. Medido contra o Asaas no mesmo dia: entrou
+  // R$ 49,00, uma vez, em 13/08, e foi o dono provando o próprio checkout.
+  //
+  // Quem decide o que é dinheiro é `lib/dono/receita.ts`, chamado de
+  // `central.ts`, onde o banco e o gateway se encontram. Aqui ficam só
+  // contagens que o banco de fato conhece.
   const limiteDaSemana = Date.now() - SETE_DIAS
 
   return {
     numeros: {
-      entraPorMes: pagando * PRO_PLAN_PRICE,
-      clientesPagando: pagando,
       contasCriadas: lista.length,
       novasEm7Dias: lista.filter((e) => new Date(e.criadoEm).getTime() >= limiteDaSemana).length,
     },
