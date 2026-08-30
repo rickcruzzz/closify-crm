@@ -6,6 +6,7 @@ import { lerEstadoDoOnboarding } from '@/lib/onboarding/estado'
 import { lerSinaisDeAtivacao } from '@/lib/onboarding/sinais'
 import { checklistCumprido, montarChecklist } from '@/lib/onboarding/checklist'
 import { PageHeader } from '@/components/layout/page-header'
+import { CABECALHO_DOS_RESULTADOS } from '@/lib/dashboard/cabecalho'
 import { MetricCardsAsync } from '@/components/dashboard/metric-cards-async'
 import { FunnelChartAsync } from '@/components/dashboard/funnel-chart-async'
 import { UpcomingDealsTableAsync } from '@/components/dashboard/upcoming-deals-table-async'
@@ -86,8 +87,8 @@ export default async function DashboardPage({
   return (
     <div className="flex flex-col gap-6">
       <PageHeader
-        title="Resultados"
-        description="Quanto entrou, quanto está em jogo e o que virou venda."
+        title={CABECALHO_DOS_RESULTADOS.titulo}
+        description={CABECALHO_DOS_RESULTADOS.descricao}
         actions={
           <ExportReportButton
             nomeDoWorkspace={nomeDoWorkspace}
