@@ -35,6 +35,12 @@ import { createAdminClient } from '@/lib/supabase/admin'
  *   endpoint com payload arbitrário e encher `error_logs` de ruído. 30/hora
  *   por IP cobre um usuário real com erro em loop (ex.: tela quebrando a
  *   cada render) sem virar canhão de flood.
+ * - `feedback`: por USUÁRIO, não por IP, e é a diferença que importa aqui —
+ *   Server Action exige sessão, então há sempre alguém identificado, e limitar
+ *   por IP puniria um escritório inteiro pelo excesso de uma pessoa. 10/hora é
+ *   folgado para quem está genuinamente com problema e relata três ou quatro
+ *   coisas seguidas, e fecha o caminho de encher a tabela — que, diferente de
+ *   `error_logs`, dispara e-mail e portanto tem custo por linha.
  */
 const LIMITES = {
   signin: { limite: 8, janelaSegundos: 15 * 60 },
@@ -44,6 +50,7 @@ const LIMITES = {
   'reset-password': { limite: 5, janelaSegundos: 60 * 60 },
   'reenviar-confirmacao': { limite: 5, janelaSegundos: 60 * 60 },
   'log-erro': { limite: 30, janelaSegundos: 60 * 60 },
+  feedback: { limite: 10, janelaSegundos: 60 * 60 },
 } as const
 
 export type AcaoLimitada = keyof typeof LIMITES

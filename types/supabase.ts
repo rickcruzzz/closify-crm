@@ -16,6 +16,10 @@ export type OnboardingEtapa = 'empresa' | 'segmento' | 'venda' | 'equipe' | 'pro
 export type TourStatus = 'not_started' | 'skipped' | 'completed'
 export type ModeloVenda = 'servicos' | 'produtos' | 'ambos'
 export type TamanhoEquipe = 'so_eu' | '2_5' | '6_20' | '21_mais'
+// Os dois tipos de relato do cliente (0060). É `check` no banco e não enum,
+// pela lição de `deal_stage`: enum não aceita `drop value`, então um terceiro
+// tipo aqui custaria recriar o tipo inteiro em vez de editar uma linha.
+export type TipoDeFeedback = 'problema' | 'sugestao'
 
 /**
  * Os campos de empresa acrescentados em 0030.
@@ -580,6 +584,57 @@ export type Database = {
         }
         Relationships: []
       }
+      // O relato que o cliente escreve de dentro do produto (0060). Tabela de
+      // sistema, igual a `error_logs`: RLS ligada, ZERO policy, escrita só por
+      // `createAdminClient()` a partir de `lib/feedback/actions.ts`.
+      feedback: {
+        Row: {
+          id: string
+          // Os dois têm urgências opostas, e é este campo que decide se um
+          // e-mail sai. `check` no banco, não enum — a lição de `deal_stage`,
+          // que virou enum e hoje impede pipeline customizável.
+          tipo: TipoDeFeedback
+          mensagem: string
+          // Contexto preenchido NO SERVIDOR: quem escreve "não funciona" não
+          // diz a tela, o plano nem o navegador, e são os três que separam
+          // resolver de adivinhar.
+          rota: string | null
+          plano: string | null
+          user_agent: string | null
+          // Sem FK, como em `error_logs`: apagar a empresa não pode apagar a
+          // evidência do problema que ela relatou.
+          workspace_id: string | null
+          user_id: string | null
+          // Relato de conta nossa, não de cliente. Vem de `ehContaDeTeste`.
+          interno: boolean
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          tipo: TipoDeFeedback
+          mensagem: string
+          rota?: string | null
+          plano?: string | null
+          user_agent?: string | null
+          workspace_id?: string | null
+          user_id?: string | null
+          interno?: boolean
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          tipo?: TipoDeFeedback
+          mensagem?: string
+          rota?: string | null
+          plano?: string | null
+          user_agent?: string | null
+          workspace_id?: string | null
+          user_id?: string | null
+          interno?: boolean
+          created_at?: string
+        }
+        Relationships: []
+      }
       subscriptions: {
         Row: {
           id: string
@@ -893,6 +948,14 @@ export type Database = {
       // clientes. Devolve quantas linhas apagou, somando as duas janelas
       // (90 dias para erro de cliente, 14 para erro interno).
       purge_old_error_logs: {
+        Args: Record<string, never>
+        Returns: number
+      }
+      // Nasceu junto da tabela (0060), em vez de esperar catorze migrations
+      // como a de `error_logs` esperou. Janela maior de propósito: um ano para
+      // relato de cliente — "cinco pessoas pediram exportação em CSV" continua
+      // valendo um ano depois, ao contrário de um erro técnico.
+      purge_old_feedback: {
         Args: Record<string, never>
         Returns: number
       }

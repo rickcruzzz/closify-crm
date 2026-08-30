@@ -11,6 +11,7 @@ import {
   LayoutDashboard,
   Loader2,
   Megaphone,
+  MessageSquareText,
 } from 'lucide-react'
 
 import { cn } from '@/lib/utils'
@@ -49,6 +50,12 @@ const SECOES = [
   // pessoa dentro dos sete dias de trial, com o WhatsApp a um clique. O funil
   // agregado da tela seguinte orienta o mês.
   { href: '/dono/trial', rotulo: 'Decidindo', icone: Handshake },
+  // Logo depois de Alertas e Decidindo, e pelo mesmo critério de rotina: as
+  // três são acionáveis HOJE. Alertas é o que o sistema detectou sozinho; esta
+  // é o que o cliente DISSE — e é a única fonte de "por quê" que este produto
+  // tem. Ativação, logo abaixo, diz onde as pessoas param; só o relato diz o
+  // motivo.
+  { href: '/dono/feedback', rotulo: 'Feedback', icone: MessageSquareText },
   // Depois de Alertas e antes de Anúncio de propósito: a ordem é a da rotina —
   // primeiro o que quebrou, depois se as pessoas estão usando, e só então
   // quanto custa trazer mais gente. Olhar anúncio antes de ativação é comprar
