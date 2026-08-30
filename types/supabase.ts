@@ -887,6 +887,15 @@ export type Database = {
         Args: Record<string, never>
         Returns: number
       }
+      // `error_logs` era a única tabela de sistema sem purga (0059). Mesmo
+      // desenho das outras duas — linha de texto que só cresce —, e a mesma
+      // conta que fez a 0047 nascer com purga: 9,7 GB em 12 meses a 400
+      // clientes. Devolve quantas linhas apagou, somando as duas janelas
+      // (90 dias para erro de cliente, 14 para erro interno).
+      purge_old_error_logs: {
+        Args: Record<string, never>
+        Returns: number
+      }
     }
     Enums: Record<string, never>
     CompositeTypes: Record<string, never>

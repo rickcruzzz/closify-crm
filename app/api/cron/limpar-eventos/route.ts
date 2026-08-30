@@ -60,21 +60,28 @@ export async function GET(requisicao: Request) {
 
   // As duas em paralelo: são tabelas independentes e nenhuma depende do
   // resultado da outra.
-  const [asaas, whatsapp] = await Promise.all([
+  const [asaas, whatsapp, erros] = await Promise.all([
     admin.rpc('purge_old_asaas_webhook_events'),
     admin.rpc('purge_old_whatsapp_webhook_events'),
+    // `error_logs` era a única tabela de sistema sem purga, e tem o mesmo
+    // desenho das outras duas: linha de texto que só cresce. A 0047 nasceu
+    // com purga por uma conta explícita — 9,7 GB em 12 meses a 400 clientes;
+    // esta faltava fazer.
+    admin.rpc('purge_old_error_logs'),
   ])
 
   // Uma falhar não pode impedir a outra de ter rodado: o retorno reporta as
-  // duas separadamente para o problema aparecer no log em vez de sumir.
+  // três separadamente para o problema aparecer no log em vez de sumir.
   if (asaas.error) console.error('Purga do Asaas falhou', asaas.error)
   if (whatsapp.error) console.error('Purga do WhatsApp falhou', whatsapp.error)
+  if (erros.error) console.error('Purga de error_logs falhou', erros.error)
 
   return NextResponse.json({
-    ok: !asaas.error && !whatsapp.error,
+    ok: !asaas.error && !whatsapp.error && !erros.error,
     apagados: {
       asaas: asaas.data ?? null,
       whatsapp: whatsapp.data ?? null,
+      erros: erros.data ?? null,
     },
   })
 }
