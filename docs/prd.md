@@ -3,10 +3,13 @@
 > Iniciativa de conversão Free→Pro (copy da landing, limites, checkout) tem
 > PRD próprio: [prd-conversao-pro.md](prd-conversao-pro.md).
 >
-> **Conferido contra produção em 26/08/2026.** Números de tabela, RPC,
+> **Conferido contra produção em 29/08/2026.** Números de tabela, RPC,
 > migration e teste vieram do catálogo real e do gate, não de memória:
-> **17 tabelas**, **30 RPCs**, **17 foreign keys**, 55 arquivos de migration
-> (a maior é `0056`) e **715 testes**. O estado
+> **17 tabelas**, **30 RPCs**, **17 foreign keys**, 56 arquivos de migration
+> (a maior é `0057`) e **687 testes**. A estrutura do banco **não mudou**
+> desde 26/08 — os três primeiros números são idênticos —, mas a `0057`
+> reescreveu `create_workspace_with_admin` por dentro, e o teste caiu de 715
+> para 687 quando o Evolution saiu do projeto. O estado
 > operacional do dia a dia (o que quebrou, o que foi medido, o que está
 > pendente) mora em [estado-atual.md](estado-atual.md); o diagrama de classes,
 > em [schema.md](schema.md).
@@ -38,8 +41,9 @@ dado real; o que não está tem o motivo escrito ao lado.
 - [x] Multi usuário — convite por e-mail, papéis admin/membro
 - [x] Multi empresa — workspace isolado por RLS, provado 14/14 com sessão real
 - [x] Permissões por usuário — checadas em RLS **e** na UI
-- [x] Parte premium (paga) — Asaas, reverse trial de 7 dias, checkout de
-      Pix/boleto dentro do produto, webhook + reconciliação diária
+- [x] Parte premium (paga) — Asaas, checkout de Pix/boleto dentro do produto,
+      webhook + reconciliação diária. **O reverse trial de 7 dias acabou em
+      29/08 (migration 0057)**: empresa nova nasce no Free
 - [x] Integrações (API) — Google Calendar e Gmail, com verificação OAuth do
       Google aprovada
 - [x] Conversas — caixa de entrada do WhatsApp dentro do produto, ordenada por
@@ -49,9 +53,10 @@ dado real; o que não está tem o motivo escrito ao lado.
       planos. A conexão pela VPS (Evolution) foi construída e está desligada; o
       destino é a **Cloud API oficial**, que exige CNPJ ativo antes de tudo
 - [x] Busca e Filtros — nome, e-mail, empresa, status, responsável, data
-- [x] Landing Page — dor do WhatsApp (não planilha), 7 dias de trial vendidos,
-      seção de confiança, prints reais legíveis no zoom e no mobile, sem prova
-      social inventada
+- [x] Landing Page — dor do WhatsApp (não planilha), Free até 50 contatos
+      (o trial de 7 dias saiu da página em 29/08, junto com a 0057), seção de
+      confiança, prints reais legíveis no zoom e no mobile, sem prova social
+      inventada
 - [x] Onboarding do Usuário — assistente de 4 passos + checklist derivado do
       estado. "Pular" só a partir do 2º passo: pular no 1º deixava a conta sem
       empresa e trancava a pessoa num laço (corrigido 24/08)
@@ -204,9 +209,16 @@ vez.
 *As funcionalidades são nomeadas pelo problema, não pelo recurso.* "Painel de
 resultados" virou "Quanto você tem para fechar este mês"; "Controle por
 colaborador" virou "Cada um vê o que precisa ver". Descrever o recurso produz
-uma página que qualquer CRM do mundo poderia assinar. São 8 cards — o oitavo é
+uma página que qualquer CRM do mundo poderia assinar. São 9 cards. O oitavo é
 o **WhatsApp**, que não aparecia em lugar nenhum da landing apesar de ser o
 canal onde a PME brasileira de fato vende.
+
+*O nono card entrou por aritmética, não por conteúdo faltando (29/08).* Com 8
+cards numa grade de 3 colunas, `8 % 3 = 2` fazia o código esticar o último para
+tapar a célula vazia — ele saía com **682px contra 341px** dos outros, e o
+texto travado em `max-w-md` deixava 186px de vazio dentro. Nove fecham 3×3
+exato, sem nada esticado. O card novo é o **Calendário**, funcionalidade
+entregue em 18/08 que a página nunca mostrou.
 
 *Imagem: híbrido, por causa do LCP.* O funil do hero é HTML puro, sem JS e sem
 imagem — é o maior elemento acima da dobra e uma imagem ali atrasaria a métrica
@@ -546,13 +558,25 @@ tráfego antes de chegar no servidor.
 
 ### Monetização (Asaas)
 
-**Reverse trial desde 24/08 (migration 0051), decisão de produto para vender
-ao máximo em vez de reter ao mínimo.** Toda empresa nasce com **7 dias de Pro
-completo** — multi-empresa, colaboradores e contatos ilimitados, sem pedir
-cartão — em vez de nascer no Free. Passado o prazo, sem assinatura, a empresa
-cai para o Free de verdade. Reverse trial converte historicamente 18-32%
-contra 2-8% de freemium puro: quem experimenta o produto inteiro sente a
-perda de recurso ao voltar para o teto, o que freemium nunca cria.
+**O reverse trial acabou em 29/08 (migration 0057), por decisão do dono.**
+Empresa nova **nasce no Free**. Entre 24/08 e 29/08 ela nascia com 7 dias de
+Pro completo (migration 0051) — multi-empresa, colaboradores e contatos
+ilimitados, sem cartão —, e a aposta era a conversão historicamente maior do
+reverse trial (18-32% contra 2-8% do freemium puro). O dono cortou para
+priorizar receita direta.
+
+**As 10 empresas que já estavam em avaliação mantêm o prazo delas**, medido
+contra produção no dia da migration: `trial_ate` intacto, nenhuma linha
+alterada. Cortar o trial de quem já tinha lido a promessa na tela de cadastro
+seria quebrar contrato, e por isso a 0057 mexe **só no `insert`** — a coluna,
+a função `em_trial()` e toda a lógica de vencimento continuam de pé, porque
+ainda existe gente vivendo dentro delas.
+
+**A ordem importou, e é a lição a não repetir:** a landing ainda dizia "7 dias
+de Pro grátis" em três lugares, incluindo a `<meta description>` e a imagem de
+compartilhamento — que é o que aparece no Google e no WhatsApp **antes de
+qualquer clique**. Aplicar a migration primeiro faria a página prometer um
+trial que já não existia. Promoção da landing primeiro, migration depois.
 
 `pro_vigente(workspace_id)` (RPC, `security definer`) passou a considerar
 duas fontes, não uma: assinatura paga vigente **ou** `workspaces.trial_ate >
@@ -560,8 +584,9 @@ now()`. É a única função que qualquer trigger de limite pode consultar — n
 a coluna `workspaces.plan`, doutrina travada desde a 0027, porque o trial
 também teria uma "data que ninguém sabe que passou".
 
-**O trial dá funcionalidade, não estoque, e isso levou uma correção
-(migration 0053).** Achado próprio: durante os 7 dias dava para criar 5
+**O trial dava funcionalidade, não estoque, e isso levou uma correção
+(migration 0053).** Vale para as empresas ainda em avaliação. Achado próprio:
+durante os 7 dias dava para criar 5
 empresas, ou convidar 10 colaboradores, e ficar com esse estoque depois do
 trial acabar — porque a trigger de limite só olhava `pro_vigente()`, que
 inclui o trial. A nova função `em_trial(workspace_id)` isola só o caso do
@@ -569,14 +594,16 @@ trial, e as triggers de limite de membro e criação de workspace passaram a
 exigir `pro_vigente() and not em_trial()` — Pro pago libera estoque
 permanente, trial libera só o uso temporário das funcionalidades.
 
-**Plano Free volta a ser apertado depois do trial (migration 0052):** 1
-empresa, até `FREE_MEMBER_LIMIT` = **2** colaboradores e `FREE_LEAD_LIMIT` =
-**50** contatos (`lib/plans.ts`). O número passou por 300 numa correção
+**O Free é apertado desde o primeiro minuto (migration 0052):** 1 empresa,
+até `FREE_MEMBER_LIMIT` = **2** colaboradores e `FREE_LEAD_LIMIT` = **50**
+contatos (`lib/plans.ts`). Até 29/08 esse teto só passava a valer depois do
+trial; agora ele vale desde a criação da conta, e isso foi provado com empresa
+descartável — o 51º contato toma `42501` no primeiro instante de vida. O número passou por 300 numa correção
 anterior e voltou a 50 nesta rodada — a landing vende "grátis pra sempre" como
 chamariz de baixo atrito, não como plano generoso; quem precisa de mais sente
 o teto rápido e assina.
 
-Multi-empresa é recurso do Pro (e do trial), sem esse limite o teto de
+Multi-empresa é recurso do Pro (e do trial que ainda corre), sem esse limite o teto de
 colaboradores não segura nada — bastava criar uma empresa nova para cada
 dupla. Plano Pro: colaboradores e leads ilimitados por R$49/mês, pela empresa
 inteira, não por vendedor.
@@ -752,7 +779,7 @@ Cada item marcado tem prova, não impressão — o método está em
 `docs/estado-atual.md` ("Como verificar as coisas aqui"). Atualizado 22/08/2026.
 
 - [x] **Build local concluído sem erros.** `npx tsc --noEmit`, `npm run lint`,
-      `npm test` (**715 testes**) e `npm run build:check`, os quatro limpos,
+      `npm test` (**687 testes**) e `npm run build:check`, os quatro limpos,
       rodados antes de cada commit. É `build:check` e não `build`: os dois
       escrevem em `.next` por padrão, e o build sobrescreve o mapa de chunks
       que o `npm run dev` está usando — a rota morre com `MODULE_NOT_FOUND` e
@@ -788,7 +815,7 @@ Cada item marcado tem prova, não impressão — o método está em
       banido pelo `prd-copy-sem-jargao.md` eliminado das telas (Pipeline→Funil,
       Leads→Contatos, Dashboard→Resultados), incluindo o que a renomeação de
       19/08 tinha deixado passar.
-- [x] **Testes automatizados para os fluxos críticos.** 715 testes cobrindo
+- [x] **Testes automatizados para os fluxos críticos.** 687 testes cobrindo
       lógica pura em `lib/**`; cada caso documenta o defeito que o motivou.
       Ressalva honesta: `tests/e2e/funil-completo.spec.ts` **nunca foi
       executado** (exige `.env.local` e roda contra o Asaas). Ele não falha em

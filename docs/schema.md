@@ -7,6 +7,30 @@ Migrations novas mudam este arquivo com o tempo; ao suspeitar de
 desatualização, reconsulte o catálogo em vez de confiar cegamente nele (mesma
 regra de `docs/estado-atual.md`).
 
+**Reconferido em 29/08/2026 — estrutura IDÊNTICA, comportamento diferente.**
+Lido do OpenAPI do PostgREST de produção: **17 tabelas**, **30 RPCs**, **17
+foreign keys** — os três números exatamente iguais aos de 26/08. Nenhuma
+tabela, coluna, chave ou enum mudou.
+
+O que mudou foi o corpo de uma função. A **0057** reescreveu
+`create_workspace_with_admin` para que o `insert` em `workspaces` **não grave
+mais `trial_ate`**: empresa nova nasce no Free, e o reverse trial acabou para
+quem chega a partir de agora. A assinatura da função é a mesma, então ela
+continua exposta como RPC e a contagem não se mexe.
+
+**É o terceiro caso da mesma classe neste documento** — 0055 reescreveu
+`pro_vigente()` por dentro, 0056 criou uma `returns trigger` que o PostgREST
+não expõe, e agora a 0057 troca o que uma RPC existente escreve. Três vezes o
+catálogo estruturado ficou idêntico enquanto a regra de negócio mudava. É
+exatamente por isso que este arquivo tem a seção **Regras que vivem em
+trigger** e não se resume ao diagrama.
+
+**A coluna `trial_ate` e a função `em_trial()` continuam existindo, e isso é
+decisão.** Medido no dia: **10 empresas ainda dentro do prazo**, com
+`trial_ate` intacto. Apagar a coluna cortaria o trial de quem leu a promessa
+na tela de cadastro. A 0057 mexe só no `insert`; toda a lógica de vigência e
+vencimento fica de pé enquanto houver alguém vivendo dentro dela.
+
 **Reconferido em 26/08/2026 — três tabelas novas, e nenhuma RPC nova.** As
 migrations 0054-0056 acrescentaram `assinatura_eventos` (0055) e o par
 `conversas`/`mensagens` (0056), levando a contagem de **14 para 17 tabelas**, e
@@ -384,7 +408,13 @@ venceu), e liberam quando `auth.uid()` é nulo, que é o caminho da service role
 webhook, job de reconciliação e script de manutenção não são o abuso que elas
 combatem.
 
-### Reverse trial (0051-0053, 24/08): a mesma função, lógica nova por dentro
+### Reverse trial (0051-0053, 24/08 — encerrado pela 0057 em 29/08)
+
+> **Empresa nova não nasce mais em trial.** A 0057 tirou `trial_ate` do
+> `insert` de `create_workspace_with_admin`. Tudo o que esta seção descreve
+> continua verdadeiro e ativo para as **10 empresas que ainda estão dentro do
+> prazo** — a coluna, `em_trial()` e as triggers seguem no lugar. Quando a
+> última vencer, elas passam a ser lógica adormecida, não removida.
 
 `pro_vigente(workspace_id)` não ganhou coluna nem parâmetro — só passou a
 consultar duas fontes em vez de uma: assinatura Asaas vigente **ou**
@@ -394,7 +424,8 @@ assinaturas de função no catálogo; só aparece lendo o corpo dela.
 A trigger de limite de membros (0050, tabela acima) e a de criação de
 workspace passaram a checar `pro_vigente() and not em_trial(workspace_id)`,
 não `pro_vigente()` sozinho. A razão é um furo medido em produção antes da
-correção: durante os 7 dias de trial dava para criar 5 empresas ou convidar
+correção, e ela vale para quem ainda está em avaliação: durante os 7 dias de
+trial dava para criar 5 empresas ou convidar
 10 colaboradores e **ficar com esse estoque depois do trial acabar**, porque
 `pro_vigente()` incluía o trial e a trigger só olhava esse booleano. `em_trial`
 isola o caso — o trial libera o *uso* de funcionalidades Pro, nunca a

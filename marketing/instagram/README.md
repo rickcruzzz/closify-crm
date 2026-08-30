@@ -211,6 +211,81 @@ InsideSales/MIT.
 que não existe no código e não dá para inventar sem cair na prova social
 fabricada que este projeto recusa.
 
+## Feed — `marketing/instagram/feed/`
+
+Gerados por `scripts/marketing/gerar-feed.py`:
+
+```sh
+python scripts/marketing/gerar-feed.py
+```
+
+**1080×1350 (4:5), não 1080×1080.** O quadrado é o formato que todo mundo
+lembra e não é mais o recomendado. 4:5 é a moldura mais alta que o feed aceita,
+e altura é a única variável que aumenta o tempo que a peça fica na tela de quem
+rola. `lib/dono/formatos-do-meta.ts` já classificava a medida como "Feed no
+celular, ocupa mais tela" desde 20/08.
+
+**A grade do perfil recorta em 3:4, e isso não estava registrado aqui.** A peça
+vai ao feed inteira, mas na grade do perfil o Instagram mostra **1012×1350
+centralizado** — 34px somem de cada lado. Quem desenhar encostado na borda
+perde conteúdo exatamente na tela onde alguém decide se segue o perfil. A
+coluna de texto começa a 97px e tem 63px de folga; `conferir_zona_segura()`
+derruba a geração se alguém mexer na margem e essa folga sumir.
+
+### Não há ícone nenhum nestas peças
+
+A cápsula de categoria do topo é a mesma dos Stories — mesma borda, mesmo raio,
+mesmo tracking — **vazia por dentro**: o ponto teal que `pill()` desenha antes
+do texto não existe em `capsula_vazia()`. A área continua no lugar, sem nada
+dentro dela.
+
+O espaço do ponto sai junto com o ponto. Manter o recuo produziria uma etiqueta
+com vão à esquerda e o texto empurrado, que lê como imagem que não carregou —
+pior do que o ícone que se queria remover.
+
+O funil da marca segue no fundo a 5,5% e no selo do rodapé. Ele não é ícone de
+banco: é a marca, e é a única forma de a peça se identificar sem escrever o
+nome três vezes. **Os 5 selos de destaque, esses sim, usam ícone genérico**
+(lâmpada, engrenagem, `?`, etiqueta) — foram feitos no Canva e continuam como
+estavam; refazê-los é trabalho à parte.
+
+### As cinco peças, na ordem de publicação
+
+| # | arquivo | o que carrega | fonte impressa na arte |
+| --- | --- | --- | --- |
+| 1 | `feed-1-janela-de-5-minutos.png` | **21x** mais chance respondendo em 5 min | InsideSales / MIT |
+| 2 | `feed-2-media-do-mercado.png` | **42h** é a média de primeira resposta | HBR, 2.241 empresas |
+| 3 | `feed-3-onde-a-pme-vende.png` | **82%** vendem pelo WhatsApp | Sebrae, Pulso 2026 |
+| 4 | `feed-4-morre-calado.png` | Negócio sem próximo passo morre calado | — (declaração) |
+| 5 | `feed-5-preco-por-empresa.png` | **R$ 49** por mês, pela empresa inteira | tabela pública de CRMs |
+
+A ordem conta uma história em vez de listar números soltos: existe uma janela,
+quase ninguém a cumpre, o canal onde isso acontece é o WhatsApp, o que mata a
+venda é não ter próximo passo, e o que custa resolver é R$ 49. **O preço fecha
+porque preço abre defesa** — quem lê o valor antes de entender o problema
+compara com zero, e as quatro anteriores constroem o custo de não fazer nada.
+
+**Cada número traz a fonte na própria arte**, mesma regra dos Stories: é o que
+separa dado público de métrica inventada, e prova social fabricada é decisão
+travada contra neste projeto enquanto não houver cliente pagante externo.
+
+A linha da fonte é escrita para quem lê no Instagram, não para quem desenhou.
+Duas delas nasceram com nota de bastidor — *"o dado costuma ser creditado à
+Harvard, e não é"* (que cita Harvard na arte só para negá-la) e *"Sem citar
+nome de concorrente"* (decisão de redação, não atribuição) — e foram
+reescritas. Quem vê a peça não tem contexto para nenhuma das duas.
+
+### O fundo muda de peça para peça, de propósito
+
+No Story a luz do halo é escolhida por destaque, porque as telas são vistas em
+sequência. No feed elas aparecem **lado a lado na grade**, então a luz é
+passada por peça (0.20 a 0.42): cinco fundos idênticos leem como uma imagem
+repetida cinco vezes.
+
+Cada peça sai também em `...@4k.png` (2160×2700), reserva para anúncio. **Não
+suba o `@4k` direto** — o Instagram recomprime para 1080 de largura de
+qualquer jeito, às vezes pior que a redução LANCZOS que o script já faz.
+
 ## Convenção de nome de arquivo
 
 **Story de destaque:** `destaque-N-assunto.png`, com `N` na ordem de
