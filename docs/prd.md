@@ -810,7 +810,15 @@ Cada item marcado tem prova, não impressão — o método está em
       empresas segura mesmo com a interface burlada. Limite de empresas do Free
       travado no banco desde a 0018, reprovado com a RPC real.
 - [x] **Documentação interna alinhada com Asaas.** Sem vestígio de Stripe nos
-      caminhos de cobrança (o agente/skill de Stripe no repo não se aplica).
+      caminhos de cobrança. Em 30/08 o agente `payment-integration` (genérico
+      de Stripe/PayPal/Square, zero menção a Asaas) foi removido do repo, e
+      confirmou-se que a skill `stripe-integration` que o `CLAUDE.md` citava
+      **nunca existiu** — a menção era falsa desde que foi escrita. As citações
+      a Stripe que restam são de duas naturezas legítimas: referência de
+      *design* (Attio, Stripe e Linear como padrão de tipografia em
+      `hero-section.tsx` e `public-navbar.tsx`) e registro histórico de por que
+      a formação original pedia Stripe e foi traduzida para Asaas
+      (`docs/plan.md`).
 - [x] **Texto e copy do produto consistentes com a solução real.** Jargão
       banido pelo `prd-copy-sem-jargao.md` eliminado das telas (Pipeline→Funil,
       Leads→Contatos, Dashboard→Resultados), incluindo o que a renomeação de

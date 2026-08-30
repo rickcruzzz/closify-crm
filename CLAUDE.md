@@ -38,10 +38,17 @@ porquê de cada decisão e são a memória real daqui.
   pergunta que hoje ninguém responde
 - **Automação futura:** n8n, Notion API, Linear API
 
-> **Importante:** este projeto usa **Asaas**, não Stripe, para pagamentos,
-> mesmo que existam agente/skill de Stripe configurados neste repo
-> (`.claude/agents/payment-integration.md`, `.claude/skills/stripe-integration`),
-> eles não se aplicam à parte de billing do Velo Funil.
+> **Importante:** este projeto usa **Asaas**, não Stripe, para pagamentos.
+> O agente `payment-integration` (genérico de Stripe/PayPal/Square, sem uma
+> linha de Asaas) foi **removido em 30/08**, e a skill `stripe-integration`
+> que este aviso citava **nunca existiu no repositório** — a menção era falsa
+> desde que foi escrita. Sobra o MCP do Stripe, que é configuração da máquina
+> (`~/.claude.json`), fica fora daqui e não é usado.
+>
+> O aviso permanece porque o risco que ele evita é real: Stripe é o padrão de
+> mercado, e o reflexo de qualquer ferramenta ao ver "billing" é sugerir
+> Stripe. Aqui é Asaas, com Pix e boleto — que é justamente o que o Stripe não
+> resolve bem no Brasil.
 
 ## Estrutura de Pastas
 

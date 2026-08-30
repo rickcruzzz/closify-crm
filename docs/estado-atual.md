@@ -2892,7 +2892,7 @@ registrado como próximo passo se a base provar valor.
 
 | Decisão                                     | Motivo                                                                                                                                                        |
 | ------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Asaas, não Stripe**                       | Existe skill/agente de Stripe no repo; não se aplica ao billing                                                                                               |
+| **Asaas, não Stripe**                       | Pix e boleto, que é o que o Stripe não resolve bem no Brasil. O agente `payment-integration` foi removido em 30/08 e a skill `stripe-integration` nunca existiu |
 | **Sem prova social inventada**              | A `StatsSection` já teve métrica falsa copiada de concorrente, removida de propósito. Só entra com cliente real                                               |
 | **Login não revela se a conta existe**      | Distinguir "senha errada" de "conta inexistente" permite enumerar e-mails e alimenta phishing. O erro oferece "Criar conta" e "Recuperar acesso" em vez disso |
 | **Logo do e-mail é tipografia, não imagem** | Gmail e Outlook bloqueiam imagem por padrão; cabeçalho com `<img>` aparece vazio                                                                              |
