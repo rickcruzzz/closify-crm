@@ -114,7 +114,14 @@ export async function lerBanco(): Promise<LeituraDoBanco> {
       // rota sem paginação dobrou o custo medido da rota.
       supabase.from('leads').select('workspace_id').limit(TETO),
       supabase.from('deals').select('workspace_id').limit(TETO),
-      supabase.from('error_logs').select('id', { count: 'exact', head: true }),
+      // Só erro de CLIENTE. A 0058 separou `interno` justamente porque 52 dos
+      // 73 registros vinham de `localhost` e de contas nossas — e um alerta
+      // que diz "73 erros" quando 4 são de gente real ensina a ignorar o
+      // alerta. Mesma classe do ruído nos outros alertas desta tela.
+      supabase
+        .from('error_logs')
+        .select('id', { count: 'exact', head: true })
+        .eq('interno', false),
     ])
 
   const empresas = (empresasRes.data ?? []) as LinhaDeEmpresa[]

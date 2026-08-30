@@ -14,7 +14,7 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { formatarData, formatarTempoRelativo } from '@/lib/dono/formato'
-import type { EmpresaNaCentral } from '@/lib/dono/tipos'
+import type { EmpresaComEstado } from '@/lib/dono/tipos'
 import { cn } from '@/lib/utils'
 
 import { AcoesDaEmpresa } from './acoes-da-empresa'
@@ -42,7 +42,7 @@ type Coluna = 'nome' | 'criadoEm' | 'ultimoAcesso' | 'contatos' | 'negocios'
  * mais, quem sumiu faz mais tempo, quem entrou por último. Isso é ordenação,
  * não busca.
  */
-export function TabelaDeClientes({ empresas }: { empresas: EmpresaNaCentral[] }) {
+export function TabelaDeClientes({ empresas }: { empresas: EmpresaComEstado[] }) {
   const [busca, setBusca] = React.useState('')
   const [coluna, setColuna] = React.useState<Coluna>('criadoEm')
   const [crescente, setCrescente] = React.useState(false)
@@ -56,7 +56,7 @@ export function TabelaDeClientes({ empresas }: { empresas: EmpresaNaCentral[] })
         )
       : empresas
 
-    const valorDe = (empresa: EmpresaNaCentral): string | number => {
+    const valorDe = (empresa: EmpresaComEstado): string | number => {
       switch (coluna) {
         case 'nome':
           return empresa.nome.toLowerCase()
@@ -258,22 +258,53 @@ export function TabelaDeClientes({ empresas }: { empresas: EmpresaNaCentral[] })
 /**
  * O plano em uma palavra.
  *
- * Note que "Pagando" sai de `pagando`, que vem da RPC `pro_vigente`, e não de
- * `statusAssinatura`. Os dois podem discordar — e quando discordam, a verdade
- * é a função: a coluna é o último valor gravado e não sabe que o tempo passou.
+ * ## "Pagando" saía de `pro_vigente()`, e isso estava errado
+ *
+ * A RPC é `assinatura viva OU trial válido` — ela responde "pode usar o Pro?".
+ * Com ela, a empresa "fcvb ds", em TRIAL gratuito, aparecia com o selo verde
+ * "Pagando" na lista de clientes. Achado em 30/08, junto do mesmo defeito na
+ * receita e no alerta de cliente sumido: `pro_vigente()` vazou como se fosse
+ * resposta sobre dinheiro por toda a Central.
+ *
+ * Agora lê `estadoDoAcesso`, decidido em `central.ts` cruzando o banco com o
+ * gateway — e cada estado ganha o próprio selo, porque "está em trial" e "está
+ * pagando" pedem conversas diferentes.
+ *
+ * `statusAssinatura` continua fora: a coluna é o último valor gravado e não
+ * sabe que o tempo passou.
  */
-function SeloDePlano({ empresa }: { empresa: EmpresaNaCentral }) {
-  if (empresa.pagando) {
-    return (
-      <Badge className="border-emerald-500/30 bg-emerald-500/10 text-emerald-500">Pagando</Badge>
-    )
+function SeloDePlano({ empresa }: { empresa: EmpresaComEstado }) {
+  switch (empresa.estadoDoAcesso) {
+    case 'pagante':
+      return (
+        <Badge className="border-emerald-500/30 bg-emerald-500/10 text-emerald-500">Pagando</Badge>
+      )
+    case 'trial':
+      return (
+        <Badge className="border-sky-500/30 bg-sky-500/10 text-sky-500">Em trial</Badge>
+      )
+    // Venda travada: assinou no gateway e não pagou. Amarelo e não verde —
+    // é dinheiro que ainda dá para recuperar, não dinheiro que entrou.
+    case 'assinou_sem_pagar':
+      return (
+        <Badge className="border-amber-500/30 bg-amber-500/10 text-amber-600 dark:text-amber-500">
+          Não pagou
+        </Badge>
+      )
+    case 'cortesia':
+      return <Badge className="border-violet-500/30 bg-violet-500/10 text-violet-500">Cortesia</Badge>
+    case 'interna':
+      return <Badge variant="outline">Interna</Badge>
+    // `null` é o Asaas fora do ar: sem ele não dá para afirmar quem paga, e
+    // cair no selo "Grátis" seria uma afirmação que não se pode sustentar.
+    case null:
+      return <Badge variant="outline">—</Badge>
+    default:
+      if (empresa.statusAssinatura === 'past_due') {
+        return <Badge className="border-red-500/30 bg-red-500/10 text-red-500">Atrasado</Badge>
+      }
+      return <Badge variant="outline">Grátis</Badge>
   }
-
-  if (empresa.statusAssinatura === 'past_due') {
-    return <Badge className="border-red-500/30 bg-red-500/10 text-red-500">Atrasado</Badge>
-  }
-
-  return <Badge variant="outline">Grátis</Badge>
 }
 
 function CabecalhoOrdenavel({
