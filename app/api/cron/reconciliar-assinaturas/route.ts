@@ -21,6 +21,31 @@ import { appUrl } from '@/lib/app-url'
 export const runtime = 'nodejs'
 
 /**
+ * Teto explícito, e não herdado.
+ *
+ * Esta rota percorre TRÊS laços em série, cada iteração com chamada HTTP
+ * externa: reconciliar (1 ao Asaas por assinatura suspeita), avisar (1 Asaas +
+ * 1 Resend por assinatura vencendo) e trial (1 Resend por empresa). Medido em
+ * 30/08 contra produção: Asaas 241ms, Resend 458ms, e a execução real levou
+ * 1908ms com 12 candidatas.
+ *
+ * A projeção de pior caso põe o estouro por volta de 2.500 assinantes — longe
+ * das 39 empresas de hoje, mas o número existe e agora está escrito.
+ *
+ * **Por que declarar em vez de herdar.** Sem esta linha o valor vem da
+ * configuração do projeto na Vercel, que é painel e muda — inclusive por
+ * engano, e sem ninguém relacionar a mudança com um cron que passou a morrer
+ * no meio. E morrer no meio aqui é a pior forma de falhar: metade dos
+ * assinantes fica sem reconciliar e sem aviso de vencimento, em silêncio, e o
+ * cron só roda de novo no dia seguinte.
+ *
+ * 300s é o teto da plataforma com Fluid Compute, não uma folga escolhida a
+ * esmo: é o máximo que dá para pedir. O vizinho `limpar-eventos` pede 60 pelo
+ * motivo oposto — lá, passar de um minuto significa que algo está errado.
+ */
+export const maxDuration = 300
+
+/**
  * Teto de linhas por varredura.
  *
  * O PostgREST corta em 1.000 e **não avisa** — quem não põe `.limit()` mente em
