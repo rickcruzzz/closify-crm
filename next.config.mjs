@@ -24,6 +24,29 @@
 // código empacotado. Antes de trocar para modo bloqueio é preciso decidir
 // entre adicionar `'unsafe-eval'` (o que enfraquece bastante a diretiva) ou
 // isolar qual dependência faz isso e trocá-la.
+/**
+ * O `next dev` NÃO consegue rodar sem `eval`.
+ *
+ * O webpack de desenvolvimento envolve cada módulo em `eval()` para dar
+ * source map por módulo — é assim que ele funciona, não é opção de
+ * configuração. Com a CSP em bloqueio e sem `'unsafe-eval'`, o navegador
+ * recusa o bundle inteiro: `EvalError` no console, **o React nunca hidrata**,
+ * e nenhum botão, formulário ou diálogo responde em `localhost`.
+ *
+ * Medido em 30/08, e o efeito é maior que "atrapalha o desenvolvimento":
+ * o formulário de login passa a submeter NATIVAMENTE, virando
+ * `GET /login?email=...&password=...` — com a senha na URL, no histórico e no
+ * `Referer`.
+ *
+ * A política virou bloqueio em 27/08 e ninguém percebeu porque a prova daquele
+ * dia rodou contra produção, onde o build **não** usa `eval` e a CSP está
+ * correta como está.
+ *
+ * `'unsafe-eval'` entra SÓ em desenvolvimento. Em produção a diretiva
+ * permanece exatamente como estava — que é onde ela protege alguém.
+ */
+const emDesenvolvimento = process.env.NODE_ENV === 'development'
+
 const csp = [
   "default-src 'self'",
   // `unsafe-inline` é inevitável enquanto as páginas forem estáticas: o Next
@@ -31,7 +54,7 @@ const csp = [
   // vale, porque bloqueia script vindo de origem externa. `connect.facebook.net`
   // é o loader do Meta Pixel (components/analytics/meta-pixel.tsx), só nas
   // páginas públicas, mas a CSP é do site inteiro, não dá pra restringir por rota.
-  "script-src 'self' 'unsafe-inline' https://connect.facebook.net",
+  `script-src 'self' 'unsafe-inline'${emDesenvolvimento ? " 'unsafe-eval'" : ''} https://connect.facebook.net`,
   // O next-themes escreve `style` inline no elemento raiz antes da hidratação
   // para evitar flash de tema; sem `unsafe-inline` a página perde formatação.
   "style-src 'self' 'unsafe-inline'",

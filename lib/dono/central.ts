@@ -2,8 +2,9 @@ import 'server-only'
 
 import { PRO_PLAN_PRICE } from '@/lib/plans'
 
-import { assinaturasComPagamento, lerDinheiro, listarAssinaturasDoAsaas } from './dinheiro'
+import { lerDinheiro } from './dinheiro'
 import { classificarAcesso, montarQuadroDeReceita, type EstadoDoAcesso } from './receita'
+import type { AssinaturaNoAsaas, Resultado } from './tipos'
 import { lerEmails } from './emails'
 import { montarPendencias } from './pendencias'
 import { lerBanco } from './queries'
@@ -34,17 +35,23 @@ export async function lerCentral(): Promise<DadosDaCentral> {
   // leitura dele custa quatro chamadas à Meta. Fazer a Visão geral pagar isso
   // a cada abertura, para mostrar um bloco que o dono vai olhar uma vez por
   // dia, é o tipo de peso que só aparece quando a tela já está lenta.
-  const [banco, dinheiro, assinaturasNoAsaas, pagas, emails, silenciados] = await Promise.all([
+  // UMA leitura do Asaas, não três. As outras duas funções faziam chamadas
+  // próprias e repetiam `/subscriptions` e `/payments?status=RECEIVED` — eram
+  // 8 idas ao gateway por F5, e em 30/08 o Asaas respondeu `429`.
+  const [banco, dinheiro, emails, silenciados] = await Promise.all([
     lerBanco(),
     lerDinheiro(),
-    listarAssinaturasDoAsaas(),
-    // Quais assinaturas de fato RECEBERAM dinheiro. É o que separa receita de
-    // intenção: a empresa "rththn" tem assinatura ACTIVE no Asaas e zero
-    // pagamento confirmado, e contava como R$ 49/mês antes desta correção.
-    assinaturasComPagamento(),
     lerEmails(),
     lerSilenciados(),
   ])
+
+  // Tudo que vinha das duas chamadas extras sai daqui agora. Quando o Asaas
+  // falha, `dinheiro.ok` é falso e os dois viram vazio — que é o mesmo
+  // caminho de antes, com uma fonte só.
+  const assinaturasNoAsaas: Resultado<AssinaturaNoAsaas[]> = dinheiro.ok
+    ? { ok: true, dados: dinheiro.dados.assinaturas }
+    : { ok: false, erro: dinheiro.erro }
+  const idsPagas = dinheiro.ok ? dinheiro.dados.comPagamento : new Set<string>()
 
   // ## Onde o banco e o gateway se encontram
   //
@@ -62,8 +69,7 @@ export async function lerCentral(): Promise<DadosDaCentral> {
       ? assinaturasNoAsaas.dados.filter((a) => a.status === 'ACTIVE' && !a.deleted).map((a) => a.id)
       : [],
   )
-  const idsPagas = pagas.ok ? pagas.dados : new Set<string>()
-  const gatewayDisponivel = assinaturasNoAsaas.ok && pagas.ok
+  const gatewayDisponivel = dinheiro.ok
 
   const empresas = banco.empresas.map((empresa) => {
     const assinatura = banco.assinaturas.find((a) => a.workspace_id === empresa.id)

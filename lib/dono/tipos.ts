@@ -131,6 +131,20 @@ export type DinheiroNoAsaas = {
   vencido: { quantidade: number; total: number }
   recebido: { quantidade: number; total: number }
   assinaturasAtivas: number
+  /**
+   * A lista crua, para o cruzamento das pendências.
+   *
+   * Vem daqui e não de uma chamada própria: `/subscriptions` era buscada
+   * DUAS vezes por abertura da Central, e as 8 chamadas por F5 estouraram o
+   * limite do Asaas em 30/08 (`429`, com a tela inteira sem dinheiro).
+   */
+  assinaturas: AssinaturaNoAsaas[]
+  /**
+   * Ids das assinaturas que de fato RECEBERAM dinheiro (RECEIVED ou
+   * CONFIRMED). É o que separa receita de intenção — assinatura ACTIVE sem
+   * pagamento é venda travada, não MRR.
+   */
+  comPagamento: Set<string>
 }
 
 /** Um e-mail transacional e se ele chegou. */

@@ -85,8 +85,33 @@ test.beforeAll(async () => {
     )
 })
 
+/**
+ * Quando `MANTER_RELATOS=1`, o roteiro NÃO apaga o que criou.
+ *
+ * Serve para conferir a Central com os olhos: os relatos precisam continuar lá
+ * depois do teste terminar. Sem a variável, tudo é apagado — que é o padrão, e
+ * o que torna seguro rodar isto com frequência contra o banco de produção.
+ *
+ * A conta e a empresa continuam sendo apagadas nos dois casos: o que fica é só
+ * o relato, e ele não custa nada. Deixar conta órfã, sim.
+ */
+const MANTER = process.env.MANTER_RELATOS === '1'
+
 test.afterAll(async () => {
   const admin = bancoAdmin()
+
+  if (MANTER) {
+    console.log(
+      [
+        '',
+        `  MANTER_RELATOS=1 — os relatos de "${identidade.empresa}" ficaram na Central.`,
+        '  Confira em /dono/suporte. Para apagar depois:',
+        `    delete from feedback where workspace_id = '${workspaceId}';`,
+        '',
+      ].join(String.fromCharCode(10)),
+    )
+    return
+  }
 
   if (workspaceId) {
     // Os ARQUIVOS primeiro: `feedback` não tem FK para `workspaces`, então
@@ -242,4 +267,44 @@ test('o aviso do problema CHEGOU ao Resend, com o plano no assunto', async () =>
   console.log(`\n  E-MAIL ENVIADO: "${aviso!.subject}"`)
   console.log(`  para: ${aviso!.to.join(', ')}`)
   console.log(`  estado no Resend: ${aviso!.last_event}\n`)
+})
+
+
+/**
+ * O relato chega na Central do Dono?
+ *
+ * Os testes acima provam que ele foi gravado e que o e-mail saiu. Este prova a
+ * terceira coisa, que é a que o dono de fato usa: **que aparece na tela onde
+ * ele trabalha**, com nome, e-mail e plano.
+ *
+ * Só roda contra `localhost`: a Central tem gate de ambiente e devolve 404 em
+ * produção — conferido hoje. Contra produção o teste é pulado em vez de
+ * falhar, porque ali o 404 é o comportamento CORRETO.
+ */
+test('o relato aparece na Central de Suporte, com nome e plano', async ({ page }) => {
+  test.skip(
+    !URL_BASE.includes('localhost'),
+    'A Central só existe em localhost — em produção o 404 é o esperado.',
+  )
+
+  await page.goto(`${URL_BASE}/dono/suporte`, { waitUntil: 'domcontentloaded' })
+  await page.waitForTimeout(6000)
+
+  // O filtro abre em "Abertos", que é onde o relato recém-enviado cai.
+  const cartao = page.locator('article').filter({ hasText: identidade.empresa })
+
+  await expect(cartao.first()).toBeVisible({ timeout: 30_000 })
+
+  const texto = await cartao.first().innerText()
+  // Nome de quem escreveu — o que permite reconhecer a pessoa.
+  expect(texto).toContain('Cliente de Teste E2E')
+  // E-mail — o que permite responder.
+  expect(texto).toContain(identidade.email)
+  // Plano — o que decide a urgência. Esta conta é Free.
+  expect(texto).toContain('Grátis')
+
+  const resumo = texto.split(String.fromCharCode(10)).slice(0, 3).join(' | ')
+  console.log('')
+  console.log('  NA CENTRAL: ' + resumo)
+  console.log('')
 })
