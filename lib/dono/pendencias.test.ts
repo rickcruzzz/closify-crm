@@ -269,6 +269,9 @@ describe('montarPendencias', () => {
         empresas: [
           empresa({
             pagando: true,
+            // `estadoDoAcesso`, não `pagando`: é ele que decide o texto desde
+            // 30/08. Ver o caso logo abaixo, que é o motivo da mudança.
+            estadoDoAcesso: 'pagante',
             quantidadeDeContatos: 5,
             ultimoAcesso: '2026-08-01T00:00:00Z',
           }),
@@ -277,6 +280,56 @@ describe('montarPendencias', () => {
 
       expect(r[0].titulo).toBe('Cliente pagante sumido')
       expect(r[0].detalhe).toContain('caminho mais curto para o cancelamento')
+    })
+
+    /**
+     * O defeito que a correção de 30/08 fechou, e ele é sobre DINHEIRO.
+     *
+     * `pagando` é `pro_vigente()`, que é `assinatura viva OU trial válido`.
+     * Alguém em trial gratuito que sumia virava "Cliente PAGANTE sumido", com
+     * o texto "está pagando e não está usando" — uma frase factualmente falsa
+     * sobre dinheiro, na tela que existe justamente para não errar sobre
+     * dinheiro.
+     */
+    it('NÃO chama de pagante quem só está em trial', () => {
+      const r = montarPendencias({
+        ...base,
+        empresas: [
+          empresa({
+            pagando: true,
+            emTrial: true,
+            estadoDoAcesso: 'trial',
+            quantidadeDeContatos: 5,
+            ultimoAcesso: '2026-08-01T00:00:00Z',
+          }),
+        ],
+      })
+
+      expect(r[0].titulo).toBe('Cliente sumido')
+      expect(r[0].detalhe).not.toContain('Está pagando')
+    })
+
+    /**
+     * Medido em 30/08: **3 de 3** alertas de "cliente sumido" eram conta de
+     * teste do próprio dono, uma delas chamada "agencia de marketig teste".
+     * Repetição exata do defeito de 20/08, quando 8 de 11 alertas da primeira
+     * execução eram e-mails inventados por script.
+     *
+     * Uma fila com 100% de ruído ensina a ignorar a fila inteira.
+     */
+    it('não avisa sobre conta de teste que sumiu', () => {
+      const r = montarPendencias({
+        ...base,
+        empresas: [
+          empresa({
+            interna: true,
+            quantidadeDeContatos: 8,
+            ultimoAcesso: '2026-08-01T00:00:00Z',
+          }),
+        ],
+      })
+
+      expect(r.filter((p) => p.tipo === 'cliente-sumido')).toHaveLength(0)
     })
 
     // Quem nunca cadastrou contato não abandonou o produto: nunca chegou a

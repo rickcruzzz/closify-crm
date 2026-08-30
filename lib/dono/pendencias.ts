@@ -149,6 +149,8 @@ export function montarPendencias({
   // 3. Pro vencendo em até 7 dias — janela para cobrar antes de perder.
   const limite = agora.getTime() + SETE_DIAS
   for (const empresa of empresas) {
+    // Conta nossa vencendo não é cobrança a fazer. Mesma regra do alerta 6.
+    if (empresa.interna) continue
     if (!empresa.pagando || !empresa.proVenceEm) continue
     const vence = new Date(empresa.proVenceEm).getTime()
     if (vence > agora.getTime() && vence <= limite) {
@@ -204,6 +206,10 @@ export function montarPendencias({
   //    Diferente do caso acima: aqui não houve bounce ainda, o defeito está no
   //    cadastro. Ver `dominios.ts` para o caso real que motivou isto.
   for (const empresa of empresas) {
+    // Hoje não dispara para ninguém (medido em 30/08: 0 de 0), mas o buraco
+    // era o mesmo dos alertas 3 e 6: e-mail descartável com domínio "quase
+    // certo" geraria alerta sobre uma pessoa que não existe.
+    if (empresa.interna) continue
     const sugestao = dominioProvavelmenteErrado(empresa.email)
     if (!sugestao) continue
 
@@ -220,8 +226,19 @@ export function montarPendencias({
 
   // 6. Cliente que sumiu. Só conta quem chegou a usar: empresa sem nenhum
   //    contato nunca ativou, e isso é outro problema (ativação), não abandono.
+  //
+  //    ## E só conta CLIENTE, não conta de teste
+  //
+  //    Medido em 30/08: **3 de 3** alertas de "cliente sumido" eram contas de
+  //    teste do próprio dono — inclusive uma chamada "agencia de marketig
+  //    teste". É a repetição exata do defeito de 20/08, quando 8 de 11 alertas
+  //    da primeira execução eram e-mails inventados por script.
+  //
+  //    Uma fila com 100% de ruído ensina a ignorar a fila inteira, e junto com
+  //    o item chato vai embora o alerta de dinheiro que aparecer amanhã.
   const corteDeSumico = agora.getTime() - DIAS_ATE_SUMIR * 24 * 60 * 60 * 1000
   for (const empresa of empresas) {
+    if (empresa.interna) continue
     if (empresa.quantidadeDeContatos === 0) continue
     if (!empresa.ultimoAcesso) continue
 
@@ -229,12 +246,21 @@ export function montarPendencias({
     if (ultimo >= corteDeSumico) continue
 
     const dias = Math.floor((agora.getTime() - ultimo) / (24 * 60 * 60 * 1000))
+    const paganteDeVerdade = empresa.estadoDoAcesso === 'pagante'
     pendencias.push({
       id: `sumido:${empresa.id}`,
       gravidade: 'atencao',
       tipo: 'cliente-sumido',
-      titulo: empresa.pagando ? 'Cliente pagante sumido' : 'Cliente sumido',
-      detalhe: `${empresa.nome} não acessa há ${dias} dias, mas tem ${empresa.quantidadeDeContatos} contato(s) cadastrado(s). Chegou a usar e parou.${empresa.pagando ? ' Está pagando e não está usando, que é o caminho mais curto para o cancelamento.' : ''}`,
+      // `estadoDoAcesso === 'pagante'`, NÃO `empresa.pagando`.
+      //
+      // `pagando` é `pro_vigente()`, que é `assinatura viva OU trial válido`.
+      // Com ela, alguém em trial gratuito que sumiu virava "Cliente PAGANTE
+      // sumido" com o texto "está pagando e não está usando" — uma frase
+      // factualmente falsa sobre dinheiro, no lugar da Central que existe
+      // justamente para não errar sobre dinheiro. É o mesmo defeito da receita
+      // (30/08), propagado até o alerta.
+      titulo: paganteDeVerdade ? 'Cliente pagante sumido' : 'Cliente sumido',
+      detalhe: `${empresa.nome} não acessa há ${dias} dias, mas tem ${empresa.quantidadeDeContatos} contato(s) cadastrado(s). Chegou a usar e parou.${paganteDeVerdade ? ' Está pagando e não está usando, que é o caminho mais curto para o cancelamento.' : ''}`,
       empresa: empresa.nome,
       email: empresa.email ?? undefined,
     })
