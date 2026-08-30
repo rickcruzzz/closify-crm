@@ -4,7 +4,12 @@ Documento de continuidade. É lido no começo de toda sessão (referenciado no
 [CLAUDE.md](../CLAUDE.md)) para que uma conversa nova, ou outra conta, comece
 sabendo o que já foi feito, o que foi decidido e onde estão as armadilhas.
 
-**Atualizado em:** 26/08/2026, tarde (a elevação do modo claro nunca chegou a
+**Atualizado em:** 29/08/2026 (o reverse trial acabou e as 10 empresas em
+avaliação mantiveram o prazo; o `META_ADS_TOKEN` está morto e a Central de
+anúncio com ele; e o Instagram nunca teve conexão nenhuma por API, apesar de
+ter sido informado que tinha)
+
+**Antes disso, 26/08/2026, tarde** (a elevação do modo claro nunca chegou a
 nenhum cartão do sistema, desde 22/08, porque `ring` e sombra disputam o mesmo
 `box-shadow` no Tailwind v4; e o PRD e o diagrama voltaram a bater com o banco)
 
@@ -49,6 +54,181 @@ minutos seguidos, contra 26% da medição anterior)
 **Antes disso, 23/08/2026** (landing auditada: promessa falsa no hero, logo quebrado no telefone, banner de cookies cobrindo o CTA, e prints mostrando o jargão que a própria página baniu; PRD, schema e grafo realinhados)
 
 **Antes disso, 22/08/2026** (funções rodavam em Washington DC com o banco em São Paulo, corrigido na config do projeto e medido: /dashboard 1221ms → 400ms; modo claro sem escada de superfícies, refeito; jargão remanescente e telas de erro; WhatsApp sem QR por Postgres esgotado na VPS; migration 0049 provada desnecessária e removida)
+
+## O trial acabou, o token da Meta morreu, e o Instagram nunca esteve ligado (29/08)
+
+Rodada longa, cinco frentes. O que as liga é a mesma classe que este documento
+existe para combater: **coisa afirmada que deixou de ser verdade sem ninguém
+perceber** — aqui em três lugares diferentes.
+
+### O reverse trial acabou (migration 0057)
+
+Decisão do dono: empresa nova **nasce no Free**. A 0057 tira `trial_ate` do
+`insert` de `create_workspace_with_admin` e não toca em mais nada.
+
+**As 10 empresas que já estavam em avaliação mantêm o prazo delas**, medido no
+dia da migration: `trial_ate` intacto, nenhuma linha alterada. Cortar o trial
+de quem leu a promessa na tela de cadastro seria quebrar contrato. Por isso a
+coluna, `em_trial()` e as triggers continuam de pé — quando a última vencer, a
+lógica fica adormecida, não removida.
+
+**A ordem importou, e é o que vale registrar.** A landing ainda dizia "7 dias
+de Pro grátis" em três lugares, incluindo a `<meta description>` e a imagem de
+compartilhamento — que é o que aparece no Google e no WhatsApp **antes de
+qualquer clique**. Aplicar a migration primeiro faria a página prometer um
+trial que já não existia. Promoção da landing primeiro, migration depois.
+
+Provado com empresa descartável, apagada num `finally`, **8 de 8**: nasce sem
+`trial_ate`, `em_trial()` e `pro_vigente()` falsos, plano `free`, e o teto de
+50 contatos valendo desde o primeiro instante (o 51º toma `42501`). As 10 em
+avaliação, conferidas antes e depois, com prazo inalterado.
+
+### A grade da landing fechou 3×3, e isso acordou dois defeitos que dormiam
+
+Reportado com print: o card "Cada um vê o que precisa ver" com tamanho
+diferente dos outros. Medido: **682px contra 341px**, o dobro exato, com
+**186px de vazio** dentro dele (texto travado em `max-w-md`). Causa: eram 8
+cards em 3 colunas, `8 % 3 = 2`, e o código esticava o último para não deixar
+célula vazia.
+
+Um 9º card (Calendário, entregue em 18/08 e nunca mostrado na página) fecha a
+conta em vez de tratar a sobra.
+
+**Os dois defeitos que a mudança de contagem revelou valem mais que a
+correção**, porque nenhum veio do card novo — os dois estavam errados desde
+sempre e eram inalcançáveis:
+
+    sm:col-span-2 vazava para lg    utility de breakpoint vale dali PARA CIMA,
+                                    e nao havia `lg:col-span-1` desfazendo.
+                                    Com 8 cards, `8 % 2 = 0` nunca ligava o
+                                    span de sm, entao o defeito nao tinha como
+                                    aparecer. Com 9, apareceu na 1a medicao.
+
+    a faixa horizontal era codigo   `viraFaixa` nunca havia sido verdadeiro.
+    morto                           Ao renderizar pela primeira vez, saiu
+                                    torta: `justify-center` empurrava icone e
+                                    texto para o meio e quebrava o alinhamento
+                                    da coluna esquerda com a grade inteira.
+
+Provado em 9 larguras e nos dois temas: 1 largura distinta em `lg`, ícone em
+`x=16 y=16` em todo card, sem rolagem horizontal em 375px. **E os PNG abertos e
+olhados** — foi assim que a faixa torta apareceu, porque nenhum portão olha
+dentro de imagem.
+
+Detalhe de método que custou uma medição errada: o print precisa esperar o
+stagger **terminar** (delay 260 + duração 600). Capturar antes mostra um
+desalinhamento que é da animação, não do layout.
+
+### Feed do Instagram: 5 artes, e o recorte que ninguém tinha registrado
+
+`scripts/marketing/gerar-feed.py` produz **1080×1350 (4:5)**, reusando fundo,
+tipografia, marca d'água e assinatura do gerador de Stories — importa o módulo
+em vez de copiar, senão as duas famílias divergem no primeiro ajuste.
+
+**A grade do perfil recorta em 3:4**, e isso não estava em lugar nenhum deste
+projeto: a peça vai ao feed inteira, mas na grade o Instagram mostra
+**1012×1350 centralizado**, 34px somem de cada lado. Quem desenhar encostado na
+borda perde conteúdo justamente na tela onde alguém decide seguir o perfil.
+`conferir_zona_segura()` derruba a geração se a margem perder a folga.
+
+**A cápsula de categoria vai sem ícone dentro** — é `pill()` menos uma linha. O
+espaço do ponto sai junto com o ponto: mantê-lo deixaria um vão à esquerda que
+lê como imagem que não carregou, pior que o ícone removido.
+
+As cinco carregam dado de pesquisa pública com a fonte impressa na arte, único
+conteúdo que passa sem esbarrar na regra contra prova social inventada. Duas
+linhas de fonte nasceram com nota de bastidor e foram reescritas — *"o dado
+costuma ser creditado à Harvard, e não é"* cita Harvard na peça só para negá-la,
+e quem lê no Instagram não tem contexto para isso.
+
+**Nenhum sparkle foi encontrado.** O pedido citava ✦, ✧ e outros; varridos os
+56 criativos, o gerador e todos os SVG, **eles não existem aqui**. O que existe
+é o ponto na cápsula dos Stories e ícone genérico de banco nos 5 selos de
+destaque (lâmpada, engrenagem, `?`, etiqueta) — **os dois seguem como estavam**,
+porque a prioridade virou o feed.
+
+### O `META_ADS_TOKEN` está morto
+
+`API access blocked` (`OAuthException`, code 200) em **8 de 8** chamadas.
+Funcionava em 25/08.
+
+**A conta da Meta não está bloqueada**, e é isso que separa os dois problemas: o
+MCP de anúncios lista as duas contas `ACTIVE`, com método de pagamento. Morreu
+só o token do `.env.local`.
+
+Consequência: **`/dono/anuncio` na Central não funciona** — a tela que 25/08
+registrou como "5 de 5 pontos prontos" está cega.
+
+### O Instagram nunca teve conexão por API
+
+Foi informado que o sistema estava conectado a `@velofunil` por API. **Não
+está**, e a evidência é de quatro lados:
+
+    codigo que publica no IG    0 arquivos
+    credencial de Instagram     nenhuma no .env.local
+    META_ADS_TOKEN              morto (acima)
+    contas de IG ligadas        0 na conta de anuncio
+
+`lib/dono/perfil-instagram.ts` gera **texto** de bio e nome para copiar e colar
+— não conecta a nada. As 5 artes sobem pelo celular.
+
+**O business virou `VELO FUNIL LTDA`** — era "Rickdaskin". É sinal forte de que
+o CNPJ novo saiu, e é o degrau que destrava a verificação de negócio da Meta.
+**Não confirmado na Receita nesta rodada**, e `lib/legal.ts` segue com
+`cnpj: null`.
+
+### Dor de mercado, com evidência de quatro classes
+
+[docs/dor-de-mercado.md](dor-de-mercado.md) analisa 5 candidatas e seleciona
+uma: **todo CRM cobra um pedágio de digitação que quem vende pelo WhatsApp não
+tem como pagar.**
+
+    banco de producao   96% concluem o onboarding, 39% criam o 1o contato
+                        (perde 13 de 22 num degrau so)
+                        6 de 9 usaram por 0 dia e nunca voltaram
+    publicada           3,4h/semana digitando; 55% das implantacoes falham,
+                        e 60% disso e adocao, nao plataforma
+    reclamacao          3 min por interacao x 30/dia = 90 min/dia
+    demanda             82% da PME vende por WhatsApp (Sebrae, 8,2 mil
+                        ouvidos); 10 CRMs brasileiros na mesma categoria
+
+Solução proposta: aceitar a **conversa exportada do WhatsApp** como fonte de
+contato — função nativa do aplicativo, gera `.txt`, não depende de API. O
+caminho de importar arquivo já existe desde 11/08; muda o parser, não a
+arquitetura.
+
+**A ressalva que mais pesa, registrada junto:** o banco mostra ONDE as pessoas
+param, não POR QUÊ. Nenhuma das 23 empresas foi perguntada. Cinco conversas de
+dez minutos com esses usuários valem mais que o documento inteiro.
+
+**Achado do próprio método:** minha primeira leitura deu "0% concluiu
+onboarding" porque eu media uma coluna (`concluido_em`) que não existe — é
+`status`. O real é 96%, e isso **move a queda** do onboarding para o cadastro
+do primeiro contato, que é outro diagnóstico e outra solução.
+
+### PRD, diagrama e grafo realinhados
+
+O PRD e o `schema.md` estavam **28 commits atrás** e ainda vendiam o trial.
+Reconferidos pelo OpenAPI do PostgREST, a mesma fonte de sempre:
+
+    tabelas       17    igual a 26/08
+    RPCs          30    igual
+    foreign keys  17    igual
+    migrations    56    o PRD dizia 55
+    testes       687    o PRD dizia 715 (cairam com a saida do Evolution)
+
+**A estrutura não mudou, e é esse o ponto.** A 0057 reescreveu uma RPC
+existente por dentro, com a mesma assinatura — nada no catálogo se mexeu
+enquanto a regra de negócio mudava. É o **terceiro caso da mesma classe**:
+0055 reescreveu `pro_vigente()`, 0056 criou uma `returns trigger` que o
+PostgREST não expõe, agora a 0057.
+
+Grafo: 3455 → **3492 nós**, 284 comunidades, **0 nós fora do repositório**. Um
+nó fantasma (`source_file: "next"`, o nome do pacote) podado e arquivado.
+**60 imagens de `marketing/instagram/` ficaram fora de propósito** — cada uma
+exige um subagente de visão, e elas não afetam o alinhamento entre PRD,
+diagrama e código. Seguem sem estampa no manifesto, então a próxima rodada as
+re-enfileira sozinha.
 
 ## O modo claro da landing, e a sombra que nunca existiu (26/08, tarde)
 
@@ -2455,6 +2635,26 @@ sessão.
       desde 08/08 e o business `Rickdaskin` está `pending_submission`. Baixa de
       MEI não tem volta, e software não cabe em MEI. Decisão do dono: abrir ME
       na Contabilizei. Enquanto não sair, o site não exibe CNPJ nenhum.
+
+      **Sinal novo, 29/08:** o business da Meta **mudou de nome para
+      `VELO FUNIL LTDA`** (era "Rickdaskin"), lido pela API. É indício forte de
+      que a inscrição saiu — **não confirmado na Receita nesta rodada**, e é
+      assim que fica registrado até alguém consultar. `lib/legal.ts` segue com
+      `cnpj: null` e `endereco: null`, então o site continua sem exibir número
+      nenhum. **Preencher os dois campos reacende sozinho** o rodapé, a seção
+      de confiança, os e-mails transacionais e as duas páginas legais — é a
+      única edição necessária quando o número estiver confirmado.
+- [ ] **`META_ADS_TOKEN` morto (29/08).** `API access blocked`
+      (`OAuthException`, code 200) em 8 de 8 chamadas à Graph API; funcionava
+      em 25/08. **A conta da Meta não está bloqueada** — o MCP de anúncios
+      lista as duas contas `ACTIVE`, com método de pagamento —, então o que
+      morreu foi só o token de system user do `.env.local`. Consequência:
+      `/dono/anuncio` na Central está cega, e ela é a tela que decide se há
+      campanha rodando. Ação do dono: gerar token novo com `ads_read`,
+      `ads_management`, `business_management`. **Não vai para a Vercel**: ele é
+      lido apenas em `lib/dono/`, e toda a Central devolve 404 em produção —
+      colá-lo lá poria um token que gasta dinheiro num ambiente onde o código
+      nunca roda.
 - [ ] **Cobrança da Fani Mayara** (`fanimayara67@gmail.com`): usuária real
       (logou em 11/08, 1 lead), plano `free`, começou o checkout e nunca pagou.
       Tem 2 cobranças de R$ 49 em aberto que vão virar aviso de vencimento.
@@ -2494,6 +2694,11 @@ sessão.
       o link sai como `.../redefinir-senha?token_hash=…`.
 - [x] Cancelar as assinaturas de teste no Asaas. Feito, eram 3, não 2.
 - [ ] **Conta de anúncio: a registrada aqui estava ERRADA (corrigido 20/08).**
+      **Conferido de novo em 29/08 pelo MCP de anúncios**, que usa credencial
+      própria: as duas contas seguem `ACTIVE` com método de pagamento, e o
+      business `1717888109644664` agora se chama **VELO FUNIL LTDA**. O que
+      mudou para pior é que o `META_ADS_TOKEN` morreu (pendência acima), então
+      nada aqui é alcançável pelo código do projeto até o token ser refeito.
       Esta entrada dizia que `27108979755418323` ("Orlando Henrique") era a
       conta do Velo Funil. Verificado contra a API da Meta: o pixel que o site
       de fato alimenta, `1566349361566072` ("h-systens", o valor de
@@ -2567,6 +2772,22 @@ registrado como próximo passo se a base provar valor.
 | **Tarefa não entra no limite de plano**     | Travar follow-up empurra a pessoa de volta para o WhatsApp e mata o hábito diário que faz ela pagar. O teto de 5.000 abertas é defesa contra abuso, não regra de negócio |
 
 ## Armadilhas já pagas, não repetir
+
+**Utility de breakpoint vale do breakpoint PARA CIMA, então `sm:` continua
+ativo em 1440px.** Parece óbvio escrito assim, e custou meia correção em 29/08:
+com 9 cards na grade de funcionalidades, `9 % 2 = 1` ligava `sm:col-span-2` no
+último — e como `lg` não declarava nada para desfazê-lo, o card seguia esticado
+em três colunas, exatamente o defeito que a mudança pretendia corrigir. A regra
+é declarar o reset **explícito** no breakpoint maior, inclusive quando o valor
+é o padrão (`lg:col-span-1`, `lg:flex-col`). Vale para qualquer classe
+condicional por largura, não só `col-span`.
+
+O que torna essa família perigosa é que ela é **inalcançável até deixar de
+ser**: com 8 cards, `8 % 2 = 0` nunca ligava o span de `sm`, então o erro
+existia no código e não tinha como aparecer. A faixa horizontal do mesmo
+componente era código morto pela mesma razão, e ao renderizar pela primeira vez
+saiu torta. **Caminho que nunca rodou não está certo — está não testado**, e a
+diferença aparece no dia em que uma contagem muda.
 
 **`ring` e sombra disputam o mesmo `box-shadow`, e o `ring` ganha.** No
 Tailwind v4 a utility `ring-*` declara `box-shadow: var(--tw-ring-offset-shadow),
