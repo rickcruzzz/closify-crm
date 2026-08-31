@@ -197,3 +197,46 @@ nenhuma — ela dá a sensação de cobertura.
 **A regra:** ao ler campo de arquivo ou de API, confira o que veio antes de
 concluir. Valor sentinela (`0`, `-1`, `null`, string vazia) quase sempre
 significa algo, e quase nunca significa o que a conversão direta sugere.
+
+---
+
+## 11. O alarme tocou, e só metade dele foi atendida
+
+**08/08 a 31/08, 23 dias.** Os cinco `.html` de `supabase/email-templates/` são
+cópias estáticas coladas à mão no painel do Supabase — a API de Auth não expõe
+template, então não há como aplicá-los por código. São os e-mails que **toda
+pessoa nova recebe**: confirmação de cadastro, recuperação de senha, convite,
+magic link, reautenticação.
+
+O projeto já tinha o alarme certo. `lib/emails/layout.test.ts` guardava um
+snapshot com o comentário explícito *"regenerar supabase/email-templates se
+falhar"*. Em 25/08, quando `CONTROLADOR.cnpj` virou anulável, ele quebrou —
+exatamente como projetado.
+
+**O snapshot foi atualizado. Os `.html` não foram regerados.**
+
+```
+landing            sem numero nenhum        (protegida em 25/08)
+e-mail de auth     CNPJ 64.543.748/0001-13  (baixado em 08/08)
+```
+
+Duas superfícies do mesmo dado, discordando por 23 dias, e nenhuma errando
+alto.
+
+**Por que passou:** um alarme que exige uma ação manual *do outro lado* é meio
+alarme. Ele prova que algo mudou, não que a consequência foi tratada. Quem
+atualiza o snapshot já está com a atenção no teste, não no arquivo que o teste
+está tentando proteger.
+
+**A regra:** quando um portão apenas *avisa* que uma cópia estática ficou para
+trás, ele não é portão — é lembrete. Troque por um teste que **leia o arquivo
+de verdade** e o compare com a função que a aplicação usa.
+
+E o teste positivo sozinho não basta: `toContain(assinaturaPublica())` passaria
+com o número velho ainda presente no HTML. Precisa do irmão negativo,
+`not.toContain('64.543.748')` — mesma estrutura do par que protege a bio do
+Instagram no item 4.
+
+**Prove com controle negativo.** Reverter um arquivo ao estado defeituoso e ver
+os testes reprovarem é o que separa "o portão existe" de "o portão funciona".
+Aqui: revertido, 2 reprovam; restaurado, 30 passam.

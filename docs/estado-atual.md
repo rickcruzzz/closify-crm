@@ -4,7 +4,11 @@ Documento de continuidade. É lido no começo de toda sessão (referenciado no
 [CLAUDE.md](../CLAUDE.md)) para que uma conversa nova, ou outra conta, comece
 sabendo o que já foi feito, o que foi decidido e onde estão as armadilhas.
 
-**Atualizado em:** 31/08/2026 (a logo que o cliente sobe nunca apareceu desde
+**Atualizado em:** 31/08/2026, noite (o CNPJ novo entrou e reacendeu seis
+superficies de uma vez; e cinco e-mails de autenticacao sairam 23 dias com um
+CNPJ que a Receita desmentia, porque o alarme tocou e so metade foi atendida)
+
+**Antes disso, 31/08/2026** (a logo que o cliente sobe nunca apareceu desde
 27/08, bloqueada pela propria CSP; o relato de suporte existia e a Central nao
 deixava ver; e o Asaas cobrava R$ 0,99 para mandar o e-mail que ja mandamos)
 
@@ -57,6 +61,134 @@ minutos seguidos, contra 26% da medição anterior)
 **Antes disso, 23/08/2026** (landing auditada: promessa falsa no hero, logo quebrado no telefone, banner de cookies cobrindo o CTA, e prints mostrando o jargão que a própria página baniu; PRD, schema e grafo realinhados)
 
 **Antes disso, 22/08/2026** (funções rodavam em Washington DC com o banco em São Paulo, corrigido na config do projeto e medido: /dashboard 1221ms → 400ms; modo claro sem escada de superfícies, refeito; jargão remanescente e telas de erro; WhatsApp sem QR por Postgres esgotado na VPS; migration 0049 provada desnecessária e removida)
+
+## O CNPJ novo entrou, e um alarme meio atendido apareceu (31/08, noite)
+
+O CNPJ saiu. Conferido contra a fonte antes de qualquer linha de codigo, pela
+regra da skill `fatos-publicados` — nunca contra o documento:
+
+    digito verificador   calculado 67, informado 67   CONFEREM
+    ReceitaWS            HTTP 200, situacao ATIVA
+    BrasilAPI            404   ainda nao propagou
+    CNPJa                402   "recently founded offices"
+
+Duas das quatro fontes ainda nao tem o registro, e **isso nao e problema do
+CNPJ** — e atraso das bases espelho, coerente com inscricao de tres dias.
+
+    razao social      ORLANDO HENRIQUE BASTOS DA CRUZ LTDA
+    CNPJ              68.877.105/0001-67, ATIVA desde 28/08
+    natureza          206-2  Sociedade Empresaria Limitada
+    CNAE principal    6311-9/00  tratamento de dados e provedor de aplicacao
+    CNAE secundario   6202-3/00  licenciamento de programas customizaveis
+    endereco          Av Tancredo Neves 2539, sala 2609, Salvador/BA
+    Simples Nacional  deferido, efeitos a partir de 31/08
+
+**Tres coisas mudaram alem do numero**, e as tres afetam codigo:
+
+1. **A razao social mudou de FORMA.** Era `64.543.748 ORLANDO HENRIQUE BASTOS
+   DA CRUZ` — o padrao do MEI, que e o CNPJ seguido do nome civil. Agora tem
+   sufixo societario de verdade.
+2. **Existe nome fantasia na Receita: VELO FUNIL.** MEI nao podia ter, foi
+   descontinuado da base do CNPJ em 15/11/2023 — e isso esta registrado aqui
+   como a razao de a fatura do Asaas mostrar o nome civil. Agora pode.
+3. **O CNAE principal e 6311-9/00**, nao o 6202-3/00 que o comentario de
+   `lib/legal.ts` previa. Os dois estao no cadastro, e o principal e o de
+   hospedagem e provedor de aplicacao, mais preciso para SaaS.
+
+### Preencher dois campos reacendeu seis superficies
+
+`lib/legal.ts` foi escrito em 25/08 exatamente para este momento, e a previsao
+se confirmou: `cnpj`, `endereco` e `razaoSocial` preenchidos, e o rodape, a
+secao de confianca, as duas paginas legais, o rodape dos e-mails e os avisos de
+fatura voltaram a citar o numero **sem nenhuma delas ser editada**.
+
+`ATUALIZADO_EM` foi de 09/08 para 31/08, e isso **nao e carimbo de revisao**: o
+controlador mudou de pessoa juridica. Sob a LGPD (Art. 9o, I) o titular tem
+direito de saber quem responde pelo dado dele, e a resposta mudou. Finalidades,
+suboperadores, prazos de retencao e direitos continuam identicos — mudou quem
+responde, nao o que e feito com o dado.
+
+### Os cinco e-mails que sairam 23 dias com um CNPJ morto
+
+Achado ao rodar `npm test`: o snapshot de `lib/emails/layout.test.ts` quebrou
+mostrando o CNPJ novo entrando no rodape. Ao regerar os `.html` que ele
+protege, os cinco estavam com **`64.543.748/0001-13`** — baixado em 08/08.
+
+    confirmacao-cadastro.html    o primeiro e-mail que toda pessoa recebe
+    recuperacao-de-senha.html
+    convite.html
+    magic-link.html
+    reautenticacao.html
+
+**Por que ficaram para tras.** A API de Auth do Supabase nao expoe template,
+entao esses arquivos sao copias ESTATICAS coladas a mao no painel. Em 25/08,
+quando `CONTROLADOR.cnpj` virou anulavel, o snapshot quebrou — como devia — e
+**foi atualizado sem os `.html` serem regerados**. O alarme tocou e so metade
+foi atendida.
+
+O resultado e o pior tipo de divergencia: por 23 dias a landing nao exibia
+numero nenhum (protegida) enquanto todo e-mail de autenticacao exibia um numero
+que qualquer consulta a Receita desmentia. **Duas superficies do mesmo dado,
+discordando**, e nenhuma delas errando alto.
+
+E a mesma classe do commit de 23/08 que se chamava *"os prints mostravam o
+vocabulario que a landing baniu"* e verificou que o script rodou, sem conferir
+se a imagem ficou certa.
+
+**A correcao nao e regerar; e travar.** O README ja pedia para regerar, e foi
+ignorado — comentario nao roda em `npm test`. Agora dois testes leem os
+arquivos de verdade:
+
+    assina igual ao que o codigo gera hoje    toContain(assinaturaPublica())
+    nao carrega o CNPJ baixado em 08/08       not.toContain('64.543.748')
+
+**O segundo e o que de fato pegaria o defeito original**, e por isso existe: o
+primeiro passaria mesmo com o numero velho ainda no arquivo, porque `toContain`
+nao se importa com o que mais ha no HTML. Mesma razao pela qual a bio do
+Instagram ganhou um teste que PROIBE a palavra da oferta aposentada em vez de
+conferir o numero da vigente.
+
+**Provado com controle negativo:** revertido um template ao estado de ontem,
+2 testes reprovam; restaurado, 30 passam. Sem isso o verde nao provaria nada.
+
+### Os dados cadastrais foram para o rodape, nao para a secao de confianca
+
+A Meta le o site procurando razao social, endereco e telefone iguais aos do
+CNPJ, e sem os tres a verificacao reprova — com a reprovacao ficando no
+historico do Business Manager.
+
+Eles entraram num bloco proprio no rodape, em corpo menor, separado da
+assinatura de marca. Isso **preserva** a decisao de 24/08 em vez de desfazer:
+aquela decisao tirou o nome civil do titular da linha de reforco visual, e essa
+linha continua usando so o nome fantasia. Rodape e onde dado cadastral pertence
+por convencao.
+
+**O telefone publicado ali e o CADASTRAL** — `(41) 9788-0145`, da contabilidade
+que abriu a empresa —, e esta rotulado como tal. O canal de suporte continua
+sendo o WhatsApp `(71) 99330-9404`. Trocar os dois quebraria as duas coisas: a
+Meta deixaria de bater, e quem precisa de ajuda cairia numa contabilidade.
+`telefoneCadastral` vira `null` quando a alteracao cadastral for feita na
+Receita, e o bloco some sozinho.
+
+### O passo 1 da Meta fechou; o 3 ainda nao deve ser tentado
+
+    1. CNPJ ativo na Receita              FEITO (28/08)
+    2. site com razao social, endereco
+       e telefone iguais aos da Receita   FEITO (esta rodada)
+    3. verificacao do negocio no BM       ESPERAR propagacao
+    4. App Business + numero em WABA
+    5. App Review de whatsapp_business_*
+    6. Tech Provider
+
+**A ressalva que decide o momento de submeter:** a verificacao da Meta consulta
+bases da Receita, e BrasilAPI e CNPJa ainda respondem 404/402. Submeter antes
+da propagacao arrisca reprovacao por dado nao encontrado — e reprovacao entra
+no historico do Business Manager. Esperar ate o numero aparecer em pelo menos
+duas fontes independentes.
+
+**Pendente do dono:** atualizar o cadastro comercial no Asaas com a razao
+social nova (ate la a fatura sai com o nome antigo enquanto a tela mostra o
+novo), e trocar o telefone na Receita, que e alteracao cadastral simples.
 
 ## Tres coisas que existiam e ninguem via (31/08)
 
@@ -3003,21 +3135,29 @@ sessão.
       produção apontando pro projeto novo), SMTP customizado corrigido
       (usuário `resend`, não `rezende`), Site URL/Redirect URLs corrigidos,
       reset de senha testado ponta a ponta com sucesso.
-- [ ] **CNPJ novo (ME, CNAE 6202-3/00).** Esta entrada dizia "CNPJ ativo, Meta
-      Business verificado". As duas afirmações estavam **erradas**, medido em
-      25/08 e detalhado em seção própria: o `64.543.748/0001-13` está BAIXADO
-      desde 08/08 e o business `Rickdaskin` está `pending_submission`. Baixa de
-      MEI não tem volta, e software não cabe em MEI. Decisão do dono: abrir ME
-      na Contabilizei. Enquanto não sair, o site não exibe CNPJ nenhum.
+- [x] **CNPJ novo — SAIU, e está no site desde 31/08.**
+      `68.877.105/0001-67`, Sociedade Empresária Limitada, ATIVA desde 28/08,
+      Simples Nacional deferido a partir de 31/08. **O CNAE principal é
+      6311-9/00** (tratamento de dados e provedor de aplicação), com o
+      6202-3/00 que esta entrada previa entre os secundários — o que a Receita
+      registrou é mais preciso para SaaS do que o que aqui se supunha.
 
-      **Sinal novo, 29/08:** o business da Meta **mudou de nome para
-      `VELO FUNIL LTDA`** (era "Rickdaskin"), lido pela API. É indício forte de
-      que a inscrição saiu — **não confirmado na Receita nesta rodada**, e é
-      assim que fica registrado até alguém consultar. `lib/legal.ts` segue com
-      `cnpj: null` e `endereco: null`, então o site continua sem exibir número
-      nenhum. **Preencher os dois campos reacende sozinho** o rodapé, a seção
-      de confiança, os e-mails transacionais e as duas páginas legais — é a
-      única edição necessária quando o número estiver confirmado.
+      A previsão de 25/08 se confirmou inteira: **preencher `cnpj`, `endereco`
+      e `razaoSocial` em `lib/legal.ts` reacendeu o rodapé, a seção de
+      confiança, as duas páginas legais, o rodapé dos e-mails e os avisos de
+      fatura**, sem editar nenhum desses arquivos. Foi a única edição
+      necessária, como estava escrito que seria.
+
+      **Duas coisas ficaram, e são do dono, não código:** atualizar o cadastro
+      comercial no Asaas com a razão social nova (até lá a fatura sai com o
+      nome antigo enquanto a tela mostra o novo) e trocar o telefone na
+      Receita, hoje o da contabilidade — enquanto não trocar, o site publica os
+      dois, rotulados, porque a Meta compara um e o cliente liga para o outro.
+
+      **Não submeter a verificação da Meta ainda:** BrasilAPI e CNPJa ainda
+      respondem 404/402 para este número. A Meta consulta bases da Receita, e
+      reprovação por dado não encontrado entra no histórico do Business
+      Manager. Esperar aparecer em duas fontes independentes.
 - [ ] **`META_ADS_TOKEN` morto (29/08).** `API access blocked`
       (`OAuthException`, code 200) em 8 de 8 chamadas à Graph API; funcionava
       em 25/08. **A conta da Meta não está bloqueada** — o MCP de anúncios

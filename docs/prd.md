@@ -210,11 +210,14 @@ buraco onde mais dói. Em vez disso, quatro garantias conferíveis (isolamento
 por RLS, dados em `sa-east-1`, cartão que nunca passa pelo nosso servidor,
 cancelamento sem multa).
 
-*O CNPJ saiu da vitrine em 25/08, e a ausência dele é deliberada.* A seção
-exibia a inscrição como prova conferível — e a consulta à Receita desmentia a
-página: `64.543.748/0001-13` está **baixado desde 08/08/2026**. Numa seção que
-abre dizendo "em vez de pedir confiança, mostramos onde ela pode ser
-conferida", exibir número morto é pior que não exibir nenhum.
+*O CNPJ saiu da vitrine em 25/08 e voltou em 31/08, com outro número.* A
+seção exibia a inscrição como prova conferível — e a consulta à Receita
+desmentia a página: `64.543.748/0001-13` estava **baixado desde 08/08/2026**.
+Numa seção que abre dizendo "em vez de pedir confiança, mostramos onde ela pode
+ser conferida", exibir número morto é pior que não exibir nenhum. Desde 31/08 a
+vitrine exibe **`68.877.105/0001-67`**, uma LTDA ativa desde 28/08 — e o
+mecanismo que permitiu viver vinte dias sem inscrição é o mesmo que reacendeu
+as seis superfícies de uma vez, sem editar nenhuma delas.
 `CONTROLADOR.cnpj` virou `string | null`, e duas funções puras decidem o texto
 (`lib/legal.ts`): `identificacaoDoControlador` para as páginas legais e avisos
 de fatura, `assinaturaPublica` para rodapé, confiança e e-mails. Sem inscrição,
@@ -267,11 +270,20 @@ sinais mais reconhecíveis de texto gerado por máquina; cada ocorrência foi
 reescrita pela pontuação que o caso pedia (ponto final, dois-pontos, vírgula),
 não trocada por hífen.
 
-*Nome civil do titular (MEI) e telefone cru, fora da vitrine.* Razão social
-("64.543.748 ORLANDO..." — dado da Receita) e o número do WhatsApp por extenso
-saíram da seção de confiança e do rodapé em 24/08: reforço visual não precisa
-de nome de pessoa física, e o link `wa.me` já abre a conversa sem o número
-escrito do lado. Continuam onde são exigência, não escolha de marca: nas
+*Nome civil do titular e telefone cru, fora da LINHA DE MARCA.* Razão social
+(era `64.543.748 ORLANDO...`, o padrão do MEI: número seguido do nome civil) e
+o número do WhatsApp por extenso saíram da seção de confiança e da assinatura
+do rodapé em 24/08: reforço visual não precisa de nome de pessoa física, e o
+link `wa.me` já abre a conversa sem o número escrito do lado.
+
+**Isso mudou de escopo em 31/08, não de decisão.** A verificação de negócio da
+Meta lê o site procurando razão social, endereço e telefone iguais aos do CNPJ,
+e sem os três na página ela reprova — com a reprovação ficando no histórico do
+Business Manager. Eles entraram num bloco cadastral próprio no rodapé, em corpo
+menor e separado da assinatura de marca, que continua usando só o nome
+fantasia. O telefone publicado ali é o **cadastral**, da contabilidade que
+abriu a empresa, e está rotulado: quem procura suporte continua caindo no
+WhatsApp, não num escritório de contabilidade. Continuam onde são exigência, não escolha de marca: nas
 páginas legais (LGPD, Art. 9º, I, exige identificar o controlador) e nos
 avisos de fatura (o nome aparece no extrato do cartão de qualquer jeito,
 avisar antes evita contestação).
