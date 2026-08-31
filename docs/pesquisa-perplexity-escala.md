@@ -36,9 +36,18 @@ Cobrança recorrente por Pix, boleto e cartão (Asaas).
 | empresas cadastradas (total) | 26 |
 | **destas, contas de teste** (e-mail descartável) | **15** |
 | **destas, contas minhas** (dono do produto) | **4** |
-| **clientes reais externos** | **8** |
-| clientes externos que ativaram (criaram 1º contato) | **5 (62,5%)** |
+| ~~**clientes reais externos**~~ ERRADO | ~~8~~ → **0** |
+| ~~clientes externos que ativaram~~ | ~~5 (62,5%)~~ |
 | **clientes externos PAGANTES** | **0** |
+
+> **Corrigido em 31/08.** Os 8 "clientes reais externos" desta tabela **não
+> existem**: o dono confirmou que todos os cadastros desta base são teste dele.
+> A separação foi feita por leitura do e-mail em vez de `ehContaDeTeste`
+> (`lib/dono/contas-internas.ts`), a função oficial do projeto — a mesma
+> armadilha registrada no `estado-atual.md`, e pela terceira vez.
+>
+> A conclusão da pesquisa sobre escala não depende deste número, mas qualquer
+> leitura de ativação ou retenção a partir dele é inválida.
 
 **A ressalva mais importante desta pesquisa, e eu preciso que ela oriente sua
 resposta:** eu tinha 2 assinaturas marcadas como ativas, mas ao conferir os

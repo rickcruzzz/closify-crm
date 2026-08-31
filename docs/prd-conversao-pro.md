@@ -31,7 +31,8 @@ investigando o código, não supostas:
 ## 2. Decisão
 
 **Não** apertar o Free só cortando número, o único cliente real que já usa
-o produto (Fani Mayara, Free, 1 lead) está longe de qualquer teto, e a
+o produto (Fani Mayara, Free, 1 lead — conta de teste do dono, conferido em
+31/08) está longe de qualquer teto, e a
 própria landing já vende "grátis pra sempre" como diferencial
 (`StatsSection`). Cortar limite sem dar nada novo em troca é bait-and-switch.
 

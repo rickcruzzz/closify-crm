@@ -151,9 +151,11 @@ R$ 49.
 Provado ponta a ponta: nasce 8/8, termina 0/8, cliente apagado num `finally`.
 
 **Os clientes que ja existiam foram desligados**, 10 dos 11, pelos dois
-caminhos (79 notificacoes). O 11o e a **Fani RRH** (`fanimayara67@gmail.com`),
-unica usuaria real da lista, com 2 cobrancas de R$ 49 em aberto — mantida
-ligada por decisao do dono.
+caminhos (79 notificacoes). O 11o, a **Fani RRH**, ficou de fora porque eu a
+classifiquei como "unica usuaria real da lista" — **e ela e conta do dono**,
+confirmado horas depois. O `contas-internas.ts` ja dizia isso; eu li o
+`estado-atual.md`, que estava errado, em vez de conferir a funcao oficial.
+Desligada na sequencia, fechando os 11.
 
 ### O checkout era a unica acao sensivel sem limite
 
@@ -2289,7 +2291,7 @@ resultado corrige um número que este documento e o PRD vinham repetindo:
 |---|---|---|---|
 | conta de teste (e-mail descartável: `neplis`, `beiwoh`, `joystill`…) | 15 | 5 | 1 |
 | contas do próprio dono | 4 | 4 | 1 |
-| **cliente real externo** | **8** | **5 (62,5%)** | **0** |
+| ~~**cliente real externo**~~ **ERRADO, ver abaixo** | ~~8~~ **0** | ~~5~~ | 0 |
 
 **As duas assinaturas "ativas" não são de cliente.** `Orne`
 (`wixese9814@neplis.com`) é a conta em que o próprio dono pagou o Pix de R$ 49
@@ -2298,8 +2300,18 @@ como prova técnica e falso como receita. `Google Review Ltda`
 (`google.review@velofunil.com.br`) é cortesia criada para o vídeo de
 verificação do Google, válida até 2027.
 
-O único cliente externo que chegou a tentar assinar, `Fani RRH Consultoria`,
-está `past_due` desde 04/08 e nunca concluiu.
+> **Corrigido em 31/08.** Esta linha dizia que `Fani RRH Consultoria` era *"o
+> único cliente externo que chegou a tentar assinar"*. **É conta do dono**,
+> confirmado por ele: todos os cadastros desta base são teste dele. O e-mail
+> `fanimayara67@gmail.com` está em `EMAILS_DO_DONO` (`contas-internas.ts`)
+> desde que a lista existe — o código estava certo e este documento, errado.
+>
+> A tabela acima, portanto, **também está errada**: não há 8 clientes reais
+> externos, há **zero**. O que ela mede é a mesma coisa que a auditoria de
+> 30/08 já tinha corrigido para as empresas, e que passou batido aqui.
+
+`Fani RRH Consultoria` está `past_due` desde 04/08 e nunca concluiu — teste de
+checkout do dono que ficou pela metade, não venda perdida.
 
 **Consequência prática, e é a que importa:** não existe conversão
 cadastro→pagante medida, nem churn, nem LTV — não por falta de instrumentação,
@@ -3017,9 +3029,12 @@ sessão.
       lido apenas em `lib/dono/`, e toda a Central devolve 404 em produção —
       colá-lo lá poria um token que gasta dinheiro num ambiente onde o código
       nunca roda.
-- [ ] **Cobrança da Fani Mayara** (`fanimayara67@gmail.com`): usuária real
-      (logou em 11/08, 1 lead), plano `free`, começou o checkout e nunca pagou.
-      Tem 2 cobranças de R$ 49 em aberto que vão virar aviso de vencimento.
+- [ ] **Cobrança da Fani Mayara** (`fanimayara67@gmail.com`): esta entrada
+      dizia "usuária real". **É conta do dono**, confirmado em 31/08 — como
+      todas as desta base. Plano `free`, começou o checkout e nunca pagou, com
+      2 cobranças de R$ 49 em aberto no Asaas. Segue como pendência porque
+      cobrança aberta gera aviso de vencimento e cabe cancelar; o que muda é
+      que **não é cliente para recuperar**.
 - [x] **Pix real de R$ 49 recebido.** Workspace "Orne", 13/08, confirmado no
       Asaas, mas o webhook não chegou (site fora do ar por DNS, ver acima) e
       ficou preso até reconciliação manual. Motivou o job de reconciliação
@@ -3093,9 +3108,13 @@ sessão.
    a 0033 guarda só a última, saber que um negócio está em "Negociação" há 12
    dias não diz quanto ele levou em "Proposta".
 3. **Sandbox do Asaas nos testes de checkout.** Hoje o checkout é exercitado
-   contra produção, e foi isso que deixou 2 cobranças de R$ 49 em aberto no nome
-   de uma usuária real. O resto do projeto continua provando contra produção, a
-   exceção é só onde o teste **cria cobrança no nome de outra pessoa**.
+   contra produção, e isso deixou 2 cobranças de R$ 49 em aberto. Este item
+   dizia que elas estavam "no nome de uma usuária real" — **não estão**, é conta
+   do dono (31/08), como todas desta base.
+
+   O argumento enfraquece e **não cai**: o risco continua sendo criar cobrança
+   real no nome de terceiro no dia em que houver terceiro. O que muda é a
+   urgência — hoje o custo é lixo no Asaas, não constrangimento com cliente.
 4. **Campos e pipelines customizáveis.** `deal_stage` é enum do Postgres; virar
    tabela é mudança grande. Só com cliente pagante pedindo.
 
