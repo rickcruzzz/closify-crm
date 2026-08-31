@@ -16,7 +16,8 @@
     "test:funil": "node --env-file=.env.local node_modules/@playwright/test/cli.js test --project=funil",
     "test:produto": "node --env-file=.env.local node_modules/@playwright/test/cli.js test --project=produto",
     "test:suporte": "node --env-file=.env.local node_modules/@playwright/test/cli.js test --project=suporte",
-    "publicar:instagram": "node --env-file=.env.local scripts/marketing/publicar-instagram.mjs"
+    "publicar:instagram": "node --env-file=.env.local scripts/marketing/publicar-instagram.mjs",
+    "renovar:token-meta": "node --env-file=.env.local scripts/marketing/renovar-token-meta.mjs"
   },
   "dependencies": {
     "@base-ui/react": "^1.6.0",
