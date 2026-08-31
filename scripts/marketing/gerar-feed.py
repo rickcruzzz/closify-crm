@@ -211,7 +211,82 @@ def arte_declaracao(categoria, titulo, corpo, arquivo, luz, remate=None):
 # rodapé, e não apenas o último.
 
 
-def _peca(luz, escuro_extra, bloco):
+def barra_de_proporcao(draw, y, parte, total, rotulo_parte, rotulo_resto, largura=None):
+    """
+    Mostra o dado em vez de só escrevê-lo.
+
+    ## Por que uma barra, e não pizza
+
+    A skill de design deste projeto é explícita: para part-to-whole, barra
+    empilhada com legenda; pizza é ruim de acessibilidade e pior de comparar.
+    Aqui o argumento é ainda mais simples — num criativo lido em dois segundos,
+    a barra é a única forma que se entende sem legenda, porque o comprimento é
+    a grandeza.
+
+    ## O que ela resolve
+
+    "55%" escrito é um símbolo: o olho lê o número e segue. Uma barra em que
+    mais da metade está acesa faz o leitor VER a proporção antes de ler
+    qualquer palavra — e é isso que separa um dado de uma afirmação.
+
+    O trecho apagado usa a cor de borda do sistema em vez de um cinza novo: o
+    resto não é "vazio", é a parte que não aconteceu, e precisa existir na
+    composição para o cheio significar alguma coisa.
+    """
+    if largura is None:
+        largura = g.LARGURA_TEXTO
+
+    altura = 22 * g.ESCALA
+    raio = altura // 2
+    fim_parte = g.MARGEM_ESQ + int(largura * parte / total)
+
+    # O trilho inteiro primeiro, depois a parte acesa por cima: desenhar dois
+    # retângulos lado a lado deixaria uma junta visível no arredondamento.
+    draw.rounded_rectangle(
+        [g.MARGEM_ESQ, y, g.MARGEM_ESQ + largura, y + altura],
+        radius=raio, fill=(0, 74, 76),
+    )
+    draw.rounded_rectangle(
+        [g.MARGEM_ESQ, y, fim_parte, y + altura], radius=raio, fill=g.TEAL,
+    )
+
+    y += altura + 20 * g.ESCALA
+    fnt = g.fonte(g.CORPO, 30)
+
+    draw.text((g.MARGEM_ESQ, y), rotulo_parte, font=fnt, fill=g.TEAL)
+    largura_resto = draw.textlength(rotulo_resto, font=fnt)
+    draw.text((g.MARGEM_ESQ + largura - largura_resto, y), rotulo_resto,
+              font=fnt, fill=(110, 132, 132))
+
+    return y + fnt.size * 1.3
+
+
+def marcador_de_passo(draw, atual, total):
+    """
+    Onde a pessoa está na sequência, no topo.
+
+    Carrossel sem isso é leitura no escuro: não se sabe se falta um card ou
+    quatro, e a decisão de continuar deslizando é tomada sem informação. Os
+    pontinhos nativos do Instagram ficam FORA da arte, minúsculos e no rodapé
+    da tela — servem ao aplicativo, não à peça.
+
+    Traços e não pontos: traço tem direção, e direção é o que comunica "isto
+    avança". Ponto comunica lista, que é outra coisa.
+    """
+    largura, altura, folga = 46 * g.ESCALA, 5 * g.ESCALA, 10 * g.ESCALA
+    y = int(g.H * 0.058)
+    x = g.MARGEM_ESQ
+
+    for i in range(1, total + 1):
+        aceso = i <= atual
+        draw.rounded_rectangle(
+            [x, y, x + largura, y + altura], radius=altura // 2,
+            fill=g.TEAL if aceso else (0, 74, 76),
+        )
+        x += largura + folga
+
+
+def _peca(luz, escuro_extra, bloco, passo=None):
     """
     Fundo, posicionamento, assinatura. O miolo vem de fora.
 
@@ -239,12 +314,14 @@ def _peca(luz, escuro_extra, bloco):
     img = g.fundo_marca(escuro_extra=escuro_extra)
     draw = ImageDraw.Draw(img)
     topo, _base = g.faixa_livre()
+    if passo:
+        marcador_de_passo(draw, *passo)
     bloco(draw, topo)
     g.assinar_discreto(img, draw)
     return img
 
 
-def card_gancho(partes, apoio, luz):
+def card_gancho(partes, apoio, luz, passo=None):
     """
     O primeiro card: uma pergunta, com a palavra que dói em itálico serifado.
 
@@ -261,39 +338,53 @@ def card_gancho(partes, apoio, luz):
     """
     def bloco(d, y):
         y = g.escrever_com_realce(
-            d, partes, g.fonte(g.TITULO, 84), g.italica(96),
+            d, partes, g.fonte(g.TITULO, 94), g.italica(108),
             y, g.BRANCO, g.TEAL, entrelinha=1.18,
         )
         if apoio:
             y += 40 * g.ESCALA
-            y = g.escrever_esq(d, apoio, g.fonte(g.CORPO, 44), y, (168, 190, 190),
-                               entrelinha=1.34)
+            y = g.escrever_esq(d, apoio, g.fonte(g.CORPO, 48), y, (168, 190, 190),
+                               entrelinha=1.36)
         return y
 
-    return _peca(luz, 0.12, bloco)
+    return _peca(luz, 0.12, bloco, passo)
 
 
-def card_dado(numero, unidade, explicacao, fonte_dado, categoria, luz):
+def card_dado(numero, unidade, explicacao, fonte_dado, categoria, luz, passo=None,
+              proporcao=None, remate=None):
     """O card de prova. Mesmo esqueleto de `arte_numero`, sem salvar."""
-    fnt_num = g.fonte(g.DISPLAY, 220)
+    fnt_num = g.fonte(g.DISPLAY, 258)
 
     def bloco(d, y):
         y = capsula_vazia(d, categoria, y) + 50 * g.ESCALA
         d.text((g.MARGEM_ESQ, y), numero, font=fnt_num, fill=g.TEAL)
         _, _, _, fim = d.textbbox((g.MARGEM_ESQ, y), numero, font=fnt_num)
         y = fim + 24 * g.ESCALA
-        y = g.escrever_esq(d, unidade, g.fonte(g.TITULO, 62), y, g.BRANCO)
+        y = g.escrever_esq(d, unidade, g.fonte(g.TITULO, 72), y, g.BRANCO)
         y += 32 * g.ESCALA
-        y = g.escrever_esq(d, explicacao, g.fonte(g.CORPO, 42), y, (168, 190, 190),
-                           entrelinha=1.34)
+        y = g.escrever_esq(d, explicacao, g.fonte(g.CORPO, 46), y, (168, 190, 190),
+                           entrelinha=1.36)
+        # A barra entra ENTRE a explicação e a fonte, não no fim: ela é parte
+        # do argumento, e a fonte é o rodapé dele. Invertido, o crédito
+        # separaria o dado da sua própria ilustração.
+        if proporcao:
+            y += 40 * g.ESCALA
+            y = barra_de_proporcao(d, y, *proporcao)
+        # O remate é a conclusão que o número não diz sozinho. Em teal e peso
+        # forte porque é a frase que a pessoa deve levar embora — o dado é a
+        # prova, isto é o argumento.
+        if remate:
+            y += 40 * g.ESCALA
+            y = g.escrever_esq(d, remate, g.fonte(g.FORTE, 52), y, g.TEAL,
+                               entrelinha=1.24)
         y += 34 * g.ESCALA
         return g.escrever_esq(d, fonte_dado, g.fonte(g.CORPO, 28), y, (110, 132, 132),
                               entrelinha=1.26)
 
-    return _peca(luz, 0.15, bloco)
+    return _peca(luz, 0.15, bloco, passo)
 
 
-def card_causa(titulo, corpo, luz):
+def card_causa(titulo, corpo, luz, passo=None):
     """
     O card que explica. Só tipografia, corpo grande.
 
@@ -301,15 +392,15 @@ def card_causa(titulo, corpo, luz):
     prova, é conclusão.
     """
     def bloco(d, y):
-        y = g.escrever_esq(d, titulo, g.fonte(g.TITULO, 76), y, g.BRANCO, entrelinha=1.18)
+        y = g.escrever_esq(d, titulo, g.fonte(g.TITULO, 86), y, g.BRANCO, entrelinha=1.18)
         y += 32 * g.ESCALA
-        return g.escrever_esq(d, corpo, g.fonte(g.CORPO, 44), y, (168, 190, 190),
-                              entrelinha=1.34)
+        return g.escrever_esq(d, corpo, g.fonte(g.CORPO, 48), y, (168, 190, 190),
+                              entrelinha=1.38)
 
-    return _peca(luz, 0.10, bloco)
+    return _peca(luz, 0.10, bloco, passo)
 
 
-def card_cta(chamada, apoio, luz):
+def card_cta(chamada, apoio, luz, passo=None):
     """
     O último card: o que fazer, e onde.
 
@@ -321,16 +412,16 @@ def card_cta(chamada, apoio, luz):
     "Link na bio" logo abaixo porque o botão não é clicável, e o Instagram não
     dá link em post de feed. Sem essa linha, a peça pede uma ação impossível.
     """
-    fnt_ch = g.fonte(g.TITULO, 76)
+    fnt_ch = g.fonte(g.TITULO, 86)
     fnt_bt = g.fonte(g.FORTE, 44)
     rotulo = "Comece grátis"
 
     def bloco(d, y):
         y = g.escrever_esq(d, chamada, fnt_ch, y, g.BRANCO, entrelinha=1.18)
         y += 30 * g.ESCALA
-        y = g.escrever_esq(d, apoio, g.fonte(g.CORPO, 44), y, (168, 190, 190),
-                           entrelinha=1.34)
-        y += 56 * g.ESCALA
+        y = g.escrever_esq(d, apoio, g.fonte(g.CORPO, 48), y, (168, 190, 190),
+                           entrelinha=1.36)
+        y += 64 * g.ESCALA
 
         pad_x, pad_y = 52 * g.ESCALA, 30 * g.ESCALA
         larg = d.textlength(rotulo, font=fnt_bt) + pad_x * 2
@@ -344,7 +435,7 @@ def card_cta(chamada, apoio, luz):
         return g.escrever_esq(d, "Link na bio", g.fonte(g.CORPO, 34), y,
                               (122, 214, 214))
 
-    return _peca(luz, 0.18, bloco)
+    return _peca(luz, 0.18, bloco, passo)
 
 
 def carrossel(nome, cards):
@@ -485,34 +576,47 @@ def main():
             [("Você comprou um CRM. Quem ", False), ("alimenta", True),
              (" ele?", False)],
             "Ninguém vende a parte chata na hora da contratação.",
-            luz=0.16,
+            luz=0.16, passo=(1, 5),
         ),
         card_dado(
             "3,4h", "por semana só digitando",
             "É o que um vendedor gasta alimentando CRM à mão — tempo que "
             "viraria proposta e vira cadastro.",
             "Pesquisa de produtividade em equipes comerciais.",
-            "D A D O   D E   M E R C A D O", luz=0.28,
+            "D A D O   D E   M E R C A D O", luz=0.28, passo=(2, 5),
+            # ## Por que este card NÃO leva barra de proporção
+            #
+            # A primeira versão tinha `proporcao=(3.4, 40, ...)`, ancorando as
+            # 3,4h numa semana de 40h. Aberta a arte e olhada: 8,5% desenha uma
+            # barra quase vazia, e o olho conclui "é pouco" — o contrário
+            # exato do que a frase diz.
+            #
+            # Proporção só é argumento quando a parte é grande em relação ao
+            # todo. Aqui o argumento é ACUMULAÇÃO: pouco por semana que vira
+            # muito no ano. Isso é uma frase, não uma barra — e é o que o
+            # remate faz.
+            remate="22 dias por ano. Quase um mês de trabalho.",
         ),
         card_dado(
             "55%", "das implantações falham",
             "E 60% disso é adoção, não plataforma. O problema quase nunca é o "
             "sistema que foi escolhido.",
             "Levantamentos publicados sobre implantação de CRM.",
-            "D A D O   D E   M E R C A D O", luz=0.36,
+            "D A D O   D E   M E R C A D O", luz=0.36, passo=(3, 5),
+            proporcao=(55, 100, "55% falham", "45% vingam"),
         ),
         card_causa(
             "O sistema funciona. Quem desiste é a pessoa.",
             "Toda ferramenta cobra um pedágio de digitação antes de devolver "
             "qualquer coisa. Quem paga esse pedágio todo dia é quem deveria "
             "estar vendendo — e na terceira semana ele para de pagar.",
-            luz=0.42,
+            luz=0.42, passo=(4, 5),
         ),
         card_cta(
             "Um funil que cabe num dia de trabalho.",
             "Grátis até 50 contatos, sem cartão. R$ 49 por mês pela empresa "
             "inteira quando precisar de mais — não por vendedor.",
-            luz=0.46,
+            luz=0.46, passo=(5, 5),
         ),
     ])
 
