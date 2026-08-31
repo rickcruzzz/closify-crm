@@ -132,9 +132,28 @@ a escada D-4..D-1. Pagavamos para mandar duas vezes a mesma coisa, com dois
 remetentes — que e como se treina alguem a marcar como spam, perdendo junto o
 e-mail que importa.
 
-`notificationDisabled: true` na criacao. **Vale so para cliente novo**; os 11
-existentes seguem ligados e precisam ser desligados um a um — pendencia do
-dono, abaixo.
+**E a flag sozinha NAO resolve** — este e o achado que a correcao original
+errou. Medido com cliente descartavel: criar com `notificationDisabled: true`
+devolve o cliente com a flag `true` e **8 de 8 eventos ativos**. Sao dois
+mecanismos independentes, e a documentacao nao diz qual vence.
+
+Descobrir qual vence exigiria gerar cobranca real e esperar a fatura para ver
+se a tarifa apareceu — caro e lento. Desligar os dois remove a pergunta:
+`desligarNotificacoesDoCliente` roda uma vez, na criacao, em paralelo (8
+chamadas independentes; em serie custariam ~8x a latencia num caminho que a
+pessoa esta esperando).
+
+**Falha ali nao derruba o checkout**, de proposito: isto e economia, nao
+correcao de defeito. Se as chamadas falharem o cliente ainda assina e ainda
+paga, so recebe aviso duplicado — derrubar o checkout trocaria R$ 0,99 por
+R$ 49.
+
+Provado ponta a ponta: nasce 8/8, termina 0/8, cliente apagado num `finally`.
+
+**Os clientes que ja existiam foram desligados**, 10 dos 11, pelos dois
+caminhos (79 notificacoes). O 11o e a **Fani RRH** (`fanimayara67@gmail.com`),
+unica usuaria real da lista, com 2 cobrancas de R$ 49 em aberto — mantida
+ligada por decisao do dono.
 
 ### O checkout era a unica acao sensivel sem limite
 

@@ -25,6 +25,78 @@ type AsaasSubscription = { id: string }
 type AsaasPayment = { id: string; invoiceUrl: string }
 type AsaasPaymentList = { data: AsaasPayment[] }
 
+type AsaasNotificacao = {
+  id: string
+  emailEnabledForCustomer: boolean
+  smsEnabledForCustomer: boolean
+  whatsappEnabledForCustomer: boolean
+}
+
+/**
+ * Desliga as notificações que o Asaas manda por conta própria.
+ *
+ * ## Por que não basta `notificationDisabled: true` na criação
+ *
+ * Passar a flag ao criar o cliente **não** desliga os eventos: medido em
+ * 31/08 com cliente descartável, o cliente nasce `notificationDisabled=true`
+ * e mesmo assim com **8 de 8** eventos ativos (`PAYMENT_CREATED`,
+ * `PAYMENT_RECEIVED`, `PAYMENT_OVERDUE`, `PAYMENT_DUEDATE_WARNING` ×2,
+ * `PAYMENT_UPDATED`, `SEND_LINHA_DIGITAVEL`).
+ *
+ * São dois mecanismos independentes, e a documentação não diz qual vence.
+ * Descobrir experimentalmente exigiria gerar cobrança real e esperar a fatura
+ * para ver se a tarifa de mensageria apareceu — caro e lento. Desligar os
+ * dois remove a pergunta.
+ *
+ * ## Por que isso importa
+ *
+ * Cada aviso enviado é tarifado como mensageria (R$ 0,99 no extrato desta
+ * conta), e o produto **já manda todos eles** pelo Resend: pagamento
+ * confirmado, pagamento atrasado, e a escada D-4..D-1 de vencimento. Manter
+ * ligado paga para mandar duas vezes a mesma coisa, com dois remetentes
+ * diferentes — que é como se treina alguém a marcar o remetente como spam,
+ * perdendo junto o e-mail que importa.
+ *
+ * ## Por que falha não derruba o checkout
+ *
+ * Isto é economia, não correção de defeito: se as chamadas falharem, o
+ * cliente ainda assina e ainda paga — só recebe aviso duplicado. Derrubar um
+ * checkout por causa disso trocaria R$ 0,99 por R$ 49.
+ *
+ * Roda uma vez por cliente, no instante da criação, e em paralelo: são 8
+ * chamadas independentes, e em série elas custariam ~8× a latência num
+ * caminho que a pessoa está esperando.
+ */
+async function desligarNotificacoesDoCliente(customerId: string) {
+  try {
+    const { data } = await asaasFetch<{ data: AsaasNotificacao[] }>(
+      `/customers/${customerId}/notifications`,
+    )
+
+    await Promise.all(
+      (data ?? [])
+        .filter(
+          (n) =>
+            n.emailEnabledForCustomer ||
+            n.smsEnabledForCustomer ||
+            n.whatsappEnabledForCustomer,
+        )
+        .map((n) =>
+          asaasFetch(`/notifications/${n.id}`, {
+            method: 'PUT',
+            body: JSON.stringify({
+              emailEnabledForCustomer: false,
+              smsEnabledForCustomer: false,
+              whatsappEnabledForCustomer: false,
+            }),
+          }),
+        ),
+    )
+  } catch (erro) {
+    console.error('desligarNotificacoesDoCliente falhou', customerId, erro)
+  }
+}
+
 export async function createCheckout(values: unknown) {
   const parsed = checkoutSchema.safeParse(values)
   if (!parsed.success) {
@@ -116,22 +188,15 @@ export async function createCheckout(values: unknown) {
           email: user.email,
           cpfCnpj: parsed.data.cpfCnpj,
           externalReference,
-          // O Asaas liga as OITO notificações por padrão em todo cliente que
-          // tem e-mail — medido em 30/08: 11 dos 12 clientes da conta estavam
-          // com `PAYMENT_CREATED`, `PAYMENT_RECEIVED`, `PAYMENT_OVERDUE`,
-          // `PAYMENT_DUEDATE_WARNING` (×2), `PAYMENT_UPDATED` e
-          // `SEND_LINHA_DIGITAVEL` todas ativas.
-          //
-          // Cada aviso enviado é tarifado como mensageria (R$ 0,99 no extrato
-          // desta conta), e o produto JÁ manda os próprios e-mails pelo Resend
-          // — `pagamento-confirmado`, `pagamento-atrasado` e os quatro avisos
-          // de vencimento da escada D-4..D-1. Deixar ligado paga por mandar
-          // duas vezes a mesma coisa, com dois remetentes diferentes, e ainda
-          // treina o cliente a marcar como spam.
+          // Metade da defesa. A outra é `desligarNotificacoesDoCliente`,
+          // chamada logo abaixo: medido, esta flag sozinha NÃO desliga os
+          // eventos — o cliente nasce com ela `true` e com 8 de 8 ativos.
+          // O porquê de desligar está no comentário daquela função.
           notificationDisabled: true,
         }),
       })
       customerId = customer.id
+      await desligarNotificacoesDoCliente(customerId)
     } else {
       // Cliente pode já existir de uma tentativa anterior, a Asaas exige
       // CPF/CNPJ pra criar cobrança, então garante que está preenchido
