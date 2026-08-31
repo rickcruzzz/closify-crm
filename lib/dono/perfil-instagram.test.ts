@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { PRO_PLAN_PRICE } from '@/lib/plans'
-import { DIAS_DE_TRIAL } from '@/lib/plans/trial'
+import { FREE_LEAD_LIMIT, PRO_PLAN_PRICE } from '@/lib/plans'
 
 import {
   BIO_DO_PERFIL,
@@ -27,16 +26,30 @@ describe('bio do Instagram', () => {
     expect(BIO_SEM_PRECO.length).toBeLessThanOrEqual(TETO_DA_BIO)
   })
 
-  it('anuncia o trial vigente, não a oferta antiga', () => {
-    // Sai das MESMAS constantes da landing: mudar o plano muda a bio junto,
-    // sem ninguém precisar lembrar de um perfil de rede social.
-    expect(BIO_DO_PERFIL).toContain(`${DIAS_DE_TRIAL} dias`)
+  /**
+   * Este teste dizia `toContain(`${DIAS_DE_TRIAL} dias`)` e **passava verde**
+   * enquanto a bio prometia um trial que a migration 0057 tinha removido.
+   *
+   * É a lição mais cara deste arquivo: um teste escrito para travar a oferta
+   * VIGENTE congela a oferta do dia em que foi escrito. Ele não sabe que o
+   * produto mudou — só sabe que o texto continua igual ao que ele exigiu.
+   *
+   * A versão nova trava o que a landing diz HOJE, lendo a mesma constante que
+   * ela lê. Se a oferta mudar de novo, o teste quebra em vez de proteger o
+   * passado.
+   */
+  it('anuncia a oferta vigente, lida das mesmas constantes da landing', () => {
+    expect(BIO_DO_PERFIL).toContain(`${FREE_LEAD_LIMIT} contatos`)
     expect(BIO_DO_PERFIL).toContain(`R$ ${PRO_PLAN_PRICE}`)
   })
 
-  it('não vende o freemium que a 0051 substituiu', () => {
+  it('não vende ofertas que já foram aposentadas', () => {
     for (const texto of [BIO_DO_PERFIL, BIO_SEM_PRECO]) {
+      // 300 contatos: o freemium anterior, que a bio publicada ainda mostrava
+      // em 31/08. "dias com tudo liberado": o reverse trial, removido pela
+      // 0057 em 29/08.
       expect(texto).not.toMatch(/300 contatos|grátis para sempre|ilimitado/i)
+      expect(texto).not.toMatch(/dias com tudo liberado|trial/i)
     }
   })
 
@@ -92,3 +105,4 @@ describe('camposDoPerfil', () => {
     }
   })
 })
+

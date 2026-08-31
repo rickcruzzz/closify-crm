@@ -1,4 +1,4 @@
-import { DIAS_DE_TRIAL } from '@/lib/plans/trial'
+import { FREE_LEAD_LIMIT } from '@/lib/plans'
 import { PRO_PLAN_PRICE } from '@/lib/plans'
 import { CONTROLADOR } from '@/lib/legal'
 
@@ -19,7 +19,7 @@ import { CONTROLADOR } from '@/lib/legal'
  * `lint` ou `test` lê uma bio de Instagram.
  *
  * Aqui, o preço e o prazo vêm das MESMAS constantes que a landing usa
- * (`DIAS_DE_TRIAL`, `PRO_PLAN_PRICE`). Mudar o plano muda a bio junto, sem
+ * (`FREE_LEAD_LIMIT`, `PRO_PLAN_PRICE`). Mudar o plano muda a bio junto, sem
  * ninguém precisar lembrar.
  *
  * ## Por que uma fonte única para várias contas
@@ -70,7 +70,7 @@ export const TETO_DA_BIO = 150
 export const BIO_DO_PERFIL = [
   'O WhatsApp guarda a conversa. Não guarda o cliente.',
   `CRM brasileiro, R$ ${PRO_PLAN_PRICE}/mês pela empresa inteira.`,
-  `${DIAS_DE_TRIAL} dias com tudo liberado, sem cartão 👇`,
+  `Grátis até ${FREE_LEAD_LIMIT} contatos, sem cartão 👇`,
 ].join('\n')
 
 /**
@@ -83,7 +83,7 @@ export const BIO_DO_PERFIL = [
 export const BIO_SEM_PRECO = [
   'O WhatsApp guarda a conversa. Não guarda o cliente.',
   'Saiba com quem falar hoje e quanto tem pra fechar.',
-  `${DIAS_DE_TRIAL} dias com tudo liberado, sem cartão 👇`,
+  `Grátis até ${FREE_LEAD_LIMIT} contatos, sem cartão 👇`,
 ].join('\n')
 
 export type CampoDoPerfil = {
