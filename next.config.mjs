@@ -82,6 +82,29 @@ const csp = [
   // evento de rastreamento por fetch/beacon pra www.facebook.com quando JS
   // está ativo (o `<img>` do noscript acima cobre só quem desativou).
   `connect-src 'self' ${process.env.NEXT_PUBLIC_SUPABASE_URL ?? ''} ${(process.env.NEXT_PUBLIC_SUPABASE_URL ?? '').replace('https://', 'wss://')} https://www.facebook.com`,
+  // ## As duas violações do Meta Pixel são ESPERADAS. Não "conserte".
+  //
+  // Com o pixel ativo, o console registra duas recusas em `/cadastro`:
+  //
+  //     form-action   POST para https://www.facebook.com/tr/
+  //     frame-src     iframe de https://www.facebook.com
+  //
+  // Parecem perda de medição e não são. Medido em produção, no navegador:
+  //
+  //     PageView                        GET 200   passa
+  //     ViewContent (parametros reais)  GET 200   passa, ZERO violacao
+  //     payload artificial de 3000 ch   bloqueado
+  //
+  // O `fbevents.js` manda por GET enquanto a query cabe (~2 KB) e só então
+  // troca por POST num `<form>` oculto. **Nenhum evento deste projeto chega
+  // perto desse tamanho**, e os três de compra (`InitiateCheckout`,
+  // `AddPaymentInfo`, `Purchase`) são Conversions API — nem passam pelo
+  // navegador, por decisão de 21/08 que bloqueia o pixel na área logada.
+  //
+  // Abrir `form-action` para o Facebook custaria a diretiva que impede um XSS
+  // de exfiltrar dado por submit de formulário — em troca de zero evento
+  // recuperado. O `fbp` continua sendo gerado sem o iframe, conferido na
+  // própria requisição que chega com 200.
   "form-action 'self'",
   // Redundante com X-Frame-Options, mas é a diretiva moderna e vale manter.
   "frame-ancestors 'none'",
