@@ -60,7 +60,23 @@ const csp = [
   "style-src 'self' 'unsafe-inline'",
   // `www.facebook.com` é o beacon de rastreamento do Pixel (`/tr?id=...`),
   // carregado como `<img>` no `<noscript>` de quem desativa JS.
-  "img-src 'self' data: blob: https://www.facebook.com",
+  //
+  // O Supabase entra aqui pelo mesmo motivo que já entrava em `connect-src`, e
+  // a ausência custou caro: **arquivo do Storage é servido pelo domínio do
+  // projeto, não pelo nosso**. Toda imagem vinda de `createSignedUrl` estava
+  // sendo bloqueada em produção desde 27/08, quando a política virou bloqueio.
+  //
+  // O que quebrava, e ninguém viu: a **logo da empresa** em Configurações →
+  // Empresa (`logo-upload.tsx` usa `<img>` com URL assinada, de propósito —
+  // `next/image` não serve para URL que expira em uma hora) e os anexos dos
+  // relatos de suporte. Nos dois casos a imagem simplesmente não aparecia,
+  // sem erro na tela: a CSP recusa em silêncio, e o registro fica só no
+  // console do navegador de quem estivesse olhando.
+  //
+  // Lido da mesma variável de `connect-src` em vez de escrito à mão: o
+  // projeto do Supabase já mudou uma vez (a migração para São Paulo, em
+  // 12/08), e um host fixo aqui voltaria a quebrar na próxima.
+  `img-src 'self' data: blob: ${process.env.NEXT_PUBLIC_SUPABASE_URL ?? ''} https://www.facebook.com`,
   "font-src 'self'",
   // Supabase por HTTPS e por WebSocket (realtime), e o Meta Pixel manda o
   // evento de rastreamento por fetch/beacon pra www.facebook.com quando JS
