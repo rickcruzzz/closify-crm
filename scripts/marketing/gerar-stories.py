@@ -101,6 +101,40 @@ PRINTS = RAIZ / "public" / "produto"
 
 GEIST = str(RAIZ / "app" / "fonts" / "GeistVF.woff")
 
+# ## A serifada itálica, e por que ela vive no repositório
+#
+# A Geist é variável e expõe só PESOS — Thin a UltraBlack, conferido em 31/08.
+# Não tem itálico, e nenhum peso substitui um: o que a itálica traz é contraste
+# de FORMA, que é o que faz uma palavra saltar dentro de uma frase sem precisar
+# de outra cor.
+#
+# Ela entra por causa do modelo de carrossel: a palavra-chave do gancho ganha
+# desenho próprio, em vez de só mudar de tom. É o mesmo recurso que o
+# @ploomescrm usa em "mais leads" e "uma tela" — a estrutura vale, e a
+# execução aqui é outra (fonte diferente, cor da nossa marca).
+#
+# **No repositório, e não em `C:\Windows\Fonts`.** Georgia e Constantia
+# existem nesta máquina e não na próxima: o gerador passaria a produzir arte
+# diferente conforme onde roda, e o `@4k` de reserva deixaria de bater com o
+# arquivo publicado. `GeistVF.woff` já é versionado ao lado; esta segue o mesmo
+# caminho. Instrument Serif, licença OFL.
+SERIFA_ITALICA = str(RAIZ / "app" / "fonts" / "InstrumentSerif-Italic.ttf")
+
+_SERIFA: dict[int, ImageFont.FreeTypeFont] = {}
+
+
+def italica(tamanho: int) -> ImageFont.FreeTypeFont:
+    """
+    A serifada itálica, no tamanho pedido (em pixels do arquivo final).
+
+    Cache por tamanho pelo mesmo motivo de `fonte()`: evita reabrir o arquivo a
+    cada palavra. Aqui não há chave de peso porque a família tem um corte só —
+    e é justamente isso que a torna previsível.
+    """
+    if tamanho not in _SERIFA:
+        _SERIFA[tamanho] = ImageFont.truetype(SERIFA_ITALICA, tamanho * ESCALA)
+    return _SERIFA[tamanho]
+
 # Os pesos, pelo papel que cada um cumpre — não pelo número, que não diz nada
 # a quem lê a chamada.
 DISPLAY = "UltraBlack"   # o número que domina a tela
@@ -482,6 +516,84 @@ def escrever_esq(draw, texto, fnt, y, cor, largura_max=None, entrelinha=1.16):
     for linha in linhas:
         draw.text((MARGEM_ESQ, y), linha, font=fnt, fill=cor)
         y += fnt.size * entrelinha
+    return y
+
+
+def escrever_com_realce(draw, partes, fnt, fnt_realce, y, cor, cor_realce,
+                        largura_max=None, entrelinha=1.16):
+    """
+    Escreve uma frase em que ALGUMAS palavras estão em outra fonte e cor.
+
+    `partes` é uma lista de `(texto, realce)`:
+
+        [("Você comprou um CRM. Quem ", False), ("alimenta", True),
+         (" ele?", False)]
+
+    ## Por que uma função, e não duas chamadas de `escrever_esq`
+
+    A quebra de linha precisa enxergar a frase INTEIRA. Escrever o trecho
+    normal, medir onde parou e emendar o itálico funcionaria enquanto a troca
+    caísse no meio de uma linha — e sairia torto no dia em que a palavra
+    realçada caísse na virada. Que é justamente onde ela tende a cair: é a
+    palavra mais longa e a mais importante da frase.
+
+    Aqui cada palavra carrega a própria fonte, e a medição soma palavra a
+    palavra. A linha vira uma sequência de pedaços, cada um desenhado com o seu
+    tipo, na posição que o anterior deixou.
+
+    ## O espaço vive ENTRE as palavras, não dentro delas
+
+    O texto é quebrado por `split()`, que descarta os espaços, e eles voltam na
+    hora de desenhar — medidos na fonte da palavra que vem ANTES. Medir na
+    fonte errada desalinha a linha inteira por alguns pixels, e o erro só
+    aparece na arte pronta.
+    """
+    if largura_max is None:
+        largura_max = LARGURA_TEXTO
+
+    palavras = [
+        (palavra, realce)
+        for texto, realce in partes
+        for palavra in texto.split()
+    ]
+
+    def largura(palavra, realce):
+        return draw.textlength(palavra, font=fnt_realce if realce else fnt)
+
+    def largura_espaco(realce):
+        return draw.textlength(" ", font=fnt_realce if realce else fnt)
+
+    # Monta as linhas medindo com a fonte de cada palavra.
+    linhas, atual, larg_atual = [], [], 0.0
+    for palavra, realce in palavras:
+        w = largura(palavra, realce)
+        espaco = largura_espaco(realce) if atual else 0
+        if atual and larg_atual + espaco + w > largura_max:
+            linhas.append(atual)
+            atual, larg_atual = [(palavra, realce)], w
+        else:
+            atual.append((palavra, realce))
+            larg_atual += espaco + w
+
+    if atual:
+        linhas.append(atual)
+
+    # A altura da linha vem da fonte MAIOR das duas: a itálica costuma ter
+    # corpo diferente da sans no mesmo tamanho nominal, e usar só uma das duas
+    # faria linhas com realce encostarem na de baixo.
+    altura = max(fnt.size, fnt_realce.size) * entrelinha
+
+    for linha in linhas:
+        x = MARGEM_ESQ
+        for i, (palavra, realce) in enumerate(linha):
+            f = fnt_realce if realce else fnt
+            if i:
+                x += draw.textlength(" ", font=f)
+            draw.text((x, y), palavra, font=f,
+                      fill=cor_realce if realce else cor)
+            x += draw.textlength(palavra, font=f)
+        y += altura
+
     return y
 
 
