@@ -428,3 +428,45 @@ describe('agruparPendencias', () => {
     expect(grupos.find((g) => g.tipo === 'assinatura-orfa')?.gravidade).toBe('dinheiro')
   })
 })
+
+describe('o alerta de erros carrega o carimbo do erro mais recente', () => {
+  /**
+   * O defeito medido em 31/08: este era o ÚNICO dos nove alertas com id fixo
+   * (`'erros'`). Os outros oito são `sumido:${empresa.id}`,
+   * `orfa:${assinatura.id}` e afins — silenciar afeta aquele item e nada mais.
+   *
+   * Com id fixo, clicar em "Silenciar" apagava a categoria inteira para
+   * sempre, inclusive erro que surgisse depois. O dono ficava entre ver os
+   * mesmos 4 erros de 7 e 11 dias atrás indefinidamente, ou nunca mais ver
+   * erro nenhum.
+   */
+  it('o id muda quando aparece erro novo, então o alerta silenciado reaparece', () => {
+    const antes = montarPendencias({ ...base, errosRecentes: 4, idDoErroMaisRecente: 'err-a' })
+    const depois = montarPendencias({ ...base, errosRecentes: 5, idDoErroMaisRecente: 'err-b' })
+
+    const idAntes = antes.find((p) => p.tipo === 'erros-no-produto')?.id
+    const idDepois = depois.find((p) => p.tipo === 'erros-no-produto')?.id
+
+    expect(idAntes).toBe('erros:err-a')
+    expect(idDepois).toBe('erros:err-b')
+    expect(idAntes).not.toBe(idDepois)
+  })
+
+  // O espelho: sem erro novo, o id é estável — senão silenciar não duraria
+  // nem até a próxima carga da página, e o botão seria decorativo.
+  it('sem erro novo o id não muda, e o silêncio dura', () => {
+    const a = montarPendencias({ ...base, errosRecentes: 4, idDoErroMaisRecente: 'err-a' })
+    const b = montarPendencias({ ...base, errosRecentes: 4, idDoErroMaisRecente: 'err-a' })
+
+    expect(a.find((p) => p.tipo === 'erros-no-produto')?.id).toBe(
+      b.find((p) => p.tipo === 'erros-no-produto')?.id,
+    )
+  })
+
+  // A tabela pode estar vazia, ou a leitura do id pode falhar sem a contagem
+  // falhar junto. O alerta não pode sumir por causa disso.
+  it('sem id disponível, cai no identificador antigo em vez de sumir', () => {
+    const r = montarPendencias({ ...base, errosRecentes: 2, idDoErroMaisRecente: null })
+    expect(r.find((p) => p.tipo === 'erros-no-produto')?.id).toBe('erros')
+  })
+})

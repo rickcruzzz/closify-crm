@@ -45,6 +45,8 @@ type EntradaDoCruzamento = {
   assinaturasNoAsaas: Resultado<AssinaturaNoAsaas[]>
   emails: Resultado<EmailEnviado[]>
   errosRecentes: number
+  /** Id do erro mais recente. Carimba o alerta — ver o comentário no item 7. */
+  idDoErroMaisRecente?: string | null
   /**
    * Todo e-mail que pertence a uma conta de verdade no banco.
    *
@@ -79,6 +81,7 @@ export function montarPendencias({
   assinaturasNoAsaas,
   emails,
   errosRecentes,
+  idDoErroMaisRecente,
   emailsDeContasReais,
   agora = new Date(),
 }: EntradaDoCruzamento): Pendencia[] {
@@ -279,9 +282,28 @@ export function montarPendencias({
 
   // 7. Erros registrados. Um só já vale olhar: `error_logs` não tem tela de
   //    leitura no produto, então ninguém veria de outro jeito.
+  //
+  //    ## O id é CARIMBADO pelo erro mais recente, e isso não é detalhe
+  //
+  //    Os outros oito alertas desta função têm id ligado à entidade
+  //    (`sumido:${empresa.id}`, `orfa:${assinatura.id}`), então silenciar
+  //    afeta aquele item e nada mais — se aparecer outro cliente sumido, ele
+  //    aparece.
+  //
+  //    Este era o único com id FIXO (`'erros'`), e a consequência, medida em
+  //    31/08: clicar em "Silenciar" apagava a categoria inteira para sempre,
+  //    inclusive erro que surgisse depois. O dono ficava entre ver os mesmos 4
+  //    erros de 7 e 11 dias atrás para sempre, ou nunca mais ver erro nenhum.
+  //
+  //    Com o carimbo, silenciar vale para o conjunto que existe HOJE. Erro
+  //    novo muda o id e o alerta reaparece sozinho.
+  //
+  //    Janela de tempo foi considerada e descartada: faria erro raro e grave
+  //    sumir por decurso de prazo sem nunca ter sido visto, e nenhum outro
+  //    alerta desta tela desaparece pelo relógio.
   if (errosRecentes > 0) {
     pendencias.push({
-      id: 'erros',
+      id: idDoErroMaisRecente ? `erros:${idDoErroMaisRecente}` : 'erros',
       gravidade: 'atencao',
       tipo: 'erros-no-produto',
       titulo: errosRecentes === 1 ? '1 erro registrado' : `${errosRecentes} erros registrados`,

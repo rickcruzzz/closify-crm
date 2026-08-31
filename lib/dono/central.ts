@@ -101,6 +101,7 @@ export async function lerCentral(): Promise<DadosDaCentral> {
     assinaturasNoAsaas,
     emails,
     errosRecentes: banco.errosRecentes,
+    idDoErroMaisRecente: banco.idDoErroMaisRecente,
     // É este conjunto que separa cliente travado de lixo de script. Ver o
     // comentário do filtro em `pendencias.ts`: sem ele, 8 dos 11 alertas da
     // primeira execução eram endereços inventados por testes meus.

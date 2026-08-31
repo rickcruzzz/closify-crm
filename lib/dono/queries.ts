@@ -51,6 +51,8 @@ export type LeituraDoBanco = {
   assinaturas: LinhaDeAssinatura[]
   podeEstarCortado: boolean
   errosRecentes: number
+  /** Id do erro mais recente de cliente, ou `null`. Ver `pendencias.ts`. */
+  idDoErroMaisRecente: string | null
   /**
    * Todo e-mail que pertence a uma conta de verdade.
    *
@@ -118,10 +120,15 @@ export async function lerBanco(): Promise<LeituraDoBanco> {
       // 73 registros vinham de `localhost` e de contas nossas — e um alerta
       // que diz "73 erros" quando 4 são de gente real ensina a ignorar o
       // alerta. Mesma classe do ruído nos outros alertas desta tela.
+      // `head: false` e uma linha: além da contagem, o alerta precisa do id do
+      // erro mais NOVO para se identificar. Sem ele o alerta tem id fixo, e
+      // silenciar apaga a categoria inteira para sempre — ver `pendencias.ts`.
       supabase
         .from('error_logs')
-        .select('id', { count: 'exact', head: true })
-        .eq('interno', false),
+        .select('id', { count: 'exact' })
+        .eq('interno', false)
+        .order('created_at', { ascending: false })
+        .limit(1),
     ])
 
   const empresas = (empresasRes.data ?? []) as LinhaDeEmpresa[]
@@ -216,6 +223,7 @@ export async function lerBanco(): Promise<LeituraDoBanco> {
     assinaturas,
     podeEstarCortado,
     errosRecentes: errosRes.count ?? 0,
+    idDoErroMaisRecente: errosRes.data?.[0]?.id ?? null,
     emailsDeContasReais: new Set(
       usuarios.data.users.map((u) => u.email).filter((e): e is string => Boolean(e)),
     ),
