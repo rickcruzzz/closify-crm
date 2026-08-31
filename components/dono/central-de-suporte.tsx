@@ -149,6 +149,26 @@ export function CentralDeSuporte({
               Há {fila.contagem.total} no total. Troque o filtro para ver.
             </p>
           )}
+          {/* O caso que o rodapé sozinho não cobria.
+              Quem testa o canal manda de uma conta que é NOSSA — e aí a fila de
+              cliente fica vazia, a tela diz "Nenhum relato aberto", e o relato
+              recém-enviado está a um clique de distância sem nada apontando
+              para ele. Foi o que aconteceu duas vezes em 30 e 31/08: as
+              mensagens chegaram ao banco e o dono concluiu, com razão, que o
+              canal não funcionava.
+              A contagem vem de `fila.internos`, que é do TOTAL — `contagem`
+              conta só o que está na fila mostrada, e por isso não serve aqui. */}
+          {!busca && !mostrandoInternos && fila.internos > 0 && (
+            <p className="text-muted-foreground mt-1 text-sm">
+              E {fila.internos} de conta interna, fora desta fila.{' '}
+              <a
+                href="/dono/suporte?internos=1"
+                className="text-foreground underline underline-offset-2"
+              >
+                Ver mesmo assim
+              </a>
+            </p>
+          )}
         </div>
       ) : (
         <div className="flex flex-col gap-3">
@@ -165,7 +185,10 @@ export function CentralDeSuporte({
           "4 relatos de conta interna, fora da fila" e não havia como abri-los.
           Contar sem deixar ver é o mesmo defeito do "silenciar" sem "reexibir",
           já pago em Alertas. */}
-      {fila.internos > 0 || mostrandoInternos ? (
+      {/* Quando a lista está VAZIA, o próprio bloco de vazio já diz isto e com
+          mais contexto. Repetir aqui deixaria a mesma frase duas vezes na
+          mesma tela, a três linhas de distância — o que lê como defeito. */}
+      {(visiveis.length > 0 && fila.internos > 0) || mostrandoInternos ? (
         <p className="text-muted-foreground text-xs">
           {mostrandoInternos ? (
             <>
