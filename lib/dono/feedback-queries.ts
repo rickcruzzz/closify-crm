@@ -33,6 +33,16 @@ export type RelatoNaTela = {
    */
   pessoa: { nome: string; email: string }
   anexos: AnexoNaTela[]
+  /**
+   * Veio de conta do próprio dono ou de teste.
+   *
+   * Vai junto com o relato, e não só na contagem, porque a tela precisa
+   * marcar visualmente cada linha quando estiver mostrando os internos — sem
+   * o selo, um relato de teste no meio da fila é indistinguível de cliente
+   * real, que é exatamente o defeito de 20/08 que a separação existe para
+   * evitar.
+   */
+  interno: boolean
 }
 
 export type FilaDeFeedback = {
@@ -84,7 +94,21 @@ const VAZIO: FilaDeFeedback['contagem'] = {
  * o status vive no BANCO (0061) e a fila inteira vem; quem escolhe o que ver é
  * quem está olhando.
  */
-export async function lerFilaDeFeedback(): Promise<FilaDeFeedback> {
+/**
+ * `incluirInternos` traz também os relatos de conta do dono e de teste.
+ *
+ * Existe porque esconder por completo tornou a tela impossível de testar: em
+ * 30/08 o dono mandou três relatos pelo produto, logado numa conta que está
+ * na lista de `contas-internas.ts`, e a Central não os mostrou em lugar
+ * nenhum — o rodapé dizia "4 relatos de conta interna, fora da fila" e não
+ * havia como abri-los. Ele concluiu, com razão, que o canal não funcionava.
+ *
+ * O padrão continua sendo esconder: fila com teste dentro é fila que se
+ * aprende a ignorar. O que muda é que agora existe a porta.
+ */
+export async function lerFilaDeFeedback(
+  opcoes: { incluirInternos?: boolean } = {},
+): Promise<FilaDeFeedback> {
   await exigirAmbienteLocal()
 
   const admin = createAdminClient()
@@ -109,7 +133,7 @@ export async function lerFilaDeFeedback(): Promise<FilaDeFeedback> {
   }
 
   const todos = linhas ?? []
-  const deCliente = todos.filter((l) => !l.interno)
+  const deCliente = opcoes.incluirInternos ? todos : todos.filter((l) => !l.interno)
 
   const idsDeEmpresa = Array.from(
     new Set(deCliente.map((l) => l.workspace_id).filter(Boolean)),
@@ -180,6 +204,7 @@ export async function lerFilaDeFeedback(): Promise<FilaDeFeedback> {
           nome: 'Conta apagada',
           email: 'sem e-mail',
         },
+        interno: Boolean(l.interno),
         anexos,
       }
     }),
@@ -194,7 +219,7 @@ export async function lerFilaDeFeedback(): Promise<FilaDeFeedback> {
   return {
     relatos,
     contagem,
-    internos: todos.length - deCliente.length,
+    internos: todos.filter((l) => l.interno).length,
     bateuNoTeto: todos.length === TETO,
     lidoEm: new Date().toISOString(),
   }

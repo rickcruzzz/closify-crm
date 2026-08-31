@@ -20,10 +20,20 @@ export const dynamic = 'force-dynamic'
  * A divisão: o e-mail (só para "problema") é o sino; esta tela é onde se
  * trabalha — filtra, busca, registra o que foi feito e guarda a decisão.
  */
-export default async function PaginaDeSuporte() {
+export default async function PaginaDeSuporte({
+  searchParams,
+}: {
+  searchParams: Promise<{ internos?: string }>
+}) {
   await exigirAmbienteLocal()
 
-  const fila = await lerFilaDeFeedback()
+  // `?internos=1` traz também os relatos das contas do dono e de teste.
+  //
+  // Fora da URL isto viraria estado de componente, e o endereço deixaria de
+  // descrever a tela — recarregar voltaria para a fila limpa sem aviso. Na
+  // URL, o link é compartilhável e o botão voltar faz o que promete.
+  const mostrandoInternos = (await searchParams).internos === '1'
+  const fila = await lerFilaDeFeedback({ incluirInternos: mostrandoInternos })
 
   return (
     <div className="flex flex-col gap-6">
@@ -38,7 +48,7 @@ export default async function PaginaDeSuporte() {
         </p>
       </header>
 
-      <CentralDeSuporte fila={fila} />
+      <CentralDeSuporte fila={fila} mostrandoInternos={mostrandoInternos} />
     </div>
   )
 }

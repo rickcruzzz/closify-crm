@@ -55,7 +55,13 @@ function peso(relato: RelatoNaTela): number {
   return 4
 }
 
-export function CentralDeSuporte({ fila }: { fila: FilaDeFeedback }) {
+export function CentralDeSuporte({
+  fila,
+  mostrandoInternos = false,
+}: {
+  fila: FilaDeFeedback
+  mostrandoInternos?: boolean
+}) {
   const [filtro, setFiltro] = React.useState<StatusDeFeedback | 'todos'>('aberto')
   const [busca, setBusca] = React.useState('')
 
@@ -152,11 +158,39 @@ export function CentralDeSuporte({ fila }: { fila: FilaDeFeedback }) {
         </div>
       )}
 
-      {fila.internos > 0 && (
+      {/* O rodapé é LINK, não texto.
+          Em 30/08 o dono mandou três relatos pelo produto para conferir se o
+          canal funcionava, logado numa conta que está em `contas-internas.ts`.
+          Eles chegaram ao banco e a Central não os mostrou: este rodapé dizia
+          "4 relatos de conta interna, fora da fila" e não havia como abri-los.
+          Contar sem deixar ver é o mesmo defeito do "silenciar" sem "reexibir",
+          já pago em Alertas. */}
+      {fila.internos > 0 || mostrandoInternos ? (
         <p className="text-muted-foreground text-xs">
-          {fila.internos} relato{fila.internos > 1 ? 's' : ''} de conta interna, fora da fila.
+          {mostrandoInternos ? (
+            <>
+              Mostrando também os relatos de conta interna.{' '}
+              <a
+                href="/dono/suporte"
+                className="text-foreground underline underline-offset-2"
+              >
+                Ver só os de cliente
+              </a>
+            </>
+          ) : (
+            <>
+              {fila.internos} relato{fila.internos > 1 ? 's' : ''} de conta interna, fora da
+              fila.{' '}
+              <a
+                href="/dono/suporte?internos=1"
+                className="text-foreground underline underline-offset-2"
+              >
+                Ver mesmo assim
+              </a>
+            </>
+          )}
         </p>
-      )}
+      ) : null}
     </div>
   )
 }
@@ -220,6 +254,15 @@ function CartaoDeRelato({ relato }: { relato: RelatoNaTela }) {
         >
           {NOME_DO_STATUS[relato.status]}
         </span>
+        {/* Só aparece quando a fila está mostrando internos — e aí é
+            obrigatório. Um relato de teste sem marca no meio de relatos de
+            cliente é indistinguível deles, que é o defeito de 20/08 (8 de 11
+            alertas eram teste do dono) reaparecendo por outra porta. */}
+        {relato.interno && (
+          <span className="border-border text-muted-foreground rounded-full border border-dashed px-2 py-0.5 text-xs font-medium">
+            conta interna
+          </span>
+        )}
         <span className="text-muted-foreground ml-auto text-xs">
           {formatarTempoRelativo(relato.criadoEm)}
         </span>
