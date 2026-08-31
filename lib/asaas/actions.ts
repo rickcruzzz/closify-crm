@@ -6,6 +6,7 @@ import { headers } from 'next/headers'
 import { asaasFetch, AsaasApiError } from '@/lib/asaas/client'
 import { appUrl } from '@/lib/app-url'
 import { ipDaRequisicao } from '@/lib/request-ip'
+import { excedeuLimite } from '@/lib/rate-limit'
 import {
   enviarConversaoDeFormaDePagamento,
   enviarConversaoDeInicioDeCheckout,
@@ -38,6 +39,18 @@ export async function createCheckout(values: unknown) {
   })
   if (!isAdmin) {
     return { error: 'Apenas administradores podem assinar o plano Pro.' }
+  }
+
+  // Depois do gate de admin e antes de qualquer chamada ao Asaas: a ideia é
+  // não gastar cliente, assinatura nem cobrança no gateway por uma tentativa
+  // que já ia ser recusada. Por USUÁRIO e não por IP, mesmo motivo do
+  // feedback — aqui sempre há alguém identificado, e limitar por IP puniria
+  // um escritório inteiro pelo excesso de uma pessoa.
+  if (await excedeuLimite('checkout', user.id)) {
+    return {
+      error:
+        'Você tentou assinar várias vezes seguidas. Aguarde alguns minutos e tente de novo.',
+    }
   }
 
   // `fbc`/`fbp` entram no mesmo `select` que já busca o nome: são as âncoras
@@ -103,6 +116,19 @@ export async function createCheckout(values: unknown) {
           email: user.email,
           cpfCnpj: parsed.data.cpfCnpj,
           externalReference,
+          // O Asaas liga as OITO notificações por padrão em todo cliente que
+          // tem e-mail — medido em 30/08: 11 dos 12 clientes da conta estavam
+          // com `PAYMENT_CREATED`, `PAYMENT_RECEIVED`, `PAYMENT_OVERDUE`,
+          // `PAYMENT_DUEDATE_WARNING` (×2), `PAYMENT_UPDATED` e
+          // `SEND_LINHA_DIGITAVEL` todas ativas.
+          //
+          // Cada aviso enviado é tarifado como mensageria (R$ 0,99 no extrato
+          // desta conta), e o produto JÁ manda os próprios e-mails pelo Resend
+          // — `pagamento-confirmado`, `pagamento-atrasado` e os quatro avisos
+          // de vencimento da escada D-4..D-1. Deixar ligado paga por mandar
+          // duas vezes a mesma coisa, com dois remetentes diferentes, e ainda
+          // treina o cliente a marcar como spam.
+          notificationDisabled: true,
         }),
       })
       customerId = customer.id

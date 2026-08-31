@@ -51,6 +51,15 @@ const LIMITES = {
   'reenviar-confirmacao': { limite: 5, janelaSegundos: 60 * 60 },
   'log-erro': { limite: 30, janelaSegundos: 60 * 60 },
   feedback: { limite: 10, janelaSegundos: 60 * 60 },
+  // Checkout é a única ação do projeto que gasta dinheiro de verdade a cada
+  // chamada: cria cliente e assinatura no Asaas, e cada cobrança gerada
+  // tarifa mensageria mesmo se ninguém pagar. Medido em 30/08: a conta tinha
+  // 5 assinaturas órfãs de tentativas repetidas.
+  //
+  // 5 por hora é folgado para uso legítimo — quem assina faz isso uma vez, e
+  // errar o CPF duas ou três vezes cabe — e fecha o laço de quem clicasse
+  // "Assinar Pro" cem vezes seguidas.
+  checkout: { limite: 5, janelaSegundos: 60 * 60 },
 } as const
 
 export type AcaoLimitada = keyof typeof LIMITES
