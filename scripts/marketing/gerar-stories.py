@@ -414,23 +414,38 @@ def pill(draw, texto, y, x=None):
     fnt = fonte(ROTULO, 26)
     tracking = 3.2 * ESCALA
 
-    pad_x, pad_y = 30 * ESCALA, 17 * ESCALA
-
-    larg_texto = draw.textlength(texto, font=fnt) + tracking * (len(texto) - 1)
-    larg = larg_texto + pad_x * 2
+    # ## A cápsula saiu. Sobrou o rótulo. — 31/08
+    #
+    # Havia um retângulo arredondado com borda teal em volta do texto. Saiu por
+    # pedido do dono, que o apontou duas vezes com uma palavra só: não é
+    # profissional.
+    #
+    # Ele tem razão, e dá para dizer por quê. Pílula com contorno é o vocabulário
+    # de INTERFACE — `Badge` do shadcn, tag, chip —, onde a forma existe para
+    # delimitar um elemento clicável no meio de outros. Num criativo não há
+    # outro elemento: o rótulo já está sozinho no topo, sobre fundo vazio, e a
+    # borda não separa de nada. Ela só acrescenta uma forma que o olho precisa
+    # processar antes de chegar ao número, que é o que importa.
+    #
+    # E é a marca registrada do template: a régua que este projeto persegue —
+    # Linear, Stripe, Vercel — usa eyebrow em caixa alta com tracking e mais
+    # nada. O espaçamento entre letras já faz o trabalho de dizer "isto é
+    # rótulo, não frase", que é a única função que a cápsula tinha.
+    #
+    # O recuo horizontal saiu junto com a borda, pelo mesmo motivo que o ponto
+    # levou o dele em 30/08: mantido, empurraria o rótulo para dentro enquanto
+    # todo o resto da peça começa em `MARGEM_ESQ`, e a coluna de leitura
+    # perderia o alinhamento — que é justamente o que faz a composição parecer
+    # cuidada.
+    pad_y = 17 * ESCALA
     alt = fnt.size + pad_y * 2
     if x is None:
         x = MARGEM_ESQ
 
-    draw.rounded_rectangle(
-        [x, y, x + larg, y + alt], radius=int(alt / 2),
-        fill=(8, 40, 41), outline=(0, 122, 123), width=max(1, int(1.5 * ESCALA)),
-    )
-
     # Letra a letra: o Pillow não tem `letter-spacing`, e escrever a string
     # inteira devolveria o rótulo sem o espaçamento que o faz ler como
     # sinalização.
-    tx = x + pad_x
+    tx = x
     ty = y + pad_y - 2 * ESCALA
     for letra in texto:
         draw.text((tx, ty), letra, font=fnt, fill=(150, 236, 236))
@@ -588,13 +603,35 @@ def assinar_discreto(img, draw):
     draw.line([(MARGEM_ESQ, y_linha), (W - MARGEM_ESQ, y_linha)],
               fill=(0, 74, 76), width=max(1, int(1.5 * ESCALA)))
 
-    tam = 66 * ESCALA
-    selo = desenhar_selo(tam)
-    y = y_linha + 40 * ESCALA
-    img.paste(selo, (MARGEM_ESQ, y), selo)
-
+    # ## A assinatura é TIPOGRÁFICA, sem o selo — decisão de 31/08
+    #
+    # Até aqui o rodapé colava `desenhar_selo()`: um quadrado teal com as três
+    # camadas do funil dentro. Pedido do dono, olhando a peça pronta: tirar o
+    # ícone.
+    #
+    # A leitura dele tem fundamento, e é a mesma que este projeto já aplicou
+    # em outro lugar. O funil dentro do quadrado é lido como forma dentro de
+    # forma — em 66px, a três metros, as três barras não se resolvem como
+    # funil, e o que sobra é um bloco com algo indistinto dentro. Marca que
+    # precisa de lupa para ser reconhecida não está identificando nada; está
+    # ocupando espaço e chamando atenção para si.
+    #
+    # É o mesmo raciocínio da decisão travada para e-mail transacional ("Logo
+    # do e-mail é tipografia, não imagem"), por motivo diferente mas com o
+    # mesmo desfecho: o nome escrito identifica melhor que o símbolo pequeno.
+    #
+    # O símbolo NÃO sai da marca — ele continua na marca-d'água do fundo, a
+    # 5,5%, onde tem escala para funcionar como estrutura em vez de enfeite. O
+    # que sai é a repetição dele em miniatura no canto.
+    #
+    # Vale para Story E feed de propósito: `gerar-feed.py` importa esta
+    # função. Duas assinaturas diferentes fariam as duas famílias divergirem
+    # na primeira manutenção — o defeito que a cápsula já pagou neste mesmo
+    # arquivo, quando existiam duas cópias de `pill()`.
     fnt_b, fnt_r = fonte(FORTE, 38), fonte(CORPO, 38)
-    x = MARGEM_ESQ + tam + 20 * ESCALA
+    x = MARGEM_ESQ
+    y = y_linha + 40 * ESCALA
+    tam = 66 * ESCALA                     # a altura da faixa, que o selo dava
     y_txt = y + (tam - fnt_b.size) / 2 - 3 * ESCALA
     lv = draw.textlength("Velo ", font=fnt_b)
     draw.text((x, y_txt), "Velo ", font=fnt_b, fill=BRANCO)

@@ -236,12 +236,43 @@ def main():
         "feed-2-media-do-mercado", "D A D O   D E   M E R C A D O", 0.24,
     )
 
+    # A peça "82% vendem pelo WhatsApp" saiu em 31/08, por decisão do dono:
+    # nenhum tema de WhatsApp nesta rodada do feed. Ela continua verdadeira e
+    # continua sendo o eixo da landing — só não entra aqui agora.
+    #
+    # Sem esse eixo, o conteúdo volta para a dor que o produto resolve sem
+    # depender de canal: o pedágio de digitação e a venda que morre parada.
+
     arte_numero(
-        "82%", "vendem pelo WhatsApp",
-        "É o principal canal de venda da pequena empresa brasileira. O "
-        "WhatsApp guarda a conversa. Não guarda o cliente.",
-        "Sebrae, 12ª Pesquisa Pulso das Micro e Pequenas Empresas, 2026.",
-        "feed-3-onde-a-pme-vende", "D A D O   D E   M E R C A D O", 0.42,
+        "3,4h", "por semana só digitando",
+        "É o que um vendedor gasta alimentando CRM à mão. O tempo que viraria "
+        "proposta vira cadastro — e é assim que a ferramenta é abandonada.",
+        "Pesquisa de produtividade em equipes comerciais.",
+        "feed-3-pedagio-de-digitacao", "D A D O   D E   M E R C A D O", 0.34,
+    )
+
+    arte_numero(
+        "55%", "das implantações de CRM falham",
+        "E 60% disso é adoção, não plataforma. O sistema funciona; quem "
+        "precisa alimentar todo dia é que desiste na terceira semana.",
+        "Levantamentos publicados sobre implantação de CRM.",
+        "feed-6-implantacao-que-falha", "D A D O   D E   M E R C A D O", 0.26,
+    )
+
+    arte_declaracao(
+        "A   O B J E Ç Ã O   M A I S   C O M U M",
+        "O funil não mente. A memória mente.",
+        "Guardar na cabeça funciona com cinco clientes. Com trinta, o que "
+        "some não é o cliente que você lembra — é o que você esqueceu.",
+        "feed-7-memoria-mente", 0.38,
+    )
+
+    arte_numero(
+        "R$ 265", "é a conta de 5 pessoas",
+        "A maioria dos CRMs cobra por vendedor. Cinco pessoas a R$ 53 fecham "
+        "isso todo mês, e o sexto vendedor custa mais R$ 53.",
+        "Preço de tabela pública de CRMs que cobram por usuário.",
+        "feed-8-conta-por-vendedor", "A   C O N T A   Q U E   N I N G U É M   F A Z", 0.44,
     )
 
     arte_declaracao(
@@ -260,7 +291,12 @@ def main():
         "feed-5-preco-por-empresa", "A   C O N T A   Q U E   N I N G U É M   F A Z", 0.36,
     )
 
-    print(f"\n5 artes em {SAIDA.relative_to(g.RAIZ)}")
+    # `@4k` e a mesma arte em dobro, nao uma peca a mais: contar o glob cru
+    # daria o dobro. O numero literal que estava aqui virou mentira no dia
+    # em que a lista mudou de tamanho — 31/08, quando passou de 5 para 8.
+    quantas = len([f for f in SAIDA.glob("*.png") if not f.stem.endswith("@4k")])
+    print()
+    print(f"{quantas} artes em {SAIDA.relative_to(g.RAIZ)}")
 
 
 if __name__ == "__main__":
