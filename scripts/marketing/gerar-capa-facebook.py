@@ -434,7 +434,7 @@ def capa(titulo, apoio, arquivo, luz=0.30):
 
 
 def main():
-    print(f"CAPA DO FACEBOOK — {g.W_FINAL}x{g.H_FINAL}")
+    print(f"CAPA DO FACEBOOK {g.W_FINAL}x{g.H_FINAL}")
     print()
 
     # Sem WhatsApp, por decisão desta rodada. E sem preço: capa é

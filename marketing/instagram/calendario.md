@@ -1,4 +1,4 @@
-# Calendário de publicação — 3 semanas
+# Calendário de publicação, 3 semanas
 
 O perfil tem **10 mil seguidores e zero posts**. Isso muda a estratégia: não é
 construir audiência, é ativar audiência que já existe e nunca viu nada.
@@ -32,7 +32,7 @@ enquanto a audiência está mais ativa.
 
 **Quatro posts por semana**, não sete. Uma conta que nunca postou e despeja
 conteúdo diário parece automatizada. E o estoque de 21 peças a 4/semana dura
-cinco semanas — tempo de ver o que funciona antes de precisar produzir mais.
+cinco semanas, tempo de ver o que funciona antes de precisar produzir mais.
 
 ## Stories: apoio diário, não conteúdo novo
 
@@ -50,21 +50,21 @@ Nas primeiras duas semanas, o número que importa **não** é seguidor nem
 curtida:
 
 ```
-salvamentos     a pessoa vai voltar — o sinal mais forte de que acertou o tema
+salvamentos     a pessoa vai voltar, o sinal mais forte de que acertou o tema
 compartilhamen. ela reconheceu o problema como sendo de alguem que conhece
 cliques no link a unica metrica que vira cadastro
 comentarios     pesam na distribuicao e dizem QUAL dor e a real
 ```
 
 **Só depois de 8 posts** dá para dizer qual eixo converte. Antes disso a
-variação é ruído — a Meta pede ~50 conversões semanais do evento otimizado
+variação é ruído, a Meta pede ~50 conversões semanais do evento otimizado
 para sair da fase de aprendizado, e o orgânico segue lógica parecida.
 
 ## A ligação com o tráfego pago
 
 Este calendário existe também para **não pagar por aprendizado que sai de
 graça**. As peças que mais salvarem e comentarem são as que viram criativo de
-anúncio — com dado real de qual mensagem funciona, em vez de chute.
+anúncio, com dado real de qual mensagem funciona, em vez de chute.
 
 A campanha atual da conta é `OUTCOME_TRAFFIC`, pausada, R$ 30/dia. Objetivo de
 tráfego otimiza por clique e não usa o pixel para conversão; para aquisição de

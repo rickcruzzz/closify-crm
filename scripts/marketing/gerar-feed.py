@@ -495,7 +495,7 @@ def conferir_zona_segura():
 # não fazer nada.
 
 def main():
-    print("FEED — 1080x1350")
+    print("FEED 1080x1350")
     SAIDA.mkdir(parents=True, exist_ok=True)
     conferir_zona_segura()
     print()
@@ -511,7 +511,7 @@ def main():
     arte_numero(
         "42h", "é a média de primeira resposta",
         "Auditoria em 2.241 empresas. Quase dois dias entre o cliente pedir e "
-        "alguém responder — e a janela dos 5 minutos passou no primeiro.",
+        "alguém responder. A janela dos 5 minutos passou no primeiro.",
         "Harvard Business Review, auditoria com 2.241 empresas.",
         "feed-2-media-do-mercado", "D A D O   D E   M E R C A D O", 0.24,
     )
@@ -526,7 +526,7 @@ def main():
     arte_numero(
         "3,4h", "por semana só digitando",
         "É o que um vendedor gasta alimentando CRM à mão. O tempo que viraria "
-        "proposta vira cadastro — e é assim que a ferramenta é abandonada.",
+        "proposta vira cadastro. É assim que a ferramenta é abandonada.",
         "Número de mercado. Varia com o tamanho da equipe.",
         "feed-3-pedagio-de-digitacao", "D A D O   D E   M E R C A D O", 0.34,
     )
@@ -543,7 +543,7 @@ def main():
         "A   O B J E Ç Ã O   M A I S   C O M U M",
         "O funil não mente. A memória mente.",
         "Guardar na cabeça funciona com cinco clientes. Com trinta, o que "
-        "some não é o cliente que você lembra — é o que você esqueceu.",
+        "some não é o cliente que você lembra: é o que você esqueceu.",
         "feed-7-memoria-mente", 0.38,
     )
 
@@ -592,7 +592,7 @@ def main():
         ),
         card_dado(
             "3,4h", "por semana só digitando",
-            "É o que um vendedor gasta alimentando CRM à mão — tempo que "
+            "É o que um vendedor gasta alimentando CRM à mão, tempo que "
             "viraria proposta e vira cadastro.",
             "Número de mercado. Varia com o tamanho da equipe.",
             "D A D O   D E   M E R C A D O", luz=0.28, passo=(2, 5),
@@ -621,14 +621,14 @@ def main():
             "O sistema funciona. Quem desiste é a pessoa.",
             "Toda ferramenta cobra um pedágio de digitação antes de devolver "
             "qualquer coisa. Quem paga esse pedágio todo dia é quem deveria "
-            "estar vendendo — e na terceira semana ele para de pagar.",
+            "estar vendendo, e na terceira semana ele para de pagar.",
             luz=0.42, passo=(4, 5),
         ),
         card_cta(
             "Um funil que cabe num dia de trabalho.",
             f"Grátis até {g.FREE_LEAD_LIMIT} contatos, sem cartão. "
             f"R$ {g.PRO_PLAN_PRICE} por mês pela empresa inteira quando "
-            "precisar de mais — não por vendedor.",
+            "precisar de mais, não por vendedor.",
             luz=0.46, passo=(5, 5),
         ),
     ])
@@ -670,7 +670,7 @@ def main():
         card_dado(
             "82%", "vendem pelo WhatsApp",
             "É o principal canal de venda da pequena empresa brasileira. A "
-            "negociação inteira acontece lá — e fica lá.",
+            "negociação inteira acontece lá. E fica lá.",
             "Pesquisa Pulso do Sebrae, 8,2 mil empresas ouvidas.",
             "D A D O   D E   M E R C A D O", luz=0.26, passo=(2, 5),
             proporcao=(82, 100, "82% pelo WhatsApp", "18% em outros canais"),
@@ -678,7 +678,7 @@ def main():
         card_dado(
             "42h", "para responder o primeiro contato",
             "É a média do mercado. Quem responde em 5 minutos tem 21x mais "
-            "chance de qualificar — e ninguém lembra do que não está anotado.",
+            "chance de qualificar, e ninguém lembra do que não está anotado.",
             "Harvard Business Review, auditoria com 2.241 empresas.",
             "D A D O   D E   M E R C A D O", luz=0.34, passo=(3, 5),
         ),
@@ -686,13 +686,13 @@ def main():
             "O histórico não é da empresa. É do aparelho.",
             "Quando o vendedor sai, vai embora com o contato, a negociação em "
             "aberto e tudo que foi combinado. A empresa continua responsável "
-            "pelo dado do cliente — só não consegue mais olhar para ele.",
+            "pelo dado do cliente. Só não consegue mais olhar para ele.",
             luz=0.40, passo=(4, 5),
         ),
         card_cta(
             "O WhatsApp continua. O cliente passa a ser seu.",
             f"Grátis até {g.FREE_LEAD_LIMIT} contatos, sem cartão. "
-            f"R$ {g.PRO_PLAN_PRICE} por mês pela empresa inteira — "
+            f"R$ {g.PRO_PLAN_PRICE} por mês pela empresa inteira, "
             "não por vendedor.",
             luz=0.46, passo=(5, 5),
         ),
@@ -724,7 +724,7 @@ def main():
         "O   Q U E   N I N G U É M   D I Z",
         "Não é o WhatsApp que é o problema.",
         "Ele é ótimo para conversar e péssimo para lembrar. O erro é pedir "
-        "que ele faça as duas coisas — e culpar a equipe quando falha.",
+        "que ele faça as duas coisas, e culpar a equipe quando falha.",
         "feed-11-o-whatsapp-nao-e-o-problema", 0.32,
     )
 

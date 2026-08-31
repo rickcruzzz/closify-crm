@@ -6,7 +6,7 @@ carrega o contexto e a pergunta.
 ## As regras que valem para todas
 
 **A primeira linha é o que decide.** O Instagram corta o resto atrás de "mais",
-e quem não abre nunca lê o CTA. Ela nunca repete o que a arte já diz — repetir
+e quem não abre nunca lê o CTA. Ela nunca repete o que a arte já diz, repetir
 gasta a única linha garantida para confirmar o que a pessoa acabou de ler.
 
 **A pergunta final não é enfeite.** Comentário pesa mais que curtida na
@@ -28,15 +28,15 @@ classificam.
 
 ---
 
-# Semana 1 — a dor, sem falar de produto
+# Semana 1, a dor, sem falar de produto
 
-## `carrossel-2-carteira` (5 cards) — abre a semana
+## `carrossel-2-carteira` (5 cards), abre a semana
 
 > Todo mundo sabe que o vendedor bom leva clientes quando sai. Ninguém trata
 > isso como problema de sistema.
 >
 > A conversa está no WhatsApp dele. O histórico do que foi combinado, na
-> memória dele. Quando ele sai, a empresa não perde só a pessoa — perde a
+> memória dele. Quando ele sai, a empresa não perde só a pessoa, perde a
 > negociação em aberto e o contexto de meses.
 >
 > E continua responsável pelo dado do cliente na LGPD, sem conseguir mais
@@ -55,7 +55,7 @@ classificam.
 > é onde o negócio fecha.
 >
 > Aí chega um CRM pedindo para digitar tudo de novo, em outro lugar, depois de
-> já ter conversado. É trabalho em dobro — e na terceira semana ninguém faz
+> já ter conversado. É trabalho em dobro, e na terceira semana ninguém faz
 > mais.
 >
 > O problema nunca foi preguiça. É que a ferramenta pede o que ninguém tem
@@ -69,7 +69,7 @@ classificam.
 > contato.
 >
 > Não é sobre ser rápido por esporte. É que a pessoa está decidindo naquele
-> momento — e ela vai decidir com quem responder primeiro.
+> momento, e ela vai decidir com quem responder primeiro.
 >
 > A conta é simples: quem some por 40 minutos está entregando a venda para
 > quem não sumiu.
@@ -91,16 +91,16 @@ classificam.
 
 ---
 
-# Semana 2 — a causa, ainda sem vender
+# Semana 2, a causa, ainda sem vender
 
-## `carrossel-1-pedagio` (5 cards) — abre a semana
+## `carrossel-1-pedagio` (5 cards), abre a semana
 
 > Ninguém vende a parte chata na hora de contratar um CRM.
 >
 > Mostram o funil bonito, o relatório colorido, o gráfico que sobe. Não
 > mostram que alguém precisa alimentar aquilo todo dia para o gráfico existir.
 >
-> São 3,4h por semana só digitando. 22 dias por ano — quase um mês de trabalho
+> São 3,4h por semana só digitando. 22 dias por ano: quase um mês de trabalho
 > que ia virar proposta e vira cadastro.
 >
 > 55% das implantações de CRM falham, e 60% disso é adoção, não plataforma. O
@@ -117,7 +117,7 @@ classificam.
 > Ele não avisa que o cliente sumiu há duas semanas. Não mostra quanto você
 > tem para fechar este mês. Não diz qual negociação parou.
 >
-> O erro não é usar WhatsApp — é pedir que ele faça uma coisa para a qual não
+> O erro não é usar WhatsApp, é pedir que ele faça uma coisa para a qual não
 > foi feito, e culpar a equipe quando falha.
 >
 > Ele continua sendo onde a conversa acontece. Só não deveria ser onde ela
@@ -125,8 +125,8 @@ classificam.
 
 ## `feed-7-memoria-mente`
 
-> Guardar cliente na cabeça funciona com cinco. Com trinta, para de funcionar
-> — e o pior é que você não percebe.
+> Guardar cliente na cabeça funciona com cinco. Com trinta, para de funcionar,
+> e o pior é que você não percebe.
 >
 > Porque o que some não é o cliente de quem você lembra. É o que você esqueceu.
 > E esse não reclama, não cobra e não aparece em lugar nenhum.
@@ -141,7 +141,7 @@ classificam.
 >
 > Ele só para de andar.
 >
-> Quando alguém lembra de olhar, o cliente já comprou de outro — e ninguém
+> Quando alguém lembra de olhar, o cliente já comprou de outro, e ninguém
 > consegue apontar o dia em que a venda foi perdida, porque não teve um dia.
 > Teve silêncio.
 >
@@ -149,7 +149,7 @@ classificam.
 
 ---
 
-# Semana 3 — a conta e a oferta
+# Semana 3, a conta e a oferta
 
 ## `feed-8-conta-por-vendedor`
 
@@ -167,7 +167,7 @@ classificam.
 
 > 3,4 horas por semana só alimentando CRM à mão.
 >
-> Parece pouco olhando a semana. São 22 dias por ano — quase um mês inteiro de
+> Parece pouco olhando a semana. São 22 dias por ano: quase um mês inteiro de
 > trabalho que ia virar proposta e virou cadastro.
 >
 > E é justamente quem deveria estar vendendo que paga esse pedágio.
@@ -186,7 +186,7 @@ classificam.
 >
 > Você já participou de uma implantação que morreu?
 
-## `feed-5-preco-por-empresa` — fecha o ciclo
+## `feed-5-preco-por-empresa`, fecha o ciclo
 
 > R$ 49 por mês, pela empresa inteira. Não por vendedor.
 >
@@ -201,9 +201,9 @@ classificam.
 
 ## As três que ficam de reserva
 
-`feed-10-se-o-vendedor-sair` — mesma dor do `carrossel-2-carteira`. Publicar
+`feed-10-se-o-vendedor-sair`, mesma dor do `carrossel-2-carteira`. Publicar
 as duas na mesma semana cansa; ela entra no mês seguinte ou como Story.
 
-`carrossel-1-pedagio` cards 2 e 3 — já existem como peça avulsa
+`carrossel-1-pedagio` cards 2 e 3, já existem como peça avulsa
 (`feed-3` e `feed-6`). Publicar a avulsa **antes** do carrossel queima o
 argumento; a ordem acima respeita isso.

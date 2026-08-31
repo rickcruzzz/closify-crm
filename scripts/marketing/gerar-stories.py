@@ -1396,6 +1396,6 @@ if __name__ == "__main__":
     destaque_dicas()
     destaque_perguntas()
     gravar_manifesto()
-    print("\npronto — cada tela em 1080x1920 (publicar) e @4k (reserva).")
+    print("\npronto: cada tela em 1080x1920 (publicar) e @4k (reserva).")
     print("\nBastidores fica de fora: exige conteúdo seu (rotina, processo,")
     print("decisões), que não existe no código e não dá para inventar.")

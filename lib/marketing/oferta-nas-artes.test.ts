@@ -136,3 +136,45 @@ describe('geradores de arte publicam o domínio canônico', () => {
     expect(codigo).not.toMatch(/["']velofunil\.com\.br["']/)
   })
 })
+
+/**
+ * ## O travessão, banido do conteúdo em 31/08
+ *
+ * A landing, as telas de erro, os e-mails transacionais e as páginas legais
+ * perderam o travessão em 26/08: ele é um dos sinais mais reconhecíveis de
+ * texto gerado por máquina, e cada ocorrência foi reescrita pela pontuação que
+ * o caso pedia (ponto final, dois-pontos, vírgula), nunca trocada por hífen.
+ *
+ * **Os criativos ficaram de fora daquela limpeza** e chegaram a 31/08 com 11
+ * travessões no texto que vai para a arte. Publicar assim entrega a 11 mil
+ * pessoas exatamente a assinatura que o resto do produto passou uma sessão
+ * inteira removendo.
+ *
+ * O teste lê o texto por AST, não por regex: docstring e comentário registram
+ * decisões e usam travessão à vontade, e um regex sobre o arquivo inteiro
+ * reprovaria a memória do projeto junto com o defeito.
+ */
+describe('geradores de arte não usam travessão', () => {
+  it.each(GERADORES)('%s não tem travessão no texto das artes', (nome) => {
+    const codigo = semComentarios(readFileSync(join(PASTA, nome), 'utf-8'))
+    // Fora de comentário, o que resta com travessão são strings e docstrings.
+    // Docstring aqui é sempre triple-quoted, então basta ignorá-las.
+    const semDocstrings = codigo.replace(/"""[\s\S]*?"""/g, '')
+    const linhas = semDocstrings.split('\n').filter((l) => /[—–]/.test(l))
+    expect(linhas).toEqual([])
+  })
+})
+
+/**
+ * As legendas são o outro lado do post: a arte carrega a ideia, elas carregam
+ * o contexto. Mesma regra, mesmo motivo.
+ */
+describe('as legendas publicadas não usam travessão', () => {
+  it.each(['legendas.md', 'calendario.md'])('%s', (nome) => {
+    const texto = readFileSync(
+      join(process.cwd(), 'marketing', 'instagram', nome),
+      'utf-8',
+    )
+    expect(texto).not.toMatch(/[—–]/)
+  })
+})

@@ -139,7 +139,7 @@ def selo(nome, cor):
 
 
 def main():
-    print("SELOS DE DESTAQUE — 1080x1920")
+    print("SELOS DE DESTAQUE 1080x1920")
     for nome, cor in TONS:
         selo(nome, cor)
     print(f"\n5 selos em {SAIDA.relative_to(g.RAIZ)}")
