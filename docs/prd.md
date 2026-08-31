@@ -3,16 +3,29 @@
 > Iniciativa de conversão Free→Pro (copy da landing, limites, checkout) tem
 > PRD próprio: [prd-conversao-pro.md](prd-conversao-pro.md).
 >
-> **Conferido contra produção em 29/08/2026.** Números de tabela, RPC,
+> **Conferido contra produção em 31/08/2026.** Números de tabela, RPC,
 > migration e teste vieram do catálogo real e do gate, não de memória:
-> **17 tabelas**, **30 RPCs**, **17 foreign keys**, 56 arquivos de migration
-> (a maior é `0057`) e **687 testes**. A estrutura do banco **não mudou**
-> desde 26/08 — os três primeiros números são idênticos —, mas a `0057`
-> reescreveu `create_workspace_with_admin` por dentro, e o teste caiu de 715
-> para 687 quando o Evolution saiu do projeto. O estado
-> operacional do dia a dia (o que quebrou, o que foi medido, o que está
-> pendente) mora em [estado-atual.md](estado-atual.md); o diagrama de classes,
-> em [schema.md](schema.md).
+> **18 tabelas**, **32 RPCs**, 60 arquivos de migration (a maior é `0061`) e
+> **774 testes**.
+>
+> A tabela nova é `feedback` (0060), o canal de suporte do cliente. Os testes
+> subiram de 687 para 774 em 41 commits — a maioria deles documentando um
+> defeito que estava em produção.
+>
+> **Este cabeçalho já esteve errado, e é por isso que os comandos estão
+> escritos aqui.** Entre 29 e 31/08 ele afirmava 687 testes e 17 tabelas
+> enquanto o real era 774 e 18. Nenhum número deste documento deve ser
+> atualizado de memória:
+>
+> ```
+> testes       npm test
+> migrations   ls supabase/migrations/*.sql
+> tabelas/RPC  OpenAPI do PostgREST de producao
+> ```
+>
+> O estado operacional do dia a dia (o que quebrou, o que foi medido, o que
+> está pendente) mora em [estado-atual.md](estado-atual.md); o diagrama de
+> classes, em [schema.md](schema.md).
 
 ## 1. Contexto e Problema
 
@@ -62,7 +75,11 @@ dado real; o que não está tem o motivo escrito ao lado.
       empresa e trancava a pessoa num laço (corrigido 24/08)
 - [x] Captura de erro — `error_logs` grava falha de tela e de webhook, e foi
       ela que permitiu achar em uma hora a causa da tela preta reportada em
-      24/08
+      24/08. Desde a 0058 separa erro de conta interna do de cliente: 52 dos
+      73 registros vinham de `localhost`, e um alerta que diz "73 erros"
+      quando 4 são de gente real ensina a ignorar o alerta
+- [x] Canal de suporte do cliente — diálogo dentro do produto, sem sair da
+      tela, com anexo; e a Central `/dono/suporte` para acompanhar (0060, 0061)
 - [x] Calendário — Mês, Semana e Agenda sobre as tarefas existentes
 - [x] Filtro de Período — 8 presets + intervalo customizado com range picker
 - [x] Exportação de Relatórios — PDF do painel de Resultados
@@ -473,6 +490,45 @@ existe uma implementação (Evolution) e ela está desligada; trocar para a Clou
 API oficial é escrever um segundo objeto, sem tocar na tela. **É a peça que
 torna a migração de WhatsApp uma troca, e não uma reescrita.**
 
+**Canal de suporte do cliente**
+Até 30/08 quem estava dentro do produto precisava **sair dele** e ir à landing
+para achar o e-mail de suporte. A única menção interna vivia no diálogo de
+pagamento — visível só para quem tentou pagar e viu dar errado.
+
+"Ajuda e sugestões" fica no rodapé da barra lateral e abre um diálogo **sobre a
+tela atual**: a URL não muda. Isso não é preferência de navegação — é o que
+preserva o valor do relato, porque a rota é gravada automaticamente e ela só é
+a tela certa porque a pessoa não saiu dela para escrever.
+
+Até 3 anexos, 10 MB cada, PNG/JPEG/WEBP/PDF. **O tipo é decidido pelos bytes
+iniciais, nunca pela extensão nem pelo `Content-Type`** — os dois são
+escolhidos por quem envia. Provado: `.exe` renomeado para `.png` é recusado no
+servidor mesmo passando pelo `accept` do input, pelo tamanho e pelo
+`allowed_mime_types` do bucket, que compara com o que o cliente declara.
+
+*E-mail sai só para "problema".* Sugestão espera dias sem custo; problema é
+cliente travado e pagando. E-mail para tudo vira ruído, e ruído treina a
+ignorar a caixa — a lição de 20/08, com 8 de 11 alertas falsos.
+
+*Defeito achado pela própria prova, e ele vale mais que o recurso:* o SDK do
+Resend **não lança** em falha de envio, devolve `{ error }`. Com só
+`try/catch`, um 401 ou domínio não verificado passaria em silêncio absoluto —
+o relato ficaria na tabela e o dono nunca saberia. Mesma classe do
+`activities.insert` sem checagem que fez o webhook do WhatsApp perder mensagem
+em 24/08.
+
+*A fila mostra tudo, e isso foi decidido duas vezes.* O padrão original
+escondia relato de conta interna, herdando a doutrina dos alertas. Em 30 e
+31/08 o dono mandou relatos pelo produto para conferir o canal, logado numa
+conta que está em `contas-internas.ts`, e a tela respondeu "Nenhum relato
+aberto" — três vezes. Ele concluiu, com razão, que estava quebrado.
+
+Alertas é gerado pelo **sistema**, em fluxo contínuo, e ruído afoga sinal.
+Suporte só ganha linha quando **alguém escreve** — são 9 desde que existe.
+Fila dessa densidade não afoga nada, e o custo de esconder é maior que o de
+mostrar. O selo `conta interna` em cada linha distingue sem sumir, e o filtro
+`?apenas=cliente` continua a um clique.
+
 **Resultados (métricas)**
 Quatro cards (Contatos, Negócios abertos, Valor no funil, Viraram venda),
 gráfico de funil em Recharts e a tabela de negócios mais próximos do prazo.
@@ -555,6 +611,28 @@ desafia bot automatizado. Rate limiting bloqueia por IP em `/login` (30
 requisições/10s), único slot disponível no Free — RLS continua sendo a
 defesa real de isolamento de dado, isso aqui é filtro de volume/tipo de
 tráfego antes de chegar no servidor.
+
+**A CSP virou bloqueio em 27/08, e derrubou a logo do cliente por três dias.**
+`img-src` listava `'self' data: blob: https://www.facebook.com` e mais nada —
+mas **arquivo do Storage é servido pelo domínio do projeto Supabase**, não pelo
+nosso. Toda URL de `createSignedUrl` era recusada.
+
+O que quebrou: a **logo da empresa** em Configurações (o upload dava certo e a
+imagem não aparecia) e os anexos de suporte. Os dois usam `<img>` com URL
+assinada de propósito — `next/image` não serve para endereço que expira em uma
+hora.
+
+**A CSP recusa em silêncio:** sem erro na tela, sem linha em `error_logs`. O
+único registro fica no console de quem estivesse com ele aberto. Mesma classe
+do pixel com quebra de linha de 24/08 — defeito que só o navegador vê, e que
+nenhum dos quatro portões alcança. O host agora sai de
+`NEXT_PUBLIC_SUPABASE_URL`, a mesma variável que `connect-src` já lia; escrito
+à mão voltaria a quebrar na próxima troca de projeto, o que já aconteceu na
+migração para São Paulo em 12/08.
+
+Provado com os dois controles: logo real (900×1600) carrega sem violação, e
+host de fora (unsplash) continua bloqueado. O controle negativo é o que separa
+"corrigiu" de "abriu demais".
 
 ### Monetização (Asaas)
 
@@ -729,6 +807,25 @@ respeitar:
    `pro_vigente` para saber quem paga). Reimplementar uma regra ali criaria
    uma segunda verdade que diverge da do produto na primeira mudança.
 
+**A Central declarava R$ 490/mês quando o real era R$ 0,00 (corrigido 30/08).**
+Ela calculava `(empresas com pro_vigente()) × R$ 49` — e `pro_vigente()`
+responde **"pode usar o Pro?"**, que é `assinatura viva OU trial válido`. Está
+correta no que faz; usá-la para medir DINHEIRO funde três coisas: quem paga,
+quem está em trial e quem ganhou cortesia. A própria Central tem botão de
+liberar Pro de brinde, então o brinde virava R$ 49/mês — o sistema cobrando de
+si mesmo.
+
+`lib/dono/receita.ts` separa os estados (`pagante`, `assinou_sem_pagar`,
+`trial`, `cortesia`, `interna`, `sem_pro`), e `assinou_sem_pagar` é estado
+próprio porque a diferença muda o que fazer: cortesia é decisão do dono,
+aquilo é venda travada que dá para recuperar.
+
+**A correção é de arquitetura, não de cálculo.** `EmpresaComEstado` é tipo
+SEPARADO de `EmpresaNaCentral` — uma função que só leu o banco não consegue
+mais afirmar quem paga. O tipo passou a impedir o defeito, não só a
+documentá-lo. E com o Asaas fora do ar a receita fica `null` e a tela mostra
+"—", nunca R$ 0,00: "não sei quem paga" é diferente de "ninguém paga".
+
 ## 8. Auditoria de qualidade e correção de bugs
 
 Para garantir que o Velo Funil esteja pronto para produção, use este prompt de auditoria e correção como guia:
@@ -776,22 +873,26 @@ Para garantir que o Velo Funil esteja pronto para produção, use este prompt de
 ### Checklist de deploy/validação final
 
 Cada item marcado tem prova, não impressão — o método está em
-`docs/estado-atual.md` ("Como verificar as coisas aqui"). Atualizado 22/08/2026.
+`docs/estado-atual.md` ("Como verificar as coisas aqui"). Atualizado 31/08/2026.
 
 - [x] **Build local concluído sem erros.** `npx tsc --noEmit`, `npm run lint`,
-      `npm test` (**687 testes**) e `npm run build:check`, os quatro limpos,
+      `npm test` (**774 testes**) e `npm run build:check`, os quatro limpos,
       rodados antes de cada commit. É `build:check` e não `build`: os dois
       escrevem em `.next` por padrão, e o build sobrescreve o mapa de chunks
       que o `npm run dev` está usando — a rota morre com `MODULE_NOT_FOUND` e
       o erro aponta para o arquivo recém-editado, parecendo defeito dele.
-- [x] **Migrations aplicadas no Supabase de produção.** 55 arquivos de
-      migration (a maior é `0056`) no projeto `tmyeunithjqkbwvezyyn`
-      (`sa-east-1`). Conferido contra o catálogo real em 26/08: **17 tabelas**,
-      **30 RPCs** e **17 foreign keys**, ver [schema.md](schema.md). As tabelas
-      subiram de 14 para 17 (`assinatura_eventos`, `conversas`, `mensagens`) e
-      as RPCs **não mudaram** — a 0055 reescreveu `pro_vigente()` por dentro e
-      a 0056 criou uma função `returns trigger`, e nenhuma das duas aparece
-      numa lista de RPCs.
+- [x] **Migrations aplicadas no Supabase de produção.** 60 arquivos de
+      migration (a maior é `0061`) no projeto `tmyeunithjqkbwvezyyn`
+      (`sa-east-1`). Conferido contra o catálogo real em 31/08: **18 tabelas**
+      e **32 RPCs**, ver [schema.md](schema.md). A tabela nova é `feedback`
+      (0060), o canal de suporte; as outras três da 0058 à 0061 mexeram em
+      coluna e política, não em estrutura.
+
+      **Reescrever função por dentro não aparece em lista de catálogo**, e este
+      projeto já pagou isso três vezes: a 0055 reescreveu `pro_vigente()`, a
+      0056 criou uma `returns trigger` que o PostgREST não expõe, e a 0057
+      mudou `create_workspace_with_admin` sem mover um número sequer. Quem
+      monitorasse só a contagem não teria visto nenhuma das três.
 - [x] **Webhook Asaas configurado em produção e validado.** Recebe, deduplica
       e aplica. Ganhou rede de segurança depois que um Pix real ficou preso
       por webhook não entregue: `/api/cron/reconciliar-assinaturas` roda 1×/dia
@@ -823,7 +924,7 @@ Cada item marcado tem prova, não impressão — o método está em
       banido pelo `prd-copy-sem-jargao.md` eliminado das telas (Pipeline→Funil,
       Leads→Contatos, Dashboard→Resultados), incluindo o que a renomeação de
       19/08 tinha deixado passar.
-- [x] **Testes automatizados para os fluxos críticos.** 687 testes cobrindo
+- [x] **Testes automatizados para os fluxos críticos.** 774 testes cobrindo
       lógica pura em `lib/**`; cada caso documenta o defeito que o motivou.
       Ressalva honesta: `tests/e2e/funil-completo.spec.ts` **nunca foi
       executado** (exige `.env.local` e roda contra o Asaas). Ele não falha em
