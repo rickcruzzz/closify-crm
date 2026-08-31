@@ -258,6 +258,50 @@ def desenhar_selo(tamanho: int) -> Image.Image:
     return selo.resize((tamanho, tamanho), Image.LANCZOS)
 
 
+def desenhar_funil(altura: int, cor=None) -> Image.Image:
+    """
+    O funil da marca, sozinho — sem o quadrado que o selo põe atrás.
+
+    ## Por que existe, separado de `desenhar_selo`
+
+    O selo saiu do rodapé em 31/08 a pedido do dono, e o motivo registrado
+    era bom: em 66px o funil dentro do quadrado lê como *forma dentro de
+    forma*, e a três metros as três camadas não se resolvem — sobra um bloco
+    teal com algo indistinto dentro.
+
+    Em 31/08, à noite, o pedido virou o oposto: a marca precisa aparecer em
+    todo conteúdo. As duas coisas se resolvem juntas tirando o **quadrado**,
+    não o funil.
+
+    Sem a moldura, o funil ocupa a altura inteira da faixa em vez de 56% dela,
+    e passa a ser lido como silhueta contra o fundo escuro. É a mesma figura,
+    quase o dobro do tamanho útil, e sem a competição entre duas formas
+    concêntricas que motivou a remoção.
+
+    Continua desenhado a 4x e reduzido, para os chanfros saírem lisos sem
+    filtro de suavização.
+    """
+    supersample = 4
+    larg = int(altura * 24 / 24)          # o viewBox e quadrado
+    t_a, t_l = altura * supersample, larg * supersample
+    img = Image.new("RGBA", (t_l, t_a), (0, 0, 0, 0))
+    d = ImageDraw.Draw(img)
+
+    u = t_a / 24.0                        # 1 unidade do viewBox 24x24
+    def P(x, y):
+        return (x * u, y * u)
+
+    c = cor or TEAL
+    # As mesmas tres camadas de `components/branding/logo.tsx`, coordenada por
+    # coordenada. Redesenhar de memoria faria a marca da arte divergir da do
+    # produto no primeiro ajuste — e ninguem compara os dois lado a lado.
+    d.polygon([P(2.6, 4.4), P(21.4, 4.4), P(18.9, 8.76), P(5.1, 8.76)], fill=c)
+    d.polygon([P(6.9, 10.6), P(17.1, 10.6), P(14.98, 14.9), P(9.02, 14.9)], fill=c)
+    d.polygon([P(10.9, 16.6), P(13.1, 16.6), P(12.0, 19.5)], fill=c)
+
+    return img.resize((larg, altura), Image.LANCZOS)
+
+
 def salvar(img, nome):
     final = img.resize((W_FINAL, H_FINAL), Image.LANCZOS)
     final.save(SAIDA / f"{nome}.png")
@@ -811,6 +855,22 @@ def assinar_discreto(img, draw):
     y = y_linha + 40 * ESCALA
     tam = 66 * ESCALA                     # a altura da faixa, que o selo dava
     y_txt = y + (tam - fnt_b.size) / 2 - 3 * ESCALA
+
+    # ## A marca voltou ao rodapé em 31/08, à noite
+    #
+    # Ela tinha saído nesta mesma data, de manhã, a pedido do dono olhando a
+    # peça pronta. O pedido novo é o oposto — marca em todo conteúdo — e os
+    # dois se atendem porque o que incomodava era o QUADRADO, não o funil.
+    #
+    # `desenhar_funil` entrega a silhueta sem moldura, com a altura inteira da
+    # faixa. Colada com a PRÓPRIA máscara alpha no terceiro argumento: sem
+    # ela, o retângulo transparente vira um bloco preto sobre o fundo, e o
+    # `alpha_composite` não serve porque a peça é RGB, não RGBA.
+    marca = desenhar_funil(int(tam * 0.82))
+    y_marca = int(y + (tam - marca.height) / 2)
+    img.paste(marca, (int(x), y_marca), marca)
+    x += marca.width + 18 * ESCALA
+
     lv = draw.textlength("Velo ", font=fnt_b)
     draw.text((x, y_txt), "Velo ", font=fnt_b, fill=BRANCO)
     draw.text((x + lv, y_txt), "Funil", font=fnt_r, fill=(150, 172, 172))
