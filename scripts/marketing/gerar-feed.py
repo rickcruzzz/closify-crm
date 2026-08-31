@@ -127,69 +127,160 @@ def salvar(img, nome):
 capsula_vazia = g.pill
 
 
-def arte_numero(numero, unidade, explicacao, fonte_dado, arquivo, categoria, luz):
-    """
-    O número domina, a explicação sustenta, a fonte prova.
+# ## O ritmo claro/escuro da grade
+#
+# A cada três peças avulsas, a terceira nasce no registro claro. A proporção
+# fica AQUI e não em cada chamada porque escolher à mão derivaria na primeira
+# peça nova: alguém acrescenta duas escuras seguidas e ninguém percebe até a
+# grade estar publicada.
+#
+# 1 em 3, e não 1 em 2, por causa de como o Instagram monta a grade: são três
+# colunas, então 1:2 alinharia as claras numa coluna só e criaria uma faixa
+# vertical. Com 1:3 elas caminham na diagonal, que dá ritmo em vez de listra.
+#
+# Os CARROSSÉIS ficam de fora: os cinco cards precisam ser do mesmo registro,
+# senão a peça pisca quando a pessoa desliza o dedo.
+_CONTADOR_DE_RITMO = {"n": 0}
 
-    Mesmo esqueleto de `tela_numero`, com duas diferenças que o formato exige:
-    o corpo sobe em toda a peça, e a luz do fundo é passada por
-    peça, não por destaque — no feed as cinco aparecem LADO A LADO na grade, e
-    cinco fundos idênticos leem como uma imagem repetida cinco vezes.
+
+def proximo_registro() -> bool:
+    """True quando a próxima peça avulsa deve nascer clara."""
+    _CONTADOR_DE_RITMO["n"] += 1
+    return _CONTADOR_DE_RITMO["n"] % 3 == 0
+
+
+def arte_numero(numero, unidade, explicacao, fonte_dado, arquivo, categoria, luz,
+                claro=False):
     """
+    O número sangra pelo topo. O texto ancora no terço inferior.
+
+    ## O que mudou, e por que a composição antiga era o problema
+
+    Até 31/08 esta função desenhava cápsula, número, título, corpo e fonte
+    empilhados e centralizados verticalmente — a MESMA estrutura de
+    `arte_declaracao`. Vinte e uma peças com a mesma ancoragem viram, na grade
+    do perfil, vinte e um retângulos indistinguíveis.
+
+    Agora o número é cortado pela borda de cima. **O corte é o argumento:**
+    número que não cabe no quadro *é* grande demais, e a peça comunica isso
+    antes de alguém ler a explicação. Uma composição que diz o que o texto diz
+    é a diferença entre desenhar e diagramar.
+
+    ## A cápsula sai daqui
+
+    "DADO DE MERCADO" acima de um algarismo de 400px é redundante: o número
+    já anuncia a categoria. A cápsula continua em `arte_declaracao`, onde não
+    há número e o leitor precisa do contexto antes da frase.
+
+    O parâmetro `categoria` permanece na assinatura, aceito e ignorado, para as
+    chamadas não mudarem todas de forma numa rodada que já muda a composição.
+    """
+    g._TEMA_CLARO = claro
     g._LUZ_ATUAL = luz
-    img = g.fundo_marca(escuro_extra=0.15)
+    img = g.fundo_do_tema(escuro_extra=0.15 if not claro else 0.0)
     draw = ImageDraw.Draw(img)
-    topo, base = g.faixa_livre()
-    fnt_num = g.fonte(g.DISPLAY, 240)
+
+    # 300 contra os 240 antigos. O tamanho é o que permite o corte: em 240 o
+    # número cabia inteiro e o sangramento não aconteceria.
+    # ## O corpo do número se ajusta à LARGURA dele
+    #
+    # 300 é o teto, não o valor. `R$ 265` tem 6 caracteres contra os 3 de
+    # `82%`, e em 300 ele vazava pela borda direita: o "5" saía cortado, o que
+    # lê como erro de diagramação, não como sangramento intencional.
+    #
+    # O corte no TOPO é decisão; o corte na lateral é defeito. A diferença é
+    # que o de cima acontece em todos os números por igual e o da direita só
+    # nos longos — e o olho reconhece na hora o que é sistema e o que é
+    # acidente.
+    #
+    # Achado montando a grade 3x3 e olhando. Nenhuma medição de altura pegaria
+    # isto, porque a altura estava certa.
+    largura_util = g.W - g.MARGEM_ESQ * 2
+    corpo = 300
+    while corpo > 150:
+        fnt_num = g.fonte(g.DISPLAY, corpo)
+        if draw.textlength(numero, font=fnt_num) <= largura_util:
+            break
+        corpo -= 10
+
+    caixa = draw.textbbox((0, 0), numero, font=fnt_num)
+    altura_num = caixa[3] - caixa[1]
+
+    # Corta ~22% da altura do número. Menos que isso lê como erro de
+    # alinhamento; mais, e o algarismo deixa de ser reconhecível. Medido nos
+    # quatro números que o feed usa hoje (21x, 42h, 82%, 55%): 22% preserva a
+    # forma de todos, inclusive o 8, que é o mais frágil ao corte superior.
+    y_num = g.SEGURO_TOPO * 0.30 - caixa[1] - altura_num * 0.22
+    draw.text((g.MARGEM_ESQ, y_num), numero, font=fnt_num, fill=g.cor_destaque())
+    piso_num = y_num + caixa[3]
 
     def bloco(d, y):
-        y = capsula_vazia(d, categoria, y) + 54 * g.ESCALA
-        # `textbbox` e não `fnt.size`: o corpo da fonte reserva espaço para
-        # acento e descida que um número não usa, e avançar por ele deixava o
-        # dado encostado na linha seguinte.
-        d.text((g.MARGEM_ESQ, y), numero, font=fnt_num, fill=g.TEAL)
-        _, _, _, fim = d.textbbox((g.MARGEM_ESQ, y), numero, font=fnt_num)
-        y = fim + 26 * g.ESCALA
-        y = g.escrever_esq(d, unidade, g.fonte(g.TITULO, 68), y, g.BRANCO)
+        y = g.escrever_esq(d, unidade, g.fonte(g.TITULO, 68), y, g.cor_titulo())
         y += 34 * g.ESCALA
-        y = g.escrever_esq(d, explicacao, g.fonte(g.CORPO, 44), y, (168, 190, 190),
+        y = g.escrever_esq(d, explicacao, g.fonte(g.CORPO, 44), y, g.cor_corpo(),
                            entrelinha=1.34)
         y += 38 * g.ESCALA
-        return g.escrever_esq(d, fonte_dado, g.fonte(g.CORPO, 29), y, (110, 132, 132),
-                              entrelinha=1.26)
+        return g.escrever_esq(d, fonte_dado, g.fonte(g.CORPO, 29), y,
+                              g.cor_fonte_dado(), entrelinha=1.26)
 
-    bloco(draw, g.centrar(topo, base, g.medir(bloco)))
+    # ## O texto ancora NO NÚMERO, não no rodapé
+    #
+    # A primeira versão empurrava o bloco para o terço inferior, e com texto
+    # curto abria um buraco de 40% da altura entre o número e a primeira
+    # linha. Vazio no MEIO da peça lê como erro de alinhamento; no fim, lê
+    # como respiro antes do rodapé, que é o que qualquer página impressa faz.
+    #
+    # Achado abrindo `feed-8-conta-por-vendedor` depois de corrigir a largura:
+    # o buraco só apareceu porque o número encolheu, e nenhuma medição
+    # apontaria — a peça estava "correta" em toda métrica que dá para checar.
+    bloco(draw, piso_num + 96 * g.ESCALA)
+
     g.assinar_discreto(img, draw)
     salvar(img, arquivo)
+    g._TEMA_CLARO = False
 
 
-def arte_declaracao(categoria, titulo, corpo, arquivo, luz, remate=None):
+def arte_declaracao(categoria, titulo, corpo, arquivo, luz, remate=None,
+                    claro=False):
     """
-    Só tipografia, para a peça que não tem número.
+    Só tipografia, centralizada no quadro, com ar deliberado dos dois lados.
 
-    Sem imagem e sem ícone, a frase carrega sozinha — e é por isso que ela é a
-    única das cinco em corpo 88. Numa grade de cinco, uma peça de ritmo
-    diferente é o que impede o conjunto de parecer um template repetido.
+    ## O vazio deixou de ser sobra
+
+    A versão anterior ancorava o bloco no alto e deixava ~30% de espaço morto
+    entre o fim do corpo e o filete do rodapé. Não era respiro: era o que
+    sobrou depois que o texto acabou.
+
+    Centralizando na faixa livre, o mesmo espaço se divide em cima e embaixo e
+    passa a enquadrar a frase. É a diferença entre uma peça que termina e uma
+    que respira — e não custa um pixel de conteúdo novo.
+
+    `g.medir` faz a passada seca que torna isso possível: dá para saber a
+    altura do bloco antes de desenhá-lo, sem chutar.
     """
+    g._TEMA_CLARO = claro
     g._LUZ_ATUAL = luz
-    img = g.fundo_marca(escuro_extra=0.10)
+    img = g.fundo_do_tema(escuro_extra=0.10 if not claro else 0.0)
     draw = ImageDraw.Draw(img)
     topo, base = g.faixa_livre()
 
     def bloco(d, y):
         y = capsula_vazia(d, categoria, y) + 54 * g.ESCALA
-        y = g.escrever_esq(d, titulo, g.fonte(g.TITULO, 88), y, g.BRANCO, entrelinha=1.16)
+        y = g.escrever_esq(d, titulo, g.fonte(g.TITULO, 88), y, g.cor_titulo(),
+                           entrelinha=1.16)
         y += 30 * g.ESCALA
-        y = g.escrever_esq(d, corpo, g.fonte(g.CORPO, 44), y, (168, 190, 190),
+        y = g.escrever_esq(d, corpo, g.fonte(g.CORPO, 44), y, g.cor_corpo(),
                            entrelinha=1.34)
         if remate:
             y += 28 * g.ESCALA
-            y = g.escrever_esq(d, remate, g.fonte(g.FORTE, 46), y, g.TEAL, entrelinha=1.22)
+            y = g.escrever_esq(d, remate, g.fonte(g.FORTE, 46), y,
+                               g.cor_destaque(), entrelinha=1.22)
         return y
 
     bloco(draw, g.centrar(topo, base, g.medir(bloco)))
     g.assinar_discreto(img, draw)
     salvar(img, arquivo)
+    g._TEMA_CLARO = False
 
 
 # ------------------------------------------------------------- carrossel
@@ -505,7 +596,7 @@ def main():
         "Responder em 5 minutos em vez de 30. A conta não é sobre ser rápido: "
         "é sobre chegar enquanto a pessoa ainda está decidindo.",
         "Estudo InsideSales com o MIT sobre tempo de resposta a lead.",
-        "feed-1-janela-de-5-minutos", "D A D O   D E   M E R C A D O", 0.30,
+        "feed-1-janela-de-5-minutos", "D A D O   D E   M E R C A D O", 0.30, claro=proximo_registro(),
     )
 
     arte_numero(
@@ -513,7 +604,7 @@ def main():
         "Auditoria em 2.241 empresas. Quase dois dias entre o cliente pedir e "
         "alguém responder. A janela dos 5 minutos passou no primeiro.",
         "Harvard Business Review, auditoria com 2.241 empresas.",
-        "feed-2-media-do-mercado", "D A D O   D E   M E R C A D O", 0.24,
+        "feed-2-media-do-mercado", "D A D O   D E   M E R C A D O", 0.24, claro=proximo_registro(),
     )
 
     # A peça "82% vendem pelo WhatsApp" saiu em 31/08, por decisão do dono:
@@ -528,7 +619,7 @@ def main():
         "É o que um vendedor gasta alimentando CRM à mão. O tempo que viraria "
         "proposta vira cadastro. É assim que a ferramenta é abandonada.",
         "Número de mercado. Varia com o tamanho da equipe.",
-        "feed-3-pedagio-de-digitacao", "D A D O   D E   M E R C A D O", 0.34,
+        "feed-3-pedagio-de-digitacao", "D A D O   D E   M E R C A D O", 0.34, claro=proximo_registro(),
     )
 
     arte_numero(
@@ -536,7 +627,7 @@ def main():
         "E 60% disso é adoção, não plataforma. O sistema funciona; quem "
         "precisa alimentar todo dia é que desiste na terceira semana.",
         "Número de mercado, recorrente em levantamentos do setor.",
-        "feed-6-implantacao-que-falha", "D A D O   D E   M E R C A D O", 0.26,
+        "feed-6-implantacao-que-falha", "D A D O   D E   M E R C A D O", 0.26, claro=proximo_registro(),
     )
 
     arte_declaracao(
@@ -544,7 +635,7 @@ def main():
         "O funil não mente. A memória mente.",
         "Guardar na cabeça funciona com cinco clientes. Com trinta, o que "
         "some não é o cliente que você lembra: é o que você esqueceu.",
-        "feed-7-memoria-mente", 0.38,
+        "feed-7-memoria-mente", 0.38, claro=proximo_registro(),
     )
 
     arte_numero(
@@ -553,7 +644,7 @@ def main():
         f"R$ {g.PRECO_POR_USUARIO} fecham isso todo mês, e o sexto vendedor "
         f"custa mais R$ {g.PRECO_POR_USUARIO}.",
         "Preço de tabela pública de CRMs que cobram por usuário.",
-        "feed-8-conta-por-vendedor", "A   C O N T A   Q U E   N I N G U É M   F A Z", 0.44,
+        "feed-8-conta-por-vendedor", "A   C O N T A   Q U E   N I N G U É M   F A Z", 0.44, claro=proximo_registro(),
     )
 
     arte_declaracao(
@@ -561,7 +652,7 @@ def main():
         "Negócio sem próximo passo morre calado",
         "Ele não dá erro, não avisa e não aparece em relatório. Só para de "
         "andar. Quando alguém lembra, o cliente já comprou de outro.",
-        "feed-4-morre-calado", 0.20,
+        "feed-4-morre-calado", 0.20, claro=proximo_registro(),
     )
 
     arte_numero(
@@ -570,7 +661,7 @@ def main():
         f"pessoas a R$ {g.PRECO_POR_USUARIO} fecham a conta em "
         f"R$ {g.PRECO_POR_USUARIO * 5} todo mês.",
         "Preço de tabela pública de CRMs que cobram por usuário.",
-        "feed-5-preco-por-empresa", "A   C O N T A   Q U E   N I N G U É M   F A Z", 0.36,
+        "feed-5-preco-por-empresa", "A   C O N T A   Q U E   N I N G U É M   F A Z", 0.36, claro=proximo_registro(),
     )
 
     # ---------------------------------------------------- o primeiro carrossel
@@ -709,7 +800,7 @@ def main():
         "Não é canal de apoio, é onde o negócio acontece. O CRM que ignora "
         "isso pede para a pessoa trabalhar duas vezes.",
         "Pesquisa Pulso do Sebrae, 8,2 mil empresas ouvidas.",
-        "feed-9-onde-a-venda-acontece", "D A D O   D E   M E R C A D O", 0.28,
+        "feed-9-onde-a-venda-acontece", "D A D O   D E   M E R C A D O", 0.28, claro=proximo_registro(),
     )
 
     arte_declaracao(
@@ -717,7 +808,7 @@ def main():
         "Se o vendedor sair amanhã, o que fica?",
         "O contato está no celular dele. A negociação, na conversa dele. O "
         "que foi combinado, na memória dele. A empresa fica com o quê?",
-        "feed-10-se-o-vendedor-sair", 0.22,
+        "feed-10-se-o-vendedor-sair", 0.22, claro=proximo_registro(),
     )
 
     arte_declaracao(
@@ -725,7 +816,7 @@ def main():
         "Não é o WhatsApp que é o problema.",
         "Ele é ótimo para conversar e péssimo para lembrar. O erro é pedir "
         "que ele faça as duas coisas, e culpar a equipe quando falha.",
-        "feed-11-o-whatsapp-nao-e-o-problema", 0.32,
+        "feed-11-o-whatsapp-nao-e-o-problema", 0.32, claro=proximo_registro(),
     )
 
     print()

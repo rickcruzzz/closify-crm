@@ -178,3 +178,61 @@ describe('as legendas publicadas não usam travessão', () => {
     expect(texto).not.toMatch(/[—–]/)
   })
 })
+
+/**
+ * ## O contraste do registro claro
+ *
+ * As peças claras usam os tokens do modo claro do produto, e o teal MUDA de
+ * valor entre os registros: o `#00BFC0` que funciona sobre o fundo escuro dá
+ * ~1,9:1 sobre off-white — ilegível.
+ *
+ * O modo claro do produto já tinha resolvido isso baixando a luminosidade
+ * para 0.5, e a arte herda a solução em vez de repetir o erro que a landing
+ * pagou em 26/08, quando cartão branco sobre página branca dava 1,10:1.
+ *
+ * Contraste de arte não some com aviso. Some com alguém não conseguindo ler
+ * no sol, e ninguém reporta isso: a pessoa passa o dedo.
+ */
+describe('o registro claro das artes tem contraste legível', () => {
+  const luminancia = ([r, g, b]: number[]) => {
+    const c = (v: number) => {
+      const x = v / 255
+      return x <= 0.03928 ? x / 12.92 : ((x + 0.055) / 1.055) ** 2.4
+    }
+    return 0.2126 * c(r) + 0.7152 * c(g) + 0.0722 * c(b)
+  }
+  const razao = (a: number[], b: number[]) => {
+    const [alto, baixo] = [luminancia(a), luminancia(b)].sort((x, y) => y - x)
+    return (alto + 0.05) / (baixo + 0.05)
+  }
+
+  /** Os mesmos valores de `gerar-stories.py`, convertidos de globals.css. */
+  const FUNDO = [246, 248, 249]
+  const casos: [string, number[], number][] = [
+    ['título', [10, 10, 10], 7],
+    ['corpo', [94, 101, 101], 4.5],
+    ['teal do claro', [0, 120, 122], 4.5],
+    ['linha de fonte', [104, 112, 112], 4.5],
+  ]
+
+  it.each(casos)('%s sobre o fundo claro', (_nome, cor, piso) => {
+    expect(razao(cor, FUNDO)).toBeGreaterThanOrEqual(piso)
+  })
+
+  /**
+   * O controle negativo: prova que o teste mede alguma coisa. O teal do
+   * registro escuro precisa REPROVAR sobre o fundo claro — se ele passasse,
+   * o piso estaria baixo demais para servir de trava.
+   */
+  it('o teal do registro escuro reprovaria sobre o claro', () => {
+    expect(razao([0, 191, 192], FUNDO)).toBeLessThan(4.5)
+  })
+
+  /** Os valores estão no gerador, não só neste teste. */
+  it('o gerador declara os tokens do modo claro', () => {
+    const codigo = readFileSync(join(PASTA, 'gerar-stories.py'), 'utf-8')
+    for (const nome of ['FUNDO_CLARO', 'TEXTO_CLARO', 'TEAL_NO_CLARO', 'CORPO_NO_CLARO']) {
+      expect(codigo).toContain(nome)
+    }
+  })
+})

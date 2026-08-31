@@ -410,6 +410,79 @@ CARD = (18, 20, 21)            # superfície do card, um degrau acima do fundo
 BORDA_CARD = (42, 46, 48)
 
 
+# ------------------------------------------------------- o registro claro
+#
+# ## Por que existe um segundo registro
+#
+# As 21 peças do feed tinham a mesma composição e o mesmo fundo. Na GRADE do
+# perfil, que é onde alguém decide seguir, viravam retângulos verde-escuros
+# indistinguíveis: o que separava uma da outra era o comprimento do título, e
+# nem isso, porque todas quebram em duas linhas.
+#
+# Duas peças escuras e uma clara dão ritmo à grade sem inventar uma segunda
+# marca.
+#
+# ## Estes valores NÃO foram escolhidos aqui
+#
+# São os tokens do modo claro do produto, convertidos de `app/globals.css`.
+# Quem clica no link e chega no software em modo claro vê a MESMA paleta que
+# viu no post. Uma paleta clara inventada para o Instagram criaria uma
+# terceira identidade, e o projeto já tem duas para manter coerentes.
+#
+#     --background        oklch(0.978 0.003 205)
+#     --foreground        oklch(0.145 0 0)
+#     --primary           oklch(0.5 0.13 195)
+#     --muted-foreground  oklch(0.5 0.008 205)
+#
+# ## O teal MUDA entre os registros, e isso é obrigatório
+#
+# O `#00BFC0` que funciona sobre o fundo escuro dá **1,9:1** sobre off-white:
+# ilegível. O modo claro do produto já resolveu isso baixando a luminosidade
+# para 0.5, e a arte herda a solução em vez de repetir o erro que a landing
+# pagou em 26/08, quando cartão branco sobre página branca dava 1,10:1.
+#
+# Medido na conversão: 18,6:1 no título, 5,6:1 no corpo, 5,0:1 no teal.
+FUNDO_CLARO = (246, 248, 249)     # --background
+TEXTO_CLARO = (10, 10, 10)        # --foreground
+TEAL_NO_CLARO = (0, 120, 122)     # --primary do modo claro
+CORPO_NO_CLARO = (94, 101, 101)   # --muted-foreground
+BORDA_NO_CLARO = (217, 220, 221)  # --border
+
+#: Qual registro está sendo desenhado. Global de módulo pelo mesmo motivo que
+#: `_LUZ_ATUAL`: as funções de desenho são chamadas em cadeia e passar o tema
+#: por parâmetro em todas obrigaria a mexer em quinze assinaturas.
+_TEMA_CLARO = False
+
+
+def cor_titulo():
+    return TEXTO_CLARO if _TEMA_CLARO else BRANCO
+
+
+def cor_corpo():
+    return CORPO_NO_CLARO if _TEMA_CLARO else (150, 172, 172)
+
+
+def cor_destaque():
+    """O teal, no valor que o registro atual suporta."""
+    return TEAL_NO_CLARO if _TEMA_CLARO else TEAL
+
+
+def cor_fonte_dado():
+    """
+    A linha de crédito da pesquisa: o texto mais apagado da peça.
+
+    No claro ela não pode cair junto com o corpo. `--muted-foreground` já é o
+    piso do que se lê confortavelmente (5,6:1); descer mais para "parecer
+    discreto" quebraria AA num texto de 29px, que é justamente o tamanho onde
+    contraste importa mais.
+    """
+    # (104,112,112) e não um cinza mais claro: medido, 4,76:1. O valor que
+    # eu tinha posto antes, (122,130,130), dava 3,69:1 e reprovava AA — o
+    # teste pegou, e o comentário acima já dizia por que não descer. Escrever
+    # a regra não impede de quebrá-la; o teste impede.
+    return (104, 112, 112) if _TEMA_CLARO else (110, 132, 132)
+
+
 def marca_dagua_do_funil(img, forca=0.055):
     """
     O símbolo da marca em escala gigante, sangrando pelo canto direito.
@@ -455,7 +528,11 @@ def marca_dagua_do_funil(img, forca=0.055):
     d = ImageDraw.Draw(camada)
 
     u = lado / 24.0                       # 1 unidade do viewBox 24 do símbolo
-    tinta = (*TEAL, int(255 * forca))
+    # No registro claro o teal vivo a 7,5% sobre off-white vira um verde
+    # leitoso que suja a superfície. O teal escuro do modo claro do produto
+    # (`--primary`) escurece em vez de clarear, e a textura volta a ser
+    # sentida em vez de vista — que é a regra desta marca-d'água.
+    tinta = (*(TEAL_NO_CLARO if _TEMA_CLARO else TEAL), int(255 * forca))
 
     def P(x, y):
         return (x * u, y * u)
@@ -518,6 +595,57 @@ def fundo_marca(escuro_extra=0.0):
         preto = Image.new("RGB", (W, H), (6, 14, 15))
         img = Image.blend(img, preto, escuro_extra)
     return img
+
+
+def fundo_claro(escuro_extra=0.0):
+    """
+    O par claro de `fundo_marca`, com a MESMA estrutura de duas luzes.
+
+    ## Por que espelhar a estrutura em vez de simplificar
+
+    Fundo claro chapado seria mais fácil e denunciaria a peça: as escuras têm
+    direção de luz, e uma clara sem ela leria como slide de apresentação no
+    meio de um perfil desenhado. O que muda é a direção do gradiente, não a
+    existência dele: aqui a luz ESCURECE de leve em vez de clarear, porque
+    sobre off-white uma luz mais clara não tem para onde ir.
+
+    A amplitude é muito menor de propósito. No escuro, 0,17 a 0,29 de
+    luminosidade é um degradê visível; no claro, a mesma distância estoura em
+    cinza sujo. Ficam ~2% entre o ponto mais claro e o mais escuro, que é o
+    bastante para a superfície não ser chapada e pouco para não virar mancha.
+
+    O `escuro_extra` continua aceito e continua ESCURECENDO, para as duas
+    famílias terem a mesma assinatura de função. Quem chama não precisa saber
+    em qual registro está.
+    """
+    img = Image.new("RGB", (W, H), FUNDO_CLARO)
+
+    halo = Image.new("RGB", (W, H), FUNDO_CLARO)
+    hd = ImageDraw.Draw(halo)
+    centro = _LUZ_ATUAL
+    # Cinza levemente azulado, no mesmo matiz 205 dos tokens: sombra neutra
+    # sobre um fundo com viés de matiz vira mancha cinza-morta.
+    hd.ellipse([-W * 0.3, H * (centro - 0.52), W * 1.3, H * (centro + 0.22)],
+               fill=(232, 236, 238))
+    hd.ellipse([W * 0.45, H * (centro + 0.02), W * 1.5, H * (centro + 0.46)],
+               fill=(226, 231, 233))
+    halo = halo.filter(ImageFilter.GaussianBlur(200 * ESCALA))
+    img = Image.blend(img, halo, 0.62)
+
+    # A marca-d'água precisa CLAREAR aqui, não escurecer: o funil a 5,5% de
+    # branco sobre off-white some, e a 5,5% de preto vira sujeira. O valor
+    # dobra porque contraste percebido cai muito em superfície clara.
+    img = marca_dagua_do_funil(img, forca=0.075)
+
+    if escuro_extra:
+        cinza = Image.new("RGB", (W, H), (214, 220, 222))
+        img = Image.blend(img, cinza, escuro_extra * 0.5)
+    return img
+
+
+def fundo_do_tema(escuro_extra=0.0):
+    """Despacha para o registro atual. É por aqui que toda peça pede o fundo."""
+    return fundo_claro(escuro_extra) if _TEMA_CLARO else fundo_marca(escuro_extra)
 
 
 def pill(draw, texto, y, x=None):
@@ -592,7 +720,11 @@ def pill(draw, texto, y, x=None):
     tx = x
     ty = y + pad_y - 2 * ESCALA
     for letra in texto:
-        draw.text((tx, ty), letra, font=fnt, fill=(150, 236, 236))
+        # O (150,236,236) do escuro da 1,4:1 sobre off-white: some por
+        # completo. No claro o rotulo usa o teal do produto, que e o unico
+        # valor da paleta que sustenta 12px em caixa alta.
+        draw.text((tx, ty), letra, font=fnt,
+                  fill=TEAL_NO_CLARO if _TEMA_CLARO else (150, 236, 236))
         tx += draw.textlength(letra, font=fnt) + tracking
 
     return y + alt
@@ -823,7 +955,8 @@ def assinar_discreto(img, draw):
     """
     y_linha = H - SEGURO_BASE + 20 * ESCALA
     draw.line([(MARGEM_ESQ, y_linha), (W - MARGEM_ESQ, y_linha)],
-              fill=(0, 74, 76), width=max(1, int(1.5 * ESCALA)))
+              fill=BORDA_NO_CLARO if _TEMA_CLARO else (0, 74, 76),
+              width=max(1, int(1.5 * ESCALA)))
 
     # ## A assinatura é TIPOGRÁFICA, sem o selo — decisão de 31/08
     #
@@ -866,14 +999,14 @@ def assinar_discreto(img, draw):
     # faixa. Colada com a PRÓPRIA máscara alpha no terceiro argumento: sem
     # ela, o retângulo transparente vira um bloco preto sobre o fundo, e o
     # `alpha_composite` não serve porque a peça é RGB, não RGBA.
-    marca = desenhar_funil(int(tam * 0.82))
+    marca = desenhar_funil(int(tam * 0.82), cor=cor_destaque())
     y_marca = int(y + (tam - marca.height) / 2)
     img.paste(marca, (int(x), y_marca), marca)
     x += marca.width + 18 * ESCALA
 
     lv = draw.textlength("Velo ", font=fnt_b)
-    draw.text((x, y_txt), "Velo ", font=fnt_b, fill=BRANCO)
-    draw.text((x + lv, y_txt), "Funil", font=fnt_r, fill=(150, 172, 172))
+    draw.text((x, y_txt), "Velo ", font=fnt_b, fill=cor_titulo())
+    draw.text((x + lv, y_txt), "Funil", font=fnt_r, fill=cor_corpo())
 
     # O endereço é o call-to-action da peça, não um crédito de rodapé: sem ele
     # o Story prova o produto e não diz onde encontrá-lo. Ganha a cor da marca
@@ -881,7 +1014,10 @@ def assinar_discreto(img, draw):
     fnt_site = fonte(ROTULO, 36)
     site = SITE_CANONICO
     draw.text((W - MARGEM_ESQ - draw.textlength(site, font=fnt_site), y_txt),
-              site, font=fnt_site, fill=(122, 214, 214))
+              site, font=fnt_site,
+              # No claro o endereco usa o teal do produto: o (122,214,214) do
+              # escuro da 1,7:1 sobre off-white e some.
+              fill=TEAL_NO_CLARO if _TEMA_CLARO else (122, 214, 214))
 
 
 # -------------------------------------------------- medir antes de desenhar
