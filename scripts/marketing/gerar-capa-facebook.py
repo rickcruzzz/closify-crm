@@ -57,6 +57,15 @@ _spec.loader.exec_module(g)
 # e ampliação de bitmap numa peça que é 90% tipografia aparece na hora — borda
 # de letra serrilhada é o defeito mais visível que uma capa pode ter.
 
+# ## Supersampling em 3x, não nos 2x do resto da família
+#
+# Esta peça é quase inteiramente tipografia sobre fundo liso, vista em telas
+# grandes de desktop. Nessa combinação, a borda serrilhada de uma letra é o
+# defeito mais visível que existe — não há textura nem imagem para escondê-la.
+#
+# Desenhar em 4920x2772 e reduzir para 1640x924 com LANCZOS dá três amostras
+# por pixel final. Custa segundos a mais numa peça gerada uma vez por mês.
+g.ESCALA = 3
 g.W_FINAL, g.H_FINAL = 1640, 924
 g.W, g.H = g.W_FINAL * g.ESCALA, g.H_FINAL * g.ESCALA
 
@@ -121,6 +130,127 @@ def conferir_zona_segura(caixa_texto):
 
     print(f"  zona segura: {SEGURO_LARG // g.ESCALA}x{SEGURO_ALT // g.ESCALA} central, "
           f"folga de {(x0 - lim_x0) // g.ESCALA}px na esquerda")
+
+
+def trama_de_pontos(img, passo=44, raio=1.5, forca=0.055):
+    """
+    Uma trama de pontos quase invisível sobre o fundo.
+
+    ## Por que existe
+
+    Fundo liso em peça grande lê como chapa — e chapa é o que separa arte feita
+    de arte gerada. A trama dá TEXTURA sem dar assunto: ela não compete com o
+    texto porque não tem forma reconhecível, só densidade.
+
+    É o mesmo recurso do papel de impressão fina, e do fundo dos produtos que
+    esta marca persegue como régua. A 5,5% de opacidade e 1,5px de raio, ela
+    não é vista — é sentida quando alguém aproxima o olho e percebe que o fundo
+    "tem alguma coisa".
+
+    ## Por que ela some no lado do texto
+
+    A densidade cai a zero na coluna de leitura. Trama atrás de letra reduz
+    contraste de borda e faz a tipografia parecer suja — o oposto do que ela
+    veio fazer.
+    """
+    camada = Image.new("RGBA", (g.W, g.H), (0, 0, 0, 0))
+    d = ImageDraw.Draw(camada)
+    r = raio * g.ESCALA
+    salto = passo * g.ESCALA
+    inicio_texto = (g.W - SEGURO_LARG) // 2
+    fim_texto = inicio_texto + SEGURO_LARG
+
+    for y in range(0, g.H, salto):
+        for x in range(0, g.W, salto):
+            # Esvazia sob a coluna de leitura, com transição em vez de corte.
+            if inicio_texto - salto * 3 < x < fim_texto + salto * 3:
+                dist = min(abs(x - (inicio_texto - salto * 3)),
+                           abs(x - (fim_texto + salto * 3)))
+                atenua = min(1.0, dist / (salto * 3))
+                if atenua < 0.15:
+                    continue
+            else:
+                atenua = 1.0
+            d.ellipse([x - r, y - r, x + r, y + r],
+                      fill=(*g.TEAL, int(255 * forca * atenua)))
+
+    return Image.alpha_composite(img.convert("RGBA"), camada).convert("RGB")
+
+
+def pipeline_abstrato(img, forca=0.30):
+    """
+    Três colunas de blocos: a geometria de um funil de vendas.
+
+    ## Por que NÃO é um print falso de interface
+
+    Critiquei exatamente isso nos criativos da concorrência — cards de UI
+    flutuando sobre foto, inventando uma tela que não existe. A diferença aqui
+    é o que a forma afirma.
+
+    Card com texto falso e botão afirma "este é o produto", e mente. Retângulos
+    sem rótulo, em três colunas decrescentes, afirmam "isto é um funil" — que é
+    uma ideia, não uma captura de tela. Ninguém confunde com print, e é isso
+    que o torna honesto.
+
+    ## Por que decrescente e à direita
+
+    Decrescente porque é a forma do funil: muitos entram, poucos fecham. É a
+    mesma geometria da marca, dita em outra escala.
+
+    À direita porque a coluna de leitura é a esquerda, e porque o corte do
+    celular remove justamente esta faixa — a peça precisa funcionar sem ela.
+    Ela é acabamento para quem vê no desktop, nunca informação.
+    """
+    camada = Image.new("RGBA", (g.W, g.H), (0, 0, 0, 0))
+    d = ImageDraw.Draw(camada)
+
+    larg_col = int(118 * g.ESCALA)
+    folga_col = int(22 * g.ESCALA)
+    alt_bloco = int(44 * g.ESCALA)
+    folga_bloco = int(13 * g.ESCALA)
+    raio = int(8 * g.ESCALA)
+
+    # ## O x é CALCULADO, não escolhido
+    #
+    # A primeira versão usava `x = W * 0.735`, um número redondo que parecia
+    # razoável. Três colunas de 150 mais duas folgas de 26 somam 502px, e
+    # 0.735*1640 + 502 = 1707 numa peça de 1640: a terceira coluna saía cortada
+    # pela borda.
+    #
+    # Agora a largura total é medida e ancorada pela DIREITA, com margem igual
+    # à do texto. Mudar o tamanho dos blocos não pode voltar a estourar a peça.
+    largura_total = larg_col * 3 + folga_col * 2
+    margem_dir = int(60 * g.ESCALA)
+    x = g.W - margem_dir - largura_total
+
+    # E confere que não invade a coluna de leitura do celular.
+    limite_texto = (g.W - SEGURO_LARG) // 2 + SEGURO_LARG
+    if x < limite_texto + int(30 * g.ESCALA):
+        raise SystemExit(
+            f"  pipeline invade a zona de texto: comeca em {x // g.ESCALA}px, "
+            f"o texto termina em {limite_texto // g.ESCALA}px"
+        )
+
+    topo = int(g.H * 0.30)
+
+    for coluna, quantos in enumerate((4, 3, 2)):
+        y = topo + coluna * int(30 * g.ESCALA)
+        for i in range(quantos):
+            # Cada bloco mais abaixo é mais apagado: a coluna se dissolve em
+            # vez de terminar numa borda reta, que leria como corte.
+            desvanece = 1 - (i / max(quantos, 2)) * 0.55
+            alpha = int(255 * forca * desvanece)
+            d.rounded_rectangle(
+                [x, y, x + larg_col, y + alt_bloco],
+                radius=raio,
+                fill=(*g.TEAL, int(alpha * 0.16)),
+                outline=(*g.TEAL, alpha),
+                width=max(1, int(1.6 * g.ESCALA)),
+            )
+            y += alt_bloco + folga_bloco
+        x += larg_col + folga_col
+
+    return Image.alpha_composite(img.convert("RGBA"), camada).convert("RGB")
 
 
 def funil_pela_direita(img, forca=0.09):
@@ -232,6 +362,8 @@ def capa(titulo, apoio, arquivo, luz=0.30):
     g._LUZ_ATUAL = luz
     img = g.fundo_marca(escuro_extra=0.12)
     funil_pela_direita(img)
+    img = trama_de_pontos(img)
+    img = pipeline_abstrato(img)
     img = escurecer_coluna_de_leitura(img)
     draw = ImageDraw.Draw(img)
 
