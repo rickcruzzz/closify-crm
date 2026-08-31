@@ -90,6 +90,16 @@ g._RASCUNHO = None
 
 SAIDA = g.RAIZ / "marketing" / "instagram" / "feed"
 
+# ## O preço do concorrente vem do módulo comum
+#
+# Não sai de `lib/plans.ts`: não é o nosso preço, é a mediana de tabela pública
+# dos CRMs que cobram por usuário. Fica nomeada num lugar só porque aparece em
+# três peças e a conta de cinco pessoas é derivada dela — escrita à mão nos
+# três lugares, bastaria corrigir dois para a arte passar a mentir sozinha.
+#
+# É preço de tabela pública, e por isso pode ser dito: não é prova social
+# inventada, é aritmética sobre número que qualquer um confere no site deles.
+
 # Largura que sobrevive ao recorte 3:4 da grade do perfil, e a folga mínima
 # que a coluna de texto tem que manter sobre ela.
 RECORTE_DA_GRADE = int(g.H_FINAL * 3 / 4)
@@ -517,7 +527,7 @@ def main():
         "3,4h", "por semana só digitando",
         "É o que um vendedor gasta alimentando CRM à mão. O tempo que viraria "
         "proposta vira cadastro — e é assim que a ferramenta é abandonada.",
-        "Pesquisa de produtividade em equipes comerciais.",
+        "Número de mercado. Varia com o tamanho da equipe.",
         "feed-3-pedagio-de-digitacao", "D A D O   D E   M E R C A D O", 0.34,
     )
 
@@ -525,7 +535,7 @@ def main():
         "55%", "das implantações de CRM falham",
         "E 60% disso é adoção, não plataforma. O sistema funciona; quem "
         "precisa alimentar todo dia é que desiste na terceira semana.",
-        "Levantamentos publicados sobre implantação de CRM.",
+        "Número de mercado, recorrente em levantamentos do setor.",
         "feed-6-implantacao-que-falha", "D A D O   D E   M E R C A D O", 0.26,
     )
 
@@ -538,9 +548,10 @@ def main():
     )
 
     arte_numero(
-        "R$ 265", "é a conta de 5 pessoas",
-        "A maioria dos CRMs cobra por vendedor. Cinco pessoas a R$ 53 fecham "
-        "isso todo mês, e o sexto vendedor custa mais R$ 53.",
+        f"R$ {g.PRECO_POR_USUARIO * 5}", "é a conta de 5 pessoas",
+        f"A maioria dos CRMs cobra por vendedor. Cinco pessoas a "
+        f"R$ {g.PRECO_POR_USUARIO} fecham isso todo mês, e o sexto vendedor "
+        f"custa mais R$ {g.PRECO_POR_USUARIO}.",
         "Preço de tabela pública de CRMs que cobram por usuário.",
         "feed-8-conta-por-vendedor", "A   C O N T A   Q U E   N I N G U É M   F A Z", 0.44,
     )
@@ -554,9 +565,10 @@ def main():
     )
 
     arte_numero(
-        "R$ 49", "por mês, pela empresa inteira",
+        f"R$ {g.PRO_PLAN_PRICE}", "por mês, pela empresa inteira",
         "Não por vendedor. A maioria dos CRMs cobra por pessoa, e cinco "
-        "pessoas a R$ 53 fecham a conta em R$ 265 todo mês.",
+        f"pessoas a R$ {g.PRECO_POR_USUARIO} fecham a conta em "
+        f"R$ {g.PRECO_POR_USUARIO * 5} todo mês.",
         "Preço de tabela pública de CRMs que cobram por usuário.",
         "feed-5-preco-por-empresa", "A   C O N T A   Q U E   N I N G U É M   F A Z", 0.36,
     )
@@ -582,7 +594,7 @@ def main():
             "3,4h", "por semana só digitando",
             "É o que um vendedor gasta alimentando CRM à mão — tempo que "
             "viraria proposta e vira cadastro.",
-            "Pesquisa de produtividade em equipes comerciais.",
+            "Número de mercado. Varia com o tamanho da equipe.",
             "D A D O   D E   M E R C A D O", luz=0.28, passo=(2, 5),
             # ## Por que este card NÃO leva barra de proporção
             #
@@ -601,7 +613,7 @@ def main():
             "55%", "das implantações falham",
             "E 60% disso é adoção, não plataforma. O problema quase nunca é o "
             "sistema que foi escolhido.",
-            "Levantamentos publicados sobre implantação de CRM.",
+            "Número de mercado, recorrente em levantamentos do setor.",
             "D A D O   D E   M E R C A D O", luz=0.36, passo=(3, 5),
             proporcao=(55, 100, "55% falham", "45% vingam"),
         ),
@@ -614,11 +626,107 @@ def main():
         ),
         card_cta(
             "Um funil que cabe num dia de trabalho.",
-            "Grátis até 50 contatos, sem cartão. R$ 49 por mês pela empresa "
-            "inteira quando precisar de mais — não por vendedor.",
+            f"Grátis até {g.FREE_LEAD_LIMIT} contatos, sem cartão. "
+            f"R$ {g.PRO_PLAN_PRICE} por mês pela empresa inteira quando "
+            "precisar de mais — não por vendedor.",
             luz=0.46, passo=(5, 5),
         ),
     ])
+
+    # -------------------------------------------- o carrossel do eixo WhatsApp
+    #
+    # ## Por que o WhatsApp volta ao feed, tendo saído em 31/08
+    #
+    # Ele foi removido de propósito naquela rodada. A decisão se desfaz aqui,
+    # conscientemente, porque criou um problema maior do que resolveu: a
+    # landing inteira é construída sobre "O WhatsApp guarda a conversa. Não
+    # guarda o cliente", e o feed falava de digitação. Quem vem do perfil cai
+    # numa página que parece de outra empresa.
+    #
+    # O pedágio de digitação NÃO some — ele é o carrossel acima, e continua
+    # sendo a dor de `docs/dor-de-mercado.md`. O que muda é qual dos dois
+    # abre a conversa: 82% da PME brasileira vende por WhatsApp (Sebrae, 8,2
+    # mil ouvidos), e é o canal, não o sintoma, que a pessoa reconhece como
+    # sendo dela.
+    #
+    # ## O card 4 é a dor que nunca apareceu em peça nenhuma
+    #
+    # `docs/estado-atual.md` registra, desde a pesquisa de 21/08, que a dor
+    # PRIMEIRA não é esquecer a venda — é **o vendedor sair e levar a carteira
+    # junto**. Esquecer dói uma vez; perder o histórico não tem conserto, e
+    # ainda expõe a empresa na LGPD, que continua responsável por dado que não
+    # consegue auditar.
+    #
+    # Nenhuma das 13 peças existentes toca nisso. É o argumento mais forte que
+    # este produto tem e estava inteiramente fora do marketing.
+    print()
+    carrossel("carrossel-2-carteira", [
+        card_gancho(
+            [("Sua carteira de clientes mora no ", False),
+             ("celular", True), (" de quem vende.", False)],
+            "E o dia em que ele sair, ela sai junto.",
+            luz=0.16, passo=(1, 5),
+        ),
+        card_dado(
+            "82%", "vendem pelo WhatsApp",
+            "É o principal canal de venda da pequena empresa brasileira. A "
+            "negociação inteira acontece lá — e fica lá.",
+            "Pesquisa Pulso do Sebrae, 8,2 mil empresas ouvidas.",
+            "D A D O   D E   M E R C A D O", luz=0.26, passo=(2, 5),
+            proporcao=(82, 100, "82% pelo WhatsApp", "18% em outros canais"),
+        ),
+        card_dado(
+            "42h", "para responder o primeiro contato",
+            "É a média do mercado. Quem responde em 5 minutos tem 21x mais "
+            "chance de qualificar — e ninguém lembra do que não está anotado.",
+            "Harvard Business Review, auditoria com 2.241 empresas.",
+            "D A D O   D E   M E R C A D O", luz=0.34, passo=(3, 5),
+        ),
+        card_causa(
+            "O histórico não é da empresa. É do aparelho.",
+            "Quando o vendedor sai, vai embora com o contato, a negociação em "
+            "aberto e tudo que foi combinado. A empresa continua responsável "
+            "pelo dado do cliente — só não consegue mais olhar para ele.",
+            luz=0.40, passo=(4, 5),
+        ),
+        card_cta(
+            "O WhatsApp continua. O cliente passa a ser seu.",
+            f"Grátis até {g.FREE_LEAD_LIMIT} contatos, sem cartão. "
+            f"R$ {g.PRO_PLAN_PRICE} por mês pela empresa inteira — "
+            "não por vendedor.",
+            luz=0.46, passo=(5, 5),
+        ),
+    ])
+
+    # ------------------------------------------- as avulsas do eixo WhatsApp
+    #
+    # Peça avulsa no feed tem função diferente da do carrossel: ela é vista
+    # na GRADE do perfil, recortada em 3:4, muitas vezes sem legenda lida.
+    # Precisa entregar a ideia inteira no primeiro olhar.
+    print()
+    arte_numero(
+        "82%", "da PME vende pelo WhatsApp",
+        "Não é canal de apoio, é onde o negócio acontece. O CRM que ignora "
+        "isso pede para a pessoa trabalhar duas vezes.",
+        "Pesquisa Pulso do Sebrae, 8,2 mil empresas ouvidas.",
+        "feed-9-onde-a-venda-acontece", "D A D O   D E   M E R C A D O", 0.28,
+    )
+
+    arte_declaracao(
+        "A   P E R G U N T A   I N C Ô M O D A",
+        "Se o vendedor sair amanhã, o que fica?",
+        "O contato está no celular dele. A negociação, na conversa dele. O "
+        "que foi combinado, na memória dele. A empresa fica com o quê?",
+        "feed-10-se-o-vendedor-sair", 0.22,
+    )
+
+    arte_declaracao(
+        "O   Q U E   N I N G U É M   D I Z",
+        "Não é o WhatsApp que é o problema.",
+        "Ele é ótimo para conversar e péssimo para lembrar. O erro é pedir "
+        "que ele faça as duas coisas — e culpar a equipe quando falha.",
+        "feed-11-o-whatsapp-nao-e-o-problema", 0.32,
+    )
 
     print()
     # `@4k` e a mesma arte em dobro, nao uma peca a mais: contar o glob cru

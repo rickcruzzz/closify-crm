@@ -64,6 +64,7 @@ pelo PRD de copy sem jargão. Texto novo escrito direto no criativo divergiria
 da página no primeiro ajuste que alguém fizesse lá.
 """
 
+import re
 from pathlib import Path
 
 from PIL import Image, ImageDraw, ImageEnhance, ImageFilter, ImageFont
@@ -83,6 +84,71 @@ SEGURO_BASE = int(H * 0.20)
 RAIZ = Path(__file__).resolve().parents[2]
 SAIDA = RAIZ / "marketing" / "instagram"
 PRINTS = RAIZ / "public" / "produto"
+
+
+# ------------------------------------------------------------------ a oferta
+#
+# ## Por que a oferta é LIDA de `lib/plans.ts` em vez de escrita aqui
+#
+# Até 31/08 estas artes traziam a oferta em texto solto, e quatro delas
+# anunciavam **"7 dias com o Pro completo"** — o reverse trial que a migration
+# 0057 removeu em 29/08. Uma delas, `planos-1-teste.png`, ia além e prometia
+# "Contatos e colaboradores ILIMITADOS", que é exatamente a promessa falsa que
+# a landing removeu em 23/08: o Free tem teto de 50.
+#
+# Nada quebrou, porque imagem não compila. As artes ficaram prontas no disco
+# esperando publicação, e teriam anunciado uma oferta morta para os 10 mil
+# seguidores do perfil.
+#
+# É a terceira vez que esta classe aparece neste projeto — a bio do Instagram
+# vendendo "300 contatos" meses depois do Free virar 50, os prints da landing
+# mostrando o vocabulário que a própria página baniu, e agora os Stories.
+# O que as três têm em comum: texto de marca que vive FORA do alcance de
+# `tsc`, `lint` e `test`.
+#
+# Ler daqui protege contra mudança de VALOR. Não protege contra mudança de
+# OFERTA — se o conceito inteiro sumir de novo, a interpolação continua
+# funcionando e vira mentira em silêncio. Por isso existe também
+# `oferta_test.py`, que PROÍBE as palavras da oferta aposentada em vez de
+# conferir o número da vigente.
+def _constante_de_plans(nome: str) -> int:
+    """Lê um `export const NOME = <int>` de `lib/plans.ts`.
+
+    Regex e não parser de TypeScript de propósito: são cinco constantes
+    numéricas simples, e trazer uma dependência para ler cinco inteiros
+    custaria mais do que o problema que resolve. Se a linha mudar de forma,
+    o `KeyError` estoura na geração — alto, que é onde se quer o erro.
+    """
+    fonte = (RAIZ / "lib" / "plans.ts").read_text(encoding="utf-8")
+    achado = re.search(rf"export const {nome}\s*=\s*(\d+)", fonte)
+    if not achado:
+        raise KeyError(f"{nome} não encontrado em lib/plans.ts")
+    return int(achado.group(1))
+
+
+FREE_LEAD_LIMIT = _constante_de_plans("FREE_LEAD_LIMIT")
+PRO_PLAN_PRICE = _constante_de_plans("PRO_PLAN_PRICE")
+
+#: A oferta vigente, numa frase. Usada onde a arte precisa dizer o que custa.
+OFERTA_CURTA = f"Grátis até {FREE_LEAD_LIMIT} contatos, sem cartão."
+
+#: A oferta com o preço do Pro. `pela empresa inteira` não é enfeite: é a
+#: única vantagem que nenhum concorrente mapeado tem, e some se for cortada.
+OFERTA_COMPLETA = (
+    f"Grátis até {FREE_LEAD_LIMIT} contatos, sem cartão. "
+    f"R$ {PRO_PLAN_PRICE} por mês pela empresa inteira."
+)
+
+#: Preço por usuário dos CRMs que cobram por vendedor — mediana de tabela
+#: PÚBLICA, não o nosso preço, e por isso não sai de `lib/plans.ts`. Fica
+#: nomeado porque aparece em três peças e a conta de cinco pessoas é derivada
+#: dele: escrito à mão nos três lugares, bastaria corrigir dois para a arte
+#: passar a mentir sozinha.
+PRECO_POR_USUARIO = 53
+
+#: O domínio, sempre canônico. Sem `www` custa 980ms contra 255ms, medido em
+#: 25/08 — é um redirecionamento a mais para quem digita o que leu na arte.
+SITE_CANONICO = "www.velofunil.com.br"
 
 # ------------------------------------------------------------ a tipografia
 #
@@ -753,7 +819,7 @@ def assinar_discreto(img, draw):
     # o Story prova o produto e não diz onde encontrá-lo. Ganha a cor da marca
     # em vez do cinza mais apagado da paleta.
     fnt_site = fonte(ROTULO, 36)
-    site = "velofunil.com.br"
+    site = SITE_CANONICO
     draw.text((W - MARGEM_ESQ - draw.textlength(site, font=fnt_site), y_txt),
               site, font=fnt_site, fill=(122, 214, 214))
 
@@ -1002,8 +1068,9 @@ def destaque_demo():
     )
     tela_declaracao(
         "Comece agora",
-        "7 dias com tudo liberado.",
-        "Depois, R$ 49 por mês pela empresa inteira. Não por vendedor.",
+        f"Grátis até {FREE_LEAD_LIMIT} contatos.",
+        f"Depois, R$ {PRO_PLAN_PRICE} por mês pela empresa inteira. "
+        "Não por vendedor.",
         "demo-5-cta", destaque="Sem cartão de crédito.",
     )
 
@@ -1037,20 +1104,31 @@ def destaque_planos():
     # 50 contatos). Ele muda de PAPEL — deixa de ser a oferta e vira a rede
     # de segurança, dita no fechamento, onde responde à objeção "e se eu não
     # quiser pagar depois?" em vez de criar a objeção "por que eu pagaria?".
+    # ## Esta tela vendia um trial que não existe mais
+    #
+    # Até 31/08 ela dizia "7 dias com o Pro completo" e listava "Contatos e
+    # colaboradores ILIMITADOS". Duas mentiras numa arte só: a migration 0057
+    # removeu o reverse trial em 29/08, e o teto de 50 contatos do Free vale
+    # desde o primeiro instante — "ilimitados" é a promessa exata que a landing
+    # removeu em 23/08.
+    #
+    # O plano grátis assume o papel que era do trial. Ele não é pior como
+    # oferta: não tem prazo, não tem contagem regressiva, e responde à objeção
+    # "e quando acabar?" antes que ela exista.
     tela_lista(
         "Comece agora",
-        "7 dias com o Pro completo",
+        f"Grátis até {FREE_LEAD_LIMIT} contatos",
         [
             ("Sem cartão de crédito", "Sem cartão"),
-            ("Contatos e colaboradores ilimitados", "ilimitados"),
-            ("Todos os recursos liberados desde o primeiro dia", "Todos os recursos"),
+            ("Sem prazo para decidir", "Sem prazo"),
+            ("Funil, contatos e tarefas desde o primeiro dia", "desde o primeiro dia"),
             ("Nada é cobrado sem você escolher", "Nada é cobrado"),
         ],
         "planos-1-teste",
     )
     tela_lista(
-        "Depois do teste",
-        "R$ 49 por mês",
+        "Quando precisar de mais",
+        f"R$ {PRO_PLAN_PRICE} por mês",
         [
             ("Da empresa inteira, nunca por vendedor a mais", "empresa inteira"),
             ("Contatos e colaboradores ilimitados", "ilimitados"),
@@ -1070,9 +1148,12 @@ def destaque_planos():
     tela_declaracao(
         "A conta que ninguém faz",
         "A maioria cobra por vendedor.",
-        "Cinco pessoas, a R$ 53 cada, dão R$ 265 por mês. E sobe toda vez que você contrata alguém.",
+        f"Cinco pessoas, a R$ {PRECO_POR_USUARIO} cada, dão "
+        f"R$ {PRECO_POR_USUARIO * 5} por mês. E sobe toda vez que você "
+        "contrata alguém.",
         "planos-4-comparacao",
-        destaque="Aqui são R$ 49, com a equipe que quiser.", tam=72,
+        destaque=f"Aqui são R$ {PRO_PLAN_PRICE}, com a equipe que quiser.",
+        tam=72,
     )
     # O fechamento carrega as duas objeções que travam a assinatura, nesta
     # ordem: "e se eu quiser sair?" (cancelamento) e "e se eu não quiser
@@ -1122,7 +1203,7 @@ def destaque_dicas():
         "Dica final",
         "O que você mede, você cobra.",
         "Sem funil, a pergunta sobre quanto você tem para fechar este mês só tem resposta no chute.",
-        "dicas-5-medir", destaque="Teste 7 dias, sem cartão.", tam=74,
+        "dicas-5-medir", destaque=OFERTA_CURTA, tam=74,
     )
 
 
@@ -1244,7 +1325,7 @@ def destaque_perguntas():
         "Sem multa e sem falar com ninguém. A conta volta para o plano "
         "grátis, e contatos, negócios e histórico continuam lá.",
         "perguntas-5-cancelar",
-        destaque="7 dias com tudo liberado, sem cartão.", tam=72,
+        destaque=OFERTA_CURTA, tam=72,
     )
 
 

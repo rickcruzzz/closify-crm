@@ -419,14 +419,14 @@ def capa(titulo, apoio, arquivo, luz=0.30):
         y += fnt_apo.size * 1.34
 
     y += 34 * g.ESCALA
-    draw.text((x, y), "velofunil.com.br", font=fnt_end, fill=g.TEAL)
+    draw.text((x, y), g.SITE_CANONICO, font=fnt_end, fill=g.TEAL)
     y += fnt_end.size
 
     # Mede o MAIOR de tudo que foi desenhado, não só do título.
     largura_maior = max(
         [draw.textlength(l, font=fnt_tit) for l in linhas_tit]
         + [draw.textlength(l, font=fnt_apo) for l in linhas_apo]
-        + [draw.textlength("velofunil.com.br", font=fnt_end)]
+        + [draw.textlength(g.SITE_CANONICO, font=fnt_end)]
     )
     conferir_zona_segura((int(x), int(y0), int(x + largura_maior), int(y)))
 
