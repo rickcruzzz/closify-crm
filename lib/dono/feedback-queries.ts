@@ -95,19 +95,30 @@ const VAZIO: FilaDeFeedback['contagem'] = {
  * quem está olhando.
  */
 /**
- * `incluirInternos` traz também os relatos de conta do dono e de teste.
+ * A fila de suporte. **Mostra tudo por padrão, inclusive conta interna.**
  *
- * Existe porque esconder por completo tornou a tela impossível de testar: em
- * 30/08 o dono mandou três relatos pelo produto, logado numa conta que está
- * na lista de `contas-internas.ts`, e a Central não os mostrou em lugar
- * nenhum — o rodapé dizia "4 relatos de conta interna, fora da fila" e não
- * havia como abri-los. Ele concluiu, com razão, que o canal não funcionava.
+ * ## Por que o padrão é este, e não o inverso
  *
- * O padrão continua sendo esconder: fila com teste dentro é fila que se
- * aprende a ignorar. O que muda é que agora existe a porta.
+ * Esconder interno era o desenho original, herdado da lição de 20/08 — quando
+ * 8 de 11 alertas eram teste do próprio dono e a fila inteira virou algo a
+ * ignorar. O raciocínio era bom e o resultado, aqui, foi ruim três vezes
+ * seguidas: em 30 e 31/08 o dono mandou relatos pelo produto para conferir o
+ * canal, logado numa conta que está em `contas-internas.ts`, e a tela
+ * respondeu "Nenhum relato aberto". Ele concluiu, com razão, que estava
+ * quebrado.
+ *
+ * O que separa este caso de Alertas é o volume e a origem. Alertas é gerado
+ * pelo SISTEMA, em fluxo contínuo, e o ruído afoga o sinal. Suporte só ganha
+ * linha quando um humano escreve — são 9 no total desde que existe. Uma fila
+ * dessa densidade não afoga nada, e o custo de esconder (o dono achar que o
+ * canal não funciona) é maior que o de mostrar.
+ *
+ * O selo `conta interna` em cada linha faz o trabalho que o filtro fazia:
+ * distinguir sem sumir. E `apenasDeCliente` continua disponível para quando
+ * houver cliente de verdade e a distinção voltar a valer a pena.
  */
 export async function lerFilaDeFeedback(
-  opcoes: { incluirInternos?: boolean } = {},
+  opcoes: { apenasDeCliente?: boolean } = {},
 ): Promise<FilaDeFeedback> {
   await exigirAmbienteLocal()
 
@@ -133,7 +144,7 @@ export async function lerFilaDeFeedback(
   }
 
   const todos = linhas ?? []
-  const deCliente = opcoes.incluirInternos ? todos : todos.filter((l) => !l.interno)
+  const deCliente = opcoes.apenasDeCliente ? todos.filter((l) => !l.interno) : todos
 
   const idsDeEmpresa = Array.from(
     new Set(deCliente.map((l) => l.workspace_id).filter(Boolean)),

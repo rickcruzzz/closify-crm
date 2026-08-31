@@ -23,17 +23,18 @@ export const dynamic = 'force-dynamic'
 export default async function PaginaDeSuporte({
   searchParams,
 }: {
-  searchParams: Promise<{ internos?: string }>
+  searchParams: Promise<{ apenas?: string }>
 }) {
   await exigirAmbienteLocal()
 
-  // `?internos=1` traz também os relatos das contas do dono e de teste.
+  // O padrão mostra TUDO. `?apenas=cliente` é que filtra — o inverso do que
+  // era até 31/08, e a razão está no comentário de `lerFilaDeFeedback`.
   //
   // Fora da URL isto viraria estado de componente, e o endereço deixaria de
-  // descrever a tela — recarregar voltaria para a fila limpa sem aviso. Na
-  // URL, o link é compartilhável e o botão voltar faz o que promete.
-  const mostrandoInternos = (await searchParams).internos === '1'
-  const fila = await lerFilaDeFeedback({ incluirInternos: mostrandoInternos })
+  // descrever a tela — recarregar perderia o filtro sem aviso. Na URL, o link
+  // é compartilhável e o botão voltar faz o que promete.
+  const apenasDeCliente = (await searchParams).apenas === 'cliente'
+  const fila = await lerFilaDeFeedback({ apenasDeCliente })
 
   return (
     <div className="flex flex-col gap-6">
@@ -48,7 +49,7 @@ export default async function PaginaDeSuporte({
         </p>
       </header>
 
-      <CentralDeSuporte fila={fila} mostrandoInternos={mostrandoInternos} />
+      <CentralDeSuporte fila={fila} apenasDeCliente={apenasDeCliente} />
     </div>
   )
 }

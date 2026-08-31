@@ -57,10 +57,10 @@ function peso(relato: RelatoNaTela): number {
 
 export function CentralDeSuporte({
   fila,
-  mostrandoInternos = false,
+  apenasDeCliente = false,
 }: {
   fila: FilaDeFeedback
-  mostrandoInternos?: boolean
+  apenasDeCliente?: boolean
 }) {
   const [filtro, setFiltro] = React.useState<StatusDeFeedback | 'todos'>('aberto')
   const [busca, setBusca] = React.useState('')
@@ -149,23 +149,14 @@ export function CentralDeSuporte({
               Há {fila.contagem.total} no total. Troque o filtro para ver.
             </p>
           )}
-          {/* O caso que o rodapé sozinho não cobria.
-              Quem testa o canal manda de uma conta que é NOSSA — e aí a fila de
-              cliente fica vazia, a tela diz "Nenhum relato aberto", e o relato
-              recém-enviado está a um clique de distância sem nada apontando
-              para ele. Foi o que aconteceu duas vezes em 30 e 31/08: as
-              mensagens chegaram ao banco e o dono concluiu, com razão, que o
-              canal não funcionava.
-              A contagem vem de `fila.internos`, que é do TOTAL — `contagem`
-              conta só o que está na fila mostrada, e por isso não serve aqui. */}
-          {!busca && !mostrandoInternos && fila.internos > 0 && (
+          {/* Só aparece no modo filtrado. No padrão nada fica escondido, então
+              não há para onde apontar — e um aviso permanente dizendo que
+              existe algo em outro lugar seria falso. */}
+          {!busca && apenasDeCliente && fila.internos > 0 && (
             <p className="text-muted-foreground mt-1 text-sm">
-              E {fila.internos} de conta interna, fora desta fila.{' '}
-              <a
-                href="/dono/suporte?internos=1"
-                className="text-foreground underline underline-offset-2"
-              >
-                Ver mesmo assim
+              E {fila.internos} de conta interna, escondidos por este filtro.{' '}
+              <a href="/dono/suporte" className="text-foreground underline underline-offset-2">
+                Mostrar tudo
               </a>
             </p>
           )}
@@ -185,35 +176,36 @@ export function CentralDeSuporte({
           "4 relatos de conta interna, fora da fila" e não havia como abri-los.
           Contar sem deixar ver é o mesmo defeito do "silenciar" sem "reexibir",
           já pago em Alertas. */}
-      {/* Quando a lista está VAZIA, o próprio bloco de vazio já diz isto e com
-          mais contexto. Repetir aqui deixaria a mesma frase duas vezes na
-          mesma tela, a três linhas de distância — o que lê como defeito. */}
-      {(visiveis.length > 0 && fila.internos > 0) || mostrandoInternos ? (
+      {/* O interruptor do filtro.
+          Até 31/08 o padrão escondia conta interna, e a tela respondeu
+          "Nenhum relato aberto" três vezes seguidas para relatos que estavam
+          no banco — o dono concluiu, com razão, que o canal não funcionava.
+          Agora nada some por padrão: o selo em cada linha distingue, e o
+          filtro fica aqui para quando houver cliente de verdade. */}
+      {fila.internos > 0 ? (
         <p className="text-muted-foreground text-xs">
-          {mostrandoInternos ? (
+          {apenasDeCliente ? (
             <>
-              Mostrando também os relatos de conta interna.{' '}
-              <a
-                href="/dono/suporte"
-                className="text-foreground underline underline-offset-2"
-              >
-                Ver só os de cliente
+              Mostrando só relatos de cliente. {fila.internos} de conta interna
+              escondidos.{' '}
+              <a href="/dono/suporte" className="text-foreground underline underline-offset-2">
+                Mostrar tudo
               </a>
             </>
           ) : (
             <>
-              {fila.internos} relato{fila.internos > 1 ? 's' : ''} de conta interna, fora da
-              fila.{' '}
+              Mostrando tudo, inclusive {fila.internos} de conta interna.{' '}
               <a
-                href="/dono/suporte?internos=1"
+                href="/dono/suporte?apenas=cliente"
                 className="text-foreground underline underline-offset-2"
               >
-                Ver mesmo assim
+                Só de cliente
               </a>
             </>
           )}
         </p>
       ) : null}
+
     </div>
   )
 }
