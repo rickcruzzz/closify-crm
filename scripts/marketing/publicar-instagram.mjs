@@ -147,7 +147,10 @@ async function main() {
   // "-10" antes de "-2" no dia em que houver dez.
   const { glob } = await import('node:fs/promises')
   const encontrados = []
-  for await (const f of glob(`${prefixo}-*.png`)) {
+  // `{,-*}` casa as duas formas: `prefixo.png` da peça avulsa e `prefixo-1.png`
+  // do carrossel. Sem a primeira, uma peça avulsa nunca é encontrada e o erro
+  // sai como "achei 0 cards", que aponta para o lugar errado.
+  for await (const f of glob(`${prefixo}{,-*}.png`)) {
     if (!f.includes('@4k')) encontrados.push(f)
   }
   encontrados.sort((a, b) => {
@@ -155,10 +158,25 @@ async function main() {
     return n(a) - n(b)
   })
 
-  exigir(encontrados.length >= 2, `Achei ${encontrados.length} card(s) em "${prefixo}-*.png". Carrossel precisa de 2 a 10.`)
+  // ## Uma peça publica sozinha; duas ou mais viram carrossel
+  //
+  // Até 31/08 este script exigia 2 cards, e as 11 peças avulsas do feed não
+  // tinham como ir ao ar por aqui. O caminho de imagem única é outro na Graph
+  // API: sem `is_carousel_item`, sem container pai, e a legenda vai no próprio
+  // container da imagem.
+  //
+  // A contagem decide sozinha em vez de haver uma flag `--avulsa`: uma flag
+  // num prefixo que casa 5 arquivos publicaria só o primeiro, em silêncio, e a
+  // única confirmação viria no feed de alguém.
+  exigir(encontrados.length >= 1, `Nenhuma arte casou com "${prefixo}{,-*}.png".`)
   exigir(encontrados.length <= 10, `${encontrados.length} cards: o Instagram aceita no máximo 10.`)
+  const ehCarrossel = encontrados.length > 1
 
-  console.log(`\n  ${encontrados.length} cards, nesta ordem:`)
+  console.log(
+    ehCarrossel
+      ? `\n  ${encontrados.length} cards, nesta ordem:`
+      : '\n  1 peça avulsa:',
+  )
   encontrados.forEach((f, i) => console.log(`    ${i + 1}. ${basename(f)}`))
 
   const conta = await resolverConta()
@@ -181,22 +199,65 @@ async function main() {
     return
   }
 
-  console.log('\n  criando os containers:')
-  const filhos = []
-  for (const [i, url] of urls.entries()) {
-    const r = await graph(`/${conta.id}/media?image_url=${encodeURIComponent(url)}&is_carousel_item=true`, { method: 'POST' })
-    filhos.push(r.id)
-    console.log(`    card ${i + 1}  ->  ${r.id}`)
+  const cap = legenda ? `&caption=${encodeURIComponent(legenda)}` : ''
+  let containerFinal
+
+  if (ehCarrossel) {
+    console.log('\n  criando os containers:')
+    const filhos = []
+    for (const [i, url] of urls.entries()) {
+      const r = await graph(`/${conta.id}/media?image_url=${encodeURIComponent(url)}&is_carousel_item=true`, { method: 'POST' })
+      filhos.push(r.id)
+      console.log(`    card ${i + 1}  ->  ${r.id}`)
+    }
+
+    const pai = await graph(
+      `/${conta.id}/media?media_type=CAROUSEL&children=${filhos.join(',')}${cap}`,
+      { method: 'POST' },
+    )
+    containerFinal = pai.id
+    console.log(`\n  container do carrossel: ${containerFinal}`)
+  } else {
+    // Imagem única: a legenda vai NESTE container, porque não há pai onde
+    // pendurá-la. Mandar `caption` num container de carrossel-item é aceito
+    // pela API e ignorado no post — some sem erro.
+    const unico = await graph(
+      `/${conta.id}/media?image_url=${encodeURIComponent(urls[0])}${cap}`,
+      { method: 'POST' },
+    )
+    containerFinal = unico.id
+    console.log(`\n  container da imagem: ${containerFinal}`)
   }
 
-  const pai = await graph(
-    `/${conta.id}/media?media_type=CAROUSEL&children=${filhos.join(',')}` +
-      (legenda ? `&caption=${encodeURIComponent(legenda)}` : ''),
-    { method: 'POST' },
-  )
-  console.log(`\n  container do carrossel: ${pai.id}`)
+  // ## Esperar o container ficar pronto, e por que isto não é paranoia
+  //
+  // Criar o container só ENFILEIRA o trabalho: a Meta ainda vai buscar a
+  // imagem na URL pública, e enquanto isso `media_publish` responde
+  // `HTTP 400: Media ID is not available`.
+  //
+  // O primeiro post desta conta funcionou sem espera nenhuma, por sorte de
+  // timing — o segundo falhou. Um erro que depende de quanto o servidor da
+  // Meta demorou hoje é o pior tipo para deixar no script: passa em teste,
+  // falha em uso, e a mensagem não diz o que aconteceu.
+  //
+  // `status_code` tem três valores: IN_PROGRESS, FINISHED e ERROR. Só o
+  // segundo pode publicar; o terceiro traz o motivo em `status`.
+  process.stdout.write('\n  aguardando o container ficar pronto')
+  for (let tentativa = 1; ; tentativa++) {
+    const { status_code: estado, status } = await graph(
+      `/${containerFinal}?fields=status_code,status`,
+    )
+    if (estado === 'FINISHED') break
+    if (estado === 'ERROR') throw new Error(`A Meta recusou a imagem: ${status ?? 'sem detalhe'}`)
+    // 30 tentativas a 2s dão 60s. Uma peça de 1080x1350 fica pronta em poucos
+    // segundos; passar de um minuto é sinal de problema na URL, não de espera.
+    exigir(tentativa <= 30, 'O container não ficou pronto em 60s. Confira se a URL da arte é pública.')
+    process.stdout.write('.')
+    await new Promise((r) => setTimeout(r, 2000))
+  }
+  console.log(' pronto')
 
-  const publicado = await graph(`/${conta.id}/media_publish?creation_id=${pai.id}`, { method: 'POST' })
+  const publicado = await graph(`/${conta.id}/media_publish?creation_id=${containerFinal}`, { method: 'POST' })
   console.log(`\n  PUBLICADO: ${publicado.id}`)
   console.log(`  https://www.instagram.com/velofunil/\n`)
 }
