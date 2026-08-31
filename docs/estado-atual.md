@@ -4,7 +4,11 @@ Documento de continuidade. É lido no começo de toda sessão (referenciado no
 [CLAUDE.md](../CLAUDE.md)) para que uma conversa nova, ou outra conta, comece
 sabendo o que já foi feito, o que foi decidido e onde estão as armadilhas.
 
-**Atualizado em:** 30/08/2026 (a Central declarava R$ 490/mes de receita e o
+**Atualizado em:** 31/08/2026 (a logo que o cliente sobe nunca apareceu desde
+27/08, bloqueada pela propria CSP; o relato de suporte existia e a Central nao
+deixava ver; e o Asaas cobrava R$ 0,99 para mandar o e-mail que ja mandamos)
+
+**Antes disso, 30/08/2026** (a Central declarava R$ 490/mes de receita e o
 real era R$ 0,00 — trial gratuito contava como dinheiro; o cliente ganhou canal
 de suporte com anexo; e o funil da Meta foi de 3 para 7 eventos)
 
@@ -53,6 +57,95 @@ minutos seguidos, contra 26% da medição anterior)
 **Antes disso, 23/08/2026** (landing auditada: promessa falsa no hero, logo quebrado no telefone, banner de cookies cobrindo o CTA, e prints mostrando o jargão que a própria página baniu; PRD, schema e grafo realinhados)
 
 **Antes disso, 22/08/2026** (funções rodavam em Washington DC com o banco em São Paulo, corrigido na config do projeto e medido: /dashboard 1221ms → 400ms; modo claro sem escada de superfícies, refeito; jargão remanescente e telas de erro; WhatsApp sem QR por Postgres esgotado na VPS; migration 0049 provada desnecessária e removida)
+
+## Tres coisas que existiam e ninguem via (31/08)
+
+Comecou com um relato do dono: *"nao chegou aqui, eu mandei por la no sistema e
+nao apareceu"*. As tres achadas na mesma investigacao, e a do meio e a mais
+cara — estava em producao havia tres dias.
+
+### O relato chegou; a Central e que nao mostrava
+
+As tres mensagens estao no banco, com anexo, rota e horario. A conta usada para
+testar (`henriquestn24@gmail.com`, criadora da empresa "pedro eee") esta em
+`contas-internas.ts`, e `lerFilaDeFeedback` tira interno da fila.
+
+**A separacao esta certa e continua** — fila com teste dentro e fila que se
+aprende a ignorar, a licao de 20/08 com 8 de 11 alertas. O defeito e **nao
+haver porta**: o rodape dizia "4 relatos de conta interna, fora da fila" e era
+texto morto. Nenhum caminho, em nenhuma tela, chegava neles.
+
+Isso torna o canal impossivel de testar, porque testar e justamente mandar de
+uma conta que e nossa. Mesmo defeito do "silenciar" sem "reexibir".
+
+Agora o rodape e link para `?internos=1`, e cada linha ganha selo
+`conta interna`. Na URL e nao em estado de componente: recarregar mantem, o
+botao voltar funciona, o link e compartilhavel.
+
+### A CSP bloqueava a logo da empresa, em producao, desde 27/08
+
+Achado ao ver as miniaturas dos anexos quebradas. A politica listava:
+
+    img-src 'self' data: blob: https://www.facebook.com
+
+**Arquivo do Storage e servido pelo dominio do PROJETO Supabase**, nao pelo
+nosso. Toda URL de `createSignedUrl` batia na politica e era recusada.
+
+Enquanto a CSP viveu em Report-Only isso nao teve efeito. Em **27/08 ela virou
+bloqueio**, e a prova daquele dia nao pegou porque nenhuma rota exercitada
+exibia imagem do Storage.
+
+    logo da empresa    Configuracoes -> Empresa. O upload dava certo e a
+                       imagem nao aparecia.
+    anexo de suporte   o print que o cliente manda junto do relato.
+
+Os dois usam `<img>` com URL assinada de proposito: `next/image` nao serve para
+endereco que expira em uma hora.
+
+**E a CSP recusa em SILENCIO** — sem erro na tela, sem entrada em `error_logs`.
+O unico registro fica no console do navegador de quem estivesse com ele aberto.
+Mesma classe do pixel com quebra de linha de 24/08: defeito que so o navegador
+ve, e que nenhum dos quatro portoes alcanca.
+
+O host vem de `NEXT_PUBLIC_SUPABASE_URL`, a mesma variavel que `connect-src` ja
+lia. Escrever a mao voltaria a quebrar na proxima troca de projeto — o que ja
+aconteceu, na migracao para Sao Paulo em 12/08.
+
+**Provado em producao, com os dois controles:**
+
+    logo real (900x1600 jpg)   carrega, sem violacao de CSP
+    host de fora (unsplash)    continua bloqueado
+
+O controle negativo e o que separa "corrigiu" de "abriu demais".
+
+### O Asaas cobrava para mandar o e-mail que ja mandamos
+
+O gateway liga as **oito** notificacoes em todo cliente criado com e-mail.
+Medido: 11 dos 12 clientes da conta com `PAYMENT_CREATED`, `PAYMENT_RECEIVED`,
+`PAYMENT_OVERDUE`, `PAYMENT_DUEDATE_WARNING` (x2), `PAYMENT_UPDATED` e
+`SEND_LINHA_DIGITAVEL` ativas. O unico desligado foi criado sem e-mail — ou
+seja, e o padrao do gateway, nao escolha nossa.
+
+Cada aviso tarifa mensageria (R$ 0,99 no extrato desta conta). E o produto **ja
+manda cada um deles** pelo Resend: pagamento confirmado, pagamento atrasado, e
+a escada D-4..D-1. Pagavamos para mandar duas vezes a mesma coisa, com dois
+remetentes — que e como se treina alguem a marcar como spam, perdendo junto o
+e-mail que importa.
+
+`notificationDisabled: true` na criacao. **Vale so para cliente novo**; os 11
+existentes seguem ligados e precisam ser desligados um a um — pendencia do
+dono, abaixo.
+
+### O checkout era a unica acao sensivel sem limite
+
+`signin`, `invite`, `reset-password`, `log-erro` e `feedback` ja tinham
+`excedeuLimite`. `createCheckout` nao — e e a unica que **gasta dinheiro por
+chamada**: cria cliente e assinatura no Asaas, e cada cobranca gerada tarifa
+mensageria mesmo sem ninguem pagar.
+
+5 por hora, por usuario, depois do gate de admin e antes da primeira chamada ao
+gateway. Por usuario e nao por IP pelo mesmo motivo do feedback: aqui sempre ha
+alguem identificado, e limitar por IP puniria um escritorio inteiro.
 
 ## A Central declarava R$ 490/mes, e o real era R$ 0,00 (30/08)
 
