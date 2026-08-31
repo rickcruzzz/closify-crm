@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache'
 import { headers } from 'next/headers'
 
 import { asaasFetch, AsaasApiError } from '@/lib/asaas/client'
+import { ehClienteDeOutraConta } from '@/lib/asaas/cliente-orfao'
 import { appUrl } from '@/lib/app-url'
 import { ipDaRequisicao } from '@/lib/request-ip'
 import { excedeuLimite } from '@/lib/rate-limit'
@@ -180,6 +181,37 @@ export async function createCheckout(values: unknown) {
   const externalReference = `${workspaceId}:${user.id}`
 
   try {
+    // A ordem aqui é sonda-depois-cria, e não o contrário, de propósito: o
+    // `PUT` abaixo já era feito sempre, então ele serve de teste de existência
+    // do cliente sem custar nenhuma chamada a mais no caminho feliz.
+    if (customerId) {
+      // Cliente pode já existir de uma tentativa anterior, a Asaas exige
+      // CPF/CNPJ pra criar cobrança, então garante que está preenchido
+      // mesmo num cliente reaproveitado (idempotente, sempre atualiza).
+      try {
+        await asaasFetch<AsaasCustomer>(`/customers/${customerId}`, {
+          method: 'PUT',
+          body: JSON.stringify({ cpfCnpj: parsed.data.cpfCnpj }),
+        })
+      } catch (err) {
+        // O id pode ser de OUTRA conta Asaas. A migração de 31/08 trocou a
+        // conta inteira (CNPJ do MEI baixado, e o gateway não deixa alterar
+        // CNPJ de conta existente), e todo `cus_…` gravado antes disso aponta
+        // para a conta velha — 13 das 15 linhas, medido no dia.
+        //
+        // Descartar o id e criar outro é o mesmo remédio que `subscriptionId`
+        // ganhou em 19/08; esta era a metade que tinha ficado sem guarda.
+        // O que NÃO é cliente ausente continua subindo, ver `cliente-orfao.ts`.
+        if (!ehClienteDeOutraConta(err)) throw err
+        customerId = null
+        // A assinatura pertence ao cliente. Se ele é de outra conta, ela
+        // também é — reusar o id aqui recriaria o defeito de 19/08 pelo
+        // outro caminho: assinatura que não existe neste gateway, fatura
+        // que nunca vem, e "não foi possível gerar o link de pagamento".
+        subscriptionId = null
+      }
+    }
+
     if (!customerId) {
       const customer = await asaasFetch<AsaasCustomer>('/customers', {
         method: 'POST',
@@ -197,14 +229,6 @@ export async function createCheckout(values: unknown) {
       })
       customerId = customer.id
       await desligarNotificacoesDoCliente(customerId)
-    } else {
-      // Cliente pode já existir de uma tentativa anterior, a Asaas exige
-      // CPF/CNPJ pra criar cobrança, então garante que está preenchido
-      // mesmo num cliente reaproveitado (idempotente, sempre atualiza).
-      await asaasFetch<AsaasCustomer>(`/customers/${customerId}`, {
-        method: 'PUT',
-        body: JSON.stringify({ cpfCnpj: parsed.data.cpfCnpj }),
-      })
     }
 
     if (!subscriptionId) {
