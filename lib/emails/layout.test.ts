@@ -1,3 +1,6 @@
+import { readdirSync, readFileSync } from 'node:fs'
+import { join } from 'node:path'
+
 import { describe, expect, it } from 'vitest'
 
 import { assinaturaPublica, CONTROLADOR } from '@/lib/legal'
@@ -173,5 +176,59 @@ describe('renderEmail', () => {
     })
 
     expect(html).toMatchSnapshot()
+  })
+})
+
+/**
+ * ## Os `.html` do painel do Supabase, travados contra `lib/legal.ts`
+ *
+ * Esta suíte existe por causa de um defeito que passou 23 dias em produção.
+ *
+ * Os arquivos de `supabase/email-templates/` são cópias ESTÁTICAS, coladas à
+ * mão no painel — a API de Auth do Supabase não expõe template, então não há
+ * como aplicá-los por código. São os e-mails de confirmação de cadastro,
+ * recuperação de senha, convite, magic link e reautenticação: justamente os
+ * que TODA pessoa nova recebe.
+ *
+ * Em 08/08 o CNPJ do rodapé foi baixado na Receita. Em 25/08 o projeto tornou
+ * `CONTROLADOR.cnpj` anulável e corrigiu as seis superfícies dinâmicas; o
+ * snapshot acima quebrou, foi atualizado, **e os `.html` não foram regerados**.
+ * O alarme tocou e só metade dele foi atendida — a mesma classe do commit que
+ * verificou que o script de prints rodou, sem conferir se a imagem ficou certa.
+ *
+ * Resultado: por 23 dias todo e-mail de autenticação saiu com um CNPJ que
+ * qualquer consulta à Receita desmentia, enquanto a landing — protegida —
+ * não exibia número nenhum. As duas superfícies do mesmo dado, discordando.
+ *
+ * **Por que um teste e não um lembrete no README.** O README já pedia para
+ * regerar, e foi ignorado. Um comentário não roda em `npm test`; este roda.
+ * Ele lê os arquivos de verdade e compara com a função que a aplicação usa,
+ * então a divergência para de depender de alguém lembrar.
+ */
+describe('templates estáticos do painel do Supabase', () => {
+  const PASTA = join(process.cwd(), 'supabase', 'email-templates')
+  const arquivos = readdirSync(PASTA).filter((n) => n.endsWith('.html'))
+
+  it('existem, e a lista não encolheu sem ninguém notar', () => {
+    expect(arquivos.length).toBeGreaterThanOrEqual(5)
+  })
+
+  it.each(arquivos)('%s assina igual ao que o código gera hoje', (nome) => {
+    const html = readFileSync(join(PASTA, nome), 'utf-8')
+    expect(html).toContain(assinaturaPublica())
+  })
+
+  /**
+   * O irmão negativo, e ele é o que de fato pegaria o defeito original.
+   *
+   * O teste acima passaria mesmo com o CNPJ velho ainda no arquivo, porque
+   * `toContain` não se importa com o que mais existe no HTML. Só a proibição
+   * explícita do número morto reprova a cópia esquecida — mesma razão pela
+   * qual a bio do Instagram ganhou um teste que PROÍBE a palavra da oferta
+   * aposentada em vez de conferir o número da vigente.
+   */
+  it.each(arquivos)('%s não carrega o CNPJ baixado em 08/08', (nome) => {
+    const html = readFileSync(join(PASTA, nome), 'utf-8')
+    expect(html).not.toContain('64.543.748')
   })
 })

@@ -33,7 +33,8 @@ export default function TermosPage() {
         </LegalP>
         <LegalP>
           Contratante: {identificacaoDoControlador()}, sob o nome fantasia{' '}
-          {CONTROLADOR.nomeFantasia}. Contato:{' '}
+          {CONTROLADOR.nomeFantasia}
+          {CONTROLADOR.endereco ? `, com sede em ${CONTROLADOR.endereco}` : ''}. Contato:{' '}
           <a
             href={`mailto:${CONTROLADOR.email}`}
             className="text-foreground underline underline-offset-4"

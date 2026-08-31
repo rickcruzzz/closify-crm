@@ -21,49 +21,71 @@ export type Controlador = {
   email: string
   site: string
   whatsapp: { numero: string; exibicao: string }
+  /**
+   * O telefone que consta no cadastro da Receita, quando ele for diferente do
+   * canal de suporte.
+   *
+   * Existe porque a verificação de negócio da Meta compara o telefone
+   * publicado no site com o do CNPJ, e os dois divergem aqui: o cadastro saiu
+   * com o número da contabilidade que abriu a empresa. Enquanto a alteração
+   * cadastral não for feita, o site publica os dois — um para bater com a
+   * Receita, outro para quem precisa de ajuda.
+   *
+   * `null` quando o cadastral for o mesmo do suporte, que é o estado desejado.
+   */
+  telefoneCadastral: string | null
 }
 
 export const CONTROLADOR: Controlador = {
   nomeFantasia: 'Velo Funil',
   /**
-   * Razão social conforme o cadastro da Receita, confirmada no cadastro
-   * comercial da conta Asaas. Formato típico de MEI: o número do CNPJ seguido
-   * do nome civil do titular.
+   * Razão social conforme o cadastro da Receita.
    *
-   * Citada junto do nome fantasia nas páginas legais, o art. 9º, I pede
+   * **Mudou de FORMA em 31/08/2026, não só de número.** Era
+   * `64.543.748 ORLANDO HENRIQUE BASTOS DA CRUZ` — o padrão do MEI, que é o
+   * CNPJ seguido do nome civil do titular. A LTDA tem razão social de verdade,
+   * com o sufixo societário.
+   *
+   * Citada junto do nome fantasia nas páginas legais: o art. 9º, I pede
    * identificação clara do controlador, e é isto que consta no CNPJ.
    *
-   * Continua aqui mesmo sem CNPJ ativo porque é o nome que o Asaas emite na
-   * fatura e que aparece no extrato de quem paga. Trocar isto antes de trocar
-   * o cadastro no Asaas faria a tela mentir sobre a cobrança.
+   * É também o nome que o Asaas emite na fatura e que aparece no extrato de
+   * quem paga. O cadastro comercial da conta Asaas precisa acompanhar — até
+   * lá, a fatura sai com o nome antigo enquanto a tela mostra o novo.
    */
-  razaoSocial: '64.543.748 ORLANDO HENRIQUE BASTOS DA CRUZ',
+  razaoSocial: 'ORLANDO HENRIQUE BASTOS DA CRUZ LTDA',
   /**
-   * **Sem CNPJ ativo desde 08/08/2026.**
+   * **CNPJ ativo desde 28/08/2026.**
    *
-   * O `64.543.748/0001-13` foi BAIXADO a pedido do titular (motivo 1 na
-   * Receita, "extinção por encerramento — liquidação voluntária"). Conferido
-   * em duas fontes independentes em 25/08/2026.
+   * O anterior, `64.543.748/0001-13`, era MEI e foi BAIXADO a pedido do
+   * titular em 08/08/2026. Baixa de MEI é irreversível — o número não volta —,
+   * e o campo passou a ser anulável justamente para o projeto poder viver sem
+   * inscrição por vinte dias sem exibir um número morto.
    *
-   * Baixa de MEI é irreversível: o número não volta, e uma inscrição nova sai
-   * com CNPJ diferente. Por isso o campo é anulável em vez de guardar o número
-   * morto — CNPJ baixado exibido numa página que vende é pior que CNPJ
-   * nenhum, porque a seção de confiança convida justamente a conferir.
+   * O novo saiu como **Sociedade Empresária Limitada**, porte MICRO EMPRESA,
+   * com Simples Nacional deferido a partir de 31/08. O CNAE principal é
+   * **6311-9/00** (tratamento de dados, provedores de serviço de aplicação e
+   * hospedagem), com **6202-3/00** entre os secundários — o comentário antigo
+   * previa o 6202 como principal, e o que a Receita registrou é mais preciso
+   * para SaaS.
    *
-   * Quem for preencher de novo: o enquadramento certo para SaaS é **ME** com
-   * CNAE 6202-3/00. MEI não comporta desenvolvimento e licenciamento de
-   * software, então um MEI novo reprovaria pelo mesmo motivo mais adiante.
-   *
-   * Preencher este campo e o `endereco` reacende sozinho o rodapé, a seção de
-   * confiança, o rodapé dos e-mails e as duas páginas legais.
+   * Conferido antes de ser escrito aqui, pela regra de `fatos-publicados`:
+   * dígito verificador fecha (67), e ReceitaWS devolve situação ATIVA.
+   * BrasilAPI e CNPJa ainda respondiam 404/402 — atraso de propagação das
+   * bases espelho, não problema do registro.
    */
-  cnpj: null,
+  cnpj: '68.877.105/0001-67',
   /**
    * Exigido pela verificação de negócio da Meta, que compara o endereço do
    * formulário com o que está publicado no site. Fica junto do CNPJ porque só
    * faz sentido com ele: endereço sem inscrição não identifica ninguém.
+   *
+   * **É sala comercial, não residência.** A preocupação registrada quando este
+   * campo era nulo — expor a casa do titular — não se aplica: o cadastro saiu
+   * em escritório no Salvador Shopping.
    */
-  endereco: null,
+  endereco:
+    'Av. Tancredo Neves, 2539, sala 2609 — Caminho das Árvores, Salvador/BA, CEP 41.820-021',
   /** Canal do titular e do encarregado (LGPD, Art. 41, §2º, I e Art. 18). */
   email: 'suporte@velofunil.com.br',
   site: 'https://www.velofunil.com.br',
@@ -76,6 +98,15 @@ export const CONTROLADOR: Controlador = {
     numero: '5571993309404',
     exibicao: '(71) 99330-9404',
   },
+  /**
+   * O cadastro da Receita saiu com o telefone da contabilidade que abriu a
+   * empresa, em outro estado. Publicado ao lado do de suporte, e rotulado,
+   * porque a verificação da Meta compara ESTE com o do CNPJ — e quem procura
+   * ajuda precisa cair no outro.
+   *
+   * Vira `null` quando a alteração cadastral for feita na Receita.
+   */
+  telefoneCadastral: '(41) 9788-0145',
 }
 
 /**
@@ -114,7 +145,19 @@ export function assinaturaPublica(
 /** Prazo de resposta ao titular. Art. 19, II, 15 dias para pedido completo. */
 export const PRAZO_RESPOSTA_TITULAR_DIAS = 15
 
-export const ATUALIZADO_EM = '9 de agosto de 2026'
+/**
+ * Data da última mudança material nas políticas.
+ *
+ * Passou de 9 para 31 de agosto porque **o controlador mudou de pessoa
+ * jurídica**: era um MEI, extinto em 08/08, e agora é uma LTDA com CNPJ
+ * próprio. Sob a LGPD (Art. 9º, I) o titular tem direito de saber quem
+ * responde pelo dado dele, e a resposta mudou.
+ *
+ * Não é carimbo de revisão: finalidades, suboperadores, prazos de retenção e
+ * direitos do titular continuam idênticos. Mudou quem responde, não o que é
+ * feito com o dado.
+ */
+export const ATUALIZADO_EM = '31 de agosto de 2026'
 
 export type Suboperador = {
   nome: string

@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
+import { validarCnpj } from './documento-br'
 import { assinaturaPublica, CONTROLADOR, identificacaoDoControlador } from './legal'
 
 /**
@@ -93,5 +94,44 @@ describe('CONTROLADOR', () => {
     // compara os dois. Publicar endereço sozinho exporia a casa do titular sem
     // entregar nada em troca.
     expect(Boolean(CONTROLADOR.endereco)).toBe(Boolean(CONTROLADOR.cnpj))
+  })
+
+  /**
+   * O CNPJ publicado precisa ao menos ser um CNPJ.
+   *
+   * Reusa `validarCnpj`, a mesma função que valida o campo no cadastro de
+   * empresa do produto — o cliente não consegue salvar um número inválido, e a
+   * vitrine não deveria poder exibir um.
+   *
+   * Isto não prova que a inscrição está ATIVA; dígito verificador é aritmética,
+   * não consulta. Situação cadastral só a Receita responde, e é o que a skill
+   * `fatos-publicados` faz em duas fontes independentes.
+   */
+  it('o CNPJ publicado tem dígito verificador válido', () => {
+    if (!CONTROLADOR.cnpj) return
+    expect(validarCnpj(CONTROLADOR.cnpj)).toBe(true)
+  })
+
+  /**
+   * A razão social do MEI era o CNPJ seguido do nome civil —
+   * `64.543.748 ORLANDO HENRIQUE BASTOS DA CRUZ`. A LTDA tem razão social de
+   * verdade.
+   *
+   * Voltar ao formato antigo significaria cópia de commit velho, e o teste
+   * trava a FORMA (começar com dígito) em vez do valor: qualquer razão social
+   * de pessoa jurídica passa, e só o padrão de MEI reprova.
+   */
+  it('a razão social não usa mais o formato de MEI', () => {
+    expect(CONTROLADOR.razaoSocial).not.toMatch(/^\d/)
+  })
+
+  /**
+   * Dois telefones, dois papéis, e trocá-los tem custo dos dois lados: quem
+   * procura suporte cairia na contabilidade, e a verificação da Meta — que
+   * compara o cadastral com o do CNPJ — deixaria de bater.
+   */
+  it('telefone cadastral e de suporte são campos distintos', () => {
+    if (!CONTROLADOR.telefoneCadastral) return
+    expect(CONTROLADOR.telefoneCadastral).not.toBe(CONTROLADOR.whatsapp.exibicao)
   })
 })

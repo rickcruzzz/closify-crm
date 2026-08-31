@@ -58,12 +58,16 @@ export function PublicFooter() {
               decidindo. Vem de `lib/legal.ts`, a mesma fonte que a Política de
               Privacidade e os Termos citam, então não há como divergirem.
 
-              Sem `razaoSocial` aqui, de propósito: nome civil do titular numa
-              linha de reforço visual não ajuda confiança, só expõe. Ele
-              continua em Privacidade/Termos, onde a LGPD (Art. 9º, I) exige
-              identificar o controlador, e nos avisos de fatura, onde avisa o
-              nome que vai aparecer no extrato do cartão — os dois por
-              necessidade, não por escolha de marca. */}
+              Sem `razaoSocial` NESTA LINHA, de propósito: nome civil do
+              titular numa linha de reforço visual não ajuda confiança, só
+              expõe. A decisão de 24/08 continua valendo aqui e é por isso que
+              `assinaturaPublica()` usa o nome fantasia.
+
+              **Ela passou a existir no rodapé em 31/08, num bloco próprio mais
+              abaixo**, porque a verificação da Meta lê o site procurando os
+              dados do CNPJ. As duas coisas convivem: esta linha é assinatura
+              de marca, aquela é identificação cadastral — separadas de
+              propósito, com pesos e tamanhos diferentes. */}
           {/* `assinaturaPublica()` some com a parte do CNPJ enquanto não houver
               inscrição ativa (25/08). Sem isso o rodapé exibiria `CNPJ null`,
               ou pior, um número baixado que qualquer consulta desmente. */}
@@ -109,6 +113,47 @@ export function PublicFooter() {
             (você escolhe onde abrir; encaminha para nossa caixa de suporte)
           </span>
         </p>
+
+        {/* ## Os dados cadastrais completos, e por que eles moram AQUI
+            
+            A verificação de negócio da Meta abre o site e procura razão
+            social, endereço e telefone iguais aos do CNPJ. Sem os três na
+            página, ela reprova — e reprovação fica no histórico do Business
+            Manager.
+
+            Ficam no rodapé, não na seção de confiança, e isso preserva a
+            decisão de 24/08 em vez de desfazê-la. Aquela seção é peça de
+            marketing: ali a razão social não ajudava confiança, só expunha o
+            nome civil do titular. Rodapé é onde dado cadastral pertence por
+            convenção — quem procura, acha; quem não procura, não tropeça.
+
+            O telefone é o CADASTRAL, da contabilidade que abriu a empresa, e
+            está rotulado como tal. O canal de suporte continua sendo o link
+            do WhatsApp acima. Trocar os dois de lugar quebraria as duas
+            coisas: a Meta deixaria de bater, e quem precisa de ajuda cairia
+            num escritório de contabilidade.
+
+            **O CNPJ não se repete aqui**, e isso foi decidido olhando o
+            rodapé renderizado nas duas larguras: com o número na assinatura
+            logo acima, repeti-lo quatro linhas abaixo lia como descuido, não
+            como intenção. Ele continua no mesmo rodapé, na mesma coluna
+            centralizada — perto o bastante para quem procura os dados
+            cadastrais encontrar os quatro juntos.
+
+            O bloco inteiro é condicionado ao CNPJ porque os três campos
+            chegam e partem juntos: sem inscrição, `endereco` e
+            `telefoneCadastral` também são nulos, e o que sobraria é uma linha
+            solta com o nome civil do titular — exatamente o que a decisão de
+            24/08 tirou daqui. */}
+        {CONTROLADOR.cnpj ? (
+          <p className="text-muted-foreground/70 text-center text-[11px] text-balance">
+            {CONTROLADOR.razaoSocial}
+            {CONTROLADOR.endereco ? ` · ${CONTROLADOR.endereco}` : ''}
+            {CONTROLADOR.telefoneCadastral
+              ? ` · Telefone cadastral: ${CONTROLADOR.telefoneCadastral}`
+              : ''}
+          </p>
+        ) : null}
       </div>
     </footer>
   )

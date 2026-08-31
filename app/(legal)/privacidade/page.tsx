@@ -34,8 +34,10 @@ export default function PrivacidadePage() {
       <LegalSection titulo="1. Quem é o controlador">
         <LegalP>
           {identificacaoDoControlador()}, operando sob o nome fantasia{' '}
-          {CONTROLADOR.nomeFantasia}, é a controladora dos dados pessoais tratados nesta
-          plataforma, nos termos do art. 5º, VI da Lei nº 13.709/2018 (LGPD).
+          {CONTROLADOR.nomeFantasia}
+          {CONTROLADOR.endereco ? `, com sede em ${CONTROLADOR.endereco}` : ''}, é a
+          controladora dos dados pessoais tratados nesta plataforma, nos termos do
+          art. 5º, VI da Lei nº 13.709/2018 (LGPD).
         </LegalP>
         <LegalP>
           Contato do encarregado pelo tratamento de dados (DPO):{' '}
