@@ -21,6 +21,39 @@
  * apaga o cliente errado.
  */
 
+/**
+ * Tira o sub-endereçamento (`+algo`) antes de comparar com as listas.
+ *
+ * ## O buraco que isto fecha
+ *
+ * `pedroescobar90sb@gmail.com` está em `EMAILS_DO_DONO` desde sempre. Os
+ * testes de ponta a ponta criam conta como
+ * `pedroescobar90sb+velofunil-teste-1788129871354@gmail.com` — a MESMA caixa,
+ * pela RFC 5233 —, e a comparação exata não casava. Medido em 31/08: **3
+ * contas** passando como cliente externo, e os 4 relatos de suporte delas
+ * aparecendo na fila como se fossem gente de fora.
+ *
+ * É a porta dos fundos da lista fechada: cada conta nova de teste nasce com
+ * carimbo de tempo no sufixo, então nomear uma a uma nunca daria conta —
+ * exatamente o argumento que já valeu para o domínio do produto em 30/08.
+ *
+ * ## Por que isto NÃO reabre o risco do regex
+ *
+ * O comentário no topo deste arquivo avisa contra detectar teste por padrão, e
+ * a razão é `testei122@gmaa2il.com`: cliente real que casa com qualquer regex
+ * de "parece teste". Esta função não decide nada sozinha — ela só normaliza o
+ * endereço ANTES de consultar as listas conferidas à mão.
+ *
+ * Consequência: `joao+nota@empresa.com` só é classificado como teste se
+ * `joao@empresa.com` já estiver explicitamente listado. Cliente de verdade que
+ * use `+` continua sendo cliente.
+ */
+function semSubEnderecamento(email: string): string {
+  const [local, dominio] = email.split('@')
+  if (!dominio) return email
+  return `${local.split('+')[0]}@${dominio}`
+}
+
 /** E-mails de contas internas. Comparado em minúsculas. */
 const EMAILS_INTERNOS = new Set([
   'google.review@velofunil.com.br',
@@ -44,7 +77,7 @@ const EMAILS_INTERNOS = new Set([
  */
 export function ehContaInterna(email: string | null | undefined): boolean {
   if (!email) return false
-  return EMAILS_INTERNOS.has(email.trim().toLowerCase())
+  return EMAILS_INTERNOS.has(semSubEnderecamento(email.trim().toLowerCase()))
 }
 
 /**
@@ -119,7 +152,7 @@ const EMAILS_DO_DONO = new Set([
  */
 export function ehContaDeTeste(email: string | null | undefined): boolean {
   if (!email) return true // sem e-mail não dá para afirmar que é cliente real
-  const limpo = email.trim().toLowerCase()
+  const limpo = semSubEnderecamento(email.trim().toLowerCase())
   if (ehContaInterna(limpo)) return true
   if (EMAILS_DO_DONO.has(limpo)) return true
 

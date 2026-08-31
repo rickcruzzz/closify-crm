@@ -93,3 +93,39 @@ describe('ehContaDeTeste', () => {
     expect(ehContaDeTeste('google.review@velofunil.com.br')).toBe(true)
   })
 })
+
+describe('sub-endereçamento (+) não é porta dos fundos', () => {
+  /**
+   * O caso REAL, medido em 31/08: os testes de ponta a ponta criam conta como
+   * `pedroescobar90sb+velofunil-teste-<carimbo>@gmail.com`. O e-mail base está
+   * em `EMAILS_DO_DONO` desde sempre, e a comparação exata não casava — 3
+   * contas passavam como cliente externo, e os 4 relatos de suporte delas
+   * apareciam na fila como se fossem gente de fora.
+   */
+  it('conta de teste E2E com sufixo cai na lista do dono', () => {
+    expect(ehContaDeTeste('pedroescobar90sb+velofunil-teste-1788129871354@gmail.com')).toBe(true)
+  })
+
+  it('o e-mail base continua valendo, sem sufixo', () => {
+    expect(ehContaDeTeste('pedroescobar90sb@gmail.com')).toBe(true)
+  })
+
+  it('vale também para a lista de contas internas', () => {
+    expect(ehContaInterna('google.review+qualquer@velofunil.com.br')).toBe(true)
+  })
+
+  /**
+   * A trava que impede esta correção de virar o regex que o arquivo inteiro
+   * proíbe. Normalizar o `+` NÃO classifica ninguém sozinho: só faz a consulta
+   * às listas conferidas à mão enxergar a mesma caixa. Cliente de verdade que
+   * usa `+` para organizar a própria caixa continua sendo cliente.
+   */
+  it('cliente real com + continua sendo cliente', () => {
+    expect(ehContaDeTeste('joao+velofunil@empresadocliente.com.br')).toBe(false)
+    expect(ehContaDeTeste('maria+notas@gmail.com')).toBe(false)
+  })
+
+  it('endereço sem @ não quebra', () => {
+    expect(ehContaDeTeste('isto-nao-e-email')).toBe(false)
+  })
+})
