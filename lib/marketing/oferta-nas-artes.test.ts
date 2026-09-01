@@ -252,6 +252,19 @@ describe('o registro claro das artes tem contraste legível', () => {
  * O teste conta ocorrências no texto que vai para a arte, ignorando
  * comentários: os comentários citam os números o tempo todo ao explicar as
  * decisões.
+ *
+ * ## Por que ele lê a pasta em vez de nomear o arquivo
+ *
+ * Ele nasceu lendo `gerar-feed.py` por nome, e isso é um buraco: no dia em
+ * que as composições novas nascerem num arquivo próprio, a trava para de
+ * valer para metade do feed sem nada avisar. As outras cinco travas deste
+ * arquivo já varrem a pasta inteira (`readdirSync`) e não têm o problema.
+ *
+ * É a classe de defeito que este projeto pagou três vezes: a trava existe, o
+ * arquivo novo nasce fora do alcance dela, e o portão fica verde.
+ *
+ * Agora o padrão é ENTRAR. Sair do conjunto exige uma linha em
+ * `FORA_DO_CONJUNTO_DA_GRADE` com o motivo escrito.
  */
 describe('nenhum dado se repete entre as peças do feed', () => {
   const DADOS: [string, RegExp][] = [
@@ -262,13 +275,41 @@ describe('nenhum dado se repete entre as peças do feed', () => {
     ['55%', /"55%"/g],
   ]
 
+  /**
+   * O critério é UMA pergunta: a peça aparece na mesma tela que uma peça de
+   * feed? Se aparece, repetir um número ali é visível no mesmo rolar de dedo.
+   *
+   *   gerar-stories.py        FORA. Story é visto uma vez, em 24h, e some.
+   *                           A grade é permanente e navegável
+   *   gerar-capa-facebook.py  FORA. Outra rede, outra tela
+   *   gerar-selos.py          DENTRO. Os selos de destaque ficam no perfil,
+   *                           logo acima da grade, na mesma tela
+   *
+   * Reel, quando existir, entra: ele aparece na grade junto das artes.
+   */
+  const FORA_DO_CONJUNTO_DA_GRADE = new Set([
+    'gerar-stories.py',
+    'gerar-capa-facebook.py',
+  ])
+
+  const geradoresDaGrade = GERADORES.filter((n) => !FORA_DO_CONJUNTO_DA_GRADE.has(n))
+
+  it('há gerador da grade para conferir', () => {
+    expect(geradoresDaGrade.length).toBeGreaterThan(0)
+  })
+
   // Docstrings fora, não só comentários: elas citam os números ao explicar
   // por que cada composição existe, e um contador ingênuo leria a explicação
   // como se fosse uma peça a mais. Foi o que aconteceu na primeira versão
   // deste teste, com quatro falsos positivos de uma vez.
-  const codigo = semComentarios(
-    readFileSync(join(PASTA, 'gerar-feed.py'), 'utf-8'),
-  ).replace(/"""[\s\S]*?"""/g, '')
+  const codigo = geradoresDaGrade
+    .map((nome) =>
+      semComentarios(readFileSync(join(PASTA, nome), 'utf-8')).replace(
+        /"""[\s\S]*?"""/g,
+        '',
+      ),
+    )
+    .join('\n')
 
   it.each(DADOS)('%s aparece uma vez só', (_nome, padrao) => {
     expect((codigo.match(padrao) ?? []).length).toBe(1)
