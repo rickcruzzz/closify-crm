@@ -30,6 +30,7 @@ import {
 import type { TaskFormValues } from '@/lib/validations/task'
 import { mesclarSaindo, type EmSaida } from '@/lib/tasks/mesclar-saindo'
 import { COOKIE_ESCOPO, MAX_AGE_ESCOPO, type EscopoDeTarefas } from '@/lib/tasks/escopo'
+import { CABECALHOS } from '@/lib/telas/cabecalhos'
 
 /**
  * Quanto tempo a tarefa concluída fica visível, riscada, antes de sair.
@@ -323,8 +324,7 @@ export function HojeClient({
   return (
     <div className="flex flex-col gap-6">
       <PageHeader
-        title="Hoje"
-        description="O que precisa da sua atenção, por prazo."
+        {...CABECALHOS.hoje}
         className="mb-0"
         actions={
           <div className="flex items-center gap-2">
@@ -366,16 +366,14 @@ export function HojeClient({
                 // de 19/08 padronizou o vocabulário justamente para a mesma
                 // coisa não ter dois nomes. Esta tela escapou dela, e é a
                 // primeira que a pessoa abre pelo menu.
-                title="Comece cadastrando um contato"
-                description="Assim que você tiver um contato aqui, o Velo Funil passa a avisar com quem falar cada dia."
+                {...CABECALHOS.hoje}
               >
                 <Button onClick={() => router.push('/leads')}>Cadastrar contato</Button>
               </EmptyState>
             ) : !temNegocio ? (
               <EmptyState
                 icon={KanbanSquare}
-                title="Coloque um cliente no funil"
-                description="Um negócio no funil é o que dá o que fazer: dele sai a próxima ação que aparece nesta tela."
+                {...CABECALHOS.hoje}
               >
                 <Button onClick={() => router.push('/kanban')}>Abrir o funil</Button>
               </EmptyState>

@@ -1,6 +1,7 @@
 import { PageHeader } from '@/components/layout/page-header'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
+import { CABECALHOS } from '@/lib/telas/cabecalhos'
 
 /**
  * O esqueleto de `/perfil`.
@@ -14,7 +15,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 export default function PerfilLoading() {
   return (
     <div className="flex flex-col gap-6">
-      <PageHeader title="Meu perfil" description="Seus dados de acesso e exibição." />
+      <PageHeader {...CABECALHOS.perfil} />
 
       {[2, 1].map((campos, cartao) => (
         <Card key={cartao}>

@@ -1,6 +1,7 @@
 import { PageHeader } from '@/components/layout/page-header'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
+import { CABECALHOS } from '@/lib/telas/cabecalhos'
 
 /**
  * O esqueleto de `/hoje`, no formato da tela real.
@@ -18,8 +19,7 @@ export default function HojeLoading() {
   return (
     <div className="flex flex-col gap-6">
       <PageHeader
-        title="Hoje"
-        description="O que precisa da sua atenção, por prazo."
+        {...CABECALHOS.hoje}
         className="mb-0"
       />
 

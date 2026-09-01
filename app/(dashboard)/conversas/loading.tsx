@@ -1,5 +1,6 @@
 import { PageHeader } from '@/components/layout/page-header'
 import { Skeleton } from '@/components/ui/skeleton'
+import { CABECALHOS } from '@/lib/telas/cabecalhos'
 
 /**
  * O esqueleto de Conversas.
@@ -14,10 +15,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 export default function CarregandoConversas() {
   return (
     <div className="flex flex-col gap-4">
-      <PageHeader
-        title="Conversas"
-        description="Quem está esperando resposta, do que espera há mais tempo para o mais recente."
-      />
+      <PageHeader {...CABECALHOS.conversas} />
 
       <div className="border-border/60 flex h-[calc(100vh-11rem)] overflow-hidden rounded-xl border">
         <div className="border-border/60 flex w-full flex-col border-r md:w-80 lg:w-96">

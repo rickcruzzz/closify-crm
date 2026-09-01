@@ -8,6 +8,7 @@ import { getCurrentUserAndWorkspace } from '@/lib/supabase/workspace'
 import { PageHeader } from '@/components/layout/page-header'
 import { KanbanBoard } from '@/components/kanban/kanban-board'
 import { GettingStartedCard } from '@/components/kanban/getting-started-card'
+import { CABECALHOS } from '@/lib/telas/cabecalhos'
 
 export const metadata: Metadata = { title: 'Funil' }
 
@@ -78,10 +79,7 @@ export default async function KanbanPage({
     // `max-w-none` desfaz o teto de 1160px do layout: o board rola na
     // horizontal e espremê-lo esconderia colunas atrás da rolagem.
     <div className="-mx-4 max-w-none px-4 md:-mx-6 md:px-6">
-      <PageHeader
-        title="Funil"
-        description="Cada negócio, do primeiro contato ao fechamento. Arraste o card conforme a conversa avança."
-      />
+      <PageHeader {...CABECALHOS.kanban} />
 
       {/* Board completamente vazio: mostra o guia acima dele. A condição é
           resolvida no servidor, sobre `deals`, não sobre o resultado do filtro

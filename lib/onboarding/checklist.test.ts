@@ -21,7 +21,19 @@ describe('montarChecklist', () => {
 
     expect(contarConcluidos(itens)).toBe(1)
     expect(itens.find((i) => i.chave === 'pipeline')?.concluido).toBe(true)
-    expect(proximoPasso(itens)?.chave).toBe('empresa')
+
+    // ## O próximo passo é o CONTATO, não a configuração da empresa
+    //
+    // Este caso esperava `'empresa'` até 01/09, e a inversão é deliberada.
+    // O rodapé do card anuncia o próximo passo, e é a primeira coisa que
+    // alguém lê ao entrar: apontar para "nome, segmento e dados de contato"
+    // manda a pessoa preencher formulário para continuar com um CRM vazio.
+    //
+    // A auditoria daquele dia mediu onde essa fila termina: 25 das 42
+    // empresas nunca criaram um contato, e 88% concluem o assistente. O
+    // primeiro contato é o único passo depois do qual o produto tem o que
+    // mostrar.
+    expect(proximoPasso(itens)?.chave).toBe('lead')
   })
 
   it('empresa só conta como configurada com nome E segmento', () => {

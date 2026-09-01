@@ -5,6 +5,7 @@ import { ConversasClient } from '@/components/conversas/conversas-client'
 import { getConversas, getMensagensDaConversa } from '@/lib/conversas/queries'
 import { getCurrentUserAndWorkspace } from '@/lib/supabase/workspace'
 import { getWorkspaceMembers } from '@/lib/leads/queries'
+import { CABECALHOS } from '@/lib/telas/cabecalhos'
 
 export const metadata: Metadata = { title: 'Conversas' }
 
@@ -44,10 +45,7 @@ export default async function ConversasPage({
 
   return (
     <div className="flex flex-col gap-4">
-      <PageHeader
-        title="Conversas"
-        description="Quem está esperando resposta, do que espera há mais tempo para o mais recente."
-      />
+      <PageHeader {...CABECALHOS.conversas} />
 
       <ConversasClient
         conversas={conversas}

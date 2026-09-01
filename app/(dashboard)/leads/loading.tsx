@@ -1,10 +1,11 @@
 import { PageHeader } from '@/components/layout/page-header'
 import { Skeleton } from '@/components/ui/skeleton'
+import { CABECALHOS } from '@/lib/telas/cabecalhos'
 
 export default function LeadsLoading() {
   return (
     <div>
-      <PageHeader title="Contatos" description="Busque, filtre e acompanhe seus contatos." />
+      <PageHeader {...CABECALHOS.leads} />
 
       <div className="mb-4 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
         <Skeleton className="h-9 max-w-sm flex-1" />

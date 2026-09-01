@@ -39,6 +39,7 @@ import { createLead, deleteLead, updateLead } from '@/lib/leads/actions'
 import type { LeadRow, WorkspaceMember } from '@/lib/leads/queries'
 import { leadStatusLabels, type LeadStatus } from '@/lib/leads/types'
 import type { LeadFormValues } from '@/lib/validations/lead'
+import { CABECALHOS } from '@/lib/telas/cabecalhos'
 
 const currencyFormatter = new Intl.NumberFormat('pt-BR', {
   style: 'currency',
@@ -267,7 +268,7 @@ export function LeadsPageClient({
 
   return (
     <div>
-      <PageHeader title="Contatos" description="Busque, filtre e acompanhe seus contatos." />
+      <PageHeader {...CABECALHOS.leads} />
 
       <div className="mb-4 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
         <form

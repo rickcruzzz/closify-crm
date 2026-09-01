@@ -1,5 +1,6 @@
 import { PageHeader } from '@/components/layout/page-header'
 import { Skeleton } from '@/components/ui/skeleton'
+import { CABECALHOS } from '@/lib/telas/cabecalhos'
 
 /**
  * O esqueleto de `/calendario`, no formato de grade de mês — o modo padrão no
@@ -10,8 +11,7 @@ export default function CalendarioLoading() {
   return (
     <div className="flex flex-col gap-6">
       <PageHeader
-        title="Calendário"
-        description="O que aconteceu e o que vem por aí, tudo num lugar."
+        {...CABECALHOS.calendario}
         className="mb-0"
       />
 
