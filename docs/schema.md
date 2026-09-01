@@ -7,6 +7,22 @@ Migrations novas mudam este arquivo com o tempo; ao suspeitar de
 desatualização, reconsulte o catálogo em vez de confiar cegamente nele (mesma
 regra de `docs/estado-atual.md`).
 
+**Reconferido em 01/09/2026 — uma tabela nova e duas RPCs novas.** Lido do
+OpenAPI do PostgREST de produção: **18 tabelas**, **32 RPCs**, **17 foreign
+keys**, 60 arquivos de migration (a maior é `0061`).
+
+A tabela nova é **`feedback`** (0060), o canal de suporte do cliente, com os
+anexos e o acompanhamento da 0061. Ela é a primeira tabela do projeto que
+guarda texto escrito pelo cliente **sobre o produto**, e não sobre o negócio
+dele — por isso não tem relação com `leads` nem com `deals`, e por isso o
+`workspace_id` existe sem chave estrangeira: um relato precisa sobreviver à
+exclusão da empresa que o escreveu, senão a fila perde justamente o caso que
+motivou a saída.
+
+As duas RPCs novas são de purga (`purge_old_error_logs`, `purge_old_feedback`),
+chamadas pelo cron de limpeza. As foreign keys **não se mexeram**: seguem 17,
+o mesmo número de 26/08.
+
 **Reconferido em 29/08/2026 — estrutura IDÊNTICA, comportamento diferente.**
 Lido do OpenAPI do PostgREST de produção: **17 tabelas**, **30 RPCs**, **17
 foreign keys** — os três números exatamente iguais aos de 26/08. Nenhuma
@@ -284,6 +300,23 @@ classDiagram
         +timestamptz created_at
     }
 
+    class feedback {
+        +uuid id PK
+        +text tipo "problema|sugestao"
+        +text mensagem
+        +text rota "a tela de onde o relato saiu"
+        +text plano "free|pro no momento do relato"
+        +text user_agent "nullable"
+        +uuid workspace_id "sem FK, nullable"
+        +uuid user_id "→ auth.users, sem FK, nullable"
+        +boolean interno "conta nossa, marcada e NAO escondida"
+        +jsonb anexos "[{caminho, nome, tamanho}] no bucket anexos-feedback"
+        +text status "aberto|em_andamento|resolvido|descartado"
+        +text solucao "nullable, o que foi feito"
+        +timestamptz resolvido_em "nullable"
+        +timestamptz created_at
+    }
+
     class conversas {
         +uuid id PK
         +uuid workspace_id FK
@@ -351,8 +384,15 @@ classDiagram
 *Tabelas soltas, sem FK para nenhuma outra do schema `public`:
 `asaas_webhook_events` (dedupe de webhook do Asaas),
 `whatsapp_webhook_events` (dedupe de webhook do Evolution, migration 0047),
-`rate_limit_attempts` (controle de tentativas de login) e `error_logs`
-(captura de erro dos boundaries do produto, migration 0046).
+`rate_limit_attempts` (controle de tentativas de login), `error_logs`
+(captura de erro dos boundaries do produto, migration 0046) e **`feedback`**
+(canal de suporte do cliente, migrations 0060 e 0061).
+
+`feedback` é a única das cinco cuja ausência de FK é **decisão de produto, não
+consequência técnica**: `workspace_id` e `user_id` existem na tabela sem chave
+estrangeira de propósito, porque um relato precisa sobreviver à exclusão da
+empresa que o escreveu. Com `on delete cascade`, apagar uma empresa levaria
+junto exatamente o relato que explicaria por que ela foi embora.
 `whatsapp_webhook_events` é a única das quatro que **nasce com purga**
 (`purge_old_whatsapp_webhook_events()`, 7 dias, rodada por Vercel Cron): a
 projeção de 240 mil eventos/dia com 400 clientes a levaria a 9,7 GB em 12

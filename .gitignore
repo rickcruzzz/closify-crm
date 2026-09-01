@@ -80,3 +80,11 @@ criativos/
 
 # Scripts descartáveis de investigação (o padrão do projeto é criá-los, usá-los e apagá-los).
 tmp-*.mjs
+
+# Skills e ferramentas instaladas na máquina, não código do produto. Elas
+# aparecem em `.claude/skills/` porque é onde o Claude Code as procura, e o
+# `.deepsec/` é o mesmo caso. Versioná-las poria ~280 arquivos de terceiro no
+# diff de um repositório de produto, e elas se atualizam por fora do Git.
+.claude/skills/
+.deepsec/
+skills-lock.json

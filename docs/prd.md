@@ -3,14 +3,16 @@
 > Iniciativa de conversão Free→Pro (copy da landing, limites, checkout) tem
 > PRD próprio: [prd-conversao-pro.md](prd-conversao-pro.md).
 >
-> **Conferido contra produção em 31/08/2026.** Números de tabela, RPC,
+> **Conferido contra produção em 01/09/2026.** Números de tabela, RPC,
 > migration e teste vieram do catálogo real e do gate, não de memória:
-> **18 tabelas**, **32 RPCs**, 60 arquivos de migration (a maior é `0061`) e
-> **774 testes**.
+> **18 tabelas**, **32 RPCs**, **17 foreign keys**, 60 arquivos de migration
+> (a maior é `0061`) e **854 testes**.
 >
-> A tabela nova é `feedback` (0060), o canal de suporte do cliente. Os testes
-> subiram de 687 para 774 em 41 commits — a maioria deles documentando um
-> defeito que estava em produção.
+> **A estrutura não mudou desde 31/08; o número de testes, sim** — 774 para
+> 854. Os 80 novos vieram de três frentes, e as três documentam defeito que
+> estava no ar: o rate limit por IP que contava o IP do Cloudflare, a trava de
+> oferta que não alcançava arquivo novo, e o checklist de ativação que fechava
+> sem ter volta.
 >
 > **Este cabeçalho já esteve errado, e é por isso que os comandos estão
 > escritos aqui.** Entre 29 e 31/08 ele afirmava 687 testes e 17 tabelas
@@ -457,9 +459,28 @@ relatório por atendente.
 *A restrição que decide o prazo, e não é de código.* A **Cloud API oficial**
 exige, nesta ordem: CNPJ ativo na Receita → site exibindo razão social,
 endereço e telefone iguais aos da Receita → verificação do negócio no Business
-Manager → App Review de `whatsapp_business_messaging`. O CNPJ do projeto está
-**baixado desde 08/08/2026** e baixa de MEI não tem volta; a decisão do dono é
-abrir ME. O detalhe e o estado dessa fila estão em
+Manager → App Review de `whatsapp_business_messaging`.
+
+**Os dois primeiros degraus caíram, e o terceiro está em análise (01/09).**
+O CNPJ `68.877.105/0001-67` está ATIVA desde 28/08, o site publica os três
+dados cadastrais desde 31/08, e a verificação do negócio foi **submetida**.
+Medido na Graph API em 01/09:
+
+```
+name                  VELO FUNIL LTDA
+verification_status   pending        <- estava pending_submission em 25/08
+two_factor_type       all_required
+```
+
+**`pending` e `pending_submission` parecem iguais na tela e não são:** o
+primeiro é "enviado, na fila do analista", o segundo é "nunca enviou". Este
+documento já afirmou "Meta Business verificado" enquanto o estado real era
+`pending_submission`, e é por isso que os dois valores estão escritos aqui.
+
+A tentativa anterior reprovaria com certeza: a Meta bate o número contra a
+Receita, e o CNPJ de então estava baixado. Agora os requisitos estão em ordem
+— o que **não** é o mesmo que aprovado. Enquanto não virar `verified`, nada
+que dependa dela está liberado. O detalhe e o estado dessa fila estão em
 [estado-atual.md](estado-atual.md).
 
 *O que fica pronto enquanto isso.* A tela **Conversas** (abaixo) e o objeto
@@ -888,15 +909,15 @@ Cada item marcado tem prova, não impressão — o método está em
 `docs/estado-atual.md` ("Como verificar as coisas aqui"). Atualizado 31/08/2026.
 
 - [x] **Build local concluído sem erros.** `npx tsc --noEmit`, `npm run lint`,
-      `npm test` (**774 testes**) e `npm run build:check`, os quatro limpos,
+      `npm test` (**854 testes**) e `npm run build:check`, os quatro limpos,
       rodados antes de cada commit. É `build:check` e não `build`: os dois
       escrevem em `.next` por padrão, e o build sobrescreve o mapa de chunks
       que o `npm run dev` está usando — a rota morre com `MODULE_NOT_FOUND` e
       o erro aponta para o arquivo recém-editado, parecendo defeito dele.
 - [x] **Migrations aplicadas no Supabase de produção.** 60 arquivos de
       migration (a maior é `0061`) no projeto `tmyeunithjqkbwvezyyn`
-      (`sa-east-1`). Conferido contra o catálogo real em 31/08: **18 tabelas**
-      e **32 RPCs**, ver [schema.md](schema.md). A tabela nova é `feedback`
+      (`sa-east-1`). Conferido contra o catálogo real em 01/09: **18 tabelas**,
+      **32 RPCs** e **17 foreign keys**, ver [schema.md](schema.md). A tabela nova é `feedback`
       (0060), o canal de suporte; as outras três da 0058 à 0061 mexeram em
       coluna e política, não em estrutura.
 
@@ -936,11 +957,61 @@ Cada item marcado tem prova, não impressão — o método está em
       banido pelo `prd-copy-sem-jargao.md` eliminado das telas (Pipeline→Funil,
       Leads→Contatos, Dashboard→Resultados), incluindo o que a renomeação de
       19/08 tinha deixado passar.
-- [x] **Testes automatizados para os fluxos críticos.** 774 testes cobrindo
+- [x] **Testes automatizados para os fluxos críticos.** 854 testes cobrindo
       lógica pura em `lib/**`; cada caso documenta o defeito que o motivou.
       Ressalva honesta: `tests/e2e/funil-completo.spec.ts` **nunca foi
       executado** (exige `.env.local` e roda contra o Asaas). Ele não falha em
       `npm test` — falha no gate de deploy.
+
+### Auditoria de usabilidade: o produto ensina a navegar e não a ativar (01/09)
+
+[auditoria-usabilidade.md](auditoria-usabilidade.md) percorre o produto contra
+produção, com conta descartável, e mede onde a pessoa fica sem saber o que
+fazer. O número que orienta o documento inteiro:
+
+```
+42 empresas   17 com contato (40%)   13 com negocio   11 com tarefa
+contatos por empresa   0: 25 empresas · 1-4: 11 · 5-19: 6 · 20+: nenhuma
+onboarding             43 de 49 concluem   88%
+```
+
+**25 das 42 empresas nunca criaram um contato, e 88% concluem o assistente.**
+O vão não está no onboarding — está depois dele.
+
+*Ressalva que muda a leitura e não pode ser omitida:* a maior parte dessas
+contas é teste do próprio dono. Isto **não mede cliente**, porque cliente
+externo não existe. Mede o caminho que o produto oferece a quem chega.
+
+**Três correções entraram, e as três removem obstáculo entre a pessoa e o
+primeiro contato salvo:**
+
+*A primeira tela era um relatório de um negócio que ainda não começou.* O
+login cai em `/dashboard`, que abria com "Exportar relatório" e dez botões de
+período — os dois calculados sobre zero linha. Medido no DOM: em 375px o botão
+"Adicionar primeiro contato" ficava a **984px** do topo, e a tela do telefone
+tem **812px**. A única ação que importa nascia abaixo da dobra. Os dois agora
+dependem de haver o que relatar, por condição **derivada** de
+`lerSinaisDeAtivacao` — voltam sozinhos no primeiro contato, e não há
+preferência gravada para dessincronizar.
+
+*Fechar o checklist de ativação era definitivo.* `ocultarChecklist` aceita
+`true` e `false` desde que existe, e **a única chamada era com `true`**. Nove
+das 49 contas já haviam fechado o card que é o único lugar do produto que diz
+o que fazer em seguida, sem ter como reabrir. É a terceira aparição da classe
+aqui: `/dono/alertas` teve "silenciar" sem "reexibir", e `/dono/suporte` teve
+fila de relatos internos sem porta.
+
+*A mesma ação tinha dois nomes.* `/hoje` — primeiro item do menu — chamava de
+**cliente** o que Contatos, Funil e Resultados chamam de **contato**. A
+renomeação de 19/08 padronizou o produto inteiro justamente para isso não
+acontecer, e essa tela escapou dela.
+
+**O achado de marketing, não implementado por ser decisão de copy:** a dor que
+a landing vende desaparece assim que a pessoa entra. As descrições de tela
+explicam o que a tela **é** ("Busque, filtre e acompanhe seus contatos"), não
+o que ela resolve. A promessa do WhatsApp não é renegada — ela para de ser
+dita, exatamente quando a pessoa decide se vale alimentar mais uma ferramenta.
+O único texto que acerta é o estado vazio de `/hoje`.
 
 ### Três defeitos que estavam no ar, achados e corrigidos em 24/08
 
@@ -970,10 +1041,17 @@ poder ser consultado pela condição exata do defeito — não leitura de códig
       `preview`, marcada `sensitive`. Ficou aqui por meses afirmando que o cron
       tomava 401 todo dia. Pendência falsa desvia atenção das reais, e por isso
       a linha fica registrada em vez de apagada.
-- [ ] **CNPJ novo (ME, CNAE 6202-3/00).** É o que bloqueia a Cloud API oficial
-      do WhatsApp, e nenhuma linha de código contorna: a verificação da Meta
-      bate o número contra a Receita. O anterior está baixado desde 08/08/2026
-      e baixa de MEI não tem volta.
+- [x] **CNPJ novo — SAIU.** `68.877.105/0001-67`, Sociedade Empresária
+      Limitada, ATIVA desde 28/08, Simples Nacional deferido a partir de 31/08.
+      **O CNAE principal é 6311-9/00** (tratamento de dados e provedor de
+      aplicação), não o 6202-3/00 que esta linha previa — o que a Receita
+      registrou é mais preciso para SaaS do que o que aqui se supunha.
+      Preencher `cnpj`, `endereco` e `razaoSocial` em `lib/legal.ts` reacendeu
+      as seis superfícies de uma vez, sem editar nenhuma delas, exatamente
+      como estava previsto que aconteceria.
+- [ ] **Verificação do negócio na Meta — `pending` desde 01/09**, em análise
+      humana (~2 dias úteis). É o degrau que resta antes do App Review do
+      WhatsApp. Nenhuma linha de código a acelera.
 - [ ] CSP em modo bloqueio — hoje está em `Report-Only`; falta decidir entre
       aceitar `'unsafe-eval'` ou isolar a dependência que o exige.
 - [x] **Verificação OAuth do Google — APROVADA em 24/08** para

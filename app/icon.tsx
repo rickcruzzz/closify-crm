@@ -12,8 +12,9 @@ export const contentType = 'image/png'
 // da marca numa fonte só, junto do resto do código, em vez de num binário que
 // ninguém consegue revisar em diff.
 //
-// O Next serve este ícone junto de app/favicon.ico (que ainda carrega a marca
-// antiga e deve ser removido quando o binário for substituído).
+// Este comentário dizia que o Next servia o ícone "junto de app/favicon.ico,
+// que ainda carrega a marca antiga". O arquivo NÃO existe mais, conferido em
+// 01/09/2026: este é o único ícone servido, e não há marca velha em produção.
 //
 // Mesmas cores e proporções do LogoMark e da OG image, com o vão entre as
 // camadas proporcionalmente maior: a 32px o gap do SVG original fecharia e as
