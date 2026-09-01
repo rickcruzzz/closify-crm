@@ -15,6 +15,7 @@ import {
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getCurrentUserAndWorkspace } from '@/lib/supabase/workspace'
+import { dadosDeCorrespondencia } from '@/lib/analytics/dados-de-correspondencia'
 import { cancelSubscriptionSchema, checkoutSchema } from '@/lib/validations/billing'
 import { PRO_PLAN_PRICE } from '@/lib/plans'
 import { CONTROLADOR } from '@/lib/legal'
@@ -330,8 +331,13 @@ export async function createCheckout(values: unknown) {
   // atribuição antes de o Purchase chegar.
   try {
     const cabecalhos = await headers()
+    // Nome, cidade, estado e CEP da empresa: cada um amplia a janela de
+    // correspondência da Meta. Estavam no banco desde o onboarding e nunca
+    // eram enviados — o EMQ media 6,2 de 10 com e-mail, IP e user agent só.
+    const correspondencia = await dadosDeCorrespondencia(workspaceId)
     await enviarConversaoDeInicioDeCheckout({
       email: user.email ?? '',
+      ...correspondencia,
       // `checkout:` + id da assinatura, não UUID novo: quem clica em "Assinar"
       // de novo depois de fechar o diálogo cairia como segunda intenção de
       // compra, inflando o número que a campanha usa para otimizar.

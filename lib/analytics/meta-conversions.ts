@@ -16,6 +16,20 @@ type EventoDeAtribuicao = {
    */
   telefone?: string | null
   /**
+   * Nome de quem converteu, ou da empresa. Vira `fn` e `ln` hasheados.
+   *
+   * Sai de `workspaces.name`, que é o que a pessoa digitou no onboarding.
+   * Para PME costuma ser o nome dela ou o da empresa, e os dois servem: a
+   * Meta casa contra o perfil, que carrega ambos.
+   */
+  nome?: string | null
+  /** Cidade da empresa, do onboarding. Vira `ct`. */
+  cidade?: string | null
+  /** Estado, sigla de dois caracteres. Vira `st`. */
+  estado?: string | null
+  /** CEP, com ou sem traço — só os dígitos são hasheados. Vira `zp`. */
+  cep?: string | null
+  /**
    * UUID do usuário no Supabase Auth. Vira `external_id` hasheado — um
    * terceiro identificador estável que não depende de cookie nem de o
    * e-mail bater exatamente, e é o que a documentação da Meta lista junto
@@ -99,6 +113,7 @@ type EventoDaMeta =
   | 'InitiateCheckout'
   | 'AddPaymentInfo'
   | 'Purchase'
+  | 'CustomizeProduct'
 
 /**
  * Monta o corpo que vai para a Graph API.
@@ -116,6 +131,51 @@ export function montarCorpoDoEvento(
   const emailHash = sha256(params.email.trim().toLowerCase())
   const telefoneHash = params.telefone ? sha256(normalizarTelefone(params.telefone)) : null
   const externalIdHash = params.userId ? sha256(params.userId) : null
+
+  // ## Os parâmetros que faltavam, e por que eles importam
+  //
+  // O Event Match Quality medido em 30/08 foi 6,2 de 10, com e-mail, IP, user
+  // agent e `external_id` em 100% de cobertura. O que faltava para subir não
+  // era instrumentação nova: **o produto já guardava nome, cidade, estado e
+  // CEP da empresa**, coletados no onboarding, e nenhum era enviado.
+  //
+  // Cada parâmetro amplia a janela de correspondência da Meta. Com EMQ mais
+  // alto, a mesma verba alcança mais gente certa — é o multiplicador mais
+  // barato que existe aqui, porque o dado já foi coletado e está no banco.
+  //
+  // ## Todos hasheados, e normalizados como a API exige
+  //
+  // A Meta especifica a normalização de cada campo, e errar nela é pior que
+  // não mandar: hash de string não normalizada nunca casa com nada, e o
+  // parâmetro conta como cobertura sem produzir correspondência. Minúsculas,
+  // sem acento e sem pontuação para nome e cidade; sigla de dois caracteres
+  // para estado; só dígitos para CEP.
+  //
+  // `country` é constante: este produto vende no Brasil, e a landing está em
+  // português com preço em real. Mandá-lo eleva a correspondência sem custo.
+  const normalizar = (v: string) =>
+    v
+      .trim()
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[̀-ͯ]/g, '')
+      .replace(/[^a-z0-9]/g, '')
+
+  const hashSeExistir = (v: string | null | undefined) => {
+    if (!v) return null
+    const limpo = normalizar(v)
+    return limpo ? sha256(limpo) : null
+  }
+
+  // O nome vem da empresa: `workspaces.name` é o que a pessoa digitou no
+  // onboarding, e para PME costuma ser o nome dela ou o da empresa. Os dois
+  // servem — a Meta casa contra o perfil, que tem os dois.
+  const partes = (params.nome ?? '').trim().split(/\s+/).filter(Boolean)
+  const primeiroNomeHash = hashSeExistir(partes[0])
+  const sobrenomeHash = partes.length > 1 ? hashSeExistir(partes[partes.length - 1]) : null
+  const cidadeHash = hashSeExistir(params.cidade)
+  const estadoHash = hashSeExistir(params.estado)
+  const cepHash = params.cep ? hashSeExistir(params.cep.replace(/\D/g, '')) : null
 
   return {
     data: [
@@ -135,6 +195,14 @@ export function montarCorpoDoEvento(
           ...(params.fbp ? { fbp: params.fbp } : {}),
           ...(params.clientIp ? { client_ip_address: params.clientIp } : {}),
           ...(params.clientUserAgent ? { client_user_agent: params.clientUserAgent } : {}),
+          ...(primeiroNomeHash ? { fn: [primeiroNomeHash] } : {}),
+          ...(sobrenomeHash ? { ln: [sobrenomeHash] } : {}),
+          ...(cidadeHash ? { ct: [cidadeHash] } : {}),
+          ...(estadoHash ? { st: [estadoHash] } : {}),
+          ...(cepHash ? { zp: [cepHash] } : {}),
+          // Constante, e hasheada como os demais: a API recusa `country` em
+          // texto puro no mesmo objeto em que os outros vão hasheados.
+          country: [sha256('br')],
         },
         ...(params.customData ? { custom_data: params.customData } : {}),
       },
@@ -242,6 +310,35 @@ export async function enviarConversaoDeRegistro(params: EventoDeAtribuicao): Pro
  */
 export async function enviarConversaoDeLead(params: EventoDeAtribuicao): Promise<void> {
   await enviarEventoParaMeta('Lead', params)
+}
+
+/**
+ * "CustomizeProduct", disparado quando a empresa cria o PRIMEIRO contato.
+ *
+ * ## É o evento que faltava, e o mais importante do funil
+ *
+ * Auditoria de 31/08, medida no banco: das 5 empresas externas cadastradas,
+ * **nenhuma criou um contato**. E 43 de 49 concluem o onboarding — as pessoas
+ * terminam o assistente, caem num funil vazio e param ali.
+ *
+ * Sem evento nesse ponto, o melhor sinal disponível para a Meta é
+ * `CompleteRegistration`, que é o passo ANTERIOR e já provou não bastar:
+ * otimizar por ele é pedir mais gente que se cadastra e não usa.
+ *
+ * ## Por que um evento do catálogo, e não um customizado
+ *
+ * `CustomizeProduct` é o padrão mais próximo de "a pessoa começou a montar o
+ * dela". Evento padrão entra em otimização e em público semelhante sem
+ * configuração extra no gerenciador; evento customizado exige criar uma
+ * conversão personalizada antes de servir para alguma coisa.
+ *
+ * Quem dispara é `registrarAtivacao` (`lib/analytics/ativacao.ts`), que
+ * garante o "primeiro" e usa `event_id` determinístico por empresa.
+ */
+export async function enviarConversaoDeAtivacao(
+  params: EventoDeAtribuicao,
+): Promise<void> {
+  await enviarEventoParaMeta('CustomizeProduct', params)
 }
 
 /**

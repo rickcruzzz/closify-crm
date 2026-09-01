@@ -115,3 +115,82 @@ describe('montarCorpoDoEvento', () => {
     expect(evento(montarCorpoDoEvento('Purchase', base)).action_source).toBe('system_generated')
   })
 })
+
+/**
+ * ## Os parâmetros que elevam o Event Match Quality
+ *
+ * O EMQ medido em 30/08 foi 6,2 de 10. O que faltava não era instrumentação
+ * nova: o produto já guardava nome, cidade, estado e CEP da empresa, e nenhum
+ * era enviado.
+ *
+ * ## Por que testar a NORMALIZAÇÃO e não só a presença
+ *
+ * Hash de string não normalizada nunca casa com nada — e o parâmetro conta
+ * como cobertura sem produzir correspondência nenhuma. É pior que não mandar:
+ * o painel da Meta mostra o campo preenchido, o EMQ não sobe, e não há erro
+ * em lugar algum.
+ *
+ * A Meta especifica: minúsculas, sem acento, sem pontuação e sem espaço.
+ * "São Paulo" e "sao paulo" precisam gerar o MESMO hash.
+ */
+describe('parâmetros de correspondência avançada', () => {
+  const base = {
+    email: 'pessoa@exemplo.com',
+    eventId: 'lead:1',
+    nome: 'Maria Aparecida Souza',
+    cidade: 'São Paulo',
+    estado: 'SP',
+    cep: '01310-100',
+  }
+
+  it('envia fn, ln, ct, st, zp e country', () => {
+    const { user_data: u } = montarCorpoDoEvento('Lead', base).data[0]
+    for (const campo of ['fn', 'ln', 'ct', 'st', 'zp', 'country']) {
+      expect(u, `faltou ${campo}`).toHaveProperty(campo)
+    }
+  })
+
+  /** Primeiro e ÚLTIMO nome. "Aparecida", no meio, não vira sobrenome. */
+  it('separa primeiro nome de sobrenome, ignorando o do meio', () => {
+    const { user_data: u } = montarCorpoDoEvento('Lead', base).data[0]
+    const so = montarCorpoDoEvento('Lead', { ...base, nome: 'Maria Souza' }).data[0]
+    expect(u.fn).toEqual(so.user_data.fn)
+    expect(u.ln).toEqual(so.user_data.ln)
+  })
+
+  it('acento e caixa não mudam o hash', () => {
+    const a = montarCorpoDoEvento('Lead', base).data[0].user_data
+    const b = montarCorpoDoEvento('Lead', { ...base, cidade: 'sao paulo' }).data[0].user_data
+    expect(a.ct).toEqual(b.ct)
+  })
+
+  it('o CEP entra só com dígitos', () => {
+    const a = montarCorpoDoEvento('Lead', base).data[0].user_data
+    const b = montarCorpoDoEvento('Lead', { ...base, cep: '01310100' }).data[0].user_data
+    expect(a.zp).toEqual(b.zp)
+  })
+
+  /**
+   * Campo ausente NÃO entra como string vazia: hash de "" é um valor válido
+   * que casa com ninguém, e infla a cobertura aparente sem melhorar nada.
+   */
+  it('campo ausente não vira hash de string vazia', () => {
+    const { user_data: u } = montarCorpoDoEvento('Lead', {
+      email: 'pessoa@exemplo.com',
+      eventId: 'lead:2',
+    }).data[0]
+    for (const campo of ['fn', 'ln', 'ct', 'st', 'zp']) {
+      expect(u, `${campo} não deveria existir`).not.toHaveProperty(campo)
+    }
+    // `country` é constante e sempre vai: o produto vende só no Brasil.
+    expect(u).toHaveProperty('country')
+  })
+
+  it('nome só com espaços não vira fn vazio', () => {
+    const { user_data: u } = montarCorpoDoEvento('Lead', {
+      ...base,
+      nome: '   ',
+    }).data[0]
+    expect(u).not.toHaveProperty('fn')
+  })
+})

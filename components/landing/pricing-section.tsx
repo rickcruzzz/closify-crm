@@ -22,6 +22,9 @@ import {
   FREE_LEAD_LIMIT,
   FREE_MEMBER_LIMIT,
   FREE_WORKSPACE_LIMIT,
+  PRECOS_CONFERIDOS_EM,
+  PRECO_MEDIANA_POR_USUARIO,
+  PRO_PLAN_PRICE,
 } from '@/lib/plans'
 
 type Plan = {
@@ -362,14 +365,70 @@ export function PricingSection() {
               A conta que ninguém faz antes de assinar
             </p>
             <p className="mt-3 text-balance">
-              A maioria dos CRMs cobra <strong>por vendedor</strong>. Uma equipe de cinco
-              pessoas, a R$ 53 cada, custa{' '}
-              <strong className="text-foreground">R$ 265 por mês</strong>, e sobe toda
+              A maioria dos CRMs cobra <strong>por vendedor</strong>. A conta sobe toda
               vez que você contrata alguém.
             </p>
-            <p className="mt-3 text-balance">
-              Aqui são <strong className="text-foreground">R$ 49</strong>, com a equipe
-              que você quiser. Contratar mais gente não aumenta a mensalidade.
+
+            {/* ## Por que uma TABELA e não a frase que estava aqui
+
+                O texto anterior citava um ponto só da curva: cinco pessoas a
+                R$ 53 dão R$ 265. Verdadeiro, e fraco como argumento — quem tem
+                dois vendedores hoje lê "cinco pessoas" e conclui que não é o
+                caso dele.
+
+                O que converte é ver a diferença CRESCER. Uma linha constante ao
+                lado de uma que sobe diz sozinha o que dois parágrafos tentavam
+                dizer, e cada pessoa encontra a própria coluna.
+
+                A mediana de R$ 60 sai de tabela pública conferida em 31/08:
+                Agendor R$ 53, Moskit R$ 59, RD Station ~R$ 60, Ploomes ~R$ 75
+                (R$ 225 para 3), Pipedrive ~R$ 80 (US$ 14,90). Preço publicado
+                por eles, então pode ser dito — não é prova social inventada.
+
+                **Preço de concorrente envelhece**, e é a mesma classe do CNPJ
+                baixado que ficou 17 dias no ar. A data da conferência fica no
+                código e na tela: quem revisar daqui a três meses sabe que
+                precisa reconferir. */}
+            <table className="mx-auto mt-5 w-full max-w-sm border-separate border-spacing-y-1 text-sm">
+              <caption className="sr-only">
+                Comparação de custo mensal por tamanho de equipe
+              </caption>
+              <thead>
+                <tr className="text-muted-foreground text-xs">
+                  <th scope="col" className="text-left font-normal">
+                    Equipe
+                  </th>
+                  <th scope="col" className="text-right font-normal">
+                    Cobrando por pessoa
+                  </th>
+                  <th scope="col" className="text-right font-normal">
+                    Aqui
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="tabular-nums">
+                {[1, 3, 5, 10].map((pessoas) => (
+                  <tr key={pessoas}>
+                    <th
+                      scope="row"
+                      className="text-muted-foreground text-left font-normal"
+                    >
+                      {pessoas === 1 ? '1 pessoa' : `${pessoas} pessoas`}
+                    </th>
+                    <td className="text-muted-foreground text-right">
+                      R$ {PRECO_MEDIANA_POR_USUARIO * pessoas}
+                    </td>
+                    <td className="text-foreground text-right font-semibold">
+                      R$ {PRO_PLAN_PRICE}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+
+            <p className="text-muted-foreground mt-4 text-xs text-balance">
+              Preço de tabela pública dos CRMs que cobram por usuário, conferido em{' '}
+              {PRECOS_CONFERIDOS_EM}. Aqui a equipe inteira cabe na mesma mensalidade.
             </p>
           </div>
         </RevealOnScroll>

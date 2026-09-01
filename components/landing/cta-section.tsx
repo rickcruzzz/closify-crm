@@ -14,12 +14,28 @@ export function CtaSection() {
             aria-hidden
             className="glow-radial pointer-events-none absolute -top-24 left-1/2 -z-10 h-64 w-[32rem] -translate-x-1/2"
           />
+          {/* ## O fecho vendia o inimigo que a página abandonou
+
+              Até 31/08 esta headline era "Pronto para largar a planilha?" — o
+              inimigo que a repositionagem de 24/08 trocou, com base no Sebrae:
+              82% da PME brasileira vende pelo WhatsApp, e **quem vende por lá
+              não tem planilha para largar**.
+
+              O hero mudou naquele dia; o fecho não acompanhou. Medido no
+              navegador: a pessoa lê sobre WhatsApp na tela 0,1, rola doze
+              telas e é convidada a resolver um problema que não tem. A última
+              coisa que ela vê antes de decidir falava com outra pessoa.
+
+              A planilha **não some da página** — importar `.csv` é recurso
+              real e quem tem planilha precisa saber que dá. Ela muda de papel:
+              deixa de ser o inimigo e vira um dos caminhos para trazer o que
+              já é seu. */}
           <h2 className="text-titulo-md md:text-titulo-lg">
-            Pronto para largar a planilha?
+            Seus clientes já estão no WhatsApp. Faltam num lugar só.
           </h2>
           <p className="text-muted-foreground max-w-xl text-lg">
-            Crie a conta da sua empresa, de graça, em menos de um minuto, e organize seu
-            funil de vendas hoje mesmo.
+            Crie a conta da sua empresa, de graça, em menos de um minuto, e veja com
+            quem você precisa falar hoje.
           </p>
           <Link
             id="final-cta"

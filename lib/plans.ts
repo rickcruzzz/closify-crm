@@ -40,4 +40,37 @@ export const FREE_MEMBER_LIMIT = 2
  */
 export const FREE_WORKSPACE_LIMIT = 1
 export const PRO_PLAN_PRICE = 49
+
+/**
+ * A mediana do que os concorrentes cobram POR USUÁRIO, em reais.
+ *
+ * ## Não é o nosso preço, e por isso vive aqui e não em `CONTROLADOR`
+ *
+ * É a âncora que faz R$ 49 ser lido como barato. Sem ela o cérebro compara com
+ * R$ 0 e qualquer preço perde; com ela, compara com o que a equipe custaria
+ * em qualquer outro CRM.
+ *
+ * ## De onde sai, e por que a data importa
+ *
+ * Tabela pública, conferida em 31/08/2026:
+ *
+ *     Agendor       53    por usuario
+ *     Moskit        59    por usuario
+ *     RD Station   ~60    por usuario
+ *     Ploomes      ~75    R$ 225 para 3 usuarios
+ *     Pipedrive    ~80    US$ 14,90
+ *
+ * Mediana: 60. É preço publicado por eles, então pode ser dito — não é prova
+ * social inventada, é aritmética sobre número que qualquer um confere no site
+ * deles.
+ *
+ * **Preço de concorrente envelhece**, e esta é a mesma classe de defeito do
+ * CNPJ baixado que ficou 17 dias exibido na landing: dado externo que não
+ * acompanha mudança de estado, e nenhum `tsc` ou `test` consulta a tabela de
+ * ninguém. A data fica no código e na tela, e a conferência é manual.
+ */
+export const PRECO_MEDIANA_POR_USUARIO = 60
+
+/** Quando os preços acima foram conferidos. Aparece na landing. */
+export const PRECOS_CONFERIDOS_EM = '31/08/2026'
 export const FREE_PLAN_PRICE = 0

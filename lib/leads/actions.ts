@@ -2,6 +2,9 @@
 
 import { revalidatePath } from 'next/cache'
 
+import { registrarAtivacao } from '@/lib/analytics/ativacao'
+import { obterUsuarioAutenticado } from '@/lib/supabase/usuario-autenticado'
+
 import { createClient } from '@/lib/supabase/server'
 import { resolverWorkspaceAtivo } from '@/lib/workspace/ativo'
 import { leadSchema, planilhaSchema } from '@/lib/validations/lead'
@@ -194,7 +197,31 @@ export async function createLead(values: unknown) {
     return { error: 'Não foi possível criar o lead.' }
   }
 
+  // ## O sinal de ATIVAÇÃO, e por que ele fica aqui
+  //
+  // Criar o primeiro contato é o momento em que a empresa passa de cadastrada
+  // para usuária. Medido em 31/08: das 5 empresas externas, nenhuma chegou
+  // aqui — e é por isso que otimizar campanha por `CompleteRegistration`
+  // traria mais gente que se cadastra e não usa.
+  //
+  // Depois do `revalidatePath` de propósito: a tela de quem está usando não
+  // espera pela Meta. E `registrarAtivacao` nunca lança — medição quebrada
+  // custa o dado, nunca a ação do usuário.
   revalidatePath('/leads')
+
+  // `obterUsuarioAutenticado` é `cache()` por requisição: o middleware e o
+  // layout já a chamaram nesta mesma requisição, então aqui não há ida nova
+  // ao Supabase Auth. Chamar `supabase.auth.getUser()` direto pagaria a
+  // viagem de novo — o defeito de 12/08, quando duas funções cacheadas
+  // separadamente faziam a mesma pergunta duas vezes por navegação.
+  const usuario = await obterUsuarioAutenticado()
+  if (usuario) {
+    await registrarAtivacao({
+      workspaceId,
+      email: usuario.email ?? '',
+      userId: usuario.id,
+    })
+  }
   return { success: true }
 }
 
