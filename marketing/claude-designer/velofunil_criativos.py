@@ -561,8 +561,13 @@ def comp_carrossel(c: Tela, p: dict) -> None:
     fm = c.f("mono", "Medium", 24)
     c.texto(x, TOPO_CONTEUDO, p["rotulo"], fm, pal.destaque, 1.6)
     y = TOPO_CONTEUDO + 68
-    y += c.paragrafo(x, y, p["claim"], c.f("sans", "SemiBold", 66), pal.titulo,
-                     880, 80) + 26
+    fclaim = c.f("sans", "SemiBold", 66)
+    y += c.paragrafo(x, y, p["claim"], fclaim, pal.titulo, 880, 80)
+    # A enfase cromatica na ultima linha: em miniatura a frase inteira vira
+    # mancha, e a parte colorida e o que ainda se le.
+    if p.get("realce"):
+        y += c.paragrafo(x, y, p["realce"], fclaim, pal.destaque, 880, 80)
+    y += 26
     c.paragrafo(x, y, p["texto"], c.f("sans", "Regular", 32), pal.corpo, 820, 46)
 
     # Colunas parametrizadas: a base do campo e calculada a partir do rodape,
@@ -759,6 +764,63 @@ def comp_passo(c: Tela, p: dict) -> None:
             c.f("mono", "Medium", 24), pal.corpo, 0.16 * 24)
 
 
+def comp_passos(c: Tela, p: dict) -> None:
+    """
+    O mapa do carrossel: os passos como blocos, nao como frase corrida.
+
+    ## Por que grafismo aqui, e por que este
+
+    Os tres primeiros slides eram texto no topo e vazio no resto. Vazio no
+    FIM e respiro; vazio ocupando metade da peca, com o titulo sozinho la em
+    cima, le como arte que nao terminou de carregar.
+
+    A tentacao e preencher com textura. O teste que este projeto usa contra
+    isso: **o grafismo diz algo que o texto teria de explicar?** Barra de
+    altura escolhida a olho nao diz — e por isso o campo de barras saiu dos
+    cards de carrossel. Uma escada numerada diz: ela mostra que sao TRES,
+    que tem ordem, e que cada um e curto. A frase precisaria de tres oracoes
+    para isso, e ninguem le tres oracoes num slide.
+
+    ## A barra de progresso a esquerda
+
+    Cada passo tem uma regua vertical no acento. Juntas elas formam a
+    coluna que a leitura desce, e e o mesmo elemento que o card do Kanban
+    usa para marcar etapa: a peca e o produto falam a mesma lingua visual.
+    """
+    pal, pad = c.pal, FEED_PAD
+    x, larg = pad["lado"], c.w - 2 * pad["lado"]
+    marca(c, p["indice"])
+
+    fm = c.f("mono", "Medium", 24)
+    c.texto(x, TOPO_CONTEUDO, p["rotulo"], fm, pal.destaque, 1.6)
+
+    y = TOPO_CONTEUDO + 58
+    fclaim = c.f("sans", "SemiBold", 54)
+    y += c.paragrafo(x, y, p["claim"], fclaim, pal.titulo, larg, 64)
+    if p.get("realce"):
+        y += c.paragrafo(x, y, p["realce"], fclaim, pal.destaque, larg, 64)
+
+    rodape_y = c.h - pad["base"] - 74
+    passos = p["passos"]
+    y += 56
+    espaco = (rodape_y - 44 - y) / len(passos)
+
+    fnum = c.f("mono", "Medium", 30)
+    ftit = c.f("sans", "SemiBold", 42)
+    ftxt = c.f("sans", "Regular", 29)
+
+    for i, (titulo, apoio) in enumerate(passos):
+        by = y + i * espaco
+        # A regua no acento, do mesmo peso do marcador de etapa do Kanban.
+        c.retangulo(x, by + 4, 5, espaco - 30, pal.destaque)
+        c.texto(x + 34, by, f"0{i + 1}", fnum, pal.destaque, 0.8)
+        c.texto(x + 34, by + 46, titulo, ftit, pal.titulo)
+        c.paragrafo(x + 34, by + 102, apoio, ftxt, pal.corpo, larg - 34, 40)
+
+    c.linha_fina(x, rodape_y, larg, pal.borda, 2)
+    c.texto(x, rodape_y + 26, p.get("rodape", "ARRASTE"), fm, pal.corpo, 0.16 * 24)
+
+
 COMPOSICOES = {
     "numero": comp_numero,
     "conta": comp_conta,
@@ -767,6 +829,7 @@ COMPOSICOES = {
     "produto": comp_produto,
     "chamada": comp_chamada,
     "passo": comp_passo,
+    "passos": comp_passos,
 }
 
 # ---------------------------------------------------------------------------
@@ -928,24 +991,49 @@ PECAS = [
 # carrossel, e a trava agora escala com a contagem em vez de exigir 3 fixas.
 
 CARROSSEL_DEMO = [
-    dict(id="c1_capa", comp="carrossel", pal=CLARO,
-         rotulo="TRES TELAS", indice="1/7", rodape="ARRASTE",
-         claim="No fim do dia, o sistema diz com quem falar amanhã.",
-         texto="Não é relatório. É a lista de quem está esperando você.",
+    # ## A capa MOSTRA o resultado, nao so promete
+    #
+    # Ela era tipografica, e sobrava metade da peca em branco. A capa e o
+    # post na grade do perfil: ela compete sozinha, antes de alguem saber
+    # que ha carrossel atras, e vazio ali nao le como respiro — le como arte
+    # que nao terminou de carregar.
+    #
+    # O framework Demo Walkthrough manda o slide 1 abrir com o RESULTADO
+    # ("lead with what they get"), e o resultado deste produto e literalmente
+    # a tela Hoje: a lista de quem esta esperando. Prometer isso em texto e
+    # deixar o espaco vazio embaixo era desperdicar as duas coisas.
+    dict(id="c1_capa", comp="passo", pal=CLARO,
+         rotulo="O QUE VOCE ABRE AMANHA", indice="1/7", rodape="ARRASTE",
+         claim="O sistema já sabe",
+         realce="com quem você precisa falar.",
+         captura="04-hoje-desktop-light.png",
+         # Recorte mais fechado que o do passo 3: a capa mostra as primeiras
+         # linhas, o passo 3 mostra os grupos por prazo. Mesma tela, duas
+         # leituras — repetir o mesmo enquadramento faria o carrossel
+         # parecer travado.
+         foco=(524, 430, 2000, 1010),
          dominio=DOMAIN),
 
     dict(id="c2_dor", comp="carrossel", pal=CLARO,
          rotulo="O QUE ISTO SUBSTITUI", indice="2/7", rodape="ARRASTE",
-         claim="Rolar a conversa para achar o que foi combinado.",
+         claim="Rolar a conversa para achar",
+         realce="o que foi combinado.",
          texto="A negociação está lá, entre a foto do almoço e o áudio de "
                "três minutos. Achar leva mais tempo do que responder.",
          dominio=DOMAIN),
 
-    dict(id="c3_mapa", comp="carrossel", pal=CLARO,
+    dict(id="c3_mapa", comp="passos", pal=CLARO,
          rotulo="O CAMINHO INTEIRO", indice="3/7", rodape="ARRASTE",
-         claim="Três passos. Nenhum deles é digitar relatório.",
-         texto="1. o contato entra.  2. o negócio ganha etapa e prazo.  "
-               "3. a tela Hoje diz com quem falar.",
+         claim="Três passos. Nenhum deles",
+         realce="é digitar relatório.",
+         passos=[
+             ("O contato entra",
+              "Uma vez. Nome, empresa e telefone, e ele fica."),
+             ("O negócio ganha etapa e prazo",
+              "Arrastar o card é o trabalho inteiro."),
+             ("A tela Hoje diz com quem falar",
+              "Ela cobra sozinha o que ficou em aberto."),
+         ],
          dominio=DOMAIN),
 
     # ## Os recortes vem da tela em 2880x1800 (deviceScaleFactor 2)
@@ -1024,7 +1112,11 @@ def ocupa_celula(p: dict) -> bool:
 def textos_da_peca(p: dict) -> list:
     out = []
     for k, v in p.items():
-        if k in ("id", "comp", "pal"):
+        # `captura` e nome de ARQUIVO e `foco` sao coordenadas: nenhum dos
+        # dois chega a tela. Sem esta linha, duas pecas usando a mesma
+        # captura reprovavam por "repetir o numero 04" — o prefixo do nome
+        # do arquivo.
+        if k in ("id", "comp", "pal", "captura", "foco"):
             continue
         if isinstance(v, str):
             out.append(v)
