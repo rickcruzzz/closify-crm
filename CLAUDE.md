@@ -134,8 +134,9 @@ próprio gate. `build:check` escreve em `.next-check`
 
 ## O mapa do projeto (grafo do graphify)
 
-`graphify-out/graph.json` é um índice navegável de todo este repositório: 3.512
-nós ligando arquivo, função, componente, tabela e conceito de documentação.
+`graphify-out/graph.json` é um índice navegável de todo este repositório:
+**3.743 nós e 8.554 arestas em 288 comunidades** (01/09/2026), ligando arquivo,
+função, componente, tabela e conceito de documentação.
 Serve para achar coisa rápido, e **é a primeira parada antes de sair lendo
 arquivo atrás de arquivo** para perguntas do tipo "quem chama X", "onde isso é
 usado", "o que quebra se eu mexer aqui".
@@ -166,6 +167,14 @@ O que o hook **não** cobre: documento e imagem, que exigem leitura semântica.
 Depois de mexer em `docs/**` ou trocar um print, rode `/graphify . --update`.
 O cache guarda o que já foi extraído, então só o que mudou custa alguma coisa.
 
+**Desde 01/09 existe um `.graphifyignore`,** e ele é a outra metade da regra
+de corte abaixo. Ficaram de fora `.claude/skills/` e `.deepsec/` (ferramentas
+instaladas, que se atualizam por fora do Git), `graphify-out/` (sem isso cada
+rebuild indexa o relatório do anterior) e o binário de marketing — as artes
+continuam versionadas, mas um PNG não responde "onde o preço é lido"; os
+geradores, que são código, continuam dentro. Medido: 249 dos 3.966 nós vinham
+de `.claude/`, e a poda tirou 235 de 53 arquivos.
+
 **A regra de corte, aprendida caro em 27/08:** só entra no grafo o nó cujo
 arquivo existe no disco **e mora dentro deste repositório**. O grafo chegou a
 ter 17.014 nós, dos quais **13.502 apontavam para outro projeto** — herança de
@@ -173,3 +182,9 @@ uma rodada antiga —, e nada na resposta de uma consulta avisava disso. Só
 "existe no disco" não basta: 35 nós apontavam para um plugin do Claude Code
 instalado na pasta pessoal do usuário, fora daqui. O que foi retirado está
 inteiro em `graphify-out/arquivo/`, nada foi descartado.
+
+**Oito nós apontam para nome de PACOTE** (`next`, `jspdf`, `@playwright/test`,
+`node:fs/promises`…) e **não são fantasmas**: são dependências declaradas no
+`package.json` que o extrator AST representa como nó de import. Elas não
+violam a regra, porque não apontam para outro projeto. O custo é cosmético,
+três delas viram comunidade de um nó só no relatório.
