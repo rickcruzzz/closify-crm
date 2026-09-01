@@ -666,49 +666,60 @@ CAPTURAS = RAIZ.parent / "artes"     # saida de scripts/marketing/capturar-catal
 
 def comp_passo(c: Tela, p: dict) -> None:
     """
-    Um passo do carrossel de demonstracao: numero, acao, captura, legenda.
+    Um passo do carrossel: a TELA e o heroi, nao a legenda dela.
 
-    ## Por que captura e nao desenho
+    ## O que mudou depois de olhar o concorrente
 
-    A peca `produto` desenha um Kanban com a tipografia da arte. Fica
-    coerente e e uma REPRESENTACAO: comparada com a tela real, nenhuma coluna
-    tem o nome certo (o desenho diz NOVO / CONVERSANDO / PROPOSTA / FECHADO,
-    o produto diz A contatar / Contato Realizado / Proposta Enviada /
-    Negociacao), nao ha valor no card, nem responsavel, nem faixa por etapa.
-    Quem visse a peca e assinasse encontraria outra tela.
+    A primeira versao punha a captura numa faixa entre o titulo e o rodape.
+    Comparada com o feed do Agendor — que e a referencia de SaaS B2B
+    brasileiro nesta categoria —, a diferenca era estrutural e nao de
+    acabamento:
 
-    O proprio designer registrou isso como a unica pendencia que nao
-    conseguia resolver sozinho. Aqui ela se resolve: `capturar-catalogo.mjs`
-    produz 36 telas reais, com cenario ficticio e limpeza no `finally`.
+      a tela ocupava ~28% da peca      la ocupa 55 a 60%
+      encostada na margem, chapada     la e um card elevado sobre o fundo
+      titulo em peso unico             la uma parte da frase muda de cor
 
-    A skill de carrossel diz o mesmo em uma linha: "mockups read as
-    vaporware".
+    Nenhuma dessas tres e enfeite. A tela grande e a unica prova que um SaaS
+    sem cliente externo consegue mostrar; o card elevado a separa do fundo e
+    diz "isto e software, nao ilustracao"; e a enfase cromatica carrega a
+    leitura em miniatura, onde a frase inteira vira mancha.
 
-    ## O recorte e por ACAO, nao pela tela inteira
+    Os principios foram extraidos, nao a arte: nada aqui copia layout,
+    paleta ou composicao de ninguem. O `prompt-enviado.txt` pede exatamente
+    isso, e a paleta continua sendo a dos tokens do produto.
 
-    Uma captura de 2880x1800 reduzida para caber num card de 1080 vira
-    mancha cinza. O `foco` recorta a regiao onde a acao acontece, em
-    coordenadas da imagem original, e so ela e ampliada. E a regra da skill:
-    cada captura precisa fazer sentido em miniatura.
+    ## O card SANGRA pela direita
+
+    Ele comeca na margem e sai pela borda. Uma tela inteira centralizada com
+    ar dos dois lados le como print colado numa apresentacao; sangrando, le
+    como software que continua fora do quadro. E a mesma decisao que
+    `comp_produto` ja usava.
     """
     pal, pad = c.pal, FEED_PAD
-    x, larg = pad["lado"], c.w - 2 * pad["lado"]
+    x, larg_texto = pad["lado"], c.w - 2 * pad["lado"]
     marca(c, p["indice"])
 
     fm = c.f("mono", "Medium", 24)
     c.texto(x, TOPO_CONTEUDO, p["rotulo"], fm, pal.destaque, 1.6)
 
-    y = TOPO_CONTEUDO + 62
-    y += c.paragrafo(x, y, p["claim"], c.f("sans", "SemiBold", 54), pal.titulo,
-                     larg, 64) + 34
-
-    # ## A moldura da captura
+    # ## A enfase entra na ULTIMA linha, e por construcao
     #
-    # Contorno de 1px na borda do registro, sem sombra: sombra longa le como
-    # cartao de marketing, e a decisao de 26/08 na landing ja tinha removido
-    # a `shadow-2xl` pelo mesmo motivo.
+    # `realce` e a parte da frase que muda de cor. Ela e escrita separada, na
+    # linha seguinte ao resto, em vez de dentro do fluxo: medir a quebra de
+    # uma frase com dois pesos exigiria um layout de texto rico que este
+    # gerador nao tem, e o resultado seria a palavra caindo em lugar
+    # imprevisivel a cada mudanca de copy.
+    y = TOPO_CONTEUDO + 58
+    fclaim = c.f("sans", "SemiBold", 54)
+    y += c.paragrafo(x, y, p["claim"], fclaim, pal.titulo, larg_texto, 64)
+    if p.get("realce"):
+        y += c.paragrafo(x, y, p["realce"], fclaim, pal.destaque, larg_texto, 64)
+    y += 40
+
     rodape_y = c.h - pad["base"] - 74
-    alt = rodape_y - 44 - y
+    alt = rodape_y - 46 - y
+    larg_card = c.w - x                       # sangra pela direita
+
     caminho = CAPTURAS / p["captura"]
     if not caminho.exists():
         raise FileNotFoundError(
@@ -717,18 +728,33 @@ def comp_passo(c: Tela, p: dict) -> None:
             "      node --env-file=.env.local scripts/marketing/capturar-catalogo.mjs")
 
     tela = Image.open(caminho).convert("RGB")
-    esq, topo, dire, base = p["foco"]
-    tela = tela.crop((esq, topo, dire, base))
+    tela = tela.crop(p["foco"])
 
-    # cabe na caixa preservando a proporcao, ancorado no topo
-    k = min(larg / tela.width, alt / tela.height)
+    # Preenche a caixa e corta o excedente, em vez de caber inteira dentro
+    # dela: caber deixava faixa vazia embaixo, e o vazio no MEIO da peca e o
+    # defeito que a auditoria da grade ja tinha reprovado.
+    k = max(larg_card / tela.width, alt / tela.height)
     lw, lh = int(tela.width * k), int(tela.height * k)
     tela = tela.resize((lw * c.ss, lh * c.ss), Image.LANCZOS)
+    tela = tela.crop((0, 0, c.u(larg_card), c.u(alt)))
+
+    # ## A sombra e curta, e so no registro claro
+    #
+    # Sobre fundo claro o contorno sozinho le como desenho, nao como
+    # profundidade. Sombra longa le como cartao de marketing — a landing
+    # removeu a `shadow-2xl` por isso em 26/08. Aqui sao 6px de deslocamento
+    # com uma faixa esmaecida, o suficiente para o card descolar do fundo.
+    if pal is CLARO:
+        for i, d in enumerate((10, 7, 4)):
+            tom = tuple(int(v - 6 + i * 2) for v in pal.fundo)
+            c.d.rectangle([c.u(x + d), c.u(y + d),
+                           c.u(x + larg_card) - 1, c.u(y + alt + d) - 1], fill=tom)
+
     c.im.paste(tela, (c.u(x), c.u(y)))
-    c.d.rectangle([c.u(x), c.u(y), c.u(x + lw) - 1, c.u(y + lh) - 1],
+    c.d.rectangle([c.u(x), c.u(y), c.u(x + larg_card) - 1, c.u(y + alt) - 1],
                   outline=pal.borda, width=max(1, c.u(1)))
 
-    c.linha_fina(x, rodape_y, larg, pal.borda, 2)
+    c.linha_fina(x, rodape_y, larg_texto, pal.borda, 2)
     c.texto(x, rodape_y + 26, p.get("rodape", "ARRASTE"),
             c.f("mono", "Medium", 24), pal.corpo, 0.16 * 24)
 
@@ -931,23 +957,26 @@ CARROSSEL_DEMO = [
     # sentido em MINIATURA, entao o recorte fecha na acao, nao na tela.
     dict(id="c4_passo1", comp="passo", pal=CLARO,
          rotulo="PASSO 1", indice="4/7", rodape="ARRASTE",
-         claim="O contato entra uma vez, e fica.",
+         claim="O contato entra uma vez",
+         realce="e fica.",
          captura="03-contatos-desktop-light.png",
-         foco=(700, 470, 2280, 1120),
+         foco=(524, 470, 2360, 1180),
          dominio=DOMAIN),
 
     dict(id="c5_passo2", comp="passo", pal=CLARO,
          rotulo="PASSO 2", indice="5/7", rodape="ARRASTE",
-         claim="O negócio ganha etapa, valor e próximo passo.",
+         claim="O negócio ganha etapa, valor",
+         realce="e próximo passo.",
          captura="02-funil-desktop-light.png",
-         foco=(760, 560, 2100, 1560),
+         foco=(600, 560, 2200, 1620),
          dominio=DOMAIN),
 
     dict(id="c6_passo3", comp="passo", pal=CLARO,
          rotulo="PASSO 3", indice="6/7", rodape="ARRASTE",
-         claim="A tela Hoje cobra o que ficou em aberto.",
+         claim="A tela Hoje cobra",
+         realce="o que ficou em aberto.",
          captura="04-hoje-desktop-light.png",
-         foco=(700, 400, 2280, 1180),
+         foco=(524, 400, 2360, 1200),
          dominio=DOMAIN),
 
     # `indice` num slide de fecho parece redundante e nao e: e ele que diz
