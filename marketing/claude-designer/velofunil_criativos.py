@@ -388,7 +388,25 @@ def comp_numero(c: Tela, p: dict) -> None:
     pal, pad = c.pal, FEED_PAD
     x, larg = pad["lado"], c.w - 2 * pad["lado"]
     marca(c, p.get("selo", ""))
-    fnum = c.f("serif", "Regular", 400)
+    # ## O corpo do numero e CALCULADO, nao fixo em 400
+    #
+    # O `-12` de recuo e compensacao optica da serifa: o glifo carrega
+    # sidebearing e sem isso o numero parece deslocado para dentro. Com "97%"
+    # a 400 isso cabe. Com "3 em 5", que e quatro vezes mais largo, o mesmo
+    # corpo passava **21px da margem esquerda e 6px da direita** (medido).
+    #
+    # Sobrevivia ao recorte 3:4 da grade por sorte, nao por construcao — e a
+    # peca seguinte com um numero longo nao teria a mesma sorte. O corpo
+    # agora desce de 10 em 10 ate caber na largura util, como a legenda do
+    # video ja faz.
+    larg_util = c.w - 2 * pad["lado"]
+    corpo = 400
+    while corpo > 180:
+        fnum = c.f("serif", "Regular", corpo)
+        if c.largura_texto(p["numero"], fnum) + 12 <= larg_util:
+            break
+        corpo -= 10
+    fnum = c.f("serif", "Regular", corpo)
     c.texto(x - 12, TOPO_CONTEUDO - 76, p["numero"], fnum, pal.titulo)
     y = TOPO_CONTEUDO + 322
     c.linha_fina(x, y, larg, pal.borda, 2)
@@ -668,6 +686,40 @@ PECAS = [
                   f"{brl(PRO_PLAN_PRICE)} por mês, a empresa inteira")],
          assinatura="FUNIL DE VENDAS EM KANBAN",
          dominio=DOMAIN),
+
+    # ## A decima peca, 01/09: o outro lado da mesma perda
+    #
+    # As nove primeiras falam do VENDEDOR que esquece. Esta fala do CLIENTE
+    # que desiste, e e o mesmo evento visto do lado que decide a venda.
+    #
+    # O dado e da Opinion Box 2025: 62% dos brasileiros ja desistiram de
+    # comprar pelo WhatsApp depois de uma experiencia ruim, e a pesquisa
+    # nomeia as tres causas — demora, conversa que recomeca do zero,
+    # follow-up ausente. As tres sao exatamente o que um funil resolve, e
+    # nenhuma delas e o aplicativo: a propria pesquisa conclui que a raiz e
+    # "falta de estrutura operacional, nao problema tecnologico".
+    #
+    # ## Por que "3 em 5" e nao "62%"
+    #
+    # A grade ja tem "97%" e "60%" em duas pecas de numero. Um terceiro
+    # "6x%" leria como repeticao mesmo passando na trava, que compara texto e
+    # nao forma. "3 em 5" e o MESMO dado com outro enquadramento, e o
+    # enquadramento e o argumento: "62%" e uma estatistica, "3 em 5 clientes"
+    # e um numero que a pessoa consegue contar na propria carteira.
+    #
+    # ## O que ela nao faz
+    #
+    # Nao acusa o WhatsApp. A landing inteira depende de nao competir com
+    # ele, e a pesquisa esta do mesmo lado: o defeito nao e o canal.
+    dict(id="p10_numero_desistencia", comp="numero", pal=ESCURO,
+         numero="3 em 5",
+         claim="clientes já desistiram de comprar por causa do atendimento.",
+         texto="A pesquisa nomeia as três causas, e nenhuma delas é o "
+               "aplicativo: a resposta que demorou, a conversa que recomeçou "
+               "do zero e o retorno que não veio.",
+         fonte="Opinion Box, 2025. A raiz apontada é falta de estrutura, "
+               "não tecnologia.",
+         dominio=DOMAIN),
 ]
 
 VITRINE = ["p01_carrossel_1", "p02_numero_97", "p03_declaracao_posicionamento",
@@ -714,8 +766,15 @@ def mosaico(out: Path, escala: float = 0.25) -> None:
     lado_x = (FEED[0] - GRID_CROP_W) // 2
     tw, th = int(GRID_CROP_W * escala), int(FEED[1] * escala)
     gap, moldura = 6, 24
+    # ## As linhas vem da CONTAGEM, nao do numero 3
+    #
+    # A folha era fixa em 3x3 e a decima peca saiu cortada pela metade na
+    # borda de baixo. A grade do perfil cresce; a regua tem que crescer com
+    # ela, senao a peca nova nasce fora do unico lugar onde o conjunto e
+    # julgado.
+    linhas_grade = -(-len(PECAS) // 3)          # divisao para cima
     W = moldura * 2 + tw * 3 + gap * 2
-    H = moldura * 2 + th * 3 + gap * 2
+    H = moldura * 2 + th * linhas_grade + gap * (linhas_grade - 1)
     folha = Image.new("RGB", (W, H), (12, 12, 12))
     for i, p in enumerate(PECAS):
         im = Image.open(out / f"{p['id']}.png").convert("RGB")
