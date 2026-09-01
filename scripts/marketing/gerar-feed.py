@@ -149,95 +149,142 @@ def proximo_registro() -> bool:
     return _CONTADOR_DE_RITMO["n"] % 3 == 0
 
 
-def arte_numero(numero, unidade, explicacao, fonte_dado, arquivo, categoria, luz,
-                claro=False):
+def grade_de_cem(draw, y, parte, cor_aceso, cor_apagado, cols=10):
     """
-    O número sangra pelo topo. O texto ancora no terço inferior.
+    Cem blocos, `parte` deles acesos. Devolve o y do fim.
 
-    ## O que mudou, e por que a composição antiga era o problema
+    ## Por que desenhar o dado em vez de escrever o número
 
-    Até 31/08 esta função desenhava cápsula, número, título, corpo e fonte
-    empilhados e centralizados verticalmente — a MESMA estrutura de
-    `arte_declaracao`. Vinte e uma peças com a mesma ancoragem viram, na grade
-    do perfil, vinte e um retângulos indistinguíveis.
+    "82%" é uma afirmação: quem lê precisa acreditar. Oitenta e dois quadrados
+    acesos entre cem são a mesma informação em forma de evidência — o olho
+    conta a proporção antes de o cérebro ler o rótulo, e não há como discordar
+    de uma área.
 
-    Agora o número é cortado pela borda de cima. **O corte é o argumento:**
-    número que não cabe no quadro *é* grande demais, e a peça comunica isso
-    antes de alguém ler a explicação. Uma composição que diz o que o texto diz
-    é a diferença entre desenhar e diagramar.
+    É a única composição desta família em que o grafismo diz algo que o texto
+    teria de explicar. Nas outras, forma sem conteúdo seria decoração, que é o
+    que faz peça parecer template.
 
-    ## A cápsula sai daqui
+    ## Dez por dez, e não uma barra
 
-    "DADO DE MERCADO" acima de um algarismo de 400px é redundante: o número
-    já anuncia a categoria. A cápsula continua em `arte_declaracao`, onde não
-    há número e o leitor precisa do contexto antes da frase.
+    Barra de proporção já existe aqui (`barra_de_proporcao`) e serve para
+    comparar duas grandezas. A grade serve para outra coisa: ela mostra a
+    UNIDADE. Cada bloco é uma empresa, e "82 em cada 100" é como a pesquisa do
+    Sebrae foi feita — 8,2 mil ouvidas. A forma espelha o método.
+    """
+    larg = g.W - g.MARGEM_ESQ * 2
+    gap = 9 * g.ESCALA
+    lado_x = (larg - gap * (cols - 1)) / cols
+    linhas = 100 // cols
+    # ## A proporção do bloco depende de quantas linhas existem
+    #
+    # Com 10 colunas são 10 linhas, e blocos quadrados ocupariam 60% da peça.
+    # Com 20 colunas são 5, e aí o bloco pode ser mais alto que largo sem
+    # sufocar nada.
+    #
+    # Achado gerando: a primeira versão usava 10 colunas em todo lugar, e no
+    # card de carrossel — que já tem cápsula, número, título e corpo antes da
+    # grade — ela passou POR CIMA do rodapé e saiu pela borda. `medir()` não
+    # pega isso: ele mede o bloco, não se o bloco cabe.
+    lado_y = lado_x * (0.62 if linhas >= 10 else 1.15)
+    for i in range(100):
+        cx = g.MARGEM_ESQ + (i % cols) * (lado_x + gap)
+        cy = y + (i // cols) * (lado_y + gap)
+        draw.rounded_rectangle([cx, cy, cx + lado_x, cy + lado_y],
+                               radius=6 * g.ESCALA,
+                               fill=cor_aceso if i < parte else cor_apagado)
+    return y + linhas * (lado_y + gap)
 
-    O parâmetro `categoria` permanece na assinatura, aceito e ignorado, para as
-    chamadas não mudarem todas de forma numa rodada que já muda a composição.
+
+def arte_numero(numero, unidade, explicacao, fonte_dado, arquivo, categoria, luz,
+                claro=False, proporcao=None):
+    """
+    Duas composições, escolhidas pelo que o dado É.
+
+    ## `proporcao` presente: o dado vira grade de 100
+
+    Só faz sentido quando o número é uma parte de um todo conhecido — 82%, 55%.
+    Aí o desenho carrega o argumento e o algarismo vira legenda.
+
+    ## `proporcao` ausente: serifa itálica em corpo grande
+
+    "21x" e "42h" não têm todo para desenhar; forçar um gráfico ali seria
+    inventar uma proporção que o dado não tem, o que é pior que número escrito.
+
+    A serifa entra porque era o que faltava: as 21 peças usavam Geist bold com
+    Geist regular, contraste de PESO e nenhum de VOZ. `InstrumentSerif-Italic`
+    já estava no projeto, usada em duas palavras de duas peças — e era o único
+    momento com personalidade nas vinte e uma.
+
+    ## O corte no topo saiu
+
+    A versão anterior sangrava o número pela borda de cima. Reprovado olhando a
+    grade: em miniatura lê como erro de alinhamento, não como intenção. Corte
+    só funciona quando quem vê tem certeza de que foi de propósito, e 3:4 a
+    150px de largura não dá essa certeza.
     """
     g._TEMA_CLARO = claro
     g._LUZ_ATUAL = luz
-    img = g.fundo_do_tema(escuro_extra=0.15 if not claro else 0.0)
+    img = g.fundo_do_tema(escuro_extra=0.16 if not claro else 0.0)
     draw = ImageDraw.Draw(img)
+    topo, base = g.faixa_livre()
 
-    # 300 contra os 240 antigos. O tamanho é o que permite o corte: em 240 o
-    # número cabia inteiro e o sangramento não aconteceria.
-    # ## O corpo do número se ajusta à LARGURA dele
-    #
-    # 300 é o teto, não o valor. `R$ 265` tem 6 caracteres contra os 3 de
-    # `82%`, e em 300 ele vazava pela borda direita: o "5" saía cortado, o que
-    # lê como erro de diagramação, não como sangramento intencional.
-    #
-    # O corte no TOPO é decisão; o corte na lateral é defeito. A diferença é
-    # que o de cima acontece em todos os números por igual e o da direita só
-    # nos longos — e o olho reconhece na hora o que é sistema e o que é
-    # acidente.
-    #
-    # Achado montando a grade 3x3 e olhando. Nenhuma medição de altura pegaria
-    # isto, porque a altura estava certa.
-    largura_util = g.W - g.MARGEM_ESQ * 2
-    corpo = 300
-    while corpo > 150:
-        fnt_num = g.fonte(g.DISPLAY, corpo)
-        if draw.textlength(numero, font=fnt_num) <= largura_util:
-            break
-        corpo -= 10
+    if proporcao is not None:
+        def bloco(d, y):
+            # O rótulo em mono: é a voz de software, e diz de onde o dado vem
+            # antes de o desenho aparecer.
+            d.text((g.MARGEM_ESQ, y), categoria_em_mono(categoria),
+                   font=g.mono(30, 500), fill=g.cor_rotulo_mono())
+            y += 74 * g.ESCALA
+            y = grade_de_cem(d, y, proporcao, g.cor_destaque(),
+                             g.cor_bloco_apagado())
+            y += 62 * g.ESCALA
+            d.text((g.MARGEM_ESQ, y), numero, font=g.fonte(g.DISPLAY, 130),
+                   fill=g.cor_titulo())
+            cx = d.textbbox((g.MARGEM_ESQ, y), numero, font=g.fonte(g.DISPLAY, 130))
+            d.text((cx[2] + 14 * g.ESCALA, cx[3] - 54 * g.ESCALA),
+                   f"em cada {100}", font=g.mono(32, 500), fill=g.cor_corpo())
+            y = cx[3] + 22 * g.ESCALA
+            y = g.escrever_esq(d, unidade, g.fonte(g.TITULO, 58), y, g.cor_titulo(),
+                               entrelinha=1.14)
+            y += 30 * g.ESCALA
+            return g.escrever_esq(d, fonte_dado, g.fonte(g.CORPO, 29), y,
+                                  g.cor_fonte_dado(), entrelinha=1.26)
+    else:
+        def bloco(d, y):
+            d.text((g.MARGEM_ESQ, y), numero, font=g.italica(300),
+                   fill=g.cor_destaque())
+            cx = d.textbbox((g.MARGEM_ESQ, y), numero, font=g.italica(300))
+            y = cx[3] + 30 * g.ESCALA
+            # O filete separa o dado do que ele significa. Curto de propósito:
+            # atravessar a peça inteira viraria divisória de slide.
+            d.line([(g.MARGEM_ESQ, y), (g.MARGEM_ESQ + 130 * g.ESCALA, y)],
+                   fill=g.cor_filete(), width=3 * g.ESCALA)
+            y += 42 * g.ESCALA
+            y = g.escrever_esq(d, unidade, g.fonte(g.TITULO, 64), y, g.cor_titulo(),
+                               entrelinha=1.14)
+            y += 28 * g.ESCALA
+            y = g.escrever_esq(d, explicacao, g.fonte(g.CORPO, 42), y, g.cor_corpo(),
+                               entrelinha=1.34)
+            y += 34 * g.ESCALA
+            return g.escrever_esq(d, fonte_dado, g.fonte(g.CORPO, 29), y,
+                                  g.cor_fonte_dado(), entrelinha=1.26)
 
-    caixa = draw.textbbox((0, 0), numero, font=fnt_num)
-    altura_num = caixa[3] - caixa[1]
-
-    # Corta ~22% da altura do número. Menos que isso lê como erro de
-    # alinhamento; mais, e o algarismo deixa de ser reconhecível. Medido nos
-    # quatro números que o feed usa hoje (21x, 42h, 82%, 55%): 22% preserva a
-    # forma de todos, inclusive o 8, que é o mais frágil ao corte superior.
-    y_num = g.SEGURO_TOPO * 0.30 - caixa[1] - altura_num * 0.22
-    draw.text((g.MARGEM_ESQ, y_num), numero, font=fnt_num, fill=g.cor_destaque())
-    piso_num = y_num + caixa[3]
-
-    def bloco(d, y):
-        y = g.escrever_esq(d, unidade, g.fonte(g.TITULO, 68), y, g.cor_titulo())
-        y += 34 * g.ESCALA
-        y = g.escrever_esq(d, explicacao, g.fonte(g.CORPO, 44), y, g.cor_corpo(),
-                           entrelinha=1.34)
-        y += 38 * g.ESCALA
-        return g.escrever_esq(d, fonte_dado, g.fonte(g.CORPO, 29), y,
-                              g.cor_fonte_dado(), entrelinha=1.26)
-
-    # ## O texto ancora NO NÚMERO, não no rodapé
-    #
-    # A primeira versão empurrava o bloco para o terço inferior, e com texto
-    # curto abria um buraco de 40% da altura entre o número e a primeira
-    # linha. Vazio no MEIO da peça lê como erro de alinhamento; no fim, lê
-    # como respiro antes do rodapé, que é o que qualquer página impressa faz.
-    #
-    # Achado abrindo `feed-8-conta-por-vendedor` depois de corrigir a largura:
-    # o buraco só apareceu porque o número encolheu, e nenhuma medição
-    # apontaria — a peça estava "correta" em toda métrica que dá para checar.
-    bloco(draw, piso_num + 96 * g.ESCALA)
-
+    bloco(draw, g.centrar(topo, base, g.medir(bloco)))
     g.assinar_discreto(img, draw)
     salvar(img, arquivo)
     g._TEMA_CLARO = False
+
+
+def categoria_em_mono(categoria):
+    """
+    O rótulo em caixa alta espaçada vira comentário de código.
+
+    `"D A D O   D E   M E R C A D O"` era espaçado letra a letra na string, o
+    truque de tracking sem suporte a `letter-spacing`. Em mono o espaçamento já
+    vem da fonte, então o texto volta a ser texto — e ganha o `//`, que é o que
+    o faz ler como anotação de software em vez de etiqueta de apresentação.
+    """
+    return "// " + " ".join(categoria.split()).lower()
 
 
 def arte_declaracao(categoria, titulo, corpo, arquivo, luz, remate=None,
@@ -454,7 +501,10 @@ def card_gancho(partes, apoio, luz, passo=None):
 def card_dado(numero, unidade, explicacao, fonte_dado, categoria, luz, passo=None,
               proporcao=None, remate=None):
     """O card de prova. Mesmo esqueleto de `arte_numero`, sem salvar."""
-    fnt_num = g.fonte(g.DISPLAY, 258)
+    # 258 quando o número é o protagonista; 176 quando existe grade, porque
+    # aí quem prova é o desenho e o algarismo vira legenda dele. Dois
+    # elementos disputando o mesmo papel deixam o card confuso.
+    fnt_num = g.fonte(g.DISPLAY, 176 if (proporcao and proporcao[1] == 100) else 258)
 
     def bloco(d, y):
         y = capsula_vazia(d, categoria, y) + 50 * g.ESCALA
@@ -468,9 +518,21 @@ def card_dado(numero, unidade, explicacao, fonte_dado, categoria, luz, passo=Non
         # A barra entra ENTRE a explicação e a fonte, não no fim: ela é parte
         # do argumento, e a fonte é o rodapé dele. Invertido, o crédito
         # separaria o dado da sua própria ilustração.
+        #
+        # ## Grade de 100 quando o todo É 100
+        #
+        # Proporção sobre 100 vira grade: cada bloco é uma empresa, e "82 em
+        # cada 100" é literalmente como a pesquisa do Sebrae foi feita. A
+        # barra continua para o resto, onde o todo é outra coisa (40 horas de
+        # semana, por exemplo) e cem blocos mentiriam sobre a unidade.
         if proporcao:
             y += 40 * g.ESCALA
-            y = barra_de_proporcao(d, y, *proporcao)
+            if proporcao[1] == 100:
+                # 20 colunas no carrossel: o card já gastou metade da
+                # altura antes de chegar aqui.
+                y = grade_de_cem(d, y, proporcao[0], g.TEAL, (0, 66, 68), cols=20)
+            else:
+                y = barra_de_proporcao(d, y, *proporcao)
         # O remate é a conclusão que o número não diz sozinho. Em teal e peso
         # forte porque é a frase que a pessoa deve levar embora — o dado é a
         # prova, isto é o argumento.
@@ -599,13 +661,6 @@ def main():
         "feed-1-janela-de-5-minutos", "D A D O   D E   M E R C A D O", 0.30, claro=proximo_registro(),
     )
 
-    arte_numero(
-        "42h", "é a média de primeira resposta",
-        "Auditoria em 2.241 empresas. Quase dois dias entre o cliente pedir e "
-        "alguém responder. A janela dos 5 minutos passou no primeiro.",
-        "Harvard Business Review, auditoria com 2.241 empresas.",
-        "feed-2-media-do-mercado", "D A D O   D E   M E R C A D O", 0.24, claro=proximo_registro(),
-    )
 
     # A peça "82% vendem pelo WhatsApp" saiu em 31/08, por decisão do dono:
     # nenhum tema de WhatsApp nesta rodada do feed. Ela continua verdadeira e
@@ -614,21 +669,7 @@ def main():
     # Sem esse eixo, o conteúdo volta para a dor que o produto resolve sem
     # depender de canal: o pedágio de digitação e a venda que morre parada.
 
-    arte_numero(
-        "3,4h", "por semana só digitando",
-        "É o que um vendedor gasta alimentando CRM à mão. O tempo que viraria "
-        "proposta vira cadastro. É assim que a ferramenta é abandonada.",
-        "Número de mercado. Varia com o tamanho da equipe.",
-        "feed-3-pedagio-de-digitacao", "D A D O   D E   M E R C A D O", 0.34, claro=proximo_registro(),
-    )
 
-    arte_numero(
-        "55%", "das implantações de CRM falham",
-        "E 60% disso é adoção, não plataforma. O sistema funciona; quem "
-        "precisa alimentar todo dia é que desiste na terceira semana.",
-        "Número de mercado, recorrente em levantamentos do setor.",
-        "feed-6-implantacao-que-falha", "D A D O   D E   M E R C A D O", 0.26, claro=proximo_registro(),
-    )
 
     arte_declaracao(
         "A   O B J E Ç Ã O   M A I S   C O M U M",
@@ -638,14 +679,6 @@ def main():
         "feed-7-memoria-mente", 0.38, claro=proximo_registro(),
     )
 
-    arte_numero(
-        f"R$ {g.PRECO_POR_USUARIO * 5}", "é a conta de 5 pessoas",
-        f"A maioria dos CRMs cobra por vendedor. Cinco pessoas a "
-        f"R$ {g.PRECO_POR_USUARIO} fecham isso todo mês, e o sexto vendedor "
-        f"custa mais R$ {g.PRECO_POR_USUARIO}.",
-        "Preço de tabela pública de CRMs que cobram por usuário.",
-        "feed-8-conta-por-vendedor", "A   C O N T A   Q U E   N I N G U É M   F A Z", 0.44, claro=proximo_registro(),
-    )
 
     arte_declaracao(
         "O   S I N A L   Q U E   N I N G U É M   O L H A",
@@ -795,21 +828,7 @@ def main():
     # na GRADE do perfil, recortada em 3:4, muitas vezes sem legenda lida.
     # Precisa entregar a ideia inteira no primeiro olhar.
     print()
-    arte_numero(
-        "82%", "da PME vende pelo WhatsApp",
-        "Não é canal de apoio, é onde o negócio acontece. O CRM que ignora "
-        "isso pede para a pessoa trabalhar duas vezes.",
-        "Pesquisa Pulso do Sebrae, 8,2 mil empresas ouvidas.",
-        "feed-9-onde-a-venda-acontece", "D A D O   D E   M E R C A D O", 0.28, claro=proximo_registro(),
-    )
 
-    arte_declaracao(
-        "A   P E R G U N T A   I N C Ô M O D A",
-        "Se o vendedor sair amanhã, o que fica?",
-        "O contato está no celular dele. A negociação, na conversa dele. O "
-        "que foi combinado, na memória dele. A empresa fica com o quê?",
-        "feed-10-se-o-vendedor-sair", 0.22, claro=proximo_registro(),
-    )
 
     arte_declaracao(
         "O   Q U E   N I N G U É M   D I Z",

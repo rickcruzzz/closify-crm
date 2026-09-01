@@ -230,6 +230,50 @@ def fonte(peso: str, tamanho: int) -> ImageFont.FreeTypeFont:
     return _FONTES[chave]
 
 
+# ---------------------------------------------------------------- a monoespaçada
+#
+# ## Ela já estava no projeto e nunca tinha sido usada
+#
+# `app/fonts/GeistMonoVF.woff` é servida pelo produto desde sempre e não
+# aparecia em nenhuma peça. As 21 artes usavam Geist bold com Geist regular, o
+# que dá o contraste de PESO mas nenhum de VOZ — e é parte do que fazia tudo
+# parecer o mesmo criativo.
+#
+# ## Por que mono, e não uma terceira família qualquer
+#
+# Mono carrega significado sozinha: é a fonte de terminal, de código, de
+# planilha, de extrato. Num criativo de CRM ela diz "software" antes de
+# qualquer palavra ser lida — e é a fonte do próprio produto, então não inventa
+# uma identidade nova para o Instagram.
+#
+# Ela entra em RÓTULO e UNIDADE, nunca em corpo de texto. Mono em parágrafo
+# cansa a leitura: a largura fixa que a torna boa para número alinhado é a
+# mesma que abre buracos entre palavras.
+_MONO: dict[tuple[int, int], ImageFont.FreeTypeFont] = {}
+
+
+def mono(tamanho: int, peso: int = 500) -> ImageFont.FreeTypeFont:
+    """
+    Geist Mono, no tamanho e peso pedidos.
+
+    O peso vai por EIXO numérico (`set_variation_by_axes`) e não por nome: a
+    Geist Mono variável não expõe os mesmos nomes de instância da Geist normal,
+    e `set_variation_by_name("Medium")` estoura nela. Envolto em `try` porque
+    uma build estática da fonte não teria eixo nenhum, e nesse caso o peso
+    padrão do arquivo já serve.
+    """
+    chave = (tamanho, peso)
+    if chave not in _MONO:
+        f = ImageFont.truetype(str(RAIZ / "app" / "fonts" / "GeistMonoVF.woff"),
+                               tamanho * ESCALA)
+        try:
+            f.set_variation_by_axes([peso])
+        except Exception:
+            pass
+        _MONO[chave] = f
+    return _MONO[chave]
+
+
 def desenhar_selo(tamanho: int) -> Image.Image:
     """
     O selo da marca: quadrado teal arredondado com as três camadas do funil.
@@ -481,6 +525,33 @@ def cor_fonte_dado():
     # teste pegou, e o comentário acima já dizia por que não descer. Escrever
     # a regra não impede de quebrá-la; o teste impede.
     return (104, 112, 112) if _TEMA_CLARO else (110, 132, 132)
+
+
+def cor_rotulo_mono():
+    """
+    O rótulo em mono: mais apagado que o corpo, mais forte que a fonte do dado.
+
+    Ele é anotação, não conteúdo — quem lê a peça não precisa dele para
+    entender. Mas é a primeira coisa na composição, e some se cair ao nível da
+    linha de crédito.
+    """
+    return (0, 130, 132) if _TEMA_CLARO else (120, 175, 176)
+
+
+def cor_bloco_apagado():
+    """
+    Os blocos que NÃO fazem parte da proporção.
+
+    Precisam existir visivelmente: são eles que dão o denominador. Apagados
+    demais e a grade vira uma mancha de 82 quadrados sem referência; fortes
+    demais e a proporção some.
+    """
+    return (215, 226, 227) if _TEMA_CLARO else (0, 66, 68)
+
+
+def cor_filete():
+    """O traço curto entre o número em serifa e o que ele significa."""
+    return BORDA_NO_CLARO if _TEMA_CLARO else (0, 110, 112)
 
 
 def marca_dagua_do_funil(img, forca=0.055):

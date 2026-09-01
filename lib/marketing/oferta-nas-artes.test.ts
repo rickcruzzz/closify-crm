@@ -236,3 +236,63 @@ describe('o registro claro das artes tem contraste legível', () => {
     }
   })
 })
+
+/**
+ * ## Cada dado aparece numa peça só
+ *
+ * Em 31/08 o feed tinha 21 peças e **seis delas repetiam um card de
+ * carrossel**: 42h, 82%, 3,4h, 55%, R$ 265 e a dor da carteira apareciam duas
+ * vezes cada. Publicadas, o perfil mostrava pares dizendo o mesmo número, e o
+ * visitante percebia rolando dois dedos.
+ *
+ * Repetição não quebra nada e não aparece em métrica nenhuma. Só aparece
+ * quando alguém olha o conjunto — e é por isso que um teste faz mais sentido
+ * aqui do que uma revisão manual antes de publicar.
+ *
+ * O teste conta ocorrências no texto que vai para a arte, ignorando
+ * comentários: os comentários citam os números o tempo todo ao explicar as
+ * decisões.
+ */
+describe('nenhum dado se repete entre as peças do feed', () => {
+  const DADOS: [string, RegExp][] = [
+    ['21x', /"21x"/g],
+    ['42h', /"42h"/g],
+    ['82%', /"82%"/g],
+    ['3,4h', /"3,4h"/g],
+    ['55%', /"55%"/g],
+  ]
+
+  // Docstrings fora, não só comentários: elas citam os números ao explicar
+  // por que cada composição existe, e um contador ingênuo leria a explicação
+  // como se fosse uma peça a mais. Foi o que aconteceu na primeira versão
+  // deste teste, com quatro falsos positivos de uma vez.
+  const codigo = semComentarios(
+    readFileSync(join(PASTA, 'gerar-feed.py'), 'utf-8'),
+  ).replace(/"""[\s\S]*?"""/g, '')
+
+  it.each(DADOS)('%s aparece uma vez só', (_nome, padrao) => {
+    expect((codigo.match(padrao) ?? []).length).toBe(1)
+  })
+})
+
+/**
+ * A monoespaçada e a serifa entraram em 31/08 para dar o contraste de VOZ que
+ * faltava: até então tudo era Geist bold com Geist regular, contraste de peso
+ * e nenhum de família.
+ *
+ * Este teste não julga estética. Ele trava que as duas continuem sendo usadas
+ * — se alguém "simplificar" o gerador de volta para uma família só, as peças
+ * voltam a ser indistinguíveis e nada mais avisaria.
+ */
+describe('as artes usam mais de uma família tipográfica', () => {
+  it('a monoespaçada do produto está em uso', () => {
+    const comum = readFileSync(join(PASTA, 'gerar-stories.py'), 'utf-8')
+    expect(comum).toContain('GeistMonoVF.woff')
+    expect(comum).toContain('def mono(')
+  })
+
+  it('a serifa itálica carrega o número nas peças sem proporção', () => {
+    const feed = readFileSync(join(PASTA, 'gerar-feed.py'), 'utf-8')
+    expect(feed).toContain('g.italica(300)')
+  })
+})

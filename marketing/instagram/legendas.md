@@ -49,20 +49,6 @@ classificam.
 >
 > Link na bio.
 
-## `feed-9-onde-a-venda-acontece`
-
-> 82% da pequena empresa brasileira vende pelo WhatsApp. Não é canal de apoio,
-> é onde o negócio fecha.
->
-> Aí chega um CRM pedindo para digitar tudo de novo, em outro lugar, depois de
-> já ter conversado. É trabalho em dobro, e na terceira semana ninguém faz
-> mais.
->
-> O problema nunca foi preguiça. É que a ferramenta pede o que ninguém tem
-> tempo de dar.
->
-> Como você registra hoje o que combina no WhatsApp?
-
 ## `feed-1-janela-de-5-minutos`
 
 > Responder em 5 minutos em vez de 30 dá 21x mais chance de qualificar o
@@ -75,19 +61,6 @@ classificam.
 > quem não sumiu.
 >
 > Quanto tempo você leva para responder um contato novo?
-
-## `feed-2-media-do-mercado`
-
-> 42 horas. É a média de tempo até a primeira resposta, medida em 2.241
-> empresas pela Harvard Business Review.
->
-> Quase dois dias. A janela dos 5 minutos passou no primeiro minuto, e o
-> cliente já falou com outros três.
->
-> O detalhe cruel: ninguém demora de propósito. A mensagem chega, você está no
-> meio de outra coisa, e some.
->
-> Isso já aconteceu com você?
 
 ---
 
@@ -150,41 +123,6 @@ classificam.
 ---
 
 # Semana 3, a conta e a oferta
-
-## `feed-8-conta-por-vendedor`
-
-> A maioria dos CRMs cobra por vendedor.
->
-> Cinco pessoas a R$ 53 dão R$ 265 por mês. Contratou o sexto? Mais R$ 53.
-> Crescer passa a custar duas vezes: o salário e a licença.
->
-> É um modelo que faz sentido para quem vende o software. Não para quem
-> compra.
->
-> Você já deixou de dar acesso a alguém por causa do preço por usuário?
-
-## `feed-3-pedagio-de-digitacao`
-
-> 3,4 horas por semana só alimentando CRM à mão.
->
-> Parece pouco olhando a semana. São 22 dias por ano: quase um mês inteiro de
-> trabalho que ia virar proposta e virou cadastro.
->
-> E é justamente quem deveria estar vendendo que paga esse pedágio.
->
-> Quanto tempo por dia você gasta registrando o que já conversou?
-
-## `feed-6-implantacao-que-falha`
-
-> 55% das implantações de CRM falham. E 60% disso é adoção, não plataforma.
->
-> Ou seja: o sistema escolhido quase nunca é o problema. O problema é que
-> ninguém sustenta o hábito de alimentar.
->
-> Trocar de ferramenta sem resolver isso é repetir o mesmo projeto com outro
-> logo.
->
-> Você já participou de uma implantação que morreu?
 
 ## `feed-5-preco-por-empresa`, fecha o ciclo
 
