@@ -11,7 +11,7 @@ import { MetricCardsAsync } from '@/components/dashboard/metric-cards-async'
 import { FunnelChartAsync } from '@/components/dashboard/funnel-chart-async'
 import { UpcomingDealsTableAsync } from '@/components/dashboard/upcoming-deals-table-async'
 import { PeriodFilter } from '@/components/dashboard/period-filter'
-import { ChecklistCard } from '@/components/onboarding/checklist-card'
+import { ChecklistCard, RetomarChecklist } from '@/components/onboarding/checklist-card'
 import { TourDeBoasVindas } from '@/components/onboarding/tour'
 import { ReportArea } from '@/components/dashboard/report-area'
 import { ExportReportButton } from '@/components/dashboard/export-report-button'
@@ -56,8 +56,31 @@ export default async function DashboardPage({
   // Três condições para o checklist aparecer, e todas precisam ser verdade:
   // ainda há item aberto, a pessoa não fechou o card, e o onboarding não foi
   // ignorado por completo. Quem pulou tudo pediu para ser deixado em paz.
-  const mostrarChecklist =
-    !checklistCumprido(itens) && !estado.checklistOculto && estado.status !== 'skipped'
+  const aindaFalta = !checklistCumprido(itens) && estado.status !== 'skipped'
+  const mostrarChecklist = aindaFalta && !estado.checklistOculto
+
+  // Quem fechou o card continua vendo uma porta de volta, e só ela.
+  // `ocultarChecklist(false)` existia desde sempre e nunca era chamada: até
+  // 01/09 fechar o checklist era definitivo, e 9 das 49 contas já haviam
+  // fechado sem ter como reabrir.
+  const podeRetomar = aindaFalta && estado.checklistOculto
+  const pendentes = itens.filter((i) => !i.concluido).length
+
+  // ## O relatório de um negócio que ainda não começou
+  //
+  // Medido em 01/09 contra produção, com conta nova e empresa vazia: em
+  // 375px o botão "Adicionar primeiro contato" fica a **984px** do topo, e a
+  // tela do telefone tem **812px**. A única ação que importa nasce abaixo da
+  // dobra, e o que a empurra para lá é "Exportar relatório" mais dez botões
+  // de período — os dois calculados sobre zero linha.
+  //
+  // Não é excesso de zelo com pixel: 25 das 42 empresas do banco nunca
+  // criaram um contato. Quem chega vê uma tela de RELATÓRIO de um negócio
+  // que ainda não existe, com a ação de valor escondida no rodapé.
+  //
+  // Os dois voltam sozinhos no instante em que houver o primeiro contato,
+  // porque a condição é derivada dos sinais, não gravada.
+  const temAlgoParaRelatar = sinais.leads > 0 || sinais.negocios > 0
 
   // O tour abre pelo ESTADO, não por parâmetro de URL.
   //
@@ -90,20 +113,25 @@ export default async function DashboardPage({
         title={CABECALHO_DOS_RESULTADOS.titulo}
         description={CABECALHO_DOS_RESULTADOS.descricao}
         actions={
-          <ExportReportButton
-            nomeDoWorkspace={nomeDoWorkspace}
-            rotuloDoPeriodo={rotuloDoPeriodo}
-          />
+          temAlgoParaRelatar ? (
+            <ExportReportButton
+              nomeDoWorkspace={nomeDoWorkspace}
+              rotuloDoPeriodo={rotuloDoPeriodo}
+            />
+          ) : null
         }
       />
 
-      <PeriodFilter
-        presetAtivo={params.desde ? null : (params.periodo ?? null)}
-        desdeAtivo={params.desde ?? null}
-        ateAtivo={params.ate ?? null}
-      />
+      {temAlgoParaRelatar && (
+        <PeriodFilter
+          presetAtivo={params.desde ? null : (params.periodo ?? null)}
+          desdeAtivo={params.desde ?? null}
+          ateAtivo={params.ate ?? null}
+        />
+      )}
 
       {mostrarChecklist && <ChecklistCard itens={itens} />}
+      {podeRetomar && <RetomarChecklist pendentes={pendentes} />}
 
       {/* Só o que entra no PDF: o checklist é sobre o produto, não sobre o
           negócio da pessoa, e um relatório com "Cadastre seu primeiro lead"

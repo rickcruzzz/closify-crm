@@ -361,10 +361,15 @@ export function HojeClient({
             {!temLead ? (
               <EmptyState
                 icon={Users}
-                title="Comece cadastrando um cliente"
+                // "Cliente" era a única tela do produto que chamava assim.
+                // Contatos, Funil e Resultados dizem "contato", e a renomeação
+                // de 19/08 padronizou o vocabulário justamente para a mesma
+                // coisa não ter dois nomes. Esta tela escapou dela, e é a
+                // primeira que a pessoa abre pelo menu.
+                title="Comece cadastrando um contato"
                 description="Assim que você tiver um contato aqui, o Velo Funil passa a avisar com quem falar cada dia."
               >
-                <Button onClick={() => router.push('/leads')}>Cadastrar cliente</Button>
+                <Button onClick={() => router.push('/leads')}>Cadastrar contato</Button>
               </EmptyState>
             ) : !temNegocio ? (
               <EmptyState

@@ -12,6 +12,58 @@ import { ocultarChecklist } from '@/lib/onboarding/actions'
 import { contarConcluidos, proximoPasso, type ItemDoChecklist } from '@/lib/onboarding/checklist'
 
 /**
+ * Traz o checklist de volta depois de fechado.
+ *
+ * ## O buraco que isto fecha
+ *
+ * `ocultarChecklist` aceita `true` e `false` desde que existe, e até 01/09
+ * **nenhum lugar do produto a chamava com `false`**. Fechar o card era
+ * definitivo: o único ponto do sistema que diz o que fazer em seguida sumia
+ * com um clique, para sempre, e o estado ia para o banco, então nem trocar de
+ * navegador trazia de volta.
+ *
+ * Medido no dia: **9 das 49 contas já haviam fechado.** Nenhuma delas tem
+ * como reabrir.
+ *
+ * É a mesma classe do "silenciar" sem "reexibir" que a Central de alertas
+ * pagou em 31/08, e da fila de relatos internos que existia sem porta. Ação
+ * destrutiva de um clique precisa de volta, ainda mais quando o que ela
+ * destrói é a orientação de quem acabou de chegar.
+ *
+ * O link é discreto de propósito: quem fechou pediu para não ser incomodado,
+ * e devolver o card inteiro por cima seria ignorar o pedido. O que ele
+ * garante é que a porta existe.
+ */
+export function RetomarChecklist({ pendentes }: { pendentes: number }) {
+  const router = useRouter()
+  const [abrindo, setAbrindo] = React.useState(false)
+
+  async function retomar() {
+    setAbrindo(true)
+    const resultado = await ocultarChecklist(false)
+    if ('error' in resultado) {
+      setAbrindo(false)
+      return
+    }
+    router.refresh()
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={retomar}
+      disabled={abrindo}
+      className="text-muted-foreground hover:text-foreground focus-visible:ring-ring inline-flex w-fit items-center gap-1.5 rounded-md text-sm underline-offset-4 transition-colors hover:underline focus-visible:ring-2 focus-visible:outline-none disabled:opacity-60"
+    >
+      <Rocket className="size-3.5" aria-hidden />
+      {abrindo
+        ? 'Abrindo…'
+        : `Retomar a configuração (${pendentes} ${pendentes === 1 ? 'passo' : 'passos'})`}
+    </button>
+  )
+}
+
+/**
  * O checklist de ativação, no topo do Dashboard.
  *
  * Os itens chegam prontos do servidor, DERIVADOS do estado real do workspace,
@@ -20,7 +72,8 @@ import { contarConcluidos, proximoPasso, type ItemDoChecklist } from '@/lib/onbo
  *
  * O card some sozinho quando os cinco estiverem feitos; a página nem o
  * renderiza. Fechar é preferência da pessoa e vai para o banco, porque
- * `localStorage` não sobrevive a trocar de navegador.
+ * `localStorage` não sobrevive a trocar de navegador. E fechar tem volta, por
+ * `RetomarChecklist` acima.
  */
 export function ChecklistCard({ itens }: { itens: ItemDoChecklist[] }) {
   const router = useRouter()
