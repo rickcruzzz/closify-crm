@@ -45,6 +45,10 @@ import { createAdminClient } from '@/lib/supabase/admin'
 const LIMITES = {
   signin: { limite: 8, janelaSegundos: 15 * 60 },
   'signin-ip': { limite: 60, janelaSegundos: 15 * 60 },
+  // Cinco por hora: quem cria conta faz isso uma vez, e o teto so incomoda
+  // quem esta criando em serie. Por IP e nao por e-mail porque o e-mail e
+  // sempre novo num cadastro em massa — nao ha o que contar.
+  'signup-ip': { limite: 5, janelaSegundos: 60 * 60 },
   invite: { limite: 20, janelaSegundos: 60 * 60 },
   'accept-invite': { limite: 15, janelaSegundos: 15 * 60 },
   'reset-password': { limite: 5, janelaSegundos: 60 * 60 },

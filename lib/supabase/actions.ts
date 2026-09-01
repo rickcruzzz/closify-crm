@@ -71,6 +71,29 @@ export async function signUp(values: unknown) {
     return { error: 'Dados inválidos.' }
   }
 
+  // ## O cadastro era a única ação pública sem teto
+  //
+  // Medido em 01/09: 12 cadastros seguidos, nenhum barrado. `signin`,
+  // `reset-password`, `invite`, `feedback`, `log-erro` e `checkout` já tinham
+  // limite; este não.
+  //
+  // Não há dano financeiro direto — criar conta não gasta nada, e o Supabase
+  // corta o envio de e-mail em 100/hora. O que dói é mais lento: a base enche
+  // de conta fantasma (37 das 42 empresas já são teste), e envio em massa
+  // para endereços que nunca confirmam derruba a entrega dos e-mails que
+  // importam.
+  //
+  // Cinco por hora não incomoda ninguém real: quem cria conta faz isso uma
+  // vez. E o IP agora é o de verdade — até 01/09 `ipDaRequisicao` devolvia o
+  // IP do Cloudflare, que muda entre data centers e dividia o contador
+  // sozinho. Sem aquela correção, este limite nasceria decorativo.
+  if (await excedeuLimite('signup-ip', await ipDaRequisicao())) {
+    return {
+      error:
+        'Muitas contas criadas deste dispositivo. Aguarde alguns minutos e tente de novo.',
+    }
+  }
+
   // Guarda ANTES de qualquer chamada de rede, porque todos os caminhos daqui
   // para baixo terminam em `redirect()`, que lança, não haveria depois.
   //

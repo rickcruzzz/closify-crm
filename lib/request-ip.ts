@@ -2,16 +2,21 @@ import 'server-only'
 
 import { headers } from 'next/headers'
 
-import { extrairIpDoHeader } from '@/lib/request-ip-parse'
+import { escolherIp } from '@/lib/request-ip-parse'
 
 /**
- * O IP de quem fez a requisição, do jeito que dá para confiar dentro da Vercel.
+ * O IP de quem fez a requisição.
  *
- * `x-forwarded-for` é forjável em geral, mas a Vercel SOBRESCREVE esse header
- * na borda antes de a requisição chegar à função — não é o cliente quem
- * escreve o valor final. É a mesma garantia que a documentação da Vercel dá
- * para `x-real-ip`/`x-forwarded-for` em Edge e Node functions.
+ * Prefere `cf-connecting-ip`, que o Cloudflare preenche com o IP real do
+ * cliente. `x-forwarded-for` sozinho traz o IP do PROXY desde que o DNS migrou
+ * para lá em 19/08 — e como o Cloudflare distribui entre data centers, o
+ * contador de rate limit se dividia entre três ou mais IPs para a mesma
+ * pessoa. Ver `lib/request-ip-parse.ts` para a medição que revelou isso.
  */
 export async function ipDaRequisicao(): Promise<string> {
-  return extrairIpDoHeader((await headers()).get('x-forwarded-for'))
+  const h = await headers()
+  return escolherIp({
+    cfConnectingIp: h.get('cf-connecting-ip'),
+    xForwardedFor: h.get('x-forwarded-for'),
+  })
 }
