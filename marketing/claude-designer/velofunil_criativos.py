@@ -98,23 +98,77 @@ FUNIL_BARRAS = [
 ]
 
 
+def _cantos_arredondados(pontos, raio: float, passos: int = 10) -> list:
+    """
+    O poligono com os cantos cortados por curva, no lugar de vertice vivo.
+
+    ## O que isto substitui, e por que
+
+    A versao anterior encolhia o poligono inteiro pelo raio e depois
+    desenhava o contorno por cima com `joint="curve"`, contando com a
+    espessura da linha para devolver o tamanho. Aberto em 300px, o resultado
+    nao era o simbolo:
+
+      barra 1   ganhava um degrau no canto superior esquerdo
+      barra 2   perdia a simetria do trapezio
+      barra 3   virava um PINGO disforme, e nao o triangulo da marca
+
+    A terceira e a que denuncia o metodo: ela tem 2.2 de largura por 2.9 de
+    altura, e encolher isso por 0.9 em cada direcao nao deixa forma nenhuma
+    de pe. O erro cresce quanto MENOR a peca, ou seja, exatamente onde a
+    marca precisa se sustentar.
+
+    Aqui cada canto e recuado ao longo das duas arestas que o formam e
+    ligado por um Bezier quadratico com o proprio vertice de controle. E o
+    que os arcos `a.9 .9` do SVG fazem, e preserva a silhueta: nenhum ponto
+    do poligono se move para dentro, so o canto e suavizado.
+
+    O raio se adapta ao lado mais curto — 0.9 num triangulo de 2.2 comeria
+    a forma, e a marca oficial usa arcos elipticos que se acomodam sozinhos.
+    """
+    n = len(pontos)
+    lados = [((pontos[i][0] - pontos[(i + 1) % n][0]) ** 2
+              + (pontos[i][1] - pontos[(i + 1) % n][1]) ** 2) ** 0.5
+             for i in range(n)]
+    r = min(raio, min(lados) / 2.4)
+
+    saida = []
+    for i in range(n):
+        ant, atual, prox = pontos[i - 1], pontos[i], pontos[(i + 1) % n]
+
+        def recuar(de, para):
+            dx, dy = para[0] - de[0], para[1] - de[1]
+            d = max(1e-6, (dx * dx + dy * dy) ** 0.5)
+            t = min(r, d / 2) / d
+            return (de[0] + dx * t, de[1] + dy * t)
+
+        a = recuar(atual, ant)
+        b = recuar(atual, prox)
+        saida.append(a)
+        # Bezier quadratico: o proprio vertice e o ponto de controle.
+        for k in range(1, passos):
+            u = k / passos
+            saida.append((
+                (1 - u) ** 2 * a[0] + 2 * (1 - u) * u * atual[0] + u * u * b[0],
+                (1 - u) ** 2 * a[1] + 2 * (1 - u) * u * atual[1] + u * u * b[1],
+            ))
+        saida.append(b)
+    return saida
+
+
 def funil(c: "Tela", x: float, y: float, tam: float, cor: tuple, raio: float = 0.9) -> None:
-    """Traca o simbolo do arquivo de marca. Os cantos do SVG sao arredondados
-    em 0.9 unidade; aqui isso vira um contorno de junta curva sobre o poligono
-    encolhido pelo mesmo raio, entao a silhueta fecha no mesmo tamanho."""
+    """
+    Traca o simbolo do arquivo de marca (`marketing/marca/*.svg`).
+
+    Tres camadas que afunilam: lidas juntas formam o funil e a letra V de
+    Velo. As larguras caem 18.8, 10.2 e 2.2 no espaco 24x24 do arquivo, e o
+    SVG arredonda os cantos em 0.9.
+    """
     k = tam / 24.0
     for pontos in FUNIL_BARRAS:
-        cx = sum(px for px, _ in pontos) / len(pontos)
-        cy = sum(py for _, py in pontos) / len(pontos)
-        dentro = []
-        for px, py in pontos:
-            dx, dy = px - cx, py - cy
-            dist = max(1e-6, (dx * dx + dy * dy) ** 0.5)
-            f = max(0.0, (dist - raio) / dist)
-            dentro.append((c.u(x + (cx + dx * f) * k), c.u(y + (cy + dy * f) * k)))
-        c.d.polygon(dentro, fill=cor)
-        c.d.line(dentro + [dentro[0]], fill=cor, width=c.u(raio * k * 2),
-                 joint="curve")
+        forma = _cantos_arredondados(pontos, raio)
+        c.d.polygon([(c.u(x + px * k), c.u(y + py * k)) for px, py in forma],
+                    fill=cor)
 
 
 def marca(c: "Tela", selo: str = "") -> None:
@@ -603,6 +657,82 @@ def comp_chamada(c: Tela, p: dict) -> None:
     c.texto(x, base + 44, p["assinatura"], c.f("mono", "Regular", 24), pal.corpo, 0.6)
 
 
+# ---------------------------------------------------------------------------
+# 6b. A composicao `passo`: uma captura REAL do produto, com legenda.
+# ---------------------------------------------------------------------------
+
+CAPTURAS = RAIZ.parent / "artes"     # saida de scripts/marketing/capturar-catalogo.mjs
+
+
+def comp_passo(c: Tela, p: dict) -> None:
+    """
+    Um passo do carrossel de demonstracao: numero, acao, captura, legenda.
+
+    ## Por que captura e nao desenho
+
+    A peca `produto` desenha um Kanban com a tipografia da arte. Fica
+    coerente e e uma REPRESENTACAO: comparada com a tela real, nenhuma coluna
+    tem o nome certo (o desenho diz NOVO / CONVERSANDO / PROPOSTA / FECHADO,
+    o produto diz A contatar / Contato Realizado / Proposta Enviada /
+    Negociacao), nao ha valor no card, nem responsavel, nem faixa por etapa.
+    Quem visse a peca e assinasse encontraria outra tela.
+
+    O proprio designer registrou isso como a unica pendencia que nao
+    conseguia resolver sozinho. Aqui ela se resolve: `capturar-catalogo.mjs`
+    produz 36 telas reais, com cenario ficticio e limpeza no `finally`.
+
+    A skill de carrossel diz o mesmo em uma linha: "mockups read as
+    vaporware".
+
+    ## O recorte e por ACAO, nao pela tela inteira
+
+    Uma captura de 2880x1800 reduzida para caber num card de 1080 vira
+    mancha cinza. O `foco` recorta a regiao onde a acao acontece, em
+    coordenadas da imagem original, e so ela e ampliada. E a regra da skill:
+    cada captura precisa fazer sentido em miniatura.
+    """
+    pal, pad = c.pal, FEED_PAD
+    x, larg = pad["lado"], c.w - 2 * pad["lado"]
+    marca(c, p["indice"])
+
+    fm = c.f("mono", "Medium", 24)
+    c.texto(x, TOPO_CONTEUDO, p["rotulo"], fm, pal.destaque, 1.6)
+
+    y = TOPO_CONTEUDO + 62
+    y += c.paragrafo(x, y, p["claim"], c.f("sans", "SemiBold", 54), pal.titulo,
+                     larg, 64) + 34
+
+    # ## A moldura da captura
+    #
+    # Contorno de 1px na borda do registro, sem sombra: sombra longa le como
+    # cartao de marketing, e a decisao de 26/08 na landing ja tinha removido
+    # a `shadow-2xl` pelo mesmo motivo.
+    rodape_y = c.h - pad["base"] - 74
+    alt = rodape_y - 44 - y
+    caminho = CAPTURAS / p["captura"]
+    if not caminho.exists():
+        raise FileNotFoundError(
+            f"captura ausente: {caminho}\n"
+            "Rode: npm run build && npm run start -- -p 3970\n"
+            "      node --env-file=.env.local scripts/marketing/capturar-catalogo.mjs")
+
+    tela = Image.open(caminho).convert("RGB")
+    esq, topo, dire, base = p["foco"]
+    tela = tela.crop((esq, topo, dire, base))
+
+    # cabe na caixa preservando a proporcao, ancorado no topo
+    k = min(larg / tela.width, alt / tela.height)
+    lw, lh = int(tela.width * k), int(tela.height * k)
+    tela = tela.resize((lw * c.ss, lh * c.ss), Image.LANCZOS)
+    c.im.paste(tela, (c.u(x), c.u(y)))
+    c.d.rectangle([c.u(x), c.u(y), c.u(x + lw) - 1, c.u(y + lh) - 1],
+                  outline=pal.borda, width=max(1, c.u(1)))
+
+    c.linha_fina(x, rodape_y, larg, pal.borda, 2)
+    c.texto(x, rodape_y + 26, p.get("rodape", "ARRASTE"),
+            c.f("mono", "Medium", 24), pal.corpo, 0.16 * 24)
+
+
 COMPOSICOES = {
     "numero": comp_numero,
     "conta": comp_conta,
@@ -610,6 +740,7 @@ COMPOSICOES = {
     "carrossel": comp_carrossel,
     "produto": comp_produto,
     "chamada": comp_chamada,
+    "passo": comp_passo,
 }
 
 # ---------------------------------------------------------------------------
@@ -679,7 +810,10 @@ PECAS = [
          claim="Cole a conversa. O contato nasce com data e próximo passo.",
          texto="Leva menos tempo do que procurar a mensagem no histórico.",
          dominio=DOMAIN),
-    dict(id="p09_chamada", comp="chamada", pal=CLARO,
+    # Escura desde 01/09: o carrossel de demonstracao termina numa chamada
+    # clara, e duas chamadas claras no mesmo perfil leem como a mesma peca
+    # publicada duas vezes.
+    dict(id="p09_chamada", comp="chamada", pal=ESCURO,
          claim="Sem cartão para começar.",
          linhas=[(PLAN_LABELS["free"], f"até {FREE_LEAD_LIMIT} contatos"),
                  (PLAN_LABELS["pro"],
@@ -711,7 +845,11 @@ PECAS = [
     #
     # Nao acusa o WhatsApp. A landing inteira depende de nao competir com
     # ele, e a pesquisa esta do mesmo lado: o defeito nao e o canal.
-    dict(id="p10_numero_desistencia", comp="numero", pal=ESCURO,
+    # Clara porque a coluna 2 da grade nao tinha nenhuma, e duas colunas com
+    # todas as claras formam a listra vertical que a trava existe para
+    # impedir. Ela tambem e a unica peca de dado no registro claro, o que
+    # separa as tres pecas de numero entre si.
+    dict(id="p10_numero_desistencia", comp="numero", pal=CLARO,
          numero="3 em 5",
          claim="clientes já desistiram de comprar por causa do atendimento.",
          texto="A pesquisa nomeia as três causas, e nenhuma delas é o "
@@ -722,8 +860,136 @@ PECAS = [
          dominio=DOMAIN),
 ]
 
+# ---------------------------------------------------------------------------
+# 7b. O carrossel de demonstracao. Framework E da skill de carrossel.
+# ---------------------------------------------------------------------------
+#
+# ## Por que Demo Walkthrough, e nao os outros quatro
+#
+# A skill oferece cinco arquiteturas. Problem-Proof exige um resultado
+# proprio com numero ("eu fiz X, deu Y") e este produto NAO TEM cliente
+# externo: inventar seria a prova social que a decisao travada proibe.
+# Value-Stack e Hack List pedem lista de dicas, que qualquer concorrente
+# escreve igual. Rant Callout brigaria com o canal, e a landing inteira
+# depende de nao brigar com o WhatsApp.
+#
+# Sobra Demo Walkthrough, e ele e o unico que usa o ativo que so este
+# projeto tem: as 36 capturas reais do produto. A skill e explicita — "real
+# screenshots; mockups read as vaporware".
+#
+# ## A estrutura, e por que o slide 3 existe
+#
+#   1  capa       produto + resultado. A capa e o post na grade: ela compete
+#                 sozinha, antes de alguem saber que ha carrossel atras
+#   2  dor        a frustracao especifica que isto substitui
+#   3  mapa       os tres passos ANTES do detalhe
+#   4  passo 1    captura real, recortada na acao
+#   5  passo 2    captura real
+#   6  passo 3    captura real
+#   7  fecho      a oferta e o posicionamento
+#
+# O slide 3 e o que segura a leitura: quem viu "3 passos" termina; quem cai
+# direto no passo 1 sem mapa abandona no 2. E a mesma razao pela qual receita
+# lista ingrediente antes do modo de preparo.
+#
+# ## Tudo no registro claro
+#
+# Pedido do dono. Os sete slides usam a MESMA paleta: a skill exige um
+# template visual por carrossel, e alternar registro entre slides faria a
+# peca piscar sob o dedo.
+#
+# Isso muda o ritmo da grade — sao 4 claras em 12 pecas depois deste
+# carrossel, e a trava agora escala com a contagem em vez de exigir 3 fixas.
+
+CARROSSEL_DEMO = [
+    dict(id="c1_capa", comp="carrossel", pal=CLARO,
+         rotulo="TRES TELAS", indice="1/7", rodape="ARRASTE",
+         claim="No fim do dia, o sistema diz com quem falar amanhã.",
+         texto="Não é relatório. É a lista de quem está esperando você.",
+         dominio=DOMAIN),
+
+    dict(id="c2_dor", comp="carrossel", pal=CLARO,
+         rotulo="O QUE ISTO SUBSTITUI", indice="2/7", rodape="ARRASTE",
+         claim="Rolar a conversa para achar o que foi combinado.",
+         texto="A negociação está lá, entre a foto do almoço e o áudio de "
+               "três minutos. Achar leva mais tempo do que responder.",
+         dominio=DOMAIN),
+
+    dict(id="c3_mapa", comp="carrossel", pal=CLARO,
+         rotulo="O CAMINHO INTEIRO", indice="3/7", rodape="ARRASTE",
+         claim="Três passos. Nenhum deles é digitar relatório.",
+         texto="1. o contato entra.  2. o negócio ganha etapa e prazo.  "
+               "3. a tela Hoje diz com quem falar.",
+         dominio=DOMAIN),
+
+    # ## Os recortes vem da tela em 2880x1800 (deviceScaleFactor 2)
+    #
+    # Cada `foco` e a regiao onde a acao acontece, medida na captura
+    # original. Os primeiros recortes pegavam 2360x1030 e, cabendo em 886 de
+    # largura, viravam uma faixa de 386 de altura onde o texto da interface
+    # sumia. A skill de carrossel e explicita: cada captura precisa fazer
+    # sentido em MINIATURA, entao o recorte fecha na acao, nao na tela.
+    dict(id="c4_passo1", comp="passo", pal=CLARO,
+         rotulo="PASSO 1", indice="4/7", rodape="ARRASTE",
+         claim="O contato entra uma vez, e fica.",
+         captura="03-contatos-desktop-light.png",
+         foco=(700, 470, 2280, 1120),
+         dominio=DOMAIN),
+
+    dict(id="c5_passo2", comp="passo", pal=CLARO,
+         rotulo="PASSO 2", indice="5/7", rodape="ARRASTE",
+         claim="O negócio ganha etapa, valor e próximo passo.",
+         captura="02-funil-desktop-light.png",
+         foco=(760, 560, 2100, 1560),
+         dominio=DOMAIN),
+
+    dict(id="c6_passo3", comp="passo", pal=CLARO,
+         rotulo="PASSO 3", indice="6/7", rodape="ARRASTE",
+         claim="A tela Hoje cobra o que ficou em aberto.",
+         captura="04-hoje-desktop-light.png",
+         foco=(700, 400, 2280, 1180),
+         dominio=DOMAIN),
+
+    # `indice` num slide de fecho parece redundante e nao e: e ele que diz
+    # a `ocupa_celula` que este cartao e slide, nao post. Sem ele, o fecho
+    # entrava na grade do perfil como uma decima-primeira celula.
+    dict(id="c7_fecho", comp="chamada", pal=CLARO, indice="7/7",
+         claim="O WhatsApp continua. O cliente passa a ser seu.",
+         linhas=[(PLAN_LABELS["free"], f"até {FREE_LEAD_LIMIT} contatos"),
+                 (PLAN_LABELS["pro"],
+                  f"{brl(PRO_PLAN_PRICE)} por mês, a empresa inteira")],
+         assinatura="FUNIL DE VENDAS EM KANBAN",
+         dominio=DOMAIN),
+]
+
+PECAS += CARROSSEL_DEMO
+
 VITRINE = ["p01_carrossel_1", "p02_numero_97", "p03_declaracao_posicionamento",
            "p04_conta", "p05_produto", "p09_chamada"]
+
+
+def ocupa_celula(p: dict) -> bool:
+    """
+    Verdadeiro para a peca que aparece na GRADE do perfil.
+
+    ## Peca nao e celula, e a diferenca so aparece com carrossel
+
+    Um carrossel e UM post: a grade mostra so a capa, e as outras se veem
+    deslizando o dedo. As travas de ritmo e o mosaico foram escritos quando
+    todo carrossel do conjunto tinha dois cards, e nessa escala a diferenca
+    entre "peca" e "celula" nao aparecia.
+
+    Com um carrossel de sete slides ela apareceu de uma vez: a trava de
+    ritmo passou a exigir 6 claras porque contou 17 pecas, quando a grade
+    de fato mostra 11 celulas. Ela reprovava conteudo legitimo por um erro
+    de contagem proprio.
+
+    Fora da grade fica todo slide de carrossel que nao seja o primeiro.
+    """
+    ind = p.get("indice")
+    if not ind:
+        return True
+    return ind.split("/")[0].strip() == "1"
 
 
 def textos_da_peca(p: dict) -> list:
@@ -772,11 +1038,12 @@ def mosaico(out: Path, escala: float = 0.25) -> None:
     # borda de baixo. A grade do perfil cresce; a regua tem que crescer com
     # ela, senao a peca nova nasce fora do unico lugar onde o conjunto e
     # julgado.
-    linhas_grade = -(-len(PECAS) // 3)          # divisao para cima
+    na_grade = [p for p in PECAS if ocupa_celula(p)]
+    linhas_grade = -(-len(na_grade) // 3)       # divisao para cima
     W = moldura * 2 + tw * 3 + gap * 2
     H = moldura * 2 + th * linhas_grade + gap * (linhas_grade - 1)
     folha = Image.new("RGB", (W, H), (12, 12, 12))
-    for i, p in enumerate(PECAS):
+    for i, p in enumerate(na_grade):
         im = Image.open(out / f"{p['id']}.png").convert("RGB")
         im = im.crop((lado_x, 0, lado_x + GRID_CROP_W, FEED[1]))
         im = im.resize((tw, th), Image.LANCZOS)
@@ -1057,7 +1324,11 @@ def check() -> int:
             #
             # A linha de credito sai da varredura inteira: o que ela carrega
             # e a procedencia, nao o argumento.
-            if t == p.get("fonte"):
+            # A linha de credito e o indice do carrossel saem da varredura:
+            # o primeiro carrega procedencia, o segundo e paginacao. Nenhum
+            # dos dois e argumento, e "1/7" fazia sete slides reprovarem por
+            # "repetir" o numero 7.
+            if t in (p.get("fonte"), p.get("indice")):
                 continue
             for n in re.findall(r"\b\d{1,3}(?:\.\d{3})*(?:,\d+)?%?(?!\d)", t):
                 if n in ("1", "2", "3", "4", "5"):
@@ -1067,10 +1338,36 @@ def check() -> int:
                 if n in usados:
                     faltas.append(f"{p['id']}: numero repetido em outra peca ({n})")
                 usados.add(n)
-    claras = [i for i, p in enumerate(PECAS) if p["pal"] is CLARO]
-    if len(claras) != 3 or len({i % 3 for i in claras}) != 3:
-        faltas.append(f"ritmo claro/escuro: claras em {claras}, "
-                      "esperado uma por coluna da grade")
+    # ## O ritmo escala com a contagem, e nao com o numero 3
+    #
+    # A trava exigia exatamente 3 claras. Ela foi escrita quando o conjunto
+    # tinha 9 pecas, e a regra real e outra: "1 clara a cada 3, sem duas na
+    # mesma coluna". Com 9 as duas formulacoes dao o mesmo resultado; a
+    # partir da decima elas divergem, e a fixa passa a REPROVAR peca nova
+    # legitima. Mesmo defeito do mosaico, que era fixo em 3x3 e cortava a
+    # decima peca ao meio.
+    celulas = [p for p in PECAS if ocupa_celula(p)]
+    claras = [i for i, p in enumerate(celulas) if p["pal"] is CLARO]
+    esperado = max(1, round(len(celulas) / 3))
+    colunas = {i % 3 for i in claras}
+    # ## Tolerancia de um, e nao igualdade exata
+    #
+    # A regra existe para impedir DOIS defeitos visiveis: grade monotona de
+    # um registro so, e duas claras na mesma coluna formando listra. Nenhum
+    # dos dois aparece por uma peca de diferenca.
+    #
+    # Exigir igualdade exata fazia a trava reprovar conteudo legitimo por
+    # aritmetica: 4 claras em 10 celulas da 40% contra os 33% da regra, e a
+    # grade nao tem como ficar melhor com 3 ou com 5.
+    if abs(len(claras) - esperado) > 1:
+        faltas.append(f"ritmo claro/escuro: {len(claras)} claras em "
+                      f"{len(celulas)} celulas, esperado {esperado} (1 a cada 3)")
+    # Com mais claras que colunas, alguma coluna repete por aritmetica. O que
+    # a regra impede e a LISTRA: uma coluna sem nenhuma clara enquanto outra
+    # tem duas.
+    elif len(colunas) < min(3, len(claras)):
+        faltas.append(f"ritmo claro/escuro: claras em {claras}, colunas "
+                      f"{sorted(colunas)} — duas na mesma coluna formam listra")
     familias = set()
     for p in PECAS:
         familias.add("mono" if p["comp"] in ("carrossel", "chamada", "numero",
