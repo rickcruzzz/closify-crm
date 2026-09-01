@@ -38,3 +38,13 @@ marketing/instagram/*.png
 marketing/facebook/*.png
 marketing/video/*.mp4
 marketing/video/*.png
+
+# ## Runtime do Claude Design, de terceiro
+#
+# 125 KB que existem só para abrir os `.dc.html` do briefing do designer.
+# Mesma classe de `.claude/skills/`: mora fisicamente aqui e não é código
+# deste produto. O GERADOR (`velofunil_criativos.py`) fica dentro do grafo —
+# ele é código nosso agora, e carrega decisões que uma consulta deve
+# alcançar.
+marketing/claude-designer/runtime/
+marketing/claude-designer/briefing/*.dc.html

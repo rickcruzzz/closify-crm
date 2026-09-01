@@ -1,0 +1,248 @@
+# ANÁLISE E DIREÇÃO DE ARTE — VELOFUNIL
+
+Vou enviar:
+
+1. Prints de artes de marcas SaaS B2B como referência visual.
+2. Prints de todas as telas e funcionalidades do Velofunil por dentro.
+3. As artes atuais da Velofunil.
+
+Analise todo esse material antes de criar qualquer coisa.
+
+## OBJETIVO
+
+Elevar a identidade visual e a comunicação da Velofunil para um nível **premium, moderno, tecnológico e competitivo internacionalmente**, sem perder a identidade própria da marca.
+
+A Velofunil é uma **SaaS B2B brasileira de gestão comercial**, com foco em:
+
+- CRM e gestão de clientes
+- Funil de vendas
+- WhatsApp
+- Agendador
+- Automação
+- Organização e produtividade comercial
+
+O Agendador deve ser apresentado como **um dos recursos do ecossistema**, e não como o produto inteiro.
+
+## VISÃO DE PRODUTO
+
+Não quero que a Velofunil pareça simplesmente mais um software de CRM.
+
+A direção de marca deve permitir uma evolução futura:
+
+**SaaS → SaaS + IA → agentes/robôs digitais que executam tarefas para as empresas.**
+
+A identidade deve ter potencial para representar uma empresa de tecnologia que, no futuro, possa oferecer agentes digitais capazes de trabalhar, automatizar processos, atender clientes, organizar informações, executar tarefas e apoiar operações comerciais.
+
+Não transforme a marca agora em uma empresa de “robôs” nem em uma marca excessivamente futurista. Apenas construa uma identidade capaz de evoluir nessa direção.
+
+---
+
+# ANÁLISE DAS REFERÊNCIAS
+
+Analise profundamente as referências visuais enviadas.
+
+Não copie nenhuma arte, layout, ilustração, texto, composição específica ou elemento proprietário.
+
+Extraia apenas os **princípios de direção de arte**.
+
+Analise:
+
+- composição e grid
+- hierarquia visual
+- tipografia
+- escala e proporção
+- espaço negativo
+- alinhamento
+- ritmo visual
+- contraste
+- paleta
+- ícones e gráficos
+- elementos de interface
+- profundidade
+- sombras e iluminação
+- texturas e formas
+- ilustrações e renderizações
+- densidade visual
+- equilíbrio entre informação e estética
+- consistência entre peças
+- padrões recorrentes de branding
+- percepção de tecnologia
+- confiança
+- autoridade
+- produto premium
+
+Identifique **por que** essas marcas parecem profissionais e quais decisões visuais produzem essa percepção.
+
+---
+
+# ANÁLISE DO VELOFUNIL
+
+Analise também todas as telas internas do Velofunil.
+
+Use essas interfaces para compreender:
+
+- linguagem visual atual
+- cores
+- componentes
+- ícones
+- cards
+- botões
+- gráficos
+- tabelas
+- estrutura de informação
+- hierarquia
+- personalidade visual
+- funcionalidades
+- posicionamento do produto
+
+A comunicação externa deve parecer pertencente ao **mesmo produto mostrado nas interfaces**, criando conexão entre:
+
+**produto → marca → site → anúncios → redes sociais → conteúdo.**
+
+Não crie uma identidade externa desconectada do software.
+
+---
+
+# POSICIONAMENTO
+
+A Velofunil deve transmitir:
+
+**tecnologia + produtividade + organização + inteligência comercial + confiança + simplicidade.**
+
+Evite aparência:
+
+- infantil
+- genérica
+- excessivamente corporativa
+- de template pronto
+- de agência de marketing genérica
+- de aplicativo barato
+- de startup visualmente exagerada
+- de “arte feita por IA”
+
+A estética deve parecer resultado de uma **equipe profissional de design de uma SaaS B2B premium**.
+
+---
+
+# DIREÇÃO VISUAL
+
+Ao criar novas peças, priorize:
+
+**clareza > impacto > sofisticação > consistência de marca**
+
+Não adicione elementos apenas para deixar a arte mais bonita.
+
+Cada elemento precisa ter uma função:
+
+- comunicar
+- organizar
+- direcionar atenção
+- reforçar a marca
+- explicar o produto
+- aumentar percepção de valor
+
+---
+
+# COMUNICAÇÃO B2B
+
+O público é empresarial.
+
+A comunicação visual deve transmitir:
+
+- profissionalismo
+- autoridade
+- confiança
+- eficiência
+- retorno sobre investimento
+- organização
+- produtividade
+- redução de trabalho manual
+- tecnologia útil
+- facilidade de operação
+
+Ao mesmo tempo, não deixe a comunicação fria ou sem personalidade.
+
+Quero uma estética **premium, humana e tecnológica**.
+
+---
+
+# EVOLUÇÃO PARA IA E AGENTES
+
+A identidade deve permitir evolução futura para:
+
+- inteligência artificial
+- automações
+- agentes
+- assistentes digitais
+- execução automática de tarefas
+- atendimento automatizado
+- follow-up automático
+- análise inteligente
+- operações comerciais autônomas
+
+Não force elementos futuristas ou robóticos em todas as artes.
+
+A tecnologia deve parecer natural e sofisticada, não artificial.
+
+---
+
+# CRIAÇÃO DAS NOVAS ARTES
+
+Ao criar uma nova peça:
+
+1. Entenda primeiro a mensagem.
+2. Escolha a hierarquia visual ideal.
+3. Utilize os princípios extraídos das referências.
+4. Preserve a identidade da Velofunil.
+5. Conecte visualmente a peça ao produto real.
+6. Faça a arte parecer parte de um sistema de marca consistente.
+7. Garanta legibilidade em formato de Instagram.
+8. Evite excesso de elementos.
+9. Evite aparência de template.
+10. Evite qualquer estética genérica de IA.
+
+---
+
+# PROCESSO DE REFINAMENTO
+
+Não pare na primeira solução.
+
+Depois de criar a primeira proposta, faça uma avaliação crítica como um **diretor de arte sênior**.
+
+Verifique internamente:
+
+- A composição está realmente forte?
+- A hierarquia está clara?
+- A mensagem é compreendida rapidamente?
+- A peça parece SaaS B2B premium?
+- Existe algum elemento desnecessário?
+- Existe excesso de informação?
+- O produto está representado de maneira convincente?
+- A identidade Velofunil continua reconhecível?
+- A arte parece parte de um sistema visual consistente?
+- Existe algo que faça a peça parecer genérica ou gerada por IA?
+- A referência foi interpretada ou simplesmente imitada?
+
+Corrija os problemas encontrados antes de finalizar.
+
+Quando houver ganho real de qualidade, faça uma segunda iteração mais refinada.
+
+---
+
+# REGRA PRINCIPAL
+
+Não quero apenas uma arte bonita.
+
+Quero uma **linguagem visual de marca**.
+
+A partir das referências, das telas internas do produto e das artes atuais, construa um sistema visual que possa ser repetido em:
+
+- posts
+- carrosséis
+- anúncios
+- campanhas
+- landing pages
+- apresentações
+- materiais comerciais
+- lançamentos de funcionalidades
+- conteúdos educativos

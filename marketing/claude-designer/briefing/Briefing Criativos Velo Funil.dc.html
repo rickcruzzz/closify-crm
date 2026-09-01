@@ -1,0 +1,679 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700;900&family=Geist+Mono:wght@400;500&family=Instrument+Serif:ital@1&display=swap" rel="stylesheet">
+<style>
+  body { margin: 0; background: rgb(10,10,10); }
+  a { color: rgb(0,191,192); text-decoration: none; }
+  a:hover { color: rgb(252,252,252); }
+</style>
+</helmet>
+
+<section id="t1" style="display: flex; flex-direction: column; gap: 72px; padding: 72px 80px 120px; background: rgb(10,10,10); font-family: 'Geist', system-ui, sans-serif; color: rgb(252,252,252); width: 2680px; min-width: 2680px; flex: none; box-sizing: border-box">
+
+  <div style="display: flex; gap: 0; align-items: stretch; border: 1px solid rgb(42,46,48)">
+    <div style="flex: none; width: 620px; background: rgb(4,32,33); display: flex; flex-direction: column; align-items: flex-start; justify-content: center; gap: 40px; padding: 64px 72px">
+      <svg viewBox="0 0 24 24" width="248" height="248" aria-label="Velo Funil" style="display: block">
+        <g fill="rgb(0,191,192)">
+          <path d="M2.6 4.4h18.8a.9.9 0 0 1 .72 1.44l-2.1 2.8a1.4 1.4 0 0 1-1.12.56H5.1a1.4 1.4 0 0 1-1.12-.56l-2.1-2.8A.9.9 0 0 1 2.6 4.4Z"></path>
+          <path d="M6.9 10.6h10.2a.9.9 0 0 1 .72 1.44l-1.72 2.3a1.4 1.4 0 0 1-1.12.56H9.02a1.4 1.4 0 0 1-1.12-.56l-1.72-2.3a.9.9 0 0 1 .72-1.44Z"></path>
+          <path d="M10.9 16.6h2.2a.9.9 0 0 1 .72 1.44l-1.1 1.47a.9.9 0 0 1-1.44 0l-1.1-1.47a.9.9 0 0 1 .72-1.44Z"></path>
+        </g>
+      </svg>
+      <div style="font-size: 52px; letter-spacing: -0.03em"><span style="font-weight: 600; color: rgb(252,252,252)">Velo </span><span style="font-weight: 400; color: rgb(150,172,172)">Funil</span></div>
+    </div>
+    <div style="flex: 1; padding: 64px 72px; display: flex; flex-direction: column; justify-content: space-between; gap: 34px">
+      <div>
+        <div style="font-family: 'Geist Mono', ui-monospace, monospace; font-size: 12px; letter-spacing: 0.18em; color: rgb(0,191,192)">O SÍMBOLO É O ELEMENTO DE TOPO DE TODA PEÇA</div>
+        <p style="font-size: 19px; line-height: 1.55; color: rgb(252,252,252); margin: 18px 0 0; max-width: 940px; text-wrap: pretty">Três barras que afunilam. Ele diz o que o produto faz antes de qualquer palavra ser lida, e é a única forma do conjunto que sobrevive a 20px. Por isso ele abre as nove peças e os dois vídeos, sempre no mesmo canto, no mesmo tamanho e na mesma cor do registro.</p>
+      </div>
+      <div>
+        <div style="font-family: 'Geist Mono', ui-monospace, monospace; font-size: 12px; letter-spacing: 0.16em; color: rgb(150,172,172); padding-bottom: 12px; border-bottom: 1px solid rgb(42,46,48)">AUDITORIA DOS OITO ARQUIVOS ENVIADOS</div>
+        <sc-for list="{{ auditoria }}" as="a" hint-placeholder-count="5">
+          <div style="display: flex; gap: 20px; align-items: baseline; padding: 12px 0; border-bottom: 1px solid rgb(42,46,48)">
+            <span style="font-family: 'Geist Mono', ui-monospace, monospace; font-size: 12px; letter-spacing: 0.06em; color: {{ a.cor }}; flex: none; width: 96px">{{ a.veredito }}</span>
+            <span style="font-family: 'Geist Mono', ui-monospace, monospace; font-size: 12px; color: rgb(252,252,252); flex: none; width: 210px">{{ a.arquivo }}</span>
+            <span style="font-size: 14px; line-height: 1.55; color: rgb(150,172,172); flex: 1">{{ a.nota }}</span>
+          </div>
+        </sc-for>
+      </div>
+    </div>
+  </div>
+
+  <header style="display: flex; gap: 64px; align-items: flex-start">
+    <div style="flex: 1; max-width: 780px">
+      <div style="font-family: 'Geist Mono', ui-monospace, monospace; font-size: 13px; letter-spacing: 0.18em; color: rgb(0,191,192)">BRIEFING DE CRIATIVOS</div>
+      <h1 style="font-size: 62px; font-weight: 900; letter-spacing: -0.035em; line-height: 1.04; margin: 18px 0 0">Velo Funil</h1>
+      <p style="font-size: 17px; line-height: 1.6; color: rgb(150,172,172); margin: 20px 0 0; text-wrap: pretty">Cinco composições, nove peças no plano de grade, dois formatos de vídeo. A oferta é interpolada das constantes em <a href="velofunil_criativos.py">velofunil_criativos.py</a>, que é o mesmo arquivo que desenha os frames do vídeo. O que você vê aqui é o espelho do gerador, no tamanho real reduzido.</p>
+      <p style="font-size: 17px; line-height: 1.6; color: rgb(150,172,172); margin: 16px 0 0; text-wrap: pretty">Os dois formatos de vídeo estão batidos em segundos abaixo, com o primeiro frame parado e a zona segura por cima. A versão com scrubber e export entra na próxima rodada.</p>
+    </div>
+    <div style="display: flex; gap: 40px">
+      <div style="min-width: 300px">
+        <div style="font-family: 'Geist Mono', ui-monospace, monospace; font-size: 12px; letter-spacing: 0.16em; color: rgb(150,172,172); padding-bottom: 12px; border-bottom: 1px solid rgb(42,46,48)">FORMATO</div>
+        <sc-for list="{{ formatos }}" as="f" hint-placeholder-count="4">
+          <div style="display: flex; justify-content: space-between; gap: 24px; padding: 11px 0; border-bottom: 1px solid rgb(42,46,48); font-size: 14px">
+            <span style="color: rgb(150,172,172)">{{ f.rotulo }}</span>
+            <span style="font-family: 'Geist Mono', ui-monospace, monospace">{{ f.valor }}</span>
+          </div>
+        </sc-for>
+      </div>
+      <div style="min-width: 380px">
+        <div style="font-family: 'Geist Mono', ui-monospace, monospace; font-size: 12px; letter-spacing: 0.16em; color: rgb(150,172,172); padding-bottom: 12px; border-bottom: 1px solid rgb(42,46,48)">MARGEM: ARTE / VÍDEO</div>
+        <sc-for list="{{ margens }}" as="m" hint-placeholder-count="3">
+          <div style="display: flex; justify-content: space-between; gap: 24px; padding: 11px 0; border-bottom: 1px solid rgb(42,46,48); font-size: 14px">
+            <span style="color: rgb(150,172,172)">{{ m.rotulo }}</span>
+            <span style="font-family: 'Geist Mono', ui-monospace, monospace"><span style="color: rgb(150,172,172)">{{ m.arte }}</span> / <span style="color: rgb(0,191,192)">{{ m.video }}</span></span>
+          </div>
+        </sc-for>
+        <div style="font-size: 13px; line-height: 1.55; color: rgb(150,172,172); margin-top: 14px">Exportar a arte estática como MP4 enterra o rodapé e a margem direita debaixo da interface. Por isso o vídeo tem gerador próprio, com banda útil de 720x1200.</div>
+      </div>
+      <div style="min-width: 400px">
+        <div style="font-family: 'Geist Mono', ui-monospace, monospace; font-size: 12px; letter-spacing: 0.16em; color: rgb(150,172,172); padding-bottom: 12px; border-bottom: 1px solid rgb(42,46,48)">CONTRASTE MEDIDO</div>
+        <sc-for list="{{ medicoes }}" as="c" hint-placeholder-count="6">
+          <div style="display: flex; align-items: center; gap: 14px; padding: 9px 0; border-bottom: 1px solid rgb(42,46,48); font-size: 14px">
+            <span style="width: 26px; height: 26px; flex: none; border: 1px solid rgb(42,46,48); background: {{ c.amostraFundo }}; display: flex; align-items: center; justify-content: center"><span style="width: 12px; height: 12px; background: {{ c.amostra }}"></span></span>
+            <span style="flex: 1; color: rgb(150,172,172)">{{ c.rotulo }}</span>
+            <span style="font-family: 'Geist Mono', ui-monospace, monospace; color: {{ c.cor }}">{{ c.valor }}</span>
+            <span style="font-family: 'Geist Mono', ui-monospace, monospace; font-size: 12px; color: rgb(150,172,172)">piso {{ c.piso }}</span>
+          </div>
+        </sc-for>
+      </div>
+    </div>
+  </header>
+
+  <div style="height: 1px; background: rgb(42,46,48)"></div>
+
+  <div style="display: flex; gap: 72px; align-items: flex-start">
+    <div style="flex: none; width: 620px">
+      <div style="display: flex; align-items: baseline; gap: 12px">
+        <span style="font-family: 'Geist Mono', ui-monospace, monospace; font-size: 12px; letter-spacing: 0.16em; color: rgb(0,191,192)">A RÉGUA</span>
+        <h2 style="font-size: 30px; font-weight: 700; letter-spacing: -0.02em; margin: 0">A grade 3x3 em miniatura</h2>
+      </div>
+      <p style="font-size: 16px; line-height: 1.6; color: rgb(150,172,172); margin: 16px 0 0; text-wrap: pretty">O critério não é a peça isolada. Aqui as nove peças aparecem no recorte 3:4 da grade do perfil, no tamanho em que alguém decide seguir. As três claras caem em 1, 5 e 9: uma por coluna e uma por linha, então nenhuma listra vertical se forma. Nenhuma composição encosta na igual.</p>
+      <div style="display: flex; flex-wrap: wrap; gap: 10px; margin-top: 26px">
+        <sc-for list="{{ controles }}" as="b" hint-placeholder-count="3">
+          <button onClick="{{ b.click }}" style="font-family: 'Geist Mono', ui-monospace, monospace; font-size: 12px; letter-spacing: 0.1em; padding: 9px 14px; border-radius: 2px; cursor: pointer; border: 1px solid {{ b.borda }}; background: {{ b.fundo }}; color: {{ b.cor }}">{{ b.rotulo }}</button>
+        </sc-for>
+      </div>
+      <div style="display: flex; flex-wrap: wrap; gap: 10px; margin-top: 10px">
+        <sc-for list="{{ tamanhos }}" as="b" hint-placeholder-count="3">
+          <button onClick="{{ b.click }}" style="font-family: 'Geist Mono', ui-monospace, monospace; font-size: 12px; letter-spacing: 0.1em; padding: 9px 14px; border-radius: 2px; cursor: pointer; border: 1px solid {{ b.borda }}; background: {{ b.fundo }}; color: {{ b.cor }}">{{ b.rotulo }}</button>
+        </sc-for>
+      </div>
+      <div style="display: flex; flex-wrap: wrap; gap: 10px; margin-top: 10px">
+        <sc-for list="{{ registros }}" as="b" hint-placeholder-count="3">
+          <button onClick="{{ b.click }}" style="font-family: 'Geist Mono', ui-monospace, monospace; font-size: 12px; letter-spacing: 0.1em; padding: 9px 14px; border-radius: 2px; cursor: pointer; border: 1px solid {{ b.borda }}; background: {{ b.fundo }}; color: {{ b.cor }}">{{ b.rotulo }}</button>
+        </sc-for>
+      </div>
+      <div style="font-family: 'Geist Mono', ui-monospace, monospace; font-size: 12px; line-height: 1.7; color: rgb(150,172,172); margin-top: 22px; border-top: 1px solid rgb(42,46,48); padding-top: 18px">{{ diagnostico }}</div>
+    </div>
+
+    <div style="flex: none; padding: 26px; background: rgb(4,32,33); border: 1px solid rgb(42,46,48)">
+      <div style="display: grid; grid-template-columns: repeat(3, max-content); gap: 8px">
+        <sc-for list="{{ thumbs }}" as="t" hint-placeholder-count="9">
+          <div style="display: flex; flex-direction: column; gap: 7px">
+            <div style="width: {{ t.w }}; height: {{ t.h }}; position: relative; overflow: hidden; outline: {{ t.contorno }}; outline-offset: 1px">
+              <div style="position: absolute; top: 0; left: {{ t.esq }}; width: 1080px; height: 1350px; transform: scale({{ t.k }}); transform-origin: 0 0">
+                <dc-import name="Peca" p="{{ t.p }}" hint-size="1080px,1350px"></dc-import>
+              </div>
+            </div>
+            <div style="font-family: 'Geist Mono', ui-monospace, monospace; font-size: 11px; letter-spacing: 0.04em; color: rgb(150,172,172)">{{ t.rotulo }}</div>
+          </div>
+        </sc-for>
+      </div>
+    </div>
+  </div>
+
+  <div style="height: 1px; background: rgb(42,46,48)"></div>
+
+  <div style="display: flex; gap: 56px; align-items: flex-start">
+    <div style="flex: none; width: 620px">
+      <div style="display: flex; align-items: baseline; gap: 12px">
+        <span style="font-family: 'Geist Mono', ui-monospace, monospace; font-size: 12px; letter-spacing: 0.16em; color: rgb(0,191,192)">A MARCA</span>
+        <h2 style="font-size: 30px; font-weight: 700; letter-spacing: -0.02em; margin: 0">O funil sozinho, sempre no mesmo lugar</h2>
+      </div>
+      <p style="font-size: 16px; line-height: 1.6; color: rgb(150,172,172); margin: 16px 0 0; text-wrap: pretty">O selo com o funil dentro foi reprovado, e o motivo é medível: forma dentro de forma vira bloco indistinto em miniatura. O símbolo entra sem moldura, no canto superior esquerdo, com o nome ao lado e a mesma âncora em toda peça. É isso que faz a grade do perfil ler como um perfil, e não como nove posts soltos.</p>
+      <p style="font-size: 16px; line-height: 1.6; color: rgb(150,172,172); margin: 14px 0 0; text-wrap: pretty">No vídeo a marca fica dentro da banda útil, nunca no topo do canvas: os primeiros 220px ficam debaixo da interface do aplicativo. Um símbolo colado no topo desaparece exatamente no frame que serve de capa.</p>
+      <div style="display: flex; gap: 28px; margin-top: 30px; align-items: flex-end">
+        <sc-for list="{{ marcas }}" as="m" hint-placeholder-count="4">
+          <div style="display: flex; flex-direction: column; align-items: flex-start; gap: 12px">
+            <div style="display: flex; align-items: center; justify-content: center; padding: 18px; background: {{ m.fundo }}; border: 1px solid rgb(42,46,48)">
+              <svg viewBox="0 0 24 24" width="{{ m.tam }}" height="{{ m.tam }}" style="display: block"><g fill="{{ m.cor }}"><path d="M2.6 4.4h18.8a.9.9 0 0 1 .72 1.44l-2.1 2.8a1.4 1.4 0 0 1-1.12.56H5.1a1.4 1.4 0 0 1-1.12-.56l-2.1-2.8A.9.9 0 0 1 2.6 4.4Z"></path><path d="M6.9 10.6h10.2a.9.9 0 0 1 .72 1.44l-1.72 2.3a1.4 1.4 0 0 1-1.12.56H9.02a1.4 1.4 0 0 1-1.12-.56l-1.72-2.3a.9.9 0 0 1 .72-1.44Z"></path><path d="M10.9 16.6h2.2a.9.9 0 0 1 .72 1.44l-1.1 1.47a.9.9 0 0 1-1.44 0l-1.1-1.47a.9.9 0 0 1 .72-1.44Z"></path></g></svg>
+            </div>
+            <div style="font-family: 'Geist Mono', ui-monospace, monospace; font-size: 11px; letter-spacing: 0.08em; color: rgb(150,172,172)">{{ m.rotulo }}</div>
+          </div>
+        </sc-for>
+      </div>
+    </div>
+    <div style="flex: 1">
+      <div style="font-family: 'Geist Mono', ui-monospace, monospace; font-size: 12px; letter-spacing: 0.16em; color: rgb(150,172,172); padding-bottom: 12px; border-bottom: 1px solid rgb(42,46,48)">A REGRA DE APLICAÇÃO</div>
+      <sc-for list="{{ regrasMarca }}" as="r" hint-placeholder-count="6">
+        <div style="display: flex; gap: 20px; padding: 13px 0; border-bottom: 1px solid rgb(42,46,48)">
+          <span style="font-family: 'Geist Mono', ui-monospace, monospace; font-size: 12px; letter-spacing: 0.06em; color: rgb(0,191,192); flex: none; width: 190px">{{ r.regra }}</span>
+          <span style="font-size: 14px; line-height: 1.55; color: rgb(150,172,172); flex: 1">{{ r.como }}</span>
+        </div>
+      </sc-for>
+    </div>
+  </div>
+
+  <div style="height: 1px; background: rgb(42,46,48)"></div>
+
+  <div>
+    <div style="display: flex; align-items: baseline; gap: 12px">
+      <span style="font-family: 'Geist Mono', ui-monospace, monospace; font-size: 12px; letter-spacing: 0.16em; color: rgb(0,191,192)">SEIS COMPOSIÇÕES</span>
+      <h2 style="font-size: 30px; font-weight: 700; letter-spacing: -0.02em; margin: 0">Cada uma carrega um tipo de conteúdo</h2>
+    </div>
+    <p style="font-size: 16px; line-height: 1.6; color: rgb(150,172,172); margin: 16px 0 0; max-width: 900px; text-wrap: pretty">Composição sem tipo próprio é variação. Cada card abaixo diz o tipo que carrega, o grafismo que usa e o que o gerador interpola de constante. Cite pelo id na conversa.</p>
+    <div style="display: flex; flex-wrap: wrap; gap: 48px 28px; margin-top: 34px; align-items: flex-start">
+      <sc-for list="{{ vitrine }}" as="v" hint-placeholder-count="6">
+        <div id="{{ v.id }}" style="flex: none; width: 452px; display: flex; flex-direction: column; gap: 16px">
+          <div style="display: flex; align-items: baseline; gap: 10px">
+            <a href="{{ v.href }}" style="font-family: 'Geist Mono', ui-monospace, monospace; font-size: 11px; letter-spacing: 0.08em; padding: 4px 8px; background: rgb(0,191,192); color: rgb(4,32,33); border-radius: 3px">{{ v.id }}</a>
+            <span style="font-size: 17px; font-weight: 600; letter-spacing: -0.01em">{{ v.nome }}</span>
+          </div>
+          <div style="width: 432px; height: 540px; position: relative; overflow: hidden; border: 1px solid rgb(42,46,48)">
+            <div style="position: absolute; top: 0; left: 0; width: 1080px; height: 1350px; transform: scale(0.4); transform-origin: 0 0">
+              <dc-import name="Peca" p="{{ v.p }}" hint-size="1080px,1350px"></dc-import>
+            </div>
+          </div>
+          <div style="font-family: 'Geist Mono', ui-monospace, monospace; font-size: 11px; letter-spacing: 0.1em; color: rgb(0,191,192)">{{ v.tipo }}</div>
+          <div style="font-size: 15px; line-height: 1.6; color: rgb(150,172,172); text-wrap: pretty">{{ v.porque }}</div>
+          <div style="font-family: 'Geist Mono', ui-monospace, monospace; font-size: 12px; line-height: 1.7; color: rgb(150,172,172); border-top: 1px solid rgb(42,46,48); padding-top: 12px">{{ v.trava }}</div>
+        </div>
+      </sc-for>
+    </div>
+  </div>
+
+  <div style="height: 1px; background: rgb(42,46,48)"></div>
+
+  <div>
+    <div style="display: flex; align-items: baseline; gap: 12px">
+      <span style="font-family: 'Geist Mono', ui-monospace, monospace; font-size: 12px; letter-spacing: 0.16em; color: rgb(0,191,192)">ESTRUTURA</span>
+      <h2 style="font-size: 30px; font-weight: 700; letter-spacing: -0.02em; margin: 0">O esqueleto antes do acabamento</h2>
+    </div>
+    <p style="font-size: 16px; line-height: 1.6; color: rgb(150,172,172); margin: 16px 0 0; max-width: 900px; text-wrap: pretty">Sem tipografia e sem cor, o que sobra é a decisão: onde entra o grafismo, onde fica o vazio e quem manda na hierarquia. Vazio no fim é respiro. Vazio no meio lê como erro de alinhamento, e é por isso que nenhum destes esqueletos tem buraco central.</p>
+    <div style="display: flex; gap: 22px; margin-top: 32px; align-items: flex-start">
+      <sc-for list="{{ esqueletos }}" as="e" hint-placeholder-count="5">
+        <div style="flex: none; width: 268px">
+          <div style="width: 268px; height: 335px; background: rgb(4,32,33); border: 1px dashed rgb(90,100,100); position: relative; box-sizing: border-box; padding: 22px 24px 24px; display: flex; flex-direction: column">
+            <sc-for list="{{ e.blocos }}" as="b" hint-placeholder-count="4">
+              <div style="height: {{ b.h }}; background: {{ b.cor }}; margin-bottom: {{ b.gap }}; flex: {{ b.flex }}; border: {{ b.borda }}; box-sizing: border-box; display: flex; align-items: flex-end; padding: 4px">
+                <span style="font-family: 'Geist Mono', ui-monospace, monospace; font-size: 9px; letter-spacing: 0.08em; color: rgb(150,172,172)">{{ b.rotulo }}</span>
+              </div>
+            </sc-for>
+          </div>
+          <div style="font-family: 'Geist Mono', ui-monospace, monospace; font-size: 11px; letter-spacing: 0.1em; color: rgb(252,252,252); margin-top: 14px">{{ e.nome }}</div>
+          <div style="font-size: 14px; line-height: 1.55; color: rgb(150,172,172); margin-top: 8px; text-wrap: pretty">{{ e.nota }}</div>
+        </div>
+      </sc-for>
+    </div>
+  </div>
+
+  <div style="height: 1px; background: rgb(42,46,48)"></div>
+
+  <div>
+    <div style="display: flex; align-items: baseline; gap: 12px">
+      <span style="font-family: 'Geist Mono', ui-monospace, monospace; font-size: 12px; letter-spacing: 0.16em; color: rgb(0,191,192)">VÍDEO</span>
+      <h2 style="font-size: 30px; font-weight: 700; letter-spacing: -0.02em; margin: 0">Primeiro frame parado, zona segura por cima</h2>
+    </div>
+    <p style="font-size: 16px; line-height: 1.6; color: rgb(150,172,172); margin: 16px 0 0; max-width: 980px; text-wrap: pretty">A faixa vermelha é onde a interface do aplicativo cobre o vídeo: 220px no topo, 500px na base, 180px de cada lado. O contorno ciano é a banda útil de 720x1200, de y=220 a y=1420. Nada que precisa ser lido sai dela.</p>
+
+    <div style="display: flex; gap: 56px; margin-top: 36px; align-items: flex-start">
+
+      <div style="flex: none; display: flex; gap: 28px; align-items: flex-start">
+        <div style="width: 302px; height: 538px; position: relative; overflow: hidden; border: 1px solid rgb(42,46,48); flex: none">
+          <div style="position: absolute; top: 0; left: 0; width: 1080px; height: 1920px; transform: scale(0.28); transform-origin: 0 0; background: rgb(4,32,33)">
+            <div style="position: absolute; left: 180px; top: 236px; display: flex; align-items: center; gap: 22px">
+              <svg viewBox="0 0 24 24" width="72" height="72" style="display: block"><g fill="rgb(0,191,192)"><path d="M2.6 4.4h18.8a.9.9 0 0 1 .72 1.44l-2.1 2.8a1.4 1.4 0 0 1-1.12.56H5.1a1.4 1.4 0 0 1-1.12-.56l-2.1-2.8A.9.9 0 0 1 2.6 4.4Z"></path><path d="M6.9 10.6h10.2a.9.9 0 0 1 .72 1.44l-1.72 2.3a1.4 1.4 0 0 1-1.12.56H9.02a1.4 1.4 0 0 1-1.12-.56l-1.72-2.3a.9.9 0 0 1 .72-1.44Z"></path><path d="M10.9 16.6h2.2a.9.9 0 0 1 .72 1.44l-1.1 1.47a.9.9 0 0 1-1.44 0l-1.1-1.47a.9.9 0 0 1 .72-1.44Z"></path></g></svg>
+              <span style="font-size: 30px; font-weight: 600; letter-spacing: -0.02em; color: rgb(252,252,252)">Velo Funil</span>
+            </div>
+            <div style="position: absolute; left: 180px; top: 400px; right: 180px; display: flex; justify-content: space-between; font-family: 'Geist Mono', ui-monospace, monospace; font-size: 26px; letter-spacing: 0.18em; color: rgb(150,172,172)">
+              <span>POR PESSOA</span><span>POR MÊS</span>
+            </div>
+            <div style="position: absolute; left: 180px; right: 180px; top: 450px; height: 2px; background: rgb(42,46,48)"></div>
+            <div style="position: absolute; left: 180px; top: 520px; width: 720px; height: 470px; display: flex; align-items: flex-end; gap: 25px">
+              <div style="flex: 1; height: 20%; background: rgb(42,46,48)"></div>
+              <div style="flex: 1; height: 0"></div>
+              <div style="flex: 1; height: 0"></div>
+              <div style="flex: 1; height: 0"></div>
+              <div style="flex: 1; height: 0"></div>
+            </div>
+            <div style="position: absolute; left: 180px; top: 1016px; font-family: 'Geist Mono', ui-monospace, monospace; font-size: 24px; letter-spacing: 0.08em; color: rgb(150,172,172)">53</div>
+            <div style="position: absolute; left: 180px; width: 720px; top: 1140px; text-align: center; font-size: 58px; font-weight: 600; line-height: 1.24; color: rgb(252,252,252); -webkit-text-stroke: 5px rgb(0,0,0); paint-order: stroke fill">Seu CRM cobra por pessoa.</div>
+            <div style="position: absolute; left: 0; top: 0; width: 1080px; height: 220px; background: rgba(255,74,74,0.25)"></div>
+            <div style="position: absolute; left: 0; top: 1420px; width: 1080px; height: 500px; background: rgba(255,74,74,0.25)"></div>
+            <div style="position: absolute; left: 0; top: 220px; width: 180px; height: 1200px; background: rgba(255,74,74,0.25)"></div>
+            <div style="position: absolute; left: 900px; top: 220px; width: 180px; height: 1200px; background: rgba(255,74,74,0.25)"></div>
+            <div style="position: absolute; left: 180px; top: 220px; width: 720px; height: 1200px; border: 4px solid rgba(0,255,240,0.85); box-sizing: border-box"></div>
+            <div style="position: absolute; left: 196px; top: 1348px; font-family: 'Geist Mono', ui-monospace, monospace; font-size: 28px; letter-spacing: 0.06em; color: rgb(0,255,240)">BANDA ÚTIL 720x1200</div>
+            <div style="position: absolute; left: 196px; top: 1442px; font-family: 'Geist Mono', ui-monospace, monospace; font-size: 28px; letter-spacing: 0.06em; color: rgb(255,190,190)">BARRA DE AÇÕES + LEGENDA 500px</div>
+          </div>
+        </div>
+        <div style="width: 380px">
+          <div style="font-family: 'Geist Mono', ui-monospace, monospace; font-size: 11px; letter-spacing: 0.1em; color: rgb(0,191,192)">V1 · EXPLICADOR TIPOGRÁFICO · 18,5s</div>
+          <div style="font-size: 20px; font-weight: 600; letter-spacing: -0.01em; margin-top: 10px">A conta sobe por pessoa</div>
+          <div style="font-size: 14px; line-height: 1.6; color: rgb(150,172,172); margin-top: 10px; text-wrap: pretty">O grafismo é o argumento: a escada sobe um degrau por pessoa, a reta do plano entra e não se move. A legenda queimada carrega a frase, então o frame não repete o texto.</div>
+          <sc-for list="{{ v1 }}" as="s" hint-placeholder-count="5">
+            <div style="display: flex; gap: 14px; padding: 10px 0; border-bottom: 1px solid rgb(42,46,48); font-size: 13px; line-height: 1.5">
+              <span style="font-family: 'Geist Mono', ui-monospace, monospace; color: rgb(0,191,192); flex: none; width: 84px">{{ s.t }}</span>
+              <span style="flex: 1; color: rgb(150,172,172)">{{ s.acao }}</span>
+              <span style="flex: 1">{{ s.legenda }}</span>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+
+      <div style="flex: none; display: flex; gap: 28px; align-items: flex-start">
+        <div style="width: 302px; height: 538px; position: relative; overflow: hidden; border: 1px solid rgb(42,46,48); flex: none">
+          <div style="position: absolute; top: 0; left: 0; width: 1080px; height: 1920px; transform: scale(0.28); transform-origin: 0 0; background: rgb(4,32,33)">
+            <div style="position: absolute; left: 180px; top: 236px; display: flex; align-items: center; gap: 22px">
+              <svg viewBox="0 0 24 24" width="72" height="72" style="display: block"><g fill="rgb(0,191,192)"><path d="M2.6 4.4h18.8a.9.9 0 0 1 .72 1.44l-2.1 2.8a1.4 1.4 0 0 1-1.12.56H5.1a1.4 1.4 0 0 1-1.12-.56l-2.1-2.8A.9.9 0 0 1 2.6 4.4Z"></path><path d="M6.9 10.6h10.2a.9.9 0 0 1 .72 1.44l-1.72 2.3a1.4 1.4 0 0 1-1.12.56H9.02a1.4 1.4 0 0 1-1.12-.56l-1.72-2.3a.9.9 0 0 1 .72-1.44Z"></path><path d="M10.9 16.6h2.2a.9.9 0 0 1 .72 1.44l-1.1 1.47a.9.9 0 0 1-1.44 0l-1.1-1.47a.9.9 0 0 1 .72-1.44Z"></path></g></svg>
+              <span style="font-size: 30px; font-weight: 600; letter-spacing: -0.02em; color: rgb(252,252,252)">Velo Funil</span>
+            </div>
+            <div style="position: absolute; left: 180px; top: 410px; width: 720px; font-size: 96px; font-weight: 900; line-height: 1.1; letter-spacing: -0.035em; color: rgb(252,252,252)">O WhatsApp guarda a conversa.</div>
+            <div style="position: absolute; left: 0; top: 0; width: 1080px; height: 220px; background: rgba(255,74,74,0.25)"></div>
+            <div style="position: absolute; left: 0; top: 1420px; width: 1080px; height: 500px; background: rgba(255,74,74,0.25)"></div>
+            <div style="position: absolute; left: 0; top: 220px; width: 180px; height: 1200px; background: rgba(255,74,74,0.25)"></div>
+            <div style="position: absolute; left: 900px; top: 220px; width: 180px; height: 1200px; background: rgba(255,74,74,0.25)"></div>
+            <div style="position: absolute; left: 180px; top: 220px; width: 720px; height: 1200px; border: 4px solid rgba(0,255,240,0.85); box-sizing: border-box"></div>
+            <div style="position: absolute; left: 196px; top: 1348px; font-family: 'Geist Mono', ui-monospace, monospace; font-size: 28px; letter-spacing: 0.06em; color: rgb(0,255,240)">BANDA ÚTIL 720x1200</div>
+            <div style="position: absolute; left: 196px; top: 1442px; font-family: 'Geist Mono', ui-monospace, monospace; font-size: 28px; letter-spacing: 0.06em; color: rgb(255,190,190)">BARRA DE AÇÕES + LEGENDA 500px</div>
+          </div>
+        </div>
+        <div style="width: 380px">
+          <div style="font-family: 'Geist Mono', ui-monospace, monospace; font-size: 11px; letter-spacing: 0.1em; color: rgb(0,191,192)">V2 · PÔSTER ANIMADO · 11s</div>
+          <div style="font-size: 20px; font-weight: 600; letter-spacing: -0.01em; margin-top: 10px">O posicionamento, em três batidas</div>
+          <div style="font-size: 14px; line-height: 1.6; color: rgb(150,172,172); margin-top: 10px; text-wrap: pretty">Aqui o tipo é o conteúdo, então a legenda queimada entra só na chamada. Texto duplicado na tela é defeito, não reforço. A cláusula anterior desbota e continua na tela: a leitura acumula em vez de reiniciar.</div>
+          <sc-for list="{{ v2 }}" as="s" hint-placeholder-count="4">
+            <div style="display: flex; gap: 14px; padding: 10px 0; border-bottom: 1px solid rgb(42,46,48); font-size: 13px; line-height: 1.5">
+              <span style="font-family: 'Geist Mono', ui-monospace, monospace; color: rgb(0,191,192); flex: none; width: 84px">{{ s.t }}</span>
+              <span style="flex: 1; color: rgb(150,172,172)">{{ s.acao }}</span>
+              <span style="flex: 1">{{ s.legenda }}</span>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+    </div>
+
+    <div style="display: flex; gap: 40px; margin-top: 40px; padding-top: 26px; border-top: 1px solid rgb(42,46,48)">
+      <sc-for list="{{ regrasVideo }}" as="r" hint-placeholder-count="4">
+        <div style="flex: 1">
+          <div style="font-family: 'Geist Mono', ui-monospace, monospace; font-size: 11px; letter-spacing: 0.12em; color: rgb(0,191,192)">{{ r.titulo }}</div>
+          <div style="font-size: 14px; line-height: 1.6; color: rgb(150,172,172); margin-top: 10px; text-wrap: pretty">{{ r.texto }}</div>
+        </div>
+      </sc-for>
+    </div>
+  </div>
+
+  <div style="height: 1px; background: rgb(42,46,48)"></div>
+
+  <div>
+    <div style="display: flex; align-items: baseline; gap: 12px">
+      <span style="font-family: 'Geist Mono', ui-monospace, monospace; font-size: 12px; letter-spacing: 0.16em; color: rgb(0,191,192)">A CRÍTICA</span>
+      <h2 style="font-size: 30px; font-weight: 700; letter-spacing: -0.02em; margin: 0">O que ainda era genérico</h2>
+    </div>
+    <p style="font-size: 16px; line-height: 1.6; color: rgb(150,172,172); margin: 16px 0 0; max-width: 980px; text-wrap: pretty">Julgado como conjunto, não peça a peça. Cada linha diz o defeito, por que ele é defeito e o que foi feito. As três primeiras eram estruturais: sobreviveram à primeira rodada porque cada peça, sozinha, parecia bem resolvida.</p>
+    <div style="display: flex; gap: 28px; margin-top: 32px; align-items: stretch">
+      <sc-for list="{{ critica }}" as="c" hint-placeholder-count="7">
+        <div style="flex: 1; display: flex; flex-direction: column; gap: 14px; padding: 24px 26px; border: 1px solid rgb(42,46,48); background: {{ c.fundo }}">
+          <div style="display: flex; align-items: baseline; justify-content: space-between; gap: 12px">
+            <span style="font-family: 'Geist Mono', ui-monospace, monospace; font-size: 11px; letter-spacing: 0.1em; color: {{ c.cor }}">{{ c.estado }}</span>
+            <span style="font-family: 'Geist Mono', ui-monospace, monospace; font-size: 11px; color: rgb(150,172,172)">{{ c.peso }}</span>
+          </div>
+          <div style="font-size: 19px; font-weight: 600; letter-spacing: -0.015em; line-height: 1.25; text-wrap: pretty">{{ c.defeito }}</div>
+          <div style="font-size: 14px; line-height: 1.6; color: rgb(150,172,172); text-wrap: pretty">{{ c.porque }}</div>
+          <div style="flex: 1"></div>
+          <div style="font-size: 14px; line-height: 1.6; color: {{ c.cor }}; border-top: 1px solid rgb(42,46,48); padding-top: 12px; text-wrap: pretty">{{ c.feito }}</div>
+        </div>
+      </sc-for>
+    </div>
+  </div>
+
+  <div style="height: 1px; background: rgb(42,46,48)"></div>
+
+  <div style="display: flex; gap: 56px; align-items: flex-start">
+    <div style="flex: none; width: 620px">
+      <div style="display: flex; align-items: baseline; gap: 12px">
+        <span style="font-family: 'Geist Mono', ui-monospace, monospace; font-size: 12px; letter-spacing: 0.16em; color: rgb(0,191,192)">O GERADOR</span>
+        <h2 style="font-size: 30px; font-weight: 700; letter-spacing: -0.02em; margin: 0">Imagem não compila</h2>
+      </div>
+      <p style="font-size: 16px; line-height: 1.6; color: rgb(150,172,172); margin: 16px 0 0; text-wrap: pretty">O gerador é o último ponto do caminho onde o texto ainda é texto, então é lá que a trava funciona. O vídeo nasce do mesmo arquivo e herda as travas em vez de abrir uma superfície nova onde a oferta volta a poder mentir.</p>
+      <pre style="font-family: 'Geist Mono', ui-monospace, monospace; font-size: 13px; line-height: 1.8; color: rgb(150,172,172); background: rgb(4,32,33); border: 1px solid rgb(42,46,48); padding: 20px 22px; margin: 22px 0 0; overflow-x: auto">python velofunil_criativos.py --check
+python velofunil_criativos.py --tudo</pre>
+    </div>
+    <div style="flex: 1">
+      <div style="font-family: 'Geist Mono', ui-monospace, monospace; font-size: 12px; letter-spacing: 0.16em; color: rgb(150,172,172); padding-bottom: 12px; border-bottom: 1px solid rgb(42,46,48)">O QUE --CHECK REPROVA ANTES DE DESENHAR</div>
+      <sc-for list="{{ travas }}" as="t" hint-placeholder-count="7">
+        <div style="display: flex; gap: 20px; padding: 13px 0; border-bottom: 1px solid rgb(42,46,48)">
+          <span style="font-family: 'Geist Mono', ui-monospace, monospace; font-size: 12px; letter-spacing: 0.06em; color: rgb(0,191,192); flex: none; width: 210px">{{ t.regra }}</span>
+          <span style="font-size: 14px; line-height: 1.55; color: rgb(150,172,172); flex: 1">{{ t.como }}</span>
+        </div>
+      </sc-for>
+    </div>
+  </div>
+
+</section>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{}">
+class Component extends DCLogic {
+  state = { crop: true, thumb: 132, registro: "plano", claras: false };
+
+  PRO = 49;
+  FREE = 50;
+  SEAT = 53;
+  TEAM = 5;
+  MESES = 12;
+  DOM = "www.velofunil.com.br";
+
+  ESCURO = { nome: "escuro", fundo: [4,32,33], titulo: [252,252,252], corpo: [150,172,172], destaque: [0,191,192], borda: [42,46,48] };
+  CLARO = { nome: "claro", fundo: [246,248,249], titulo: [10,10,10], corpo: [94,101,101], destaque: [0,120,122], borda: [217,220,221] };
+
+  css(rgb) { return "rgb(" + rgb[0] + "," + rgb[1] + "," + rgb[2] + ")"; }
+  brl(v) { return "R$ " + v.toLocaleString("pt-BR"); }
+
+  lin(c) { const s = c / 255; return s <= 0.04045 ? s / 12.92 : Math.pow((s + 0.055) / 1.055, 2.4); }
+  lum(rgb) { return 0.2126 * this.lin(rgb[0]) + 0.7152 * this.lin(rgb[1]) + 0.0722 * this.lin(rgb[2]); }
+  ratio(a, b) { const la = this.lum(a), lb = this.lum(b); const hi = Math.max(la, lb), lo = Math.min(la, lb); return (hi + 0.05) / (lo + 0.05); }
+
+  specs() {
+    const D = this.DOM, PRO = this.PRO, FREE = this.FREE, SEAT = this.SEAT, TEAM = this.TEAM, M = this.MESES;
+    return [
+      { id: "p01", comp: "carrossel", reg: "claro", rotulo: "COMO É HOJE", indice: "1/3",
+        claim: "A conversa fica salva. O cliente fica na sua memória.",
+        texto: "Você lembra do orçamento de terça. Do de quinta, menos.",
+        indice: "1/2", dominio: D },
+      { id: "p02", comp: "numero", reg: "escuro", numero: "97%",
+        claim: "dos usuários abrem o WhatsApp todo dia.",
+        texto: "Toda conversa nova empurra a de ontem para baixo. Cinco dias depois, a proposta que você mandou está a trinta rolagens de distância.",
+        fonte: "Opinion Box, WhatsApp no Brasil 2025. 1.126 ouvidos.", dominio: D },
+      { id: "p03", comp: "declaracao", reg: "escuro",
+        claim: "O WhatsApp guarda a conversa. Não guarda o cliente.", dominio: D },
+      { id: "p04", comp: "conta", reg: "escuro",
+        claim: "Os outros cobram por pessoa. Aqui não existe por pessoa.",
+        unidade: "PESSOAS NO TIME",
+        notaEscada: TEAM + " pessoas em CRM que cobra por usuário.",
+        notaReta: "Pro, a empresa inteira, " + this.brl(PRO) + " por mês.",
+        fonte: "mediana pública de " + this.brl(SEAT) + " por usuário por mês. " + TEAM + " pessoas. " + M + " meses.",
+        dominio: D },
+      { id: "p05", comp: "produto", reg: "claro",
+        claim: "É isto. Quatro colunas e o próximo passo com data.",
+        dominio: D },
+      { id: "p06", comp: "declaracao", reg: "escuro",
+        claim: "Continue no WhatsApp. O funil fica do lado, não no lugar.", dominio: D },
+      { id: "p07", comp: "numero", reg: "escuro", numero: "60%",
+        claim: "já compraram algum serviço pelo WhatsApp.",
+        texto: "A venda acontece na conversa. A conversa não tem etapa, não tem data e não tem próximo passo.",
+        fonte: "Opinion Box, WhatsApp no Brasil 2025. 1.126 ouvidos.", dominio: D },
+      { id: "p08", comp: "carrossel", reg: "escuro", rotulo: "COMO COMEÇA", indice: "2/2",
+        claim: "Cole a conversa. O contato nasce com data e próximo passo.",
+        texto: "Leva menos tempo do que procurar a mensagem no histórico.", dominio: D },
+      { id: "p09", comp: "chamada", reg: "claro",
+        claim: "Sem cartão para começar.",
+        linhas: [{ rotulo: "GRÁTIS", texto: "até " + FREE + " contatos" },
+                 { rotulo: "PRO", texto: this.brl(PRO) + " por mês, a empresa inteira" }],
+        assinatura: "FUNIL DE VENDAS EM KANBAN", dominio: D }
+    ];
+  }
+
+  paletaDe(spec) {
+    const r = this.state.registro;
+    if (r === "escuro") return this.ESCURO;
+    if (r === "claro") return this.CLARO;
+    return spec.reg === "claro" ? this.CLARO : this.ESCURO;
+  }
+
+  montar(spec) {
+    const pal = this.paletaDe(spec);
+    const p = {
+      fundo: this.css(pal.fundo), titulo: this.css(pal.titulo), corpo: this.css(pal.corpo),
+      destaque: this.css(pal.destaque), borda: this.css(pal.borda),
+      isNumero: spec.comp === "numero", isConta: spec.comp === "conta",
+      isDeclaracao: spec.comp === "declaracao", isCarrossel: spec.comp === "carrossel",
+      isChamada: spec.comp === "chamada", isProduto: spec.comp === "produto",
+      temColunas: !!spec.colunas,
+      rodape: spec.comp === "carrossel" ? "ARRASTE" : spec.dominio,
+      numero: spec.numero, claim: spec.claim, texto: spec.texto, fonte: spec.fonte,
+      dominio: spec.dominio, rotulo: spec.rotulo, indice: spec.indice,
+      unidade: spec.unidade, notaEscada: spec.notaEscada, notaReta: spec.notaReta,
+      assinatura: spec.assinatura, linhas: spec.linhas,
+      selo: spec.comp === "carrossel" ? spec.indice : (spec.selo || "")
+    };
+    if (spec.colunas) {
+      p.colunas = spec.colunas.map(c => ({ alt: (c[0] * 100).toFixed(1) + "%", cor: c[1] ? p.destaque : p.borda }));
+    }
+    if (spec.comp === "produto") {
+      const cols = [
+        { rotulo: "NOVO", n: "4", cards: [["Orçamento pedido no WhatsApp", "hoje, 09:12"], ["Indicação, sem retorno ainda", "ontem"], ["Formulário do site", "ontem"]] },
+        { rotulo: "CONVERSANDO", n: "7", cards: [["Pediu prazo de entrega", "responder até 17h"], ["Sumiu depois do valor", "3 dias parado"], ["Quer ver o portfólio", "amanhã, 10h"]] },
+        { rotulo: "PROPOSTA", n: "3", cards: [["Proposta enviada terça", "retomar quinta"], ["Aguardando aprovação", "5 dias parado"], ["Pediu desconto", "decidir hoje"]] },
+        { rotulo: "FECHADO", n: "2", cards: [["Assinou o contrato", "confirmado"], ["Primeira parcela paga", "confirmado"]] }
+      ];
+      // A quarta coluna e um sliver: cabecalho dentro do recorte 3:4 e cards
+      // sem texto. O corte lateral cai em padding, nunca em glifo, e o olho
+      // ainda entende que a tela continua fora da peca.
+      p.colunasKanban = cols.map((c, ci) => {
+        const sliver = ci === 3;
+        return {
+          rotulo: c.rotulo, n: sliver ? "" : c.n,
+          regua: sliver ? p.destaque : p.borda,
+          rotuloCor: sliver ? p.destaque : p.corpo,
+          cards: c.cards.map((cd, k) => ({
+            titulo: sliver ? "" : cd[0], meta: sliver ? "" : cd[1],
+            altura: sliver ? (k === 0 ? "168px" : "140px") : "auto",
+            marca: (ci === 1 && k === 0) ? p.destaque : p.borda,
+            metaCor: (ci === 1 && k === 0) ? p.destaque : p.corpo,
+            fundo: "transparent"
+          }))
+        };
+      });
+    }
+    if (spec.comp === "conta") {
+      p.degraus = [1,2,3,4,5].map(n => ({ n: String(n), alt: (n * 20) + "%", cor: n === 5 ? p.destaque : p.borda }));
+      p.totalAssento = this.brl(this.SEAT * this.TEAM * this.MESES);
+      p.totalPlano = this.brl(this.PRO * this.MESES);
+    }
+    return p;
+  }
+
+  botao(ativo) {
+    return ativo
+      ? { fundo: "rgb(0,191,192)", cor: "rgb(4,32,33)", borda: "rgb(0,191,192)" }
+      : { fundo: "transparent", cor: "rgb(150,172,172)", borda: "rgb(42,46,48)" };
+  }
+
+  renderVals() {
+    const st = this.state, specs = this.specs();
+    const nomes = { numero: "número", conta: "conta", declaracao: "declaração", carrossel: "carrossel", produto: "produto", chamada: "chamada" };
+
+    const k = st.thumb / (st.crop ? 1012 : 1080);
+    const thumbs = specs.map((s, i) => {
+      const pal = this.paletaDe(s);
+      const claraDestacada = st.claras && pal.nome === "claro";
+      return {
+        p: this.montar(s), k: k.toFixed(4),
+        w: st.thumb + "px", h: Math.round(1350 * k) + "px",
+        esq: st.crop ? (-34 * k).toFixed(1) + "px" : "0px",
+        contorno: claraDestacada ? "2px solid rgb(0,191,192)" : "1px solid rgb(42,46,48)",
+        rotulo: (i + 1) + " " + nomes[s.comp] + " " + pal.nome
+      };
+    });
+
+    const vit = [
+      { id: "1a", spec: "p02", nome: "Número", tipo: "DADO COM FONTE, SEM GRAFISMO",
+        porque: "O número é o grafismo. A serifa itálica entra só aqui, onde não há desenho para dar peso editorial, e a fonte da pesquisa fica impressa na própria arte.",
+        trava: "fonte da pesquisa obrigatória\nnúmero exclusivo desta peça" },
+      { id: "1b", spec: "p04", nome: "Conta", tipo: "DADO COM GRAFISMO QUE ARGUMENTA",
+        porque: "A escada sobe um degrau por pessoa e a reta do plano não se move. A forma diz o que a frase teria de explicar, e a reta cair na altura do primeiro degrau é o argumento inteiro.",
+        trava: "R$ {PRO_PLAN_PRICE} * 12 e R$ 53 * 5 * 12\nbase da comparação impressa" },
+      { id: "1c", spec: "p03", nome: "Declaração", tipo: "AFIRMAÇÃO SEM NÚMERO",
+        porque: "Nenhum grafismo, nenhum dado. Peso tipográfico e vazio no fim, nunca no meio. É a peça que carrega o posicionamento sem pedir nada.",
+        trava: "sem número, então sem risco de repetir dado" },
+      { id: "1d", spec: "p01", nome: "Carrossel", tipo: "CARD DE SEQUÊNCIA",
+        porque: "Índice, texto curto e um campo de colunas cuja base é calculada a partir do rodapé. A grade de 10 colunas passou por cima do rodapé quando era fixa, então aqui ela é parametrizada.",
+        trava: "colunas = lista, base = rodapé menos folga" },
+      { id: "1e", spec: "p05", nome: "Produto", tipo: "PROVA DE PRODUTO",
+        porque: "A única prova que este produto tem é ele mesmo. O Kanban sangra pela direita, então a peça mostra o recorte de uma tela que continua. A quarta coluna é um sliver sem texto: o corte cai em padding, e corte lateral em cima de glifo é sempre defeito.",
+        trava: "sem nome de empresa nos cards\nnenhum glifo cortado na lateral" },
+      { id: "1f", spec: "p09", nome: "Chamada", tipo: "A OFERTA E O DOMÍNIO",
+        porque: "Duas linhas de oferta em estrutura de tabela, o domínio com www e vazio no fim. Nenhuma promessa de teste, nenhum ilimitado.",
+        trava: "até {FREE_LEAD_LIMIT} contatos\nR$ {PRO_PLAN_PRICE} por mês" }
+    ].map(v => {
+      const s = specs.find(x => x.id === v.spec);
+      return { id: v.id, href: "#" + v.id, nome: v.nome, tipo: v.tipo, porque: v.porque, trava: v.trava, p: this.montar(s) };
+    });
+
+    const cinza = "rgb(58,64,64)", cinzaClaro = "rgb(78,86,86)";
+    const teal = "rgb(0,120,121)";
+    const bloco = (rotulo, h, gap, cor, flex, borda) => ({ rotulo, h, gap: gap + "px", cor, flex: flex || "none", borda: borda || "none" });
+    const marca = bloco("marca", "9%", 20, teal);
+    const esqueletos = [
+      { nome: "NÚMERO", nota: "O número ocupa o terço de cima inteiro. Corte no topo foi reprovado, então ele nasce dentro da margem.",
+        blocos: [marca, bloco("número", "31%", 14, cinzaClaro), bloco("régua", "2px", 12, cinza), bloco("claim", "13%", 8, cinzaClaro), bloco("corpo", "16%", 0, cinza), bloco("vazio", "auto", 8, "transparent", "1", "1px dashed rgb(60,68,68)"), bloco("fonte + domínio", "7%", 0, cinza)] },
+      { nome: "CONTA", nota: "Claim em cima, grafismo no meio à esquerda, leitura numérica à direita na altura de cada elemento.",
+        blocos: [marca, bloco("claim", "15%", 14, cinzaClaro), bloco("escada + reta + notas", "38%", 0, cinza), bloco("vazio", "auto", 8, "transparent", "1", "1px dashed rgb(60,68,68)"), bloco("fonte", "6%", 8, cinza), bloco("domínio", "5%", 0, cinza)] },
+      { nome: "DECLARAÇÃO", nota: "Só tipo. O vazio é metade da peça e fica todo no fim: respiro, não buraco.",
+        blocos: [marca, bloco("claim", "34%", 0, cinzaClaro), bloco("vazio", "auto", 8, "transparent", "1", "1px dashed rgb(60,68,68)"), bloco("domínio", "5%", 0, cinza)] },
+      { nome: "CARROSSEL", nota: "Rótulo e índice no topo, campo de colunas ancorado acima do rodapé. A base do campo vem do rodapé.",
+        blocos: [marca, bloco("rótulo", "4%", 14, cinza), bloco("claim", "18%", 8, cinzaClaro), bloco("corpo", "10%", 0, cinza), bloco("vazio", "auto", 10, "transparent", "1", "1px dashed rgb(60,68,68)"), bloco("colunas", "18%", 12, cinzaClaro), bloco("rodapé", "2px", 6, cinza), bloco("domínio", "5%", 0, cinza)] },
+      { nome: "CHAMADA", nota: "Título, duas linhas de oferta em tabela, vazio, domínio. Nada compete com o preço.",
+        blocos: [marca, bloco("título", "20%", 16, cinzaClaro), bloco("linha grátis", "9%", 6, cinza), bloco("linha pro", "9%", 0, cinza), bloco("vazio", "auto", 10, "transparent", "1", "1px dashed rgb(60,68,68)"), bloco("domínio", "8%", 8, cinzaClaro), bloco("assinatura", "4%", 0, cinza)] }
+    ];
+
+    const medicoes = [];
+    [this.ESCURO, this.CLARO].forEach(pal => {
+      [["titulo", 7], ["corpo", 4.5], ["destaque", 4.5]].forEach(par => {
+        const r = this.ratio(pal[par[0]], pal.fundo);
+        medicoes.push({
+          rotulo: par[0] + " " + pal.nome, valor: r.toFixed(2) + ":1", piso: par[1].toFixed(1),
+          cor: r >= par[1] ? "rgb(0,191,192)" : "rgb(255,120,120)",
+          amostra: this.css(pal[par[0]]), amostraFundo: this.css(pal.fundo)
+        });
+      });
+    });
+
+    const claras = specs.map((s, i) => (this.paletaDe(s).nome === "claro" ? i : -1)).filter(i => i >= 0);
+    const colunas = Array.from(new Set(claras.map(i => i % 3)));
+    const diag = st.registro === "plano"
+      ? "claras nas posições " + claras.map(i => i + 1).join(", ") + ". colunas ocupadas: " + colunas.length + " de 3. " + (colunas.length === 3 ? "sem listra vertical na grade." : "duas claras na mesma coluna formam listra.")
+      : "registro forçado para conferir contraste. o ritmo real da grade é 1 clara a cada 3, no modo plano.";
+
+    return {
+      thumbs, vitrine: vit, esqueletos, medicoes, diagnostico: diag,
+      critica: [
+        { estado: "CORRIGIDO", peso: "ESTRUTURAL", cor: "rgb(0,191,192)", fundo: "rgb(4,32,33)",
+          defeito: "As barras dos cards de carrossel não diziam nada",
+          porque: "Sete colunas de alturas escolhidas a olho, uma acesa em teal. Não representavam dado nenhum, e o próprio briefing tem o teste: se o grafismo não diz o que o texto teria de explicar, é textura de fundo. Três das nove peças reprovavam nele.",
+          feito: "Campo de barras removido dos dois cards. No lugar entra vazio no fim, que é respiro, e a única grade que sobrou é a do produto real." },
+        { estado: "CORRIGIDO", peso: "ESTRUTURAL", cor: "rgb(0,191,192)", fundo: "rgb(4,32,33)",
+          defeito: "Nenhuma peça mostrava o produto",
+          porque: "Para um SaaS sem cliente externo, sem depoimento e sem trial, a tela é a única prova que existe. Nove peças de tipografia sobre fundo chapado dizem que o produto pode nem estar pronto, e é justamente a dúvida que trava a assinatura.",
+          feito: "Composição nova, prova de produto: um recorte do Kanban sangrando pela direita, com a quarta coluna reduzida a um sliver sem texto para o corte não partir palavra. Os cards só têm ação e data, nunca nome de empresa, então nada vira prova social inventada." },
+        { estado: "CORRIGIDO", peso: "ESTRUTURAL", cor: "rgb(0,191,192)", fundo: "rgb(4,32,33)",
+          defeito: "Um carrossel ocupava três células da grade",
+          porque: "Erro de contagem, não de desenho. Um carrossel é UM post: a grade do perfil mostra só a capa. Três cards em três células inflavam o conjunto e escondiam que havia menos variedade do que parecia.",
+          feito: "A sequência caiu para dois cards, e só a capa disputa célula. As duas células liberadas foram para prova de produto e declaração." },
+        { estado: "CORRIGIDO", peso: "RITMO", cor: "rgb(0,191,192)", fundo: "rgb(4,32,33)",
+          defeito: "Nove rodapés idênticos com o domínio",
+          porque: "O domínio repetido em toda peça é exatamente o cacoete de template que o briefing quer fora, e ele já está na bio do perfil. Repetição sem função também gasta a linha que poderia carregar a instrução de leitura.",
+          feito: "O domínio ficou nas declarações, na prova de produto e grande na chamada. Nos cards de sequência a linha virou ARRASTE, que é instrução, e nas peças de dado sobrou só a fonte da pesquisa." },
+        { estado: "ABERTO", peso: "RITMO", cor: "rgb(255,190,120)", fundo: "rgb(10,10,10)",
+          defeito: "Todas as peças ancoram o texto no mesmo canto",
+          porque: "Marca em cima à esquerda, título começando em 96px, rodapé embaixo à esquerda. Em miniatura as nove células têm a mancha de tinta no mesmo lugar, e a grade lê como papel de parede. A âncora da marca é regra, mas o conteúdo abaixo dela não precisa obedecer à mesma coluna.",
+          feito: "Proposta para a próxima rodada: duas peças ancoradas na base e uma com o número atravessando a largura inteira. Precisa da sua aprovação porque mexe na régua da grade." },
+        { estado: "ABERTO", peso: "COPY", cor: "rgb(255,190,120)", fundo: "rgb(10,10,10)",
+          defeito: "A chamada é intercambiável com qualquer SaaS",
+          porque: "Sem cartão para começar serve para qualquer produto com plano grátis. É correto, é verdadeiro e não é desta marca. A frase que só este produto pode dizer é a do preço que não conta cabeça.",
+          feito: "Alternativa para testar: a chamada assumir a conta por escrito, no lugar de anunciar ausência de cartão. Duas versões prontas se você quiser comparar." },
+        { estado: "ABERTO", peso: "PRODUÇÃO", cor: "rgb(255,190,120)", fundo: "rgb(10,10,10)",
+          defeito: "A tela do produto é desenhada, não capturada",
+          porque: "O Kanban da peça foi redesenhado com a mesma tipografia da arte. Fica coerente, mas é uma representação: se a tela real divergir, a peça promete uma interface que o usuário não encontra depois de assinar.",
+          feito: "Precisa de uma captura real em 1080 de largura, ou da confirmação de que esta representação bate com a tela em produção. É a única pendência que não consigo resolver sozinho." }
+      ],
+      auditoria: [
+        { veredito: "EM USO", cor: "rgb(0,191,192)", arquivo: "simbolo-teal.svg", nota: "o traçado oficial, três barras, viewBox 24x24. É este que o gerador reproduz em PIL, com os cantos de 0.9 unidade preservados." },
+        { veredito: "EM USO", cor: "rgb(0,191,192)", arquivo: "completa-fundo-escuro / claro", nota: "de onde saiu a assinatura: Velo em SemiBold, Funil em Regular. Copiei os dois pesos, mas troquei o cinza #8c9c9c pelo corpo do registro." },
+        { veredito: "RESERVA", cor: "rgb(150,172,172)", arquivo: "simbolo-branco / preto", nota: "ficam para fundo fotográfico ou parceria, onde o teal perde. Este conjunto não usa foto, então o símbolo é sempre teal." },
+        { veredito: "FORA", cor: "rgb(255,120,120)", arquivo: "selo-branco / escuro / teal", nota: "funil dentro de quadrado arredondado: é a forma dentro de forma já reprovada. Serve como ícone de aplicativo e avatar do perfil, nunca dentro da arte." },
+        { veredito: "CORRIGIDO", cor: "rgb(255,190,120)", arquivo: "#8c9c9c da assinatura", nota: "o cinza do arquivo dá 2,74:1 sobre o fundo claro e reprova. No registro claro a palavra Funil usa (94,101,101), que passa." },
+        { veredito: "CORRIGIDO", cor: "rgb(255,190,120)", arquivo: "quadrado do completa-*", nota: "o lockup oficial traz o funil dentro de um quadrado teal. Na arte ele entra sem o quadrado, pelo mesmo motivo do selo." }
+      ],
+      marcas: [
+        { tam: "86", cor: "rgb(0,191,192)", fundo: "rgb(4,32,33)", rotulo: "86PX · ARTE ESCURA" },
+        { tam: "86", cor: "rgb(0,120,122)", fundo: "rgb(246,248,249)", rotulo: "86PX · ARTE CLARA" },
+        { tam: "72", cor: "rgb(0,191,192)", fundo: "rgb(4,32,33)", rotulo: "72PX · VÍDEO" },
+        { tam: "20", cor: "rgb(0,191,192)", fundo: "rgb(4,32,33)", rotulo: "20PX · TESTE DE MINIATURA" }
+      ],
+      regrasMarca: [
+        { regra: "símbolo sozinho", como: "sem selo, sem círculo, sem moldura. Forma dentro de forma foi reprovada e não volta." },
+        { regra: "âncora fixa", como: "canto superior esquerdo, 96px da lateral e 88px do topo na arte. Nenhuma peça move a marca para compor melhor." },
+        { regra: "tamanho", como: "86px na arte estática, 72px no vídeo. Um só tamanho por meio: variar tamanho por peça desmonta a leitura da grade." },
+        { regra: "cor", como: "destaque do registro: teal claro no escuro, teal escuro no claro. Nunca branco sobre teal nem teal sobre teal." },
+        { regra: "assinatura ao lado", como: "Velo Funil em Geist SemiBold 34px, alinhado ao centro óptico do símbolo. O domínio fica no rodapé e não se repete aqui." },
+        { regra: "vídeo", como: "dentro da banda útil, a partir de y=236. Acima disso a interface do aplicativo cobre a marca no frame de capa." },
+        { regra: "campo livre", como: "nada entra na faixa entre a marca e o primeiro elemento de conteúdo: 78px de respiro na arte." }
+      ],
+      formatos: [
+        { rotulo: "feed 4:5", valor: "1080x1350" },
+        { rotulo: "recorte da grade 3:4", valor: "1012x1350" },
+        { rotulo: "story e reel 9:16", valor: "1080x1920" },
+        { rotulo: "supersample", valor: "2x, LANCZOS" }
+      ],
+      margens: [
+        { rotulo: "topo", arte: "269", video: "220" },
+        { rotulo: "base", arte: "384", video: "500" },
+        { rotulo: "lateral", arte: "97", video: "180" }
+      ],
+      controles: [
+        Object.assign({ rotulo: st.crop ? "RECORTE 3:4 LIGADO" : "RECORTE 3:4 DESLIGADO", click: () => this.setState({ crop: !st.crop }) }, this.botao(st.crop)),
+        Object.assign({ rotulo: "MARCAR AS CLARAS", click: () => this.setState({ claras: !st.claras }) }, this.botao(st.claras))
+      ],
+      tamanhos: [132, 180, 240].map(t => Object.assign({ rotulo: t + "PX", click: () => this.setState({ thumb: t }) }, this.botao(st.thumb === t))),
+      registros: [["plano", "RITMO DO PLANO"], ["escuro", "TUDO ESCURO"], ["claro", "TUDO CLARO"]].map(r =>
+        Object.assign({ rotulo: r[1], click: () => this.setState({ registro: r[0] }) }, this.botao(st.registro === r[0]))),
+      v1: [
+        { t: "0,0 a 3,0", acao: "primeiro degrau já na tela, rótulo por pessoa", legenda: "Seu CRM cobra por pessoa." },
+        { t: "3,0 a 7,5", acao: "degraus sobem, um por pessoa", legenda: "Cada pessoa que entra sobe a conta." },
+        { t: "7,5 a 12,0", acao: "a reta do plano entra e para", legenda: "Aqui a conta é uma só." },
+        { t: "12,0 a 15,5", acao: this.brl(this.PRO * this.MESES) + " por ano em destaque", legenda: this.brl(this.PRO * this.MESES) + " por ano, a empresa inteira." },
+        { t: "15,5 a 18,5", acao: "chamada, fade de 0,8s", legenda: "Grátis até " + this.FREE + " contatos. Sem cartão." }
+      ],
+      v2: [
+        { t: "0,0 a 3,0", acao: "cláusula 1 em peso cheio no frame 1", legenda: "sem legenda: o tipo é o texto" },
+        { t: "3,0 a 6,0", acao: "cláusula 2 entra, a 1 desbota", legenda: "sem legenda" },
+        { t: "6,0 a 8,5", acao: "cláusula 3 entra, as duas ficam", legenda: "sem legenda" },
+        { t: "8,5 a 11,0", acao: "chamada e preço, fade de 0,8s", legenda: "Grátis até " + this.FREE + " contatos. " + this.DOM }
+      ],
+      regrasVideo: [
+        { titulo: "LEGENDA", texto: "Branca, contorno preto, sem pílula de fundo, paint-order stroke fill. Estática dentro do segmento, e a janela dela casa exatamente com a batida. Começa em 58px e desce de 2 em 2 até caber na banda, piso de 26px." },
+        { titulo: "ÁUDIO", texto: "Sai sem trilha queimada, com o som anexado dentro do aplicativo: áudio nativo é descobrível e reutilizável. Queimar trilha só em anúncio pago, onde não dá para anexar. O ffmpeg roda com -an." },
+        { titulo: "PIPELINE", texto: "O gerador PIL produz os frames, o ffmpeg monta por subprocess. A legenda queimada sai do mesmo texto que gerou o frame, então o MP4 herda as travas da arte em vez de abrir superfície nova." },
+        { titulo: "DEMO DE TELA", texto: "É a única prova real que o produto tem, e é o terceiro formato a fazer. Depende de uma captura do produto em produção, que não existe neste pacote. Sem ela, gravar seria inventar." }
+      ],
+      travas: [
+        { regra: "marca", como: "o símbolo entra sozinho, sem selo em volta: forma dentro de forma vira bloco indistinto em 66px. Mesma âncora, mesmo tamanho, em toda peça e nos dois vídeos." },
+        { regra: "oferta interpolada", como: "preço, teto e nome do plano vêm de FREE_LEAD_LIMIT e PRO_PLAN_PRICE. O linter lê o próprio arquivo e reprova o valor escrito à mão." },
+        { regra: "travessão", como: "qualquer travessão no texto de peça ou de legenda reprova. É assinatura de texto de máquina." },
+        { regra: "prova social", como: "depoimento, logo de cliente e mais de N empresas reprovam. Não existe cliente externo para citar." },
+        { regra: "trial e ilimitado", como: "período de teste e contatos ilimitados reprovam. O grátis tem teto e o trial acabou." },
+        { regra: "domínio", como: "velofunil.com.br sem www reprova: custa um redirecionamento de 980ms contra 255ms." },
+        { regra: "dado repetido", como: "os cinco dados já em uso reprovam, e um número que aparece em duas peças reprova." },
+        { regra: "contraste", como: "título 7:1, corpo e destaque 4.5:1, medidos nos dois registros antes de desenhar." },
+        { regra: "três famílias", como: "a monoespaçada e a serifa itálica precisam estar em uso no conjunto. Uma família só é o que fazia as peças parecerem template." },
+        { regra: "determinismo", como: "sem relógio, sem random, sem rede. Mesma entrada, mesmo arquivo, no PNG e no MP4." }
+      ]
+    };
+  }
+}
+</script>
+</body>
+</html>
