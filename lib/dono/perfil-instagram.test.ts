@@ -1,3 +1,6 @@
+import { readFileSync } from 'node:fs'
+import { join } from 'node:path'
+
 import { describe, expect, it } from 'vitest'
 
 import { FREE_LEAD_LIMIT, PRO_PLAN_PRICE } from '@/lib/plans'
@@ -82,12 +85,38 @@ describe('link da bio', () => {
     expect(LINK_DA_BIO).toContain('https://www.velofunil.com.br/')
   })
 
-  it('leva os três parâmetros que a captura da landing lê', () => {
-    // Os nomes têm que bater com `components/landing/utm-capture.tsx`. Um
-    // parâmetro escrito diferente vira visita sem atribuição — e o painel de
+  /**
+   * ## As UTMs saíram do link e foram para o redirect
+   *
+   * Até 31/08 o link era a URL completa com os três parâmetros. Ele media
+   * certo e **parecia link de rastreamento** — o que as pessoas aprenderam a
+   * desconfiar, e numa bio o link é a única porta.
+   *
+   * Agora é `/ig`, e o `next.config.mjs` acrescenta as UTMs no redirect. A
+   * captura funciona igual, porque `utm-capture.tsx` lê a URL final.
+   *
+   * O teste passou a travar as DUAS pontas. Só verificar o link deixaria de
+   * pegar o caso pior: alguém remove o redirect, a bio continua apontando
+   * para `/ig`, e a atribuição morre em silêncio — a página carrega normal,
+   * nada falha, e só o painel de origem fica vazio.
+   */
+  it('é um atalho curto, não a URL com query string', () => {
+    expect(LINK_DA_BIO).not.toContain('utm_')
+    expect(LINK_DA_BIO.length).toBeLessThan(40)
+  })
+
+  it('o redirect que sustenta o atalho existe e leva os três parâmetros', () => {
+    const config = readFileSync(join(process.cwd(), 'next.config.mjs'), 'utf-8')
+
+    // O caminho da bio precisa estar entre os atalhos declarados.
+    const slug = LINK_DA_BIO.split('/').pop()
+    expect(config).toContain(`paraCanal('${slug}'`)
+
+    // E o destino precisa carregar os nomes que `utm-capture.tsx` lê. Um
+    // parâmetro escrito diferente vira visita sem atribuição, e o painel de
     // custo por cliente passa a contar Instagram como tráfego direto.
-    for (const p of ['utm_source=instagram', 'utm_medium=bio', 'utm_campaign=']) {
-      expect(LINK_DA_BIO).toContain(p)
+    for (const p of ['utm_source=', 'utm_medium=', 'utm_campaign=']) {
+      expect(config).toContain(p)
     }
   })
 })

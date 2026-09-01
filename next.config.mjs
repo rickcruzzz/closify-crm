@@ -155,6 +155,49 @@ const securityHeaders = [
 
 const nextConfig = {
   poweredByHeader: false,
+
+  /**
+   * Atalhos por canal, para o link publicado ficar limpo E rastreável.
+   *
+   * ## O problema que isto resolve
+   *
+   * A bio do Instagram precisava do link com UTM para a atribuição funcionar:
+   * medido em 31/08, apenas **2 de 42 empresas** têm origem registrada, e sem
+   * marcar o link o orgânico publicado fica invisível — daqui a um mês a
+   * pergunta "valeu a pena postar?" não teria resposta.
+   *
+   * Mas a URL com query string inteira na bio é feia e lê como link de
+   * rastreamento, que é justamente o que as pessoas aprenderam a desconfiar.
+   * Era uma escolha entre medir e parecer confiável.
+   *
+   * `velofunil.com.br/ig` resolve as duas: curto no perfil, e o redirect
+   * acrescenta as UTMs antes de a página carregar. `utm-capture.tsx` grava
+   * normalmente, porque para ele a URL final é a que importa.
+   *
+   * ## Por que `permanent: false`
+   *
+   * 307, não 308. Redirect permanente fica no cache do navegador e do
+   * Cloudflare para sempre — trocar a campanha depois exigiria que cada
+   * visitante limpasse o cache. Com temporário, mudar a UTM é editar esta
+   * linha.
+   *
+   * ## O custo, medido
+   *
+   * Um salto a mais: ~250ms contra os ~980ms que o domínio SEM `www` já
+   * custava antes de existir atalho nenhum. Continua mais rápido que o que
+   * estava na bio até hoje.
+   */
+  async redirects() {
+    const paraCanal = (slug, medium) => ({
+      source: `/${slug}`,
+      destination:
+        `/?utm_source=${slug === 'ig' ? 'instagram' : slug}` +
+        `&utm_medium=${medium}&utm_campaign=perfil`,
+      permanent: false,
+    })
+
+    return [paraCanal('ig', 'bio')]
+  },
   /**
    * Para onde o build escreve.
    *

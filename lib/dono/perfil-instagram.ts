@@ -30,9 +30,24 @@ import { CONTROLADOR } from '@/lib/legal'
  * Colando o mesmo texto nos dois, eles ficam idênticos por construção.
  */
 
-/** O endereço da bio, com atribuição e sem o salto de redirecionamento. */
-export const LINK_DA_BIO =
-  'https://www.velofunil.com.br/?utm_source=instagram&utm_medium=bio&utm_campaign=perfil'
+/**
+ * O endereço da bio: curto no perfil, com atribuição por trás.
+ *
+ * ## Por que um atalho, e não a URL com as UTMs
+ *
+ * A versão anterior era a URL completa,
+ * `...?utm_source=instagram&utm_medium=bio&utm_campaign=perfil`. Ela media
+ * certo e **parecia link de rastreamento** — exatamente o que as pessoas
+ * aprenderam a desconfiar. Numa bio, onde o link é a única porta, isso custa
+ * clique.
+ *
+ * `/ig` redireciona para a mesma URL com as UTMs (`next.config.mjs`), então a
+ * captura funciona igual e o perfil mostra um endereço limpo.
+ *
+ * O `www` continua: sem ele são 980ms contra 255ms, por redirecionamento de
+ * domínio — medido em 25/08.
+ */
+export const LINK_DA_BIO = 'https://www.velofunil.com.br/ig'
 
 /**
  * O campo Nome, e por que ele não é só o nome.
