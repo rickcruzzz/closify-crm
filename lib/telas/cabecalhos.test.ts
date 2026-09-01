@@ -101,3 +101,52 @@ describe('nenhum esqueleto de carregamento escreve o próprio cabeçalho', () =>
     expect(fonte).toContain('CABECALHOS')
   })
 })
+
+/**
+ * ## O cabeçalho da TELA não serve de texto para estado vazio
+ *
+ * Este caso existe por um erro cometido ao ligar as telas à constante: a
+ * substituição automática trocou `title`/`description` em todo `PageHeader`
+ * **e também nos dois `EmptyState` de `/hoje`**, que tinham texto próprio.
+ * Aberta a tela no navegador, `/hoje` mostrava "Com quem falar hoje, para
+ * nenhuma venda morrer esperando" duas vezes — uma no cabeçalho e outra no
+ * lugar de "Comece cadastrando um contato".
+ *
+ * As duas respondem perguntas diferentes. O cabeçalho diz para que a tela
+ * serve; o estado vazio diz o que fazer AGORA, e é a única instrução que
+ * alguém sem dado nenhum tem. Trocar um pelo outro apaga a instrução e
+ * duplica a legenda.
+ *
+ * Nenhum `tsc` ou `lint` vê isso: `EmptyState` e `PageHeader` aceitam as
+ * mesmas props, então o código compila perfeito e a tela fica errada.
+ */
+describe('o cabeçalho da tela não vaza para dentro de estado vazio', () => {
+  const TELAS = [
+    'components/tasks/hoje-client.tsx',
+    'components/leads/leads-page-client.tsx',
+    'components/conversas/conversas-client.tsx',
+  ]
+
+  /**
+   * A primeira versão deste caso recortava o bloco `<EmptyState …>` por regex
+   * e procurava `CABECALHOS` dentro dele. **O controle negativo reprovou o
+   * teste, não o código:** reintroduzido o vazamento, os 36 casos passaram.
+   *
+   * O recorte tinha teto de 400 caracteres, e os comentários que explicam
+   * cada estado vazio passam disso — o bloco defeituoso ficava fora da janela.
+   * Um teste que depende de casar tag de JSX quebra assim que alguém comenta
+   * o código.
+   *
+   * A contagem não tem esse problema: numa tela, o cabeçalho é usado UMA vez,
+   * no `PageHeader`. Qualquer segunda ocorrência é o texto da tela ocupando o
+   * lugar de outra coisa.
+   */
+  it.each(TELAS)('%s usa o cabeçalho uma vez só', (rel) => {
+    const fonte = readFileSync(join(process.cwd(), rel), 'utf-8')
+    const usos = fonte.match(/\{\.\.\.CABECALHOS\.\w+\}/g) ?? []
+    expect(
+      usos.length,
+      `${usos.length} usos do cabeçalho: o segundo está ocupando o lugar de outro texto`,
+    ).toBeLessThanOrEqual(1)
+  })
+})

@@ -366,14 +366,18 @@ export function HojeClient({
                 // de 19/08 padronizou o vocabulário justamente para a mesma
                 // coisa não ter dois nomes. Esta tela escapou dela, e é a
                 // primeira que a pessoa abre pelo menu.
-                {...CABECALHOS.hoje}
+                title="Comece cadastrando um contato"
+                description="Assim que você tiver um contato aqui, o Velo Funil passa a avisar com quem falar cada dia."
               >
                 <Button onClick={() => router.push('/leads')}>Cadastrar contato</Button>
               </EmptyState>
             ) : !temNegocio ? (
               <EmptyState
                 icon={KanbanSquare}
-                {...CABECALHOS.hoje}
+                // "Cliente" aqui pelo mesmo motivo do estado acima: a tela
+                // dizia cliente onde o resto do produto diz contato.
+                title="Coloque um contato no funil"
+                description="Um negócio no funil é o que dá o que fazer: dele sai a próxima ação que aparece nesta tela."
               >
                 <Button onClick={() => router.push('/kanban')}>Abrir o funil</Button>
               </EmptyState>
