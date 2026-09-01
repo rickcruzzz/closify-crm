@@ -37,7 +37,7 @@
           "ordem": 5,
           "arquivo": "demo-5-cta.png",
           "arquivo4k": "demo-5-cta@4k.png",
-          "titulo": "7 dias com tudo liberado.",
+          "titulo": "Grátis até 50 contatos.",
           "layout": "declaracao"
         }
       ]
@@ -51,7 +51,7 @@
           "ordem": 1,
           "arquivo": "planos-1-teste.png",
           "arquivo4k": "planos-1-teste@4k.png",
-          "titulo": "7 dias com o Pro completo",
+          "titulo": "Grátis até 50 contatos",
           "layout": "lista"
         },
         {
@@ -87,28 +87,28 @@
     {
       "id": "dicas",
       "nome": "Dicas de venda",
-      "resumo": "Os números de mercado que justificam o produto, cada um com a FONTE no próprio criativo. Serve para quem ainda não aceitou que tem um problema.",
+      "resumo": "O que fazer no produto para a venda não parar. Cada tela mostra a situação e onde ela se resolve, com o print real. Serve para quem já entendeu o problema e quer o passo.",
       "telas": [
         {
           "ordem": 1,
-          "arquivo": "dicas-1-resposta-rapida.png",
-          "arquivo4k": "dicas-1-resposta-rapida@4k.png",
-          "titulo": "21x mais chance de fechar",
-          "layout": "numero"
+          "arquivo": "dicas-1-negocio-parado.png",
+          "arquivo4k": "dicas-1-negocio-parado@4k.png",
+          "titulo": "Todo negócio parado aparece numa lista",
+          "layout": "produto"
         },
         {
           "ordem": 2,
-          "arquivo": "dicas-2-media-do-mercado.png",
-          "arquivo4k": "dicas-2-media-do-mercado@4k.png",
-          "titulo": "42h é a média do mercado",
-          "layout": "numero"
+          "arquivo": "dicas-2-historico-da-empresa.png",
+          "arquivo4k": "dicas-2-historico-da-empresa@4k.png",
+          "titulo": "O histórico é da empresa, não do celular",
+          "layout": "produto"
         },
         {
           "ordem": 3,
-          "arquivo": "dicas-3-whatsapp.png",
-          "arquivo4k": "dicas-3-whatsapp@4k.png",
-          "titulo": "82% vendem pelo WhatsApp",
-          "layout": "numero"
+          "arquivo": "dicas-3-comeco-do-dia.png",
+          "arquivo4k": "dicas-3-comeco-do-dia@4k.png",
+          "titulo": "Uma tela responde o que fazer agora",
+          "layout": "produto"
         },
         {
           "ordem": 4,
