@@ -88,3 +88,12 @@ tmp-*.mjs
 .claude/skills/
 .deepsec/
 skills-lock.json
+
+# Preferência de editor, de uma pessoa e não do projeto. O que apareceu aqui
+# foi `liveServer.settings.port`, de uma extensão que este projeto nem usa
+# (o servidor é o `next dev`) — versioná-la imporia a porta 5501 a quem
+# clonasse, sem nenhuma relação com o produto.
+#
+# Se algum dia houver configuração de fato compartilhada (`extensions.json`
+# recomendando o ESLint, por exemplo), ela sai da regra com `!.vscode/nome`.
+.vscode/
