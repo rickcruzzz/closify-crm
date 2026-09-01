@@ -1,0 +1,40 @@
+# O que NÃO entra no grafo de conhecimento deste repositório.
+#
+# A regra de corte está no CLAUDE.md e foi aprendida caro em 27/08: o grafo
+# chegou a ter 17.014 nós, dos quais 13.502 apontavam para outro projeto, e
+# nada na resposta de uma consulta avisava disso. Só "existe no disco" não
+# basta — 35 nós apontavam para um plugin do Claude Code instalado na pasta
+# pessoal do usuário.
+#
+# Este arquivo fecha a mesma classe por dentro: código de terceiro que mora
+# fisicamente aqui e não é deste produto.
+
+# ## Skills e ferramentas instaladas, não código do Velo Funil
+#
+# Medido em 01/09/2026: 249 dos 3.966 nós do grafo vinham de `.claude/`, ou
+# seja, 6% do grafo era documentação de marketing de terceiro. Uma consulta
+# como "onde o limite de contatos é aplicado" competia com trechos de skill
+# que citam limite de plano em outro contexto.
+#
+# Elas se atualizam por fora do Git (`skills add`), então também poluiriam o
+# diff a cada atualização. Saíram do versionamento no mesmo dia, e sair do
+# grafo é a outra metade da mesma decisão.
+.claude/skills/
+.deepsec/
+
+# ## Saída do próprio grafo
+#
+# Sem isto, cada rebuild indexaria o relatório do rebuild anterior, e o grafo
+# passaria a falar sobre si mesmo em vez de sobre o produto.
+graphify-out/
+
+# ## Binário de marketing
+#
+# As artes e os vídeos ficam versionados de propósito (são o material
+# publicado), mas não têm texto que uma consulta possa alcançar: um PNG de
+# 1080x1350 não responde "onde o preço é lido". Os GERADORES, que são código
+# e carregam a decisão de cada peça, continuam dentro.
+marketing/instagram/*.png
+marketing/facebook/*.png
+marketing/video/*.mp4
+marketing/video/*.png
