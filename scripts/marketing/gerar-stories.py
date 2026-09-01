@@ -1365,29 +1365,53 @@ def destaque_planos():
 
 
 def destaque_dicas():
+    # ## Esta família deixou de ser dado de mercado (31/08)
+    #
+    # As três primeiras telas eram "21x", "42h" e "82%" — os MESMOS números
+    # que o feed publica. Medido: quatro temas apareciam nas duas famílias, e
+    # `dicas-2-media-do-mercado` tinha até nome idêntico ao da peça de feed.
+    #
+    # Quem vê o Story e depois o post recebe o mesmo argumento duas vezes, e
+    # conclui que a conta tem pouco a dizer.
+    #
+    # A divisão passou a ser por PAPEL, não por acaso:
+    #
+    #     FEED     argumento e dado. Permanente, para quem AINDA NÃO segue.
+    #              A dor, a causa, o número de mercado.
+    #     STORIES  operação e objeção. Efêmero, para quem JÁ segue.
+    #              O que fazer no produto, com a tela real.
+    #
+    # Dado de mercado sustenta melhor uma peça permanente do que um Story de
+    # 24h, então os números ficaram no feed. Em troca, `dicas` recebeu o que
+    # só ela consegue: a tela do produto resolvendo a situação, que no feed
+    # viraria post de manual.
     abrir_destaque(
         "dicas", "Dicas de venda",
-        "Os números de mercado que justificam o produto, cada um com "
-        "a FONTE no próprio criativo. Serve para quem ainda não "
-        "aceitou que tem um problema.",
+        "O que fazer no produto para a venda não parar. Cada tela mostra "
+        "a situação e onde ela se resolve, com o print real. Serve para "
+        "quem já entendeu o problema e quer o passo.",
     )
 
-    tela_numero(
-        "21x", "mais chance de fechar",
-        "Responder em 5 minutos, em vez de 30, multiplica por 21 a chance de qualificar o contato.",
-        "Estudo InsideSales / MIT", "dicas-1-resposta-rapida",
+    tela_produto(
+        "Quando o cliente some",
+        "Todo negócio parado aparece numa lista",
+        "O funil separa o que está andando do que travou. Não é memória, "
+        "é filtro: quem parou há dias fica visível sem ninguém procurar.",
+        "kanban-dark.png", "dicas-1-negocio-parado",
     )
-    tela_numero(
-        "42h", "é a média do mercado",
-        "O tempo que uma empresa leva, em média, para responder o primeiro contato.",
-        "Harvard Business Review, auditoria em 2.241 empresas",
-        "dicas-2-media-do-mercado",
+    tela_produto(
+        "Quem atendeu fica gravado",
+        "O histórico é da empresa, não do celular",
+        "Cada contato registra quem falou e quando. Se a pessoa sair, a "
+        "conversa continua onde sempre esteve: na ficha do cliente.",
+        "contatos-dark.png", "dicas-2-historico-da-empresa",
     )
-    tela_numero(
-        "82%", "vendem pelo WhatsApp",
-        "É o principal canal de venda dos pequenos negócios brasileiros. O problema não é o canal: é o que some junto com a conversa.",
-        "12ª Pesquisa Pulso dos Pequenos Negócios / Sebrae, 2026",
-        "dicas-3-whatsapp",
+    tela_produto(
+        "O começo do dia",
+        "Uma tela responde o que fazer agora",
+        "Tarefas vencidas primeiro, depois as de hoje. Sem escolher por "
+        "onde começar, que é onde a manhã costuma ser perdida.",
+        "hoje-dark.png", "dicas-3-comeco-do-dia",
     )
     tela_produto(
         "O sinal que ninguém olha",
