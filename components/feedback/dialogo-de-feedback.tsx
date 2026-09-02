@@ -132,7 +132,35 @@ export function DialogoDeFeedback() {
     formulario.set('rota', pathname)
     for (const arquivo of anexos) formulario.append('anexos', arquivo)
 
-    const resultado = await enviarFeedback(formulario)
+    // ## O `try/catch` existe porque o botao girava para sempre
+    //
+    // Reportado com print em 02/09: clica em Enviar e o spinner nao para.
+    // `enviarFeedback` devolve `{ error }` quando REPROVA, e isso ja era
+    // tratado. O que faltava era o caso em que ela REJEITA, que nao passa por
+    // nenhum `if`:
+    //
+    //   anexo acima do teto de corpo da Server Action  (ver next.config.mjs)
+    //   rede caindo no meio do envio
+    //   excecao nao tratada do outro lado
+    //
+    // Sem o `catch`, `setEnviando(false)` nunca rodava. A pessoa ficava com o
+    // botao travado, sem mensagem, e o unico caminho era fechar o dialogo
+    // perdendo o texto que ela acabou de escrever, junto dos anexos.
+    //
+    // Mesma classe corrigida no `signup-form.tsx` hoje, e aqui doi mais: quem
+    // usa este dialogo ja esta com um problema, e o canal de reclamar do
+    // problema e o que quebra.
+    let resultado: Awaited<ReturnType<typeof enviarFeedback>>
+    try {
+      resultado = await enviarFeedback(formulario)
+    } catch {
+      setEnviando(false)
+      toast.error(
+        'Nao conseguimos enviar agora. Se anexou arquivo, tente sem ele, ou ' +
+          'escreva para suporte@velofunil.com.br.',
+      )
+      return
+    }
     setEnviando(false)
 
     if (resultado?.error) {

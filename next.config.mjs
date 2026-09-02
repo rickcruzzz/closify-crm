@@ -226,6 +226,34 @@ const nextConfig = {
   // do produto; passado isso, busca de novo, dado de CRM muda o tempo todo.
   experimental: {
     staleTimes: { dynamic: 30, static: 180 },
+    serverActions: {
+      /**
+       * ## O teto de corpo da Server Action, e a promessa que ele desmentia
+       *
+       * O padrao do Next e **1 MB**. O dialogo de suporte
+       * (`components/feedback/dialogo-de-feedback.tsx`) anuncia na tela
+       * "PNG, JPG, WEBP ou PDF ate 10 MB", aceita ate 3 arquivos
+       * (`ANEXO_QUANTIDADE_MAXIMA`), e valida os 10 MB no navegador antes de
+       * enviar. Ou seja: a tela aprovava ate 30 MB e o servidor recusava a
+       * partir de 1.
+       *
+       * A recusa nao vinha como `{ error }` — a Server Action REJEITA, e sem
+       * `try/catch` no chamador isso virava o botao girando para sempre.
+       * Reportado com print em 02/09, e as duas metades foram corrigidas
+       * juntas: sem o `catch` a pessoa nao ve mensagem nenhuma; sem este
+       * limite ela ve a mensagem, mas o anexo continua sem passar.
+       *
+       * 32 MB e a conta da propria UI (3 x 10 MB) mais folga para o resto do
+       * `FormData` e para a sobrecarga de multipart. Escrito em MB de
+       * proposito: a unidade que a tela promete e a unidade que o servidor
+       * aceita, para a divergencia ser visivel na leitura.
+       *
+       * Isto NAO substitui a validacao de `lib/feedback/actions.ts`, que
+       * confere tipo pelos BYTES iniciais e tamanho arquivo a arquivo. Este
+       * numero e o teto do transporte; aquele e a regra.
+       */
+      bodySizeLimit: '32mb',
+    },
   },
   async headers() {
     return [{ source: '/:path*', headers: securityHeaders }]
