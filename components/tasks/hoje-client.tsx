@@ -33,13 +33,30 @@ import { COOKIE_ESCOPO, MAX_AGE_ESCOPO, type EscopoDeTarefas } from '@/lib/tasks
 import { CABECALHOS } from '@/lib/telas/cabecalhos'
 
 /**
- * Quanto tempo a tarefa concluída fica visível, riscada, antes de sair.
+ * A tarefa concluída FICA na tela, riscada, até a pessoa sair dela.
  *
- * Longo o bastante para o olho registrar o que aconteceu e a mão alcançar o
- * "Desfazer"; curto o bastante para a lista não virar um cemitério de itens
- * já feitos enquanto a pessoa trabalha.
+ * ## Por que o item não some mais sozinho
+ *
+ * Ele sumia em 4 segundos. A intenção era não deixar a lista virar cemitério
+ * de coisas já feitas — mas o efeito, reportado com print, é o oposto do que
+ * uma lista de tarefas precisa fazer: você marca, vê o ícone certo aparecer, e
+ * a linha desaparece antes de você terminar de conferir se marcou a certa.
+ *
+ * Numa tela cuja pergunta é "com quem falar hoje", ver o que JÁ foi feito é
+ * metade da resposta. Todoist, Things e o próprio Google Tasks mantêm o item
+ * riscado à vista pelo resto da sessão, e é o comportamento que a pessoa
+ * espera de um checkbox: ele fica marcado.
+ *
+ * ## O que ainda tira a tarefa da lista
+ *
+ * Sair de `/hoje` e voltar, ou recarregar. Aí o servidor manda a lista sem ela
+ * e a janela local está vazia — a lista se limpa sozinha, no momento em que a
+ * pessoa mudou de assunto, e não no meio do trabalho dela.
+ *
+ * O "Desfazer" continua ao lado enquanto o item estiver ali, e agora sem
+ * prazo: era o botão que dependia de reflexo em quatro segundos.
  */
-const TEMPO_RISCADA_MS = 4_000
+const ATUALIZAR_CONTADOR_MS = 600
 
 export function HojeClient({
   tasks: tasksIniciais,
@@ -225,19 +242,22 @@ export function HojeClient({
       return
     }
 
+    // ## O refresh continua, e a tarefa NAO sai da janela
+    //
+    // Ele existe para o contador da barra lateral e o resto da tela
+    // acompanharem. `saindo` nao e limpo junto: enquanto a entrada estiver la,
+    // `mesclarSaindo` faz a copia local vencer a do servidor, e a linha
+    // permanece riscada com o "Desfazer" ao lado.
+    //
+    // Meio segundo de espera porque `revalidatePath` no servidor termina
+    // depois que a Server Action retorna; pedir o refresh no mesmo instante
+    // traria a lista antiga e gastaria uma ida a toa.
     timers.current.set(
       taskId,
       setTimeout(() => {
-        // So limpa `saindo`. A lista volta a ser o que o servidor ja mandou,
-        // sem a tarefa — nao ha mais nada para filtrar nem corrida para perder.
-        setSaindo((atual) => {
-          const novo = new Map(atual)
-          novo.delete(taskId)
-          return novo
-        })
         timers.current.delete(taskId)
         router.refresh()
-      }, TEMPO_RISCADA_MS),
+      }, ATUALIZAR_CONTADOR_MS),
     )
   }
 
@@ -340,7 +360,10 @@ export function HojeClient({
               </SelectContent>
             </Select>
             {trocandoEscopo && (
-              <Loader2 aria-hidden className="text-muted-foreground size-4 animate-spin" />
+              <Loader2
+                aria-hidden
+                className="text-muted-foreground size-4 animate-spin"
+              />
             )}
           </div>
         }
@@ -384,7 +407,9 @@ export function HojeClient({
             ) : (
               <EmptyState
                 icon={CheckCircle2}
-                title={escopo === 'equipe' ? 'Ninguém tem tarefa em aberto' : 'Nada pendente'}
+                title={
+                  escopo === 'equipe' ? 'Ninguém tem tarefa em aberto' : 'Nada pendente'
+                }
                 description={
                   escopo === 'equipe'
                     ? 'Nenhum negócio da equipe tem próxima ação marcada. Sem isso, é fácil um cliente ficar sem resposta.'
@@ -442,7 +467,9 @@ export function HojeClient({
                           // um "Desfazer" ao lado de uma tarefa ABERTA nao
                           // desfaz coisa nenhuma.
                           onDesfazer={
-                            saindo.get(task.id)?.task.done_at ? desfazerConclusao : undefined
+                            saindo.get(task.id)?.task.done_at
+                              ? desfazerConclusao
+                              : undefined
                           }
                           onEditar={(t) =>
                             setEmEdicao({

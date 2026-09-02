@@ -405,10 +405,10 @@ export function WorkspaceSwitcher({
         titulo="Trocar de empresa?"
         descricao={
           <>
-            Você sai de <strong>{active.name}</strong> e entra em{' '}
-            <strong>{aguardandoConfirmacao?.nome}</strong>. Contatos, negócios e tarefas
-            são separados por empresa — o que você escrever a partir daqui fica na empresa
-            nova.
+            {/* A explicacao do que e uma empresa saiu daqui: quem tem mais de
+                uma ja sabe que os dados sao separados, e a frase so afastava do
+                unico dado que importa no momento — para onde voce vai. */}
+            Você vai para <strong>{aguardandoConfirmacao?.nome}</strong>.
           </>
         }
         rotuloDaAcao="Trocar"
