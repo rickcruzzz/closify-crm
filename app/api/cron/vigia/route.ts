@@ -14,6 +14,10 @@ import {
   HORAS_ATE_SUPORTE_VIRAR_ALERTA,
   type LeituraDoVigia,
 } from '@/lib/dono/vigia'
+import {
+  contarAssinaturasSemPro,
+  contarCobrancasVencidas,
+} from '@/lib/dono/dinheiro-do-vigia'
 import { renderVigiaEmail } from '@/lib/emails/vigia'
 import { getResend } from '@/lib/resend/client'
 import { createAdminClient } from '@/lib/supabase/admin'
@@ -136,7 +140,14 @@ export async function GET(request: Request) {
   // mesmo defeito que a auditoria de 19/08 corrigiu em `/settings/billing` e
   // que o layout do dashboard ja resolvia com `Promise.all`. Numa rota com
   // teto de 60s isso e folga jogada fora.
-  const [errosNovos, trialsVencendo, suporteParado, credenciaisMortas] = await Promise.all([
+  const [
+    errosNovos,
+    trialsVencendo,
+    suporteParado,
+    credenciaisMortas,
+    assinaturasSemPro,
+    cobrancasVencidas,
+  ] = await Promise.all([
     medir('error_logs', async () => {
       const { count, error } = await admin
         .from('error_logs')
@@ -216,6 +227,20 @@ export async function GET(request: Request) {
 
       return mortas
     }),
+
+    // ## As duas do gateway, com leitura propria e nao com `lerDinheiro()`
+    //
+    // Aquela funcao existe e faz o trabalho — para a CENTRAL, que mostra seis
+    // coisas numa tela so e por isso faz seis chamadas. Aqui sao duas
+    // perguntas, e reusar a funcao inteira daria 144 chamadas por dia ao
+    // gateway para responder duas: a Central le sob demanda, um cron le sem
+    // ninguem pedir.
+    //
+    // E `lerDinheiro()` esta atras de `exigirAmbienteLocal()` de proposito.
+    // Arrancar essa linha para reusa-la enfraqueceria uma trava que protege
+    // dado financeiro de cliente.
+    medir('assinaturas no Asaas', () => contarAssinaturasSemPro()),
+    medir('cobrancas vencidas', () => contarCobrancasVencidas()),
   ])
 
   const leitura: LeituraDoVigia = {
@@ -224,16 +249,8 @@ export async function GET(request: Request) {
     suporteParado,
     credenciaisMortas,
 
-    // As duas do gateway ficam para uma rodada seguinte: `lerDinheiro()` já
-    // existe em `lib/dono/dinheiro.ts` e é `import 'server-only'` amarrado ao
-    // gate de ambiente. Trazê-lo para uma rota que roda na Vercel exige
-    // separar a leitura do gate primeiro, e fazer isso às pressas é como se
-    // desfaz uma trava de segurança sem perceber.
-    //
-    // Enquanto isso, `null` — e o e-mail diz, em texto, que não conferiu.
-    // Silêncio sobre dinheiro seria pior que a ausência do dado.
-    assinaturasSemPro: null,
-    cobrancasVencidas: null,
+    assinaturasSemPro,
+    cobrancasVencidas,
   }
 
   const alertas = montarAlertas(leitura)
