@@ -948,6 +948,7 @@ def comp_chamada(c: Tela, p: dict) -> None:
     by = py + 168
     fb = c.f("sans", "Regular", 27)
     col = (larg - 76) / 2
+    linhas_de_item = -(-len(pro["itens"]) // 2)      # divisao para cima
     for i, item in enumerate(pro["itens"]):
         cx = ix + (i % 2) * col
         cy = by + (i // 2) * 46
@@ -955,7 +956,45 @@ def comp_chamada(c: Tela, p: dict) -> None:
         c.texto(cx + 32, cy, item, fb, pal.titulo)
 
     # ------------------------------------------------------------- a ancora
-    ay = y + alt_pro - 78
+    #
+    # ## A posicao vem do CONTEUDO, e nao de um recuo fixo do fim do cartao
+    #
+    # `ay` era `y + alt_pro - 78`, e `alt_pro` deriva da ALTURA DA TELA. Ou
+    # seja: a lista de itens crescia com a contagem e a ancora ficava parada,
+    # entao a partir de quatro itens (duas linhas) a frase da comparacao
+    # subia por cima da segunda linha. Visto na peca de anuncio `a5_oferta`
+    # em 02/09, e o mesmo defeito estava na peca organica `p09_chamada`
+    # desde que ela ganhou o quarto item.
+    #
+    # E o mesmo desenho do mosaico, que era fixo em 3x3 e cortou a decima
+    # peca ao meio: contagem que cresce precisa de posicao derivada dela.
+    #
+    # `max` e nao substituicao: em tela alta a ancora continua onde estava,
+    # colada ao rodape do cartao, que e onde ela le melhor. So quando o
+    # conteudo empurra e que ela cede.
+    piso_do_conteudo = by + linhas_de_item * 46 + 34
+    ay = max(y + alt_pro - 78, piso_do_conteudo)
+
+    # Sobrepor em silencio e o defeito; falhar alto e a correcao. Este
+    # gerador ja lanca quando a linha nao cabe em LARGURA — faltava o mesmo
+    # em altura, e por isso a colisao passou por duas revisoes.
+    #
+    # ## O numero 46 nao e folga, e a altura do que ainda vai ser desenhado
+    #
+    # A primeira versao usou 24 e a linha da ancora saiu EM CIMA da borda
+    # arredondada do cartao — a guarda passou porque media so o topo do texto,
+    # e o texto tem corpo. 26 e o tamanho maximo da fonte da comparacao (o
+    # laco de encolhimento acima comeca nele) e 20 e a distancia minima ate a
+    # borda para o cartao nao ler como cortado.
+    ALTURA_DA_ANCORA = 26 + 20
+    if ay + ALTURA_DA_ANCORA > y + alt_pro:
+        raise ValueError(
+            f"a ancora nao cabe no cartao do Pro: {len(pro['itens'])} itens "
+            f"em {linhas_de_item} linha(s) empurram ate {ay:.0f}, e o cartao "
+            f"termina em {y + alt_pro:.0f}. Tire um item — quatro viram duas "
+            f"linhas e nao sobra altura para a comparacao de preco, que e o "
+            f"argumento mais forte da peca.")
+
     c.linha_fina(ix, ay - 26, larg - 76, pal.borda, 2)
 
     # ## A linha da ancora ENCOLHE ate caber, e nao quebra
@@ -1311,8 +1350,15 @@ PECAS = [
              # como "Em breve" na propria tela de Integracoes do produto
              # (`lib/integrations/whatsapp-estado.ts`). Nomear as duas que
              # existem tira a ambiguidade e ainda diz mais.
-             itens=["Contatos sem teto", "Importar planilha",
-                    "Cancela sem multa", "Google Agenda e Gmail"],
+             # DOIS itens, e a guarda de altura de `comp_chamada` obriga.
+             # Com quatro eles viram duas linhas, e a linha da comparacao de
+             # preco subia por cima da borda do cartao — esta peca esteve
+             # publicada assim, e o defeito so apareceu em 02/09 ao gerar a
+             # peca de anuncio equivalente e OLHAR o PNG.
+             #
+             # Os dois que ficaram respondem OBJECAO; os que sairam descrevem
+             # recurso, e recurso perde para objecao numa arte de decisao.
+             itens=["Contatos sem teto", "Cancela sem multa"],
              comparacao=f"Em CRM que cobra por vendedor, {TEAM_SIZE} pessoas custam",
              valor_deles=f"{brl(SEAT_MEDIAN_PRICE * TEAM_SIZE)}/mês"),
          free=dict(
@@ -1527,8 +1573,15 @@ CARROSSEL_DEMO = [
              selo="SEM COBRAR POR PESSOA",
              preco=brl(PRO_PLAN_PRICE), unidade="/mês",
              apoio="A empresa inteira. Quantas pessoas quiser.",
-             itens=["Contatos sem teto", "Importar planilha",
-                    "Cancela sem multa", "Google Agenda e Gmail"],
+             # DOIS itens, e a guarda de altura de `comp_chamada` obriga.
+             # Com quatro eles viram duas linhas, e a linha da comparacao de
+             # preco subia por cima da borda do cartao — esta peca esteve
+             # publicada assim, e o defeito so apareceu em 02/09 ao gerar a
+             # peca de anuncio equivalente e OLHAR o PNG.
+             #
+             # Os dois que ficaram respondem OBJECAO; os que sairam descrevem
+             # recurso, e recurso perde para objecao numa arte de decisao.
+             itens=["Contatos sem teto", "Cancela sem multa"],
              comparacao=f"Em CRM que cobra por vendedor, {TEAM_SIZE} pessoas custam",
              valor_deles=f"{brl(SEAT_MEDIAN_PRICE * TEAM_SIZE)}/mês"),
          free=dict(
