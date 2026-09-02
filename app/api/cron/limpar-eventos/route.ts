@@ -3,6 +3,7 @@ import { timingSafeEqual } from 'node:crypto'
 import { NextResponse } from 'next/server'
 
 import { createAdminClient } from '@/lib/supabase/admin'
+import { ANEXO_BUCKET } from '@/lib/storage/anexo-de-feedback'
 
 /**
  * Apaga os eventos de webhook velhos, uma vez por dia.
@@ -96,6 +97,38 @@ export async function GET(requisicao: Request) {
     admin.rpc('purge_old_rate_limit_attempts'),
   ])
 
+  // ## Os anexos do feedback são apagados AQUI, e não na função SQL
+  //
+  // `purge_old_feedback` tentava apagar de `storage.objects` por SQL, e o
+  // Supabase **proíbe**: uma trigger (`storage.protect_delete`) aborta a
+  // transação inteira com `42501`. O efeito era pior que perder o arquivo — o
+  // `delete` das LINHAS ia junto na mesma transação, então **nenhum relato foi
+  // apagado desde que a 0060 criou a função**.
+  //
+  // Achado em 02/09 exercitando esta rota contra produção: ela devolvia
+  // `{"ok": false, "feedback": null}` todo dia, e ninguém lê o corpo da
+  // resposta de um cron.
+  //
+  // Agora a 0068 devolve os caminhos e quem apaga arquivo é a Storage API,
+  // que é o caminho que o próprio Supabase manda usar.
+  //
+  // Falhar aqui NÃO desfaz a linha já apagada, de propósito: a linha é o dado
+  // pessoal (mensagem, e-mail, empresa) e é ela que a retenção precisa cortar.
+  // Arquivo órfão custa centavos de armazenamento; relato guardado além do
+  // prazo é problema de LGPD.
+  const resultadoDoFeedback = feedback.data as { apagados: number; anexos: string[] } | null
+  const anexosOrfaos = resultadoDoFeedback?.anexos ?? []
+  let anexosApagados = 0
+
+  if (anexosOrfaos.length > 0) {
+    const { error: erroDoStorage } = await admin.storage.from(ANEXO_BUCKET).remove(anexosOrfaos)
+    if (erroDoStorage) {
+      console.error('Anexos de feedback não removidos do Storage', erroDoStorage)
+    } else {
+      anexosApagados = anexosOrfaos.length
+    }
+  }
+
   // Uma falhar não pode impedir a outra de ter rodado: o retorno reporta as
   // quatro separadamente para o problema aparecer no log em vez de sumir.
   if (asaas.error) console.error('Purga do Asaas falhou', asaas.error)
@@ -117,7 +150,8 @@ export async function GET(requisicao: Request) {
       asaas: asaas.data ?? null,
       whatsapp: whatsapp.data ?? null,
       erros: erros.data ?? null,
-      feedback: feedback.data ?? null,
+      feedback: resultadoDoFeedback?.apagados ?? null,
+      anexosDeFeedback: anexosApagados,
       notificacoes: notificacoes.data ?? null,
       tentativas: tentativas.data ?? null,
     },

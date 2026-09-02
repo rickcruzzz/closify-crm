@@ -1048,9 +1048,17 @@ export type Database = {
       // como a de `error_logs` esperou. Janela maior de propósito: um ano para
       // relato de cliente — "cinco pessoas pediram exportação em CSV" continua
       // valendo um ano depois, ao contrário de um erro técnico.
+      // Devolve `jsonb` e não um número desde a 0068, e a razão é o Storage:
+      // apagar anexo por SQL é PROIBIDO pelo Supabase (trigger
+      // `storage.protect_delete`, erro 42501), e a tentativa abortava a
+      // transação inteira — nenhum relato era apagado desde a 0060.
+      //
+      // Agora a função devolve os caminhos dos anexos órfãos junto com a
+      // contagem, e quem apaga arquivo é a Storage API em
+      // `/api/cron/limpar-eventos`.
       purge_old_feedback: {
         Args: Record<string, never>
-        Returns: number
+        Returns: { apagados: number; anexos: string[] }
       }
       // 90 dias (0066): aviso de três meses atrás não muda decisão nenhuma. O
       // histórico de dinheiro que importa vive em `assinatura_eventos` (0055),
