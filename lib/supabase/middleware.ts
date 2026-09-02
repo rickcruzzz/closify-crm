@@ -105,7 +105,36 @@ export async function updateSession(request: NextRequest) {
    */
   if (user && isProtectedPath) {
     const EXPIRACAO_ABSOLUTA_MS = 30 * 24 * 60 * 60 * 1000 // 30 dias desde o login
-    const TIMEOUT_INATIVIDADE_MS = 14 * 24 * 60 * 60 * 1000 // 14 dias sem nenhuma requisição
+
+    /**
+     * Sete dias sem abrir, e a pessoa entra de novo. Era 14.
+     *
+     * ## Por que um CRM nao segue o prazo de um Notion
+     *
+     * A divisao no mercado nao e por tamanho de produto, e pelo que ele
+     * guarda. Notion, Linear e Slack mantem sessao por meses porque guardam o
+     * trabalho da propria pessoa. Salesforce usa 2 horas e o HubSpot 24, e os
+     * dois sao CRM — guardam nome, telefone e negociacao de gente que nunca
+     * concordou com nada.
+     *
+     * Sob a LGPD quem responde por esse dado e a empresa cliente, e sessao
+     * longa num computador de escritorio e a porta mais comum para acesso
+     * indevido. O publico daqui pesa: PME brasileira, computador
+     * frequentemente compartilhado no balcao ou na recepcao — a mesma razao
+     * pela qual "Sair" ganhou confirmacao em 19/08.
+     *
+     * ## Sete, e nao tres nem catorze
+     *
+     * Quem usa o CRM na rotina NUNCA e deslogado: basta abrir uma vez por
+     * semana, e quem trabalha com isso abre todo dia. O prazo so alcanca quem
+     * sumiu — e nesse caso a sessao aberta nao esta servindo a ninguem, so
+     * esperando.
+     *
+     * Catorze dias deixava a janela aberta por duas semanas num computador
+     * que outras pessoas usam. Tres alcancaria ferias curtas e feriado
+     * prolongado, cobrando login de quem nao fez nada de errado.
+     */
+    const TIMEOUT_INATIVIDADE_MS = 7 * 24 * 60 * 60 * 1000 // 7 dias sem nenhuma requisição
 
     const entrouEm = user.last_sign_in_at ? new Date(user.last_sign_in_at).getTime() : 0
     const ultimaAtividade = Number(request.cookies.get('vf_atividade')?.value) || entrouEm
