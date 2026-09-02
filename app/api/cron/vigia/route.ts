@@ -3,7 +3,10 @@ import { timingSafeEqual } from 'node:crypto'
 import { NextResponse } from 'next/server'
 
 import {
+  alertasNaoAvisados,
   assuntoDoVigia,
+
+  memoriaAtualizada,
   deveEnviar,
   leiturasQueFalharam,
   montarAlertas,
@@ -159,7 +162,37 @@ export async function GET(request: Request) {
   const naoConferido = leiturasQueFalharam(leitura)
 
   if (!deveEnviar(leitura)) {
+    // Nada vivo: a memória some junto, e é isso que faz um problema que
+    // voltar ser tratado como novo em vez de ficar calado para sempre.
+    await admin.from('vigia_ultimo_aviso').delete().neq('chave', '')
     return NextResponse.json({ enviado: false, motivo: 'nada a relatar' })
+  }
+
+  // ## A memória, e por que ela não pode derrubar o e-mail
+  //
+  // Rodando de hora em hora, um erro que apareceu de manhã geraria 24 e-mails
+  // idênticos até alguém resolver — e aí a pessoa aprende a arquivar sem ler,
+  // que é o estado que a fila de 20/08 produziu com 8 de 11 alertas de ruído.
+  //
+  // Se a leitura da memória falhar, `{}` faz tudo parecer novo e o e-mail sai.
+  // Errar para o lado de avisar demais é recuperável; errar para o lado de
+  // calar transforma o vigia no problema que ele existe para evitar.
+  const memoria: Record<string, number> = {}
+  try {
+    const { data } = await admin.from('vigia_ultimo_aviso').select('chave, quantidade')
+    for (const linha of data ?? []) memoria[linha.chave] = linha.quantidade
+  } catch (err) {
+    console.error('vigia: falhou ao ler a memoria, tratando tudo como novo', err)
+  }
+
+  const novidades = alertasNaoAvisados(alertas, memoria)
+
+  // Leitura que falhou também respeita a memória: sem isto, uma falha
+  // persistente do Asaas mandaria e-mail a cada hora dizendo a mesma coisa.
+  const jaAvisouDasFalhas = naoConferido.every((n) => memoria[`falha-${n}`] === 1)
+
+  if (novidades.length === 0 && jaAvisouDasFalhas) {
+    return NextResponse.json({ enviado: false, motivo: 'nada novo desde o ultimo aviso' })
   }
 
   const dia = new Intl.DateTimeFormat('pt-BR', {
@@ -171,8 +204,14 @@ export async function GET(request: Request) {
   const { error } = await getResend().emails.send({
     from: 'Velo Funil <suporte@velofunil.com.br>',
     to: DESTINATARIO,
-    subject: assuntoDoVigia(alertas, naoConferido),
-    html: renderVigiaEmail({ alertas, naoConferido, dia }),
+    // O e-mail mostra as NOVIDADES, não a fila inteira: repetir o que já foi
+    // comunicado obriga a reler tudo para achar o que mudou.
+    subject: assuntoDoVigia(novidades, jaAvisouDasFalhas ? [] : naoConferido),
+    html: renderVigiaEmail({
+      alertas: novidades,
+      naoConferido: jaAvisouDasFalhas ? [] : naoConferido,
+      dia,
+    }),
   })
 
   // O SDK do Resend NÃO lança em falha de envio — devolve `{ error }`. Com só
@@ -184,9 +223,22 @@ export async function GET(request: Request) {
     return NextResponse.json({ enviado: false, erro: String(error) }, { status: 500 })
   }
 
+  // A memória só é gravada DEPOIS do envio confirmado. Gravar antes e falhar
+  // no envio faria o vigia achar que já avisou de algo que ninguém recebeu —
+  // o alerta ficaria enterrado até piorar de número.
+  const nova = memoriaAtualizada(alertas)
+  for (const n of naoConferido) nova[`falha-${n}`] = 1
+
+  await admin.from('vigia_ultimo_aviso').delete().neq('chave', '')
+  if (Object.keys(nova).length > 0) {
+    await admin.from('vigia_ultimo_aviso').insert(
+      Object.entries(nova).map(([chave, quantidade]) => ({ chave, quantidade })),
+    )
+  }
+
   return NextResponse.json({
     enviado: true,
-    alertas: alertas.length,
+    novidades: novidades.length,
     naoConferido: naoConferido.length,
   })
 }

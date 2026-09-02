@@ -184,3 +184,81 @@ export function assuntoDoVigia(alertas: Alerta[], falhas: string[]): string {
     ? `${prefixo}: ${n} ${plural} (e ${falhas.length} não conferido)`
     : `${prefixo}: ${n} ${plural}`
 }
+
+/**
+ * O que já foi comunicado, por tipo de alerta.
+ *
+ * Vem de `vigia_ultimo_aviso` (0062). Chave ausente significa que aquele
+ * alerta nunca foi avisado — não que ele estava em zero.
+ */
+export type MemoriaDoVigia = Record<string, number>
+
+/** A chave de memória de um alerta. Deriva do título, não do texto. */
+export function chaveDoAlerta(alerta: Alerta): string {
+  return alerta.titulo
+    .toLowerCase()
+    .replace(/\d+/g, '')
+    .replace(/[^a-zà-ú]+/g, '-')
+    .replace(/^-|-$/g, '')
+    .slice(0, 60)
+}
+
+/**
+ * Quantos itens o alerta reporta. Sai do próprio título, que já o carrega.
+ *
+ * Ler o número do texto parece frágil e é a escolha certa aqui: a alternativa
+ * seria carregá-lo num campo à parte, que ficaria livre para discordar do
+ * título — e aí o e-mail diria "5 erros" enquanto a memória guardaria 2.
+ * Uma fonte só não tem como divergir de si mesma.
+ */
+export function quantidadeDoAlerta(alerta: Alerta): number {
+  const achado = alerta.titulo.match(/\d+/)
+  return achado ? Number(achado[0]) : 1
+}
+
+/**
+ * Filtra a fila, deixando só o que a pessoa ainda não sabe.
+ *
+ * ## As três situações, e por que cada uma decide assim
+ *
+ *     nunca avisado        MANDA   e novidade
+ *     igual ao ultimo      cala    ela ja sabe, e ja esta resolvendo
+ *     PIOROU (2 -> 5)      MANDA   mudou de tamanho, e isso e fato novo
+ *
+ * Melhorar sem zerar (5 -> 2) **não** dispara: quem está resolvendo não
+ * precisa ser avisado de que está funcionando. Some da fila quando chega a
+ * zero, e volta a avisar se reaparecer — porque aí é problema novo.
+ *
+ * ## Por que "piorou" importa e "continua" não
+ *
+ * Um alerta que persiste é o mesmo problema; um que cresce mudou de natureza.
+ * Dois erros num dia podem ser um navegador antigo; trinta são um defeito em
+ * produção. Sem comparar o número, os dois casos gerariam o mesmo silêncio
+ * depois do primeiro aviso.
+ */
+export function alertasNaoAvisados(
+  alertas: Alerta[],
+  memoria: MemoriaDoVigia,
+): Alerta[] {
+  return alertas.filter((a) => {
+    const anterior = memoria[chaveDoAlerta(a)]
+    if (anterior === undefined) return true
+    return quantidadeDoAlerta(a) > anterior
+  })
+}
+
+/**
+ * A memória nova, depois desta varredura.
+ *
+ * Guarda o estado ATUAL de todo alerta vivo, inclusive dos que não foram
+ * comunicados agora — senão um alerta que melhorou de 5 para 2 ficaria
+ * registrado como 5, e voltar a 4 não dispararia nada apesar de ter piorado.
+ *
+ * O que não está mais na fila sai da memória (a rota apaga), e é isso que faz
+ * um problema que voltou ser tratado como novo.
+ */
+export function memoriaAtualizada(alertas: Alerta[]): MemoriaDoVigia {
+  const nova: MemoriaDoVigia = {}
+  for (const a of alertas) nova[chaveDoAlerta(a)] = quantidadeDoAlerta(a)
+  return nova
+}

@@ -1,7 +1,11 @@
 import { describe, expect, it } from 'vitest'
 
 import {
+  alertasNaoAvisados,
   assuntoDoVigia,
+  chaveDoAlerta,
+  memoriaAtualizada,
+  quantidadeDoAlerta,
   deveEnviar,
   leiturasQueFalharam,
   montarAlertas,
@@ -112,5 +116,45 @@ describe('assuntoDoVigia', () => {
     // O caso perigoso: zero alertas porque zero leituras funcionaram.
     const assunto = assuntoDoVigia([], ['assinaturas no Asaas'])
     expect(assunto).toContain('não consegui')
+  })
+})
+
+describe('alertasNaoAvisados', () => {
+  const doisErros = montarAlertas({ ...LIMPO, errosNovos: 2 })
+  const trintaErros = montarAlertas({ ...LIMPO, errosNovos: 30 })
+
+  it('manda o que nunca foi avisado', () => {
+    expect(alertasNaoAvisados(doisErros, {})).toHaveLength(1)
+  })
+
+  it('cala quando o alerta continua igual', () => {
+    // A razão de a memória existir: rodando de hora em hora, um erro que
+    // apareceu de manhã geraria 24 e-mails idênticos até alguém resolver.
+    const memoria = memoriaAtualizada(doisErros)
+    expect(alertasNaoAvisados(doisErros, memoria)).toHaveLength(0)
+  })
+
+  it('manda de novo quando PIOROU', () => {
+    // Dois erros podem ser um navegador antigo; trinta são defeito em
+    // produção. Sem comparar o número, os dois casos calariam igual.
+    const memoria = memoriaAtualizada(doisErros)
+    expect(alertasNaoAvisados(trintaErros, memoria)).toHaveLength(1)
+  })
+
+  it('cala quando melhorou sem zerar', () => {
+    // Quem está resolvendo não precisa ser avisado de que está funcionando.
+    const memoria = memoriaAtualizada(trintaErros)
+    expect(alertasNaoAvisados(doisErros, memoria)).toHaveLength(0)
+  })
+
+  it('a chave não muda quando só a quantidade muda', () => {
+    // Se o número entrasse na chave, cada quantidade viraria um alerta
+    // diferente e a memória nunca casaria — 2 erros e 3 erros seriam coisas
+    // distintas, e todo aumento passaria como novidade.
+    expect(chaveDoAlerta(doisErros[0])).toBe(chaveDoAlerta(trintaErros[0]))
+  })
+
+  it('lê a quantidade do próprio título, sem campo paralelo', () => {
+    expect(quantidadeDoAlerta(trintaErros[0])).toBe(30)
   })
 })

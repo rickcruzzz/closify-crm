@@ -378,6 +378,24 @@ export type Database = {
       // alcanca. Diferenca que importa: esta tabela NASCE com purga de 7 dias
       // (0047), porque o volume de WhatsApp e ordens de grandeza maior — ver o
       // cabecalho da migration.
+      vigia_ultimo_aviso: {
+        Row: {
+          avisado_em: string
+          chave: string
+          quantidade: number
+        }
+        Insert: {
+          avisado_em?: string
+          chave: string
+          quantidade: number
+        }
+        Update: {
+          avisado_em?: string
+          chave?: string
+          quantidade?: number
+        }
+        Relationships: []
+      }
       whatsapp_webhook_events: {
         Row: {
           event_id: string
