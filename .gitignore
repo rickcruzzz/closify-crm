@@ -97,3 +97,7 @@ skills-lock.json
 # Se algum dia houver configuração de fato compartilhada (`extensions.json`
 # recomendando o ESLint, por exemplo), ela sai da regra com `!.vscode/nome`.
 .vscode/
+
+# Log do vigilante que mantem a Central local de pe (scripts/local/).
+# Fica fora do Git: e diario de uma maquina so, nao estado do projeto.
+.central-local/
