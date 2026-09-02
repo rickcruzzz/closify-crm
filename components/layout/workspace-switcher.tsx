@@ -79,15 +79,40 @@ export function WorkspaceSwitcher({
    * disparado. Antes o spinner parava um instante depois do clique e a tela
    * mostrava a empresa antiga por ~1s, sem sinal nenhum de que algo mudou.
    */
+  /**
+   * Qual empresa esta sendo aberta agora.
+   *
+   * Sem isto o spinner nao tem onde morar: `trocando` e um booleano, e um
+   * booleano so consegue dizer "alguma coisa esta acontecendo" — nao em qual
+   * das linhas. Era por isso que o `Loader2` da lista nascia `opacity-0`.
+   */
+  const [idEmTroca, setIdEmTroca] = React.useState<string | null>(null)
+
   async function trocar(id: string) {
     if (id === activeId || trocando) return
+    setIdEmTroca(id)
     setEnviando(true)
     const resultado = await trocarEmpresa(id)
     setEnviando(false)
+    if (resultado?.error) setIdEmTroca(null)
     if (resultado?.error) {
       toast.error(resultado.error)
       return
     }
+    // ## O aviso, em vez de um dialogo de confirmacao
+    //
+    // Slack, Notion e Linear trocam de espaco sem perguntar nada, e o motivo
+    // e solido: trocar de empresa se desfaz com outro clique. Confirmacao
+    // existe para o que nao volta — a regra que `anuncio-actions.ts` ja
+    // escreve: "se o pior caso de um clique errado for 'desfaco agora',
+    // entra".
+    //
+    // O que faltava nao era permissao, era CONFIRMACAO DO FATO: a tela toda
+    // troca de dados de uma vez, e sem uma frase dizendo onde voce esta o
+    // efeito e o de ter aberto outro sistema.
+    const destino = workspaces.find((w) => w.id === id)
+    if (destino) toast.success(`Você está em ${destino.name}`)
+
     // `refresh` e não `push`: a pessoa continua na mesma tela, só que agora
     // preenchida com os dados da outra empresa.
     startTransition(() => {
@@ -175,10 +200,17 @@ export function WorkspaceSwitcher({
             className="flex items-center justify-between gap-2"
           >
             <span className="flex min-w-0 items-center gap-2">
-              {workspace.id === activeId ? (
+              {/* ## O spinner nasce na linha CLICADA
+                  Ele existia e era `opacity-0` — um placeholder de
+                  alinhamento, nao um sinal. Clicar nao mostrava nada ate a
+                  tela recarregar, e trocar de empresa custa uma ida ao
+                  servidor mais um `router.refresh()`.
+                  As outras linhas mantem o espaco reservado, senao a lista
+                  inteira se desloca no instante do clique. */}
+              {workspace.id === activeId && !trocando ? (
                 <Check aria-hidden className="size-4 shrink-0" />
-              ) : trocando ? (
-                <Loader2 aria-hidden className="size-4 shrink-0 animate-spin opacity-0" />
+              ) : workspace.id === idEmTroca ? (
+                <Loader2 aria-hidden className="size-4 shrink-0 animate-spin" />
               ) : (
                 <span aria-hidden className="size-4 shrink-0" />
               )}
@@ -189,6 +221,18 @@ export function WorkspaceSwitcher({
             </Badge>
           </DropdownMenuItem>
         ))}
+        {/* ## Por que ha mais empresa do que o plano permite
+            O limite de uma empresa no Free chegou depois, e quem ja tinha
+            manteve as suas — a mesma decisao da 0057, que preservou o prazo
+            das 10 empresas em avaliacao quando o trial acabou. Cortar o que
+            alguem ja usava seria quebrar contrato.
+            Sem esta linha a tela se contradiz: lista tres empresas com selo
+            `Free` e, logo abaixo, diz que empresa nova exige Pro. */}
+        {!podeCriarEmpresa && workspaces.length > 1 && (
+          <p className="text-muted-foreground px-2 py-1.5 text-xs text-pretty">
+            Criadas antes do limite de uma empresa no Free. Você mantém todas.
+          </p>
+        )}
         <DropdownMenuSeparator />
         {/* No Free o limite é de uma empresa. Mostrar "Nova empresa" para quem
             não pode criar leva a pessoa a preencher o formulário inteiro e só
