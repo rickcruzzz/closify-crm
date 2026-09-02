@@ -7,9 +7,15 @@ Migrations novas mudam este arquivo com o tempo; ao suspeitar de
 desatualização, reconsulte o catálogo em vez de confiar cegamente nele (mesma
 regra de `docs/estado-atual.md`).
 
-**Reconferido em 01/09/2026 — uma tabela nova e duas RPCs novas.** Lido do
-OpenAPI do PostgREST de produção: **18 tabelas**, **32 RPCs**, **17 foreign
-keys**, 60 arquivos de migration (a maior é `0061`).
+**Reconferido em 02/09/2026, noite — duas tabelas novas, e a fonte mudou.**
+Lido de `pg_catalog` e não do OpenAPI: **20 tabelas**, **34 RPCs do projeto**
+(65 no catálogo, 31 são da extensão `pg_trgm`), **31 foreign keys**, **15
+triggers**, **8 enums**, 67 arquivos de migration (a maior é `0068`).
+
+As tabelas novas são `vigia_ultimo_aviso` (0062) e `notificacoes` (0066). A
+mudança de fonte está explicada no "Resumo do catálogo", no fim — em resumo, o
+OpenAPI responde "o que a API expõe" e o catálogo responde "o que o banco tem",
+e para um diagrama de schema a segunda é a pergunta certa.
 
 A tabela nova é **`feedback`** (0060), o canal de suporte do cliente, com os
 anexos e o acompanhamento da 0061. Ela é a primeira tabela do projeto que
@@ -300,6 +306,24 @@ classDiagram
         +timestamptz created_at
     }
 
+    class notificacoes {
+        +uuid id PK
+        +uuid workspace_id FK "→ workspaces, CASCADE"
+        +uuid user_id FK "→ auth.users, CASCADE, nullable = toda a empresa"
+        +text tipo "check: pagamento_confirmado|pagamento_atrasado|plano_vencendo|trial_terminando"
+        +text titulo "1..120"
+        +text corpo "nullable, ate 400"
+        +text href "nullable, check: comeca com /"
+        +timestamptz criada_em
+        +timestamptz lida_em "nullable"
+    }
+
+    class vigia_ultimo_aviso {
+        +text chave PK "tipo do alerta, ou __ultima_varredura"
+        +integer quantidade
+        +timestamptz atualizado_em
+    }
+
     class feedback {
         +uuid id PK
         +text tipo "problema|sugestao"
@@ -370,6 +394,7 @@ classDiagram
     workspaces "1" --> "many" conversas : CASCADE
     workspaces "1" --> "many" mensagens : CASCADE
     workspaces "1" --> "many" assinatura_eventos : CASCADE
+    workspaces "1" --> "many" notificacoes : CASCADE
 
     leads "1" --> "many" deals : SET NULL
     leads "1" --> "many" activities : CASCADE
@@ -543,26 +568,47 @@ roda. Enum se paga quando o conjunto está estável, que é o caso de
 
 ## Resumo do catálogo
 
-**17 tabelas** no schema `public`, todas com Row Level Security ligada
-(`rls_enabled: true` em `list_tables`, confirmado, não suposto). O número já
-disse 12 (até 23/08) e 14 (até 25/08); subiu para 17 em 26/08 com
-`assinatura_eventos` (0055) e o par `conversas`/`mensagens` (0056).
+**Reconferido em 02/09/2026, noite, contra `pg_catalog` — não contra o
+OpenAPI.** A troca de fonte é a correção mais importante desta revisão, e está
+explicada no fim desta seção.
 
-**30 RPCs**, e este número **não mudou** desde 24/08 — as duas migrations que
-acrescentaram tabela não acrescentaram função exposta. `checar_teto_de_mensagens`
-(0056) é `returns trigger`, que o PostgREST não lista, e a 0055 alterou
-`pro_vigente()` por dentro sem tocar na assinatura.
+**20 tabelas** no schema `public`, todas com Row Level Security ligada
+(conferido em `pg_class.relrowsecurity`, 20 de 20). O número já disse 12 (até
+23/08), 14 (até 25/08), 17 (26/08) e 18 (01/09). Entraram desde então:
+`vigia_ultimo_aviso` (0062, a memória do vigilante) e `notificacoes` (0066, o
+sino de avisos dentro do produto).
 
-**17 relações de foreign key** entre tabelas do schema, contra 12 até 25/08:
-entraram `conversas.workspace_id`, `conversas.lead_id`, `mensagens.workspace_id`,
-`mensagens.conversa_id` e `assinatura_eventos.workspace_id`. A maioria com
-`ON DELETE CASCADE` a partir de `workspaces`, exceto `deals.lead_id` (`SET
-NULL` — um negócio sobrevive à exclusão do lead vinculado).
+**34 RPCs do projeto**, e aqui mora uma armadilha nova. O catálogo devolve
+**65** funções, e **31 delas são da extensão `pg_trgm`** — `gin_*`, `gtrgm_*`,
+`similarity*`, `word_similarity*`, `set_limit`, `show_trgm`. Elas vieram junto
+com o índice de busca por nome de contato, são reais, estão no schema `public`,
+e **não foram escritas aqui**. Contá-las infla o número em 91% e passa a medir
+a extensão em vez do produto.
 
-`conversas.dono_id` e `mensagens.enviada_por` **têm FK declarada**, para
-`auth.users`, com `ON DELETE SET NULL` — diferente das dez colunas listadas na
-seção acima, que apontam para lá sem FK nenhuma. Elas não entram na contagem de
-17 porque `auth` é outro schema.
+As do projeto que entraram desde 01/09: `excluir_empresa` (0064),
+`purge_old_notificacoes` (0066), `purge_old_rate_limit_attempts` (0067) e
+`vigiar_o_vigia` (0063, que roda por `pg_cron` e **não aparece no OpenAPI**,
+porque o PostgREST só lista o que ele expõe).
 
-Tudo reconferido lendo o documento OpenAPI que o PostgREST de produção serve,
-que é a mesma fonte que o app consome — não a leitura das migrations.
+**31 relações de foreign key** entre tabelas do schema, contra 17 na contagem
+anterior. **A diferença não é crescimento, é método:** aquela vinha do OpenAPI,
+que só enxerga o que está exposto na API; esta vem de `pg_constraint`, que
+conta o que o banco de fato tem. É o mesmo erro que o cabeçalho do PRD cometeu
+em 01/09 e que está registrado lá.
+
+**15 triggers** e **8 enums**, os dois números medidos pela primeira vez neste
+documento — antes as triggers só apareciam descritas em prosa, o que as tornava
+impossíveis de conferir por contagem.
+
+### Por que a fonte mudou de OpenAPI para `pg_catalog`
+
+O OpenAPI do PostgREST responde "o que a API expõe". O catálogo responde "o que
+o banco tem". As duas perguntas são legítimas e dão números diferentes, e usar
+uma achando que é a outra já custou dois cabeçalhos errados neste projeto.
+
+Para um diagrama de schema, a pergunta certa é a do banco: uma função
+`returns trigger` não aparece no OpenAPI e continua governando limite de plano;
+uma FK para `auth.users` não aparece e continua apagando linha em cascata.
+
+Os comandos exatos estão no cabeçalho do [prd.md](prd.md), com o filtro de
+`pg_trgm` escrito, para a próxima conferência não repetir a inflação.

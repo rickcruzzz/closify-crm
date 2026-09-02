@@ -3,25 +3,30 @@
 > Iniciativa de conversão Free→Pro (copy da landing, limites, checkout) tem
 > PRD próprio: [prd-conversao-pro.md](prd-conversao-pro.md).
 >
-> **Conferido contra produção em 02/09/2026.** Números de tabela, RPC,
+> **Conferido contra produção em 02/09/2026, noite.** Números de tabela, RPC,
 > migration e teste vieram do catálogo real e do gate, não de memória:
-> **19 tabelas**, **34 RPCs**, **29 foreign keys**, 64 arquivos de migration
-> (a maior é `0065`) e **931 testes**.
+> **20 tabelas**, **34 RPCs do projeto**, **31 foreign keys**, **15 triggers**,
+> **8 enums**, 67 arquivos de migration (a maior é `0068`) e **944 testes**.
 >
-> **Cinco dos cinco números do cabeçalho anterior estavam errados**, e um por
-> muito: ele afirmava 17 foreign keys quando são 29. A diferença não é de
-> crescimento — é de **método**. A contagem antiga vinha do OpenAPI do
-> PostgREST, que só enxerga o que está exposto na API; a de agora vem de
-> `pg_constraint`, que conta o que o banco de fato tem. As duas respondem
-> perguntas diferentes, e o cabeçalho não dizia qual estava usando.
+> **`34 RPCs` precisa de ressalva, e ela é nova.** O catálogo devolve **65**
+> funções, e 31 delas são da extensão `pg_trgm` (`gin_*`, `gtrgm_*`,
+> `similarity*`, `word_similarity*`, `set_limit`, `show_trgm`) — instaladas
+> junto do índice de busca por nome de contato, não escritas aqui. Contar as
+> 65 infla o número em 91% e mede a extensão, não o produto. O comando abaixo
+> exclui o prefixo delas.
 >
-> A partir daqui o comando é explícito, abaixo, e é `pg_constraint`.
+> **O que a estrutura ganhou nesta rodada:** `notificacoes` (0066, o sino de
+> avisos dentro do produto), `purge_old_rate_limit_attempts` (0067, a purga
+> que faltava na tabela mais escrita do sistema) e `purge_old_feedback`
+> reescrita (0068) — ela **nunca havia funcionado**: apagava anexo direto de
+> `storage.objects`, o Supabase proíbe isso por trigger, e a exceção abortava
+> a transação inteira, então nenhum relato era apagado desde a 0060.
 >
-> **O que a estrutura ganhou desde 31/08:** `vigia_ultimo_aviso` (0062, a
-> memória do vigilante), `excluir_empresa` (0064) e `vigiar_o_vigia` (0063,
-> que roda em `pg_cron` e não aparece como RPC do PostgREST). A coluna
-> `workspaces.consentimento_analitico` (0065) não muda a contagem de tabelas,
-> e é a que fechou o envio de dado pessoal à Meta sem consentimento.
+> **Antes disso, em 02/09 de madrugada:** `vigia_ultimo_aviso` (0062),
+> `excluir_empresa` (0064), `vigiar_o_vigia` (0063, que roda em `pg_cron` e
+> não aparece como RPC do PostgREST) e a coluna
+> `workspaces.consentimento_analitico` (0065), que fechou o envio de dado
+> pessoal à Meta sem consentimento.
 >
 > **Este cabeçalho já esteve errado, e é por isso que os comandos estão
 > escritos aqui.** Entre 29 e 31/08 ele afirmava 687 testes e 17 tabelas
@@ -31,15 +36,33 @@
 > ```
 > testes        npm test
 > migrations    ls supabase/migrations/*.sql
-> tabelas/RPC   OpenAPI do PostgREST de producao
+> tabelas       select count(*) from pg_tables where schemaname = 'public'
+> RPCs          select count(*) from pg_proc p
+>                 join pg_namespace n on n.oid = p.pronamespace
+>                where n.nspname = 'public' and p.prokind = 'f'
+>                  and pg_get_function_result(p.oid) <> 'trigger'
+>                  and p.proname !~ '^(gin_|gtrgm_|similarity|word_similarity|
+>                                       strict_word_similarity|set_limit|
+>                                       show_limit|show_trgm)'
 > foreign keys  select count(*) from pg_constraint c
 >                 join pg_namespace n on n.oid = c.connamespace
 >                where n.nspname = 'public' and c.contype = 'f'
+> triggers      select count(*) from pg_trigger t
+>                 join pg_class c on c.oid = t.tgrelid
+>                 join pg_namespace n on n.oid = c.relnamespace
+>                where n.nspname = 'public' and not t.tgisinternal
 > ```
 >
-> A última é a que mais engana: `pg_constraint` e o OpenAPI dão números
-> diferentes de propósito, e usar um achando que é o outro foi exatamente o
-> erro do cabeçalho de 01/09.
+> **Duas armadilhas de contagem, as duas já pagas aqui.**
+>
+> A primeira: `pg_constraint` e o OpenAPI dão números diferentes de propósito,
+> e usar um achando que é o outro foi o erro do cabeçalho de 01/09 — ele dizia
+> 17 foreign keys quando eram 29.
+>
+> A segunda, achada em 02/09: contar RPC sem filtrar `pg_trgm` devolve 65 em
+> vez de 34. As funções da extensão são reais e estão no schema `public`, mas
+> não são deste produto — nenhuma delas aparece em `lib/**`, e o número serve
+> para medir o que foi escrito, não o que foi instalado.
 >
 > O estado operacional do dia a dia (o que quebrou, o que foi medido, o que
 > está pendente) mora em [estado-atual.md](estado-atual.md); o diagrama de
@@ -1077,19 +1100,31 @@ Para garantir que o Velo Funil esteja pronto para produção, use este prompt de
 ### Checklist de deploy/validação final
 
 Cada item marcado tem prova, não impressão — o método está em
-`docs/estado-atual.md` ("Como verificar as coisas aqui"). Atualizado 31/08/2026.
+`docs/estado-atual.md` ("Como verificar as coisas aqui"). Atualizado 02/09/2026.
 
 - [x] **Build local concluído sem erros.** `npx tsc --noEmit`, `npm run lint`,
-      `npm test` (**931 testes**) e `npm run build:check`, os quatro limpos,
+      `npm test` (**944 testes**) e `npm run build:check`, os quatro limpos,
       rodados antes de cada commit. É `build:check` e não `build`: os dois
       escrevem em `.next` por padrão, e o build sobrescreve o mapa de chunks
       que o `npm run dev` está usando — a rota morre com `MODULE_NOT_FOUND` e
       o erro aponta para o arquivo recém-editado, parecendo defeito dele.
-- [x] **Migrations aplicadas no Supabase de produção.** 60 arquivos de
-      migration (a maior é `0061`) no projeto `tmyeunithjqkbwvezyyn`
-      (`sa-east-1`). Conferido contra o catálogo real em 01/09: **18 tabelas**,
-      **32 RPCs** e **17 foreign keys**, ver [schema.md](schema.md). A tabela nova é `feedback`
-      (0060), o canal de suporte; as outras três da 0058 à 0061 mexeram em
+- [x] **Migrations aplicadas no Supabase de produção.** 67 arquivos de
+      migration (a maior é `0068`) no projeto `tmyeunithjqkbwvezyyn`
+      (`sa-east-1`). Conferido contra o catálogo real em 02/09: **20 tabelas**,
+      **34 RPCs do projeto** (65 no catálogo, 31 são da extensão `pg_trgm`),
+      **31 foreign keys**, **15 triggers** e **8 enums**, ver
+      [schema.md](schema.md).
+
+      A tabela nova desta rodada é `notificacoes` (0066), o sino de avisos
+      dentro do produto. E a 0068 corrigiu uma função que **nunca havia
+      funcionado**: `purge_old_feedback` apagava anexo direto de
+      `storage.objects`, o Supabase proíbe isso por trigger, e a exceção
+      abortava a transação inteira — nenhum relato foi apagado desde a 0060.
+      Achado exercitando a rota de cron contra produção, que devolvia
+      `{"ok": false}` todo dia num corpo de resposta que ninguém abre.
+
+      A tabela `feedback` (0060) é o canal de suporte; as outras três da 0058 à
+      0061 mexeram em
       coluna e política, não em estrutura.
 
       **Reescrever função por dentro não aparece em lista de catálogo**, e este
@@ -1128,7 +1163,7 @@ Cada item marcado tem prova, não impressão — o método está em
       banido pelo `prd-copy-sem-jargao.md` eliminado das telas (Pipeline→Funil,
       Leads→Contatos, Dashboard→Resultados), incluindo o que a renomeação de
       19/08 tinha deixado passar.
-- [x] **Testes automatizados para os fluxos críticos.** 931 testes cobrindo
+- [x] **Testes automatizados para os fluxos críticos.** 944 testes cobrindo
       lógica pura em `lib/**`; cada caso documenta o defeito que o motivou.
       Ressalva honesta: `tests/e2e/funil-completo.spec.ts` **nunca foi
       executado** (exige `.env.local` e roda contra o Asaas). Ele não falha em
