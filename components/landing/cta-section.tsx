@@ -14,24 +14,26 @@ export function CtaSection() {
             aria-hidden
             className="glow-radial pointer-events-none absolute -top-24 left-1/2 -z-10 h-64 w-[32rem] -translate-x-1/2"
           />
-          {/* ## O fecho vendia o inimigo que a página abandonou
+          {/* ## O fecho tem que falar com a MESMA pessoa do hero
 
-              Até 31/08 esta headline era "Pronto para largar a planilha?" — o
-              inimigo que a repositionagem de 24/08 trocou, com base no Sebrae:
-              82% da PME brasileira vende pelo WhatsApp, e **quem vende por lá
-              não tem planilha para largar**.
+              Esta linha já errou nos dois sentidos, e o registro das duas
+              vezes é o que impede a terceira.
 
-              O hero mudou naquele dia; o fecho não acompanhou. Medido no
-              navegador: a pessoa lê sobre WhatsApp na tela 0,1, rola doze
-              telas e é convidada a resolver um problema que não tem. A última
-              coisa que ela vê antes de decidir falava com outra pessoa.
+              Até 31/08 dizia "Pronto para largar a planilha?" enquanto o hero
+              falava de WhatsApp: a pessoa lia sobre WhatsApp na tela 0,1, rolava
+              doze telas e era convidada a resolver um problema que não tinha.
+              Corrigido para WhatsApp, acompanhando o hero.
 
-              A planilha **não some da página** — importar `.csv` é recurso
-              real e quem tem planilha precisa saber que dá. Ela muda de papel:
-              deixa de ser o inimigo e vira um dos caminhos para trazer o que
-              já é seu. */}
+              Em 02/09 o hero voltou para a planilha, porque o WhatsApp saiu
+              da tese — `FASE_DO_WHATSAPP = 'migrando'`, e o produto entrega
+              só o link `wa.me`. Se este fecho ficasse falando de WhatsApp,
+              seria o mesmo descasamento na direção inversa.
+
+              **A regra que sobra: hero e fecho mudam JUNTOS.** Eles são a
+              primeira e a última coisa que a pessoa lê, e quando discordam é
+              sempre a última que decide, contra o que a trouxe até aqui. */}
           <h2 className="text-titulo-md md:text-titulo-lg">
-            Seus clientes já estão no WhatsApp. Faltam num lugar só.
+            Sua carteira de clientes cabe num lugar só.
           </h2>
           <p className="text-muted-foreground max-w-xl text-lg">
             Crie a conta da sua empresa, de graça, em menos de um minuto, e veja com

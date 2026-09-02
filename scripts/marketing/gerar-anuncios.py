@@ -141,13 +141,23 @@ PECAS = [
     #
     # O número tem fonte impressa na arte porque é o que substitui prova
     # social aqui: dado público confere, depoimento inventado não.
+    #
+    # ## Trocado em 02/09: era sobre WhatsApp
+    #
+    # A versão anterior usava "97% abrem o WhatsApp todo dia" para dizer que a
+    # proposta some no histórico. O dado é verdadeiro e a peça era boa, mas
+    # `FASE_DO_WHATSAPP = 'migrando'`: o produto não lê conversa nenhuma, e um
+    # anúncio que abre em WhatsApp cria a expectativa de que leia.
+    #
+    # O dado novo mede a MESMA dor sem prometer o que não roda, e ainda aponta
+    # para o recurso que existe: a importação de planilha.
     dict(id="a2_perda_memoria", comp="numero", pal=vf.ESCURO,
-         numero="97%",
-         claim="dos usuários abrem o WhatsApp todo dia.",
-         texto="Toda conversa nova empurra a de ontem para baixo. Cinco dias "
-               "depois, a proposta que você mandou está a trinta rolagens de "
-               "distância.",
-         fonte="Opinion Box, WhatsApp no Brasil 2025. 1.126 ouvidos.",
+         numero="42h",
+         claim="é o tempo médio até a primeira resposta.",
+         texto="Não é falta de vontade. É que a lista de quem está esperando "
+               "não fica em lugar nenhum, e quem lembra primeiro é quem "
+               "cobra.",
+         fonte="Harvard Business Review, auditoria em 2.241 empresas.",
          dominio=D),
 
     # -----------------------------------------------------------------------
@@ -161,8 +171,19 @@ PECAS = [
     # Esta peça não compete com o WhatsApp: declara que ele fica. A objeção
     # deixa de existir em vez de ser combatida, que é a única forma de vencê-la
     # numa arte de duas linhas.
-    dict(id="a3_objecao_whatsapp", comp="declaracao", pal=vf.ESCURO,
-         claim="Continue no WhatsApp. O funil fica do lado, não no lugar.",
+    #
+    # ## Trocada em 02/09, pelo mesmo motivo da a2
+    #
+    # Dizia "Continue no WhatsApp. O funil fica do lado, não no lugar." A
+    # frase tratava a objeção certa, e ainda trata: ninguém quer trocar de
+    # ferramenta. O problema é o que ela sugere sobre integração.
+    #
+    # A objeção continua sendo de status quo, e a planilha ocupa o mesmo
+    # lugar mental que o WhatsApp ocupava: "o que eu tenho já funciona". A
+    # resposta é a mesma — não pedimos que largue nada. E aqui ela é
+    # LITERALMENTE verdade, porque importar planilha é recurso entregue.
+    dict(id="a3_objecao_planilha", comp="declaracao", pal=vf.ESCURO,
+         claim="Sua planilha entra. O funil monta sozinho.",
          dominio=D),
 
     # -----------------------------------------------------------------------
@@ -222,6 +243,37 @@ PECAS = [
     # que sobra depois do preço: quem já foi cobrado por um teste esquecido
     # hesita mesmo diante do grátis. Dizer isso na arte é mais barato que
     # explicar depois.
+    # -----------------------------------------------------------------------
+    # 6. ENERGIA DE ATIVACAO + AUTORIDADE POR ASSOCIACAO
+    # -----------------------------------------------------------------------
+    # A objecao que sobra depois de preco e de troca e "vou ter que aprender
+    # outra ferramenta". Ela nao e sobre o produto: e sobre o custo de comecar,
+    # e custo de comecar mata adocao mesmo quando tudo o mais convence.
+    #
+    # Google Agenda e Gmail respondem isso sem argumentar: a pessoa nao aprende
+    # nada novo, o compromisso cai na agenda que ela ja abre e o e-mail sai da
+    # caixa que ela ja usa. E o nome do Google empresta confianca que este
+    # produto ainda nao tem por conta propria.
+    #
+    # ## Esta peca so existe porque as duas integracoes foram MEDIDAS
+    #
+    # Contra o banco de producao em 02/09: `google_calendar` com 3 conexoes,
+    # 3 conectadas, 0 com erro; `gmail` com 1 conexao, 1 conectada, 0 com
+    # erro. Credenciais de OAuth presentes, e a verificacao do Google
+    # aprovada em 24/08 para `calendar.events.owned` e `gmail.send` — sem o
+    # aviso de "app nao verificado" que assusta quem nao e desenvolvedor.
+    #
+    # Sem essa medicao esta peca seria a mesma classe do "em breve" que acabou
+    # de sair da landing.
+    # A frase e CURTA por medicao, nao por gosto: a primeira versao tinha 12
+    # palavras ("O compromisso vai para a sua Agenda. O e-mail sai do seu
+    # Gmail") e `comp_declaracao` a quebrou em SEIS linhas, com um "O" sozinho
+    # na primeira. Gerado e olhado em 02/09. Esta composicao foi desenhada
+    # para uma tese de uma respiracao, e passar disso vira parede de texto.
+    dict(id="a6_google", comp="declaracao", pal=vf.ESCURO,
+         claim="Marca no seu Google. Manda do seu Gmail.",
+         dominio=D),
+
     dict(id="a5_oferta", comp="chamada", pal=vf.ESCURO,
          rotulo="SEM CARTAO PARA COMECAR",
          claim="O plano é o mesmo para uma pessoa",
@@ -276,6 +328,30 @@ def conferir_texto_de_anuncio(p: dict) -> None:
                 raise ValueError(
                     f"{p['id']}: '{termo}' em `{chave}` , anúncio é imagem "
                     f"única, não há para onde arrastar")
+
+    # ## Teto de palavras no `claim`, e ele nasceu de duas quebras seguidas
+    #
+    # `comp_declaracao` desenha o claim em corpo grande, e passar de umas dez
+    # palavras faz o texto quebrar em seis linhas com uma palavra solta na
+    # primeira. Aconteceu DUAS VEZES na mesma sessão, em 02/09: primeiro na
+    # peça do Google, depois na da planilha. Nas duas o defeito só apareceu ao
+    # abrir o PNG.
+    #
+    # Contar palavra é grosseiro e é de propósito: medir a largura real exigia
+    # instanciar fonte e canvas aqui, e a trava tem que rodar ANTES de desenhar
+    # para o erro dizer o que fazer em vez de mostrar o estrago. Dez é o
+    # tamanho das frases que couberam.
+    #
+    # O teto vale só para `declaracao`: `numero` e `chamada` têm o claim em
+    # corpo menor e com mais espaço, e frases dessas peças passam de dez sem
+    # quebrar nada.
+    if p["comp"] == "declaracao":
+        palavras = len(p["claim"].split())
+        if palavras > 10:
+            raise ValueError(
+                f"{p['id']}: o claim tem {palavras} palavras e `declaracao` "
+                f"desenha em corpo grande. Acima de 10 ele vira parede de "
+                f"texto de seis linhas. Encurte: {p['claim']!r}")
 
 
 def render(formato: str, tamanho: tuple, so: str | None = None) -> list:

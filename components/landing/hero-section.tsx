@@ -81,21 +81,43 @@ export function HeroSection() {
               auditoria da HBR em 2.241 empresas achou tempo médio de PRIMEIRA
               resposta de 42 horas.
 
-              ## O que a frase faz de propósito
+              ## E em 02/09 ela saiu, com o WhatsApp junto
 
-              Não compete com o WhatsApp — o complementa. "Mas eu já uso
-              WhatsApp" é a objeção nº 1 do nosso público, e uma headline que
-              mandasse trocar de ferramenta perderia a discussão antes de
-              começar. Esta concede o que é verdade (o WhatsApp é ótimo para
-              conversar) e nomeia o que ele não faz (lembrar).
+              A headline anterior era "O WhatsApp guarda a conversa. Não guarda
+              o cliente." Ela funcionava, e o dado do Sebrae continua verdadeiro
+              — o que deixou de ser verdade é a promessa embutida nela.
 
-              ## O que ela NÃO promete
+              `FASE_DO_WHATSAPP = 'migrando'`: a ponte não oficial saiu de
+              operação e a API da Meta depende de App Review. O único WhatsApp
+              que este produto entrega é o link `wa.me`, que abre a conversa a
+              partir do contato. Isso é um botão, não uma tese, e uma página
+              inteira construída sobre ele promete o que não existe.
 
-              Nada sobre integração automática. A ponte não oficial (Evolution)
-              foi REMOVIDA do produto em 28/08, junto com a VPS, e a API
-              oficial da Meta depende de App Review. Prometer o que não roda é
-              a mesma classe de defeito que o "contatos ilimitados" que saiu
-              daqui em 23/08 — e agora não há nem o que ligar. */}
+              Numa página orgânica isso custa decepção. Numa que recebe TRÁFEGO
+              PAGO, custa dinheiro: a decepção acontece depois do clique, com
+              ele já cobrado.
+
+              ## Por que ESTA frase, e não outra
+
+              O diferencial que sobra é o único que nenhum concorrente copia
+              sem mudar a própria receita. Medido em 02/09 contra a fonte:
+
+                  RD Station    R$ 59,40/usuario   gratis ate 4 usuarios
+                  Agendor       R$ 53 a 59/usuario  conta gratis
+                  Ploomes       ~R$ 75/usuario      sem gratis
+                  Pipedrive     US$ 12,50/usuario
+
+              Os quatro cobram por pessoa, e três têm plano grátis. Ou seja:
+              "grátis" não diferencia nada, e o Free daqui (2 pessoas) é mais
+              restrito que o do RD Station (4). O que diferencia é o preço
+              fixo, e ele estava enterrado atrás do gancho de WhatsApp.
+
+              A frase mantém a forma que funcionava: concede o que é verdade
+              (a planilha organiza) e nomeia o que ela não faz (avisar). O
+              inimigo volta a ser a planilha porque é ela que a importação
+              resolve — e importação é coisa que o produto ENTREGA.
+
+              O WhatsApp volta para cá quando voltar a entregar. Não antes. */}
           {/* Três degraus, e o primeiro existe por medição, não por gosto.
               A frase nova tem 47 caracteres contra 38 da anterior; em 390px,
               com `text-titulo-lg` (44px), ela ocupava CINCO linhas e empurrava
@@ -116,14 +138,15 @@ export function HeroSection() {
               o movimento de entrada continua existindo. Só a opacidade sai. */}
           <h1 className="animate-in slide-in-from-bottom-3 fill-mode-both ease-entrada duration-entrada delay-passo-2 text-titulo-md text-balance sm:text-titulo-lg md:text-titulo-xl">
             <span className="sr-only">Velo Funil, CRM para pequenos negócios. </span>
-            O WhatsApp guarda a conversa. Não guarda o cliente.
+            A planilha organiza. Ela não avisa quem está esperando.
           </h1>
           {/* Era de 47 palavras e terminava em três negações. Referência de
               conversão põe a sub do hero entre 15 e 25 — acima disso ela deixa
               de ser lida e passa a ser pulada. */}
           <p className="text-muted-foreground animate-in fade-in slide-in-from-bottom-3 fill-mode-both ease-entrada duration-entrada delay-passo-3 max-w-xl text-lg text-balance">
-            Cada pedido de orçamento vira um contato com prazo para responder e valor
-            do negócio. Você abre o sistema e já sabe com quem falar hoje.
+            Traga sua planilha em um minuto. Cada cliente vira um contato com
+            prazo para responder, e você abre o sistema já sabendo com quem
+            falar hoje.
           </p>
           {/* `items-stretch` é o padrão do flex, e é por ser padrão que
               ninguém percebe quando some. É ele que dá aos dois botões a mesma

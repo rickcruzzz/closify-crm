@@ -96,21 +96,25 @@ const features: Feature[] = [
     // O canal onde a PME brasileira realmente vende não aparecia em lugar
     // nenhum desta página. É a feature mais reconhecível do produto para
     // quem chega de anúncio, e estava invisível.
-    title: 'Fala com o cliente pelo WhatsApp',
-    // A segunda frase prometia que a mensagem recebida vira contato e tarefa
-    // sozinha. Isso funcionou pela ponte nao oficial e parou de funcionar
-    // quando ela saiu de operacao — hoje nao vale para NINGUEM, nem no Pro.
+    title: 'Fala com o cliente sem procurar o número',
+    // ## O "em breve" saiu em 02/09, e o motivo vale mais que a frase
     //
-    // Prometer o que o produto nao entrega e a classe de defeito que esta
-    // pagina ja pagou duas vezes: os "contatos ilimitados" com o Free em 300, e
-    // o CNPJ baixado exibido como prova de confianca. Nos dois casos a promessa
-    // era conferivel, e quem conferiu descobriu a mentira.
+    // A descricao terminava em "Em breve, pela API oficial da Meta, a mensagem
+    // que chega vira contato e tarefa sozinha". Era honesta: dizia que nao
+    // funciona hoje.
     //
-    // O que sobrou e verdade hoje: o link `wa.me` abre a conversa a partir do
-    // contato, sem procurar numero na agenda. O resto vira "em breve", com o
-    // motivo dito — API oficial soa como melhoria, e e.
+    // Mas honesto nao basta numa pagina que recebe TRAFEGO PAGO. Promessa
+    // futura ao lado de recurso entregue e lida como recurso, porque ninguem
+    // le cartao de anuncio com atencao de contrato — e quando a pessoa
+    // descobre, o clique ja foi cobrado.
+    //
+    // Fica so o que roda: o link `wa.me` abre a conversa a partir do contato.
+    // Isso e verdade, e util, e nao promete nada.
+    //
+    // O "em breve" volta quando `FASE_DO_WHATSAPP` sair de 'migrando'. A
+    // decisao e do dono, e esta registrada em `docs/estado-atual.md`.
     description:
-      'Abra a conversa direto do contato, sem procurar o número na agenda. Em breve, pela API oficial da Meta, a mensagem que chega vira contato e tarefa sozinha.',
+      'Um toque abre a conversa direto do contato, com o número certo, sem procurar na agenda nem copiar e colar.',
     icon: MessageCircle,
     delay: 130,
   },

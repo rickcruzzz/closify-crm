@@ -282,14 +282,36 @@ describe('nenhum dado se repete entre as peças do feed', () => {
    *   gerar-stories.py        FORA. Story é visto uma vez, em 24h, e some.
    *                           A grade é permanente e navegável
    *   gerar-capa-facebook.py  FORA. Outra rede, outra tela
+   *   gerar-anuncios.py       FORA. Anúncio aparece no feed de quem NÃO segue
+   *                           o perfil, um de cada vez, e nunca ao lado de
+   *                           uma peça orgânica. Ver abaixo
    *   gerar-selos.py          DENTRO. Os selos de destaque ficam no perfil,
    *                           logo acima da grade, na mesma tela
    *
    * Reel, quando existir, entra: ele aparece na grade junto das artes.
+   *
+   * ## Por que o anúncio sai, e por que isso NÃO é abrir mão da trava
+   *
+   * A trava existe por uma razão visual precisa: na grade do perfil as peças
+   * ficam lado a lado, e dois posts com "42h" são percebidos rolando dois
+   * dedos. Anúncio não tem grade. Ele é servido isolado, para público que não
+   * segue o perfil, e a chance de duas peças aparecerem juntas é a mesma de
+   * duas marcas diferentes aparecerem juntas.
+   *
+   * Mais que isso: repetir o dado entre orgânico e anúncio é DESEJÁVEL. Quem
+   * viu o número no anúncio e o reencontra no perfil recebe o mesmo argumento
+   * duas vezes, que é o efeito de mera exposição funcionando a favor. Forçar
+   * argumentos diferentes nos dois canais gastaria o melhor dado em um só.
+   *
+   * O que continua valendo para o anúncio são as OUTRAS travas deste arquivo,
+   * que varrem a pasta inteira: prova social inventada, oferta aposentada,
+   * preço escrito à mão e travessão. Essas não dependem de onde a peça
+   * aparece — dependem de ela ser verdade.
    */
   const FORA_DO_CONJUNTO_DA_GRADE = new Set([
     'gerar-stories.py',
     'gerar-capa-facebook.py',
+    'gerar-anuncios.py',
   ])
 
   const geradoresDaGrade = GERADORES.filter((n) => !FORA_DO_CONJUNTO_DA_GRADE.has(n))

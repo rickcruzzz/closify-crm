@@ -14,17 +14,41 @@ import { MobileStickyCta } from '@/components/landing/mobile-sticky-cta'
 
 // A landing usa o title default (sem o template "| Velo Funil"), já que
 // aqui o nome do produto é o próprio título.
+//
+// ## O WhatsApp saiu da tese em 02/09, e não foi por gosto
+//
+// O title, o `og:title`, o h1 e o fecho da página eram todos sobre WhatsApp,
+// desde a repositionagem de 24/08 que se apoiou nos 82% do Sebrae. O dado
+// continua verdadeiro; a promessa é que deixou de ser.
+//
+// `FASE_DO_WHATSAPP = 'migrando'` (lib/integrations/whatsapp-estado.ts): a
+// ponte não oficial saiu de operação e a API da Meta depende de App Review.
+// O único WhatsApp que este produto entrega hoje é o link `wa.me`, que abre a
+// conversa a partir do contato. Isso é um botão, não uma tese.
+//
+// Numa página orgânica, um gancho à frente do produto custa decepção. Numa
+// página que recebe TRÁFEGO PAGO, custa dinheiro: a decepção acontece depois
+// do clique, quando ele já foi cobrado. É a mesma classe dos "contatos
+// ilimitados" com o Free em 300 e do CNPJ baixado exibido como prova.
+//
+// A tese nova é o que o produto de fato faz e o que nenhum concorrente copia
+// sem mudar a própria receita: preço fixo pela empresa. Medido em 02/09
+// contra a fonte, os quatro CRMs brasileiros de referência cobram por
+// usuário (R$ 53 a R$ 75), e três deles têm plano grátis — ou seja, "grátis"
+// não diferencia nada, e "não cobra por pessoa" diferencia tudo.
+//
+// Quando o WhatsApp voltar a entregar, ele volta para cá. Não antes.
 export const metadata: Metadata = {
-  title: 'Velo Funil: o WhatsApp guarda a conversa, não guarda o cliente',
+  title: 'Velo Funil: o CRM que não cobra por vendedor',
   description:
-    'CRM para pequenos negócios brasileiros. Cada pedido de orçamento vira um contato com prazo para responder. Grátis até 50 contatos, sem cartão. Pro por R$ 49 por mês pela empresa inteira, não por vendedor.',
+    'CRM para pequenos negócios brasileiros. Traga sua planilha e cada cliente vira um contato com prazo para responder. Grátis até 50 contatos, sem cartão. Pro por R$ 49 por mês pela empresa inteira, não por vendedor.',
   alternates: { canonical: '/' },
   // Sem repetir aqui, o preview de link herdaria o openGraph genérico do
   // layout raiz em vez do texto de conversão da landing.
   openGraph: {
-    title: 'Velo Funil: o WhatsApp guarda a conversa, não guarda o cliente',
+    title: 'Velo Funil: o CRM que não cobra por vendedor',
     description:
-      'CRM para pequenos negócios brasileiros. Cada pedido de orçamento vira um contato com prazo para responder. Grátis até 50 contatos, sem cartão. Pro por R$ 49 por mês pela empresa inteira, não por vendedor.',
+      'CRM para pequenos negócios brasileiros. Traga sua planilha e cada cliente vira um contato com prazo para responder. Grátis até 50 contatos, sem cartão. Pro por R$ 49 por mês pela empresa inteira, não por vendedor.',
     // Next.js não mescla `openGraph` entre layout e página, definir aqui
     // sobrescreve o do layout raiz por inteiro, e sem `siteName` a home
     // ficava sem `og:site_name`. É provavelmente o que o verificador de
