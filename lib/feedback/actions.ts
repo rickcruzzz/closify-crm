@@ -10,6 +10,7 @@ import { excedeuLimite } from '@/lib/rate-limit'
 import { ehContaDeTeste } from '@/lib/dono/contas-internas'
 import { getResend } from '@/lib/resend/client'
 import { renderFeedbackRecebidoEmail } from '@/lib/emails/feedback-recebido'
+import { EMAIL_DE_AVISO_DO_DONO } from '@/lib/emails/destinatario'
 import { CONTROLADOR } from '@/lib/legal'
 import {
   ANEXO_BUCKET,
@@ -170,17 +171,39 @@ export async function enviarFeedback(formulario: FormData) {
     return { error: 'Não foi possível enviar agora. Tente de novo em instantes.' }
   }
 
-  // ## O e-mail sai só para problema, e só de cliente
+  // ## O e-mail passou a sair SEMPRE, e a regra anterior tinha duas falhas
   //
-  // Sugestão espera dias sem custo; problema é alguém travado e pagando. E
-  // relato interno (meu ou do dono testando) não pode tocar a campainha —
-  // e-mail para tudo vira ruído, e ruído treina a ignorar a caixa. Foi o que a
-  // Central pagou em 20/08, com 8 de 11 alertas falsos.
+  // Era `tipo === 'problema' && !interno`, e a intenção estava certa: e-mail
+  // para tudo vira ruído, e ruído treina a ignorar a caixa — a lição de 20/08,
+  // com 8 de 11 alertas falsos na Central.
+  //
+  // Medido em 02/09, contra o banco e contra o Resend: **dez relatos
+  // guardados, ZERO e-mails enviados.** As duas metades da condição estavam
+  // barrando, e cada uma por um motivo diferente:
+  //
+  //     !interno   os dez relatos tem `interno = true`, porque quem testou foi
+  //                o dono, e o e-mail dele esta em `EMAILS_DO_DONO`. O canal
+  //                era IMPOSSIVEL de testar: testar e mandar de uma conta que
+  //                e nossa, e conta nossa nunca dispara
+  //
+  //     problema   sugestao nunca avisava, e o dono esperava que avisasse
+  //
+  // A primeira é o mesmo defeito que a Central pagou em 31/08: relato interno
+  // existia e não havia porta para vê-lo. A correção lá não foi apagar a
+  // separação — foi dar uma porta (`?internos=1`) e marcar cada linha com um
+  // selo. Aqui é o mesmo: o e-mail SAI, e o assunto diz o que ele é.
+  //
+  // ## E o argumento do ruído não se aplica no volume real
+  //
+  // Dez relatos em três dias, todos de teste. A regra foi desenhada para um
+  // volume que ainda não existe. Quando existir — quando houver cliente de
+  // verdade mandando sugestão toda semana — a decisão certa é voltar a
+  // silenciar sugestão, e o comentário fica aqui para quem for fazer isso.
   //
   // Falha aqui NÃO desfaz o insert e não vira erro na tela: o relato já está
   // guardado e aparece na Central. Devolver erro faria a pessoa reenviar e
   // duplicar um registro que chegou inteiro.
-  if (parsed.data.tipo === 'problema' && !interno) {
+  {
     try {
       const { subject, html } = renderFeedbackRecebidoEmail({
         emailDoCliente: user.email ?? 'sem e-mail',
@@ -205,14 +228,26 @@ export async function enviarFeedback(formulario: FormData) {
       // Achado pela própria prova desta implementação: com a chave trocada
       // por uma inválida de propósito, o log ficou VAZIO — o que passaria por
       // "não tentou mandar" quando o certo é "tentou e falhou".
+      // `from` continua sendo o dominio proprio, que e o verificado no
+      // Resend — mandar de um Gmail derrubaria a entregabilidade. O que muda
+      // e o DESTINO: vai para a mesma caixa do vigia, porque aviso operacional
+      // espalhado em duas caixas significa que uma sera esquecida. Era
+      // exatamente o caso: o vigia chegava, o suporte nao.
+      //
+      // O assunto carrega DE ONDE veio. Sem isso, um teste do dono e um
+      // relato de cliente pagante chegam identicos, e a distincao que a regra
+      // antiga fazia (silenciando o interno) se perderia de vez.
+      const marca = interno ? '[interno] ' : ''
+      const rotulo = parsed.data.tipo === 'sugestao' ? '[sugestao] ' : ''
+
       const { error: erroDoEmail } = await getResend().emails.send({
         from: `Velo Funil <${CONTROLADOR.email}>`,
-        to: CONTROLADOR.email,
+        to: EMAIL_DE_AVISO_DO_DONO,
         // Responder ao cliente é a ação deste e-mail: com `replyTo`, o botão
         // "Responder" do celular já vai para a pessoa certa, sem copiar
         // endereço do corpo.
         replyTo: user.email ?? undefined,
-        subject,
+        subject: `${marca}${rotulo}${subject}`,
         html,
       })
 

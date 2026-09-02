@@ -18,6 +18,7 @@ import {
   contarAssinaturasSemPro,
   contarCobrancasVencidas,
 } from '@/lib/dono/dinheiro-do-vigia'
+import { EMAIL_DE_AVISO_DO_DONO } from '@/lib/emails/destinatario'
 import { renderVigiaEmail } from '@/lib/emails/vigia'
 import { getResend } from '@/lib/resend/client'
 import { createAdminClient } from '@/lib/supabase/admin'
@@ -47,8 +48,12 @@ export const runtime = 'nodejs'
 export const maxDuration = 60
 
 /** Para onde o alerta vai. Não é a lista de contas internas do dono, que serve
- *  para FILTRAR métrica — misturar as duas mandaria e-mail para cinco caixas. */
-const DESTINATARIO = 'notificacaosistemavelofunil@gmail.com'
+ *  para FILTRAR métrica — misturar as duas mandaria e-mail para cinco caixas.
+ *
+ *  Mudou de lugar em 02/09: o endereço morava aqui, e só o vigia o conhecia.
+ *  O relato de suporte, que é aviso do mesmo tipo, ia para outra caixa — e o
+ *  resultado medido foi dez relatos no banco e zero e-mails enviados. */
+const DESTINATARIO = EMAIL_DE_AVISO_DO_DONO
 
 function autorizado(cabecalho: string | null): boolean {
   const esperado = process.env.CRON_SECRET

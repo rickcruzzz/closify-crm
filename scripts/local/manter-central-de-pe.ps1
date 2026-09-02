@@ -55,7 +55,17 @@ param(
     # Fica vivo, conferindo para sempre. E assim que ele roda pela pasta
     # Inicializar; sem isto, faz uma passagem so e sai.
     [switch]$Continuo,
-    [int]$IntervaloSegundos = 300
+    # 45 segundos, e nao os 300 da primeira versao.
+    #
+    # Medido em 02/09: o servidor foi derrubado as 17:11 e a proxima conferencia
+    # so cairia as 17:14:31 — tres minutos de tela fora do ar, e foi exatamente
+    # nessa janela que o dono tentou abrir. Para uma ferramenta que se propoe a
+    # estar "sempre ligada", tres minutos e uma eternidade.
+    #
+    # O custo de conferir mais vezes e uma requisicao HTTP em localhost por
+    # passagem, que nao sai da maquina e nao acorda nada. Barato o bastante
+    # para nao valer a pena economizar.
+    [int]$IntervaloSegundos = 45
 )
 
 $ErrorActionPreference = 'Stop'

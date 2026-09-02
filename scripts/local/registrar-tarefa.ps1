@@ -41,7 +41,7 @@
 [CmdletBinding()]
 param(
     [int]$Porta = 3000,
-    [int]$IntervaloSegundos = 300,
+    [int]$IntervaloSegundos = 45,
     # Nao inicia agora, so registra para o proximo logon.
     [switch]$NaoIniciarAgora
 )
@@ -81,7 +81,7 @@ $lnk.Save()
 Write-Host ""
 Write-Host "registrado: $Atalho"
 Write-Host "  sobe quando voce entrar no Windows"
-Write-Host "  confere a cada $([int]($IntervaloSegundos/60)) minutos e levanta de volta se cair"
+Write-Host "  confere a cada $IntervaloSegundos segundos e levanta de volta se cair"
 Write-Host "  Central em http://localhost:$Porta/dono"
 Write-Host "  log em .central-local\manter-de-pe.log"
 
