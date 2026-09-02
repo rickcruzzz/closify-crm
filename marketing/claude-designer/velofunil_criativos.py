@@ -36,13 +36,14 @@ import tempfile
 from dataclasses import dataclass
 from pathlib import Path
 
-from PIL import Image, ImageDraw, ImageFont
+from PIL import Image, ImageDraw, ImageFilter, ImageFont
 
 # ---------------------------------------------------------------------------
 # 1. A oferta. Lida de lib/plans.ts, nunca escrita a mao numa peca.
 # ---------------------------------------------------------------------------
 
-FREE_LEAD_LIMIT = 50          # lib/plans.ts
+FREE_LEAD_LIMIT = 50
+FREE_MEMBER_LIMIT = 2   # lib/plans.ts
 PRO_PLAN_PRICE = 49           # lib/plans.ts
 PRO_PLAN_NAME = "Pro"         # lib/plans.ts
 FREE_PLAN_NAME = "Gratis"     # lib/plans.ts  (acentuado na saida via PLAN_LABELS)
@@ -51,7 +52,17 @@ PLAN_LABELS = {"free": "GRÁTIS", "pro": PRO_PLAN_NAME.upper()}
 
 # Base publica da comparacao por assento. Mediana de preco por usuario do
 # mercado mapeado, e o tamanho de time que a peca declara na propria arte.
-SEAT_MEDIAN_PRICE = 53
+# ## Este numero vive em `lib/plans.ts`, e ali ele e 60
+#
+# O gerador tinha 53, e o produto tem `PRECO_MEDIANA_POR_USUARIO = 60`, com
+# `PRECOS_CONFERIDOS_EM = '31/08/2026'` ao lado. Duas fontes do mesmo dado
+# discordando — a classe de defeito que custou 23 dias de e-mail com CNPJ
+# baixado neste projeto.
+#
+# Vence o do produto: ele carrega a data da conferencia, e a peca nao. O
+# argumento fica mais forte de graca (5 pessoas passam de R$ 265 para R$ 300),
+# mas o motivo de trocar nao e esse — e que 53 nao era mais verdade.
+SEAT_MEDIAN_PRICE = 60
 TEAM_SIZE = 5
 MONTHS = 12
 
@@ -199,6 +210,34 @@ class Paleta:
     borda: tuple
 
 
+# ## As cores das etapas, tiradas do produto e nao inventadas aqui
+#
+# Sao os mesmos valores de `lib/deals/stage-colors.ts`, que pintam a barra de
+# cada etapa no Kanban, no grafico de funil e no card do negocio. Copiados a
+# mao porque este gerador e Python e nao le TypeScript; se um dia divergirem,
+# quem manda e o arquivo do produto.
+#
+# ## Por que ESTAS cores podem entrar, e outras nao
+#
+# A landing removeu oito matizes em 26/08 com um motivo escrito: "Funil visual"
+# nao e a categoria azul, entao a cor nao carregava informacao — lia como
+# template. As tres que ficaram, e continuam, sao as que SIGNIFICAM algo: os
+# pontinhos da barra de janela (imitam o cromo do sistema) e as barras do
+# funil.
+#
+# Estas sao as barras do funil. Azul e onde o negocio entra, verde e onde ele
+# vira dinheiro, e a ordem entre os dois e o produto inteiro. Quem ja usou a
+# tela reconhece a sequencia; quem nunca usou le um degrade que afunila, que e
+# exatamente o que a marca desenha.
+ETAPAS_DO_FUNIL = [
+    ("Novo",       (57, 135, 229)),
+    ("Contato",    (201, 133, 0)),
+    ("Proposta",   (144, 133, 233)),
+    ("Negociação", (217, 89, 38)),
+    ("Ganho",      (25, 158, 112)),
+]
+
+
 ESCURO = Paleta("escuro", (4, 32, 33), (252, 252, 252), (150, 172, 172),
                 (0, 191, 192), (42, 46, 48))
 CLARO = Paleta("claro", (246, 248, 249), (10, 10, 10), (94, 101, 101),
@@ -344,8 +383,35 @@ def fonte(familia: str, peso: str, tamanho: int) -> ImageFont.FreeTypeFont:
             + ", ".join(ARQUIVOS[familia]))
     f = ImageFont.truetype(str(caminho), tamanho)
     if familia != "serif":
+        # ## Um valor por EIXO, casado pelo nome
+        #
+        # A versao anterior mandava `[PESOS[peso]]` — uma lista de um item.
+        # Isso funciona para a Geist, que so tem `wght`, e falha em silencio
+        # para qualquer fonte de mais eixos: `set_variation_by_axes` exige um
+        # valor por eixo, na ordem, e o `except: pass` engolia o erro deixando
+        # a fonte no peso PADRAO.
+        #
+        # O defeito e do tipo que nao aparece: o texto sai desenhado, so que
+        # em Regular onde se pediu UltraBlack. Bricolage tem tres eixos
+        # (opsz, wdth, wght) e teria caido exatamente nisso.
         try:
-            f.set_variation_by_axes([PESOS[peso]])
+            valores = []
+            for eixo in f.get_variation_axes():
+                nome_eixo = eixo["name"]
+                if isinstance(nome_eixo, bytes):
+                    nome_eixo = nome_eixo.decode("utf-8", "ignore")
+                nome_eixo = str(nome_eixo).strip().lower()
+                if nome_eixo in ("weight", "wght"):
+                    valores.append(PESOS[peso])
+                elif nome_eixo in ("optical size", "opsz"):
+                    # Otico casado com o corpo real: e para isso que o eixo
+                    # existe, e ignora-lo devolve o desenho de texto pequeno
+                    # ampliado, que e o que engorda contraforma em titulo.
+                    valores.append(min(max(tamanho / SS, eixo["minimum"]),
+                                       eixo["maximum"]))
+                else:
+                    valores.append(eixo["default"])
+            f.set_variation_by_axes(valores)
         except Exception:
             pass
     _cache[chave] = f
@@ -436,6 +502,62 @@ class Tela:
 # C. declaracao  afirmacao sem numero. Vazio no fim, nunca no meio.
 # D. carrossel   card de sequencia: indice, colunas parametrizadas, rodape.
 # E. chamada     a oferta e o dominio, no registro claro.
+
+
+# ## O fundo fica CHAPADO, e isso e decisao
+#
+# Houve uma versao com gradiente: duas luzes, uma quente no teal da marca e uma
+# fria no azul da etapa `novo`, mais o simbolo em escala a 4,5%. Ela funcionava
+# — a peca ganhava profundidade — e foi retirada assim mesmo.
+#
+# O motivo e o carrossel, nao a peca. Sete slides passam sob o dedo em
+# sequencia, e o fundo e a unica coisa constante entre eles: qualquer variacao
+# ali le como slide de outro post. Uniforme, o fundo desaparece e o conteudo
+# fica sendo a unica coisa que muda, que e o que se quer.
+#
+# O que a versao com gradiente resolvia — a peca parecer morta — ficou
+# resolvido por outros meios, e sao eles que valem: a captura do produto ocupa
+# 55% da peca, a faixa das etapas colore o rodape, e o simbolo ancora o rotulo.
+# Cor com funcao em vez de cor de fundo.
+
+def faixa_de_etapas(c: "Tela", x: float, y: float, larg: float, alt: float = 9) -> None:
+    """
+    O rodape deixa de ser um traco cinza e passa a ser o funil.
+
+    ## O que ela substitui, e por que a troca vale
+
+    Era `linha_fina(...)` na cor da borda: um filete que separa o conteudo do
+    rodape e nao diz nada. Aqui os mesmos pixels desenham as cinco etapas do
+    Kanban, com as larguras caindo — o que e literalmente a forma do funil, e
+    literalmente a forma do simbolo da marca.
+
+    ## Isto nao contradiz a decisao de 26/08 contra cor decorativa
+
+    Aquela decisao removeu oito matizes da landing porque "Funil visual" nao e
+    a categoria azul: a cor nao codificava informacao. Estas cinco codificam a
+    unica coisa que o produto tem de estrutural — em que pe esta o negocio —, e
+    sao os mesmos valores que pintam a barra no Kanban. Quem abriu o produto
+    reconhece; quem nao abriu le um degrade que afunila.
+
+    ## As larguras
+
+    Caem 5 / 4 / 3 / 2.4 / 1.8. Nao e dado de conversao — nenhuma medicao deste
+    projeto sustentaria uma taxa por etapa, e inventa-la seria a metrica falsa
+    que a `StatsSection` ja removeu uma vez. E proporcao de DESENHO, e por isso
+    a faixa nao carrega numero nenhum: sem eixo e sem rotulo, ela nao afirma
+    nada que possa ser lido como medicao.
+    """
+    pesos = [5.0, 4.0, 3.0, 2.4, 1.8]
+    vao = 7
+    util = larg - vao * (len(pesos) - 1)
+    cx = x
+    for peso, (_, cor) in zip(pesos, ETAPAS_DO_FUNIL):
+        w = util * peso / sum(pesos)
+        # Cantos levemente arredondados: o mesmo raio do card do produto.
+        c.d.rounded_rectangle(
+            [c.u(cx), c.u(y), c.u(cx + w) - 1, c.u(y + alt) - 1],
+            radius=c.u(alt / 2), fill=cor)
+        cx += w + vao
 
 
 def comp_numero(c: Tela, p: dict) -> None:
@@ -642,24 +764,247 @@ def comp_produto(c: Tela, p: dict) -> None:
             cy += ch + 16
 
 
+# ## Icones de TRACO, no vocabulario que o produto ja usa
+#
+# O produto desenha com Lucide: traco de 2px sobre grade de 24, ponta e junta
+# arredondadas, sem preenchimento. Estes seguem a mesma gramatica — nao sao os
+# arquivos do Lucide (nao ha como importar SVG aqui sem dependencia nova), sao
+# os mesmos tracados, em coordenadas 0..24.
+#
+# ## Por que desenhar, e nao usar emoji ou dingbat da fonte
+#
+# Emoji renderiza colorido e chapado, com o estilo do SISTEMA e nao o da peca:
+# num criativo B2B ele le como mensagem de WhatsApp. Dingbat de fonte muda de
+# desenho conforme a familia instalada, que e como um icone vira quadrado vazio
+# na maquina de outra pessoa. Tracado a mao, o desenho e o mesmo em qualquer
+# lugar e herda a cor da paleta.
+_TRACOS = {
+    # cada entrada e uma lista de polilinhas; o circulo vai a parte
+    "check":    [[(5, 12.5), (9.7, 17.2), (19, 7)]],
+    "raio":     [[(13, 2), (4, 14), (11, 14), (10, 22), (19, 10), (12, 10),
+                  (13, 2)]],
+    "escudo":   [[(12, 2.2), (20, 5.6), (20, 11.6), (12, 21.8), (4, 11.6),
+                  (4, 5.6), (12, 2.2)]],
+    "relogio":  [[(12, 6.5), (12, 12), (16, 14.2)]],
+    "usuarios": [[(3.5, 20.5), (3.5, 18.6)], [(14.5, 20.5), (14.5, 18.6)]],
+    "seta":     [[(4, 12), (19, 12)], [(13, 6), (19, 12), (13, 18)]],
+}
+_ARCOS = {           # (cx, cy, raio) desenhados como circulo aberto
+    "relogio":  [(12, 12, 9)],
+    "usuarios": [(9, 8.5, 4.2), (9, 18.6, 5.5), (14.5, 18.6, 5.5)],
+}
+
+
+def icone(c: "Tela", nome: str, x: float, y: float, tam: float, cor: tuple,
+          peso: float = 2.0) -> None:
+    """Desenha o icone com o canto superior esquerdo em (x, y)."""
+    k = tam / 24.0
+    w = max(1, c.u(peso * k))
+
+    def pt(px, py):
+        return (c.u(x + px * k), c.u(y + py * k))
+
+    for cx, cy, r in _ARCOS.get(nome, []):
+        c.d.ellipse([pt(cx - r, cy - r), pt(cx + r, cy + r)],
+                    outline=cor, width=w)
+    for linha in _TRACOS.get(nome, []):
+        c.d.line([pt(a, b) for a, b in linha], fill=cor, width=w, joint="curve")
+        # `joint="curve"` arredonda so as juntas INTERNAS; as pontas ficam
+        # quadradas e, num traco de 2px ampliado, isso le como pixel solto.
+        # Um disco do diametro do traco em cada extremidade fecha as duas.
+        for a, b in (linha[0], linha[-1]):
+            px, py = pt(a, b)
+            c.d.ellipse([px - w // 2, py - w // 2, px + w // 2, py + w // 2],
+                        fill=cor)
+
+
+# ## O CNPJ vem de `lib/legal.ts`, e so entra quando existe
+#
+# A skill de UI marca "no trust signals" como anti-padrao de pagina de preco,
+# e no Brasil o CNPJ e o primeiro sinal que uma PME procura antes de confiar
+# num site desconhecido. Ele ficou `null` de 08/08 a 31/08, com a inscricao
+# anterior BAIXADA — e a landing, por construcao, simplesmente parou de
+# exibi-lo em vez de mostrar numero morto.
+#
+# Copiado a mao porque este gerador e Python. A regra que vale e a mesma do
+# TypeScript: se um dia voltar a nao existir, e para sair da peca inteiro, e
+# nunca a palavra "CNPJ" sozinha.
+CNPJ_DO_CONTROLADOR = "68.877.105/0001-67"
+
+
+def assinatura_legal(sufixo: str) -> str:
+    """A linha de rodape, com a inscricao quando ela existe."""
+    if not CNPJ_DO_CONTROLADOR:
+        return sufixo
+    return f"CNPJ {CNPJ_DO_CONTROLADOR}  ·  {sufixo}"
+
+
 def comp_chamada(c: Tela, p: dict) -> None:
+    """
+    O fecho: um plano dominante, a comparacao de preco, e o gratis como base.
+
+    ## O que estava generico, e por que
+
+    A versao anterior eram dois cartoes de mesmo tamanho, lado a lado, cada um
+    com preco em cima e lista de tiques embaixo. Aberta em tamanho real ela
+    nao tinha defeito de execucao — tinha defeito de IDEIA: e literalmente o
+    layout de pagina de preco de qualquer SaaS, e por isso nao dizia nada que
+    a proxima peca de outro produto nao dissesse igual.
+
+    Simetria e o mecanismo do problema. Dois cartoes do mesmo tamanho afirmam
+    que as duas opcoes tem o mesmo peso, e obrigam a pessoa a comparar item a
+    item para descobrir qual e a oferta. A skill de UI resume isso em duas
+    regras que a versao anterior quebrava: *popular plan highlighted* e
+    *Free: grey*.
+
+    ## As quatro decisoes
+
+      hierarquia    o Pro ocupa a peca; o Gratis vira uma faixa embaixo. Nao e
+                    escondido — continua legivel e continua sendo a entrada
+                    sem cartao —, mas para de disputar atencao com a oferta
+
+      ancora        o custo de uma equipe pequena em CRM por assento, ao
+                    lado da mensalidade daqui. E o argumento
+                    real deste produto e o unico numero da peca que vem de
+                    fora: preco de TABELA PUBLICA de CRM que cobra por
+                    assento, nao pesquisa e nao depoimento. Sem essa ancora o
+                    cerebro compara a mensalidade com zero, e contra zero
+                    qualquer preco perde
+
+      selo          diz `SEM COBRAR POR PESSOA`, e NAO "mais popular". Este
+                    produto nao tem cliente externo: escrever popularidade
+                    seria a prova social inventada que a `StatsSection` ja
+                    removeu uma vez deste projeto
+
+      CNPJ          o sinal de confianca que a skill cobra como anti-padrao
+                    quando falta. No Brasil e o primeiro que uma PME procura,
+                    e desde 28/08 ele existe e esta ATIVO — vem de
+                    `lib/legal.ts`, a mesma fonte do rodape do site
+    """
     pal, pad = c.pal, FEED_PAD
     x, larg = pad["lado"], c.w - 2 * pad["lado"]
-    marca(c, p.get("selo", ""))
+    marca(c, p.get("indice", p.get("selo", "")))
+
     y = TOPO_CONTEUDO
-    y += c.paragrafo(x, y, p["claim"], c.f("sans", "UltraBlack", 92), pal.titulo,
-                     880, 98) + 78
-    fm = c.f("mono", "Medium", 26)
-    ft = c.f("sans", "Medium", 40)
-    for rotulo, texto in p["linhas"]:
-        c.linha_fina(x, y, larg, pal.borda, 2)
-        c.texto(x, y + 34, rotulo, fm, pal.destaque, 1.6)
-        c.texto(x + 232, y + 26, texto, ft, pal.titulo)
-        y += 116
-    c.linha_fina(x, y, larg, pal.borda, 2)
+    if p.get("rotulo"):
+        funil(c, x, y + 2, 22, pal.destaque)
+        c.texto(x + 34, y, p["rotulo"], c.f("mono", "Medium", 24),
+                pal.destaque, 1.6)
+        y += 58
+
+    # ## O titulo usa a MESMA construcao dos outros seis
+    #
+    # Houve uma rodada com fonte de display propria aqui (Lexend Deca, a de
+    # marca do HubSpot). Recuada: o fecho passou a ser o unico slide com outra
+    # letra, e num carrossel isso le como peca de outro post, nao como fecho
+    # do mesmo.
+    #
+    # O que resolve o titulo nao e trocar de fonte — e a divisao que os slides
+    # de passo ja usavam: a primeira parte em preto, a segunda no teal. A cor
+    # carrega a leitura em miniatura, onde a frase inteira vira mancha, e o
+    # corte cai onde a frase vira do problema para a promessa.
+    fclaim = c.f("sans", "SemiBold", 58)
+    y += c.paragrafo(x, y, p["claim"], fclaim, pal.titulo, larg, 68)
+    if p.get("realce"):
+        y += c.paragrafo(x, y, p["realce"], fclaim, pal.destaque, larg, 68)
+    y += 46
+
+    pro, free = p["pro"], p["free"]
+    claro = pal is CLARO
+
+    # ------------------------------------------------------- o cartao do Pro
+    alt_free = 132
+    alt_pro = c.h - pad["base"] - 122 - y - alt_free - 20
+    fundo = tuple(int(f * 0.94 + d * 0.06) for f, d in zip(pal.fundo, pal.destaque))
+    c.d.rounded_rectangle([c.u(x), c.u(y), c.u(x + larg) - 1, c.u(y + alt_pro) - 1],
+                          radius=c.u(20), fill=fundo,
+                          outline=pal.destaque, width=c.u(3))
+
+    ix, iy = x + 38, y + 34
+    icone(c, "raio", ix, iy, 30, pal.destaque, 2.0)
+    c.texto(ix + 44, iy + 3, pro["nome"], c.f("mono", "Medium", 25),
+            pal.destaque, 1.4)
+
+    # O selo, ancorado a DIREITA: medido e posicionado a partir da borda, para
+    # nao depender do comprimento do texto ficar igual se a copy mudar.
+    fs = c.f("mono", "Medium", 20)
+    ls = c.largura_texto(pro["selo"], fs) + 1.2 * len(pro["selo"])
+    sx = x + larg - 38 - ls - 36
+    c.d.rounded_rectangle([c.u(sx), c.u(iy - 3), c.u(sx + ls + 36) - 1,
+                           c.u(iy + 35) - 1], radius=c.u(19),
+                          fill=pal.destaque)
+    c.texto(sx + 18, iy + 6, pro["selo"], fs, pal.fundo, 1.2)
+
+    # O preco e a unidade na MESMA linha de base: `R$ 49` e `/mes` separados em
+    # duas linhas leem como dois numeros diferentes.
+    py = iy + 66
+    fp = c.f("sans", "UltraBlack", 96)
+    c.texto(ix, py, pro["preco"], fp, pal.destaque)
+    lp = c.largura_texto(pro["preco"], fp)
+    c.texto(ix + lp + 14, py + 52, pro["unidade"], c.f("sans", "Medium", 30),
+            pal.corpo)
+    c.texto(ix, py + 112, pro["apoio"], c.f("sans", "Regular", 29), pal.titulo)
+
+    by = py + 168
+    fb = c.f("sans", "Regular", 27)
+    col = (larg - 76) / 2
+    for i, item in enumerate(pro["itens"]):
+        cx = ix + (i % 2) * col
+        cy = by + (i // 2) * 46
+        icone(c, "check", cx, cy + 2, 21, pal.destaque, 2.2)
+        c.texto(cx + 32, cy, item, fb, pal.titulo)
+
+    # ------------------------------------------------------------- a ancora
+    ay = y + alt_pro - 78
+    c.linha_fina(ix, ay - 26, larg - 76, pal.borda, 2)
+
+    # ## A linha da ancora ENCOLHE ate caber, e nao quebra
+    #
+    # Medida a 26/30 ela terminava 9px alem da borda interna do cartao — a
+    # frase e o valor sao duas fontes diferentes na mesma linha, e nenhum
+    # `paragrafo` mede isso junto. Quebrar em duas linhas separaria o custo
+    # do concorrente da frase que o explica, que e o contrario do efeito de
+    # contraste que ela existe para produzir.
+    #
+    # O piso de 20 nao e enfeite: abaixo disso a linha deixa de ser legivel na
+    # miniatura da grade, e ai o certo e encurtar a copy, nao diminuir mais.
+    limite = larg - 76
+    for tam in range(26, 19, -1):
+        fa = c.f("sans", "Regular", tam)
+        fv = c.f("sans", "SemiBold", tam + 4)
+        la = c.largura_texto(pro["comparacao"], fa)
+        lv = c.largura_texto(pro["valor_deles"], fv)
+        if la + 12 + lv <= limite:
+            break
+    else:
+        raise ValueError(
+            f"a linha de comparacao nao cabe nem a 20px: "
+            f"{pro['comparacao']!r} + {pro['valor_deles']!r}. Encurte a copy.")
+
+    c.texto(ix, ay, pro["comparacao"], fa, pal.corpo)
+    c.texto(ix + la + 12, ay - 3, pro["valor_deles"], fv, pal.corpo)
+    # Riscado: o valor do concorrente e o que se quer ver DESCARTADO. Sem o
+    # risco ele le como preco alternativo; com o risco, le como o que se deixa
+    # de pagar.
+    c.retangulo(ix + la + 12, ay + 12, lv, 3, pal.corpo)
+
+    # ----------------------------------------------------- a faixa do gratis
+    fy = y + alt_pro + 20
+    c.d.rounded_rectangle([c.u(x), c.u(fy), c.u(x + larg) - 1,
+                           c.u(fy + alt_free) - 1], radius=c.u(20),
+                          fill=pal.fundo, outline=pal.borda, width=c.u(2))
+    icone(c, "escudo", x + 38, fy + 30, 26, pal.corpo, 2.0)
+    c.texto(x + 76, fy + 32, free["nome"], c.f("mono", "Medium", 23),
+            pal.corpo, 1.4)
+    c.texto(x + 38, fy + 76, free["texto"], c.f("sans", "Regular", 28),
+            pal.titulo)
+
+    # ------------------------------------------------------------- o rodape
     base = c.h - pad["base"]
-    c.texto(x, base - 40, p["dominio"], c.f("sans", "Medium", 46), pal.destaque)
-    c.texto(x, base + 44, p["assinatura"], c.f("mono", "Regular", 24), pal.corpo, 0.6)
+    faixa_de_etapas(c, x, base - 70, larg, 8)
+    c.texto(x, base - 44, p["dominio"], c.f("sans", "Medium", 42), pal.destaque)
+    c.texto(x, base + 16, p["assinatura"], c.f("mono", "Regular", 21),
+            pal.corpo, 0.5)
 
 
 # ---------------------------------------------------------------------------
@@ -667,6 +1012,37 @@ def comp_chamada(c: Tela, p: dict) -> None:
 # ---------------------------------------------------------------------------
 
 CAPTURAS = RAIZ.parent / "artes"     # saida de scripts/marketing/capturar-catalogo.mjs
+
+
+def recortar(tela: "Image.Image", foco: tuple) -> "Image.Image":
+    """
+    Recorta a captura por FRACAO das dimensoes dela, nao por pixel.
+
+    ## O defeito que isto fecha
+
+    Os focos nasceram em pixel absoluto, medidos contra capturas de
+    2880x1800 (viewport de 1440x900 em `deviceScaleFactor: 2`). Ao subir a
+    captura para 4x — 5760x3600, feito para acabar com 41% de perda de
+    nitidez por ampliacao — **todos os quatro focos passaram a apontar para o
+    quadrante superior esquerdo da imagem**, porque a mesma coordenada agora
+    significa metade do caminho.
+
+    E o pior tipo de acoplamento: nada falha. O recorte continua valido, a
+    peca continua sendo gerada, e so quem ABRIR a imagem descobre que ela
+    mostra o canto errado da tela. Nenhuma das travas do gerador olha dentro
+    de uma captura.
+
+    Em fracao, a escala da captura deixa de importar. Recapturar em 2x, 4x ou
+    8x devolve o mesmo enquadramento, e a unica coisa que muda e quanto pixel
+    sobra para reduzir — que e exatamente o que se queria ganhar.
+    """
+    W, H = tela.size
+    e, t, d, b = foco
+    if max(foco) > 1.0:
+        raise ValueError(
+            f"foco em pixel: {foco}. Use fracao de 0 a 1 — pixel quebra em "
+            "silencio quando a escala da captura muda.")
+    return tela.crop((int(e * W), int(t * H), int(d * W), int(b * H)))
 
 
 def comp_passo(c: Tela, p: dict) -> None:
@@ -702,10 +1078,25 @@ def comp_passo(c: Tela, p: dict) -> None:
     """
     pal, pad = c.pal, FEED_PAD
     x, larg_texto = pad["lado"], c.w - 2 * pad["lado"]
+    if p.get("fundo_vivo"):
+        fundo_vivo(c)
     marca(c, p["indice"])
 
+    # ## O rotulo NAO vai dentro de capsula
+    #
+    # Ele esteve, por uma rodada. A capsula resolvia um problema real — o
+    # eyebrow em mono espacado e o elemento mais apagado da peca e some na
+    # miniatura da grade — e resolvia com a forma mais batida que existe: pill
+    # arredondado com fundo a 10%. E o mesmo clichê de `rounded-lg` em tudo,
+    # e um perfil de Instagram e onde ele mais aparece.
+    #
+    # O que entra no lugar resolve o MESMO problema com a marca: o simbolo do
+    # funil, pequeno, antes do texto. Ele ancora a linha, sobrevive a reducao,
+    # e ja e o desenho que a peca inteira usa — no rodape, na marca d'agua e
+    # no proprio logotipo. Nao e um enfeite a mais; e o mesmo, tres vezes.
     fm = c.f("mono", "Medium", 24)
-    c.texto(x, TOPO_CONTEUDO, p["rotulo"], fm, pal.destaque, 1.6)
+    funil(c, x, TOPO_CONTEUDO + 2, 22, pal.destaque)
+    c.texto(x + 34, TOPO_CONTEUDO, p["rotulo"], fm, pal.destaque, 1.6)
 
     # ## A enfase entra na ULTIMA linha, e por construcao
     #
@@ -733,7 +1124,7 @@ def comp_passo(c: Tela, p: dict) -> None:
             "      node --env-file=.env.local scripts/marketing/capturar-catalogo.mjs")
 
     tela = Image.open(caminho).convert("RGB")
-    tela = tela.crop(p["foco"])
+    tela = recortar(tela, p["foco"])
 
     # Preenche a caixa e corta o excedente, em vez de caber inteira dentro
     # dela: caber deixava faixa vazia embaixo, e o vazio no MEIO da peca e o
@@ -759,8 +1150,8 @@ def comp_passo(c: Tela, p: dict) -> None:
     c.d.rectangle([c.u(x), c.u(y), c.u(x + larg_card) - 1, c.u(y + alt) - 1],
                   outline=pal.borda, width=max(1, c.u(1)))
 
-    c.linha_fina(x, rodape_y, larg_texto, pal.borda, 2)
-    c.texto(x, rodape_y + 26, p.get("rodape", "ARRASTE"),
+    faixa_de_etapas(c, x, rodape_y - 3, larg_texto)
+    c.texto(x, rodape_y + 30, p.get("rodape", "ARRASTE"),
             c.f("mono", "Medium", 24), pal.corpo, 0.16 * 24)
 
 
@@ -902,12 +1293,37 @@ PECAS = [
     # Escura desde 01/09: o carrossel de demonstracao termina numa chamada
     # clara, e duas chamadas claras no mesmo perfil leem como a mesma peca
     # publicada duas vezes.
+    # Convertida junto com o `c7_fecho` em 01/09. Deixar as duas formas de
+    # dado convivendo em `comp_chamada` seria dois caminhos para a mesma tela,
+    # e o segundo so seria exercitado por esta peca — que e exatamente como um
+    # deles diverge do outro sem ninguem notar.
     dict(id="p09_chamada", comp="chamada", pal=ESCURO,
-         claim="Sem cartão para começar.",
-         linhas=[(PLAN_LABELS["free"], f"até {FREE_LEAD_LIMIT} contatos"),
-                 (PLAN_LABELS["pro"],
-                  f"{brl(PRO_PLAN_PRICE)} por mês, a empresa inteira")],
-         assinatura="FUNIL DE VENDAS EM KANBAN",
+         rotulo="SEM CARTAO PARA COMECAR",
+         claim="O plano é o mesmo para uma pessoa",
+         realce="ou para a equipe inteira.",
+         pro=dict(
+             nome=PLAN_LABELS["pro"].upper(),
+             selo="SEM COBRAR POR PESSOA",
+             preco=brl(PRO_PLAN_PRICE), unidade="/mês",
+             apoio="A empresa inteira. Quantas pessoas quiser.",
+             # "Integracoes" solto, num carrossel cujo tema E o WhatsApp, seria
+             # lido como integracao de WhatsApp — que esta DESLIGADA e aparece
+             # como "Em breve" na propria tela de Integracoes do produto
+             # (`lib/integrations/whatsapp-estado.ts`). Nomear as duas que
+             # existem tira a ambiguidade e ainda diz mais.
+             itens=["Contatos sem teto", "Importar planilha",
+                    "Cancela sem multa", "Google Agenda e Gmail"],
+             comparacao=f"Em CRM que cobra por vendedor, {TEAM_SIZE} pessoas custam",
+             valor_deles=f"{brl(SEAT_MEDIAN_PRICE * TEAM_SIZE)}/mês"),
+         free=dict(
+             nome=PLAN_LABELS["free"].upper(),
+             # `FREE_MEMBER_LIMIT` e 2 em `lib/plans.ts`, e a trigger da 0011
+             # recusa o terceiro. A peca dizia "uma pessoa" e subvendia o
+             # proprio plano: duas pessoas e o socio ou a secretaria junto,
+             # que e exatamente a PME que este produto atende.
+             texto=f"Até {FREE_LEAD_LIMIT} contatos, {FREE_MEMBER_LIMIT} pessoas. "
+                   "Sem cartão e sem prazo para decidir."),
+         assinatura=assinatura_legal("CRIE A CONTA GRÁTIS EM 2 MINUTOS"),
          dominio=DOMAIN),
 
     # ## A decima peca, 01/09: o outro lado da mesma perda
@@ -1003,35 +1419,94 @@ CARROSSEL_DEMO = [
     # a tela Hoje: a lista de quem esta esperando. Prometer isso em texto e
     # deixar o espaco vazio embaixo era desperdicar as duas coisas.
     dict(id="c1_capa", comp="passo", pal=CLARO,
-         rotulo="O QUE VOCE ABRE AMANHA", indice="1/7", rodape="ARRASTE",
-         claim="O sistema já sabe",
+         rotulo="CRM PARA QUEM VENDE PELO WHATSAPP", indice="1/7", rodape="ARRASTE",
+         claim="Ele já sabe",
          realce="com quem você precisa falar.",
          captura="04-hoje-desktop-light.png",
          # Recorte mais fechado que o do passo 3: a capa mostra as primeiras
          # linhas, o passo 3 mostra os grupos por prazo. Mesma tela, duas
          # leituras — repetir o mesmo enquadramento faria o carrossel
          # parecer travado.
-         foco=(524, 430, 2000, 1010),
+         # ## A PROPORCAO do recorte precisa bater com a da caixa
+         #
+         # Este foco era 1476x580 (2.54:1) para uma caixa de ~984x660
+         # (1.49:1). Com `max()` cobrindo, a escala vinha da altura e a
+         # largura estourava em 700px: a tela saia com zoom de lupa e
+         # cortada pela metade.
+         #
+         # 1836x1220 da 1.50:1 — a mesma da caixa, entao a captura entra
+         # inteira, na escala em que foi feita para ser lida.
+         # Medido na peca: o conteudo terminava a 72% da altura do card e os
+         # 28% restantes eram o vazio da propria tela. Vazio no FIM da peca e
+         # respiro; vazio DENTRO do card le como captura que nao carregou.
+         # 1402x931 mantem a proporcao de 1.50 e corta onde o conteudo acaba.
+         foco=(0.182, 0.222, 0.669, 0.739),
          dominio=DOMAIN),
 
     dict(id="c2_dor", comp="carrossel", pal=CLARO,
-         rotulo="O QUE ISTO SUBSTITUI", indice="2/7", rodape="ARRASTE",
+         rotulo="O QUE ELE SUBSTITUI", indice="2/7", rodape="ARRASTE",
          claim="Rolar a conversa para achar",
          realce="o que foi combinado.",
          texto="A negociação está lá, entre a foto do almoço e o áudio de "
                "três minutos. Achar leva mais tempo do que responder.",
          dominio=DOMAIN),
 
+    dict(id="c4_passo1", comp="passo", pal=CLARO,
+         rotulo="PASSO 1", indice="3/7", rodape="ARRASTE",
+         claim="O contato entra uma vez",
+         realce="e fica.",
+         captura="03-contatos-desktop-light.png",
+         foco=(0.182, 0.261, 0.819, 0.656),
+         dominio=DOMAIN),
+
+    dict(id="c5_passo2", comp="passo", pal=CLARO,
+         rotulo="PASSO 2", indice="4/7", rodape="ARRASTE",
+         claim="O negócio ganha etapa, valor",
+         realce="e próximo passo.",
+         captura="02-funil-desktop-light.png",
+         foco=(0.208, 0.311, 0.764, 0.900),
+         dominio=DOMAIN),
+
+    dict(id="c6_passo3", comp="passo", pal=CLARO,
+         rotulo="PASSO 3", indice="5/7", rodape="ARRASTE",
+         claim="A tela de hoje cobra",
+         realce="o que ficou em aberto.",
+         captura="04-hoje-desktop-light.png",
+         foco=(0.182, 0.222, 0.819, 0.667),
+         dominio=DOMAIN),
+
+    # `indice` num slide de fecho parece redundante e nao e: e ele que diz
+    # a `ocupa_celula` que este cartao e slide, nao post. Sem ele, o fecho
+    # entrava na grade do perfil como uma decima-primeira celula.
+    # ## O fecho fica CLARO, como os outros seis
+    #
+    # Ele chegou a ir para a paleta escura — preto-esverdeado com teal, que e
+    # a identidade do modo escuro do produto. Recuado depois de olhar em
+    # tamanho real, e o motivo vale registrar.
+    #
+    # No escuro o preco sai em (0,191,192), o teal claro. Ele fica LUMINOSO, e
+    # o brilho e o mesmo de um botao de app — o numero para de parecer preco e
+    # comeca a parecer link. No claro, o (0,120,122) sobre off-white e a mesma
+    # cor de marca com peso de tinta: le como valor impresso, que e o que o
+    # ultimo slide precisa.
+    #
+    # E a captura dos seis slides anteriores vem do tema claro. Fechar o
+    # carrossel com fundo preto trocaria de mundo no ultimo passo, bem onde a
+    # pessoa decide.
+    #
+    # Preto no texto, teal na marca, fundo claro: as tres coisas pedidas, e as
+    # tres ja estao na paleta CLARO — titulo (10,10,10), destaque (0,120,122),
+    # fundo (246,248,249).
     dict(id="c3_mapa", comp="passos", pal=CLARO,
-         rotulo="O CAMINHO INTEIRO", indice="3/7", rodape="ARRASTE",
-         claim="Três passos. Nenhum deles",
+         rotulo="RECAPITULANDO", indice="6/7", rodape="ARRASTE",
+         claim="Foi isso. Nenhum dos três",
          realce="é digitar relatório.",
          passos=[
              ("O contato entra",
               "Uma vez. Nome, empresa e telefone, e ele fica."),
              ("O negócio ganha etapa e prazo",
               "Arrastar o card é o trabalho inteiro."),
-             ("A tela Hoje diz com quem falar",
+             ("Uma tela diz com quem falar hoje",
               "Ela cobra sozinha o que ficou em aberto."),
          ],
          dominio=DOMAIN),
@@ -1043,39 +1518,24 @@ CARROSSEL_DEMO = [
     # largura, viravam uma faixa de 386 de altura onde o texto da interface
     # sumia. A skill de carrossel e explicita: cada captura precisa fazer
     # sentido em MINIATURA, entao o recorte fecha na acao, nao na tela.
-    dict(id="c4_passo1", comp="passo", pal=CLARO,
-         rotulo="PASSO 1", indice="4/7", rodape="ARRASTE",
-         claim="O contato entra uma vez",
-         realce="e fica.",
-         captura="03-contatos-desktop-light.png",
-         foco=(524, 470, 2360, 1180),
-         dominio=DOMAIN),
-
-    dict(id="c5_passo2", comp="passo", pal=CLARO,
-         rotulo="PASSO 2", indice="5/7", rodape="ARRASTE",
-         claim="O negócio ganha etapa, valor",
-         realce="e próximo passo.",
-         captura="02-funil-desktop-light.png",
-         foco=(600, 560, 2200, 1620),
-         dominio=DOMAIN),
-
-    dict(id="c6_passo3", comp="passo", pal=CLARO,
-         rotulo="PASSO 3", indice="6/7", rodape="ARRASTE",
-         claim="A tela Hoje cobra",
-         realce="o que ficou em aberto.",
-         captura="04-hoje-desktop-light.png",
-         foco=(524, 400, 2360, 1200),
-         dominio=DOMAIN),
-
-    # `indice` num slide de fecho parece redundante e nao e: e ele que diz
-    # a `ocupa_celula` que este cartao e slide, nao post. Sem ele, o fecho
-    # entrava na grade do perfil como uma decima-primeira celula.
     dict(id="c7_fecho", comp="chamada", pal=CLARO, indice="7/7",
-         claim="O WhatsApp continua. O cliente passa a ser seu.",
-         linhas=[(PLAN_LABELS["free"], f"até {FREE_LEAD_LIMIT} contatos"),
-                 (PLAN_LABELS["pro"],
-                  f"{brl(PRO_PLAN_PRICE)} por mês, a empresa inteira")],
-         assinatura="FUNIL DE VENDAS EM KANBAN",
+         rotulo="LINK NA BIO",
+         claim="O WhatsApp continua.",
+         realce="O cliente passa a ser seu.",
+         pro=dict(
+             nome=PLAN_LABELS["pro"].upper(),
+             selo="SEM COBRAR POR PESSOA",
+             preco=brl(PRO_PLAN_PRICE), unidade="/mês",
+             apoio="A empresa inteira. Quantas pessoas quiser.",
+             itens=["Contatos sem teto", "Importar planilha",
+                    "Cancela sem multa", "Google Agenda e Gmail"],
+             comparacao=f"Em CRM que cobra por vendedor, {TEAM_SIZE} pessoas custam",
+             valor_deles=f"{brl(SEAT_MEDIAN_PRICE * TEAM_SIZE)}/mês"),
+         free=dict(
+             nome=PLAN_LABELS["free"].upper(),
+             texto=f"Até {FREE_LEAD_LIMIT} contatos, {FREE_MEMBER_LIMIT} pessoas. "
+                   "Sem cartão e sem prazo para decidir."),
+         assinatura=assinatura_legal("CRIE A CONTA GRÁTIS EM 2 MINUTOS"),
          dominio=DOMAIN),
 ]
 
@@ -1107,6 +1567,27 @@ def ocupa_celula(p: dict) -> bool:
     if not ind:
         return True
     return ind.split("/")[0].strip() == "1"
+
+
+# ## Palavras que so existem em portugues COM acento
+#
+# `O QUE VOCE ABRE AMANHA` foi publicado assim: duas palavras sem acento num
+# rotulo em caixa alta, numa peca que vai para o Instagram. Caixa alta e onde
+# isso passa despercebido — o olho nao estranha `VOCE` como estranharia
+# `voce` —, e nenhuma das travas anteriores lia ortografia.
+#
+# A lista proibe a forma ERRADA em vez de conferir a certa, pelo mesmo motivo
+# que o teste dos e-mails proibe o CNPJ baixado: conferir a forma certa passa
+# mesmo com a errada ainda presente em outro lugar do texto.
+#
+# So entram palavras cuja forma sem acento NAO existe em portugues. `E` fica
+# de fora de proposito: e conjuncao valida, e proibi-la reprovaria texto
+# correto — a trava que grita em caso legitimo e a que se aprende a ignorar.
+SEM_ACENTO = [
+    "VOCE", "AMANHA", "NAO", "ATE", "TAMBEM", "PORQUE NAO", "NEGOCIO",
+    "PROXIMO", "PROXIMA", "ULTIMO", "ULTIMA", "MES", "TRES", "JA ",
+    "SERA", "ESTA ACABANDO", "PRE", "POS", "ORGANICO", "RELATORIO",
+]
 
 
 def textos_da_peca(p: dict) -> list:
@@ -1418,6 +1899,17 @@ def check() -> int:
                 lint_texto(cap)
             except ValueError as e:
                 faltas.append(f"{nome}: {e}")
+    # A ortografia entra na mesma varredura que ja abre cada texto visivel,
+    # incluindo o dos videos: um rotulo sem acento e tao publico numa legenda
+    # de Reels quanto num slide de carrossel.
+    for alvo, textos in ([(p["id"], textos_da_peca(p)) for p in PECAS]
+                         + [(n, [c for _, _, c in v["segs"] if c])
+                            for n, v in VIDEOS.items()]):
+        for t in textos:
+            for palavra in SEM_ACENTO:
+                if re.search(r"\b" + re.escape(palavra) + r"\b", t.upper()):
+                    faltas.append(f"{alvo}: falta acento em {palavra!r}")
+
     usados = set()
     for p in PECAS:
         for t in textos_da_peca(p):
@@ -1449,7 +1941,11 @@ def check() -> int:
             # o primeiro carrega procedencia, o segundo e paginacao. Nenhum
             # dos dois e argumento, e "1/7" fazia sete slides reprovarem por
             # "repetir" o numero 7.
-            if t in (p.get("fonte"), p.get("indice")):
+            # A assinatura entra na lista pelo mesmo motivo que a linha de
+            # credito e o indice: CNPJ e identificacao do controlador, nao
+            # argumento de peca. Ele repete em TODA peca de propria, e a regra
+            # de numero unico existe para dado de pesquisa nao ser reciclado.
+            if t in (p.get("fonte"), p.get("indice"), p.get("assinatura")):
                 continue
             for n in re.findall(r"\b\d{1,3}(?:\.\d{3})*(?:,\d+)?%?(?!\d)", t):
                 if n in ("1", "2", "3", "4", "5"):

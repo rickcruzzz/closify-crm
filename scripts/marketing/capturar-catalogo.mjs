@@ -47,7 +47,24 @@ const SAIDA = process.argv[2] ?? 'C:/Users/orlan/OneDrive/Desktop/artes'
  * dá 1170px de pixel real, com folga.
  */
 const FORMATOS = [
-  { nome: 'desktop', viewport: { width: 1440, height: 900 }, escala: 2 },
+  // ## Por que 4x, e nao 2x
+  //
+  // A peca de carrossel usa um RECORTE da captura, ampliado ate encher o
+  // card. Medido no `c1_capa`: um recorte de 1402x931 esticado para 1968x1328
+  // e uma ampliacao de 1,40x, e a nitidez cai **41%** (variancia de bordas,
+  // antes e depois). Interpolacao nao inventa detalhe — ela suaviza o que
+  // falta, e o resultado le como print de print.
+  //
+  // A 4x o mesmo enquadramento sai de 2804x1862 e vai para 1968x1328
+  // REDUZINDO, que e onde LANCZOS funciona bem. Sobra pixel para recortar,
+  // que e a unica coisa que resolve o problema de verdade.
+  //
+  // Renderizar a peca inteira em HTML resolveria pelo mesmo mecanismo, e nao
+  // por ser HTML: o que decide e ter pixel sobrando na origem. Um HTML
+  // capturado a 1x teria exatamente este defeito — e custaria reescrever o
+  // gerador inteiro, com as travas de contraste, ortografia, dado repetido,
+  // ritmo da grade e zona segura de video que hoje moram nele.
+  { nome: 'desktop', viewport: { width: 1440, height: 900 }, escala: 4 },
   { nome: 'telefone', viewport: { width: 390, height: 844 }, escala: 3 },
 ]
 
