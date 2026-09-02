@@ -17,6 +17,7 @@ import { Logo } from '@/components/branding/logo'
 import { ScrollLink } from '@/components/landing/scroll-link'
 import { NavCtaLink } from '@/components/landing/nav-cta-link'
 import { useHeroCtaVisivel } from '@/hooks/use-hero-cta-visivel'
+import { useSessaoAtiva } from '@/hooks/use-sessao-ativa'
 import { cn } from '@/lib/utils'
 
 const navLinks = [
@@ -27,6 +28,21 @@ const navLinks = [
 ] as const
 
 export function PublicNavbar() {
+  /**
+   * ## O botao passa a dizer o que faz
+   *
+   * O middleware desvia quem tem sessao de `/login` para `/dashboard`
+   * (`lib/supabase/middleware.ts:168`), e isso e correto — mas com o botao
+   * escrito "Entrar" o efeito e o de abrir o sistema de surpresa: a pessoa
+   * clica esperando a tela de login e cai dentro do produto.
+   *
+   * O desvio fica; o rotulo e que passa a acompanhar. Deslogado le "Entrar" e
+   * vai ao login; logado le "Ir para o sistema" e vai ao painel. Nenhum
+   * clique muda de destino sem avisar antes.
+   */
+  const logado = useSessaoAtiva()
+  const rotuloDeEntrada = logado ? 'Ir para o sistema' : 'Entrar'
+  const destinoDeEntrada = logado ? '/dashboard' : '/login'
   // Fonte única compartilhada com `mobile-sticky-cta` — ver o hook.
   const heroVisivel = useHeroCtaVisivel()
 
@@ -81,12 +97,11 @@ export function PublicNavbar() {
             Ele CONTINUA no produto (`components/layout/topbar.tsx`), que é
             onde faz sentido: lá a pessoa passa horas, e a escolha é dela. */}
         <div className="flex items-center gap-2">
-
           <NavCtaLink
-            href="/login"
+            href={destinoDeEntrada}
             className={cn(buttonVariants({ variant: 'ghost' }), 'hidden sm:inline-flex')}
           >
-            Entrar
+            {rotuloDeEntrada}
           </NavCtaLink>
 
           {/* 48px de alvo de toque no celular, 32 no desktop. Os links do
@@ -127,9 +142,7 @@ export function PublicNavbar() {
               // botão continuava visível. Duas utilities de `display` no mesmo
               // elemento é briga de especificidade que o Tailwind resolve pela
               // ordem no CSS gerado, não pela ordem que se escreve aqui.
-              heroVisivel
-                ? 'hidden min-[340px]:inline-flex'
-                : 'hidden md:inline-flex',
+              heroVisivel ? 'hidden min-[340px]:inline-flex' : 'hidden md:inline-flex',
             )}
           >
             Começar grátis
@@ -193,7 +206,7 @@ export function PublicNavbar() {
                   <SheetClose
                     render={
                       <NavCtaLink
-                        href="/login"
+                        href={destinoDeEntrada}
                         className={cn(
                           buttonVariants({ variant: 'outline' }),
                           'min-h-11 w-full',
@@ -201,7 +214,7 @@ export function PublicNavbar() {
                       />
                     }
                   >
-                    Entrar
+                    {rotuloDeEntrada}
                   </SheetClose>
                   <SheetClose
                     render={
