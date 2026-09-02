@@ -110,7 +110,13 @@ export default async function DashboardLayout({
           container em UM viewport e movendo o scroll pra dentro da coluna
           principal, o sidebar nunca mais estica além da tela: fica fixo sem
           precisar de `position: sticky`. */}
-      <div className="flex h-dvh overflow-hidden">
+      {/* `data-casca="tela-cheia"` é lido pelo `globals.css` para NÃO reservar
+          espaço de banner de consentimento no `body` aqui. Este container
+          trava a altura em um viewport, então um `padding-bottom` no
+          documento criaria uma segunda barra de rolagem — medido, 142px — numa
+          tela desenhada para não rolar. Fora da área logada o padding é o que
+          impede o banner de tapar o fim de página curta. */}
+      <div data-casca="tela-cheia" className="flex h-dvh overflow-hidden">
         <Sidebar
           workspaces={workspaces}
           activeWorkspaceId={workspaceId}

@@ -212,20 +212,71 @@
   }
   body {
     @apply bg-background text-foreground;
+  }
 
-    /* ESPAÇO RESERVADO PARA O BANNER DE CONSENTIMENTO.
-       Ele é `fixed`, então não empurra nada e o fim do documento fica atrás
-       dele. Numa página LONGA isso é só estética — rolar um pouco mais
-       resolve. Numa página CURTA é um beco: medido em produção em 02/09, em
-       390×659, o `/cadastro` tinha `scrollY 144 == maxScroll 144` com o botão
-       "Criar conta" em 539..583 e o banner começando em 534. A página já
-       estava no fim e o clique caía no banner — quem chegava de anúncio pelo
-       telefone não tinha como criar conta.
-       O valor é escrito pelo próprio banner (`banner-consentimento.tsx`), que
-       é o único que sabe a altura real: ela muda com a largura, com o zoom de
-       fonte do sistema e com a quebra do texto. Zero quando ele não existe,
-       então isto não custa nada nas outras 99% das visitas. */
+  /* ESPAÇO RESERVADO PARA O BANNER DE CONSENTIMENTO.
+
+     O banner é `fixed`, então não empurra nada e o fim do documento fica atrás
+     dele. Numa página LONGA isso é só estética — rolar um pouco mais resolve.
+     Numa página CURTA é um beco: medido em produção em 02/09, em 390×659, o
+     `/cadastro` tinha `scrollY 144 == maxScroll 144` com o botão "Criar conta"
+     em 539..583 e o banner começando em 534. A página já estava no fim e o
+     clique caía no banner — quem chegava de anúncio pelo telefone não tinha
+     como criar conta.
+
+     ## Vale em TODA largura, e a tentativa de cortar em `sm` foi medida
+
+     Acima de 640px o banner deixa de ser faixa e vira card de 448px no canto
+     direito (`sm:left-auto` no próprio componente), então parecia óbvio
+     reservar o espaço só no telefone. Medido em 1440×900, o custo de não
+     cortar é real: 142px de vão abaixo do rodapé, nos 992px à esquerda onde
+     não há banner nenhum.
+
+     Mas cortar em `sm` reabria o defeito numa largura diferente. Medido em
+     700×800 (tablet em retrato, telefone deitado), no `/cadastro`:
+
+         banner       448px, comecando em x=252
+         botao        x de 126 a 574, y de 670 a 714
+         padding      0px, cortado
+         clique       o <p> do banner, de novo
+
+     O card à direita ALCANÇA o formulário enquanto ele é coluna única
+     centralizada — a tela dividida só começa em `lg`. E sem o espaço
+     reservado não há para onde rolar.
+
+     A troca, então, é entre um vão temporário abaixo do rodapé em telas
+     largas e um botão de cadastro inalcançável em tablet. O vão só existe
+     enquanto o banner está aberto, fica fora do campo de leitura e some no
+     primeiro clique; o botão inalcançável custa a conversão que o anúncio
+     pagou. Reserva sempre.
+
+     O valor é escrito pelo próprio banner, que é o único que sabe a altura
+     real — ela muda com a largura, com o zoom de fonte do sistema e com a
+     quebra do texto. Zero quando ele não existe, então isto não custa nada nas
+     outras 99% das visitas. */
+  body {
     padding-bottom: var(--altura-do-banner, 0px);
+  }
+
+  /* ...MENOS onde a casca é de tela cheia, que é a área logada.
+
+     `app/(dashboard)/layout.tsx` monta um `flex h-dvh overflow-hidden`: ali o
+     documento NÃO rola de propósito, quem rola é a coluna de conteúdo por
+     dentro. Reservar espaço no `body` de uma tela desses transforma o
+     documento inteiro em rolável — medido em 1440×900 com o banner aberto,
+     `scrollHeight - innerHeight` saiu de 0 para **142px**, e a janela ganhou
+     uma segunda barra de rolagem ao lado da que já existe no conteúdo.
+
+     E ali o espaço não é necessário: nada do dashboard fica preso atrás do
+     banner, porque a coluna interna já rola por conta própria.
+
+     `:has()` e não uma classe no `body`: o layout do dashboard é um Server
+     Component e o `body` mora no layout RAIZ — passar o estado de um para o
+     outro exigiria contexto de cliente para uma decisão que é puramente de
+     apresentação. Onde `:has()` não existir (Firefox anterior ao 121), a
+     degradação é a rolagem extra de volta, não um beco. */
+  body:has([data-casca='tela-cheia']) {
+    padding-bottom: 0;
   }
   html {
     @apply font-sans;

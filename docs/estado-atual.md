@@ -63,6 +63,48 @@ a regra volta a ser so a do hero.
 
 **O controle negativo e o que separa "corrigi" de "empurrei para sempre".**
 
+### E a correcao abriu DUAS regressoes, achadas so por medir mais larguras
+
+Perguntado pelo dono antes de promover: *"seria bom medir isso?"*. Era. Eu tinha
+medido **so em 390px**, e o `padding-bottom` vai no `body` — que e global.
+
+**1. Vao morto em desktop.** Em 1440x900 o banner nao e faixa: e card de 448px
+no canto direito. Reservar altura no `body` abria **142px de espaco vazio abaixo
+do rodape**, nos 992px a esquerda onde nao ha banner nenhum.
+
+A correcao obvia era cortar em `sm` (640px), onde o banner vira card. **Medida,
+ela reabria o defeito original numa largura diferente** — 700x800, tablet em
+retrato ou telefone deitado, no `/cadastro`:
+
+    banner    448px, comecando em x=252
+    botao     x de 126 a 574
+    clique    o <p> do banner, de novo
+
+O card a direita ALCANCA o formulario enquanto ele e coluna unica centralizada;
+a tela dividida so comeca em `lg`. A troca, entao, e entre um vao temporario
+abaixo do rodape e um botao de cadastro inalcancavel em tablet. **Reserva
+sempre** — o vao some no primeiro clique, o botao inalcancavel custa a conversao
+que o anuncio pagou.
+
+**2. O dashboard passou a rolar.** `app/(dashboard)/layout.tsx` e
+`flex h-dvh overflow-hidden`: ali o documento NAO rola de proposito, quem rola e
+a coluna interna. Medido com o banner aberto, `scrollHeight - innerHeight` saiu
+de 0 para **142px**, e a janela ganhou uma segunda barra de rolagem.
+
+`data-casca="tela-cheia"` + `body:has(...)` zera o padding la, e o espaco nao
+faz falta porque nada do dashboard fica preso atras do banner.
+
+**A licao e sobre metodo:** medir uma largura prova uma largura. Regra global
+(`body`) exige varredura global — 390, 700, 1024 e 1440, mais a area logada, que
+tem casca diferente de tudo.
+
+    390    padding 126px   chega no BOTAO   (maxScroll 144 -> 271)
+    700    padding 150px   chega no BOTAO   <- a que o corte em `sm` quebrava
+    1024   padding 142px   chega no BOTAO
+    1440   padding 142px   chega no BOTAO
+    dashboard  padding 0px, rolagem extra 0
+    negativo   respondido -> padding 0px em todas, e o clique continua chegando
+
 ## O cliente do Supabase viajava na landing (02/09, tarde)
 
 Medido em producao, com `fetch` nos proprios chunks:
