@@ -118,7 +118,31 @@ isso exigiu duas correções no gerador — registradas na seção seguinte.
 `criativos/anuncio/hashes.json`. `scripts/marketing/criar-anuncios-meta.mjs`
 monta o `asset_feed_spec` com `asset_customization_rules`, que é o mecanismo
 oficial para imagem por posicionamento — e **não existe no MCP**, só na Graph
-API.
+API, que o app em modo de desenvolvimento bloqueia.
+
+### Enquanto isso: o 1:1 é a imagem única, e isso foi MEDIDO
+
+Sem `asset_feed_spec`, o creative carrega uma imagem só. Qual das três sofre
+menos? Medido abrindo o preview real do Facebook no navegador, não deduzido:
+
+```
+4:5 em posicionamento 1:1 (coluna da direita)
+    CORTA topo e base — a marca "Velo Funil" e o dominio somem, sobra o miolo
+
+1:1 em posicionamento 4:5 (feed do Facebook)
+    INTEIRA — marca, claim, grafico, linha de fonte e dominio, nada cortado
+```
+
+**O 1:1 é o denominador comum seguro.** O custo é ocupar menos altura no feed
+do que uma 4:5 ocuparia — atenção, não conteúdo. O custo do 4:5 é perder a
+marca e o endereço do site em sete posicionamentos, o que é pior.
+
+Os seis creatives da conta usam o 1:1. Os de 4:5 foram criados primeiro e
+apagados depois desta medição.
+
+**A regra que fica:** quando só cabe uma imagem, escolha a proporção mais
+QUADRADA das que você tem. Ela perde área nas outras; as alongadas perdem
+conteúdo.
 
 ---
 
@@ -184,9 +208,32 @@ O post do criativo dos anuncios foi criado por um app que esta em modo de
 desenvolvimento. Ele deve estar em modo publico para criar este anuncio.
 ```
 
-**Ação:** em <https://developers.facebook.com/apps/1248926890692442/>, alternar
-o app para **Live**. Isso destrava `criar-anuncios-meta.mjs` e, com ele, as três
-proporções nos 19 posicionamentos.
+**Ação:** em <https://developers.facebook.com/apps/1248926890692442/>, menu
+lateral → **Publicar**. Isso destrava `criar-anuncios-meta.mjs` e, com ele, as
+três proporções nos 19 posicionamentos.
+
+**Não é um clique, e a estimativa importa:** o app usa `ads_management` e
+`business_management`, que são permissões avançadas. Publicar com elas exige
+**Análise do app** e **Verificação da empresa** — dias a semanas. No painel de
+02/09, 5 dos 7 requisitos estavam sem check.
+
+**Por isso a campanha não espera por isto.** O 1:1 como imagem única resolve o
+recorte hoje (ver acima), e a customização por posicionamento entra depois, se
+e quando o App Review passar. Ela é melhoria, não pré-requisito.
+
+**Nota sobre a Verificação da empresa:** ela consulta bases da Receita, e o
+CNPJ ainda não propagou em todas. Medido em 02/09:
+
+```
+ReceitaWS      HTTP 200   ATIVA
+minhareceita   HTTP 404   ainda nao tem
+BrasilAPI      HTTP 403   inconclusivo (bloqueio de robo)
+CNPJa          HTTP 402   inconclusivo (paywall)
+```
+
+Uma fonte confirma. A regra registrada em 31/08 — esperar duas fontes
+independentes antes de submeter — **ainda não foi satisfeita**, e reprovação
+entra no histórico do Business Manager.
 
 ### 2. O pagamento está desativado para o usuário
 
