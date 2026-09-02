@@ -4,9 +4,201 @@ Documento de continuidade. É lido no começo de toda sessão (referenciado no
 [CLAUDE.md](../CLAUDE.md)) para que uma conversa nova, ou outra conta, comece
 sabendo o que já foi feito, o que foi decidido e onde estão as armadilhas.
 
-**Atualizado em:** 01/09/2026, noite (o sistema passou a avisar sozinho, de
+**Atualizado em:** 02/09/2026, madrugada (o vigia ganhou quem o vigie, fora da
+Vercel; a Meta recebia dado pessoal de quem RECUSOU o banner; e a entrada pelo
+Google entrava sem deixar ninguem escolher a conta)
+
+**Antes disso, 01/09/2026, noite** (o sistema passou a avisar sozinho, de
 hora em hora e so quando muda; e tres coisas que este documento afirmava
 deixaram de ser verdade sem ninguem notar)
+
+## Quem vigia o vigia, e por que ele nao mora na Vercel (02/09)
+
+O vigia de 01/09 fechou o "ninguem olha a Central". Ficou um buraco que ele
+nao podia fechar sozinho: **se ELE parar, o silencio parece ordem.**
+
+Quatro falhas produzem o mesmo silencio — o cron nao disparar, a rota lancar,
+o Resend recusar, um deploy quebrar a rota. De fora, "nenhum problema" e "o
+vigia parou" eram indistinguiveis, e o segundo some justamente quando mais se
+confia nele.
+
+**Um segundo cron na Vercel cairia junto.** Vigiar o vigia so funciona de fora,
+e o Postgres e a unica infraestrutura deste projeto que ja esta de pe e nao
+depende dela. `vigiar_o_vigia` (0063) roda por `pg_cron` aos 30 de cada hora —
+deslocado de proposito, porque conferir na hora cheia correria contra a
+execucao que se quer observar.
+
+**A peca que faltava era o carimbo.** A memoria so grava quando um e-mail sai,
+o que e correto para nao repetir aviso e deixa a varredura limpa sem rastro.
+`__ultima_varredura` avanca em TODA passagem, antes de qualquer decisao de
+envio, e sobrevive a limpeza: nao e alerta, e prova de vida.
+
+Tres horas de tolerancia, nao uma: uma falha isolada se resolve na proxima
+passagem, e alertar na primeira ausencia geraria alarme falso todo deploy que
+caisse na hora cheia.
+
+**`pg_cron`, `pg_net` e o Vault entraram para isso.** Quatro migrations (0014,
+0015, 0027, 0051) afirmam em texto que `pg_cron` nao esta habilitado — passa a
+ser falso a partir daqui, e nenhuma decisao daquelas quatro migra para la.
+
+**A chave do Resend foi posta no Vault PELO DONO**, pelo painel. O
+classificador bloqueou minhas duas tentativas de move-la, e o bloqueio estava
+certo: mover credencial de API para outro sistema nao e algo que eu deva fazer
+sozinho. Ela nao entra em migration versionada — arquivo no Git e a forma mais
+comum de vazar credencial.
+
+Provado nos dois sentidos: carimbo de agora cala, carimbo de 5 horas atras
+manda o e-mail, entrega `delivered` conferida no Resend.
+
+## A Meta recebia dado de quem clicou "Recusar" (02/09)
+
+Auditoria do funil de aquisicao. O achado mais grave nao era de conversao — era
+juridico, e estava no codigo desde que a CAPI existe.
+
+O pixel do navegador sempre respeitou o banner, com duas cercas independentes.
+**A Conversions API nunca consultou nada**: a decisao vive em `localStorage`, e
+o servidor nao le `localStorage`.
+
+Quem recusava e se cadastrava tinha e-mail, telefone, nome, cidade, estado, CEP
+e `external_id` enviados a Meta — hasheados, mas enviados. Seis eventos. Sob a
+LGPD e tratamento sem base legal declarada, e a Politica de Privacidade
+descrevia outra coisa.
+
+**A correcao tem duas metades, e a segunda foi erro meu.** Cookie espelho
+resolve os cinco eventos que nascem numa requisicao do visitante. O `Purchase`
+nao: ele nasce no webhook do Asaas, onde quem faz a requisicao e o gateway.
+Minha primeira versao tinha um `catch` que retornava — faria o Purchase nunca
+ser enviado, matando a conversao principal para consertar o consentimento. A
+0065 guarda a decisao em `workspaces`, gravada no onboarding.
+
+`null` conta como recusa nos dois caminhos: **ausencia de decisao nunca e
+consentimento**.
+
+Junto: o `Purchase` passou a levar `fn/ln/ct/st/zp` como os outros cinco ja
+levavam — era o evento mais valioso para o algoritmo e o de pior
+identificacao —, e `CompleteRegistration` ganhou `event_id` deterministico.
+
+**Os 9 testes afirmam a RECUSA, nao o aceite.** O defeito era uma ausencia:
+nada falhava, nenhum teste quebrava. So um caso que exercita "recusado" e "nao
+decidiu" o pega.
+
+**O metodo de prova contra a Meta fica registrado:** token INVALIDO. A recusa
+alta prova que a chamada aconteceu; sucesso seria silencioso. E
+`test_event_code` inventado NAO serve — a Meta responde `events_received: 1` e
+grava no dataset de producao do mesmo jeito.
+
+## A entrada pelo Google, e o que ela quebrou ao ser consertada (02/09)
+
+`signInWithOAuth` sem `queryParams`. Sem `prompt`, o Google pula toda tela
+quando ha uma conta logada e o app ja foi autorizado: "Entrar com Google"
+virava uma piscada e a pessoa ja estava dentro, sem ver com qual identidade.
+
+**Num CRM isso e pior que abrupto.** Quem trabalha tem conta pessoal e de
+trabalho no mesmo navegador; entrar com a errada significa criar uma empresa
+paralela sem perceber, ou nao achar os proprios contatos e concluir que o
+sistema perdeu tudo.
+
+`prompt: select_account`. Nao `consent`, que remostraria as permissoes em toda
+entrada — atrito diario que nao protege de nada.
+
+**E a correcao abriu um defeito novo, o que vale mais registrar que ela.** Com
+a tela de escolha passou a existir o botao voltar, e quem desistia voltava para
+`/login` com o botao girando para sempre: `isGoogleLoading` nunca era desligado
+no caminho de sucesso, de proposito, porque o navegador estaria saindo.
+
+A pagina volta do **bfcache** com a arvore React inteira preservada — sem
+remontagem, `useEffect([])` nao roda e o estado inicial nao e reavaliado.
+`pageshow` com `event.persisted` e o unico evento que distingue esse caso.
+
+**Mudanca que acrescenta um passo ao fluxo acrescenta junto todos os caminhos
+de saida desse passo.**
+
+## O botao "Entrar" abria o sistema de surpresa (02/09)
+
+`middleware.ts:168` desvia quem tem sessao de `/login` para `/dashboard`, e
+isso esta certo. O defeito era o rotulo: escrito "Entrar", o efeito e o de
+abrir o produto sem avisar. Provavelmente e tambem o "duplo clique" relatado —
+clica, vai ao dashboard, volta, clica de novo.
+
+O desvio fica; o rotulo acompanha. Deslogado le "Entrar" e vai ao login; logado
+le "Ir para o sistema" e vai ao painel.
+
+**A sessao e lida no NAVEGADOR, e isso e decisao.** Ler num Server Component
+tornaria a landing dinamica, e ela e o LCP da pagina que recebe trafego pago. O
+padrao e "deslogado", que e o caso da quase totalidade de quem chega — so quem
+TEM sessao ve o rotulo mudar, e essa pessoa ja conhece o produto.
+
+**A sessao passou a expirar em 7 dias sem uso**, nao 14. A divisao no mercado
+nao e por tamanho de produto, e pelo que ele guarda: Salesforce usa 2h e
+HubSpot 24h, os dois CRM; Notion e Linear ficam em meses porque guardam o
+trabalho da propria pessoa. Um CRM guarda dado de gente que nunca concordou com
+nada, e o publico daqui usa computador compartilhado. O teto absoluto de 30
+dias fica — ele responde outra pergunta: limitar o estrago de um cookie
+roubado.
+
+## A Central de anuncio mostrava campanha e so (02/09)
+
+Oito endpoints da Meta testados, **nenhum bloqueado**. A tela parava na
+campanha, e dois defeitos so apareceram ao ler o nivel abaixo:
+
+    a campanha nao tem NENHUM anuncio    ligar nao veicula nada
+    o conjunto otimiza por LINK_CLICKS   nao usa o pixel para conversao
+
+O campo `optimization_goal` so existe no CONJUNTO — por isso a tela que parava
+na campanha nao tinha como mostrar. E o botao Ligar ficava disponivel, sem
+sinal de que o clique seria inocuo.
+
+Agora mostra a arvore inteira, o dinheiro da conta, a serie de 30 dias em
+barras CSS (sem dependencia nova), e o que impede de rodar. `Parcial<T>` faz
+cada bloco falhar sozinho: antes um endpoint fora do ar apagava a tela toda.
+
+**Escrita continua nas tres reversiveis.** Criar campanha segue fora, pela
+decisao de 20/08.
+
+## Outras quatro, curtas (02/09)
+
+**Excluir empresa** existe no produto (0064), com quatro travas no banco — so
+o criador, nunca a ultima, sem assinatura viva, e o nome conferido no servidor.
+`workspaces` tem RLS sem policy de DELETE: um `delete` do cliente seria negado
+em silencio, devolvendo sucesso com zero linhas.
+
+**Trocar de empresa pede confirmacao**, contra o que Slack, Notion e Linear
+fazem. Aqui as empresas nao sao espacos intercambiaveis, sao carteiras de
+cliente: escrever na errada nao se desfaz voltando.
+
+**A tarefa marcada sumia em 4 segundos**, antes de dar tempo de conferir se
+marcou a certa. Agora fica riscada ate sair da tela — e o "Desfazer" perdeu o
+prazo.
+
+**A importacao de planilha** tinha tres defeitos: a tela prometia 1000 linhas e
+o servidor recusava as 1500; um telefone repetido derrubava o lote inteiro
+(`23505`); e o `update` de negocio nao checava erro. O gargalo do caminho
+`atualizar` (~2010 requisicoes para 1000 linhas) fica registrado e nao foi
+corrigido — merece rodada propria.
+
+## O Kanban quebrou, e o instrumento de diagnostico estava cego (02/09)
+
+Dois React #185 ("Maximum update depth exceeded") em producao, ao arrastar um
+card. **Nao reproduzi o laco** — nem varrendo o caminho de render, nem com o
+gesto real em build de producao local.
+
+O que achei foi por que ninguem consegue: `component_stack` das duas linhas
+estava VAZIO, e essa coluna existe (0058) para nomear o componente que entra em
+laco. `CapturaDeComponente` estava no layout, e no App Router o `error.tsx` da
+rota e um boundary MAIS INTERNO — captura primeiro, e o Next nao passa
+`componentStack` para ele. Para erro de pagina, ela era codigo morto.
+
+Desceu para dentro da pagina. **Na proxima ocorrencia o nome do componente
+chega**, e a busca vira consulta.
+
+**Hipotese que os horarios sustentam:** os dois erros caem dentro da janela de
+promocao (07:12 e 07:15, com deploys as 07:14 e 07:17-18). E *deployment skew*
+— aba aberta com chunks da versao antiga. Explica o erro ser novo, nao
+reproduzir e ter parado sozinho quando parei de promover. **Nao esta provado**,
+e se voltar fora de janela de deploy e defeito de verdade.
+
+Fica em aberto: `skewProtectionBoundaryAt` nao definido, e `ChunkLoadError` nao
+tratado em lugar nenhum do codigo.
 
 ## O sistema avisa, em vez de esperar alguem abrir a tela (01/09)
 
@@ -3144,6 +3336,32 @@ exato do bug do calendário e o "Cancelar" do diálogo de saída mantendo a
 sessão.
 
 ## Pendente do dono (não é código)
+
+- [ ] **A campanha da Meta não tem NENHUM anúncio, e otimiza por clique.**
+      Medido em 02/09: campanha + conjunto + criativo, e zero `ads`. Ligar não
+      veicula nada. O conjunto usa `LINK_CLICKS`, que busca clique barato e
+      **não usa o pixel para conversão** — para aquisição de SaaS é a
+      configuração errada.
+
+      Nenhuma linha de código muda isso: criar anúncio e trocar objetivo são
+      ~15 campos onde errar um queima dinheiro em silêncio, e a decisão de
+      20/08 mantém isso fora da Central de propósito. `/dono/anuncio` avisa dos
+      dois desde 02/09.
+
+      **Quando criar, otimize por `Lead` nas primeiras semanas.** A Meta pede
+      ~50 conversões por semana para sair da fase de aprendizado; com 7
+      `Purchase` em 17 dias, otimizar por Purchase é pagar o algoritmo para
+      chutar. A escada é `Lead` → `CompleteRegistration` → `Purchase`.
+
+- [ ] **1 assinatura ativa no Asaas sem Pro liberado**, achada pelo vigia em
+      02/09. É o alerta mais caro que existe: alguém pagou, o gateway confirma,
+      e o banco não liberou o plano — a pessoa está pagando e usando o Free.
+      Pode ser conta de teste sua, mas vale conferir em `/dono`.
+
+- [ ] **Apagar o post antigo do Instagram** não é mais necessário — feito em
+      02/09. Fica registrado que a Content Publishing API **publica mas não
+      apaga**: não existe endpoint de exclusão, e isso é da plataforma.
+
 
 - [x] **`CRON_SECRET` na Vercel.** Esta entrada dizia que faltava colar e que
       o cron tomava 401 todo dia em silêncio. **Falso**, medido na API da
