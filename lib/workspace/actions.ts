@@ -534,3 +534,59 @@ export async function criarEmpresa(
   revalidatePath('/', 'layout')
   return { workspaceId: data as string }
 }
+
+/**
+ * Exclui uma empresa e tudo dentro dela.
+ *
+ * ## As travas moram no banco, não aqui
+ *
+ * `excluir_empresa` (0064) confere criador, empresa única, assinatura viva e
+ * o nome digitado. Repeti-las nesta função criaria uma segunda cópia da regra,
+ * e a que diverge em silêncio é sempre a escrita depois — a armadilha que este
+ * projeto já pagou com o filtro de conta de teste.
+ *
+ * Server Action é endpoint HTTP: quem chamar o PostgREST direto com a chave
+ * pública pula tudo que estiver só aqui. Foi assim que o autoupgrade para Pro,
+ * o limite de leads e o autoconvite passaram, e o que os fechou foram
+ * migrations, não validação no TypeScript.
+ *
+ * O que esta função faz é o que o banco não pode: traduzir a exceção do
+ * Postgres em mensagem legível e mandar a pessoa para outra empresa, já que a
+ * que ela estava vendo deixou de existir.
+ */
+export async function excluirEmpresa(workspaceId: string, nomeConfirmado: string) {
+  const supabase = await createClient()
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) return { error: 'Sessão expirada. Entre de novo.' }
+
+  const { error } = await supabase.rpc('excluir_empresa', {
+    target_workspace_id: workspaceId,
+    nome_confirmado: nomeConfirmado,
+  })
+
+  if (error) {
+    console.error('excluir_empresa falhou', { code: error.code })
+    // As mensagens da RPC são escritas para quem usa ("Esta é sua única
+    // empresa...", "Cancele a assinatura..."), então repassar é melhor que
+    // trocar por um genérico que esconde o motivo e o caminho.
+    return { error: error.message }
+  }
+
+  // A empresa ativa acabou de sumir. Sem trocar, a próxima navegação cai numa
+  // empresa que não existe e o layout redireciona para o onboarding — o que
+  // parece perda de dados para quem só apagou uma das empresas.
+  const { data: restantes } = await supabase
+    .from('workspace_members')
+    .select('workspace_id')
+    .eq('user_id', user.id)
+    .limit(1)
+
+  const proxima = restantes?.[0]?.workspace_id
+  if (proxima) await trocarEmpresa(proxima)
+
+  revalidatePath('/', 'layout')
+  return { success: true }
+}

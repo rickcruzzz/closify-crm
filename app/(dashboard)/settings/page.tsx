@@ -5,6 +5,7 @@ import { urlDaLogo } from '@/lib/workspace/empresa'
 import { MembersCard } from '@/components/settings/members-card'
 import { PlanCard } from '@/components/settings/plan-card'
 import { DeleteAccountCard } from '@/components/settings/delete-account-card'
+import { ExcluirEmpresaCard } from '@/components/settings/excluir-empresa-card'
 import { IntegrationsTab } from '@/components/settings/integrations-tab'
 import { AvisoDeConexao } from '@/components/settings/aviso-de-conexao'
 import {
@@ -188,6 +189,17 @@ export default async function SettingsPage({
             logoUrl,
           }}
         />
+      )}
+
+      {/* ## Excluir empresa fica na aba Empresa, e abaixo dos dados
+          E o mesmo lugar onde "Excluir conta" mora em Equipe: acao destrutiva
+          no fim da tela a que ela pertence, nunca no meio de um formulario que
+          a pessoa esta preenchendo.
+          So para quem administra. As outras travas — criador, empresa unica,
+          assinatura viva — moram na RPC `excluir_empresa` (0064), porque regra
+          que so vive na Server Action nao e regra. */}
+      {aba === 'empresa' && isAdmin && workspace && (
+        <ExcluirEmpresaCard nomeDaEmpresa={workspace.name} workspaceId={workspace.id} />
       )}
 
       {aba === 'equipe' && (

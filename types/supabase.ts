@@ -877,6 +877,10 @@ export type Database = {
         Args: { target_workspace_id: string }
         Returns: 'free' | 'pro' | null
       }
+      excluir_empresa: {
+        Args: { nome_confirmado: string; target_workspace_id: string }
+        Returns: undefined
+      }
       excluir_minha_conta: { Args: never; Returns: undefined }
       get_workspace_member_names: {
         Args: { target_workspace_id: string; target_user_ids: string[] }
