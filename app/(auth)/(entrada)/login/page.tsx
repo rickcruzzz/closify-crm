@@ -42,6 +42,47 @@ export default function LoginPage() {
     }
   }
 
+  /**
+   * Desliga o spinner do Google quando a pessoa VOLTA da tela de escolha.
+   *
+   * ## O defeito, e por que ele nasceu junto com a correcao
+   *
+   * `onGoogleClick` liga `isGoogleLoading` e nunca o desliga no caminho de
+   * sucesso — de proposito, porque o navegador estaria saindo para o Google e
+   * resetar deixaria o botao "acordar" no meio da navegacao.
+   *
+   * Isso valia enquanto o Google entrava DIRETO. Com `prompt=select_account`
+   * passou a existir uma tela de escolha, e com ela o botao voltar: quem
+   * desiste ali volta para `/login` e encontra o botao girando para sempre.
+   *
+   * A correcao anterior criou a oportunidade para este defeito. Vale registrar
+   * porque e o padrao: mudanca que acrescenta um passo ao fluxo acrescenta
+   * junto todos os caminhos de saida desse passo.
+   *
+   * ## Por que `pageshow` com `persisted`, e nao `useEffect` de montagem
+   *
+   * A pagina volta do **bfcache** do navegador, com a arvore React inteira
+   * preservada — estado incluso. Nao ha remontagem, entao um `useEffect([])`
+   * nao roda de novo e o `useState(false)` inicial nunca e reavaliado.
+   *
+   * `pageshow` dispara nos dois casos, e `event.persisted` distingue: `true`
+   * significa que veio do bfcache, que e exatamente o caso em que o estado
+   * sobreviveu e precisa ser desfeito. Numa recarga de verdade o estado ja
+   * nasce limpo e nao ha o que fazer.
+   */
+  React.useEffect(() => {
+    function aoVoltarParaEstaPagina(evento: PageTransitionEvent) {
+      if (evento.persisted) {
+        setIsGoogleLoading(false)
+        // `isSubmitting` pelo mesmo motivo: o login por senha termina em
+        // `redirect()`, e voltar dele cairia no mesmo botao travado.
+        setIsSubmitting(false)
+      }
+    }
+    window.addEventListener('pageshow', aoVoltarParaEstaPagina)
+    return () => window.removeEventListener('pageshow', aoVoltarParaEstaPagina)
+  }, [])
+
   async function onGoogleClick() {
     setFormError(null)
     setIsGoogleLoading(true)
