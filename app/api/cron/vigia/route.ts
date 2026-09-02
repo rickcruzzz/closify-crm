@@ -241,10 +241,29 @@ export async function GET(request: Request) {
     return NextResponse.json({ enviado: false, motivo: 'nada novo desde o ultimo aviso' })
   }
 
+  // ## O relogio do e-mail e o de Sao Paulo, e a HORA entra junto
+  //
+  // A Vercel dispara o cron em UTC e isso NAO e configuravel — nao existe
+  // campo de fuso no `vercel.json`. Com `0 * * * *` isso nao muda nada (hora
+  // cheia em UTC e hora cheia aqui, porque o offset e inteiro), mas o horario
+  // que a pessoa le precisa ser o do relogio dela.
+  //
+  // A data ja saia em `America/Sao_Paulo`; faltava a HORA. Sem ela, dois
+  // e-mails do mesmo dia sao indistinguiveis, e "isto e novo ou e o de
+  // ontem?" vira uma pergunta que so o Resend responde.
+  //
+  // Para os outros dois crons deste projeto, a conversao e -3h:
+  //     reconciliar-assinaturas  0 12 * * *  ->  09:00 em Sao Paulo
+  //     limpar-eventos           0 6  * * *  ->  03:00 em Sao Paulo
+  // (o comentario mora aqui e nao no `vercel.json` porque JSON nao aceita
+  // comentario — tentar isso ja derrubou dois deploys deste projeto em 22/08,
+  // com `should NOT have additional property`.)
   const dia = new Intl.DateTimeFormat('pt-BR', {
     timeZone: 'America/Sao_Paulo',
     day: '2-digit',
     month: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
   }).format(agora)
 
   const { error } = await getResend().emails.send({

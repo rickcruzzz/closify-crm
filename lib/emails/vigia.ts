@@ -62,7 +62,9 @@ export function renderVigiaEmail(params: {
     title: alertas.length > 0 ? 'O que precisa de você' : 'Não consegui conferir tudo',
     bodyHtml: corpo,
     footnote:
-      `Varredura de ${escapeHtml(dia)}. ` +
+      // O fuso vai escrito: "01:11" sozinho e ambiguo para quem sabe que o
+      // servidor roda em UTC, e a duvida derrota o proposito de mostrar a hora.
+      `Varredura de ${escapeHtml(dia)} (horário de Brasília). ` +
       'Este e-mail só chega quando há algo — silêncio significa que está tudo em ordem.',
   })
 }
