@@ -82,12 +82,44 @@ async function medir(nome: string, fn: () => Promise<number>): Promise<number | 
   }
 }
 
+/**
+ * A chave que registra "eu rodei", separada de "eu avisei".
+ *
+ * ## Por que as duas coisas não podem ser a mesma
+ *
+ * A memória só é gravada quando um e-mail sai. Isso é correto para não
+ * repetir aviso — e deixa um buraco: numa varredura limpa, o vigia cala e
+ * **não deixa rastro nenhum**. Do lado de fora, "rodou e estava tudo bem" e
+ * "não rodou" produzem exatamente o mesmo silêncio.
+ *
+ * Este carimbo é o que o vigilante em `pg_cron` observa. Ele avança em toda
+ * varredura, inclusive nas que não mandam nada — e é por isso que ele mora
+ * fora do fluxo de novidades, gravado antes de qualquer decisão de envio.
+ */
+const CARIMBO_DE_VARREDURA = '__ultima_varredura'
+
+async function carimbarVarredura(admin: ReturnType<typeof createAdminClient>) {
+  // Falha aqui NÃO derruba a varredura: o carimbo serve à vigilância, e
+  // perder o alerta real para gravar o registro de que houve alerta seria
+  // trocar o fim pelo meio. O vigilante trata o carimbo velho como suspeita,
+  // que é o comportamento certo mesmo quando a causa foi só isto.
+  const { error } = await admin
+    .from('vigia_ultimo_aviso')
+    .upsert(
+      { chave: CARIMBO_DE_VARREDURA, quantidade: 0, avisado_em: new Date().toISOString() },
+      { onConflict: 'chave' },
+    )
+  if (error) console.error('vigia: falhou ao carimbar a varredura', error)
+}
+
 export async function GET(request: Request) {
   if (!autorizado(request.headers.get('authorization'))) {
     return NextResponse.json({ erro: 'não autorizado' }, { status: 401 })
   }
 
   const admin = createAdminClient()
+  await carimbarVarredura(admin)
+
   const agora = new Date()
   const ontem = new Date(agora.getTime() - 24 * 60 * 60 * 1000).toISOString()
   const limiteSuporte = new Date(
@@ -210,7 +242,8 @@ export async function GET(request: Request) {
   if (!deveEnviar(leitura)) {
     // Nada vivo: a memória some junto, e é isso que faz um problema que
     // voltar ser tratado como novo em vez de ficar calado para sempre.
-    await admin.from('vigia_ultimo_aviso').delete().neq('chave', '')
+    // O carimbo sobrevive à limpeza: ele não é alerta, é prova de vida.
+    await admin.from('vigia_ultimo_aviso').delete().neq('chave', CARIMBO_DE_VARREDURA)
     return NextResponse.json({ enviado: false, motivo: 'nada a relatar' })
   }
 
@@ -226,7 +259,10 @@ export async function GET(request: Request) {
   const memoria: Record<string, number> = {}
   try {
     const { data } = await admin.from('vigia_ultimo_aviso').select('chave, quantidade')
-    for (const linha of data ?? []) memoria[linha.chave] = linha.quantidade
+    for (const linha of data ?? []) {
+      if (linha.chave === CARIMBO_DE_VARREDURA) continue
+      memoria[linha.chave] = linha.quantidade
+    }
   } catch (err) {
     console.error('vigia: falhou ao ler a memoria, tratando tudo como novo', err)
   }
@@ -294,7 +330,7 @@ export async function GET(request: Request) {
   const nova = memoriaAtualizada(alertas)
   for (const n of naoConferido) nova[`falha-${n}`] = 1
 
-  await admin.from('vigia_ultimo_aviso').delete().neq('chave', '')
+  await admin.from('vigia_ultimo_aviso').delete().neq('chave', CARIMBO_DE_VARREDURA)
   if (Object.keys(nova).length > 0) {
     await admin.from('vigia_ultimo_aviso').insert(
       Object.entries(nova).map(([chave, quantidade]) => ({ chave, quantidade })),
