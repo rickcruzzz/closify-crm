@@ -3,16 +3,25 @@
 > Iniciativa de conversão Free→Pro (copy da landing, limites, checkout) tem
 > PRD próprio: [prd-conversao-pro.md](prd-conversao-pro.md).
 >
-> **Conferido contra produção em 01/09/2026.** Números de tabela, RPC,
+> **Conferido contra produção em 02/09/2026.** Números de tabela, RPC,
 > migration e teste vieram do catálogo real e do gate, não de memória:
-> **18 tabelas**, **32 RPCs**, **17 foreign keys**, 60 arquivos de migration
-> (a maior é `0061`) e **854 testes**.
+> **19 tabelas**, **34 RPCs**, **29 foreign keys**, 64 arquivos de migration
+> (a maior é `0065`) e **931 testes**.
 >
-> **A estrutura não mudou desde 31/08; o número de testes, sim** — 774 para
-> 854. Os 80 novos vieram de três frentes, e as três documentam defeito que
-> estava no ar: o rate limit por IP que contava o IP do Cloudflare, a trava de
-> oferta que não alcançava arquivo novo, e o checklist de ativação que fechava
-> sem ter volta.
+> **Cinco dos cinco números do cabeçalho anterior estavam errados**, e um por
+> muito: ele afirmava 17 foreign keys quando são 29. A diferença não é de
+> crescimento — é de **método**. A contagem antiga vinha do OpenAPI do
+> PostgREST, que só enxerga o que está exposto na API; a de agora vem de
+> `pg_constraint`, que conta o que o banco de fato tem. As duas respondem
+> perguntas diferentes, e o cabeçalho não dizia qual estava usando.
+>
+> A partir daqui o comando é explícito, abaixo, e é `pg_constraint`.
+>
+> **O que a estrutura ganhou desde 31/08:** `vigia_ultimo_aviso` (0062, a
+> memória do vigilante), `excluir_empresa` (0064) e `vigiar_o_vigia` (0063,
+> que roda em `pg_cron` e não aparece como RPC do PostgREST). A coluna
+> `workspaces.consentimento_analitico` (0065) não muda a contagem de tabelas,
+> e é a que fechou o envio de dado pessoal à Meta sem consentimento.
 >
 > **Este cabeçalho já esteve errado, e é por isso que os comandos estão
 > escritos aqui.** Entre 29 e 31/08 ele afirmava 687 testes e 17 tabelas
@@ -20,10 +29,17 @@
 > atualizado de memória:
 >
 > ```
-> testes       npm test
-> migrations   ls supabase/migrations/*.sql
-> tabelas/RPC  OpenAPI do PostgREST de producao
+> testes        npm test
+> migrations    ls supabase/migrations/*.sql
+> tabelas/RPC   OpenAPI do PostgREST de producao
+> foreign keys  select count(*) from pg_constraint c
+>                 join pg_namespace n on n.oid = c.connamespace
+>                where n.nspname = 'public' and c.contype = 'f'
 > ```
+>
+> A última é a que mais engana: `pg_constraint` e o OpenAPI dão números
+> diferentes de propósito, e usar um achando que é o outro foi exatamente o
+> erro do cabeçalho de 01/09.
 >
 > O estado operacional do dia a dia (o que quebrou, o que foi medido, o que
 > está pendente) mora em [estado-atual.md](estado-atual.md); o diagrama de
@@ -85,6 +101,11 @@ dado real; o que não está tem o motivo escrito ao lado.
 - [x] Calendário — Mês, Semana e Agenda sobre as tarefas existentes
 - [x] Filtro de Período — 8 presets + intervalo customizado com range picker
 - [x] Exportação de Relatórios — PDF do painel de Resultados
+- [x] **Importação de planilha** (`.xlsx` e `.csv`) — entregue em 11/08 e
+      **ausente deste documento até 02/09**, apesar de ser o caminho que a
+      promessa "substitui a planilha em um dia" depende. Colunas reconhecidas
+      sozinhas por dicionário de sinônimos, prévia com as 3 primeiras linhas
+      interpretadas, e cada linha vira contato **e** negócio no funil
 - [ ] Exportar para Excel/CSV — **próximo da fila.** Tira a objeção "vou ficar
       preso no sistema" na hora da venda
 - [ ] Dashboard de receita — ganho no mês e ticket médio saem do que já existe;
@@ -631,9 +652,85 @@ e rastreabilidade de sincronização/permissão. Mesmo volume que já reprovou
 IA/lead scoring e a Cloud API do WhatsApp neste projeto; a timeline por lead
 já cobre auditoria nesse volume.
 
+### Importação de planilha
+
+O caminho que sustenta "substitui a planilha em um dia". O arquivo é lido **no
+navegador** (`read-excel-file` para `.xlsx`, parser próprio para `.csv`), e o
+servidor recebe a matriz já parseada — mas **reinterpreta do zero**: o cliente
+não é confiado.
+
+**A decodificação tenta UTF-8 com `fatal: true` e cai para Windows-1252**,
+nessa ordem, porque o Excel em português salva CSV em Windows-1252 e "José
+Antônio" entrava no banco como `Jos� Ant�nio`, calado. A ordem importa:
+Windows-1252 aceita qualquer byte e nunca falharia.
+
+**Três defeitos corrigidos em 02/09**, os três achados em auditoria e nenhum
+visível na leitura casual:
+
+**A tela prometia o que o servidor recusava.** A prévia truncava em 1000 linhas
+e avisava; o envio mandava a matriz inteira; o Zod recusava tudo. Uma planilha
+de 1500 mostrava "1000 linhas prontas", a pessoa clicava Importar e **nada
+entrava**. O corte passou para a origem, e o aviso deixou de descrever o
+passado ("foram lidas") para prometer o que acontece ("vamos importar as
+primeiras 1000").
+
+**Um telefone repetido derrubava o lote inteiro.** A chave de dedupe prioriza
+e-mail — correto dentro da planilha, buraco contra o banco: um lead gravado com
+e-mail *e* telefone entrava no mapa só pela chave de e-mail. Linha nova com
+e-mail inédito e telefone existente passava, batia no índice único, e `23505`
+derruba o lote — uma linha custava as outras 999. Agora as duas chaves são
+indexadas, e o conflito deixa de existir em vez de virar mensagem melhor.
+
+**O `update` de negócio não checava erro.** Falha de RLS ou rede movia zero
+negócios e a tela dizia que deu certo — mesma classe do `activities.insert` de
+24/08.
+
+**Nenhum limite de importação por plano, e isso é decisão.** O teto de 50
+contatos já é o limite real: uma planilha de 300 linhas importa 50 e para. O
+que faltava não era trava — era a tela dizer **antes** o que vai acontecer, em
+vez de mostrar 288 ignorados no relatório final. A prévia agora avisa quantas
+vagas restam, com botão que abre o pagamento na hora (`?pagar=1`) e mostra o
+preço.
+
+**O gargalo que fica registrado:** o caminho `atualizar` custa ~2010
+requisições para 1000 linhas — um `UPDATE` HTTP por lead, porque o PostgREST
+não atualiza N linhas com N valores diferentes numa requisição só. A saída é
+uma RPC com `update ... from (values ...)`, e ela merece rodada própria. O
+caminho `ignorar`, que é o padrão, custa ~10.
+
 ### Multi-empresa e Colaboração
 
 Workspaces separados por empresa ou cliente. Convite de colaboradores por e-mail via Resend. Papéis: Admin e Membro. Isolamento total de dados via RLS no Supabase.
+
+**Trocar de empresa pede confirmação (02/09), contra o que o mercado faz.**
+Slack, Notion e Linear trocam de espaço sem perguntar, e o argumento deles é
+bom: a troca se desfaz com outro clique. Aqui a decisão foi outra, e ela vem do
+próprio produto — neste CRM as empresas não são espaços de trabalho
+intercambiáveis, são **carteiras de cliente separadas**. Escrever um contato ou
+mover um negócio na empresa errada não se desfaz voltando: o dado ficou no
+lugar errado, e só se descobre depois.
+
+**Excluir empresa existe no produto desde 02/09** (RPC `excluir_empresa`,
+0064), e as quatro travas moram no banco, não na Server Action:
+
+```
+so o CRIADOR          admin convidado administra o dia a dia; apagar a
+                      empresa com o historico de todo mundo e do dono
+nunca a ULTIMA        sem empresa o middleware manda ao onboarding, e a
+                      pessoa recomeca do zero achando que perdeu tudo
+sem assinatura viva   apagar sem cancelar deixa a cobranca correndo no Asaas
+o nome CONFERIDO      no servidor, nao so no dialogo
+```
+
+`workspaces` tem RLS **sem policy de DELETE**: um `delete` pela sessão do
+usuário seria negado em silêncio, com o PostgREST devolvendo sucesso e zero
+linhas — a tela diria "excluída" com a empresa intacta.
+
+**Quem tinha mais de uma empresa no Free mantém todas.** O limite chegou
+depois, e cortar o que alguém já usava seria quebrar contrato — a mesma decisão
+da 0057, que preservou o prazo das empresas em avaliação quando o trial acabou.
+O seletor explica isso em vez de se contradizer listando três empresas `Free`
+enquanto diz que empresa nova exige Pro.
 
 ### Segurança de borda (Cloudflare)
 
@@ -859,6 +956,80 @@ mais afirmar quem paga. O tipo passou a impedir o defeito, não só a
 documentá-lo. E com o Asaas fora do ar a receita fica `null` e a tela mostra
 "—", nunca R$ 0,00: "não sei quem paga" é diferente de "ninguém paga".
 
+### O sistema avisa sozinho, e alguém de fora vigia o vigia (02/09)
+
+A Central responde tudo — e só abre em `localhost`. Isso deixava um buraco que
+nenhuma tela resolve: **para saber se algo quebrou, alguém precisava lembrar de
+abrir o painel.**
+
+`/api/cron/vigia` inverte isso. Varre de hora em hora e manda e-mail quando há
+algo: erro novo em produção, avaliação vencendo, relato de suporte parado,
+credencial externa fora do ar, assinatura ativa sem Pro liberado, cobrança
+vencida.
+
+**Silêncio é resposta, e essa é a regra que sustenta as outras.** Quando não há
+nada, não sai e-mail. Um "tudo certo" diário treina a pessoa a arquivar sem
+ler, e no dia em que o assunto for grave o reflexo já está formado — é a lição
+de 20/08, quando 8 dos 11 alertas da fila eram ruído.
+
+Mas o e-mail **sai** quando uma leitura falha, mesmo sem alerta: um vigia que
+não conseguiu ler o Asaas e cala passa a mensagem de que conferiu e estava tudo
+bem. `null` significa **não sei**, nunca "está zerado" — a mesma distinção que
+fez a Central declarar R$ 490/mês de receita com R$ 0,00 real.
+
+**A memória (0062) é o que torna a frequência viável.** De hora em hora sem
+ela, um erro que aparece de manhã geraria 24 e-mails idênticos. Vigilância
+contínua não quer dizer aviso contínuo:
+
+```
+nunca avisado        MANDA   e novidade
+igual ao ultimo      cala    ela ja sabe, e ja esta resolvendo
+PIOROU (2 -> 30)     MANDA   mudou de tamanho, e isso e fato novo
+```
+
+**E quem vigia o vigia roda no Postgres, não na Vercel** (`vigiar_o_vigia`,
+0063, agendada por `pg_cron`). Quatro falhas diferentes — o cron não disparar,
+a rota lançar, o Resend recusar, um deploy quebrar a rota — produziam o mesmo
+silêncio, e do lado de fora "nenhum problema" e "o vigia parou" eram
+indistinguíveis.
+
+Um segundo cron na mesma plataforma cairia junto. **Vigiar o vigia só funciona
+de fora**, e o Postgres é a única infraestrutura deste projeto que já está de
+pé e não depende da Vercel. Três horas de tolerância, não uma: uma falha
+isolada se resolve na próxima passagem, e alertar na primeira ausência geraria
+alarme falso todo deploy que caísse na hora cheia.
+
+Isso torna falsa, a partir de 02/09, a afirmação que quatro migrations (0014,
+0015, 0027, 0051) repetem: `pg_cron` **está** habilitado. As decisões daquelas
+quatro continuam valendo — nenhuma migra para lá.
+
+### O que a Meta recebia sem consentimento (02/09)
+
+O pixel do navegador sempre respeitou o banner, com duas cercas independentes.
+**A Conversions API nunca consultou nada**: a decisão vive em `localStorage`, e
+o servidor não lê `localStorage`.
+
+Quem clicava **"Recusar" e se cadastrava** tinha e-mail, telefone, nome,
+cidade, estado, CEP e `external_id` enviados à Meta — hasheados, mas enviados.
+Seis eventos. Sob a LGPD é tratamento sem base legal declarada, e a Política de
+Privacidade descrevia outra coisa.
+
+A correção tem duas metades porque o `Purchase` é diferente dos outros cinco:
+
+```
+cookie espelho    os cinco eventos que nascem numa requisicao do visitante
+coluna 0065       o Purchase, que nasce no webhook do Asaas — onde quem faz
+                  a requisicao e o gateway, e nao ha cookie nem visitante
+```
+
+`null` conta como recusa nos dois caminhos: **ausência de decisão nunca é
+consentimento**, que é a regra que o pixel já aplicava.
+
+Junto, três correções de qualidade de sinal: o `Purchase` passou a levar
+`fn/ln/ct/st/zp` como os outros cinco já levavam (era o evento mais valioso
+para o algoritmo e o de pior identificação), e `CompleteRegistration` ganhou
+`event_id` determinístico.
+
 ## 8. Auditoria de qualidade e correção de bugs
 
 Para garantir que o Velo Funil esteja pronto para produção, use este prompt de auditoria e correção como guia:
@@ -909,7 +1080,7 @@ Cada item marcado tem prova, não impressão — o método está em
 `docs/estado-atual.md` ("Como verificar as coisas aqui"). Atualizado 31/08/2026.
 
 - [x] **Build local concluído sem erros.** `npx tsc --noEmit`, `npm run lint`,
-      `npm test` (**854 testes**) e `npm run build:check`, os quatro limpos,
+      `npm test` (**931 testes**) e `npm run build:check`, os quatro limpos,
       rodados antes de cada commit. É `build:check` e não `build`: os dois
       escrevem em `.next` por padrão, e o build sobrescreve o mapa de chunks
       que o `npm run dev` está usando — a rota morre com `MODULE_NOT_FOUND` e
@@ -957,7 +1128,7 @@ Cada item marcado tem prova, não impressão — o método está em
       banido pelo `prd-copy-sem-jargao.md` eliminado das telas (Pipeline→Funil,
       Leads→Contatos, Dashboard→Resultados), incluindo o que a renomeação de
       19/08 tinha deixado passar.
-- [x] **Testes automatizados para os fluxos críticos.** 854 testes cobrindo
+- [x] **Testes automatizados para os fluxos críticos.** 931 testes cobrindo
       lógica pura em `lib/**`; cada caso documenta o defeito que o motivou.
       Ressalva honesta: `tests/e2e/funil-completo.spec.ts` **nunca foi
       executado** (exige `.env.local` e roda contra o Asaas). Ele não falha em
