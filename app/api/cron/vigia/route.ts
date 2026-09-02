@@ -59,6 +59,19 @@ function autorizado(cabecalho: string | null): boolean {
   return timingSafeEqual(a, b)
 }
 
+/** Igual a `medir`, para leitura que devolve lista em vez de contagem. */
+async function medirLista(
+  nome: string,
+  fn: () => Promise<string[]>,
+): Promise<string[] | null> {
+  try {
+    return await fn()
+  } catch (err) {
+    console.error(`vigia: falhou ao ler ${nome}`, err)
+    return null
+  }
+}
+
 /** Roda a leitura e devolve `null` se ela falhar, em vez de derrubar o resto. */
 async function medir(nome: string, fn: () => Promise<number>): Promise<number | null> {
   try {
@@ -91,7 +104,7 @@ export async function GET(request: Request) {
   // mesmo defeito que a auditoria de 19/08 corrigiu em `/settings/billing` e
   // que o layout do dashboard ja resolvia com `Promise.all`. Numa rota com
   // teto de 60s isso e folga jogada fora.
-  const [errosNovos, trialsVencendo, suporteParado] = await Promise.all([
+  const [errosNovos, trialsVencendo, suporteParado, credenciaisMortas] = await Promise.all([
     medir('error_logs', async () => {
       const { count, error } = await admin
         .from('error_logs')
@@ -139,12 +152,45 @@ export async function GET(request: Request) {
       if (error) throw error
       return count ?? 0
     }),
+
+    // ## As credenciais externas, que nenhum portao alcanca
+    //
+    // `tsc`, `lint`, `test` e `build` nao consultam a Graph API. Foi assim que
+    // o `META_ADS_TOKEN` ficou tres dias marcado como morto DEPOIS de voltar a
+    // funcionar, com a pendencia pedindo uma acao que nao era necessaria — e
+    // e a mesma classe dos cinco e-mails que sairam 23 dias com um CNPJ que a
+    // Receita desmentia.
+    //
+    // Uma leitura barata de cada, e o nome de quem parou. Sem detalhe tecnico:
+    // o alerta precisa dizer O QUE parou de funcionar, nao o codigo do erro.
+    medirLista('credenciais', async () => {
+      const mortas: string[] = []
+
+      const ads = (process.env.META_ADS_TOKEN ?? '').trim()
+      if (ads) {
+        const r = await fetch(
+          `https://graph.facebook.com/v23.0/me?access_token=${encodeURIComponent(ads)}`,
+        ).then((x) => x.json() as Promise<{ error?: unknown }>)
+        if (r.error) mortas.push('Meta Ads (a tela de anuncio fica cega)')
+      }
+
+      const ig = (process.env.META_INSTAGRAM_TOKEN ?? '').trim()
+      if (ig) {
+        const r = await fetch(
+          `https://graph.facebook.com/v23.0/me?access_token=${encodeURIComponent(ig)}`,
+        ).then((x) => x.json() as Promise<{ error?: unknown }>)
+        if (r.error) mortas.push('Instagram (nao publica carrossel)')
+      }
+
+      return mortas
+    }),
   ])
 
   const leitura: LeituraDoVigia = {
     errosNovos,
     trialsVencendo,
     suporteParado,
+    credenciaisMortas,
 
     // As duas do gateway ficam para uma rodada seguinte: `lerDinheiro()` já
     // existe em `lib/dono/dinheiro.ts` e é `import 'server-only'` amarrado ao

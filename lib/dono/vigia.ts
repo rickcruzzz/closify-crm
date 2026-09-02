@@ -52,6 +52,22 @@ export type LeituraDoVigia = {
   suporteParado: number | null
   /** Cobranças vencidas e não pagas no Asaas. */
   cobrancasVencidas: number | null
+  /**
+   * Credenciais externas que pararam de responder.
+   *
+   * ## Por que isto entrou no vigia, e não numa checagem manual
+   *
+   * O `META_ADS_TOKEN` ficou **três dias** marcado neste projeto como morto
+   * depois de voltar a funcionar, e a pendência dizia "gerar token novo"
+   * quando não havia o que fazer. Antes disso, cinco e-mails de autenticação
+   * saíram 23 dias com um CNPJ que a Receita desmentia.
+   *
+   * A classe é sempre a mesma: **fato externo que deixa de ser verdade e
+   * nada avisa**, porque nenhum `tsc`, `lint` ou `test` consulta a Graph API
+   * ou a Receita. Pedir para alguém conferir de tempos em tempos não funciona
+   * — foi exatamente o que não aconteceu nos dois casos.
+   */
+  credenciaisMortas: string[] | null
 }
 
 /**
@@ -120,6 +136,17 @@ export function montarAlertas(leitura: LeituraDoVigia): Alerta[] {
     })
   }
 
+  if (leitura.credenciaisMortas && leitura.credenciaisMortas.length > 0) {
+    alertas.push({
+      gravidade: 'defeito',
+      titulo: `${leitura.credenciaisMortas.length} credencial(is) fora do ar`,
+      detalhe:
+        `${leitura.credenciaisMortas.join(', ')}. ` +
+        'Enquanto estiver assim, o que depende dela para de funcionar em silêncio.',
+      ondeOlhar: '/dono',
+    })
+  }
+
   if (leitura.errosNovos && leitura.errosNovos > 0) {
     alertas.push({
       gravidade: 'defeito',
@@ -149,6 +176,7 @@ export function leiturasQueFalharam(leitura: LeituraDoVigia): string[] {
     trialsVencendo: 'avaliações em curso',
     suporteParado: 'fila de suporte',
     cobrancasVencidas: 'cobranças vencidas',
+    credenciaisMortas: 'credenciais externas',
   }
   return (Object.keys(nomes) as (keyof LeituraDoVigia)[])
     .filter((chave) => leitura[chave] === null)

@@ -19,6 +19,7 @@ const LIMPO: LeituraDoVigia = {
   trialsVencendo: 0,
   suporteParado: 0,
   cobrancasVencidas: 0,
+  credenciaisMortas: [],
 }
 
 describe('montarAlertas', () => {
@@ -36,9 +37,10 @@ describe('montarAlertas', () => {
       trialsVencendo: null,
       suporteParado: null,
       cobrancasVencidas: null,
+      credenciaisMortas: null,
     }
     expect(montarAlertas(semLeitura)).toEqual([])
-    expect(leiturasQueFalharam(semLeitura)).toHaveLength(5)
+    expect(leiturasQueFalharam(semLeitura)).toHaveLength(6)
   })
 
   it('põe dinheiro antes de defeito', () => {
@@ -116,6 +118,21 @@ describe('assuntoDoVigia', () => {
     // O caso perigoso: zero alertas porque zero leituras funcionaram.
     const assunto = assuntoDoVigia([], ['assinaturas no Asaas'])
     expect(assunto).toContain('não consegui')
+  })
+})
+
+describe('credenciais externas', () => {
+  it('avisa quando uma credencial para de responder', () => {
+    // O caso que motivou: o META_ADS_TOKEN ficou tres dias marcado como morto
+    // depois de voltar, e a pendencia pedia acao que nao era necessaria.
+    // Nenhum tsc, lint ou test consulta a Graph API — so isto consulta.
+    const [a] = montarAlertas({ ...LIMPO, credenciaisMortas: ['Meta Ads'] })
+    expect(a.titulo).toContain('1 credencial')
+    expect(a.detalhe).toContain('Meta Ads')
+  })
+
+  it('cala quando todas respondem', () => {
+    expect(montarAlertas({ ...LIMPO, credenciaisMortas: [] })).toEqual([])
   })
 })
 
