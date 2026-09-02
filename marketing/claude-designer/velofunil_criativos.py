@@ -101,6 +101,62 @@ MARCA_TAM = 86
 MARCA_TOPO = FEED_PAD["topo"]
 TOPO_CONTEUDO = 252
 
+
+# ---------------------------------------------------------------------------
+# As metricas por PROPORCAO, e por que elas precisaram existir
+# ---------------------------------------------------------------------------
+#
+# `FEED_PAD` e `TOPO_CONTEUDO` acima nasceram medidos contra 1080x1350, que era
+# a unica medida que este gerador produzia. Toda composicao posiciona a partir
+# deles e do rodape (`c.h - pad["base"]`), entao a altura da tela entra em cada
+# conta sem aparecer em nenhuma.
+#
+# Isso quebrou de duas formas opostas ao gerar as outras duas proporcoes que os
+# posicionamentos do Meta pedem:
+#
+#     1:1   1080x1080   270px A MENOS. O conteudo calibrado para 1350 nao cabe,
+#                       e o primeiro sintoma medido em 02/09 foi o rotulo do
+#                       eixo ("PESSOAS NO TIME") sobreposto a linha de fonte.
+#
+#     9:16  1080x1920   570px A MAIS, e a folga e ARMADILHA: Stories e Reels
+#                       cobrem 14% do topo (foto de perfil, nome) e 20% do
+#                       rodape (legenda, botao). Escalar proporcionalmente
+#                       poria a marca embaixo do avatar do proprio perfil.
+#
+# Por isso a tabela e por proporcao, e nao um fator de escala: o 1:1 precisa
+# ENCOLHER e o 9:16 precisa AFASTAR-SE DAS BORDAS. Sao problemas diferentes.
+#
+# ## O 4:5 devolve exatamente os valores de cima, e isso e a rede de seguranca
+#
+# Toda peca organica ja publicada e 4:5. Se esta funcao mudasse um pixel ali,
+# a proxima geracao do feed sairia diferente da que esta no ar sem ninguem
+# pedir. O `assert` abaixo trava isso: nao e estilo, e o que impede a correcao
+# do anuncio de mexer no organico.
+def metricas_da_proporcao(largura: int, altura: int) -> tuple[dict, int]:
+    """Devolve `(pad, topo_do_conteudo)` para a proporcao desta tela."""
+    prop = largura / altura
+
+    if prop >= 0.95:                       # 1:1 — o quadrado
+        # Os recuos verticais encolhem na proporcao da altura (0.8), o lateral
+        # NAO: a largura continua 1080, e estreitar a mancha de texto so para
+        # acompanhar a altura deixaria vazio nos dois lados.
+        return dict(topo=70, base=78, lado=96), 196
+
+    if prop <= 0.65:                       # 9:16 — Stories e Reels
+        # `MARGENS_ESTATICA` ja e a zona segura do 9:16 neste arquivo, medida
+        # para a arte de Story: 269 no topo (14%) e 384 na base (20%). Reusar
+        # em vez de escrever numero novo — duas copias da mesma margem divergem
+        # na primeira vez que a Meta mudar a interface.
+        m = MARGENS_ESTATICA
+        return dict(topo=m["topo"], base=m["base"], lado=m["lado"]), \
+            m["topo"] + 164
+
+    return dict(FEED_PAD), TOPO_CONTEUDO   # 4:5 — o feed, inalterado
+
+
+assert metricas_da_proporcao(*FEED) == (FEED_PAD, TOPO_CONTEUDO), \
+    "o 4:5 mudou de metrica; toda peca organica publicada sairia diferente"
+
 # Tracado do simbolo, no espaco 24x24 do arquivo de marca.
 FUNIL_BARRAS = [
     ((2.6, 4.4), (21.4, 4.4), (18.9, 7.76), (5.1, 7.76)),
@@ -183,21 +239,22 @@ def funil(c: "Tela", x: float, y: float, tam: float, cor: tuple, raio: float = 0
 
 
 def marca(c: "Tela", selo: str = "") -> None:
-    pal, x = c.pal, FEED_PAD["lado"]
-    funil(c, x, MARCA_TOPO, MARCA_TAM, pal.destaque)
+    pal, x = c.pal, c.pad["lado"]
+    topo = c.marca_topo
+    funil(c, x, topo, MARCA_TAM, pal.destaque)
     # Assinatura conforme o arquivo completa-*: Velo em SemiBold no titulo,
     # Funil em Regular no corpo. O cinza do arquivo (#8c9c9c) reprova em fundo
     # claro, entao o segundo termo usa o corpo do registro, que ja passa 4.5:1.
     fv = c.f("sans", "SemiBold", 34)
     fu = c.f("sans", "Regular", 34)
     xt = x + MARCA_TAM + 22
-    c.texto(xt, MARCA_TOPO + 24, "Velo ", fv, pal.titulo)
-    c.texto(xt + c.largura_texto("Velo ", fv), MARCA_TOPO + 24, "Funil", fu,
+    c.texto(xt, topo + 24, "Velo ", fv, pal.titulo)
+    c.texto(xt + c.largura_texto("Velo ", fv), topo + 24, "Funil", fu,
             pal.corpo)
     if selo:
         fm = c.f("mono", "Medium", 24)
         c.texto(c.w - x - c.largura_texto(selo, fm) - 24 * 0.16 * len(selo),
-                MARCA_TOPO + 30, selo, fm, pal.corpo, 0.16 * 24)
+                topo + 30, selo, fm, pal.corpo, 0.16 * 24)
 
 
 @dataclass(frozen=True)
@@ -429,6 +486,24 @@ class Tela:
         self.pal = pal
         self.im = Image.new("RGB", (largura * ss, altura * ss), pal.fundo)
         self.d = ImageDraw.Draw(self.im)
+        # Os recuos viajam COM a tela, em vez de serem lidos de uma global.
+        # Enquanto eram globais, a altura da peca entrava em toda conta de
+        # posicao sem aparecer em nenhuma — e mudar de proporcao quebrava as
+        # composicoes em silencio. Ver `metricas_da_proporcao`.
+        self.pad, self.topo = metricas_da_proporcao(largura, altura)
+        self.marca_topo = self.pad["topo"]
+        # ## `esc`: quanto a tela encolheu em altura util, contra o 4:5
+        #
+        # Recuo e corpo de fonte escritos para 1350 nao cabem em 1080 — a
+        # composicao `chamada` estourou por 124px na primeira geracao do
+        # quadrado, e a guarda de altura dela foi quem avisou.
+        #
+        # Nunca passa de 1.0, de proposito: no 9:16 sobra altura, e ESTICAR a
+        # tipografia para preencher deixaria a peca com corpo diferente das
+        # outras duas. A mesma arte, com respiro maior, le como a mesma marca;
+        # a mesma arte com letra 22% maior le como outra peca.
+        self.esc = min(1.0, (altura - self.pad["base"] - self.topo)
+                       / (FEED[1] - FEED_PAD["base"] - TOPO_CONTEUDO))
 
     def u(self, v: float) -> int:
         return int(round(v * self.ss))
@@ -561,7 +636,7 @@ def faixa_de_etapas(c: "Tela", x: float, y: float, larg: float, alt: float = 9) 
 
 
 def comp_numero(c: Tela, p: dict) -> None:
-    pal, pad = c.pal, FEED_PAD
+    pal, pad = c.pal, c.pad
     x, larg = pad["lado"], c.w - 2 * pad["lado"]
     marca(c, p.get("selo", ""))
     # ## O corpo do numero e CALCULADO, nao fixo em 400
@@ -583,8 +658,8 @@ def comp_numero(c: Tela, p: dict) -> None:
             break
         corpo -= 10
     fnum = c.f("serif", "Regular", corpo)
-    c.texto(x - 12, TOPO_CONTEUDO - 76, p["numero"], fnum, pal.titulo)
-    y = TOPO_CONTEUDO + 322
+    c.texto(x - 12, c.topo - 76, p["numero"], fnum, pal.titulo)
+    y = c.topo + 322
     c.linha_fina(x, y, larg, pal.borda, 2)
     y += 44
     y += c.paragrafo(x, y, p["claim"], c.f("sans", "SemiBold", 62), pal.titulo,
@@ -641,10 +716,10 @@ def escada(c: Tela, x, y, w, h, passos_visiveis=TEAM_SIZE, reta=True,
 
 
 def comp_conta(c: Tela, p: dict) -> None:
-    pal, pad = c.pal, FEED_PAD
+    pal, pad = c.pal, c.pad
     x, larg = pad["lado"], c.w - 2 * pad["lado"]
     marca(c, p.get("selo", ""))
-    y = TOPO_CONTEUDO
+    y = c.topo
     y += c.paragrafo(x, y, p["claim"], c.f("sans", "Bold", 60), pal.titulo,
                      880, 72) + 54
     gh = 380
@@ -659,30 +734,50 @@ def comp_conta(c: Tela, p: dict) -> None:
     c.texto(xa, ry - 60, brl(FLAT_YEAR), c.f("sans", "SemiBold", 46), pal.destaque)
     c.paragrafo(xa, ry - 4, p["nota_reta"], c.f("sans", "Regular", 27), pal.destaque,
                 larg * 0.34, 38)
+    # ## O dominio estava DESENHADO FORA DA TELA, e em toda proporcao
+    #
+    # Era `c.texto(x, base + 96, ...)`. Medido em 02/09, ao gerar as tres
+    # proporcoes:
+    #
+    #     4:5    base 1254 + 96 = 1350   a tela tem 1350   FORA por 1px
+    #     1:1    base 1002 + 96 = 1098   a tela tem 1080   FORA por 18px
+    #
+    # Ou seja: a peca de ancora de preco — o argumento mais forte que este
+    # produto tem — sempre saiu SEM o endereco do site, desde que existe. Nao
+    # apareceu em nenhuma revisao porque `tsc`, `lint`, `test` e `build` nao
+    # olham dentro de imagem, e a fatia que faltava era a ultima linha.
+    #
+    # A correcao reusa o que `comp_numero` ja resolveu: o dominio vai a
+    # DIREITA, na primeira linha da fonte, com a largura da fonte calculada
+    # para os dois nao colidirem. Uma posicao derivada do rodape, em vez de um
+    # recuo somado a ele, nao tem como cair fora de nenhuma tela.
     base = c.h - pad["base"]
     fs = c.f("mono", "Regular", 23)
-    for i, linha in enumerate(c.quebra(p["fonte"], fs, 640)):
-        c.texto(x, base + i * 34, linha, fs, pal.corpo, 0.4)
-    c.texto(x, base + 96, p["dominio"], fs, pal.destaque, 0.4)
+    dom, tracking = p["dominio"], 0.4
+    larg_dom = c.largura_texto(dom, fs) + tracking * len(dom)
+    larg_fonte = larg - larg_dom - 40
+    for i, linha in enumerate(c.quebra(p["fonte"], fs, larg_fonte)):
+        c.texto(x, base + i * 34, linha, fs, pal.corpo, tracking)
+    c.texto(c.w - pad["lado"] - larg_dom, base, dom, fs, pal.destaque, tracking)
 
 
 def comp_declaracao(c: Tela, p: dict) -> None:
-    pal, pad = c.pal, FEED_PAD
+    pal, pad = c.pal, c.pad
     x = pad["lado"]
     marca(c, p.get("selo", ""))
-    c.paragrafo(x, TOPO_CONTEUDO + 12, p["claim"],
+    c.paragrafo(x, c.topo + 12, p["claim"],
                 c.f("sans", "UltraBlack", 112), pal.titulo, 880, 118)
     fm = c.f("mono", "Regular", 26)
     c.texto(x, c.h - pad["base"] - 8, p["dominio"], fm, pal.corpo, 0.6)
 
 
 def comp_carrossel(c: Tela, p: dict) -> None:
-    pal, pad = c.pal, FEED_PAD
+    pal, pad = c.pal, c.pad
     x, larg = pad["lado"], c.w - 2 * pad["lado"]
     marca(c, p["indice"])
     fm = c.f("mono", "Medium", 24)
-    c.texto(x, TOPO_CONTEUDO, p["rotulo"], fm, pal.destaque, 1.6)
-    y = TOPO_CONTEUDO + 68
+    c.texto(x, c.topo, p["rotulo"], fm, pal.destaque, 1.6)
+    y = c.topo + 68
     fclaim = c.f("sans", "SemiBold", 66)
     y += c.paragrafo(x, y, p["claim"], fclaim, pal.titulo, 880, 80)
     # A enfase cromatica na ultima linha: em miniatura a frase inteira vira
@@ -723,13 +818,23 @@ def comp_produto(c: Tela, p: dict) -> None:
     Os cards so tem acao e data. Nome de empresa aqui viraria prova social.
     A base nao sangra: o vazio abaixo das pilhas e respiro, nao buraco.
     """
-    pal, pad = c.pal, FEED_PAD
+    pal, pad = c.pal, c.pad
     x = pad["lado"]
     marca(c, p.get("selo", ""))
-    c.paragrafo(x, TOPO_CONTEUDO, p["claim"], c.f("sans", "SemiBold", 58),
-                pal.titulo, 800, 68)
+    alt_claim = c.paragrafo(x, c.topo, p["claim"], c.f("sans", "SemiBold", 58),
+                            pal.titulo, 800, 68)
 
-    cw, gap, topo_k = 262, 18, 452
+    # ## `topo_k` deriva do claim, e nao e mais o literal 452
+    #
+    # Era fixo. Com `c.topo` variando por proporcao, o claim de 9:16 comecava
+    # em 433 e o kanban continuava em 452: **19px de folga para um texto de 58
+    # com duas linhas**, e os rotulos das colunas sairam POR CIMA da frase.
+    # Visto abrindo o PNG em 02/09 — nenhuma trava pega colisao de pixel.
+    #
+    # `max` preserva o 4:5 exatamente: la o claim ocupa 2 linhas de 68 a partir
+    # de 252, e 252 + 136 + 64 da 452, o mesmo numero que estava escrito a mao.
+    cw, gap = 262, 18
+    topo_k = max(452, c.topo + alt_claim + 64)
     fr = c.f("mono", "Medium", 22)
     ft = c.f("sans", "Medium", 26)
     fmeta = c.f("mono", "Regular", 19)
@@ -881,11 +986,11 @@ def comp_chamada(c: Tela, p: dict) -> None:
                     e desde 28/08 ele existe e esta ATIVO — vem de
                     `lib/legal.ts`, a mesma fonte do rodape do site
     """
-    pal, pad = c.pal, FEED_PAD
+    pal, pad = c.pal, c.pad
     x, larg = pad["lado"], c.w - 2 * pad["lado"]
     marca(c, p.get("indice", p.get("selo", "")))
 
-    y = TOPO_CONTEUDO
+    y = c.topo
     if p.get("rotulo"):
         funil(c, x, y + 2, 22, pal.destaque)
         c.texto(x + 34, y, p["rotulo"], c.f("mono", "Medium", 24),
@@ -903,57 +1008,71 @@ def comp_chamada(c: Tela, p: dict) -> None:
     # de passo ja usavam: a primeira parte em preto, a segunda no teal. A cor
     # carrega a leitura em miniatura, onde a frase inteira vira mancha, e o
     # corte cai onde a frase vira do problema para a promessa.
-    fclaim = c.f("sans", "SemiBold", 58)
-    y += c.paragrafo(x, y, p["claim"], fclaim, pal.titulo, larg, 68)
+    # ## `k` encolhe a peca inteira quando a tela e mais baixa
+    #
+    # Esta e a composicao mais densa do gerador: rotulo, titulo em duas cores,
+    # um cartao com preco, itens e ancora de preco, uma faixa e um rodape de
+    # tres linhas. Em 1080x1080 ela estourou por 124px — a guarda de altura
+    # abaixo foi quem avisou, e a mensagem dizia "tire um item", que era o
+    # conselho certo para o defeito ERRADO: nao sobravam itens, sobrava altura
+    # de menos.
+    #
+    # Escalar e melhor que cortar conteudo porque o quadrado e o mesmo anuncio:
+    # tirar a ancora de preco dele deixaria sete posicionamentos sem o unico
+    # argumento que este produto tem contra CRM que cobra por assento.
+    k = c.esc
+    fclaim = c.f("sans", "SemiBold", 58 * k)
+    y += c.paragrafo(x, y, p["claim"], fclaim, pal.titulo, larg, 68 * k)
     if p.get("realce"):
-        y += c.paragrafo(x, y, p["realce"], fclaim, pal.destaque, larg, 68)
-    y += 46
+        y += c.paragrafo(x, y, p["realce"], fclaim, pal.destaque, larg, 68 * k)
+    y += 46 * k
 
     pro, free = p["pro"], p["free"]
     claro = pal is CLARO
 
     # ------------------------------------------------------- o cartao do Pro
-    alt_free = 132
-    alt_pro = c.h - pad["base"] - 122 - y - alt_free - 20
+    alt_free = 132 * k
+    alt_pro = c.h - pad["base"] - 122 * k - y - alt_free - 20 * k
     fundo = tuple(int(f * 0.94 + d * 0.06) for f, d in zip(pal.fundo, pal.destaque))
     c.d.rounded_rectangle([c.u(x), c.u(y), c.u(x + larg) - 1, c.u(y + alt_pro) - 1],
                           radius=c.u(20), fill=fundo,
                           outline=pal.destaque, width=c.u(3))
 
-    ix, iy = x + 38, y + 34
-    icone(c, "raio", ix, iy, 30, pal.destaque, 2.0)
-    c.texto(ix + 44, iy + 3, pro["nome"], c.f("mono", "Medium", 25),
+    ix, iy = x + 38, y + 34 * k
+    icone(c, "raio", ix, iy, 30 * k, pal.destaque, 2.0)
+    c.texto(ix + 44 * k, iy + 3, pro["nome"], c.f("mono", "Medium", 25 * k),
             pal.destaque, 1.4)
 
     # O selo, ancorado a DIREITA: medido e posicionado a partir da borda, para
     # nao depender do comprimento do texto ficar igual se a copy mudar.
-    fs = c.f("mono", "Medium", 20)
+    fs = c.f("mono", "Medium", 20 * k)
     ls = c.largura_texto(pro["selo"], fs) + 1.2 * len(pro["selo"])
     sx = x + larg - 38 - ls - 36
     c.d.rounded_rectangle([c.u(sx), c.u(iy - 3), c.u(sx + ls + 36) - 1,
-                           c.u(iy + 35) - 1], radius=c.u(19),
+                           c.u(iy + 35 * k) - 1], radius=c.u(19 * k),
                           fill=pal.destaque)
-    c.texto(sx + 18, iy + 6, pro["selo"], fs, pal.fundo, 1.2)
+    c.texto(sx + 18, iy + 6 * k, pro["selo"], fs, pal.fundo, 1.2)
 
     # O preco e a unidade na MESMA linha de base: `R$ 49` e `/mes` separados em
     # duas linhas leem como dois numeros diferentes.
-    py = iy + 66
-    fp = c.f("sans", "UltraBlack", 96)
+    py = iy + 66 * k
+    fp = c.f("sans", "UltraBlack", 96 * k)
     c.texto(ix, py, pro["preco"], fp, pal.destaque)
     lp = c.largura_texto(pro["preco"], fp)
-    c.texto(ix + lp + 14, py + 52, pro["unidade"], c.f("sans", "Medium", 30),
-            pal.corpo)
-    c.texto(ix, py + 112, pro["apoio"], c.f("sans", "Regular", 29), pal.titulo)
+    c.texto(ix + lp + 14, py + 52 * k, pro["unidade"],
+            c.f("sans", "Medium", 30 * k), pal.corpo)
+    c.texto(ix, py + 112 * k, pro["apoio"], c.f("sans", "Regular", 29 * k),
+            pal.titulo)
 
-    by = py + 168
-    fb = c.f("sans", "Regular", 27)
+    by = py + 168 * k
+    fb = c.f("sans", "Regular", 27 * k)
     col = (larg - 76) / 2
     linhas_de_item = -(-len(pro["itens"]) // 2)      # divisao para cima
     for i, item in enumerate(pro["itens"]):
         cx = ix + (i % 2) * col
-        cy = by + (i // 2) * 46
-        icone(c, "check", cx, cy + 2, 21, pal.destaque, 2.2)
-        c.texto(cx + 32, cy, item, fb, pal.titulo)
+        cy = by + (i // 2) * 46 * k
+        icone(c, "check", cx, cy + 2, 21 * k, pal.destaque, 2.2)
+        c.texto(cx + 32 * k, cy, item, fb, pal.titulo)
 
     # ------------------------------------------------------------- a ancora
     #
@@ -972,8 +1091,8 @@ def comp_chamada(c: Tela, p: dict) -> None:
     # `max` e nao substituicao: em tela alta a ancora continua onde estava,
     # colada ao rodape do cartao, que e onde ela le melhor. So quando o
     # conteudo empurra e que ela cede.
-    piso_do_conteudo = by + linhas_de_item * 46 + 34
-    ay = max(y + alt_pro - 78, piso_do_conteudo)
+    piso_do_conteudo = by + linhas_de_item * 46 * k + 34 * k
+    ay = max(y + alt_pro - 78 * k, piso_do_conteudo)
 
     # Sobrepor em silencio e o defeito; falhar alto e a correcao. Este
     # gerador ja lanca quando a linha nao cabe em LARGURA — faltava o mesmo
@@ -986,16 +1105,25 @@ def comp_chamada(c: Tela, p: dict) -> None:
     # e o texto tem corpo. 26 e o tamanho maximo da fonte da comparacao (o
     # laco de encolhimento acima comeca nele) e 20 e a distancia minima ate a
     # borda para o cartao nao ler como cortado.
-    ALTURA_DA_ANCORA = 26 + 20
+    #
+    # ## A mensagem diz as DUAS causas, porque o mesmo estouro tem duas
+    #
+    # Ela dizia so "tire um item", que era o conselho certo para o defeito de
+    # 4:5 (quatro itens viram duas linhas). Em 1080x1080 a guarda disparou com
+    # DOIS itens, e o conselho estava errado: nao sobravam itens, faltava
+    # altura de tela. Uma guarda que nomeia a causa errada manda quem a lê
+    # estragar a peca tentando obedecer.
+    ALTURA_DA_ANCORA = (26 + 20) * k
     if ay + ALTURA_DA_ANCORA > y + alt_pro:
         raise ValueError(
-            f"a ancora nao cabe no cartao do Pro: {len(pro['itens'])} itens "
-            f"em {linhas_de_item} linha(s) empurram ate {ay:.0f}, e o cartao "
-            f"termina em {y + alt_pro:.0f}. Tire um item — quatro viram duas "
-            f"linhas e nao sobra altura para a comparacao de preco, que e o "
-            f"argumento mais forte da peca.")
+            f"a ancora nao cabe no cartao do Pro em {c.w}x{c.h} (esc={k:.2f}): "
+            f"{len(pro['itens'])} itens em {linhas_de_item} linha(s) empurram "
+            f"ate {ay:.0f}, e o cartao termina em {y + alt_pro:.0f}. "
+            f"Em 4:5 a causa costuma ser CONTAGEM (quatro itens viram duas "
+            f"linhas); em tela mais baixa costuma ser ALTURA, e ai o ajuste e "
+            f"em `metricas_da_proporcao`, nao na copy.")
 
-    c.linha_fina(ix, ay - 26, larg - 76, pal.borda, 2)
+    c.linha_fina(ix, ay - 26 * k, larg - 76, pal.borda, 2)
 
     # ## A linha da ancora ENCOLHE ate caber, e nao quebra
     #
@@ -1009,8 +1137,8 @@ def comp_chamada(c: Tela, p: dict) -> None:
     # miniatura da grade, e ai o certo e encurtar a copy, nao diminuir mais.
     limite = larg - 76
     for tam in range(26, 19, -1):
-        fa = c.f("sans", "Regular", tam)
-        fv = c.f("sans", "SemiBold", tam + 4)
+        fa = c.f("sans", "Regular", tam * k)
+        fv = c.f("sans", "SemiBold", (tam + 4) * k)
         la = c.largura_texto(pro["comparacao"], fa)
         lv = c.largura_texto(pro["valor_deles"], fv)
         if la + 12 + lv <= limite:
@@ -1028,21 +1156,22 @@ def comp_chamada(c: Tela, p: dict) -> None:
     c.retangulo(ix + la + 12, ay + 12, lv, 3, pal.corpo)
 
     # ----------------------------------------------------- a faixa do gratis
-    fy = y + alt_pro + 20
+    fy = y + alt_pro + 20 * k
     c.d.rounded_rectangle([c.u(x), c.u(fy), c.u(x + larg) - 1,
-                           c.u(fy + alt_free) - 1], radius=c.u(20),
+                           c.u(fy + alt_free) - 1], radius=c.u(20 * k),
                           fill=pal.fundo, outline=pal.borda, width=c.u(2))
-    icone(c, "escudo", x + 38, fy + 30, 26, pal.corpo, 2.0)
-    c.texto(x + 76, fy + 32, free["nome"], c.f("mono", "Medium", 23),
+    icone(c, "escudo", x + 38, fy + 30 * k, 26 * k, pal.corpo, 2.0)
+    c.texto(x + 76 * k, fy + 32 * k, free["nome"], c.f("mono", "Medium", 23 * k),
             pal.corpo, 1.4)
-    c.texto(x + 38, fy + 76, free["texto"], c.f("sans", "Regular", 28),
+    c.texto(x + 38, fy + 76 * k, free["texto"], c.f("sans", "Regular", 28 * k),
             pal.titulo)
 
     # ------------------------------------------------------------- o rodape
     base = c.h - pad["base"]
-    faixa_de_etapas(c, x, base - 70, larg, 8)
-    c.texto(x, base - 44, p["dominio"], c.f("sans", "Medium", 42), pal.destaque)
-    c.texto(x, base + 16, p["assinatura"], c.f("mono", "Regular", 21),
+    faixa_de_etapas(c, x, base - 70 * k, larg, 8 * k)
+    c.texto(x, base - 44 * k, p["dominio"], c.f("sans", "Medium", 42 * k),
+            pal.destaque)
+    c.texto(x, base + 16 * k, p["assinatura"], c.f("mono", "Regular", 21 * k),
             pal.corpo, 0.5)
 
 
@@ -1115,7 +1244,7 @@ def comp_passo(c: Tela, p: dict) -> None:
     como software que continua fora do quadro. E a mesma decisao que
     `comp_produto` ja usava.
     """
-    pal, pad = c.pal, FEED_PAD
+    pal, pad = c.pal, c.pad
     x, larg_texto = pad["lado"], c.w - 2 * pad["lado"]
     if p.get("fundo_vivo"):
         fundo_vivo(c)
@@ -1134,8 +1263,8 @@ def comp_passo(c: Tela, p: dict) -> None:
     # e ja e o desenho que a peca inteira usa — no rodape, na marca d'agua e
     # no proprio logotipo. Nao e um enfeite a mais; e o mesmo, tres vezes.
     fm = c.f("mono", "Medium", 24)
-    funil(c, x, TOPO_CONTEUDO + 2, 22, pal.destaque)
-    c.texto(x + 34, TOPO_CONTEUDO, p["rotulo"], fm, pal.destaque, 1.6)
+    funil(c, x, c.topo + 2, 22, pal.destaque)
+    c.texto(x + 34, c.topo, p["rotulo"], fm, pal.destaque, 1.6)
 
     # ## A enfase entra na ULTIMA linha, e por construcao
     #
@@ -1144,7 +1273,7 @@ def comp_passo(c: Tela, p: dict) -> None:
     # uma frase com dois pesos exigiria um layout de texto rico que este
     # gerador nao tem, e o resultado seria a palavra caindo em lugar
     # imprevisivel a cada mudanca de copy.
-    y = TOPO_CONTEUDO + 58
+    y = c.topo + 58
     fclaim = c.f("sans", "SemiBold", 54)
     y += c.paragrafo(x, y, p["claim"], fclaim, pal.titulo, larg_texto, 64)
     if p.get("realce"):
@@ -1217,14 +1346,14 @@ def comp_passos(c: Tela, p: dict) -> None:
     coluna que a leitura desce, e e o mesmo elemento que o card do Kanban
     usa para marcar etapa: a peca e o produto falam a mesma lingua visual.
     """
-    pal, pad = c.pal, FEED_PAD
+    pal, pad = c.pal, c.pad
     x, larg = pad["lado"], c.w - 2 * pad["lado"]
     marca(c, p["indice"])
 
     fm = c.f("mono", "Medium", 24)
-    c.texto(x, TOPO_CONTEUDO, p["rotulo"], fm, pal.destaque, 1.6)
+    c.texto(x, c.topo, p["rotulo"], fm, pal.destaque, 1.6)
 
-    y = TOPO_CONTEUDO + 58
+    y = c.topo + 58
     fclaim = c.f("sans", "SemiBold", 54)
     y += c.paragrafo(x, y, p["claim"], fclaim, pal.titulo, larg, 64)
     if p.get("realce"):

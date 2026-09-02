@@ -66,33 +66,48 @@ _spec.loader.exec_module(vf)
 # Formatos
 # ---------------------------------------------------------------------------
 #
-# Os dez posicionamentos do Meta se resolvem em três proporções, e isso já está
-# registrado em `lib/dono/formatos-do-meta.ts` desde 20/08. Aqui saem duas:
+# Os posicionamentos do Meta se resolvem em três proporções, e isso já está
+# registrado em `lib/dono/formatos-do-meta.ts` desde 20/08. Agora saem as três:
 #
 #     4:5  1080x1350   feed do Instagram e do Facebook. Ocupa mais tela, e
 #                      altura e a unica variavel que aumenta o tempo que a
 #                      peca fica na frente de quem rola.
 #
-# ## Só 4:5, e o 1:1 foi tentado e DESCARTADO com o motivo medido
+#     1:1  1080x1080   Explorar, Marketplace, coluna da direita, resultados de
+#                      busca, notificacoes, caixa do Messenger, Audience
+#                      Network. Sete posicionamentos, todos com o dedo em
+#                      movimento e nenhum com a peca ocupando a tela inteira.
 #
-# `Tela` aceita qualquer tamanho, então gerar 1080x1080 parecia de graça. Não
-# é: as composições posicionam blocos a partir de `c.h` com recuos calibrados
-# para 1350. Gerado e OLHADO em 02/09, o quadrado saiu com o rótulo do eixo
-# ("PESSOAS NO TIME") sobreposto à linha de fonte: legível na medição, ilegível
-# na arte.
+#     9:16 1080x1920   Stories e Reels, nos dois aplicativos.
 #
-# Publicar quadrado quebrado é pior que não ter quadrado: o Meta recorta 4:5
-# para os posicionamentos que pedem quadrado, e um recorte automático perde
-# menos que um texto colidido. Fazer o 1:1 direito é reescrever as composições
-# em altura relativa, que é rodada própria e não cabe antes da primeira
-# campanha.
+# ## O 1:1 foi DESCARTADO em 02/09 e o motivo virou a correcao
 #
-# 9:16 fica de fora pelo mesmo tipo de razão, mais uma: Stories e Reels pedem
-# movimento, e imagem parada num formato que o dedo passa em 1,5s desperdiça o
-# posicionamento mais barato do leilão. Vídeo ali é rodada própria, e o gerador
-# já tem `--videos`.
+# O comentario que ficou aqui dizia: "as composicoes posicionam blocos a partir
+# de `c.h` com recuos calibrados para 1350", e o quadrado saia com o rotulo do
+# eixo ("PESSOAS NO TIME") sobreposto a linha de fonte.
+#
+# Estava certo no diagnostico. `metricas_da_proporcao` fechou a causa: os
+# recuos deixaram de ser globais de 1350 e passam a viajar com a `Tela`.
+#
+# ## Por que valia a rodada, medido
+#
+# Dos 19 posicionamentos que a conta alcanca, apenas 4 recebiam a peca na
+# medida certa. Nos outros 15 o Meta RECORTA o 4:5 sozinho — e recorte
+# automatico nao sabe onde esta o texto. Advantage+ placements (que e a
+# configuracao que barateia o CPM com orcamento baixo) so vale a pena com as
+# tres proporcoes existindo.
+#
+# ## O 9:16 estatico entra, e a ressalva continua de pe
+#
+# Stories e Reels rendem mais com MOVIMENTO, e o gerador ja tem `--videos`.
+# Imagem parada ali e a segunda melhor opcao. Mas a alternativa hoje nao e
+# video: e o Meta recortando um 4:5 para 9:16, que perde 44% da altura e nao
+# olha onde corta. Estatico desenhado para a medida perde do video e ganha do
+# recorte cego.
 FORMATOS = {
     "4x5": (1080, 1350),
+    "1x1": (1080, 1080),
+    "9x16": (1080, 1920),
 }
 
 SAIDA = RAIZ / "criativos" / "anuncio"
@@ -354,18 +369,71 @@ def conferir_texto_de_anuncio(p: dict) -> None:
                 f"texto de seis linhas. Encurte: {p['claim']!r}")
 
 
+# ---------------------------------------------------------------------------
+# O 9:16, e por que ele NAO e desenhado nativamente
+# ---------------------------------------------------------------------------
+#
+# A primeira tentativa desenhou direto em 1080x1920, com os recuos que
+# `metricas_da_proporcao` devolve para a zona segura. Tecnicamente correto e
+# **feio**: aberto e olhado em 02/09, o conteudo empilhava a partir do topo e o
+# rodape ancorava na base, deixando ~800px de vazio no meio de toda peca. Le
+# como arte que nao carregou.
+#
+# A causa nao e ajustavel por recuo: estas composicoes tem altura de conteudo
+# propria, e "distribuir" exigiria medir cada bloco antes de desenhar — ou
+# seja, reescrever as cinco.
+#
+# O que resolve e mais simples e mais seguro: desenhar a peca em 4:5, que e a
+# medida provada, e assenta-la na banda segura do 9:16 sobre o fundo da
+# paleta. A arte que vai ao ar e byte a byte a mesma que foi conferida no
+# feed, e a zona coberta pela interface fica vazia porque nada foi desenhado
+# nela — em vez de ficar vazia porque o Meta cortou por cima.
+#
+# ## A conta da banda
+#
+#     zona segura   269 no topo (14%), 384 na base (20%)  -> 1267px uteis
+#     arte 4:5      1080x1350, reduzida para caber        -> 1013x1267
+#     lateral       (1080 - 1013) / 2 = 33px de cada lado
+#
+# Reduzir e melhor que cortar: 4:5 dentro de 9:16 sempre perde altura ou
+# largura, e largura e onde mora o texto.
+BANDA_9X16 = (vf.MARGENS_ESTATICA["topo"], vf.MARGENS_ESTATICA["base"])
+
+
+def compor_em_banda(arte, tamanho: tuple, pal) -> "vf.Image.Image":
+    """Assenta a arte 4:5 na banda segura de uma tela mais alta."""
+    larg, alt = tamanho
+    topo, base = BANDA_9X16
+    util = alt - topo - base
+    k = util / arte.height
+    nova = arte.resize((int(arte.width * k), util), vf.Image.LANCZOS)
+    fundo = vf.Image.new("RGB", (larg, alt), pal.fundo)
+    fundo.paste(nova, ((larg - nova.width) // 2, topo))
+    return fundo
+
+
 def render(formato: str, tamanho: tuple, so: str | None = None) -> list:
     pasta = SAIDA / formato
     pasta.mkdir(parents=True, exist_ok=True)
+    em_banda = formato == "9x16"
     feitas = []
     for p in PECAS:
         if so and so != p["id"]:
             continue
         conferir_texto_de_anuncio(p)
-        c = vf.Tela(tamanho[0], tamanho[1], p["pal"])
+        desenho = FORMATOS["4x5"] if em_banda else tamanho
+        c = vf.Tela(desenho[0], desenho[1], p["pal"])
         vf.COMPOSICOES[p["comp"]](c, p)
         caminho = pasta / f"{p['id']}.png"
-        c.salvar(caminho)
+        if em_banda:
+            # `c.im` e o supersample (2x), nao `c.imagem()`: reduzir de 2700
+            # para 1267 numa passagem so preserva mais detalhe que reduzir
+            # 2700->1350 e depois 1350->1267. A tipografia mono de 21px do
+            # rodape e onde a diferenca aparece primeiro.
+            compor_em_banda(c.im, tamanho, p["pal"]).save(
+                caminho, "PNG", optimize=True)
+        else:
+            c.salvar(caminho)
         feitas.append(caminho)
         print(f"  {formato}/{p['id']}.png")
     return feitas

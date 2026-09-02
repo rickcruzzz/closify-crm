@@ -1,0 +1,251 @@
+# A campanha do Meta Ads, e os dois portões que faltam
+
+Montada em 02/09/2026. Está **pausada e completa até onde a conta permite** —
+dois bloqueios de configuração do Meta, nenhum deles de código, impedem o
+último passo.
+
+```
+campanha   120253684403370580   OUTCOME_LEADS   R$ 25/dia   PAUSED
+conjunto   120253684403670580   Brasil, 25-55, Advantage+   PAUSED
+criativos  6, um por angulo                                 criados
+anuncios   0                                                BLOQUEADO
+```
+
+---
+
+## O que mudou a estratégia: o Instagram orgânico não é canal
+
+Medido nesta rodada, e o dono confirmou a causa: **os 11.416 seguidores foram
+comprados**, para o perfil não parecer vazio.
+
+```
+11.416 seguidores
+7 posts, 25 curtidas no total, 3,6 por post
+engajamento 0,031%     saudavel e 3% a 6%
+```
+
+**Uma recomendação anterior deste projeto dizia que o Instagram era "o ativo
+mais barato que você tem, parado". Era falsa.** Seguidor comprado não é só
+inútil: o algoritmo mede a taxa de reação nas primeiras horas para decidir
+quanto entregar, e onze mil contas que nunca reagem afundam essa taxa. O perfil
+alcança menos do que alcançaria com cem seguidores reais.
+
+**Decisão: o perfil é vitrine.** Serve para quem vê o anúncio e vai conferir se
+a empresa existe — e para isso os 11 mil ajudam, que era a intenção original.
+Nada de aquisição vem dali.
+
+Isso **não contamina o anúncio**: o público do anúncio é escolhido pela Meta
+pelo pixel, não pelos seguidores da página.
+
+---
+
+## As decisões da campanha
+
+### `OUTCOME_LEADS`, e não `OUTCOME_SALES`
+
+O plano dizia `OUTCOME_SALES` otimizando pelo evento `Lead`. **A Meta recusa
+essa combinação** — medido, não suposto:
+
+```
+Evento de conversao indisponivel: Este evento de conversao nao esta
+disponivel com o objetivo selecionado.
+```
+
+`OUTCOME_SALES` só aceita eventos de compra. Otimizar pelo cadastro exige
+`OUTCOME_LEADS`, que é literalmente o que ele é. A campanha de SALES criada por
+engano foi apagada no mesmo dia.
+
+### Otimizar por `Lead`, e isto corrige uma recomendação anterior
+
+Eu havia recomendado otimizar por visualização de página, argumentando que com
+R$ 25/dia o `Lead` nunca sai da fase de aprendizado. **O cálculo continua certo
+— 3 a 5 leads por semana contra os ~50 que a Meta pede — e a conclusão estava
+errada:**
+
+- otimizar por **tráfego** compra quem clica, e quem clica por hábito não assina
+- otimizar por **conversão**, mesmo em aprendizado, faz a Meta procurar gente
+  parecida com quem já converteu — e o pixel tem histórico
+
+Fase de aprendizado entrega pior. Comprar clique barato entrega **errado**.
+
+### Um conjunto só, Brasil inteiro, sem interesse travado
+
+R$ 25 divididos em três conjuntos viram R$ 8/dia cada, e nenhum acumula sinal.
+Segmentação estreita encarece o CPM — menos inventário, leilão mais disputado —
+e o criativo da âncora de preço ("os outros cobram por pessoa") **se
+autofiltra**: quem trabalha sozinho ignora, quem tem quatro vendedores para.
+
+Advantage+ Audience fica ligado; 25-55 entra como sugestão, não como teto.
+
+### Os seis ângulos, um mecanismo psicológico cada
+
+A Meta aprende comparando. Seis peças com a mesma tese e cores diferentes não
+dão nada para comparar — ela testaria a arte e concluiria sobre a arte. Seis
+**teses** fazem o teste responder por que essa pessoa compraria.
+
+| peça | mecanismo | headline |
+|---|---|---|
+| `a1_ancora_preco` | ancoragem + contraste | R$ 49 pela empresa inteira |
+| `a2_perda_memoria` | aversão à perda | Nenhum cliente esquecido |
+| `a3_objecao_planilha` | viés de status quo | Sua planilha vira funil |
+| `a4_prova_produto` | prova por demonstração | Veja o funil por dentro |
+| `a6_google` | energia de ativação | Funciona com o que você já usa |
+| `a5_oferta` | efeito preço zero | Comece grátis, sem cartão |
+
+Todos apontam para `/cadastro` com UTM. `utm-capture.tsx` grava a origem em
+`workspaces` — a ponte existe desde sempre e **nunca foi exercitada**, porque
+nenhuma campanha rodou. Será o primeiro dado real de origem deste projeto.
+
+---
+
+## As três proporções, e por que elas existem
+
+Dos **19 posicionamentos** que a conta alcança, apenas 4 recebiam peça na
+medida certa. Nos outros 15 o Meta recorta o 4:5 sozinho, e recorte automático
+não sabe onde está o texto.
+
+```
+4:5   1080x1350   feed do IG e do FB                            4 posicionamentos
+1:1   1080x1080   Explorar, Marketplace, coluna da direita,
+                  busca, notificacoes, Messenger, Audience Network
+9:16  1080x1920   Stories e Reels, nos dois aplicativos
+```
+
+`scripts/marketing/gerar-anuncios.py` passou a produzir as três (18 arquivos), e
+isso exigiu duas correções no gerador — registradas na seção seguinte.
+
+**As 18 estão na biblioteca da conta**, com os hashes em
+`criativos/anuncio/hashes.json`. `scripts/marketing/criar-anuncios-meta.mjs`
+monta o `asset_feed_spec` com `asset_customization_rules`, que é o mecanismo
+oficial para imagem por posicionamento — e **não existe no MCP**, só na Graph
+API.
+
+---
+
+## Os três defeitos que só apareceram ao abrir o PNG
+
+Nenhum dos quatro portões olha dentro de imagem, e os três abaixo são a prova
+disso mais uma vez.
+
+**1. O domínio estava desenhado FORA da tela, em toda proporção.**
+`comp_conta` fazia `c.texto(x, base + 96, ...)`:
+
+```
+4:5    base 1254 + 96 = 1350   a tela tem 1350   FORA
+1:1    base 1002 + 96 = 1098   a tela tem 1080   FORA
+```
+
+A peça de âncora de preço — o argumento mais forte que este produto tem —
+**sempre saiu sem o endereço do site**, desde que existe. Corrigido reusando o
+que `comp_numero` já resolvia: domínio à direita, na linha da fonte.
+
+**2. Os rótulos do Kanban por cima do claim, em 9:16.** `topo_k` era o literal
+`452`, e em 9:16 o claim começa em 433 — 19px de folga para um texto de corpo
+58. Passou a derivar da altura do claim, com `max(452, …)` preservando o 4:5
+exatamente.
+
+**3. O 9:16 nativo tinha ~800px de vazio no meio.** Tecnicamente correto e
+ilegível como arte. Resolvido assentando a peça 4:5 na banda segura do 9:16
+(269 no topo, 384 na base) sobre o fundo da paleta: a arte que vai ao ar é a
+mesma que foi conferida no feed, e a zona coberta pela interface fica vazia
+porque nada foi desenhado nela.
+
+### O que passou a impedir a classe inteira
+
+`metricas_da_proporcao` tira `FEED_PAD` e `TOPO_CONTEUDO` de globais e os faz
+viajar com a `Tela`. Um `assert` trava que o 4:5 devolve exatamente os valores
+antigos — **é o que impede a correção do anúncio de mexer no orgânico já
+publicado.**
+
+`scripts/marketing/conferir-criativos.py` mede proporção, resolução e a zona
+segura do 9:16. **Provado nos dois sentidos:** 18 de 18 passam, e os três casos
+negativos (9:16 nativo, paisagem 16:9, 720px de largura) são todos reprovados
+com exit 1. Verde sem controle negativo não prova nada.
+
+Ele **não diz que a arte está boa** — diz que não está obviamente quebrada.
+Colisão de texto é de pixel, e só o olho pega.
+
+---
+
+## Os dois portões que faltam, e nenhum é código
+
+### 1. O app do Meta está em modo de desenvolvimento
+
+```
+app 1248926890692442 "budsiness"   META_ADS_TOKEN e META_INSTAGRAM_TOKEN
+```
+
+Medido: esse token **não cria creative nem anúncio**, nem com `asset_feed_spec`
+nem sem ele. O MCP cria (usa credencial de um app publicado), mas o MCP não
+expõe imagem por posicionamento.
+
+```
+O post do criativo dos anuncios foi criado por um app que esta em modo de
+desenvolvimento. Ele deve estar em modo publico para criar este anuncio.
+```
+
+**Ação:** em <https://developers.facebook.com/apps/1248926890692442/>, alternar
+o app para **Live**. Isso destrava `criar-anuncios-meta.mjs` e, com ele, as três
+proporções nos 19 posicionamentos.
+
+### 2. O pagamento está desativado para o usuário
+
+```
+Pagamento desativado para o usuario   (code 100, subcode 1815010)
+```
+
+E a conta em si está sã — medido:
+
+```
+conta      Rickdaskin Ads
+status     1 = ACTIVE        disable_reason 0 = nenhum
+funding    Mastercard *7924
+gasto      R$ 0,00 (nunca gastou)
+```
+
+`ads_get_errors` devolve lista vazia para campanha, conjunto e conta: não há
+erro de entidade. O bloqueio é no **método de pagamento do usuário**, e é o que
+impede criar o anúncio — a Meta valida o pagamento na criação do `ad`, não da
+campanha.
+
+**Ação:** em <https://www.facebook.com/ads/manager/account_settings/account_billing/>
+(conta `1316925630418162`), conferir o cartão e concluir a verificação que ele
+pedir. Cartão que nunca foi usado costuma exigir uma confirmação na primeira
+cobrança.
+
+**Isto exige o titular.** Não há endpoint para reativar método de pagamento, e
+mexer em credencial de cobrança de terceiro não é algo que uma ferramenta deva
+fazer sozinha — é a mesma regra que barrou mover a chave do Resend para o Vault
+em 02/09.
+
+---
+
+## A ordem certa quando os dois portões abrirem
+
+```
+1. app em Live + pagamento resolvido
+2. node --env-file=.env.local scripts/marketing/criar-anuncios-meta.mjs
+3. abrir os previews e OLHAR, um por posicionamento
+4. ativar campanha e conjunto
+5. NAO TOCAR EM NADA por 7 dias
+```
+
+**O passo 5 é o que mais pesa.** Toda edição de orçamento, público ou criativo
+reinicia a fase de aprendizado e joga fora o que a Meta já sabia. É o erro mais
+comum e o mais caro.
+
+Por isso os 6 creatives criados com a peça 4:5 **não devem ser ativados como
+estão**: se forem, e depois trocados pelos de três proporções, o aprendizado
+recomeça. Melhor esperar e ligar uma vez só.
+
+## A ressalva, dita na cara
+
+Com R$ 25/dia o `Lead` não sai da fase de aprendizado — 3 a 5 por semana contra
+~50. O custo por resultado será mais alto e mais instável nas primeiras semanas.
+Não é defeito de configuração; é o que R$ 750/mês compra num leilão em que
+concorrentes de SaaS gastam dez vezes isso.
+
+O que esse dinheiro **realmente** compra é o primeiro dado real deste projeto:
+quanto custa um cadastro, e quantos deles pagam. Hoje esses dois números não
+existem — nunca houve um cliente externo. Com eles, subir para R$ 100/dia deixa
+de ser aposta.
