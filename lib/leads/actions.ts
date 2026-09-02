@@ -15,6 +15,7 @@ import { CSV_MAX_LINHAS } from '@/lib/leads/csv'
 import {
   apenasDigitos,
   chaveDeContato,
+  chavesDoContato,
   contarAvisosDeArquivo,
   interpretarPlanilha,
   type LinhaPlanilha,
@@ -327,8 +328,13 @@ async function chavesJaCadastradas(
     if (!data || data.length === 0) break
 
     for (const lead of data) {
-      const chave = chaveDeContato(lead.email, lead.phone)
-      if (chave && !chaves.has(chave)) chaves.set(chave, lead.id)
+      // As DUAS chaves, não a de maior prioridade: um lead com e-mail e
+      // telefone precisa ser reencontrável pelos dois, senão uma linha nova
+      // com e-mail inédito e o mesmo telefone passa a dedupe e derruba o lote
+      // inteiro no índice único. Ver `chavesDoContato`.
+      for (const chave of chavesDoContato(lead.email, lead.phone)) {
+        if (!chaves.has(chave)) chaves.set(chave, lead.id)
+      }
     }
 
     if (data.length < tamanhoDaPagina) break
@@ -499,9 +505,34 @@ async function atualizarRepetidos(
     }
   }
 
+  // ## O erro deste `update` era descartado
+  //
+  // `await` sem olhar o retorno: uma falha de RLS, constraint ou rede movia
+  // zero negocios e a tela dizia que a importacao deu certo. Mesma classe do
+  // `activities.insert` sem checagem, de 24/08 — e aqui doi mais, porque a
+  // pessoa acredita que o funil foi atualizado e nao volta a conferir.
+  //
+  // Vira aviso, nao erro: os CONTATOS ja foram atualizados com sucesso, e
+  // derrubar tudo por causa do negocio desfaria trabalho que deu certo.
+  let negociosComFalha = 0
   await emBlocos(paraAtualizar, 20, async ({ dealId, mudancas }) => {
-    await supabase.from('deals').update(mudancas).eq('id', dealId).eq('workspace_id', workspaceId)
+    const { error } = await supabase
+      .from('deals')
+      .update(mudancas)
+      .eq('id', dealId)
+      .eq('workspace_id', workspaceId)
+    if (error) {
+      negociosComFalha += 1
+      console.error('importarPlanilha: update de negocio falhou', { dealId, code: error.code })
+    }
   })
+
+  if (negociosComFalha > 0) {
+    avisos.push(
+      `${negociosComFalha} negócio(s) não puderam ser atualizados no funil. ` +
+        'Os contatos foram atualizados normalmente.',
+    )
+  }
 
   if (ambiguos > 0) {
     avisos.push(
@@ -663,13 +694,38 @@ export async function importarPlanilha(
         error: `Plano Free permite no máximo ${FREE_LEAD_LIMIT} leads. Faça upgrade para o Pro para importar mais.`,
       }
     }
+    // ## `23505` como rede, nao como caminho esperado
+    //
+    // A causa conhecida — lead com e-mail e telefone reencontravel so pelo
+    // e-mail — foi fechada em `chavesDoContato`, entao isto nao deveria
+    // acontecer. Fica porque `23505` derruba o LOTE INTEIRO: uma linha ruim
+    // custa as outras 999, e a mensagem anterior ("Nao foi possivel importar
+    // os leads") nao dizia qual, nem por que, nem o que fazer.
+    //
+    // `ehContatoRepetido` ja existe e e usada em `createLead` e `updateLead`;
+    // o import era o unico caminho de escrita que nao a consultava.
+    if (ehContatoRepetido(error.code)) {
+      return {
+        error:
+          'Algum contato da planilha já existe com o mesmo e-mail ou telefone. ' +
+          'Escolha "Atualizar" em Repetidos para reaproveitar o cadastro, ' +
+          'ou remova a linha e importe de novo.',
+      }
+    }
+
     console.error('importarPlanilha falhou', error)
     return { error: 'Não foi possível importar os leads.' }
   }
 
+  // ## Um `Map`, e nao `find` dentro do laco
+  //
+  // Era `aInserir.find(...)` a cada registro inserido: O(n^2), e para 1000
+  // linhas isso e 1.000.000 de comparacoes de string no servidor. O `Map` faz
+  // o mesmo em uma passada.
+  const origemPorChave = new Map(aInserir.map((l) => [l.chave, l]))
   for (const registro of inseridos ?? []) {
     const chave = chaveDeContato(registro.email, registro.phone)
-    const origem = chave ? aInserir.find((l) => l.chave === chave) : undefined
+    const origem = chave ? origemPorChave.get(chave) : undefined
     if (origem) porId.set(registro.id, origem)
   }
 

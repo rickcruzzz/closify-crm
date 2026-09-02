@@ -40,6 +40,7 @@ import {
   type Mapeamento,
 } from '@/lib/leads/planilha'
 import { importarPlanilha, type ResultadoImportacao } from '@/lib/leads/actions'
+import { FREE_LEAD_LIMIT, PRO_PLAN_PRICE } from '@/lib/plans'
 
 // Valor entre aspas de propósito: o separador do modelo é vírgula e o decimal
 // brasileiro também, sem aspas, "2500,00" viraria duas colunas.
@@ -56,10 +57,19 @@ export function ImportLeadsDialog({
   open,
   onOpenChange,
   onImported,
+  vagasNoPlano,
 }: {
   open: boolean
   onOpenChange: (open: boolean) => void
   onImported: () => void
+  /**
+   * Quantos contatos ainda cabem no plano. `null` = sem teto (Pro ou trial).
+   *
+   * Vem do servidor por `remainingLeadSlots`, a MESMA função que a Server
+   * Action consulta antes de inserir — não uma segunda contagem, que
+   * divergiria da primeira no dia em que uma mudasse.
+   */
+  vagasNoPlano: number | null
 }) {
   const [passo, setPasso] = React.useState<Passo>('arquivo')
   const [nomeDoArquivo, setNomeDoArquivo] = React.useState('')
@@ -189,9 +199,28 @@ export function ImportLeadsDialog({
   // a crua: é o que faz "pular N linhas" corrigir a importação inteira sem
   // o servidor precisar saber que isso existe.
   const matrizEfetiva = React.useMemo(
-    () => matriz.slice(pularLinhas),
+    // ## O corte em `CSV_MAX_LINHAS` acontece AQUI, e nao so na previa
+    //
+    // A previa truncava e avisava "so as primeiras 1000 foram lidas"; o envio
+    // mandava a matriz inteira; e o Zod recusava TUDO com "A planilha passa de
+    // 1000 linhas". Uma planilha de 1500 mostrava "1000 linhas prontas", a
+    // pessoa clicava Importar e nada entrava.
+    //
+    // A tela e o servidor discordavam sobre a mesma regra, e quem pagava era
+    // quem confiou na tela. Cortando na origem, as duas passam a ver a mesma
+    // matriz — e o aviso deixa de ser uma promessa que o servidor desmente.
+    //
+    // `+ 1` porque a primeira linha e o cabecalho: o limite conta LINHAS DE
+    // DADO, e sem isso uma planilha de exatamente 1000 registros perderia a
+    // ultima.
+    () => matriz.slice(pularLinhas, pularLinhas + CSV_MAX_LINHAS + 1),
     [matriz, pularLinhas],
   )
+
+  // O aviso de truncamento nao mora aqui: `interpretarPlanilha` ja o produz
+  // em `previa.erros`, com o numero real de linhas do arquivo, e a tela ja
+  // renderiza essa lista. Uma segunda contagem aqui seria a mesma regra em
+  // dois lugares, divergindo na primeira mudanca.
   const cabecalho = React.useMemo(() => matrizEfetiva[0] ?? [], [matrizEfetiva])
   const corpo = React.useMemo(() => matrizEfetiva.slice(1), [matrizEfetiva])
 
@@ -578,6 +607,42 @@ export function ImportLeadsDialog({
               </div>
             </div>
 
+            {/* ## O aviso de vagas vem ANTES do botao, nao no relatorio
+                Antes a pessoa importava 300 linhas e descobria no fim que 288
+                foram ignoradas. Saber depois nao ajuda a decidir — e a mesma
+                classe do painel de prazos que dizia "nenhum negocio em aberto"
+                com 4 negocios ao lado.
+                So aparece quando ha teto (Free) E ele de fato corta algo. Pro
+                e trial tem `vagasNoPlano === null` e nao veem nada. */}
+            {vagasNoPlano !== null && previa.linhas.length > vagasNoPlano && (
+              <div className="bg-amber-500/5 ring-amber-500/25 flex flex-col gap-3 rounded-lg p-3 ring-1">
+                <div className="flex flex-col gap-1">
+                  <p className="text-sm font-medium">
+                    {vagasNoPlano === 0
+                      ? `Você já usou os ${FREE_LEAD_LIMIT} contatos do plano Free.`
+                      : `Você tem ${vagasNoPlano} vaga(s) no plano Free.`}
+                  </p>
+                  <p className="text-muted-foreground text-xs text-pretty">
+                    {vagasNoPlano === 0
+                      ? 'Nenhum contato desta planilha vai entrar sem o Pro.'
+                      : `Vão entrar ${vagasNoPlano} dos ${previa.linhas.length} contatos.`}
+                  </p>
+                </div>
+                <div>
+                  <Button
+                    type="button"
+                    size="sm"
+                    // Abre o diálogo de pagamento com o Pix na tela. Cair em
+                    // `/settings/billing` seco deixava a pessoa procurando o
+                    // botão depois de já ter decidido — corrigido em 25/08.
+                    render={<a href="/settings/billing?pagar=1" />}
+                  >
+                    Assinar o Pro &mdash; R$ {PRO_PLAN_PRICE}/mês
+                  </Button>
+                </div>
+              </div>
+            )}
+
             {previa.linhas.length > 0 && (
               <div className="border-border rounded-lg border p-3">
                 <p className="mb-2 text-xs font-medium">
@@ -678,8 +743,16 @@ export function ImportLeadsDialog({
 
             <DialogFooter className="sm:justify-between">
               {resultado.foraDoLimite > 0 ? (
-                <Button type="button" variant="ghost" render={<a href="/settings/billing" />}>
-                  Desbloquear no Pro
+                <Button
+                  type="button"
+                  variant="ghost"
+                  // `?pagar=1` abre o diálogo de pagamento com o Pix na tela.
+                  // Existe desde 25/08, criado porque cair em
+                  // `/settings/billing` seco deixava a pessoa procurando o
+                  // botão depois de já ter decidido pagar.
+                  render={<a href="/settings/billing?pagar=1" />}
+                >
+                  Assinar o Pro &mdash; R$ {PRO_PLAN_PRICE}/mês
                 </Button>
               ) : (
                 <span />

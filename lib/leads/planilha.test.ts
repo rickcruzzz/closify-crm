@@ -194,7 +194,23 @@ describe('interpretarPlanilha', () => {
   it('separa aviso de arquivo de linha descartada', () => {
     const corpo = Array.from({ length: 5 }, (_, i) => ['Ana ' + i, `a${i}@x.com`])
     const { erros } = interpretarPlanilha([['Nome', 'E-mail'], ...corpo], { name: 0, email: 1 }, 3)
-    expect(erros[0]).toContain('só as primeiras 3 foram lidas')
+    // A frase mudou de "foram lidas" para "vamos importar" quando o corte
+    // passou a valer TAMBEM no envio: antes a tela prometia 1000 de 1500 e o
+    // servidor recusava as 1500 inteiras.
+    expect(erros[0]).toContain('Vamos importar as primeiras 3')
+    expect(contarAvisosDeArquivo(erros)).toBe(1)
+  })
+
+  it('conta o aviso de truncamento como aviso de ARQUIVO, nao de linha', () => {
+    // O que `contarAvisosDeArquivo` protege: sem isto o total de "ignorados"
+    // somava uma mensagem que fala do arquivo, e ficava maior que o arquivo.
+    const corpo = Array.from({ length: 9 }, (_, i) => ['Ana ' + i, `a${i}@x.com`])
+    const { linhas, erros } = interpretarPlanilha(
+      [['Nome', 'E-mail'], ...corpo],
+      { name: 0, email: 1 },
+      4,
+    )
+    expect(linhas).toHaveLength(4)
     expect(contarAvisosDeArquivo(erros)).toBe(1)
   })
 

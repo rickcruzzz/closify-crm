@@ -49,3 +49,48 @@ export function interpretarConsentimento(valor: string | null): Consentimento | 
 export function podeRastrear(valor: string | null): boolean {
   return interpretarConsentimento(valor) === 'aceito'
 }
+
+/**
+ * O mesmo consentimento, num cookie que o SERVIDOR consegue ler.
+ *
+ * ## O buraco que isto fecha
+ *
+ * A decisão vive em `localStorage`, e o servidor não lê `localStorage`. O
+ * resultado, medido no código: **os seis eventos da Conversions API disparavam
+ * independentemente do banner**. Quem clicava "Recusar" e se cadastrava tinha
+ * e-mail, telefone, nome, cidade, estado, CEP e `external_id` enviados à Meta
+ * do mesmo jeito — hasheados, mas enviados.
+ *
+ * O pixel do navegador sempre respeitou, com duas cercas. A CAPI nunca
+ * consultou nada, e é ela que manda o dado pessoal.
+ *
+ * ## Por que um cookie espelho, e não trocar o `localStorage`
+ *
+ * Trocar significaria reescrever as duas cercas do pixel, que funcionam e
+ * foram provadas com controle negativo em 30/08. O cookie ANDA JUNTO: mesma
+ * chave versionada, mesmo valor, escrito no mesmo instante.
+ *
+ * `httpOnly: false` de propósito — não é segredo, é a escolha da pessoa, e o
+ * cliente precisa lê-lo para manter as duas fontes em sincronia.
+ */
+export const COOKIE_CONSENTIMENTO = CHAVE_CONSENTIMENTO
+
+/** Um ano: o mesmo prazo que a LGPD considera razoável para renovar a pergunta. */
+export const MAX_AGE_CONSENTIMENTO = 365 * 24 * 60 * 60
+
+/**
+ * Lê o consentimento de uma string de cookies (`document.cookie` ou o header).
+ *
+ * Recebe a string em vez de ir buscá-la para continuar sendo função pura:
+ * roda igual no servidor, no cliente e no teste, sem mock.
+ */
+export function lerConsentimentoDoCookie(cookies: string | null | undefined): Consentimento | null {
+  if (!cookies) return null
+  for (const parte of cookies.split(';')) {
+    const [nome, ...resto] = parte.trim().split('=')
+    if (nome === COOKIE_CONSENTIMENTO) {
+      return interpretarConsentimento(decodeURIComponent(resto.join('=')))
+    }
+  }
+  return null
+}

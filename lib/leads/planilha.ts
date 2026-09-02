@@ -154,6 +154,38 @@ export function chaveDeContato(email: string | null, phone: string | null): stri
   return digitos.length >= 8 ? `t:${digitos}` : null
 }
 
+/**
+ * TODAS as chaves pelas quais um contato já cadastrado pode ser reencontrado.
+ *
+ * ## Por que a versão no singular não bastava contra o banco
+ *
+ * `chaveDeContato` devolve UMA chave, com o e-mail tendo prioridade. Isso está
+ * certo para deduplicar linhas dentro da própria planilha: a mesma pessoa
+ * aparecendo duas vezes com o mesmo e-mail é uma repetição, e o telefone não
+ * muda essa conclusão.
+ *
+ * Contra o BANCO ela abria um buraco. Um lead gravado com e-mail **e**
+ * telefone entrava no mapa só como `e:...`. Uma linha nova com e-mail inédito
+ * e o telefone daquele lead não casava com nada, passava pela dedupe como
+ * contato novo, e batia no índice `leads_workspace_telefone_unico` (0045) já
+ * dentro do `insert`.
+ *
+ * O efeito era desproporcional: `23505` derruba o **lote inteiro**, então uma
+ * única linha com telefone repetido fazia as outras 999 se perderem junto — e
+ * a mensagem era "Não foi possível importar os leads", sem dizer qual linha
+ * nem por quê.
+ *
+ * Indexando as duas, o conflito deixa de existir em vez de virar mensagem de
+ * erro melhor.
+ */
+export function chavesDoContato(email: string | null, phone: string | null): string[] {
+  const chaves: string[] = []
+  if (email) chaves.push(`e:${email.toLowerCase()}`)
+  const digitos = phone ? apenasDigitos(phone) : ''
+  if (digitos.length >= 8) chaves.push(`t:${digitos}`)
+  return chaves
+}
+
 export type LinhaPlanilha = {
   /** Linha no arquivo (1 = cabeçalho), para a mensagem citar onde. */
   linha: number
@@ -216,8 +248,12 @@ export function interpretarPlanilha(
 
   const corpo = matriz.slice(1)
   if (corpo.length > limiteDeLinhas) {
+    // "foram lidas" descrevia o passado e nao dizia o que ia acontecer. A
+    // frase agora promete o que o envio de fato faz — o cliente corta a matriz
+    // no mesmo limite antes de mandar, entao tela e servidor dizem a mesma
+    // coisa. Antes a tela prometia 1000 de 1500 e o servidor recusava as 1500.
     erros.push(
-      `A planilha tem ${corpo.length} linhas; só as primeiras ${limiteDeLinhas} foram lidas.`,
+      `A planilha tem ${corpo.length} linhas. Vamos importar as primeiras ${limiteDeLinhas}.`,
     )
   }
 

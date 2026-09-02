@@ -50,12 +50,15 @@ const dateFormatter = new Intl.DateTimeFormat('pt-BR', { dateStyle: 'short' })
 
 export function LeadsPageClient({
   leads,
+  vagasNoPlano,
   members,
   nextCursor,
   search: initialSearch,
   status: initialStatus,
 }: {
   leads: LeadRow[]
+  /** Vagas restantes no plano. `null` = sem teto (Pro ou trial). */
+  vagasNoPlano: number | null
   members: WorkspaceMember[]
   nextCursor: string | null
   search: string
@@ -446,6 +449,7 @@ export function LeadsPageClient({
         open={importOpen}
         onOpenChange={setImportOpen}
         onImported={() => router.refresh()}
+        vagasNoPlano={vagasNoPlano}
       />
 
       <DeleteLeadDialog
