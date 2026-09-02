@@ -4,7 +4,101 @@ Documento de continuidade. É lido no começo de toda sessão (referenciado no
 [CLAUDE.md](../CLAUDE.md)) para que uma conversa nova, ou outra conta, comece
 sabendo o que já foi feito, o que foi decidido e onde estão as armadilhas.
 
-**Atualizado em:** 31/08/2026, noite (o CNPJ novo entrou e reacendeu seis
+**Atualizado em:** 01/09/2026, noite (o sistema passou a avisar sozinho, de
+hora em hora e so quando muda; e tres coisas que este documento afirmava
+deixaram de ser verdade sem ninguem notar)
+
+## O sistema avisa, em vez de esperar alguem abrir a tela (01/09)
+
+Pedido: monitorar tudo, 24h, sem parar. A saida obvia era publicar a Central
+num host gratuito, e ela nao serve por duas razoes.
+
+`lib/dono/queries.ts` le com `createAdminClient()`, que **ignora RLS por
+completo** — nome, e-mail, telefone e valor de negocio de todos os clientes.
+O gate de duas condicoes (`NODE_ENV` e host local) existe exatamente para
+isso, e publicar exige desliga-lo. E o free do Render **dorme** apos 15
+minutos, que e o oposto do que foi pedido.
+
+`/api/cron/vigia` resolve a necessidade sem tocar no gate: em vez de uma tela
+que alguem precisa lembrar de abrir, um e-mail que chega sozinho para
+`notificacaosistemavelofunil@gmail.com`.
+
+### Silencio e resposta, e essa e a regra que governa o resto
+
+**Quando nao ha nada, nao sai e-mail nenhum.** Um "tudo certo" diario parece
+cuidado e e o contrario: treina a pessoa a arquivar sem ler, e no dia em que o
+assunto for grave o reflexo ja esta formado. E a licao de 20/08, quando 8 dos
+11 alertas da fila eram e-mail de teste gerado por script.
+
+Mas o e-mail **sai** quando uma leitura falha, mesmo sem alerta: um vigia que
+nao conseguiu ler o Asaas e cala passa a mensagem de que conferiu e estava
+tudo bem. `null` significa **nao sei**, nunca "esta zerado" — a distincao que
+fez a Central declarar R$ 490/mes de receita com R$ 0,00 real em 30/08.
+
+### A memoria, e por que ela decide a frequencia
+
+De hora em hora sem memoria, um erro que aparece de manha gera **24 e-mails
+identicos** ate alguem resolver. Vigilancia continua nao quer dizer aviso
+continuo — quer dizer varrer sempre e avisar quando MUDA.
+
+    nunca avisado        MANDA   e novidade
+    igual ao ultimo      cala    ela ja sabe, e ja esta resolvendo
+    PIOROU (2 -> 30)     MANDA   mudou de tamanho, e isso e fato novo
+
+Comparar o NUMERO e o que separa "continua" de "piorou": dois erros num dia
+podem ser navegador antigo, trinta sao defeito em producao. Migration 0062
+(`vigia_ultimo_aviso`, RLS ligada e zero policy).
+
+**Duas decisoes de seguranca do proprio mecanismo:** se a leitura da memoria
+falhar, tudo parece novo e o e-mail sai — errar para o lado de avisar demais e
+recuperavel, calar transforma o vigia no problema que ele evita. E a memoria
+so grava DEPOIS do envio confirmado, senao um alerta ficaria enterrado ate
+piorar de numero.
+
+### Provado contra producao
+
+1a chamada enviou, 2a respondeu `nada novo desde o ultimo aviso`. Entrega
+`delivered` conferida na API do Resend. Sem token 401, token errado 401.
+
+**Tres defeitos achados na propria revisao:** as leituras iam em serie ao
+Supabase (viraram `Promise.all`); a fila de suporte contava relato de conta de
+teste do dono (a tabela ja carrega `interno`, decidido por `ehContaDeTeste` na
+gravacao — filtrar por ele evita uma segunda copia da regra); e a coluna era
+um palpite meu (`tratado_em`, sendo `status`). **O terceiro apareceu pelo
+comportamento certo funcionando:** a leitura virou `null` e o e-mail disse que
+nao conferiu a fila.
+
+### O que falta, e esta escrito no e-mail
+
+As duas leituras do Asaas — assinatura ativa sem Pro, e cobranca vencida.
+`lerDinheiro()` e `import 'server-only'` amarrado ao gate da Central, e
+traze-lo para uma rota da Vercel exige separar a leitura do gate primeiro.
+Ate la o e-mail **diz em texto** que nao conferiu dinheiro.
+
+## Tres coisas que este documento afirmava e nao eram mais verdade (01/09)
+
+Medidas nesta rodada, todas contra a fonte:
+
+**O Instagram TEM caminho por API.** A secao de 29/08 diz "codigo que publica
+no IG: 0 arquivos". Existe `scripts/marketing/publicar-instagram.mjs`, com
+`META_INSTAGRAM_TOKEN` proprio, e o carrossel de sete slides saiu por ele.
+Modo de ensaio por padrao: sem `--confirmar` ele confere token, resolve conta,
+sobe as artes e imprime o que iria ao ar.
+
+**O perfil tem 11.528 seguidores**, nao 3.555.
+
+**O `META_ADS_TOKEN` NAO esta morto.** A pendencia registrada em 29/08 dizia
+`API access blocked` em 8 de 8 chamadas. Medido em 01/09, tres chamadas reais:
+
+    /me                          Velo Funil (122113347051334091)
+    conta de anuncio             Rickdaskin Ads, account_status 1
+    campanhas                    1, "Teste Pagamento", PAUSED
+
+O business tambem mudou de nome — era `Rickdaskin`, agora **`Velo Funil`**.
+Logo `/dono/anuncio` deixou de estar cega. A tela em si nao foi exercitada
+nesta rodada; so o token.
+
+**Antes disso, 31/08/2026, noite** (o CNPJ novo entrou e reacendeu seis
 superficies de uma vez; e cinco e-mails de autenticacao sairam 23 dias com um
 CNPJ que a Receita desmentia, porque o alarme tocou e so metade foi atendida)
 
@@ -3158,7 +3252,10 @@ sessão.
       respondem 404/402 para este número. A Meta consulta bases da Receita, e
       reprovação por dado não encontrado entra no histórico do Business
       Manager. Esperar aparecer em duas fontes independentes.
-- [ ] **`META_ADS_TOKEN` morto (29/08).** `API access blocked`
+- [x] **`META_ADS_TOKEN` VOLTOU (medido em 01/09).** As tres chamadas
+      respondem, o business agora se chama `Velo Funil`, e `/dono/anuncio`
+      deixou de estar cega. O texto abaixo fica como registro do que era.
+      **`META_ADS_TOKEN` estava morto (29/08).** `API access blocked`
       (`OAuthException`, code 200) em 8 de 8 chamadas à Graph API; funcionava
       em 25/08. **A conta da Meta não está bloqueada** — o MCP de anúncios
       lista as duas contas `ACTIVE`, com método de pagamento —, então o que
