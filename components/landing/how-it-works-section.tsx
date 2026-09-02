@@ -135,9 +135,14 @@ export function HowItWorksSection() {
           <ProdutoPrint nome="hoje" alt="o que precisa da sua atenção · Acme Corp" />
         </RevealOnScroll>
 
+        {/* Dizia "do cadastro ao primeiro contato", a mesma promessa da faixa
+            de números, e ela não sobrevive ao caminho real: o formulário
+            termina em `/verifique-email` e a pessoa precisa SAIR DO SITE para
+            abrir a caixa de entrada antes de ver qualquer tela do produto.
+            Ver a nota em `stats-section.tsx`, que carrega o mesmo número. */}
         <RevealOnScroll delay={490}>
           <p className="text-muted-foreground mt-6 flex items-center justify-center gap-1.5 text-center text-sm">
-            Leva menos de dois minutos do cadastro ao primeiro contato
+            Leva menos de dois minutos para criar a conta e entrar
             <ArrowRight aria-hidden className="size-4" />
           </p>
         </RevealOnScroll>

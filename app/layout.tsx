@@ -12,13 +12,32 @@ import { BannerConsentimento } from '@/components/analytics/banner-consentimento
 import { UtmCapture } from '@/components/landing/utm-capture'
 import { NavigationProgress } from '@/components/layout/navigation-progress'
 
+/**
+ * ## `.woff2`, e por que os `.woff` continuam no repositório
+ *
+ * `next/font/local` faz `preload` por padrão, então as duas fontes são
+ * baixadas em TODA visita, antes de qualquer outra coisa. Medido em produção
+ * em 02/09, na landing que recebe o tráfego pago: 66.268 + 67.864 bytes.
+ * Convertidas para `.woff2` (Brotli, contra o deflate do `.woff`): 55.516 +
+ * 56.828, **17% menos cada**, ~22 KB no total, sem tocar em desenho de letra.
+ *
+ * Os `.woff` **ficam no disco de propósito**: `scripts/marketing/gerar-stories.py`,
+ * `gerar-feed.py` e `marketing/claude-designer/velofunil_criativos.py` os
+ * carregam pelo Pillow, que não lê `.woff2`. Um deles tem teste amarrado
+ * (`lib/marketing/oferta-nas-artes.test.ts`). Apagá-los pareceria limpeza e
+ * quebraria o gerador de criativos — que é o que alimenta o próprio anúncio
+ * cuja página estas fontes servem.
+ *
+ * Mesma razão para `InstrumentSerif-Italic.ttf` continuar aqui sem nenhum
+ * `import`: ele é a serifa dos números das artes, não uma sobra.
+ */
 const geistSans = localFont({
-  src: './fonts/GeistVF.woff',
+  src: './fonts/GeistVF.woff2',
   variable: '--font-sans',
   weight: '100 900',
 })
 const geistMono = localFont({
-  src: './fonts/GeistMonoVF.woff',
+  src: './fonts/GeistMonoVF.woff2',
   variable: '--font-geist-mono',
   weight: '100 900',
 })

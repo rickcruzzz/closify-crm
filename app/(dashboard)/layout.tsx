@@ -11,6 +11,7 @@ import { AvisoDeTrial } from '@/components/layout/aviso-de-trial'
 import { lerEstadoDoOnboarding, precisaDeBoasVindas } from '@/lib/onboarding/estado'
 import { contarTarefasDoDiaDoUsuario } from '@/lib/tasks/queries'
 import { contarConversasEsperandoDoUsuario } from '@/lib/conversas/queries'
+import { contarNaoLidasDaEmpresaAtiva } from '@/lib/notificacoes/queries'
 import { decidirNovaEmpresa } from '@/lib/plans/multi-empresa'
 
 // Tudo aqui dentro é área logada: nada deve ser indexado. As páginas filhas
@@ -40,6 +41,7 @@ export default async function DashboardLayout({
     tarefasDoDia,
     conversasEsperando,
     situacaoDoPlano,
+    avisosNaoLidos,
   ] =
     await Promise.all([
       getCurrentUserAndWorkspace(),
@@ -54,6 +56,10 @@ export default async function DashboardLayout({
       // `cache()` — a segunda chamada devolve a promise da primeira, sem nova
       // ida ao Auth. Em série, seria mais uma viagem de rede por navegação.
       situacaoDoPlanoDaEmpresaAtiva(),
+      // Mesma onda, mesma razão: `count: exact, head: true` devolve o número e
+      // não as 30 linhas. A LISTA não vem aqui — ela é buscada por Server
+      // Action quando o sino abre, porque a maioria das navegações nunca abre.
+      contarNaoLidasDaEmpresaAtiva(),
     ])
 
   if (workspaces.length === 0) {
@@ -126,6 +132,7 @@ export default async function DashboardLayout({
             currentUser={currentUser}
             tarefasDoDia={tarefasDoDia}
             conversasEsperando={conversasEsperando}
+            avisosNaoLidos={avisosNaoLidos}
             novaEmpresa={novaEmpresa}
           />
           {/* Entre a barra e o conteúdo: não empurra a navegação para baixo e

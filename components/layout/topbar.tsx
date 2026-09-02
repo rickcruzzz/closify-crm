@@ -1,5 +1,6 @@
 import { MobileSidebar } from '@/components/layout/mobile-sidebar'
 import { ThemeToggle } from '@/components/theme-toggle'
+import { Sino } from '@/components/layout/sino'
 import { UserMenu, type CurrentUser } from '@/components/layout/user-menu'
 import type { WorkspaceSummary } from '@/components/layout/workspace-switcher'
 import type { DecisaoDeNovaEmpresa } from '@/lib/plans/multi-empresa'
@@ -10,6 +11,7 @@ export function Topbar({
   currentUser,
   tarefasDoDia,
   conversasEsperando,
+  avisosNaoLidos,
   novaEmpresa,
 }: {
   workspaces: WorkspaceSummary[]
@@ -17,6 +19,8 @@ export function Topbar({
   currentUser: CurrentUser
   tarefasDoDia: number
   conversasEsperando: number
+  /** Notificações não lidas da empresa ativa, contadas no servidor. */
+  avisosNaoLidos: number
   /** Se pode criar outra empresa, decidido no servidor. */
   novaEmpresa: DecisaoDeNovaEmpresa
 }) {
@@ -31,6 +35,12 @@ export function Topbar({
         novaEmpresa={novaEmpresa}
       />
       <div className="flex-1" />
+      {/* Antes do tema e da conta, e não depois: a ordem da direita para a
+          esquerda vai do mais frequente ao mais raro, e avisar é o único dos
+          três que muda sozinho. O sino NÃO ganha cópia no `MobileSidebar` —
+          duas entradas para a mesma lista divergem na primeira mudança, e ele
+          já cabe aqui nas duas larguras com alvo de 44px. */}
+      <Sino naoLidas={avisosNaoLidos} />
       <ThemeToggle />
       <UserMenu currentUser={currentUser} />
     </header>

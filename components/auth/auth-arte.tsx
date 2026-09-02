@@ -49,8 +49,15 @@ export function AuthArte() {
         <PipelinePreviewCard />
       </div>
 
+      {/* TERCEIRA cópia da mesma promessa, achada só ao ler o DOM da tela de
+          login durante a prova — as outras duas (`stats-section.tsx` e
+          `how-it-works-section.tsx`) já tinham sido corrigidas e esta passou.
+          Prometia "do cadastro ao primeiro contato", e o caminho real sai do
+          site para abrir a caixa de entrada antes de qualquer tela do produto.
+          Aqui dói mais que na landing: a pessoa está no formulário, e a frase
+          descreve o que vai acontecer nos próximos segundos. */}
       <p className="text-muted-foreground animate-in fade-in fill-mode-both ease-entrada duration-entrada delay-passo-4 text-sm text-balance">
-        Leva menos de dois minutos do cadastro ao primeiro contato.
+        Leva menos de dois minutos para criar a conta e entrar.
       </p>
     </aside>
   )

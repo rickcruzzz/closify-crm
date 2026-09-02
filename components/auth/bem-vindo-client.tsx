@@ -24,11 +24,18 @@ export function BemVindoClient({
   primeiroNome,
   email,
   podeDefinirSenha,
+  podePular,
   retomando,
 }: {
   primeiroNome: string | null
   email: string
   podeDefinirSenha: boolean
+  /**
+   * A pessoa já tem alguma empresa, então `pularOnboarding` vai aceitar.
+   * Decidido no servidor — ver a nota na página, que explica por que este
+   * botão era uma saída que reprovava no clique para toda conta nova.
+   */
+  podePular: boolean
   /** Já tinha começado o assistente e voltou depois. */
   retomando: boolean
 }) {
@@ -205,18 +212,27 @@ export function BemVindoClient({
 
         {/* Pular é oferta de verdade, não armadilha: não bloqueia nada, guarda
             o que já foi respondido, e não volta a aparecer a cada login. Sem
-            uma saída visível, o assistente vira pedágio. */}
-        <Button
-          type="button"
-          variant="ghost"
-          size="sm"
-          className="text-muted-foreground w-full"
-          disabled={ocupado}
-          onClick={pular}
-        >
-          {pulando && <Loader2 className="size-4 animate-spin" />}
-          Pular por enquanto
-        </Button>
+            uma saída visível, o assistente vira pedágio.
+            **Só aparece para quem já tem empresa**, e isso não é preferência:
+            `pularOnboarding` recusa quem não tem nenhuma, porque a empresa
+            nasce dentro do assistente. Para toda conta recém-criada — pelo
+            Google ou por e-mail — este botão prometia uma saída e devolvia um
+            toast de erro no clique, deixando a pessoa onde estava. Uma saída
+            que reprova é pior que saída nenhuma: ela gasta a confiança no
+            primeiro minuto de uso. */}
+        {podePular && (
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="text-muted-foreground w-full"
+            disabled={ocupado}
+            onClick={pular}
+          >
+            {pulando && <Loader2 className="size-4 animate-spin" />}
+            Pular por enquanto
+          </Button>
+        )}
       </CardContent>
     </Card>
   )

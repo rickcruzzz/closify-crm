@@ -60,7 +60,7 @@ export async function GET(requisicao: Request) {
 
   // As duas em paralelo: são tabelas independentes e nenhuma depende do
   // resultado da outra.
-  const [asaas, whatsapp, erros, feedback] = await Promise.all([
+  const [asaas, whatsapp, erros, feedback, notificacoes] = await Promise.all([
     admin.rpc('purge_old_asaas_webhook_events'),
     admin.rpc('purge_old_whatsapp_webhook_events'),
     // `error_logs` era a única tabela de sistema sem purga, e tem o mesmo
@@ -75,6 +75,15 @@ export async function GET(requisicao: Request) {
     // pessoas pediram exportação em CSV" continua sendo a razão de construir
     // a funcionalidade um ano depois.
     admin.rpc('purge_old_feedback'),
+    // `notificacoes` (0066) também nasceu com purga, pelo mesmo motivo:
+    // `purge_old_asaas_webhook_events` existe desde a 0014 e ficou sete
+    // migrations sem NUNCA ter sido agendada, esperando um `pg_cron` que só
+    // apareceu em 02/09. Tabela de evento sem purga escrita no mesmo dia é
+    // tabela que cresce até alguém notar pela fatura.
+    // 90 dias: aviso de três meses atrás não muda decisão nenhuma, e o
+    // histórico de dinheiro que importa vive em `assinatura_eventos` (0055),
+    // que é append-only e não é tocado por isto.
+    admin.rpc('purge_old_notificacoes'),
   ])
 
   // Uma falhar não pode impedir a outra de ter rodado: o retorno reporta as
@@ -83,14 +92,21 @@ export async function GET(requisicao: Request) {
   if (whatsapp.error) console.error('Purga do WhatsApp falhou', whatsapp.error)
   if (erros.error) console.error('Purga de error_logs falhou', erros.error)
   if (feedback.error) console.error('Purga de feedback falhou', feedback.error)
+  if (notificacoes.error) console.error('Purga de notificações falhou', notificacoes.error)
 
   return NextResponse.json({
-    ok: !asaas.error && !whatsapp.error && !erros.error && !feedback.error,
+    ok:
+      !asaas.error &&
+      !whatsapp.error &&
+      !erros.error &&
+      !feedback.error &&
+      !notificacoes.error,
     apagados: {
       asaas: asaas.data ?? null,
       whatsapp: whatsapp.data ?? null,
       erros: erros.data ?? null,
       feedback: feedback.data ?? null,
+      notificacoes: notificacoes.data ?? null,
     },
   })
 }

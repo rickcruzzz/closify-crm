@@ -75,12 +75,37 @@ export function SignUpForm({
     },
   })
 
+  /**
+   * ## Por que o `catch` existe, e por que ele NÃO desliga no caminho feliz
+   *
+   * Sem ele, uma Server Action que REJEITA (rede caindo no meio do envio,
+   * falha de transporte, exceção não tratada no servidor) deixava
+   * `isSubmitting` em `true` para sempre com `formError` em `null`: spinner
+   * girando, sem mensagem, sem botão clicável. O único caminho era recarregar
+   * a página, perdendo o formulário inteiro — no fim de um cadastro de cinco
+   * campos, e no exato passo que o anúncio pagou para alcançar.
+   *
+   * Erro DEVOLVIDO (`{ error }`) já era tratado. O que faltava era o erro
+   * LANÇADO, que não passa por nenhum `if`.
+   *
+   * E não há `finally` de propósito: no sucesso a Server Action redireciona, e
+   * desligar o spinner ali faria o botão voltar ao normal por um instante
+   * enquanto o navegador ainda está saindo — que lê como "não funcionou" e
+   * convida ao segundo clique.
+   */
   async function onSubmit(values: SignUpValues) {
     setFormError(null)
     setIsSubmitting(true)
-    const result = await signUp({ ...values, convite, plano })
-    if (result?.error) {
-      setFormError(result.error)
+    try {
+      const result = await signUp({ ...values, convite, plano })
+      if (result?.error) {
+        setFormError(result.error)
+        setIsSubmitting(false)
+      }
+    } catch {
+      setFormError(
+        'Não conseguimos concluir agora. Confira sua conexão e tente de novo — o que você digitou continua aqui.',
+      )
       setIsSubmitting(false)
     }
   }
@@ -88,12 +113,17 @@ export function SignUpForm({
   async function onGoogleClick() {
     setFormError(null)
     setIsGoogleLoading(true)
-    const result = await signInWithGoogleClient()
-    if (result?.error) {
-      setFormError(result.error)
+    try {
+      const result = await signInWithGoogleClient()
+      if (result?.error) {
+        setFormError(result.error)
+        setIsGoogleLoading(false)
+      }
+      // Sem erro: signInWithGoogleClient já redirecionou o browser pro Google.
+    } catch {
+      setFormError('Não conseguimos abrir o Google agora. Tente de novo em instantes.')
       setIsGoogleLoading(false)
     }
-    // Sem erro: signInWithGoogleClient já redirecionou o browser pro Google.
   }
 
   return (

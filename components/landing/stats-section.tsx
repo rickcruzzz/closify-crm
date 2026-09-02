@@ -26,10 +26,12 @@ import { FREE_LEAD_LIMIT } from '@/lib/plans'
 // seção de confiança, onde há espaço para dizer COMO. "Pix / boleto e cartão
 // também" é lista de meio de pagamento com cara de número.
 //
-// Cada valor abaixo é verificável: o limite do Free vem de `FREE_LEAD_LIMIT`; os dois
-// minutos são o tempo real do cadastro ao primeiro contato; o preço é o do
-// plano Pro; e o banco roda em `sa-east-1` com as funções em `gru1` desde a
-// correção de 22/08 — São Paulo é medição, não licença poética.
+// Cada valor abaixo é verificável: o limite do Free vem de `FREE_LEAD_LIMIT`; os
+// dois minutos são o tempo de criar a conta e entrar (ver a nota no próprio
+// item — a versão anterior media até o primeiro contato, e o caminho real
+// atravessa a caixa de entrada); o preço é o do plano Pro; e o banco roda em
+// `sa-east-1` com as funções em `gru1` desde a correção de 22/08 — São Paulo é
+// medição, não licença poética.
 const stats = [
   {
     // Era "7 dias / de Pro completo, sem pedir cartao", verdade enquanto a
@@ -45,8 +47,18 @@ const stats = [
     delay: 0,
   },
   {
+    // Dizia "do cadastro ao primeiro contato", e o caminho real não cabe nisso:
+    // o formulário termina em `/verifique-email`, a pessoa SAI DO SITE para
+    // abrir a caixa de entrada, volta em `/confirmar`, e só então atravessa as
+    // quatro perguntas do assistente. A ida ao e-mail sozinha já invalida
+    // qualquer promessa de dois minutos, e ela aparecia em DUAS seções.
+    //
+    // Prometer na landing um prazo que o produto não cumpre é a forma mais
+    // cara de queimar tráfego pago: a decepção acontece depois do clique pago,
+    // não antes. O que sobrou é o que de fato leva dois minutos e é o passo
+    // que a página está pedindo — criar a conta.
     value: '2 min',
-    label: 'do cadastro ao primeiro contato',
+    label: 'para criar a conta e entrar',
     delay: 130,
   },
   {

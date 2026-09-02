@@ -147,7 +147,16 @@ const plans: Plan[] = [
     // por o cartao. E verdade — `cancelarAssinatura` encerra no Asaas e o
     // acesso segue ate o fim do ciclo ja pago.
     fecho: 'Cancela quando quiser, sem multa. O acesso vai até o fim do mês pago.',
-    cta: 'Assinar Pro',
+    // Dizia "Assinar Pro", e o clique **não assina nada**: leva à mesma tela de
+    // criar conta grátis do botão ao lado. O checkout só existe depois do
+    // formulário, do e-mail de confirmação e do assistente — ou seja, o rótulo
+    // prometia uma cobrança que não acontece ali.
+    //
+    // Num funil pago isso custa dos dois lados: quem esperava pagar acha que
+    // errou de botão, e quem não queria pagar ainda hesita em clicar. "Começar
+    // com o Pro" descreve o que o clique faz de verdade, e o `?plano=pro`
+    // abaixo continua carregando a intenção até o checkout.
+    cta: 'Começar com o Pro',
     // O `?plano=pro` é o que faz o clique valer alguma coisa. Sem ele, este
     // botão levava ao MESMO destino do plano Free, e a intenção de compra
     // morria ali: a pessoa terminava no dashboard em Free, tendo que descobrir

@@ -4,7 +4,192 @@ Documento de continuidade. É lido no começo de toda sessão (referenciado no
 [CLAUDE.md](../CLAUDE.md)) para que uma conversa nova, ou outra conta, comece
 sabendo o que já foi feito, o que foi decidido e onde estão as armadilhas.
 
-**Atualizado em:** 02/09/2026, madrugada (o vigia ganhou quem o vigie, fora da
+**Atualizado em:** 02/09/2026, tarde (o botao "Criar conta" era INALCANCAVEL em
+telefone na primeira visita, e nenhum dos quatro portoes podia ver isso; o
+cliente do Supabase viajava na landing para escolher o rotulo de um botao; e o
+produto ganhou sino de avisos)
+
+## O botao "Criar conta" nao podia ser clicado, em telefone (02/09, tarde)
+
+Auditoria de frontend antes de investir no Meta Ads. O achado que justifica a
+rodada inteira apareceu ao medir em **390x659** — o viewport VISIVEL de um
+iPhone, nao os 844 do aparelho. A diferenca e a barra do navegador, e e ela que
+muda a resposta.
+
+    /cadastro, rolado ate o FIM     scrollY 144 == maxScroll 144
+    botao "Criar conta"             539..583
+    elementFromPoint no centro      o <p> do banner de consentimento
+
+**Nao e "abaixo da dobra".** A pagina e curta, ja estava no fim da rolagem, e
+nao havia para onde rolar. Quem chegava de anuncio pelo telefone **nao tinha
+como criar conta**, exceto pelo "Continuar com Google", que fica no topo.
+
+Na landing, os dois CTAs tambem: o do hero (532..580) atras do banner, e o CTA
+fixo (z-40) inteiro debaixo dele (z-50) — clicavel pelo teclado, invisivel para
+o dedo.
+
+**E a TERCEIRA reincidencia.** O proprio arquivo do banner documenta que ele
+cobriu o "Comecar gratis" em 23/08 e a linha de preco em 24/08. A correcao de
+24/08 moveu a linha de preco para CIMA do botao, o que empurrou o botao mais
+para baixo, na direcao do banner. **Corrigir posicao nao fecha a classe** — todo
+texto que crescer no hero reabre.
+
+### O que fecha: o banner publica a propria altura
+
+`--altura-do-banner`, escrita no `<html>` por `ResizeObserver`. Quem sabe a
+altura do banner e o banner; todo o resto estava chutando um numero que muda
+com a largura, o zoom de fonte e a quebra do texto.
+
+    body            padding-bottom: var(--altura-do-banner)
+    CTA fixo        bottom: var(--altura-do-banner)
+
+O comentario do banner afirmava que reservar espaco **"nao resolve, medido"**.
+Resolve — so nao resolve a DOBRA, que e outro problema. A distincao custou o
+defeito mais caro que esta pagina ja teve: numa pagina curta, o espaco
+reservado e o que faz a rolagem existir.
+
+**E o banner aberto forca o CTA fixo a aparecer.** Na dobra do telefone o CTA do
+hero continua atras dele, e ai deixa de importar: existe um botao identico e
+livre 59px acima. Assim que a pessoa responde, o banner some, a variavel zera e
+a regra volta a ser so a do hero.
+
+### Provado nos dois sentidos
+
+    /cadastro   maxScroll 144 -> 271, botao 539..583 -> 413..457
+                elementFromPoint devolve BUTTON "Criar conta"
+    landing     CTA fixo 599..647 -> 473..521, clique chega no botao
+    negativo    banner respondido -> variavel removida, padding 0px,
+                maxScroll volta a 144, CTA fixo recolhe, hero recebe o clique
+
+**O controle negativo e o que separa "corrigi" de "empurrei para sempre".**
+
+## O cliente do Supabase viajava na landing (02/09, tarde)
+
+Medido em producao, com `fetch` nos proprios chunks:
+
+    JS total     1.299 KB descomprimido, 33 arquivos
+    chunk 9086   193 KB, com GoTrueClient dentro
+    console      400 em /auth/v1/token?grant_type=refresh_token
+
+Unico consumidor: `useSessaoAtiva()`, para escolher entre "Entrar" e "Ir para o
+sistema". E o comentario do hook afirmava que `getSession()` "le o cookie local
+sem ida a rede" — **falso**: com access token expirado ele RENOVA, e todo
+visitante de volta pagava um round-trip que ainda devolvia 400.
+
+Passou a ler o cookie do `@supabase/ssr` direto, com o prefixo DERIVADO da
+`NEXT_PUBLIC_SUPABASE_URL` (escrever a mao quebraria na proxima troca de
+projeto, o que ja aconteceu em 12/08). A resposta e mais fraca de proposito: a
+presenca do cookie nao prova que o token vale, e quem valida e o
+`middleware.ts`.
+
+    JS total     1.299 KB -> 1.045 KB   (-254 KB, -20%)
+    Supabase     193 KB   -> NENHUM chunk
+    console      sem o 400
+
+**O LCP estava travado por CSS.** O h1 do hero — o candidato a LCP — nascia em
+`opacity: 0` por `fade-in` + `fill-mode-both`, com 70ms de atraso e 600ms de
+duracao: o LCP nao podia acontecer antes de ~670ms, com a pagina pronta desde
+os 555ms (TTFB 127ms). O `fade-in` saiu; o `slide-in` fica, porque deslocar nao
+esconde o pixel.
+
+**Fontes para `.woff2`**, 17% menores cada (66.268 -> 55.516 e 67.864 ->
+56.828). Os `.woff` **ficam no disco**: `gerar-stories.py`, `gerar-feed.py` e
+`velofunil_criativos.py` os carregam pelo Pillow, que nao le `.woff2`, e um
+deles tem teste amarrado. Apaga-los pareceria limpeza e quebraria o gerador de
+criativos.
+
+**Um achado do relatorio que medi e e FALSO:** "6 PNGs baixados para 3
+exibidos". So 3 baixam — `loading="lazy"` com `display: none` nunca intersecta,
+entao nunca dispara.
+
+## Tres promessas e um spinner eterno (02/09, tarde)
+
+**"Dois minutos do cadastro ao primeiro contato" aparecia em TRES lugares**, e
+o caminho real sai do site para abrir a caixa de entrada antes de qualquer tela
+do produto. Duas copias foram corrigidas de inicio; **a terceira so apareceu ao
+ler o DOM da tela de login durante a prova** (`auth-arte.tsx`), e e onde mais
+doi — a pessoa esta no formulario, e a frase descreve os proximos segundos.
+
+**"Assinar Pro" nao assina nada:** leva a mesma tela de conta gratis do botao
+ao lado, e o checkout so existe depois do e-mail de confirmacao. Virou "Comecar
+com o Pro". O `?plano=pro` continua igual, e o E2E passou a localizar pelo
+`href` em vez do texto.
+
+**`onSubmit` do cadastro sem `try/catch`:** Server Action que REJEITA (rede
+caindo, falha de transporte) deixava `isSubmitting` em `true` para sempre com
+`formError` em `null` — spinner girando, sem mensagem, sem botao, e recarregar
+perdia o formulario de cinco campos. Erro DEVOLVIDO ja era tratado; faltava o
+LANCADO, que nao passa por nenhum `if`.
+
+**Alvo de toque de 44px** nos dois botoes dentro dos campos de senha
+(`after:-inset-1`, so a regiao clicavel, sem crescer um pixel: o campo tem 44px
+e dois controles desse tamanho comeriam a area de digitar).
+
+## O "Pular por enquanto" era uma saida que reprovava (02/09, tarde)
+
+Pedido do dono: tirar o botao para quem entra pelo Google. **O motivo e mais
+forte que o pedido.** `pularOnboarding` conta as empresas da pessoa antes de
+tudo e recusa quem nao tem nenhuma — e a empresa so nasce dentro do assistente.
+
+Para TODA conta recem-criada, pelo Google ou por e-mail, o botao nao pulava:
+mostrava um toast de erro e deixava a pessoa onde estava. O comentario do codigo
+diz *"pular e oferta de verdade, nao armadilha"*; para o caso mais comum era o
+contrario.
+
+So aparece quando ele funciona, ou seja, para quem ja tem empresa e voltou com o
+assistente pela metade. Provado 4 de 4, **com o controle negativo**: sem o
+terceiro caso, "sumiu o botao" e "sumiu para sempre" seriam indistinguiveis.
+
+## O produto passou a avisar por dentro (02/09, tarde)
+
+Pedido do dono, sobre o print da barra superior: ela tinha tema e conta, e nada
+mais. Todo aviso do produto — pagamento, plano, trial — saia so por e-mail, e
+quem esta com o CRM aberto e justamente quem nao vai abrir a caixa de entrada.
+
+**A regra que governa e a licao de 20/08**, quando 8 dos 11 alertas da Central
+eram ruido: fila com lixo dentro ensina a ignorar a fila inteira, e junto com o
+item chato vai embora o alerta de dinheiro.
+
+    so entra o que ja provou valer um e-mail
+    nada do que a pessoa acabou de fazer
+    contador so aparece quando > 0
+    sino vazio e sino vazio, nunca "tudo certo"
+
+**Quatro tipos, e cada um tem chamador vivo.** Dois candidatos obvios foram
+RECUSADOS e o motivo fica registrado: `whatsapp_caiu` (a integracao esta em
+`migrando` e o e-mail nao existe mais — tipo sem chamador e codigo morto com
+aparencia de recurso) e `limite_do_plano` (`lib/leads/actions.ts` ja devolve a
+mensagem na tela, no mesmo segundo).
+
+**Migration 0066**, com tres decisoes de RLS:
+
+    select    is_workspace_member, e so o que e seu
+    update    so `lida_em`, e so a propria linha (using E with check)
+    insert    NENHUM para authenticated
+
+O terceiro e o que importa: **notificacao forjavel e aviso de cobranca
+forjavel**. Bastaria um `POST` no PostgREST com a chave publica — que esta no
+HTML por design — para fabricar "seu pagamento falhou" na tela de outra empresa.
+Quem escreve e `service_role`, pelo mesmo motivo de `error_logs`.
+
+**Um ponto de escrita so** (`lib/notificacoes/registrar.ts`), chamado de onde os
+e-mails ja saem. O e-mail continua saindo: os dois respondem perguntas
+diferentes e leem o mesmo registro, entao nao podem discordar. Falha ali **nao
+derruba o chamador** — perder o aviso na tela e recuperavel, derrubar um webhook
+de pagamento nao.
+
+**Nasceu com purga de 90 dias**, no cron que ja existe — `purge_old_asaas_webhook_events`
+ficou sete migrations sem nunca ter sido agendada.
+
+Provado contra producao, **10 de 10**, com empresa descartavel apagada num
+`finally`: intruso lendo devolve 0 linhas; intruso inserindo toma `42501`;
+**nem o proprio dono da empresa escreve**; tipo fora da lista e `href` para fora
+do dominio recusados pelo `check` (`23514`); purga leva a de 91 dias e mantem a
+de 89. E visto na tela: badge com o numero, ponto vermelho no que custa
+dinheiro, "ha 12 min / ha 3 horas / ontem", 44px em mobile, e o vazio que **nao
+afirma que esta tudo certo**.
+
+**Antes disso, 02/09/2026, madrugada** (o vigia ganhou quem o vigie, fora da
 Vercel; a Meta recebia dado pessoal de quem RECUSOU o banner; e a entrada pelo
 Google entrava sem deixar ninguem escolher a conta)
 

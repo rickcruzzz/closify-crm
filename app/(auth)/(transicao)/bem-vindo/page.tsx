@@ -61,6 +61,26 @@ export default async function BemVindoPage() {
     redirect('/dashboard')
   }
 
+  // ## "Pular por enquanto" só quando ele de fato pula
+  //
+  // `pularOnboarding` (lib/onboarding/actions.ts) conta as empresas da pessoa
+  // ANTES de qualquer coisa e recusa quem não tem nenhuma — a empresa só nasce
+  // dentro do assistente. Ou seja: para toda conta recém-criada, pelo Google ou
+  // por e-mail, o botão não pulava nada. Mostrava um toast de erro pedindo o
+  // nome da empresa e deixava a pessoa exatamente onde estava.
+  //
+  // O comentário no componente diz "pular é oferta de verdade, não armadilha".
+  // Para o caso mais comum era o contrário: a saída existia na tela e reprovava
+  // no clique. Ele continua legítimo para quem já tem empresa e voltou com o
+  // assistente pela metade — ali funciona, e sem saída visível o assistente
+  // vira pedágio.
+  //
+  // `head: true` porque a resposta é um número, não as linhas.
+  const { count: empresas } = await supabase
+    .from('workspace_members')
+    .select('workspace_id', { count: 'exact', head: true })
+    .eq('user_id', user.id)
+
   // `identities` diz por onde a pessoa entrou. Só oferecemos senha a quem
   // entrou por provedor externo: para quem se cadastrou com e-mail a senha já
   // existe, e a tela viraria um passo repetido.
@@ -81,6 +101,7 @@ export default async function BemVindoPage() {
       primeiroNome={primeiroNome}
       email={user.email ?? ''}
       podeDefinirSenha={entrouPorProvedorExterno && !temSenhaPropria}
+      podePular={Boolean(empresas)}
       retomando={estado.status === 'in_progress'}
     />
   )

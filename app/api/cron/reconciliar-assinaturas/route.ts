@@ -15,6 +15,7 @@ import { renderTrialTerminandoEmail } from '@/lib/emails/trial-terminando'
 import { PRO_PLAN_PRICE } from '@/lib/plans'
 import { AVISAR_A_PARTIR_DE } from '@/lib/plans/trial'
 import { appUrl } from '@/lib/app-url'
+import { registrarNotificacao } from '@/lib/notificacoes/registrar'
 
 // `timingSafeEqual` e o client admin (service role) não rodam no Edge, ver
 // mesmo comentário em app/api/webhooks/asaas/route.ts.
@@ -213,7 +214,11 @@ async function avisarQuemEstaPertoDeVencer(supabase: ReturnType<typeof createAdm
 
   const { data: vencendo, error } = await supabase
     .from('subscriptions')
-    .select('asaas_subscription_id, current_period_end, aviso_vencimento_enviado_em')
+    // `workspace_id` entra aqui e não numa segunda consulta: o sino precisa
+    // dele para saber de quem é o aviso, e a linha já está sendo lida.
+    .select(
+      'workspace_id, asaas_subscription_id, current_period_end, aviso_vencimento_enviado_em',
+    )
     .eq('status', 'active')
     .not('asaas_subscription_id', 'is', null)
     .not('current_period_end', 'is', null)
@@ -287,6 +292,19 @@ async function avisarQuemEstaPertoDeVencer(supabase: ReturnType<typeof createAdm
       // manda de novo, e o cliente recebe dois avisos.
       console.error('Aviso de vencimento: e-mail enviado mas a marca não gravou', erroMarca)
     }
+
+    // O sino sai DEPOIS do e-mail confirmado e sob a MESMA trava de um por
+    // dia: escrever antes faria a notificação existir para um aviso que nunca
+    // saiu, e escrever fora da trava encheria o sino com quatro cópias da
+    // escada D-4..D-1 do mesmo vencimento.
+    await registrarNotificacao({
+      workspaceId: linha.workspace_id,
+      tipo: 'plano_vencendo',
+      titulo:
+        restam <= 1 ? 'Seu Pro vence amanhã.' : `Seu Pro vence em ${restam} dias.`,
+      corpo: `R$ ${PRO_PLAN_PRICE}/mês pela empresa inteira. Nada é apagado se vencer.`,
+      href: '/settings/billing?pagar=1',
+    })
 
     resultado.enviados += 1
   }
@@ -403,6 +421,20 @@ async function avisarQuemEstaSaindoDoTrial(supabase: ReturnType<typeof createAdm
     if (erroMarca) {
       console.error('Aviso de trial: e-mail enviado mas a marca não gravou', erroMarca)
     }
+
+    // `?assinar=1` e não `?pagar=1`: quem está em trial não tem assinatura
+    // para pagar, e mandá-la ao diálogo de pagamento abriria uma tela sem
+    // cobrança nenhuma. É a mesma distinção que o e-mail de trial já faz.
+    await registrarNotificacao({
+      workspaceId: empresa.id,
+      tipo: 'trial_terminando',
+      titulo:
+        restam <= 1
+          ? 'Seu período de avaliação termina amanhã.'
+          : `Seu período de avaliação termina em ${restam} dias.`,
+      corpo: `Continue no Pro por R$ ${PRO_PLAN_PRICE}/mês, pela empresa inteira.`,
+      href: '/settings/billing?assinar=1',
+    })
 
     resultado.enviados += 1
   }

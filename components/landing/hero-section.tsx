@@ -104,7 +104,17 @@ export function HeroSection() {
 
               Em telefone o título cede tamanho para o CTA caber na dobra:
               headline grande que esconde o botão não converte ninguém. */}
-          <h1 className="animate-in fade-in slide-in-from-bottom-3 fill-mode-both ease-entrada duration-entrada delay-passo-2 text-titulo-md text-balance sm:text-titulo-lg md:text-titulo-xl">
+          {/* ## Sem `fade-in`, e essa é a única diferença para os irmãos
+              Este h1 é o candidato a LCP da página que recebe o tráfego pago.
+              Com `fade-in` + `fill-mode-both` ele nasce em `opacity: 0`, e
+              elemento transparente NÃO conta como pintado: o LCP não podia
+              acontecer antes de 70ms de atraso + 600ms de duração ≈ 670ms.
+              Medido em produção em 02/09, com a página pronta muito antes —
+              TTFB 127ms, DOMContentLoaded 555ms. Meio segundo de métrica
+              jogado fora por decisão de CSS, sem nenhuma causa de rede.
+              O `slide-in-from-bottom-3` FICA: deslocar não esconde o pixel, e
+              o movimento de entrada continua existindo. Só a opacidade sai. */}
+          <h1 className="animate-in slide-in-from-bottom-3 fill-mode-both ease-entrada duration-entrada delay-passo-2 text-titulo-md text-balance sm:text-titulo-lg md:text-titulo-xl">
             <span className="sr-only">Velo Funil, CRM para pequenos negócios. </span>
             O WhatsApp guarda a conversa. Não guarda o cliente.
           </h1>

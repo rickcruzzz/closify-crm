@@ -89,12 +89,24 @@ export function PasswordField({
           onChange={(e) => onChange(e.target.value)}
         />
 
+        {/* ## Alvo de 44px sem crescer um pixel na tela
+            `size="icon-sm"` desenha 36px no celular. O mínimo de toque é 44, e
+            estes dois botões vivem dentro dos DOIS campos de senha do
+            cadastro — o passo de maior atrito de todo o funil pago, e o último
+            lugar onde vale economizar precisão de dedo.
+            Aumentar o botão não serve: o campo tem `h-11` (44px) e dois
+            controles de 44px lado a lado dentro dele comeriam a área onde a
+            senha é digitada. `after:-inset-1` estende só a REGIÃO CLICÁVEL em
+            4px por lado (36 + 8 = 44) sem mexer no desenho.
+            Some em `md:`, onde o apontador é mouse e a regra não se aplica —
+            mesma divisão da correção de alvo de toque de 18/08. */}
         <div className="absolute top-1/2 right-1 flex -translate-y-1/2 items-center">
           {valor && visivel && (
             <Button
               type="button"
               variant="ghost"
               size="icon-sm"
+              className="relative after:absolute after:-inset-1 after:content-[''] md:after:hidden"
               aria-label={copiada ? 'Senha copiada' : 'Copiar senha'}
               onClick={copiar}
               disabled={desabilitado}
@@ -110,6 +122,7 @@ export function PasswordField({
             type="button"
             variant="ghost"
             size="icon-sm"
+            className="relative after:absolute after:-inset-1 after:content-[''] md:after:hidden"
             aria-label={visivel ? 'Ocultar senha' : 'Mostrar senha'}
             onClick={() => setVisivel((v) => !v)}
             disabled={desabilitado}

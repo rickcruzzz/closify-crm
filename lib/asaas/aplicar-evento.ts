@@ -5,6 +5,7 @@ import { revalidatePath } from 'next/cache'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { dadosDeCorrespondencia } from '@/lib/analytics/dados-de-correspondencia'
 import { getResend } from '@/lib/resend/client'
+import { registrarNotificacao } from '@/lib/notificacoes/registrar'
 import { renderPagamentoConfirmadoEmail } from '@/lib/emails/pagamento-confirmado'
 import { renderPagamentoAtrasadoEmail } from '@/lib/emails/pagamento-atrasado'
 import { enviarConversaoDeCompra } from '@/lib/analytics/meta-conversions'
@@ -135,11 +136,41 @@ export async function aplicarEventoAsaas(params: {
   // Pagamento confirmado é o único momento em que o produto tinha algo a
   // dizer e ficava calado, liberação do Pro é assíncrona, sem aviso não dá
   // pra saber quando voltar a olhar.
+  // ## O sino sai DO MESMO ponto que o e-mail, e não de um lugar novo
+  //
+  // Os dois respondem perguntas diferentes — quem está com o CRM aberto vê o
+  // sino, quem não abre há três dias precisa do e-mail —, mas descrevem o
+  // MESMO fato. Escritos em lugares diferentes, discordariam na primeira
+  // mudança de texto, e o cliente veria a tela dizendo uma coisa e a caixa de
+  // entrada dizendo outra sobre a própria cobrança dele.
+  //
+  // `anterior?.workspace_id` já está em mãos: foi lido acima para o histórico,
+  // então isto não custa uma consulta a mais.
+  const empresaDoEvento = anterior?.workspace_id ?? null
+
   if (status === 'active' && matched === true) {
     await enviarEmailDoWebhook(supabase, subscriptionId, renderPagamentoConfirmadoEmail)
     await enviarConversaoParaMeta(supabase, subscriptionId, eventId)
+    if (empresaDoEvento) {
+      await registrarNotificacao({
+        workspaceId: empresaDoEvento,
+        tipo: 'pagamento_confirmado',
+        titulo: 'Pagamento confirmado. O Pro está ativo.',
+        corpo: 'Todos os recursos liberados para a empresa inteira.',
+        href: '/settings/billing',
+      })
+    }
   } else if (status === 'past_due' && matched === true) {
     await enviarEmailDoWebhook(supabase, subscriptionId, renderPagamentoAtrasadoEmail)
+    if (empresaDoEvento) {
+      await registrarNotificacao({
+        workspaceId: empresaDoEvento,
+        tipo: 'pagamento_atrasado',
+        titulo: 'O pagamento não foi confirmado.',
+        corpo: 'Regularize para o Pro continuar valendo. Nada é apagado.',
+        href: '/settings/billing?pagar=1',
+      })
+    }
   }
 
   return { ok: true, duplicate: false, matched: matched === true }

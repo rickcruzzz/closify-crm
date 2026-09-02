@@ -29,6 +29,15 @@ export type StatusDeFeedback = 'aberto' | 'em_andamento' | 'resolvido' | 'descar
 // tres itens que nascem e morrem com o relato, e nenhuma pergunta deste
 // produto comeca com "quais relatos tem PDF".
 export type AnexoDeFeedback = { caminho: string; nome: string; tamanho: number }
+// Os avisos que o produto dá dentro da própria tela (0066). A lista canônica,
+// com o porquê de cada exclusão, vive em `lib/notificacoes/tipos.ts` — aqui só
+// o formato. Quatro, e cada um tem um chamador vivo: tipo sem chamador é
+// código morto com aparência de recurso.
+export type TipoDeNotificacao =
+  | 'pagamento_confirmado'
+  | 'pagamento_atrasado'
+  | 'plano_vencendo'
+  | 'trial_terminando'
 
 /**
  * Os campos de empresa acrescentados em 0030.
@@ -676,6 +685,45 @@ export type Database = {
         }
         Relationships: []
       }
+      notificacoes: {
+        Row: {
+          id: string
+          workspace_id: string
+          // Nulo = para toda a empresa, que é o caso da maioria: cobrança e
+          // plano são fatos da EMPRESA, não de uma pessoa.
+          user_id: string | null
+          // `check` no banco (0066), não enum — a lição de `deal_stage`, que
+          // virou enum e hoje impede pipeline customizável. Acrescentar um
+          // tipo exige migration de propósito: é o que impede a fila de
+          // encher com aviso sem valor, a lição de 20/08.
+          tipo: TipoDeNotificacao
+          titulo: string
+          corpo: string | null
+          // Caminho interno, nunca URL absoluta: `href` gravado por quem
+          // escreve e renderizado como link vira phishing se puder sair do
+          // domínio. O `check` da 0066 recusa o que não começa com `/`.
+          href: string | null
+          criada_em: string
+          lida_em: string | null
+        }
+        Insert: {
+          id?: string
+          workspace_id: string
+          user_id?: string | null
+          tipo: TipoDeNotificacao
+          titulo: string
+          corpo?: string | null
+          href?: string | null
+          criada_em?: string
+          lida_em?: string | null
+        }
+        Update: {
+          // Só `lida_em` muda na prática: a policy de update da 0066 existe
+          // para quem LÊ marcar como lida, e nada mais.
+          lida_em?: string | null
+        }
+        Relationships: []
+      }
       subscriptions: {
         Row: {
           id: string
@@ -1001,6 +1049,13 @@ export type Database = {
       // relato de cliente — "cinco pessoas pediram exportação em CSV" continua
       // valendo um ano depois, ao contrário de um erro técnico.
       purge_old_feedback: {
+        Args: Record<string, never>
+        Returns: number
+      }
+      // 90 dias (0066): aviso de três meses atrás não muda decisão nenhuma. O
+      // histórico de dinheiro que importa vive em `assinatura_eventos` (0055),
+      // append-only, e não é tocado por esta purga.
+      purge_old_notificacoes: {
         Args: Record<string, never>
         Returns: number
       }

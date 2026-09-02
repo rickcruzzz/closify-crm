@@ -212,6 +212,20 @@
   }
   body {
     @apply bg-background text-foreground;
+
+    /* ESPAÇO RESERVADO PARA O BANNER DE CONSENTIMENTO.
+       Ele é `fixed`, então não empurra nada e o fim do documento fica atrás
+       dele. Numa página LONGA isso é só estética — rolar um pouco mais
+       resolve. Numa página CURTA é um beco: medido em produção em 02/09, em
+       390×659, o `/cadastro` tinha `scrollY 144 == maxScroll 144` com o botão
+       "Criar conta" em 539..583 e o banner começando em 534. A página já
+       estava no fim e o clique caía no banner — quem chegava de anúncio pelo
+       telefone não tinha como criar conta.
+       O valor é escrito pelo próprio banner (`banner-consentimento.tsx`), que
+       é o único que sabe a altura real: ela muda com a largura, com o zoom de
+       fonte do sistema e com a quebra do texto. Zero quando ele não existe,
+       então isto não custa nada nas outras 99% das visitas. */
+    padding-bottom: var(--altura-do-banner, 0px);
   }
   html {
     @apply font-sans;

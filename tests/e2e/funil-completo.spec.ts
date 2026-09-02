@@ -85,7 +85,7 @@ test.describe('funil completo: landing → cadastro → Pro → e-mail', () => {
     }
   })
 
-  test('1. "Assinar Pro" na landing leva ao cadastro carregando a intenção', async () => {
+  test('1. o CTA do Pro na landing leva ao cadastro carregando a intenção', async () => {
     const errosDeConsole: string[] = []
     pagina.on('console', (msg) => {
       if (msg.type() === 'error') errosDeConsole.push(msg.text())
@@ -102,7 +102,12 @@ test.describe('funil completo: landing → cadastro → Pro → e-mail', () => {
     await expect(h1).toContainText('Velo Funil')
     await expect(h1).toContainText('O WhatsApp guarda a conversa')
 
-    const assinar = pagina.getByRole('link', { name: /assinar pro/i }).first()
+    // Localizado pelo `href`, não pelo texto: o rótulo era "Assinar Pro" e
+    // mudou em 02/09 porque o clique não assina nada — leva à mesma tela de
+    // conta grátis, e o checkout só existe depois do e-mail de confirmação.
+    // O que este teste protege é o `?plano=pro` atravessar, e isso não depende
+    // de qual palavra está no botão.
+    const assinar = pagina.locator('a[href="/cadastro?plano=pro"]').first()
     // `?plano=pro` é o elo que faz este clique valer alguma coisa: sem ele o
     // botão levaria ao MESMO destino do Free e a intenção de compra morreria
     // no cadastro. O parâmetro vira cookie no `signUp` e atravessa a ida ao
