@@ -23,9 +23,15 @@ import {
   pausarCampanha,
 } from '@/lib/dono/anuncio-actions'
 import type { DesempenhoDaCampanha, ResumoDaAtribuicao } from '@/lib/dono/atribuicao'
+import {
+  diagnosticar,
+  rotuloDoObjetivo,
+  type Impedimento,
+} from '@/lib/dono/diagnostico-do-anuncio'
 import { formatarDinheiro, formatarTempoRelativo } from '@/lib/dono/formato'
 import type { ProntidaoDaConta } from '@/lib/dono/meta-ads'
 import { cn } from '@/lib/utils'
+import { CardDeFalha, NumeroCard } from './numeros'
 
 /**
  * A página de anúncio, nos dois estados.
@@ -49,16 +55,37 @@ export function PainelDoAnuncio({
   mensalidade: number
 }) {
   const jaGastou = resumo.gastoTotal > 0
+  const impedimentos = diagnosticar(prontidao)
+
+  // Quantos anúncios pendem de cada campanha, para o botão Ligar saber que não
+  // adianta clicar. `DesempenhoDaCampanha` vem do cruzamento com o banco e não
+  // carrega a árvore; o mapa liga as duas sem duplicar o tipo.
+  const anunciosPorCampanha = new Map(prontidao.campanhas.map((c) => [c.id, c.totalDeAnuncios]))
 
   return (
     <div className="flex flex-col gap-8">
+      {/* Primeiro de tudo: o que impede de rodar. Um painel bonito acima de
+          uma campanha que não veicula é pior que nenhum painel. */}
+      {impedimentos.length > 0 && <Impedimentos lista={impedimentos} />}
+
+      <Dinheiro saude={prontidao.saude} moeda={prontidao.moeda} />
+
       {jaGastou ? (
         <Resultado resumo={resumo} mensalidade={mensalidade} />
       ) : (
         <Prontidao prontidao={prontidao} />
       )}
 
-      <Campanhas campanhas={desempenho} podeAgir={prontidao.podeAgir} jaGastou={jaGastou} />
+      <Serie serie={prontidao.serie} />
+
+      <Arvore campanhas={prontidao.campanhas} />
+
+      <Campanhas
+        campanhas={desempenho}
+        podeAgir={prontidao.podeAgir}
+        jaGastou={jaGastou}
+        anunciosPorCampanha={anunciosPorCampanha}
+      />
 
       {prontidao.recomendacoesDaMeta.length > 0 && (
         <section className="flex flex-col gap-3">
@@ -73,6 +100,203 @@ export function PainelDoAnuncio({
         </section>
       )}
     </div>
+  )
+}
+
+/**
+ * O que impede de rodar, no topo e antes de qualquer número.
+ *
+ * Trava em vermelho, desperdício em âmbar — a mesma escala de `/dono/alertas`.
+ * Cada item diz o que fazer, porque aviso sem saída devolve o problema para
+ * quem lê.
+ */
+function Impedimentos({ lista }: { lista: Impedimento[] }) {
+  return (
+    <section className="flex flex-col gap-3">
+      <h2 className="text-lg font-semibold">O que impede de rodar</h2>
+      <ul className="flex flex-col gap-2">
+        {lista.map((i, idx) => {
+          const trava = i.tipo === 'trava'
+          return (
+            <li
+              key={`${i.titulo}-${idx}`}
+              className={cn(
+                'flex gap-3 rounded-xl p-4 ring-1',
+                trava
+                  ? 'bg-destructive/5 ring-destructive/25'
+                  : 'bg-amber-500/5 ring-amber-500/25',
+              )}
+            >
+              <AlertTriangle
+                className={cn(
+                  'mt-0.5 size-4 shrink-0',
+                  trava ? 'text-destructive' : 'text-amber-600 dark:text-amber-500',
+                )}
+              />
+              <div className="flex flex-col gap-1">
+                <p className="text-sm font-medium">
+                  {i.titulo}
+                  {i.campanha && (
+                    <span className="text-muted-foreground font-normal"> · {i.campanha}</span>
+                  )}
+                </p>
+                <p className="text-muted-foreground text-sm">{i.oQueFazer}</p>
+              </div>
+            </li>
+          )
+        })}
+      </ul>
+    </section>
+  )
+}
+
+/** O dinheiro da conta: o que ela já gastou, o que tem e até onde pode ir. */
+function Dinheiro({
+  saude,
+  moeda,
+}: {
+  saude: ProntidaoDaConta['saude']
+  moeda: string
+}) {
+  if (!saude.dados) {
+    return (
+      <CardDeFalha mensagem="O dinheiro da conta" detalhe={saude.erro} />
+    )
+  }
+  const d = saude.dados
+  return (
+    <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      <NumeroCard
+        rotulo="Já gastou"
+        valor={formatarDinheiro(d.gastoTotal)}
+        icone={Wallet}
+        nota="na vida da conta"
+      />
+      <NumeroCard
+        rotulo="Saldo"
+        valor={formatarDinheiro(d.saldo)}
+        icone={Wallet}
+        // Saldo zero é o normal em conta de pós-pago, e por isso a nota
+        // explica em vez de o card ficar vermelho.
+        nota={d.saldo === 0 ? 'zero é normal em pós-pago' : undefined}
+      />
+      <NumeroCard
+        rotulo="Teto de gasto"
+        valor={d.tetoDeGasto > 0 ? formatarDinheiro(d.tetoDeGasto) : 'sem teto'}
+        icone={CircleDashed}
+      />
+      <NumeroCard
+        rotulo="Situação"
+        valor={d.status === 1 ? 'Ativa' : `Status ${d.status}`}
+        icone={d.status === 1 ? CheckCircle2 : XCircle}
+        tom={d.status === 1 ? undefined : 'ruim'}
+        nota={moeda}
+      />
+    </section>
+  )
+}
+
+/**
+ * O gasto dia a dia, em barras de CSS.
+ *
+ * Sem biblioteca de gráfico: a Central não tem uma, e não vai ganhar
+ * dependência por causa de uma tela local. `FunilDeAtivacao` já resolve o
+ * mesmo problema com `div` proporcional, e este segue o padrão dele.
+ */
+function Serie({ serie }: { serie: ProntidaoDaConta['serie'] }) {
+  if (!serie.dados) return <CardDeFalha mensagem="Gasto por dia" detalhe={serie.erro} />
+  if (serie.dados.length === 0) return null
+
+  const teto = Math.max(...serie.dados.map((d) => d.gasto), 1)
+
+  return (
+    <section className="flex flex-col gap-3">
+      <h2 className="text-lg font-semibold">Gasto por dia, últimos 30</h2>
+      <div className="ring-foreground/10 flex h-32 items-end gap-1 rounded-xl p-4 ring-1">
+        {serie.dados.map((d) => (
+          <div
+            key={d.dia}
+            className="bg-primary/70 hover:bg-primary min-w-0 flex-1 rounded-t transition-colors"
+            style={{ height: `${Math.max((d.gasto / teto) * 100, 2)}%` }}
+            title={`${d.dia}: ${formatarDinheiro(d.gasto)} · ${d.cliques} cliques`}
+          />
+        ))}
+      </div>
+    </section>
+  )
+}
+
+/**
+ * A árvore: campanha, conjunto, anúncio.
+ *
+ * O conjunto é onde moram o público e o objetivo de otimização, e nenhum dos
+ * dois existe no nível da campanha — era por isso que a tela anterior não
+ * tinha como mostrar que esta conta otimiza por clique.
+ */
+function Arvore({ campanhas }: { campanhas: ProntidaoDaConta['campanhas'] }) {
+  if (campanhas.length === 0) return null
+
+  return (
+    <section className="flex flex-col gap-3">
+      <h2 className="text-lg font-semibold">Como está montado</h2>
+      <div className="flex flex-col gap-3">
+        {campanhas.map((c) => (
+          <div key={c.id} className="ring-foreground/10 rounded-xl p-4 ring-1">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="font-medium">{c.nome}</span>
+              <Badge variant={c.ativa ? 'default' : 'secondary'}>
+                {c.ativa ? 'No ar' : 'Pausada'}
+              </Badge>
+              {c.objetivo && (
+                <span className="text-muted-foreground text-xs">
+                  {rotuloDoObjetivo(c.objetivo)}
+                </span>
+              )}
+            </div>
+
+            {c.conjuntos.length === 0 ? (
+              <p className="text-muted-foreground mt-3 text-sm">Nenhum conjunto.</p>
+            ) : (
+              <ul className="mt-3 flex flex-col gap-3">
+                {c.conjuntos.map((s) => (
+                  <li key={s.id} className="border-border border-l-2 pl-4">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="text-sm font-medium">{s.nome}</span>
+                      <Badge variant="secondary" className="text-xs">
+                        {s.status === 'ACTIVE' ? 'No ar' : 'Pausado'}
+                      </Badge>
+                    </div>
+                    <p className="text-muted-foreground mt-1 text-xs">
+                      {[
+                        s.objetivo ? `otimiza por ${rotuloDoObjetivo(s.objetivo)}` : null,
+                        s.publico,
+                        s.orcamentoDiario
+                          ? `${formatarDinheiro(s.orcamentoDiario)}/dia`
+                          : null,
+                      ]
+                        .filter(Boolean)
+                        .join(' · ')}
+                    </p>
+                    <p
+                      className={cn(
+                        'mt-1 text-xs',
+                        s.totalDeAnuncios === 0
+                          ? 'text-destructive font-medium'
+                          : 'text-muted-foreground',
+                      )}
+                    >
+                      {s.totalDeAnuncios === 0
+                        ? 'nenhum anúncio — não veicula'
+                        : `${s.totalDeAnuncios} anúncio(s)`}
+                    </p>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        ))}
+      </div>
+    </section>
   )
 }
 
@@ -258,10 +482,12 @@ function Campanhas({
   campanhas,
   podeAgir,
   jaGastou,
+  anunciosPorCampanha,
 }: {
   campanhas: DesempenhoDaCampanha[]
   podeAgir: boolean
   jaGastou: boolean
+  anunciosPorCampanha: Map<string, number>
 }) {
   if (campanhas.length === 0) {
     return (
@@ -284,6 +510,7 @@ function Campanhas({
             campanha={campanha}
             podeAgir={podeAgir}
             jaGastou={jaGastou}
+            totalDeAnuncios={anunciosPorCampanha.get(campanha.id) ?? 0}
           />
         ))}
       </ul>
@@ -295,10 +522,13 @@ function LinhaDeCampanha({
   campanha,
   podeAgir,
   jaGastou,
+  totalDeAnuncios,
 }: {
   campanha: DesempenhoDaCampanha
   podeAgir: boolean
   jaGastou: boolean
+  /** `0` desabilita o botao Ligar: sem anuncio, ligar nao veicula nada. */
+  totalDeAnuncios: number
 }) {
   const [pendente, setPendente] = React.useState(false)
   const [editandoOrcamento, setEditandoOrcamento] = React.useState(false)
@@ -371,8 +601,23 @@ function LinhaDeCampanha({
           <Button
             variant="outline"
             size="sm"
-            disabled={!podeAgir || pendente}
-            title={podeAgir ? undefined : 'Falta a permissão ads_management no token'}
+            // ## Ligar fica desabilitado quando nao ha anuncio
+            //
+            // Medido em 02/09: a campanha desta conta tem conjunto e criativo
+            // e ZERO anuncios. Clicar em Ligar deixaria o status `ACTIVE` sem
+            // veicular coisa nenhuma — e a tela passaria a afirmar, pelo
+            // proprio badge, que o anuncio esta no ar.
+            //
+            // Botao que nao faz nada e pior que botao ausente: ele consome a
+            // decisao e devolve silencio.
+            disabled={!podeAgir || pendente || (!campanha.ativa && totalDeAnuncios === 0)}
+            title={
+              !podeAgir
+                ? 'Falta a permissão ads_management no token'
+                : !campanha.ativa && totalDeAnuncios === 0
+                  ? 'Esta campanha não tem anúncio: ligar não veicularia nada'
+                  : undefined
+            }
             onClick={() => setEditandoOrcamento((antes) => !antes)}
           >
             <Wallet aria-hidden className="size-4" />

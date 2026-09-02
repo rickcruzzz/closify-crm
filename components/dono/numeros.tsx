@@ -172,7 +172,8 @@ export function Numeros({
   )
 }
 
-function NumeroCard({
+/** Exportado desde 02/09: a tela de anuncio reusa em vez de manter uma copia. */
+export function NumeroCard({
   rotulo,
   valor,
   icone: Icone,
@@ -212,7 +213,8 @@ function NumeroCard({
   )
 }
 
-function CardDeFalha({ mensagem, detalhe }: { mensagem: string; detalhe: string }) {
+/** Idem. Bloco de fonte externa fora do ar, com o erro cru. */
+export function CardDeFalha({ mensagem, detalhe }: { mensagem: string; detalhe: string }) {
   return (
     <Card size="sm">
       <CardHeader>

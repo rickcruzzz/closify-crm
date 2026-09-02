@@ -30,16 +30,24 @@ export default async function PaginaDoAnuncio() {
         </header>
 
 
+        {/* ## Sem token e "a Meta recusou" pedem coisas diferentes
+            Este bloco so aparece quando a leitura da CONTA falha — as outras
+            degradam sozinhas em `CardDeFalha`, sem derrubar a tela. A
+            instrucao de gerar token so faz sentido no primeiro caso; mostra-la
+            quando o token existe e a Meta esta fora do ar manda a pessoa
+            refazer uma credencial que estava certa. */}
         <Card size="sm">
           <CardContent className="flex flex-col gap-2 py-6">
             <p className="text-sm font-medium">Ainda não consigo ler os números do anúncio.</p>
             <p className="text-muted-foreground text-sm text-pretty">{prontidao.erro}</p>
-            <p className="text-muted-foreground text-sm text-pretty">
-              Para ligar: no Graph API Explorer da Meta, gere um token marcando{' '}
-              <code>ads_read</code> e <code>ads_management</code>, e cole em{' '}
-              <code>META_ADS_TOKEN</code> no <code>.env.local</code>. A página liga sozinha depois
-              disso.
-            </p>
+            {!process.env.META_ADS_TOKEN && (
+              <p className="text-muted-foreground text-sm text-pretty">
+                Para ligar: no Graph API Explorer da Meta, gere um token marcando{' '}
+                <code>ads_read</code> e <code>ads_management</code>, e cole em{' '}
+                <code>META_ADS_TOKEN</code> no <code>.env.local</code>. A página liga sozinha
+                depois disso.
+              </p>
+            )}
           </CardContent>
         </Card>
 

@@ -42,6 +42,88 @@ export type CampanhaDoMeta = {
   orcamentoDiario: number | null
 }
 
+/**
+ * Um conjunto de anúncio: onde moram o público e o objetivo de otimização.
+ *
+ * ## Por que isto precisa aparecer na tela
+ *
+ * A campanha diz quanto gastar; o CONJUNTO diz para quem e otimizando o quê.
+ * Medido em 02/09 nesta conta: `optimization_goal: LINK_CLICKS`, que otimiza
+ * por clique e **não usa o pixel para conversão**. Para aquisição de SaaS é a
+ * configuração errada, e nada na tela anterior mostrava isso — ela parava na
+ * campanha, onde esse campo não existe.
+ */
+export type ConjuntoDeAnuncio = {
+  id: string
+  nome: string
+  status: string
+  campanhaId: string
+  /** `LINK_CLICKS`, `OFFSITE_CONVERSIONS`, `REACH`... */
+  objetivo: string | null
+  /** Em reais por dia. `null` quando o orçamento é da campanha. */
+  orcamentoDiario: number | null
+  /** Público, em texto legível: "Brasil · 18-65". */
+  publico: string | null
+  /** Quantos anúncios pendem deste conjunto. */
+  totalDeAnuncios: number
+}
+
+/**
+ * A campanha com a árvore embaixo dela.
+ *
+ * ## `totalDeAnuncios` está no tipo de propósito
+ *
+ * Medido em 02/09: esta conta tem campanha, conjunto e criativo, e **zero
+ * anúncios**. Uma campanha assim não veicula nada, mesmo `ACTIVE` — e a tela
+ * anterior mostrava "Pausada" com um botão Ligar que não faria efeito nenhum.
+ *
+ * Carregar o número no tipo é o que força a tela a tratar o caso, em vez de
+ * documentá-lo. É a mesma escolha de `EmpresaComEstado` em 30/08, quando o
+ * tipo passou a impedir que uma função que só leu o banco afirmasse quem paga.
+ */
+export type CampanhaCompleta = CampanhaDoMeta & {
+  objetivo: string | null
+  conjuntos: ConjuntoDeAnuncio[]
+  totalDeAnuncios: number
+}
+
+/** O dinheiro da conta, que decide se a campanha chega a rodar. */
+export type SaudeDaConta = {
+  /** Já gasto na vida da conta, em reais. */
+  gastoTotal: number
+  /** Saldo pré-pago. `0` numa conta de pós-pago é normal, não é problema. */
+  saldo: number
+  /** Teto de gasto configurado. `0` significa sem teto. */
+  tetoDeGasto: number
+  /** 1 = ativa. Qualquer outro valor impede veiculação. */
+  status: number
+  /** Motivo da desativação, quando `status` não é 1. */
+  motivoDaDesativacao: number
+}
+
+/** Um dia da série de gasto. */
+export type DiaDeGasto = {
+  dia: string
+  gasto: number
+  cliques: number
+  impressoes: number
+}
+
+/**
+ * O que uma leitura devolve quando pode falhar sozinha.
+ *
+ * ## Por que cada bloco falha por conta própria
+ *
+ * A versão anterior devolvia `ok: false` no primeiro erro, e a página trocava
+ * a tela inteira por um card com a mensagem crua da Meta. Um endpoint fora do
+ * ar apagava saldo, campanhas, pixel e permissões junto.
+ *
+ * É a mesma regra do vigia: `null` significa **não sei**, nunca "está
+ * zerado", e um bloco que não pôde ser lido diz isso no lugar dele enquanto o
+ * resto da tela continua de pé.
+ */
+export type Parcial<T> = { dados: T; erro: null } | { dados: null; erro: string }
+
 /** O retrato da conta: dá para ligar o anúncio? */
 export type ProntidaoDaConta = {
   contaId: string
@@ -53,7 +135,13 @@ export type ProntidaoDaConta = {
   pixelDisparandoDesde: string | null
   /** Quantos eventos por tipo chegaram nos últimos 7 dias. */
   eventos: { nome: string; quantidade: number }[]
-  campanhas: CampanhaDoMeta[]
+  campanhas: CampanhaCompleta[]
+  /** O dinheiro. `erro` quando a leitura falhou — não zero. */
+  saude: Parcial<SaudeDaConta>
+  /** Gasto dia a dia nos últimos 30. Vazio numa conta que nunca gastou. */
+  serie: Parcial<DiaDeGasto[]>
+  /** Públicos salvos na conta. */
+  publicos: Parcial<{ id: string; nome: string; tamanho: number | null }[]>
   /** 0-100, calculado pela própria Meta. */
   notaDaMeta: number | null
   recomendacoesDaMeta: { titulo: string; ganho: string }[]
@@ -101,26 +189,39 @@ export async function lerProntidao(): Promise<Resultado<ProntidaoDaConta>> {
   if (!token) return { ok: false, erro: SEM_TOKEN }
 
   try {
-    const [conta, campanhas, datasets, permissoes] = await Promise.all([
-      graph<never>(`act_${CONTA_DE_ANUNCIO.id}?fields=name,currency,timezone_name`, token),
-      graph<
-        {
-          id: string
-          name: string
-          status: string
-          daily_budget?: string
-          insights?: { data: { spend?: string; clicks?: string; reach?: string }[] }
-        }[]
-      >(
-        `act_${CONTA_DE_ANUNCIO.id}/campaigns?fields=id,name,status,daily_budget,insights.date_preset(last_30d){spend,clicks,reach}&limit=50`,
-        token,
-      ),
-      graph<{ id: string; name: string; last_fired_time?: string }[]>(
-        `act_${CONTA_DE_ANUNCIO.id}/adspixels?fields=id,name,last_fired_time`,
-        token,
-      ),
-      graph<{ permission: string; status: string }[]>('me/permissions', token),
-    ])
+    const [conta, campanhas, conjuntos, anuncios, datasets, permissoes, saude, serie, publicos] =
+      await Promise.all([
+        graph<never>(`act_${CONTA_DE_ANUNCIO.id}?fields=name,currency,timezone_name`, token),
+        graph<
+          {
+            id: string
+            name: string
+            status: string
+            objective?: string
+            daily_budget?: string
+            insights?: { data: { spend?: string; clicks?: string; reach?: string }[] }
+          }[]
+        >(
+          `act_${CONTA_DE_ANUNCIO.id}/campaigns?fields=id,name,status,objective,daily_budget,insights.date_preset(last_30d){spend,clicks,reach}&limit=50`,
+          token,
+        ),
+        graph<CruDoConjunto[]>(
+          `act_${CONTA_DE_ANUNCIO.id}/adsets?fields=id,name,status,campaign_id,optimization_goal,daily_budget,targeting{geo_locations,age_min,age_max}&limit=50`,
+          token,
+        ),
+        graph<{ id: string; adset_id: string; campaign_id: string }[]>(
+          `act_${CONTA_DE_ANUNCIO.id}/ads?fields=id,adset_id,campaign_id&limit=200`,
+          token,
+        ),
+        graph<{ id: string; name: string; last_fired_time?: string }[]>(
+          `act_${CONTA_DE_ANUNCIO.id}/adspixels?fields=id,name,last_fired_time`,
+          token,
+        ),
+        graph<{ permission: string; status: string }[]>('me/permissions', token),
+        lerSaude(token),
+        lerSerie(token),
+        lerPublicos(token),
+      ])
 
     if (conta.error) return { ok: false, erro: conta.error.message }
 
@@ -132,14 +233,40 @@ export async function lerProntidao(): Promise<Resultado<ProntidaoDaConta>> {
 
     const pixel = (datasets.data ?? []).find((d) => d.id === PIXEL_DO_SITE)
 
-    const numero = (v: string | undefined) => Number(v ?? 0) || 0
-    const listaDeCampanhas: CampanhaDoMeta[] = (campanhas.data ?? []).map((c) => {
+    // Anúncios contados por conjunto E por campanha. A Meta devolve os dois
+    // vínculos em cada `ad`, e ter os dois evita reconstruir a árvore de
+    // baixo para cima — que erraria em campanha sem conjunto nenhum.
+    const anunciosPorConjunto = new Map<string, number>()
+    const anunciosPorCampanha = new Map<string, number>()
+    for (const a of anuncios.data ?? []) {
+      anunciosPorConjunto.set(a.adset_id, (anunciosPorConjunto.get(a.adset_id) ?? 0) + 1)
+      anunciosPorCampanha.set(a.campaign_id, (anunciosPorCampanha.get(a.campaign_id) ?? 0) + 1)
+    }
+
+    const conjuntosPorCampanha = new Map<string, ConjuntoDeAnuncio[]>()
+    for (const s of conjuntos.data ?? []) {
+      const lista = conjuntosPorCampanha.get(s.campaign_id) ?? []
+      lista.push({
+        id: s.id,
+        nome: s.name,
+        status: s.status,
+        campanhaId: s.campaign_id,
+        objetivo: s.optimization_goal ?? null,
+        orcamentoDiario: s.daily_budget ? numero(s.daily_budget) / 100 : null,
+        publico: descreverPublico(s.targeting),
+        totalDeAnuncios: anunciosPorConjunto.get(s.id) ?? 0,
+      })
+      conjuntosPorCampanha.set(s.campaign_id, lista)
+    }
+
+    const listaDeCampanhas: CampanhaCompleta[] = (campanhas.data ?? []).map((c) => {
       const i = c.insights?.data[0] ?? {}
       return {
         id: c.id,
         nome: c.name,
         ativa: c.status === 'ACTIVE',
         status: c.status,
+        objetivo: c.objective ?? null,
         // A Meta devolve número como STRING. Somar sem converter concatena em
         // silêncio ("12" + "8" = "128") — erro que passa por revisão e vira
         // decisão de orçamento errada.
@@ -148,6 +275,8 @@ export async function lerProntidao(): Promise<Resultado<ProntidaoDaConta>> {
         alcance: numero(i.reach),
         // Orçamento vem em centavos.
         orcamentoDiario: c.daily_budget ? numero(c.daily_budget) / 100 : null,
+        conjuntos: conjuntosPorCampanha.get(c.id) ?? [],
+        totalDeAnuncios: anunciosPorCampanha.get(c.id) ?? 0,
       }
     })
 
@@ -155,10 +284,7 @@ export async function lerProntidao(): Promise<Resultado<ProntidaoDaConta>> {
       (permissoes.data ?? []).filter((p) => p.status === 'granted').map((p) => p.permission),
     )
 
-    const [nota, eventos] = await Promise.all([
-      lerNotaDaMeta(token),
-      lerEventosDoPixel(token),
-    ])
+    const [nota, eventos] = await Promise.all([lerNotaDaMeta(token), lerEventosDoPixel(token)])
 
     return {
       ok: true,
@@ -172,6 +298,9 @@ export async function lerProntidao(): Promise<Resultado<ProntidaoDaConta>> {
         pixelDisparandoDesde: pixel?.last_fired_time ?? null,
         eventos,
         campanhas: listaDeCampanhas,
+        saude,
+        serie,
+        publicos,
         notaDaMeta: nota.nota,
         recomendacoesDaMeta: nota.recomendacoes,
         podeAgir: concedidas.has('ads_management'),
@@ -179,6 +308,122 @@ export async function lerProntidao(): Promise<Resultado<ProntidaoDaConta>> {
     }
   } catch (err) {
     return { ok: false, erro: err instanceof Error ? err.message : 'Não consegui falar com a Meta.' }
+  }
+}
+
+type CruDoConjunto = {
+  id: string
+  name: string
+  status: string
+  campaign_id: string
+  optimization_goal?: string
+  daily_budget?: string
+  targeting?: {
+    geo_locations?: { countries?: string[]; cities?: { name?: string }[] }
+    age_min?: number
+    age_max?: number
+  }
+}
+
+const numero = (v: string | undefined) => Number(v ?? 0) || 0
+
+/**
+ * O público em uma linha legível: "Brasil · 18-65".
+ *
+ * O `targeting` cru da Meta é um objeto aninhado com dezenas de campos, e
+ * despejá-lo na tela seria mostrar JSON para quem quer saber para quem o
+ * anúncio aparece. Só o que decide isso entra: país (ou cidade) e faixa
+ * etária.
+ */
+function descreverPublico(t: CruDoConjunto['targeting']): string | null {
+  if (!t) return null
+  const partes: string[] = []
+
+  const cidades = (t.geo_locations?.cities ?? []).map((c) => c.name).filter(Boolean)
+  const paises = t.geo_locations?.countries ?? []
+  if (cidades.length > 0) partes.push(cidades.slice(0, 3).join(', '))
+  else if (paises.length > 0) partes.push(paises.includes('BR') ? 'Brasil' : paises.join(', '))
+
+  if (t.age_min || t.age_max) partes.push(`${t.age_min ?? 13}-${t.age_max ?? 65} anos`)
+
+  return partes.length > 0 ? partes.join(' · ') : null
+}
+
+/** Saldo, gasto e teto — o que decide se a campanha chega a rodar. */
+async function lerSaude(token: string): Promise<Parcial<SaudeDaConta>> {
+  try {
+    const r = (await graph<never>(
+      `act_${CONTA_DE_ANUNCIO.id}?fields=amount_spent,balance,spend_cap,account_status,disable_reason`,
+      token,
+    )) as unknown as {
+      error?: { message: string }
+      amount_spent?: string
+      balance?: string
+      spend_cap?: string
+      account_status?: number
+      disable_reason?: number
+    }
+    if (r.error) return { dados: null, erro: r.error.message }
+    return {
+      // Os três vêm em centavos, como o orçamento.
+      dados: {
+        gastoTotal: numero(r.amount_spent) / 100,
+        saldo: numero(r.balance) / 100,
+        tetoDeGasto: numero(r.spend_cap) / 100,
+        status: r.account_status ?? 0,
+        motivoDaDesativacao: r.disable_reason ?? 0,
+      },
+      erro: null,
+    }
+  } catch (err) {
+    return { dados: null, erro: err instanceof Error ? err.message : 'falhou' }
+  }
+}
+
+/** Gasto dia a dia nos últimos 30, para a série da tela. */
+async function lerSerie(token: string): Promise<Parcial<DiaDeGasto[]>> {
+  try {
+    const r = await graph<
+      { date_start: string; spend?: string; clicks?: string; impressions?: string }[]
+    >(
+      `act_${CONTA_DE_ANUNCIO.id}/insights?fields=spend,clicks,impressions&date_preset=last_30d&time_increment=1`,
+      token,
+    )
+    if (r.error) return { dados: null, erro: r.error.message }
+    return {
+      dados: (r.data ?? []).map((d) => ({
+        dia: d.date_start,
+        gasto: numero(d.spend),
+        cliques: numero(d.clicks),
+        impressoes: numero(d.impressions),
+      })),
+      erro: null,
+    }
+  } catch (err) {
+    return { dados: null, erro: err instanceof Error ? err.message : 'falhou' }
+  }
+}
+
+/** Públicos salvos, para saber o que já existe antes de criar outro. */
+async function lerPublicos(
+  token: string,
+): Promise<Parcial<{ id: string; nome: string; tamanho: number | null }[]>> {
+  try {
+    const r = await graph<{ id: string; name: string; approximate_count_lower_bound?: number }[]>(
+      `act_${CONTA_DE_ANUNCIO.id}/customaudiences?fields=id,name,approximate_count_lower_bound&limit=25`,
+      token,
+    )
+    if (r.error) return { dados: null, erro: r.error.message }
+    return {
+      dados: (r.data ?? []).map((p) => ({
+        id: p.id,
+        nome: p.name,
+        tamanho: p.approximate_count_lower_bound ?? null,
+      })),
+      erro: null,
+    }
+  } catch (err) {
+    return { dados: null, erro: err instanceof Error ? err.message : 'falhou' }
   }
 }
 
