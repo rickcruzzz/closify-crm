@@ -8,6 +8,7 @@ import { getCurrentUserAndWorkspace } from '@/lib/supabase/workspace'
 import { PageHeader } from '@/components/layout/page-header'
 import { KanbanBoard } from '@/components/kanban/kanban-board'
 import { GettingStartedCard } from '@/components/kanban/getting-started-card'
+import { CapturaDeComponente } from '@/components/erros/captura-de-componente'
 import { CABECALHOS } from '@/lib/telas/cabecalhos'
 
 export const metadata: Metadata = { title: 'Funil' }
@@ -87,18 +88,37 @@ export default async function KanbanPage({
           deve receber tutorial. */}
       {board.deals.length === 0 && <GettingStartedCard />}
 
-      <KanbanBoard
-        initialDeals={deals}
-        totalPorEtapa={board.totalPorEtapa}
-        leads={leads}
-        members={members}
-        currentUserId={user.id}
-        // `Map` não sobrevive à serialização servidor→cliente; vai como pares.
-        proximasAcoes={Array.from(proximasAcoes)}
-        calendarConectado={calendarConectado}
-        negocioInicial={negocioParaAbrir}
-        etapaEmFoco={etapaEmFoco}
-      />
+      {/* ## Por que o boundary de classe vem AQUI, e não só no layout
+
+          `CapturaDeComponente` já existe em `app/(dashboard)/layout.tsx:153`,
+          e para erro de página ela nunca é alcançada: no App Router o
+          `error.tsx` da rota é um boundary MAIS INTERNO que qualquer coisa no
+          layout, e captura primeiro.
+
+          O problema é que o Next **não passa `componentStack` para o
+          `error.tsx`** — só um boundary de classe recebe
+          `errorInfo.componentStack`, via `componentDidCatch`. Resultado
+          medido: as duas linhas de React #185 desta manhã chegaram em
+          `error_logs` com `component_stack` VAZIO, e a coluna existe (0058)
+          exatamente para nomear o componente que entra em laço.
+
+          Dentro da página, ela captura antes do `error.tsx` e o nome do
+          componente chega. O `error.tsx` continua como rede: se este boundary
+          falhar, a tela de erro ainda aparece. */}
+      <CapturaDeComponente origem="dashboard">
+        <KanbanBoard
+          initialDeals={deals}
+          totalPorEtapa={board.totalPorEtapa}
+          leads={leads}
+          members={members}
+          currentUserId={user.id}
+          // `Map` não sobrevive à serialização servidor→cliente; vai como pares.
+          proximasAcoes={Array.from(proximasAcoes)}
+          calendarConectado={calendarConectado}
+          negocioInicial={negocioParaAbrir}
+          etapaEmFoco={etapaEmFoco}
+        />
+      </CapturaDeComponente>
     </div>
   )
 }

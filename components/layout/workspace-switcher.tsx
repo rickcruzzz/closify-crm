@@ -114,7 +114,11 @@ export function WorkspaceSwitcher({
     setEnviando(true)
     const resultado = await trocarEmpresa(id)
     setEnviando(false)
-    if (resultado?.error) setIdEmTroca(null)
+    // Limpo nos DOIS caminhos. Antes so o erro zerava, e o sucesso deixava o
+    // spinner ligado — mascarado porque `activeId` muda no refresh e a linha
+    // passa a mostrar o `Check`. Estado que so e limpo pela metade sobrevive
+    // ao dia em que o mascaramento parar de acontecer.
+    setIdEmTroca(null)
     if (resultado?.error) {
       toast.error(resultado.error)
       return
