@@ -6,6 +6,8 @@ import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import {
   CHAVE_CONSENTIMENTO,
+  COOKIE_CONSENTIMENTO,
+  MAX_AGE_CONSENTIMENTO,
   interpretarConsentimento,
   type Consentimento,
 } from '@/lib/analytics/consentimento'
@@ -67,6 +69,28 @@ export function BannerConsentimento() {
     } catch {
       // Sem storage a escolha não sobrevive ao recarregamento, mas vale para
       // esta visita: some o banner e o pixel liga (ou não) agora.
+    }
+
+    // ## O mesmo valor num cookie, porque o SERVIDOR não lê `localStorage`
+    //
+    // Enquanto a decisão vivia só no storage, a Conversions API disparava
+    // independentemente dela: quem recusava e se cadastrava tinha e-mail,
+    // telefone, nome, cidade, estado e CEP enviados à Meta do mesmo jeito.
+    // O pixel do navegador sempre respeitou; a CAPI, que é justamente quem
+    // manda o dado pessoal, nunca consultou nada.
+    //
+    // Escrito no MESMO instante e com a MESMA chave versionada, para as duas
+    // fontes não divergirem. `SameSite=Lax` porque ele precisa sobreviver à
+    // volta do OAuth do Google; sem `httpOnly` porque não é segredo — é a
+    // escolha da pessoa, e o cliente também a lê.
+    try {
+      const seguro = window.location.protocol === 'https:' ? '; Secure' : ''
+      document.cookie =
+        `${COOKIE_CONSENTIMENTO}=${resposta}; Max-Age=${MAX_AGE_CONSENTIMENTO}` +
+        `; Path=/; SameSite=Lax${seguro}`
+    } catch {
+      // Cookie bloqueado: a CAPI não recebe o sinal e, por desenho, NÃO envia.
+      // Falhar para o lado de não rastrear é o comportamento certo.
     }
     window.dispatchEvent(new CustomEvent(EVENTO_CONSENTIMENTO, { detail: resposta }))
     setDecidido(true)

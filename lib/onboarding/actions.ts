@@ -1,7 +1,9 @@
 'use server'
 
 import { revalidatePath } from 'next/cache'
-import { headers } from 'next/headers'
+
+import { COOKIE_CONSENTIMENTO, podeRastrear } from '@/lib/analytics/consentimento'
+import { cookies, headers } from 'next/headers'
 import { z } from '@/lib/validations/zod'
 
 import { createClient } from '@/lib/supabase/server'
@@ -219,6 +221,12 @@ export async function finalizarOnboarding(values: unknown) {
           utm_campaign: atribuicao.campaign ?? null,
           fbc: atribuicao.fbc ?? null,
           fbp: atribuicao.fbp ?? null,
+          // Guardado aqui porque o `Purchase` nasce no webhook do Asaas, onde
+          // não há cookie nem visitante. Sem isto, o evento que mais manda
+          // dado pessoal seria o único fora da regra do banner. Ver 0065.
+          consentimento_analitico: podeRastrear(
+            (await cookies()).get(COOKIE_CONSENTIMENTO)?.value ?? null,
+          ),
         })
         .eq('id', workspaceId)
 
@@ -249,7 +257,19 @@ export async function finalizarOnboarding(values: unknown) {
       const cabecalhos = await headers()
       await enviarConversaoDeRegistro({
         email: user.email,
-        eventId: crypto.randomUUID(),
+        // ## Determinístico, como o `Lead` já era
+        //
+        // Era `crypto.randomUUID()`, o único evento de conversão do funil sem
+        // id estável. Um reenvio — retentativa de rede, dois cliques, ou o
+        // mesmo onboarding concluído de novo — virava dois
+        // `CompleteRegistration` no dataset, inflando a contagem que o
+        // algoritmo usa para aprender.
+        //
+        // `cadastro:${userId}` porque a chave natural é a PESSOA: um usuário
+        // conclui o próprio onboarding uma vez, e a Meta deduplica sozinha
+        // quando o id se repete. Mesma escolha do `lead:${userId}`, que foi
+        // decidida com três casos de recadastro medidos contra produção.
+        eventId: `cadastro:${user.id}`,
         fbc: atribuicao?.fbc,
         fbp: atribuicao?.fbp,
         telefone: user.phone || null,

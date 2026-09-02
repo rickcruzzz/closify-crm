@@ -1,35 +1,84 @@
 import { describe, expect, it } from 'vitest'
 
-import { interpretarConsentimento, podeRastrear } from './consentimento'
+import {
+  COOKIE_CONSENTIMENTO,
+  interpretarConsentimento,
+  lerConsentimentoDoCookie,
+  podeRastrear,
+} from './consentimento'
 
 /**
- * O caso que motivou cada teste é o mesmo: rastrear alguém que não consentiu é
- * o defeito caro aqui — não quebra tela nenhuma, não aparece em log, e só é
- * descoberto por quem fiscaliza. Por isso a régua é "na dúvida, não rastreia".
+ * Trava que o consentimento vale para o SERVIDOR, não só para o navegador.
+ *
+ * ## O defeito que estes casos protegem
+ *
+ * O pixel do navegador sempre respeitou o banner, com duas cercas. A
+ * Conversions API — que envia e-mail, telefone, nome, cidade, estado, CEP e
+ * `external_id` — não consultava nada: a decisão vivia em `localStorage`, e o
+ * servidor não lê `localStorage`.
+ *
+ * Quem clicava "Recusar" e se cadastrava tinha tudo isso enviado à Meta. Nada
+ * falhava, nenhum teste quebrava, e a Política de Privacidade descrevia outra
+ * coisa. Só um teste que afirma a RECUSA pega esse tipo de defeito.
  */
-describe('consentimento de rastreamento', () => {
-  it('só rastreia quem disse sim explicitamente', () => {
+describe('lerConsentimentoDoCookie', () => {
+  it('lê a decisão de aceite', () => {
+    expect(lerConsentimentoDoCookie(`${COOKIE_CONSENTIMENTO}=aceito`)).toBe('aceito')
+  })
+
+  it('lê a recusa, que é o caso que importa', () => {
+    expect(lerConsentimentoDoCookie(`${COOKIE_CONSENTIMENTO}=recusado`)).toBe('recusado')
+  })
+
+  it('acha o cookie no meio de outros', () => {
+    // Cenário real: o navegador manda a jarra inteira, com `_fbp`, cookie de
+    // sessão do Supabase e o que mais houver.
+    const jarra = `sb-access-token=abc; ${COOKIE_CONSENTIMENTO}=aceito; _fbp=fb.1.123.456`
+    expect(lerConsentimentoDoCookie(jarra)).toBe('aceito')
+  })
+
+  it('devolve null quando o cookie não existe', () => {
+    expect(lerConsentimentoDoCookie('_fbp=fb.1.123.456')).toBeNull()
+  })
+
+  it('devolve null para jarra vazia, undefined e null', () => {
+    // Cookie bloqueado pelo navegador cai aqui, e o resultado tem de ser o
+    // mesmo de "não decidiu": não rastrear.
+    expect(lerConsentimentoDoCookie('')).toBeNull()
+    expect(lerConsentimentoDoCookie(undefined)).toBeNull()
+    expect(lerConsentimentoDoCookie(null)).toBeNull()
+  })
+
+  it('não confunde um cookie de nome parecido', () => {
+    // `vf_consentimento_v1_outro` não é o nosso, e um `includes` ingênuo
+    // casaria com ele.
+    expect(lerConsentimentoDoCookie(`${COOKIE_CONSENTIMENTO}_outro=aceito`)).toBeNull()
+  })
+
+  it('trata valor estranho como não decidido', () => {
+    // Alguém editando o cookie à mão, ou versão antiga da chave.
+    expect(lerConsentimentoDoCookie(`${COOKIE_CONSENTIMENTO}=talvez`)).toBeNull()
+    expect(lerConsentimentoDoCookie(`${COOKIE_CONSENTIMENTO}=true`)).toBeNull()
+  })
+})
+
+describe('a regra que a CAPI aplica', () => {
+  it('só envia com aceite EXPLÍCITO', () => {
+    // As três formas de "não sei": ausência, recusa e valor estranho. Nenhuma
+    // pode liberar o envio — ausência de decisão não é consentimento.
     expect(podeRastrear('aceito')).toBe(true)
-  })
-
-  it('não rastreia quem recusou', () => {
     expect(podeRastrear('recusado')).toBe(false)
-  })
-
-  // Quem nunca respondeu não é o mesmo que quem disse não: o primeiro ainda vê
-  // o banner, o segundo não. Só a ausência de decisão devolve `null`.
-  it('quem ainda não decidiu não é rastreado, e continua sem decisão', () => {
-    expect(interpretarConsentimento(null)).toBeNull()
     expect(podeRastrear(null)).toBe(false)
+    expect(podeRastrear('qualquer coisa')).toBe(false)
   })
 
-  // Valor corrompido, chave de uma versão anterior, ou alguém editando o
-  // localStorage à mão. Herdar um "sim" que não foi dado para esta finalidade é
-  // exatamente o que a LGPD chama de consentimento inválido.
-  it('valor estranho vira "sem decisão", nunca aceite', () => {
-    for (const lixo of ['sim', 'true', '1', 'ACEITO', '', 'aceito ', '{}']) {
-      expect(interpretarConsentimento(lixo)).toBeNull()
-      expect(podeRastrear(lixo)).toBe(false)
+  it('o cookie e o localStorage falam a mesma língua', () => {
+    // As duas fontes usam `interpretarConsentimento`. Se divergirem, o pixel
+    // e a CAPI passam a discordar sobre a mesma escolha da pessoa.
+    for (const valor of ['aceito', 'recusado', 'lixo', '']) {
+      expect(lerConsentimentoDoCookie(`${COOKIE_CONSENTIMENTO}=${valor}`)).toBe(
+        interpretarConsentimento(valor),
+      )
     }
   })
 })

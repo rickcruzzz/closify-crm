@@ -3,6 +3,7 @@ import 'server-only'
 import { revalidatePath } from 'next/cache'
 
 import { createAdminClient } from '@/lib/supabase/admin'
+import { dadosDeCorrespondencia } from '@/lib/analytics/dados-de-correspondencia'
 import { getResend } from '@/lib/resend/client'
 import { renderPagamentoConfirmadoEmail } from '@/lib/emails/pagamento-confirmado'
 import { renderPagamentoAtrasadoEmail } from '@/lib/emails/pagamento-atrasado'
@@ -210,6 +211,10 @@ export async function buscarAssinante(
   subscriptionId: string,
 ): Promise<{
   workspaceName: string
+  /** Para o evento de compra buscar cidade, estado e CEP. */
+  workspaceId: string
+  /** Aceite do banner, gravado no onboarding. `null` = nunca respondeu. */
+  consentimento: boolean | null
   email: string
   fbc: string | null
   fbp: string | null
@@ -227,7 +232,7 @@ export async function buscarAssinante(
 
   const { data: workspace } = await supabase
     .from('workspaces')
-    .select('name, created_by, fbc, fbp')
+    .select('name, created_by, fbc, fbp, consentimento_analitico')
     .eq('id', assinatura.workspace_id)
     .maybeSingle()
 
@@ -239,6 +244,8 @@ export async function buscarAssinante(
 
   return {
     workspaceName: workspace.name,
+    workspaceId: assinatura.workspace_id,
+    consentimento: workspace.consentimento_analitico ?? null,
     email,
     fbc: workspace.fbc,
     fbp: workspace.fbp,
@@ -270,6 +277,17 @@ async function enviarEmailDoWebhook(
   try {
     const assinante = await buscarAssinante(supabase, subscriptionId)
     if (!assinante) return
+
+    // ## O consentimento, lido do BANCO e não do cookie
+    //
+    // Este caminho nasce no webhook do Asaas: quem faz a requisição é o
+    // gateway, não a pessoa. Não há cookie, não há `localStorage`, não há
+    // visitante — a guarda de `enviarEventoParaMeta` não tem o que ler aqui.
+    //
+    // Por isso a 0065 guarda a decisão em `workspaces`, no onboarding. `null`
+    // (empresa criada antes da coluna, ou quem nunca respondeu o banner) conta
+    // como recusa: ausência de decisão nunca é consentimento.
+    if (assinante.consentimento !== true) return
 
     const { subject, html } = render({
       workspaceName: assinante.workspaceName,
@@ -307,13 +325,29 @@ async function enviarConversaoParaMeta(
     const assinante = await buscarAssinante(supabase, subscriptionId)
     if (!assinante) return
 
+    // ## O Purchase era o evento de PIOR identificação do funil
+    //
+    // `InitiateCheckout` e `AddPaymentInfo` já passavam por
+    // `dadosDeCorrespondencia()` e levavam `fn`, `ln`, `ct`, `st` e `zp`. O
+    // Purchase não — mandava só e-mail, telefone e `external_id`.
+    //
+    // É o inverso do que a Meta precisa: o evento que mais vale para o
+    // algoritmo aprender era o que menos permitia casar a conversão com uma
+    // pessoa. E não havia razão registrada para a diferença — o dado estava
+    // no banco o tempo todo, a uma consulta de distância.
+    const correspondencia = await dadosDeCorrespondencia(assinante.workspaceId)
+
     await enviarConversaoDeCompra({
+      ...correspondencia,
       email: assinante.email,
       valor: PRO_PLAN_PRICE,
       eventId,
       fbc: assinante.fbc,
       fbp: assinante.fbp,
-      telefone: assinante.telefone,
+      // O spread vem ANTES para estas linhas vencerem: o telefone do Auth é
+      // o da pessoa que paga, e o de `workspaces` é o comercial da empresa.
+      // Para casar a conversão, o primeiro identifica melhor.
+      telefone: assinante.telefone ?? correspondencia.telefone,
       userId: assinante.userId,
     })
   } catch (err) {

@@ -108,6 +108,7 @@ export type Database = {
            * aviso por dia na reta final sem repetir dentro do mesmo dia.
            */
           aviso_trial_enviado_em: string | null
+          consentimento_analitico?: boolean | null
         } & DadosDaEmpresa
         Insert: {
           id?: string
@@ -141,6 +142,7 @@ export type Database = {
            * permitir o que o banco proíbe convida ao erro.
            */
           aviso_trial_enviado_em?: string | null
+          consentimento_analitico?: boolean | null
         } & Partial<DadosDaEmpresa>
         Relationships: []
       }

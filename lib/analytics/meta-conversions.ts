@@ -1,5 +1,9 @@
 import { createHash } from 'node:crypto'
 
+import { cookies } from 'next/headers'
+
+import { COOKIE_CONSENTIMENTO, podeRastrear } from './consentimento'
+
 const GRAPH_API_VERSION = 'v21.0'
 
 type EventoDeAtribuicao = {
@@ -239,6 +243,36 @@ async function enviarEventoParaMeta(
   // Sem as duas credenciais, não tem o que mandar, mesmo padrão do resto
   // do projeto: falta de env var não quebra nada, só não faz o efeito.
   if (!pixelId || !token) return
+
+  // ## O consentimento vale AQUI também, e antes não valia
+  //
+  // O pixel do navegador sempre respeitou o banner, com duas cercas. Esta
+  // função — que manda e-mail, telefone, nome, cidade, estado, CEP e
+  // `external_id` — não consultava nada: a decisão vive em `localStorage`, e
+  // o servidor não lê `localStorage`.
+  //
+  // Quem clicava "Recusar" e se cadastrava tinha tudo isso enviado à Meta do
+  // mesmo jeito. Sob a LGPD é tratamento sem base legal declarada, e a
+  // Política de Privacidade deste produto descreve outra coisa.
+  //
+  // ## Ausência de decisão NÃO é consentimento
+  //
+  // `lerConsentimentoDoCookie` devolve `null` para "ainda não decidiu", para
+  // cookie bloqueado e para valor estranho. Nos três casos o evento não sai —
+  // é a mesma regra do pixel (`podeRastrear` exige `'aceito'` explícito), e
+  // falhar para o lado de não rastrear é o único lado seguro.
+  //
+  // `cookies()` do Next lança fora de request (num cron, por exemplo). Aí não
+  // há visitante, não há consentimento a respeitar, e não há evento a enviar.
+  let decisao: string | null = null
+  try {
+    const jar = await cookies()
+    decisao = jar.get(COOKIE_CONSENTIMENTO)?.value ?? null
+  } catch {
+    return
+  }
+
+  if (!podeRastrear(decisao)) return
 
   const corpo = montarCorpoDoEvento(eventName, params, process.env.META_TEST_EVENT_CODE)
 
