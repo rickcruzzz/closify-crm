@@ -34,10 +34,18 @@ graphify-out/
 # publicado), mas não têm texto que uma consulta possa alcançar: um PNG de
 # 1080x1350 não responde "onde o preço é lido". Os GERADORES, que são código
 # e carregam a decisão de cada peça, continuam dentro.
-marketing/instagram/*.png
-marketing/facebook/*.png
-marketing/video/*.mp4
-marketing/video/*.png
+# `**/` e nao `*/`: as artes moram em `marketing/instagram/feed/`, e o padrao
+# de um nivel so nao alcanca subpasta. Medido em 02/09 — 64 PNGs do feed
+# entraram na deteccao de um `--update`, cada um exigindo um subagente de
+# visao, para responder exatamente nada sobre onde o preco e lido.
+#
+# `criativos/` entra junto: e a pasta das pecas de anuncio, fora do Git, e o
+# gerador (`scripts/marketing/gerar-anuncios.py`) continua dentro do grafo.
+marketing/instagram/**/*.png
+marketing/facebook/**/*.png
+marketing/video/**/*.mp4
+marketing/video/**/*.png
+criativos/
 
 # ## Runtime do Claude Design, de terceiro
 #

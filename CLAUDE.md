@@ -135,7 +135,7 @@ próprio gate. `build:check` escreve em `.next-check`
 ## O mapa do projeto (grafo do graphify)
 
 `graphify-out/graph.json` é um índice navegável de todo este repositório:
-**3.743 nós e 8.554 arestas em 288 comunidades** (01/09/2026), ligando arquivo,
+**3.991 nós e 8.897 arestas em 312 comunidades** (02/09/2026), ligando arquivo,
 função, componente, tabela e conceito de documentação.
 Serve para achar coisa rápido, e **é a primeira parada antes de sair lendo
 arquivo atrás de arquivo** para perguntas do tipo "quem chama X", "onde isso é
