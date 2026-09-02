@@ -122,11 +122,24 @@ export async function getLeadById(workspaceId: string, leadId: string) {
 
   const ownerNames = lead.owner_id ? await getMemberNames(workspaceId, [lead.owner_id]) : new Map()
 
+  // Teto explicito: o PostgREST corta em 1.000 e NAO avisa, e como isto ordena
+  // por `created_at desc` o que sumiria seriam as atividades mais ANTIGAS —
+  // justamente o comeco da relacao com o cliente.
+  //
+  // Hoje nao e alcancavel: a base tem poucas atividades por contato. Mas cada
+  // mensagem de WhatsApp vira uma `activity`, entao no dia em que a integracao
+  // voltar um cliente ativo chega a 1.000 em meses, e o corte aconteceria em
+  // silencio. Achado na auditoria de 02/09, mesma classe do `getBoardDeals`
+  // corrigido em 12/08.
+  //
+  // 200 e o que uma timeline mostra sem virar rolagem infinita. Quem precisar
+  // de mais que isso precisa de paginacao, nao de um teto maior.
   const { data: activities } = await supabase
     .from('activities')
     .select('id, type, description, created_at, author_id')
     .eq('lead_id', leadId)
     .order('created_at', { ascending: false })
+    .limit(200)
 
   const authorIds = Array.from(
     new Set((activities ?? []).map((a) => a.author_id).filter((id): id is string => !!id)),

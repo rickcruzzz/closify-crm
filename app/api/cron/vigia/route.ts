@@ -352,11 +352,38 @@ export async function GET(request: Request) {
   const nova = memoriaAtualizada(alertas)
   for (const n of naoConferido) nova[`falha-${n}`] = 1
 
-  await admin.from('vigia_ultimo_aviso').delete().neq('chave', CARIMBO_DE_VARREDURA)
-  if (Object.keys(nova).length > 0) {
-    await admin.from('vigia_ultimo_aviso').insert(
+  // ## As duas escritas passaram a ser CONFERIDAS, e a ordem importa
+  //
+  // Elas nao eram, e a consequencia e a pior possivel para este mecanismo: o
+  // `delete` roda primeiro, entao se o `insert` falhar a memoria fica VAZIA.
+  // Memoria vazia faz tudo parecer novidade, e na proxima passagem o mesmo
+  // alerta sai de novo — de hora em hora, o que e exatamente o defeito dos
+  // "24 e-mails identicos" que este arquivo existe para evitar.
+  //
+  // E era silencioso duas vezes: o supabase-js nao lanca em falha de escrita,
+  // devolve `{ error }`. Sem checar, nem o log saberia.
+  const { error: erroAoLimpar } = await admin
+    .from('vigia_ultimo_aviso')
+    .delete()
+    .neq('chave', CARIMBO_DE_VARREDURA)
+
+  if (erroAoLimpar) {
+    // Nao grava por cima de uma limpeza que falhou: as linhas velhas ainda
+    // estao la, e o `insert` bateria em chave duplicada.
+    console.error('[vigia] memoria NAO foi limpa; o proximo aviso pode repetir', erroAoLimpar)
+  } else if (Object.keys(nova).length > 0) {
+    const { error: erroAoGravar } = await admin.from('vigia_ultimo_aviso').insert(
       Object.entries(nova).map(([chave, quantidade]) => ({ chave, quantidade })),
     )
+    if (erroAoGravar) {
+      // A memoria acabou de ser apagada e nao foi reescrita: a proxima
+      // passagem vai reenviar tudo. Registrar alto e o unico jeito de isso
+      // nao virar "por que estou recebendo o mesmo e-mail toda hora?".
+      console.error(
+        '[vigia] memoria apagada mas NAO reescrita: o proximo aviso vai repetir',
+        erroAoGravar,
+      )
+    }
   }
 
   return NextResponse.json({

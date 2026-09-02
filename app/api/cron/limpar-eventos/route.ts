@@ -60,7 +60,7 @@ export async function GET(requisicao: Request) {
 
   // As duas em paralelo: são tabelas independentes e nenhuma depende do
   // resultado da outra.
-  const [asaas, whatsapp, erros, feedback, notificacoes] = await Promise.all([
+  const [asaas, whatsapp, erros, feedback, notificacoes, tentativas] = await Promise.all([
     admin.rpc('purge_old_asaas_webhook_events'),
     admin.rpc('purge_old_whatsapp_webhook_events'),
     // `error_logs` era a única tabela de sistema sem purga, e tem o mesmo
@@ -84,6 +84,16 @@ export async function GET(requisicao: Request) {
     // histórico de dinheiro que importa vive em `assinatura_eventos` (0055),
     // que é append-only e não é tocado por isto.
     admin.rpc('purge_old_notificacoes'),
+    // `rate_limit_attempts` era a UNICA tabela de sistema sem purga, e a mais
+    // escrita de todas: ganha uma linha por TENTATIVA de login, cadastro,
+    // convite, recuperacao de senha, relato e checkout. Ou seja, ela mede
+    // exatamente o volume que o trafego pago vai trazer.
+    //
+    // 24 horas, e nao 90 dias como as outras: a janela mais longa do rate
+    // limit e de 1 hora (`lib/rate-limit.ts`), entao linha mais velha nao
+    // decide nada — e o IP esta na chave, o que torna guardar por mais tempo
+    // acumulo de dado pessoal sem finalidade. Achada na auditoria de 02/09.
+    admin.rpc('purge_old_rate_limit_attempts'),
   ])
 
   // Uma falhar não pode impedir a outra de ter rodado: o retorno reporta as
@@ -93,6 +103,7 @@ export async function GET(requisicao: Request) {
   if (erros.error) console.error('Purga de error_logs falhou', erros.error)
   if (feedback.error) console.error('Purga de feedback falhou', feedback.error)
   if (notificacoes.error) console.error('Purga de notificações falhou', notificacoes.error)
+  if (tentativas.error) console.error('Purga de rate limit falhou', tentativas.error)
 
   return NextResponse.json({
     ok:
@@ -100,13 +111,15 @@ export async function GET(requisicao: Request) {
       !whatsapp.error &&
       !erros.error &&
       !feedback.error &&
-      !notificacoes.error,
+      !notificacoes.error &&
+      !tentativas.error,
     apagados: {
       asaas: asaas.data ?? null,
       whatsapp: whatsapp.data ?? null,
       erros: erros.data ?? null,
       feedback: feedback.data ?? null,
       notificacoes: notificacoes.data ?? null,
+      tentativas: tentativas.data ?? null,
     },
   })
 }

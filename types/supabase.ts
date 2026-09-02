@@ -1059,6 +1059,14 @@ export type Database = {
         Args: Record<string, never>
         Returns: number
       }
+      // 24 horas (0067), e nao 90 dias como as outras: a janela mais longa do
+      // rate limit e de 1 hora, entao linha mais velha nao decide nada. E o IP
+      // esta na chave — guardar por mais tempo seria acumular dado pessoal sem
+      // finalidade nenhuma.
+      purge_old_rate_limit_attempts: {
+        Args: Record<string, never>
+        Returns: number
+      }
     }
     Enums: Record<string, never>
     CompositeTypes: Record<string, never>
