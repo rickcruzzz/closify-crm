@@ -8,7 +8,7 @@ import { FREE_LEAD_LIMIT, FREE_MEMBER_LIMIT, PRO_PLAN_PRICE } from '@/lib/plans'
 // funcionalidade que não existe. A resposta sobre planilha ficou desatualizada
 // quando a importação por CSV foi construída, negar um recurso que existe é
 // tão danoso quanto prometer um que não existe.
-const faqs = [
+export const faqs = [
   /**
    * Esta resposta já mudou duas vezes, e a ordem dela nunca muda: quem lê "é
    * grátis mesmo?" quer saber se vai ser cobrado de surpresa. A resposta

@@ -7,7 +7,12 @@ import { HowItWorksSection } from '@/components/landing/how-it-works-section'
 import { FeaturesSection } from '@/components/landing/features-section'
 import { ConfiancaSection } from '@/components/landing/confianca-section'
 import { PricingSection } from '@/components/landing/pricing-section'
-import { FaqSection } from '@/components/landing/faq-section'
+import { FaqSection, faqs } from '@/components/landing/faq-section'
+import {
+  aplicacao,
+  organizacao,
+  perguntasFrequentes,
+} from '@/lib/seo/dados-estruturados'
 import { CtaSection } from '@/components/landing/cta-section'
 import { PublicFooter } from '@/components/landing/public-footer'
 import { MobileStickyCta } from '@/components/landing/mobile-sticky-cta'
@@ -61,6 +66,36 @@ export const metadata: Metadata = {
 export default function Home() {
   return (
     <div className="flex min-h-dvh flex-col">
+      {/* ## Dados estruturados, e por que eles ficam AQUI e não no layout
+          Buscando pelo nome próprio em 03/09, o site não aparecia. O lado
+          técnico estava certo — `Allow: /`, sitemap declarado, `index,
+          follow`, title e description preenchidos — e o JSON-LD era ZERO.
+
+          Sem ele o Google lê a página como texto solto: não sabe que é
+          software, que tem preço, que há perguntas frequentes. Sai como link
+          azul, enquanto concorrente com `Product` marcado mostra preço e
+          ocupa três vezes mais tela.
+
+          Ficam nesta página e não no layout porque descrevem ESTA página. A
+          FAQ, em especial, só pode ser marcada onde as perguntas existem no
+          HTML — marcá-la numa rota que não as mostra é violação de política,
+          e a punição é ação manual que derruba todo rich snippet do site. */}
+      <script
+        type="application/ld+json"
+        // O conteúdo é gerado por nós, a partir de constantes do próprio
+        // código — nunca de entrada de usuário.
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(organizacao()) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(aplicacao()) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify(perguntasFrequentes(faqs)),
+        }}
+      />
       <PublicNavbar />
       <main id="conteudo" className="flex-1">
         <HeroSection />

@@ -1,0 +1,96 @@
+import { describe, expect, it } from 'vitest'
+
+import { CONTROLADOR } from '@/lib/legal'
+import { FREE_LEAD_LIMIT, PRO_PLAN_PRICE } from '@/lib/plans'
+
+import { aplicacao, organizacao, perguntasFrequentes } from './dados-estruturados'
+
+describe('dados estruturados da landing', () => {
+  it('anuncia o preço que o produto de fato cobra', () => {
+    const pro = aplicacao().offers.find((o) => o.name === 'Pro')
+    expect(pro?.price).toBe(String(PRO_PLAN_PRICE))
+    expect(pro?.priceCurrency).toBe('BRL')
+  })
+
+  /**
+   * O teto do Free entra no texto porque "plano grátis" sem número obriga a
+   * pessoa a procurar na página para saber se cabe nela — a mesma razão que a
+   * FAQ da landing registra para citar o número lá.
+   */
+  it('mostra os DOIS planos, e o grátis com preço zero', () => {
+    const ofertas = aplicacao().offers
+    expect(ofertas).toHaveLength(2)
+
+    const gratis = ofertas.find((o) => o.name === 'Grátis')
+    expect(gratis?.price).toBe('0')
+    expect(gratis?.description).toContain(String(FREE_LEAD_LIMIT))
+  })
+
+  /**
+   * ## O teste que existe para travar uma DECISÃO, não um comportamento
+   *
+   * `aggregateRating` e `review` são a marcação de maior retorno visual que
+   * existe: com elas o Google desenha estrelas no resultado. E seriam prova
+   * social inventada — não há um único cliente externo neste produto.
+   *
+   * A mesma regra que removeu a métrica falsa da `StatsSection` e que barra
+   * depoimento fabricado no anúncio vale aqui, onde a tentação é maior porque
+   * o ganho é visível na primeira busca.
+   *
+   * Há um segundo motivo, e ele é prático: marcar avaliação inexistente viola
+   * a política de dados estruturados do Google, e a punição é ação manual —
+   * o site perde TODO rich snippet, não só o falso.
+   *
+   * O teste varre o JSON inteiro em vez de checar campo a campo: assim ele
+   * pega a marcação onde quer que alguém a coloque no futuro.
+   */
+  it('NÃO declara avaliação nem depoimento, em nenhum bloco', () => {
+    const tudo = JSON.stringify([
+      organizacao(),
+      aplicacao(),
+      perguntasFrequentes([{ q: 'p', a: 'r' }]),
+    ])
+
+    for (const proibido of ['aggregateRating', 'review', 'ratingValue', 'reviewCount']) {
+      expect(tudo).not.toContain(proibido)
+    }
+  })
+
+  it('transforma cada pergunta da página em Question com resposta', () => {
+    const faq = perguntasFrequentes([
+      { q: 'O plano grátis é grátis mesmo?', a: 'É, e não pede cartão.' },
+      { q: 'Preciso instalar alguma coisa?', a: 'Não, roda no navegador.' },
+    ])
+
+    expect(faq['@type']).toBe('FAQPage')
+    expect(faq.mainEntity).toHaveLength(2)
+    expect(faq.mainEntity[0]).toMatchObject({
+      '@type': 'Question',
+      name: 'O plano grátis é grátis mesmo?',
+      acceptedAnswer: { '@type': 'Answer', text: 'É, e não pede cartão.' },
+    })
+  })
+
+  /**
+   * `lib/legal.ts` deixa `cnpj` e `endereco` anuláveis de propósito: eles
+   * ficaram nulos de 08/08 a 31/08, com a inscrição do MEI baixada, e a
+   * landing simplesmente parou de exibi-los em vez de mostrar número morto.
+   *
+   * O dado estruturado tem de seguir a mesma regra — publicar `taxID` vazio
+   * para o Google é pior que não publicar, porque afirma identidade com campo
+   * em branco.
+   */
+  it('só declara o CNPJ quando ele existe', () => {
+    const org = organizacao()
+    if (CONTROLADOR.cnpj) {
+      expect(org).toHaveProperty('taxID', CONTROLADOR.cnpj)
+    } else {
+      expect(org).not.toHaveProperty('taxID')
+    }
+  })
+
+  it('identifica o controlador pela razão social do cadastro', () => {
+    expect(organizacao().legalName).toBe(CONTROLADOR.razaoSocial)
+    expect(organizacao().name).toBe(CONTROLADOR.nomeFantasia)
+  })
+})
