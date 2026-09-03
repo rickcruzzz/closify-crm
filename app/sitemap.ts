@@ -36,6 +36,17 @@ export default function sitemap(): MetadataRoute.Sitemap {
       changeFrequency: 'monthly',
       priority: 0.9,
     },
+    // Menos volume que a de preço e MUITO mais intenção: quem digita "crm que
+    // não cobra por usuário" já fez a conta, já se incomodou com ela, e está
+    // procurando quem resolva. É o mesmo desenho de cauda longa que
+    // `docs/google-ads.md` concluiu ser o único viável com orçamento pequeno —
+    // aqui sem custo por clique.
+    {
+      url: `${base}/crm-que-nao-cobra-por-usuario`,
+      lastModified,
+      changeFrequency: 'monthly',
+      priority: 0.9,
+    },
     // Documentos legais entram no sitemap porque a LGPD (art. 9º) exige acesso
     // facilitado à informação sobre o tratamento, e porque são a página que
     // um titular ou a própria ANPD procura primeiro.
