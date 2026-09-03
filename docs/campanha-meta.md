@@ -235,35 +235,50 @@ Uma fonte confirma. A regra registrada em 31/08 — esperar duas fontes
 independentes antes de submeter — **ainda não foi satisfeita**, e reprovação
 entra no histórico do Business Manager.
 
-### 2. O pagamento está desativado para o usuário
+### 2. O Meta Pay do perfil está desativado — e é o bloqueio real
 
 ```
-Pagamento desativado para o usuario   (code 100, subcode 1815010)
+Pagamentos desativados
+Para sua seguranca, desativamos sua conta do Meta Pay.
+Para reativa-la, entre em contato conosco.
 ```
 
-E a conta em si está sã — medido:
+Essa mensagem, vista na tela de adicionar fundos em 03/09, nomeia a causa que
+o erro da API só descrevia:
 
 ```
-conta      Rickdaskin Ads
-status     1 = ACTIVE        disable_reason 0 = nenhum
-funding    Mastercard *7924
-gasto      R$ 0,00 (nunca gastou)
+(#100) subcode 1815010   "Pagamento desativado para o usuario"
 ```
 
-`ads_get_errors` devolve lista vazia para campanha, conjunto e conta: não há
-erro de entidade. O bloqueio é no **método de pagamento do usuário**, e é o que
-impede criar o anúncio — a Meta valida o pagamento na criação do `ad`, não da
-campanha.
+**Meta Pay é a camada de pagamento do PERFIL, não da conta de anúncio.**
+Desativada, nenhum meio funciona — nem cartão, nem Pix, nem boleto, em conta
+nenhuma.
 
-**Ação:** em <https://www.facebook.com/ads/manager/account_settings/account_billing/>
-(conta `1316925630418162`), conferir o cartão e concluir a verificação que ele
-pedir. Cartão que nunca foi usado costuma exigir uma confirmação na primeira
-cobrança.
+#### O que foi eliminado antes de chegar aqui, e como
 
-**Isto exige o titular.** Não há endpoint para reativar método de pagamento, e
-mexer em credencial de cobrança de terceiro não é algo que uma ferramenta deva
-fazer sozinha — é a mesma regra que barrou mover a chave do Resend para o Vault
-em 02/09.
+O diagnóstico levou uma sessão inteira porque a mensagem da API culpa
+"pagamento", o que manda todo mundo mexer no cartão. Cada hipótese abaixo foi
+testada e descartada:
+
+```
+trocar o cartao                    o funding id nem mudou; e nao era ele
+corrigir o CNPJ                    68.877.105/0001-67 entrou; erro igual
+conta de anuncio bloqueada         ACTIVE, disable_reason 0, nas duas
+limite/saldo                       R$ 750 disponiveis, teto diario R$ 567,95
+app do Meta em modo dev            bloqueia o TOKEN, nao o MCP — e o MCP
+                                   tambem recusa o anuncio
+```
+
+**O teste decisivo foi criar a campanha inteira na OUTRA conta de anúncio**
+(`27108979755418323`), que tem método de pagamento diferente e nenhum
+business: campanha, conjunto e criativo passaram; o anúncio recusou com o
+mesmo subcódigo. Duas contas, dois métodos, um erro — logo o bloqueio é do
+usuário, e não de nada que se configure por API.
+
+**Ação, e não há alternativa técnica:** suporte da Meta em
+<https://www.facebook.com/business/help/support>, pedindo a reativação do Meta
+Pay e citando o subcódigo `1815010`. O subcódigo é específico o bastante para
+evitar a ronda de "troque o cartão".
 
 ---
 
