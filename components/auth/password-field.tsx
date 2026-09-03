@@ -187,7 +187,7 @@ export function PasswordField({
                 )}
                 <span>{r.rotulo}</span>
                 {!r.obrigatorio && (
-                  <span className="text-muted-foreground/70">(opcional)</span>
+                  <span className="text-muted-foreground">(opcional)</span>
                 )}
               </li>
             ))}

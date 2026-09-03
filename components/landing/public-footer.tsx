@@ -109,7 +109,21 @@ export function PublicFooter() {
           {/* Sinaliza o redirecionamento sem expor a mecânica interna do
               domínio — resposta ao relato de confusão de quem clicou esperando
               abrir a própria caixa e caiu direto no Outlook. */}
-          <span className="text-muted-foreground/70 block text-[11px]">
+          {/* ## Sem `/70`, e o motivo e medido
+
+              Estas duas linhas eram `text-muted-foreground/70` em 11px, e sao
+              as UNICAS duas falhas de contraste da landing — 169 elementos
+              avaliados nos dois temas, 2 reprovam, sempre estas.
+
+                             hoje /70   sem /70   minimo
+                  claro        3,00      5,58      4,5
+                  escuro       4,14      7,38      4,5
+
+              A opacidade servia para recuar informacao secundaria, e o tamanho
+              ja faz esse trabalho: 11px contra os 14px da linha acima. Empilhar
+              os dois recuos e o que derruba abaixo do minimo — e o preco e
+              justamente o dado cadastral, que existe para ser CONFERIDO. */}
+          <span className="text-muted-foreground block text-[11px]">
             (você escolhe onde abrir; encaminha para nossa caixa de suporte)
           </span>
         </p>
@@ -146,7 +160,7 @@ export function PublicFooter() {
             solta com o nome civil do titular — exatamente o que a decisão de
             24/08 tirou daqui. */}
         {CONTROLADOR.cnpj ? (
-          <p className="text-muted-foreground/70 text-center text-[11px] text-balance">
+          <p className="text-muted-foreground text-center text-[11px] text-balance">
             {CONTROLADOR.razaoSocial}
             {CONTROLADOR.endereco ? ` · ${CONTROLADOR.endereco}` : ''}
             {CONTROLADOR.telefoneCadastral
