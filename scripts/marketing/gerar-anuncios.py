@@ -289,8 +289,13 @@ PECAS = [
          claim="Marca no seu Google. Manda do seu Gmail.",
          dominio=D),
 
+    # O rotulo ja saiu "SEM CARTAO PARA COMECAR", sem til e sem cedilha, na
+    # MESMA peca em que a assinatura dizia "GRÁTIS" com acento. Duas grafias
+    # do mesmo idioma na mesma arte leem como descuido — e num anuncio que
+    # vende acabamento premium, descuido de acento e o primeiro sinal de que
+    # o produto tambem e mal acabado.
     dict(id="a5_oferta", comp="chamada", pal=vf.ESCURO,
-         rotulo="SEM CARTAO PARA COMECAR",
+         rotulo="SEM CARTÃO PARA COMEÇAR",
          claim="O plano é o mesmo para uma pessoa",
          realce="ou para a equipe inteira.",
          pro=dict(
