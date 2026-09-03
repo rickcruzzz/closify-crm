@@ -219,6 +219,54 @@ const nextConfig = {
    * escrevendo em `.next`, que é o que a Vercel espera.
    */
   distDir: process.env.BUILD_DIR || '.next',
+  /**
+   * AVIF antes de WebP.
+   *
+   * O padrão do Next 14 é `['image/webp']` e mais nada — medido em produção em
+   * 03/09: pedindo `Accept: image/avif,image/webp`, a resposta voltava
+   * `Content-Type: image/webp`. O navegador dizia que aceitava AVIF e recebia
+   * WebP mesmo assim.
+   *
+   * A ordem importa: o Next serve o PRIMEIRO formato da lista que o navegador
+   * aceita, então `avif` antes de `webp` é o que faz o AVIF ser escolhido, e o
+   * WebP continua atendendo quem não aceita AVIF (Safari abaixo de 16.4, e
+   * qualquer bot).
+   *
+   * O caso deste projeto é o melhor possível para AVIF: as imagens são prints
+   * de interface — texto pequeno sobre fundo chapado —, que é onde a
+   * compressão com perda mais desperdiça bits e onde o AVIF mais se distancia
+   * do WebP. São 259 KB de imagem no telefone hoje (`produto-print.tsx`), e é
+   * o item mais pesado da landing depois do JavaScript.
+   *
+   * O custo é a primeira codificação, que é lenta e acontece uma vez por
+   * variante — as imagens são `loading="lazy"` e vivem abaixo da dobra, então
+   * quem paga essa espera não é quem decide se o site é rápido.
+   */
+  /**
+   * O degrau de 3840 sai da lista, e isso é o que de fato corta os bytes.
+   *
+   * O padrão do Next termina em 3840. O `sizes` de `produto-print.tsx` declara
+   * a largura em CSS px, e o navegador MULTIPLICA por DPR antes de escolher o
+   * degrau — então um telefone comum (DPR 2) pedia 2050 e caía no 3840,
+   * enquanto o comentário daquele arquivo dizia, desde 24/08, que o alvo era
+   * "2048, uma folga de 1,77x". A intenção estava escrita e não era o que
+   * acontecia.
+   *
+   * Medido em produção em 03/09, o que muda no telefone:
+   *
+   *     kanban-dark   w3840 169.042 -> w2048 115.968
+   *     hoje-dark     w3840  89.948 -> w2048  60.458
+   *                        259,0 KB -> 176,4 KB   (-32%)
+   *
+   * Cortar acima de 2048 não perde nada aqui porque **`produto-print.tsx` é o
+   * único consumidor de `next/image` do projeto** (conferido), e a fonte tem
+   * 2880px de largura: o degrau de 3840 nunca entregou 3840 pixels, entregou
+   * os mesmos 2880 recodificados mais caro.
+   */
+  images: {
+    formats: ['image/avif', 'image/webp'],
+    deviceSizes: [640, 750, 828, 1080, 1200, 1920, 2048],
+  },
   // Cache do Router do lado do cliente, explícito. O padrão para rota
   // dinâmica mudou entre versões do Next, sem isto, voltar para uma tela do
   // dashboard recém-visitada (ex: Kanban → Leads → Kanban) refaz a busca no

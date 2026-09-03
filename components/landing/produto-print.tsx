@@ -97,8 +97,25 @@ export function ProdutoPrint({
      * recorte abaixo renderiza o print a 300% da largura do container; pedir
      * `100vw` ali entregaria a variante de 640px para desenhar ~1100px de
      * imagem, e o recorte ficaria pior do que o problema que ele resolve.
+     *
+     * ## E o `300vw` estava errado, medido em 03/09
+     *
+     * `vw` é a largura da JANELA; o print é 300% do CONTAINER, que é mais
+     * estreito por causa do `px-4` da seção. Medido no navegador em 390px:
+     *
+     *     janela          390px
+     *     moldura         342px
+     *     print desenhado 1025px  ->  263vw, nao 300vw
+     *
+     * Declarar 300 fazia o navegador orçar para uma caixa 14% maior do que a
+     * que existe, e como ele multiplica isso por DPR antes de escolher o
+     * degrau, a diferença atravessava a fronteira de um degrau inteiro. No
+     * perfil do PageSpeed (412px, DPR 1,75): 2163 px pedidos, degrau de 3840;
+     * com o número certo, 1897 e o degrau de 1920.
+     *
+     * Não é troca de nitidez — é parar de mentir sobre o tamanho da caixa.
      */
-    sizes: '(max-width: 639px) 300vw, (max-width: 1200px) 180vw, 2048px',
+    sizes: '(max-width: 639px) 263vw, (max-width: 1200px) 180vw, 2048px',
     className: 'h-auto w-full',
   }
 
@@ -132,8 +149,8 @@ export function ProdutoPrint({
 
       {/* ## O recorte que existe só no telefone
    
-          Medido em 390px: a moldura dá 307px de largura para uma tela
-          desenhada em 1440. São **21% do tamanho original** — o texto de 14px
+          Medido em 390px: a moldura dá 342px de largura para uma tela
+          desenhada em 1440. São **24% do tamanho original** — o texto de 14px
           da interface chega a 3 pixels. Não é um print pequeno, é uma mancha
           cinza: ninguém lê "Proposta Enviada", ninguém vê um valor, e o espaço
           é gasto provando que o produto existe sem mostrar o que ele faz.
