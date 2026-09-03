@@ -180,7 +180,10 @@ export async function getWorkspaceMembers(workspaceId: string): Promise<Workspac
 // public exposto), usa user_metadata.name já sincronizado no signUp, com
 // fallback ao invés de uma query extra. Nomes vêm de uma RPC porque o client
 // anon não pode selecionar auth.users, mesmo indiretamente via join.
-async function getMemberNames(
+// Exportado desde 03/09 para a rota de exportação (`/api/leads/exportar`), que
+// precisa do mesmo mapeamento de dono e não pode duplicá-lo — uma segunda
+// cópia divergiria no dia em que o fallback de nome mudasse.
+export async function getMemberNames(
   workspaceId: string,
   userIds: string[],
 ): Promise<Map<string, string>> {

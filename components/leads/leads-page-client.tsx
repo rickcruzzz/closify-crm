@@ -4,7 +4,16 @@ import * as React from 'react'
 import Link from 'next/link'
 import { useRouter, useSearchParams, usePathname } from 'next/navigation'
 import { toast } from 'sonner'
-import { Loader2, MoreHorizontal, Plus, Search, SearchX, Upload, Users } from 'lucide-react'
+import {
+  Download,
+  Loader2,
+  MoreHorizontal,
+  Plus,
+  Search,
+  SearchX,
+  Upload,
+  Users,
+} from 'lucide-react'
 
 import { PageHeader } from '@/components/layout/page-header'
 import { Button } from '@/components/ui/button'
@@ -321,6 +330,23 @@ export function LeadsPageClient({
         </form>
 
         <div className="flex shrink-0 gap-2">
+          {/* ## Exportar fica ao LADO de importar, e isso é o argumento
+              "Vou ficar preso no sistema" é a objeção de venda que a
+              exportação existe para matar, e ela morre melhor quando as duas
+              setas aparecem juntas: entra e sai pela mesma porta.
+
+              É um `<a download>` e não um `onClick` com fetch: o navegador
+              cuida do download sozinho, sem trazer o CSV inteiro para a
+              memória da aba antes de salvar. */}
+          <Button
+            variant="outline"
+            render={
+              <a href="/api/leads/exportar" download>
+                <Download className="size-4" />
+                Exportar
+              </a>
+            }
+          />
           <Button variant="outline" onClick={() => setImportOpen(true)}>
             <Upload className="size-4" />
             Importar planilha
