@@ -171,16 +171,49 @@ respondeu continua válido e não é preciso refazer a pergunta.
 
 ## Orçamento e expectativa, sem otimismo
 
+> **Corrigido em 03/09.** A primeira versão desta seção estimou CPC de R$ 2 a
+> R$ 6, **sem base** — foi chute meu. O dado publicado para software e SaaS no
+> Brasil em 2026 é de **R$ 4 a R$ 15**, e o orçamento mínimo que o setor
+> pratica na fase de aprendizado é de **R$ 2.500 a R$ 4.000/mês**.
+>
+> Isso muda a conclusão, não só o número.
+
 ```
-CPC estimado (CRM, Brasil)   R$ 2 a R$ 6
-R$ 25/dia                    4 a 12 cliques/dia
-conversao de cadastro        2% a 5% e a faixa comum de SaaS B2B
-                             -> 0,1 a 0,6 cadastro/dia
+CPC real (software/SaaS, BR)   R$ 4 a R$ 15
+R$ 25/dia = R$ 750/mes         1,7 a 6 cliques/dia
+conversao de cadastro          2% a 5%
+                               -> 1 cadastro a cada 3 a 10 dias
+minimo praticado no setor      R$ 2.500 a R$ 4.000/mes
 ```
 
-Ou seja: **de um cadastro a cada dois dias até três por semana**, no começo.
-Parece pouco, e é — mas é o mesmo patamar que a Meta entregaria com o mesmo
-dinheiro, com a diferença de que aqui o clique vem de quem estava procurando.
+**O orçamento está de 3 a 5 vezes abaixo do que o setor pratica.** Google Ads
+tem intenção melhor que o feed, e clique mais caro — com verba pequena as duas
+coisas se cancelam. Não é o atalho que resolve o bloqueio da Meta.
+
+O gargalo não é o canal: é o orçamento contra o custo da categoria. CRM tem LTV
+alto, então RD Station, Pipedrive e Agendor pagam caro pelo clique e dominam o
+leilão das palavras óbvias. Não se ganha esse leilão com R$ 25/dia.
+
+### O que muda a conta: só cauda longa
+
+A única forma de R$ 750/mês render em busca é **não disputar o que é caro**:
+
+```
+CARO, nao disputar        BARATO, e e onde este produto ganha
+crm                        crm que nao cobra por usuario
+melhor crm                 crm com preco fixo por empresa
+crm para empresas          crm que importa planilha de excel
+sistema de vendas          crm sem cobrar por vendedor
+```
+
+A coluna da direita tem pouco volume — talvez 50 buscas/mês cada. Mas quem
+digita aquilo procura exatamente o que este produto faz, e o clique sai por
+R$ 1 a R$ 3 em vez de R$ 12. **Pouco volume com alta precisão** é o único
+desenho que cabe nesse orçamento.
+
+Isso reordena os grupos propostos acima: o **Grupo 1 (preço)** vira o
+principal, e as palavras genéricas do Grupo 2 (`crm simples`, `crm para
+pequena empresa`) passam a ser as mais caras e as menos indicadas para começar.
 
 **O número que decide tudo, e que ainda não existe:** quantos cadastros viram
 pagantes. Nunca houve cliente externo neste produto. Até esse número aparecer,
