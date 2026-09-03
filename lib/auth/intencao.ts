@@ -66,6 +66,15 @@ export type AtribuicaoUtm = {
   source?: string
   medium?: string
   campaign?: string
+  /**
+   * Qual PEÇA trouxe, e não só qual campanha.
+   *
+   * A campanha do Meta é um teste de seis ângulos apontando para o mesmo
+   * `/cadastro`; só este campo os distingue. Sem ele o teste roda e não
+   * conclui nada — e o relatório da Meta não substitui, porque ela sabe quem
+   * se cadastrou e não quem PAGOU, que acontece dias depois no Asaas.
+   */
+  content?: string
   /** Id de clique do Meta, derivado do `fbclid` da URL, âncora de atribuição. */
   fbc?: string
   /** Cookie `_fbp` do próprio Pixel, âncora de identidade do navegador. */
@@ -112,7 +121,16 @@ export async function guardarAtribuicaoUtm(utm: AtribuicaoUtm) {
   // `fbc` sozinho é comum: clique em anúncio do Meta que não levou `utm_*`
   // na URL de destino (o link do anúncio nem sempre carrega UTM) ainda
   // carrega `fbclid`, vale capturar mesmo sem os três UTMs.
-  if (!utm.source && !utm.medium && !utm.campaign && !utm.fbc && !utm.fbp) return
+  if (
+    !utm.source &&
+    !utm.medium &&
+    !utm.campaign &&
+    !utm.content &&
+    !utm.fbc &&
+    !utm.fbp
+  ) {
+    return
+  }
 
   const jar = await cookies()
   if (jar.get(COOKIE_UTM)) return

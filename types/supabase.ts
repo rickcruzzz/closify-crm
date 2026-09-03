@@ -95,6 +95,7 @@ export type Database = {
           utm_source: string | null
           utm_medium: string | null
           utm_campaign: string | null
+          utm_content: string | null
           // Âncoras de match da Conversions API do Meta, ver 0042_fbc_fbp.sql.
           fbc: string | null
           fbp: string | null
@@ -128,6 +129,7 @@ export type Database = {
           utm_source?: string | null
           utm_medium?: string | null
           utm_campaign?: string | null
+          utm_content?: string | null
           fbc?: string | null
           fbp?: string | null
           /** Quem escreve isto é a RPC `create_workspace_with_admin` (0051). */
@@ -142,6 +144,7 @@ export type Database = {
           utm_source?: string | null
           utm_medium?: string | null
           utm_campaign?: string | null
+          utm_content?: string | null
           fbc?: string | null
           fbp?: string | null
           /**

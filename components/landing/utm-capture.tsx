@@ -40,9 +40,20 @@ function CapturaInterna() {
     const source = searchParams.get('utm_source')
     const medium = searchParams.get('utm_medium')
     const campaign = searchParams.get('utm_campaign')
+    // ## `utm_content` diz qual PECA trouxe, e nao so qual campanha
+    //
+    // A campanha do Meta e um teste de seis angulos: os seis anuncios apontam
+    // para o mesmo `/cadastro` e so se distinguem por este parametro. Sem ele,
+    // o teste roda e nao conclui nada — sabe-se que veio do Meta, nao qual
+    // argumento convenceu.
+    //
+    // O relatorio da Meta mostra qual anuncio teve mais cadastro, mas nao sabe
+    // quem PAGOU: a assinatura acontece dias depois, no Asaas. O cruzamento
+    // "qual peca trouxe quem virou Pro" so existe deste lado.
+    const content = searchParams.get('utm_content')
     const fbclid = searchParams.get('fbclid')
 
-    if (!source && !medium && !campaign && !fbclid) return
+    if (!source && !medium && !campaign && !content && !fbclid) return
 
     jaEnviou.current = true
 
@@ -51,6 +62,7 @@ function CapturaInterna() {
         source: source ?? undefined,
         medium: medium ?? undefined,
         campaign: campaign ?? undefined,
+        content: content ?? undefined,
         fbc: fbclid ? montarFbc(fbclid) : undefined,
         fbp: lerCookie('_fbp'),
       })

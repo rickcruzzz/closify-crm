@@ -219,6 +219,10 @@ export async function finalizarOnboarding(values: unknown) {
           utm_source: atribuicao.source ?? null,
           utm_medium: atribuicao.medium ?? null,
           utm_campaign: atribuicao.campaign ?? null,
+          // Qual PECA trouxe, e nao so qual campanha. A campanha do Meta e um
+          // teste de seis angulos apontando para o mesmo `/cadastro`, e sem
+          // isto o teste nao conclui qual argumento vendeu. Ver 0069.
+          utm_content: atribuicao.content ?? null,
           fbc: atribuicao.fbc ?? null,
           fbp: atribuicao.fbp ?? null,
           // Guardado aqui porque o `Purchase` nasce no webhook do Asaas, onde
