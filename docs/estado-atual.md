@@ -4,10 +4,119 @@ Documento de continuidade. É lido no começo de toda sessão (referenciado no
 [CLAUDE.md](../CLAUDE.md)) para que uma conversa nova, ou outra conta, comece
 sabendo o que já foi feito, o que foi decidido e onde estão as armadilhas.
 
-**Atualizado em:** 03/09/2026 (a campanha do Meta esta montada e TRAVADA por
-restricao no perfil pessoal do dono; a Politica de Privacidade negava usar
-cookie de publicidade e usa desde que o pixel existe; e a IA do Google estava
-PROIBIDA de citar o site, pelo Cloudflare)
+**Atualizado em:** 03/09/2026, noite (o Cloudflare reescrevia o HTML que o
+React hidrata; um `filter` de valor ZERO tirava a entrada do hero da GPU; e o
+telefone baixava 3840px para desenhar 1025)
+
+## O PageSpeed do telefone, medido item por item (03/09, noite)
+
+Sete apontamentos. **Tres eram defeito, quatro nao** — e o achado que justifica
+a rodada nao estava no relatorio.
+
+### O Cloudflare reescrevia o HTML que o React hidrata
+
+Achado ao rastrear de onde vinha o `email-decode.min.js` que aparecia como
+recurso bloqueante. O script era a ponta; o problema era o que ele desfaz.
+
+    <button data-slot="dropdown-menu-trigger">
+      <a href="/cdn-cgi/l/email-protection" class="__cf_email__">[email protected]</a>
+    </button>
+
+`suporte-email-menu.tsx` renderiza `{email}` como no de TEXTO. O Email Address
+Obfuscation (Scrape Shield) trocava por ELEMENTO — descasamento de hidratacao,
+a classe que produz React #418/#423. Em 5 paginas publicas: `/` (x1),
+`/privacidade` (x3), `/termos` (x3) e as duas de conteudo (x1 cada).
+
+**Nenhum dos quatro portoes alcanca**: `localhost` nao passa pelo Cloudflare.
+
+**Desligado pelo dono** — nao ha caminho por codigo, a reescrita acontece
+depois que a resposta sai da Vercel. A guarda ficou em
+`auditar-descoberta.mjs`, dentro do laco que ja le toda pagina do sitemap:
+sem ela, "desliguei" e "desliguei ate alguem religar" sao indistinguiveis.
+Controle negativo: com a obfuscacao ligada, reprovava em exatamente 5.
+
+**O recurso ja nao protegia nada**: o endereco esta em texto puro no
+`aria-label` do mesmo botao, a dois atributos de distancia.
+
+**Fica em aberto:** `layout/user-menu.tsx` mostra `{currentUser.email}` em 4
+pontos da area logada. Nunca foi medido, e agora nao da mais para reproduzir.
+
+### Um `filter` de valor ZERO tirava seis animacoes da GPU
+
+`tw-animate-css@1.4.0` poe `filter: blur(var(--tw-enter-blur, 0))` no
+`@keyframes enter`. Basta a propriedade EXISTIR para o Chrome recusar compor —
+a animacao cai na thread principal nos 600ms em que o LCP e decidido.
+
+`animate-entrada` (`app/globals.css`) e o mesmo quadro sem essa linha, lendo as
+MESMAS variaveis, entao `fade-in`, `slide-in-from-*` e `zoom-in-*` seguem
+valendo. 27 elementos, uma palavra cada.
+
+**A armadilha, e ela e de Tailwind v4:** escrito em `@theme static`, rodava a
+**150ms** em vez de 600. `static` emite a variavel em `:root`, e e la que os
+`var()` internos sao substituidos — onde `--tw-duration` nao existe, porque
+quem escreve isso e a classe `duration-entrada`, no elemento. `@theme inline`
+substitui dentro da utility, que aplica no elemento. O `@theme static` vizinho
+continua certo para `--ease-entrada`, que PRECISA existir em `:root` porque o
+RevealOnScroll a le num `style` inline.
+
+**E `components/auth/animacao.ts` quase escapou**: e `.ts`, e a varredura usava
+`--include=*.tsx`. Quem o pegou foi `document.getAnimations()` no navegador —
+quatro animacoes de `/cadastro` ainda vinham com o nome `enter`.
+
+### O telefone baixava 3840px para desenhar 1025
+
+Duas causas, nenhuma delas a qualidade. **O `sizes` mentia**: `vw` e a janela,
+mas o print e 300% do CONTAINER. Medido em 390px — janela 390, moldura 342,
+print desenhado 1025, ou seja **263vw**. E o degrau de **3840 saiu** do
+`deviceSizes`: `produto-print.tsx` e o unico consumidor de `next/image` do
+projeto, e a fonte tem 2880px. **AVIF entrou** (o padrao do Next 14 e so WebP).
+
+    producao antes   webp w3840   169.042 + 89.948 = 259,0 KB
+    producao agora   avif         60.587 + 32.794 =  93,4 KB   -64%
+
+### Contraste: 2 de 169, e o medidor errou DUAS vezes antes de acertar
+
+O relatorio devolveu 90 em Acessibilidade. Medido: dois elementos, os mesmos
+nos dois temas, ambos `text-muted-foreground/70` em 11px no rodape — 3,00 no
+claro e 4,14 no escuro, contra 4,5. Sem o `/70`: 5,58 e 7,38. Tamanho pequeno
+E opacidade sao dois recuos empilhados, e o texto apagado era o dado cadastral,
+que existe para ser conferido.
+
+**O metodo importa mais que a correcao.** Primeira versao do medidor leu
+`oklch(0.17 0.004 220)` como RGB: 178 falhas, todas falsas. Segunda converteu
+pelo canvas mas pintando sobre PRETO opaco, o que faz `getImageData` devolver
+alfa 255 sempre e todo ancestral transparente virar fundo preto — no escuro
+passou (o fundo real e quase preto), no claro deu 158 de 169 reprovando,
+incluindo `text-foreground` sobre a pagina, que da 18,5:1. A versao que vale
+pinta sobre preto E sobre branco: se o resultado nao muda, a cor e opaca.
+
+**Um resultado plausivel num tema so nao prova nada.**
+
+### Os quatro que NAO devem ser mexidos, com a medida de cada um
+
+**"JavaScript legado, 12 KiB"** e o `polyfill-module.js` do proprio Next (em
+`node_modules`, sob `next/dist/build/polyfills/`), **1.380 bytes no disco**, injetado sem condicao pelo Next 14 e nao governado
+por browserslist. Declarar um browserslist moderno nao removeria: o Tailwind v4
+ja exige Chrome 111 / Safari 16.4.
+
+**"Bloqueio de renderizacao, 460ms"** — as duas folhas baixam EM PARALELO (a
+propria arvore do relatorio termina uma aos 332ms e a outra aos 351). A pequena
+tem **339 bytes em brotli** e e a folha do `next/font`, com
+`ascent-override`/`size-adjust` — as metricas que IMPEDEM o salto de layout.
+Junta-las a mao trocaria protecao real de CLS por economia que nao existe.
+`experimental.inlineCss` e do Next 15; aqui e 14.2.35.
+
+**Preconnect** — o proprio relatorio diz que nao ha candidato. Correto desde
+que o cliente do Supabase saiu da landing, em 02/09.
+
+**Ciclos de cache** — 0 KiB, e a unica entrada era o script do Cloudflare.
+
+### Nao medido, e fica anotado
+
+O relatorio novo trouxe dois itens que o primeiro nao tinha: **reflow forcado**
+(43ms, a maior parte no chunk 2117) e **2 tarefas longas**. Nenhum dos dois foi
+investigado.
+
 
 ## A campanha do Meta esta pronta e nao pode ser ligada (03/09)
 
