@@ -4,10 +4,129 @@ Documento de continuidade. É lido no começo de toda sessão (referenciado no
 [CLAUDE.md](../CLAUDE.md)) para que uma conversa nova, ou outra conta, comece
 sabendo o que já foi feito, o que foi decidido e onde estão as armadilhas.
 
-**Atualizado em:** 02/09/2026, tarde (o botao "Criar conta" era INALCANCAVEL em
-telefone na primeira visita, e nenhum dos quatro portoes podia ver isso; o
-cliente do Supabase viajava na landing para escolher o rotulo de um botao; e o
-produto ganhou sino de avisos)
+**Atualizado em:** 03/09/2026 (a campanha do Meta esta montada e TRAVADA por
+restricao no perfil pessoal do dono; a Politica de Privacidade negava usar
+cookie de publicidade e usa desde que o pixel existe; e a IA do Google estava
+PROIBIDA de citar o site, pelo Cloudflare)
+
+## A campanha do Meta esta pronta e nao pode ser ligada (03/09)
+
+Montada inteira e pausada, sem custo:
+
+    campanha   120253684403370580   OUTCOME_LEADS   R$ 25/dia   PAUSED
+    conjunto   120253684403670580   Brasil, Advantage+, otimiza por Lead
+    criativos  6, um mecanismo psicologico cada, todos 1:1
+    anuncios   0                    BLOQUEADO
+
+**O bloqueio nao e de codigo, de conta nem de cartao.** O suporte da Meta
+confirmou: restricao de Fraude e Decepcao no PERFIL PESSOAL, aplicada em
+06/07/2026, que desativa o Meta Pay. Desativado, nenhum meio de pagamento
+funciona — nem cartao, nem Pix, nem boleto, em conta nenhuma.
+
+O diagnostico custou uma sessao porque a API culpa "pagamento" (`code 100`,
+`subcode 1815010`), o que manda mexer no cartao. Ficam registradas as
+hipoteses testadas e DESCARTADAS, para ninguem refazer a ronda: trocar cartao,
+corrigir o CNPJ do cadastro, conta bloqueada, limite de gasto, app em modo de
+desenvolvimento.
+
+**O teste decisivo** foi montar campanha, conjunto, criativo e anuncio na OUTRA
+conta de anuncio (`27108979755418323`), que tem metodo de pagamento diferente e
+nenhum business: os tres primeiros passaram, o anuncio recusou com o mesmo
+subcodigo. Duas contas, dois metodos, um erro — logo o bloqueio e do usuario.
+
+Caso aberto no suporte (`1782313419778871`), aguardando especialista. Detalhes
+em [docs/campanha-meta.md](campanha-meta.md).
+
+## O 1:1 e a imagem unica, e a escolha foi MEDIDA (03/09)
+
+Sem `asset_feed_spec` — que o app em modo de desenvolvimento bloqueia — o
+creative carrega uma imagem so. Qual sofre menos foi decidido abrindo o preview
+real do Facebook no navegador:
+
+    4:5 em posicionamento 1:1   CORTA topo e base: marca e dominio somem
+    1:1 em posicionamento 4:5   INTEIRA, nada cortado
+
+**A regra que fica:** quando so cabe uma imagem, escolha a mais QUADRADA das
+que voce tem. Ela perde area nas outras; as alongadas perdem conteudo.
+
+E o achado estrutural: **um `foco` unico nao serve para as tres proporcoes**. A
+caixa de `comp_passo` vai de 2.14 (1:1) a 1.30 (9:16), e o card sangra pela
+direita — o mesmo recorte cortava o botao "Google Calendar" em 1:1 e o e-mail
+do contato em 4:5. `foco` passou a aceitar dicionario por formato.
+
+## A Politica negava usar cookie de publicidade, e usa (03/09)
+
+Achado ao preparar o Google Ads. A secao 3 dizia em texto *"nao usamos cookies
+de publicidade"* — falso desde a instalacao do Meta Pixel, que grava `_fbp`. E
+a lista de SUBOPERADORES trazia Supabase, Vercel, Resend, Asaas e Google, **sem
+a Meta**, que recebe e-mail, telefone, nome, cidade, estado e CEP pela CAPI.
+
+Hasheados, e hash nao descaracteriza dado pessoal quando o destinatario
+consegue casa-lo com a base dele — que e para o que serve. Omitir destinatario
+contraria o Art. 9o, I.
+
+`lib/analytics/consentimento.ts` registrou em 02/09 que fechar o consentimento
+"deixou de ser opcional no momento em que o trafego pago entrou no plano". O
+raciocinio estava certo e **parou na metade**: o banner foi construido, o
+cookie espelho foi construido, a CAPI passou a respeitar a recusa — e a
+POLITICA, que e onde tudo isso e declarado, continuou dizendo o contrario.
+
+## A IA do Google estava PROIBIDA de citar o site (03/09)
+
+Relato do dono, e foi ele que resolveu o caso: *"aparece o site, mas a IA do
+Google nao fala do meu site"*.
+
+O `robots.txt` SERVIDO tinha 76 linhas; `app/robots.ts` gera 15. A diferenca
+vinha do Cloudflare, que injetava bloqueio de nove bots de IA — entre eles o
+`Google-Extended`, que autoriza o Google a usar o conteudo em AI Overview e no
+Gemini.
+
+    Googlebot         rastreia e indexa    -> ranking na busca normal
+    Google-Extended   autoriza uso em IA   -> citacao em AI Overview
+
+A origem era o toggle **"robots.txt gerenciado"** do AI Crawl Control, sensato
+como padrao e o oposto do que um SaaS querendo ser descoberto precisa.
+Desligado pelo dono: 76 linhas -> 15.
+
+**E duas suposicoes minhas estavam erradas**, as duas desmentidas pela fonte
+oficial: eu disse que o site NAO APARECIA (o Search Console mostra posicao
+media 1,7 e CTR de 33%) e que faltava Search Console (ja estava configurado
+desde 13/08). Quando a fonte oficial existe, e ela que decide.
+
+O diagnostico correto: **nao e visibilidade, e demanda**. 114 impressoes em
+tres meses, quase todas pelo nome proprio. Detalhes em
+[docs/descoberta-no-google.md](descoberta-no-google.md).
+
+## O site ganhou conteudo, dados estruturados e um vigia (03/09)
+
+    sitemap        5 -> 7 URLs
+    JSON-LD        0 -> 6 blocos na home, 2 em cada pagina nova
+    description    213 -> 148 chars   o corte comia "nao por vendedor"
+    canonical      /login, que era a unica sem
+
+Duas paginas escritas para quem NAO conhece o produto:
+`/quanto-custa-um-crm` e `/crm-que-nao-cobra-por-usuario`. As duas admitem
+quando o concorrente e melhor — conteudo que so puxa para o proprio lado nao e
+citado por IA nem ranqueia.
+
+`scripts/marketing/auditar-descoberta.mjs` le o site COMO O BUSCADOR LE, por
+HTTP. Nenhum dos quatro portoes fazia isso: eles leem o codigo que GERA o
+robots, nunca o que e servido — e os dois discordavam por 61 linhas.
+
+**`aggregateRating` fica FORA, com teste travando.** Ele desenha estrelas no
+resultado e seria prova social inventada. Provado com controle negativo:
+injetado, 1 de 6 reprova. Marcar avaliacao inexistente tambem viola a politica
+do Google, e a punicao e ação manual — o site perde TODO rich snippet.
+
+## O banco nao guardava qual PECA trouxe o cliente (03/09)
+
+`workspaces` tinha `utm_source`, `utm_medium`, `utm_campaign`, `fbc` e `fbp`.
+Faltava `utm_content` — e os seis anuncios apontam para o mesmo `/cadastro`,
+distinguidos so por ele.
+
+Sem a coluna, o teste de seis angulos rodaria e nao concluiria qual argumento
+vendeu. E o relatorio da Meta nao substitui: ela sabe quem se cadastrou, nao
+quem PAGOU, que acontece dias depois no Asaas. Migration 0069.
 
 ## O botao "Criar conta" nao podia ser clicado, em telefone (02/09, tarde)
 
