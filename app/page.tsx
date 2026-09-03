@@ -45,8 +45,20 @@ import { MobileStickyCta } from '@/components/landing/mobile-sticky-cta'
 // Quando o WhatsApp voltar a entregar, ele volta para cá. Não antes.
 export const metadata: Metadata = {
   title: 'Velo Funil: o CRM que não cobra por vendedor',
+  // ## O limite de ~160 caracteres é o que decide o que sobra
+  //
+  // A versão anterior tinha 213 e o Google corta em ~160 — o que ficava de
+  // fora era exatamente "não por vendedor", que é o único argumento desta
+  // categoria que um concorrente não copia sem mudar a própria receita.
+  //
+  // Medido em 03/09 por `scripts/marketing/auditar-descoberta.mjs`, que lê o
+  // HTML SERVIDO. A regra agora é a mesma da arte: o diferencial vem primeiro,
+  // porque o fim da frase pode não existir.
+  //
+  // O `openGraph` abaixo mantém a versão longa de propósito: WhatsApp e
+  // LinkedIn mostram bem mais que 160, e ali cortar seria perder à toa.
   description:
-    'CRM para pequenos negócios brasileiros. Traga sua planilha e cada cliente vira um contato com prazo para responder. Grátis até 50 contatos, sem cartão. Pro por R$ 49 por mês pela empresa inteira, não por vendedor.',
+    'CRM que não cobra por vendedor: R$ 49 por mês pela empresa inteira, com 1 ou com 20 pessoas. Traga sua planilha. Grátis até 50 contatos, sem cartão.',
   alternates: { canonical: '/' },
   // Sem repetir aqui, o preview de link herdaria o openGraph genérico do
   // layout raiz em vez do texto de conversão da landing.
