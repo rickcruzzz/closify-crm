@@ -11,6 +11,7 @@ import { FaqSection, faqs } from '@/components/landing/faq-section'
 import {
   aplicacao,
   organizacao,
+  paraScript,
   perguntasFrequentes,
 } from '@/lib/seo/dados-estruturados'
 import { CtaSection } from '@/components/landing/cta-section'
@@ -96,16 +97,16 @@ export default function Home() {
         type="application/ld+json"
         // O conteúdo é gerado por nós, a partir de constantes do próprio
         // código — nunca de entrada de usuário.
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(organizacao()) }}
+        dangerouslySetInnerHTML={{ __html: paraScript(organizacao()) }}
       />
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(aplicacao()) }}
+        dangerouslySetInnerHTML={{ __html: paraScript(aplicacao()) }}
       />
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{
-          __html: JSON.stringify(perguntasFrequentes(faqs)),
+          __html: paraScript(perguntasFrequentes(faqs)),
         }}
       />
       <PublicNavbar />

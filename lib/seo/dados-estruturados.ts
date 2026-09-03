@@ -139,3 +139,27 @@ export function perguntasFrequentes(perguntas: readonly PerguntaFrequente[]) {
     })),
   }
 }
+
+/**
+ * Serializa JSON-LD para dentro de uma tag `<script>` sem risco de quebrá-la.
+ *
+ * ## O caractere que estraga tudo
+ *
+ * `JSON.stringify` não escapa `<`, então um texto que contenha `</script>` —
+ * hoje impossível, porque tudo aqui é literal do próprio código, mas trivial
+ * de introduzir amanhã ao puxar uma pergunta de um CMS — fecharia a tag no
+ * meio do JSON e jogaria o resto como HTML na página.
+ *
+ * Escapar `<` cobre esse caso; `\u2028` e `\u2029` são separadores de linha
+ * que o JSON aceita e o parser de JavaScript recusa, e quebram o script pelo
+ * mesmo caminho.
+ *
+ * É a forma que a documentação do Next recomenda para JSON-LD, e o custo é uma
+ * substituição de string.
+ */
+export function paraScript(dados: unknown): string {
+  return JSON.stringify(dados)
+    .replace(/</g, '\u003c')
+    .replace(/\u2028/g, '\u2028')
+    .replace(/\u2029/g, '\u2029')
+}
