@@ -197,8 +197,40 @@ PECAS = [
     # lugar mental que o WhatsApp ocupava: "o que eu tenho já funciona". A
     # resposta é a mesma — não pedimos que largue nada. E aqui ela é
     # LITERALMENTE verdade, porque importar planilha é recurso entregue.
-    dict(id="a3_objecao_planilha", comp="declaracao", pal=vf.ESCURO,
-         claim="Sua planilha entra. O funil monta sozinho.",
+    # ## Era `declaracao`, e 30% da peca era VAZIO
+    #
+    # Medido em 03/09, a pedido do dono: a arte tinha o claim grande em cima e
+    # 327px de nada embaixo — 30% da peca. E a mesma classe do commit
+    # `c3ea81e` ("cinco dos sete slides estavam com metade da peca vazia"),
+    # que voltou por outro caminho.
+    #
+    # O que preenche com VALOR e a tela real. Esta peca combate o vies de
+    # status quo ("o que eu tenho ja funciona"), e a objecao por tras dele nao
+    # e a planilha: e o medo de migrar. Nenhuma frase responde isso tao bem
+    # quanto ver o produto lendo a planilha e acertando as colunas sozinho.
+    #
+    # ## O recorte e o MAPEAMENTO, e nao o dialogo inteiro
+    #
+    # O dialogo completo e quase quadrado (1.03) e a caixa desta composicao e
+    # 2.48 — encaixar um no outro cortaria metade dele. O mapeamento sozinho
+    # da 2.61, que casa quase exato, e por acaso e a parte que PROVA: as
+    # colunas do arquivo aparecem reconhecidas, uma a uma, com exemplo real de
+    # cada uma ao lado.
+    dict(id="a3_objecao_planilha", comp="passo", pal=vf.ESCURO,
+         rotulo="IMPORTAR EM UM MINUTO", indice="",
+         claim="Sua planilha entra.",
+         realce="O funil monta sozinho.",
+         captura="11-importar-desktop-dark.png",
+         # O corte cai DENTRO de um vao sem texto nas duas pontas: 0.270 fica
+         # no vao de 95px antes de "Entendemos sua planilha assim:", e 0.500
+         # no de 155px depois de "Esta errado? Ajustar colunas". A primeira
+         # tentativa comecou em 0.252 e partiu a linha "contatos.csv - 6
+         # linha(s)" ao meio, o que le como imagem quebrada.
+         foco=(0.300, 0.270, 0.700, 0.500),
+         # `comp_passo` escreve "ARRASTE" quando nao recebe rodape, e anuncio
+         # de imagem unica nao arrasta — a trava de `conferir_texto_de_anuncio`
+         # reprovaria a peca. O dominio ocupa o mesmo lugar e diz algo util.
+         rodape=D.upper(),
          dominio=D),
 
     # -----------------------------------------------------------------------
