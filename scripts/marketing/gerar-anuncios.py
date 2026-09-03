@@ -236,9 +236,20 @@ PECAS = [
          #
          # O 4:5, por ser mais alto, ganha a PREVIA de brinde — as tres
          # primeiras linhas ja prontas, que e a prova depois da promessa.
+         # ## A base precisa de RESPIRO, e nao so cair num vao
+         #
+         # A versao anterior terminava em 0.570, tecnicamente dentro do vao
+         # 0.5694..0.6072 — e a linha "Quem ja existe e ignorado" ficava
+         # COLADA na borda do card, sem um pixel de folga. Cair no vao evita
+         # partir a letra; nao evita o texto encostar, que le como corte.
+         #
+         # Agora sobram 56px de fundo depois da ultima linha (na escala da
+         # captura), e o topo abre um pouco mais para a esquerda e para a
+         # direita — 0.2934 em vez de 0.300 — porque alargar o recorte e o que
+         # compra essa altura sem mexer na proporcao que cada formato exige.
          foco={
-             "1x1": (0.300, 0.271, 0.700, 0.570),
-             "4x5": (0.300, 0.270, 0.700, 0.697),
+             "1x1": (0.2934, 0.276, 0.7066, 0.5849),
+             "4x5": (0.2934, 0.276, 0.7066, 0.7167),
          },
          # `comp_passo` escreve "ARRASTE" quando nao recebe rodape, e anuncio
          # de imagem unica nao arrasta — a trava de `conferir_texto_de_anuncio`
