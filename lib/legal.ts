@@ -157,7 +157,12 @@ export const PRAZO_RESPOSTA_TITULAR_DIAS = 15
  * direitos do titular continuam idênticos. Mudou quem responde, não o que é
  * feito com o dado.
  */
-export const ATUALIZADO_EM = '31 de agosto de 2026'
+// 03/09: a Meta entrou na lista de suboperadores e a secao 3 deixou de negar
+// cookie de publicidade. Nao e carimbo de revisao — e um destinatario NOVO de
+// dado pessoal aparecendo na declaracao, que e exatamente o que o Art. 9o, I
+// da LGPD manda informar ao titular. Mesma regra que moveu esta data em 31/08,
+// quando o controlador mudou de pessoa juridica.
+export const ATUALIZADO_EM = '3 de setembro de 2026'
 
 export type Suboperador = {
   nome: string
@@ -196,6 +201,33 @@ export const SUBOPERADORES: Suboperador[] = [
     nome: 'Google',
     finalidade: 'Login com conta Google, quando o usuário opta por esse método',
     dados: 'Nome, endereço de e-mail e identificador da conta Google',
+    paisDeProcessamento: 'Estados Unidos',
+  },
+  // ## A Meta faltava nesta lista, e recebe dado pessoal desde que a CAPI existe
+  //
+  // Achado em 03/09, ao preparar a campanha. O pixel grava `_fbp` (cookie de
+  // publicidade de terceiro) e a Conversions API envia e-mail, telefone, nome,
+  // cidade, estado, CEP e `external_id` — hasheados em SHA-256, mas enviados,
+  // e hash não descaracteriza dado pessoal quando o destinatário consegue
+  // casá-lo com a base dele, que é exatamente para o que serve.
+  //
+  // Omitir um suboperador que recebe dado pessoal contraria o Art. 9º, que dá
+  // ao titular o direito de saber com quem os dados são compartilhados. E a
+  // seção 3 desta mesma política afirmava "não usamos cookies de publicidade",
+  // o que era falso desde a instalação do pixel.
+  //
+  // Entra AGORA porque o tráfego pago está para começar: é o momento em que um
+  // risco de conformidade adormecido vira exposição real, com volume. O mesmo
+  // raciocínio que `lib/analytics/consentimento.ts` usou para fechar o
+  // consentimento — e que parou na metade, porque a política não foi junto.
+  {
+    nome: 'Meta (Facebook e Instagram)',
+    finalidade:
+      'Medição de anúncios: identificar de qual campanha veio cada visita e ' +
+      'cadastro. Só ocorre para quem aceita os cookies no banner',
+    dados:
+      'Endereço IP, identificador do navegador e, no cadastro, e-mail, ' +
+      'telefone, nome, cidade, estado e CEP — todos transmitidos com hash',
     paisDeProcessamento: 'Estados Unidos',
   },
 ]

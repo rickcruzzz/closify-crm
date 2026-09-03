@@ -102,8 +102,24 @@ export default function PrivacidadePage() {
         <LegalP>
           <strong className="text-foreground">Dados coletados automaticamente:</strong>{' '}
           endereço IP, tipo de navegador e páginas acessadas, para segurança e medição
-          de desempenho. Não usamos cookies de publicidade, não fazemos perfilamento
-          comportamental e não vendemos dados a ninguém.
+          de desempenho. Não fazemos perfilamento comportamental e não vendemos dados
+          a ninguém.
+        </LegalP>
+        {/* Esta frase dizia "não usamos cookies de publicidade", e era falsa
+            desde que o Meta Pixel foi instalado: ele grava `_fbp`, que é
+            exatamente isso. Achado em 03/09, ao preparar o tráfego pago.
+
+            O que entra no lugar não suaviza — descreve o que acontece, diz que
+            depende de aceite e aponta como recusar. Uma página que existe para
+            declarar tratamento de dado não pode ser o lugar onde ele fica
+            escondido. */}
+        <LegalP>
+          <strong className="text-foreground">Cookies de publicidade:</strong> quando
+          você aceita no aviso de cookies, usamos o pixel da Meta para saber de qual
+          anúncio veio a sua visita. Ele grava um identificador no seu navegador e,
+          se você criar conta, envia à Meta seus dados de contato transmitidos com
+          hash, para medir a conversão do anúncio. Enquanto você não aceitar, nada
+          disso é carregado — e recusar é tão simples quanto aceitar, no mesmo aviso.
         </LegalP>
         <LegalP>
           Sobre o CPF ou CNPJ: ele é transmitido diretamente ao processador de pagamentos
