@@ -134,6 +134,26 @@ const TELAS = [
   // aprovada pelo Google em 24/08), é uso nominativo factual e passa.
   { rota: '/settings?aba=integracoes', nome: '10-integracoes', inteira: true },
   { rota: '/leads', nome: '11-importar', acao: 'abrir-importacao' },
+
+  // ## O painel do negocio, para a peca do Google
+  //
+  // A tela de Integracoes seria a candidata obvia e foi capturada e
+  // REJEITADA: ela mostra "Nao conectado" nos dois cards — o produto sem usar
+  // a integracao que o anuncio promete — e traz o bloco do WhatsApp com "Em
+  // breve", que e a promessa retirada do marketing nesta sessao.
+  //
+  // O painel do negocio mostra a ACAO em vez do estado da conexao: o botao
+  // "Google Calendar" ao lado da proxima acao. E o que a peca promete —
+  // "marca no seu Google" — acontecendo dentro do produto.
+  //
+  // A rota e FUNCAO porque depende do id que o cenario acabou de criar.
+  // "Ensaio de produto" foi escolhido por ter a tarefa "Reuniao de
+  // alinhamento": agendar reuniao e exatamente o caso de uso do botao.
+  {
+    rota: (cenario) => `/kanban?negocio=${cenario.dealDe['Ensaio de produto']}`,
+    nome: '12-negocio',
+    espera: /google calendar/i,
+  },
 ]
 
 /**
@@ -245,7 +265,8 @@ try {
         if (SO_TELA && tela.nome !== SO_TELA) continue
         const arquivo = `${tela.nome}-${formato.nome}-${tema}.png`
         try {
-          await page.goto(`${BASE}${tela.rota}`, { waitUntil: 'networkidle' })
+          const rota = typeof tela.rota === 'function' ? tela.rota(cenario) : tela.rota
+          await page.goto(`${BASE}${rota}`, { waitUntil: 'networkidle' })
           await page.locator('h1').first().waitFor({ state: 'visible', timeout: 45_000 })
           // Rede parada não basta: as animações de entrada ainda correm, e um
           // print no meio delas pega o conteúdo translúcido e deslocado.
@@ -254,6 +275,13 @@ try {
           // de fotografar. Falhar aqui não pode passar em silêncio — o print
           // sairia com o nome do importador e a imagem da lista.
           if (tela.acao) await ACOES[tela.acao](page)
+          // Painel que abre por parametro de URL monta DEPOIS do board: sem
+          // esperar por algo dele, a captura sai com o funil e sem o painel.
+          if (tela.espera) {
+            await page.getByText(tela.espera).first()
+              .waitFor({ state: 'visible', timeout: 20_000 })
+            await page.waitForTimeout(700)
+          }
           await page.screenshot({
             path: `${SAIDA}/${arquivo}`,
             fullPage: Boolean(tela.inteira),

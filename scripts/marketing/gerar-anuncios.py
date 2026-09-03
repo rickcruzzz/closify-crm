@@ -221,12 +221,25 @@ PECAS = [
          claim="Sua planilha entra.",
          realce="O funil monta sozinho.",
          captura="11-importar-desktop-dark.png",
-         # O corte cai DENTRO de um vao sem texto nas duas pontas: 0.270 fica
-         # no vao de 95px antes de "Entendemos sua planilha assim:", e 0.500
-         # no de 155px depois de "Esta errado? Ajustar colunas". A primeira
-         # tentativa comecou em 0.252 e partiu a linha "contatos.csv - 6
-         # linha(s)" ao meio, o que le como imagem quebrada.
-         foco=(0.300, 0.270, 0.700, 0.500),
+         # ## O corte cai DENTRO de um vao sem texto, nas duas pontas
+         #
+         # Medido o perfil de brilho do dialogo. A primeira tentativa comecou
+         # em 0.252 e partiu a linha "contatos.csv - 6 linha(s)" ao meio, o
+         # que le como imagem quebrada.
+         #
+         # ## E um recorte POR FORMATO, pelo mesmo motivo da a6
+         #
+         # A caixa vai de 2.14 (1:1) a 1.50 (4:5). Com um foco unico de 2.78 o
+         # 4:5 cortava a largura e o e-mail do contato saia pela metade
+         # ("juliana@vidaplena.com.b"). Cada base abaixo cai num vao: 0.570 no
+         # de 0.5694..0.6072, e 0.697 no de 0.6897..0.7450.
+         #
+         # O 4:5, por ser mais alto, ganha a PREVIA de brinde — as tres
+         # primeiras linhas ja prontas, que e a prova depois da promessa.
+         foco={
+             "1x1": (0.300, 0.271, 0.700, 0.570),
+             "4x5": (0.300, 0.270, 0.700, 0.697),
+         },
          # `comp_passo` escreve "ARRASTE" quando nao recebe rodape, e anuncio
          # de imagem unica nao arrasta — a trava de `conferir_texto_de_anuncio`
          # reprovaria a peca. O dominio ocupa o mesmo lugar e diz algo util.
@@ -317,15 +330,50 @@ PECAS = [
     # Gmail") e `comp_declaracao` a quebrou em SEIS linhas, com um "O" sozinho
     # na primeira. Gerado e olhado em 02/09. Esta composicao foi desenhada
     # para uma tese de uma respiracao, e passar disso vira parede de texto.
-    dict(id="a6_google", comp="declaracao", pal=vf.ESCURO,
-         claim="Marca no seu Google. Manda do seu Gmail.",
+    # ## Era `declaracao`, e 41% da peca era VAZIO — o pior dos seis
+    #
+    # ## A tela de Integracoes foi capturada e REJEITADA
+    #
+    # Era a candidata obvia e falha por dois motivos, os dois visiveis so ao
+    # abrir a captura: os cards de Google Calendar e Gmail dizem "Nao
+    # conectado" — o produto sem usar a integracao que o anuncio promete — e o
+    # bloco do WhatsApp traz "Em breve" com a explicacao da migracao, que e
+    # exatamente a promessa retirada do marketing em 02/09.
+    #
+    # O painel do negocio mostra a ACAO em vez do estado da conexao: o botao
+    # "Google Calendar" ao lado da proxima acao, dentro do produto.
+    #
+    # ## O logo do Google continua FORA, e isso e regra e nao gosto
+    #
+    # A Meta reprova criativo cujo visual sugira endosso ou parceria nao
+    # autorizada, e logo de terceiro na arte e o caso tipico. Aqui o nome
+    # aparece como rotulo de um botao NOSSO, que e o produto se descrevendo —
+    # e a integracao existe de verdade, com verificacao OAuth aprovada pelo
+    # proprio Google em 24/08.
+    dict(id="a6_google", comp="passo", pal=vf.ESCURO,
+         rotulo="SEM APRENDER FERRAMENTA NOVA", indice="",
+         claim="Marca no seu Google.",
+         realce="Manda do seu Gmail.",
+         # ## A captura e a de TELEFONE, e nao a de desktop
+         #
+         # No desktop o painel e uma coluna estreita colada na borda direita:
+         # o titulo da tarefa sai truncado ("Reuniao de alinh...") e o botao
+         # fica a um passo da margem, onde a sangria do card o parte ao meio.
+         #
+         # No telefone o painel ocupa a largura toda. "Reuniao de alinhamento"
+         # aparece inteiro e os dois botoes cabem lado a lado, longe da borda.
+         captura="12-negocio-telefone-dark.png",
+         # Um recorte por formato: a caixa vai de 2.14 (1:1) a 1.50 (4:5), e
+         # um foco unico corta o botao numa das duas. Os dois enquadramentos
+         # terminam em 0.788, logo abaixo dos botoes; o de 4:5, mais alto,
+         # ganha o "Movimento" de brinde.
+         foco={
+             "1x1": (0.257, 0.630, 0.964, 0.783),
+             "4x5": (0.257, 0.570, 0.964, 0.788),
+         },
+         rodape=D.upper(),
          dominio=D),
 
-    # O rotulo ja saiu "SEM CARTAO PARA COMECAR", sem til e sem cedilha, na
-    # MESMA peca em que a assinatura dizia "GRÁTIS" com acento. Duas grafias
-    # do mesmo idioma na mesma arte leem como descuido — e num anuncio que
-    # vende acabamento premium, descuido de acento e o primeiro sinal de que
-    # o produto tambem e mal acabado.
     dict(id="a5_oferta", comp="chamada", pal=vf.ESCURO,
          rotulo="SEM CARTÃO PARA COMEÇAR",
          claim="O plano é o mesmo para uma pessoa",
@@ -449,6 +497,41 @@ def compor_em_banda(arte, tamanho: tuple, pal) -> "vf.Image.Image":
     return fundo
 
 
+# ---------------------------------------------------------------------------
+# O recorte da captura muda com a proporcao, e nao podia ser um so
+# ---------------------------------------------------------------------------
+#
+# `comp_passo` faz o card SANGRAR pela direita e corta o excedente. O que
+# sobra depende de qual dimensao limita, e isso muda com a proporcao da peca:
+#
+#     foco MAIS LARGO que a caixa    corta a LARGURA (some o lado direito)
+#     foco MAIS ALTO que a caixa     corta a ALTURA  (some a base)
+#
+# E a caixa varia muito entre os tres formatos, porque o texto acima dela
+# ocupa a mesma altura enquanto a peca cresce:
+#
+#     1:1    984x460   proporcao 2.14
+#     4:5    984x656   proporcao 1.50
+#     9:16   983x757   proporcao 1.30
+#
+# Um foco unico, portanto, e certeza de cortar algo em duas das tres. Foi o
+# que aconteceu: com um recorte calibrado para 2.48 o botao "Google Calendar"
+# — o elemento que a peca existe para mostrar — saiu partido pela borda em
+# 1:1, e o e-mail do contato saiu cortado em 4:5.
+#
+# `foco` passa a aceitar um dicionario por formato. Tupla continua valendo
+# para peca cujo recorte tolera corte em qualquer lado.
+def foco_do_formato(peca: dict, formato: str):
+    foco = peca.get("foco")
+    if isinstance(foco, dict):
+        if formato not in foco:
+            raise KeyError(
+                f"{peca['id']}: falta o foco de {formato}. Um recorte por "
+                f"formato existe porque a caixa muda de proporcao entre eles.")
+        return foco[formato]
+    return foco
+
+
 def render(formato: str, tamanho: tuple, so: str | None = None) -> list:
     pasta = SAIDA / formato
     pasta.mkdir(parents=True, exist_ok=True)
@@ -459,6 +542,9 @@ def render(formato: str, tamanho: tuple, so: str | None = None) -> list:
             continue
         conferir_texto_de_anuncio(p)
         desenho = FORMATOS["4x5"] if em_banda else tamanho
+        # O 9:16 e desenhado em 4:5 e assentado na banda: o recorte que vale
+        # para ele e o de 4:5, nao o da medida final.
+        p = {**p, "foco": foco_do_formato(p, "4x5" if em_banda else formato)}
         c = vf.Tela(desenho[0], desenho[1], p["pal"])
         vf.COMPOSICOES[p["comp"]](c, p)
         caminho = pasta / f"{p['id']}.png"
