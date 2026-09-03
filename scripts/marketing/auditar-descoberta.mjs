@@ -159,6 +159,27 @@ for (const url of urlsDoSitemap) {
     if (!canonical) erros.push('sem canonical')
     if (!og) erros.push('sem Open Graph (link feio no WhatsApp)')
 
+    // ## O Cloudflare reescrevendo o HTML que o React renderiza
+    //
+    // "Email Address Obfuscation" (Scrape Shield) troca todo e-mail em texto
+    // por `<a class="__cf_email__">[email protected]</a>` e injeta um script
+    // para desfazer isso no navegador. Medido em 03/09: acontecia em 5 páginas
+    // públicas, e numa delas dentro de um `<button>` renderizado pelo React
+    // (`suporte-email-menu.tsx`).
+    //
+    // São dois estragos de uma vez. O servidor passa a mandar ELEMENTO onde o
+    // React espera nó de TEXTO, que é descasamento de hidratação — a classe
+    // que produz React #418/#423, e que nenhum dos quatro portões alcança
+    // porque `localhost` não passa pelo Cloudflare. E o endereço de suporte
+    // vira `[email protected]` para todo crawler e para quem está sem JS.
+    //
+    // A conferência mora aqui, e não numa anotação, porque a correção é um
+    // interruptor de painel: sem alguém medindo o HTML servido, "desliguei" e
+    // "desliguei até alguém religar" são indistinguíveis.
+    if (texto.includes('__cf_email__')) {
+      erros.push('HTML reescrito pelo Cloudflare (__cf_email__) — quebra hidratação')
+    }
+
     // Título repetido faz o Google escolher uma página e ignorar a outra.
     if (title) {
       if (titulos.has(title)) erros.push(`title IGUAL ao de ${titulos.get(title)}`)
