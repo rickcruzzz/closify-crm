@@ -49,18 +49,18 @@ export function PageHeader({
       )}
     >
       <div className="flex min-w-0 flex-col gap-1">
-        <h1 className="animate-in fade-in slide-in-from-bottom-2 fill-mode-both ease-entrada duration-entrada delay-passo-1 truncate text-2xl font-semibold tracking-tight">
+        <h1 className="animate-entrada fade-in slide-in-from-bottom-2 fill-mode-both ease-entrada duration-entrada delay-passo-1 truncate text-2xl font-semibold tracking-tight">
           {title}
         </h1>
         {description && (
-          <Descricao className="text-muted-foreground animate-in fade-in slide-in-from-bottom-2 fill-mode-both ease-entrada duration-entrada delay-passo-2 text-sm text-pretty">
+          <Descricao className="text-muted-foreground animate-entrada fade-in slide-in-from-bottom-2 fill-mode-both ease-entrada duration-entrada delay-passo-2 text-sm text-pretty">
             {description}
           </Descricao>
         )}
       </div>
 
       {actions && (
-        <div className="animate-in fade-in slide-in-from-bottom-2 fill-mode-both ease-entrada duration-entrada delay-passo-3 flex shrink-0 flex-wrap gap-2">
+        <div className="animate-entrada fade-in slide-in-from-bottom-2 fill-mode-both ease-entrada duration-entrada delay-passo-3 flex shrink-0 flex-wrap gap-2">
           {actions}
         </div>
       )}

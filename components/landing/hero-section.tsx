@@ -47,7 +47,7 @@ export function HeroSection() {
               O mono e as maiúsculas FICAM: a barra da janela do mock, logo ao
               lado, diz `funil de vendas · Acme Corp` em mono. A letra rima com
               a página — a caixa é que não rimava. */}
-          <SegmentBadge className="animate-in fade-in slide-in-from-bottom-3 fill-mode-both ease-entrada duration-entrada delay-passo-1 text-primary font-mono text-xs tracking-wide uppercase" />
+          <SegmentBadge className="animate-entrada fade-in slide-in-from-bottom-3 fill-mode-both ease-entrada duration-entrada delay-passo-1 text-primary font-mono text-xs tracking-wide uppercase" />
           {/* Nome e categoria continuam DENTRO do h1, mas só para quem lê por
               texto: leitor de tela e o verificador de marca do Google, que
               compara o nome do app no consent screen com o heading principal
@@ -136,14 +136,14 @@ export function HeroSection() {
               jogado fora por decisão de CSS, sem nenhuma causa de rede.
               O `slide-in-from-bottom-3` FICA: deslocar não esconde o pixel, e
               o movimento de entrada continua existindo. Só a opacidade sai. */}
-          <h1 className="animate-in slide-in-from-bottom-3 fill-mode-both ease-entrada duration-entrada delay-passo-2 text-titulo-md text-balance sm:text-titulo-lg md:text-titulo-xl">
+          <h1 className="animate-entrada slide-in-from-bottom-3 fill-mode-both ease-entrada duration-entrada delay-passo-2 text-titulo-md text-balance sm:text-titulo-lg md:text-titulo-xl">
             <span className="sr-only">Velo Funil, CRM para pequenos negócios. </span>
             A planilha organiza. Ela não avisa quem está esperando.
           </h1>
           {/* Era de 47 palavras e terminava em três negações. Referência de
               conversão põe a sub do hero entre 15 e 25 — acima disso ela deixa
               de ser lida e passa a ser pulada. */}
-          <p className="text-muted-foreground animate-in fade-in slide-in-from-bottom-3 fill-mode-both ease-entrada duration-entrada delay-passo-3 max-w-xl text-lg text-balance">
+          <p className="text-muted-foreground animate-entrada fade-in slide-in-from-bottom-3 fill-mode-both ease-entrada duration-entrada delay-passo-3 max-w-xl text-lg text-balance">
             Traga sua planilha em um minuto. Cada cliente vira um contato com
             prazo para responder, e você abre o sistema já sabendo com quem
             falar hoje.
@@ -171,7 +171,7 @@ export function HeroSection() {
               separam sem que a mudança pareça ter relação. Escrito, é decisão;
               implícito, é acidente esperando. Acima de `sm` os botões voltam a
               ter a largura do próprio conteúdo, lado a lado. */}
-          <div className="animate-in fade-in slide-in-from-bottom-3 fill-mode-both ease-entrada duration-entrada delay-passo-4 order-1 mt-2 flex w-full flex-col items-stretch gap-3 sm:order-none sm:w-auto sm:flex-row sm:items-center">
+          <div className="animate-entrada fade-in slide-in-from-bottom-3 fill-mode-both ease-entrada duration-entrada delay-passo-4 order-1 mt-2 flex w-full flex-col items-stretch gap-3 sm:order-none sm:w-auto sm:flex-row sm:items-center">
             <Link
               id="hero-cta"
               href="/cadastro"
@@ -257,14 +257,14 @@ export function HeroSection() {
               três linhas e sobrepunha 46px. "Pela empresa inteira" já carrega
               o mesmo sentido, e a conta completa (cinco pessoas a R$ 53 = R$
               265) vive na seção de planos, onde há espaço para ela. */}
-          <p className="text-muted-foreground animate-in fade-in slide-in-from-bottom-3 fill-mode-both ease-entrada duration-entrada delay-passo-4 text-sm text-balance">
+          <p className="text-muted-foreground animate-entrada fade-in slide-in-from-bottom-3 fill-mode-both ease-entrada duration-entrada delay-passo-4 text-sm text-balance">
             Grátis até {FREE_LEAD_LIMIT} contatos, sem cartão. Pro por{' '}
             <span className="text-foreground font-semibold">R$ 49/mês</span>{' '}
             <span className="text-primary font-medium">pela empresa inteira</span>.
           </p>
         </div>
 
-        <div className="animate-in fade-in slide-in-from-bottom-3 fill-mode-both ease-entrada duration-entrada delay-passo-5">
+        <div className="animate-entrada fade-in slide-in-from-bottom-3 fill-mode-both ease-entrada duration-entrada delay-passo-5">
           <PipelinePreviewCard />
         </div>
       </div>

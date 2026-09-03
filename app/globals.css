@@ -486,6 +486,95 @@
   --text-titulo-sm--letter-spacing: -0.01em;
 }
 
+/* ## `animate-entrada`: o `animate-in` do pacote, sem o `filter`
+
+   O PageSpeed apontou seis animações não compostas na landing, todas com o
+   mesmo motivo: "a propriedade filter pode mover pixels". A causa está no
+   `tw-animate-css@1.4.0`, e é uma linha:
+
+       @keyframes enter { from {
+         opacity: var(--tw-enter-opacity, 1);
+         transform: translate3d(...) scale3d(...) rotate(...);
+         filter: blur(var(--tw-enter-blur, 0));      <- aqui
+       }}
+
+   `filter` está no quadro MESMO valendo zero, e basta a propriedade existir
+   para o Chrome recusar compor. A animação desce para a thread principal
+   justamente nos 600ms em que o LCP está sendo decidido — e animação na thread
+   principal é também o que produz salto de layout.
+
+   Não dá para desligar pela utility: a lista de propriedades do keyframe é do
+   pacote, não das classes.
+
+   ## Por que copiar a forma do pacote em vez de escrever quadros próprios
+
+   A primeira tentativa foi um par de quadros fixos (`translateY(0.75rem)`, com
+   e sem opacidade). Cobria o hero e mais nada: as telas de autenticação usam
+   `slide-in-from-bottom-2` (8px, não 12), `zoom-in-95` e `fade-in` sozinho, e
+   cada geometria pediria um quadro novo. Cinco nomes para trocar um.
+
+   Lendo as MESMAS variáveis que o pacote lê, um quadro só serve a todos, e
+   `fade-in`, `slide-in-from-*` e `zoom-in-*` continuam funcionando exatamente
+   como hoje — eles só escrevem essas variáveis. A troca em cada elemento passa
+   a ser uma palavra: `animate-in` vira `animate-entrada`.
+
+   `rotate()` fica de fora porque `spin-in-*` não é usado em lugar nenhum deste
+   projeto; se um dia for, acrescentar aqui é uma linha.
+
+   ## `inline`, e NÃO `static` — a armadilha que custou uma medição
+
+   Escrito primeiro num `@theme static`, junto dos tokens de ritmo acima. O
+   resultado, medido no navegador contra build de produção:
+
+       producao hoje (animate-in)    duracao 600ms
+       a primeira versao daqui       duracao 150ms   <- o valor de reserva
+
+   `static` emite `--animate-entrada` em `:root`, e é LÁ que os `var()` de
+   dentro dele são substituídos. Em `:root` não existe `--tw-duration` (quem
+   escreve isso é a classe `duration-entrada`, no elemento), então a cadeia
+   inteira caía nos valores de reserva. Silenciosamente: nada quebra, a
+   animação roda, só que quatro vezes mais rápida do que o código diz.
+
+   Com `inline` o Tailwind substitui o valor DENTRO da utility, que aplica no
+   elemento — e aí `--tw-duration`, `--tw-ease`, `--tw-animation-delay` e
+   `--tw-animation-fill-mode` existem. É por isso que o próprio tw-animate-css
+   declara `--animate-in` em `@theme inline`.
+
+   O `@theme static` logo acima continua certo para o que ele guarda:
+   `--ease-entrada` PRECISA existir em `:root`, porque o RevealOnScroll a lê num
+   `style` inline. As duas regras convivem porque respondem a perguntas
+   diferentes — "quem lê isto?" decide, não a preferência.
+
+   ## Os `var(...)` da forma abreviada não são enfeite
+
+   `animation:` abreviado ZERA tudo que não está escrito nele — inclusive
+   `animation-delay`, e a ordem entre duas utilities do Tailwind não é a ordem
+   do markup. O `delay-passo-*` (que é o `delay-*` do tw-animate-css) escreve
+   nos dois lugares, na propriedade e na variável, então ler a variável aqui faz
+   o escalonamento sobreviver a qualquer ordem. Os valores de reserva são os do
+   próprio pacote, para um elemento sem essas classes se comportar igual.
+
+   ## O h1 do hero continua sem animar opacidade
+
+   Isso não é garantido aqui, é garantido pela AUSÊNCIA de `fade-in` naquele
+   elemento — igual a hoje. Em 02/09 o `fade-in` com 70ms de atraso e 600ms de
+   duração travava o LCP em ~670ms numa página pronta aos 555ms. O `slide-in`
+   ficou porque deslocar não esconde o pixel. O comentário está lá, no hero. */
+@theme inline {
+  --animate-entrada: entrada var(--tw-animation-duration, var(--tw-duration, 0.15s))
+    var(--tw-ease, ease) var(--tw-animation-delay, 0s)
+    var(--tw-animation-iteration-count, 1) var(--tw-animation-direction, normal)
+    var(--tw-animation-fill-mode, none);
+
+  @keyframes entrada {
+    from {
+      opacity: var(--tw-enter-opacity, 1);
+      transform: translate3d(var(--tw-enter-translate-x, 0), var(--tw-enter-translate-y, 0), 0)
+        scale3d(var(--tw-enter-scale, 1), var(--tw-enter-scale, 1), 1);
+    }
+  }
+}
+
 /* Hover só onde existe ponteiro de verdade.
    No touch o `:hover` gruda depois do tap: o card fica com sombra e deslocado
    até você tocar em outro lugar. Esta variante mantém o efeito no desktop e o

@@ -17,8 +17,22 @@
  * Uma distância só (`slide-in-from-bottom-2`, 8px) para a sequência inteira. O
  * que escalona é o atraso, não o percurso: percursos diferentes leem como
  * elementos brigando, não como uma tela entrando.
+ *
+ * ## `animate-entrada` no lugar de `animate-in`
+ *
+ * O quadro `enter` do tw-animate-css anima `filter` mesmo quando o desfoque é
+ * zero, e isso basta para o Chrome recusar compor — a animação cai na thread
+ * principal. `animate-entrada` (`app/globals.css`) é o mesmo quadro sem essa
+ * linha, e lê as mesmas variáveis, então `fade-in` e `slide-in-from-bottom-2`
+ * continuam valendo sem mudança nenhuma.
+ *
+ * Este arquivo é `.ts`, e foi por isso que ele quase ficou de fora: a varredura
+ * que trocou os outros nove arquivos usava `--include=*.tsx`. O que o pegou foi
+ * `document.getAnimations()` no navegador, contra o build de produção — quatro
+ * animações de `/cadastro` ainda apareciam com o nome `enter`. Buscar no código
+ * teria dado a resposta errada com aparência de completa.
  */
-const BASE = 'animate-in fade-in fill-mode-both ease-entrada duration-entrada'
+const BASE = 'animate-entrada fade-in fill-mode-both ease-entrada duration-entrada'
 const SOBE = `${BASE} slide-in-from-bottom-2`
 
 /** Logo. Abre a sequência. */

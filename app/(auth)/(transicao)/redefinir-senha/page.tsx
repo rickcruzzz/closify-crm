@@ -281,17 +281,17 @@ function RedefinirSenhaPageInner() {
     return (
       <Card>
         <CardHeader className="items-center text-center">
-          <div className="bg-primary/10 text-primary animate-in zoom-in fade-in ease-entrada mb-2 flex size-10 items-center justify-center rounded-lg duration-500">
+          <div className="bg-primary/10 text-primary animate-entrada zoom-in fade-in ease-entrada mb-2 flex size-10 items-center justify-center rounded-lg duration-500">
             <PartyPopper className="size-5" />
           </div>
-          <CardTitle className="animate-in fade-in slide-in-from-bottom-2 ease-entrada text-xl duration-[650ms]">
+          <CardTitle className="animate-entrada fade-in slide-in-from-bottom-2 ease-entrada text-xl duration-[650ms]">
             Bem-vindo de volta{primeiroNome ? `, ${primeiroNome}` : ''}
           </CardTitle>
-          <CardDescription className="animate-in fade-in slide-in-from-bottom-3 ease-entrada duration-[750ms]">
+          <CardDescription className="animate-entrada fade-in slide-in-from-bottom-3 ease-entrada duration-[750ms]">
             Sua senha foi atualizada. Já estamos te levando pro painel.
           </CardDescription>
         </CardHeader>
-        <CardContent className="animate-in fade-in ease-entrada flex flex-col items-center gap-3 duration-[850ms]">
+        <CardContent className="animate-entrada fade-in ease-entrada flex flex-col items-center gap-3 duration-[850ms]">
           <Loader2 aria-hidden className="text-muted-foreground size-5 animate-spin" />
           <Button
             variant="ghost"

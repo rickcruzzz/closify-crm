@@ -46,7 +46,7 @@ export function AuthAlerta({
       role={tom === 'erro' || tom == null ? 'alert' : 'status'}
       className={cn(
         alertaVariants({ tom }),
-        'animate-in fade-in slide-in-from-top-1 ease-entrada duration-micro',
+        'animate-entrada fade-in slide-in-from-top-1 ease-entrada duration-micro',
         className,
       )}
     >

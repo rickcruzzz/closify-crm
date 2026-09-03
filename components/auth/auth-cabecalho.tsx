@@ -43,11 +43,11 @@ export function AuthCabecalho({
   if (variante === 'pagina') {
     return (
       <div className={cn('flex flex-col gap-2', className)}>
-        <h1 className="animate-in fade-in slide-in-from-bottom-2 fill-mode-both ease-entrada duration-entrada delay-passo-2 text-3xl font-semibold tracking-[-0.02em] text-balance md:text-4xl">
+        <h1 className="animate-entrada fade-in slide-in-from-bottom-2 fill-mode-both ease-entrada duration-entrada delay-passo-2 text-3xl font-semibold tracking-[-0.02em] text-balance md:text-4xl">
           {titulo}
         </h1>
         {descricao && (
-          <p className="text-muted-foreground animate-in fade-in slide-in-from-bottom-2 fill-mode-both ease-entrada duration-entrada delay-passo-3 text-balance">
+          <p className="text-muted-foreground animate-entrada fade-in slide-in-from-bottom-2 fill-mode-both ease-entrada duration-entrada delay-passo-3 text-balance">
             {descricao}
           </p>
         )}
@@ -68,16 +68,16 @@ export function AuthCabecalho({
       {icone && (
         <AuthStatusIcon
           tom={tom}
-          className="animate-in fade-in zoom-in-95 fill-mode-both ease-entrada duration-estado delay-passo-2 mb-1"
+          className="animate-entrada fade-in zoom-in-95 fill-mode-both ease-entrada duration-estado delay-passo-2 mb-1"
         >
           {icone}
         </AuthStatusIcon>
       )}
-      <CardTitle className="animate-in fade-in slide-in-from-bottom-2 fill-mode-both ease-entrada duration-entrada delay-passo-2 text-xl">
+      <CardTitle className="animate-entrada fade-in slide-in-from-bottom-2 fill-mode-both ease-entrada duration-entrada delay-passo-2 text-xl">
         <h1>{titulo}</h1>
       </CardTitle>
       {descricao && (
-        <CardDescription className="animate-in fade-in slide-in-from-bottom-2 fill-mode-both ease-entrada duration-entrada delay-passo-3">
+        <CardDescription className="animate-entrada fade-in slide-in-from-bottom-2 fill-mode-both ease-entrada duration-entrada delay-passo-3">
           {descricao}
         </CardDescription>
       )}

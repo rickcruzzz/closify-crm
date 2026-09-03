@@ -192,15 +192,15 @@ export function AssistenteDeOnboarding({
             `AuthCabecalho` cuida disso — aqui não dá para usá-lo porque o
             header carrega a barra de progresso antes do título, e encaixar
             isso numa prop tornaria o componente pior para os oito casos. */}
-        <CardTitle className="animate-in fade-in slide-in-from-bottom-2 fill-mode-both ease-entrada duration-entrada delay-passo-2 text-xl">
+        <CardTitle className="animate-entrada fade-in slide-in-from-bottom-2 fill-mode-both ease-entrada duration-entrada delay-passo-2 text-xl">
           <h1>{TITULOS[etapa]}</h1>
         </CardTitle>
-        <CardDescription className="animate-in fade-in slide-in-from-bottom-2 fill-mode-both ease-entrada duration-entrada delay-passo-3">
+        <CardDescription className="animate-entrada fade-in slide-in-from-bottom-2 fill-mode-both ease-entrada duration-entrada delay-passo-3">
           {SUBTITULOS[etapa]}
         </CardDescription>
       </CardHeader>
 
-      <CardContent className="animate-in fade-in slide-in-from-bottom-2 fill-mode-both ease-entrada duration-entrada delay-passo-4 flex flex-col gap-4">
+      <CardContent className="animate-entrada fade-in slide-in-from-bottom-2 fill-mode-both ease-entrada duration-entrada delay-passo-4 flex flex-col gap-4">
         {erro && <AuthAlerta>{erro}</AuthAlerta>}
 
         {etapa === 'empresa' && (

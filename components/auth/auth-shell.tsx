@@ -24,7 +24,7 @@ export function AuthShell({ children }: { children: React.ReactNode }) {
           espaço ao layout. */}
       <Link
         href="/"
-        className="animate-in fade-in slide-in-from-bottom-2 fill-mode-both ease-entrada duration-entrada delay-passo-1 focus-visible:ring-ring inline-flex w-fit -my-1.5 rounded-lg py-1.5 outline-none focus-visible:ring-3"
+        className="animate-entrada fade-in slide-in-from-bottom-2 fill-mode-both ease-entrada duration-entrada delay-passo-1 focus-visible:ring-ring inline-flex w-fit -my-1.5 rounded-lg py-1.5 outline-none focus-visible:ring-3"
       >
         <Logo />
       </Link>

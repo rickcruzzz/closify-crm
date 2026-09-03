@@ -36,7 +36,7 @@ export function AuthSplit({ children }: { children: React.ReactNode }) {
         <div className="mx-auto w-full max-w-md">
           <Link
             href="/"
-            className="animate-in fade-in slide-in-from-bottom-2 fill-mode-both ease-entrada duration-entrada delay-passo-1 focus-visible:ring-ring mb-8 inline-flex w-fit -my-1.5 rounded-lg py-1.5 outline-none focus-visible:ring-3"
+            className="animate-entrada fade-in slide-in-from-bottom-2 fill-mode-both ease-entrada duration-entrada delay-passo-1 focus-visible:ring-ring mb-8 inline-flex w-fit -my-1.5 rounded-lg py-1.5 outline-none focus-visible:ring-3"
           >
             <Logo />
           </Link>

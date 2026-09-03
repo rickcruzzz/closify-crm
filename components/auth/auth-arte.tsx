@@ -39,13 +39,13 @@ export function AuthArte() {
       {/* Mesmo eyebrow da landing: filete, mono, caixa alta. Repetir o device
           é o que faz a tela de login parecer a mesma marca da página que
           trouxe a pessoa até aqui. */}
-      <p className="text-muted-foreground animate-in fade-in fill-mode-both ease-entrada duration-entrada delay-passo-3 inline-flex items-center gap-2 font-mono text-xs tracking-wide uppercase">
+      <p className="text-muted-foreground animate-entrada fade-in fill-mode-both ease-entrada duration-entrada delay-passo-3 inline-flex items-center gap-2 font-mono text-xs tracking-wide uppercase">
         <span aria-hidden className="bg-primary h-px w-4" />
         Como fica na sua tela
         <span aria-hidden className="bg-primary h-px w-4" />
       </p>
 
-      <div className="animate-in fade-in slide-in-from-bottom-3 fill-mode-both ease-entrada duration-entrada delay-passo-3">
+      <div className="animate-entrada fade-in slide-in-from-bottom-3 fill-mode-both ease-entrada duration-entrada delay-passo-3">
         <PipelinePreviewCard />
       </div>
 
@@ -56,7 +56,7 @@ export function AuthArte() {
           site para abrir a caixa de entrada antes de qualquer tela do produto.
           Aqui dói mais que na landing: a pessoa está no formulário, e a frase
           descreve o que vai acontecer nos próximos segundos. */}
-      <p className="text-muted-foreground animate-in fade-in fill-mode-both ease-entrada duration-entrada delay-passo-4 text-sm text-balance">
+      <p className="text-muted-foreground animate-entrada fade-in fill-mode-both ease-entrada duration-entrada delay-passo-4 text-sm text-balance">
         Leva menos de dois minutos para criar a conta e entrar.
       </p>
     </aside>
