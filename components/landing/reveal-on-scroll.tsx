@@ -54,13 +54,30 @@ export function RevealOnScroll({
   children,
   className,
   delay = 0,
+  as: Elemento = 'div',
 }: {
   children: ReactNode
   className?: string
   /** Atraso do stagger em milissegundos. */
   delay?: number
+  /**
+   * A tag que este componente renderiza.
+   *
+   * Existe por uma razao de acessibilidade, nao de estilo. Envolver um `<li>`
+   * com este componente punha um `<div>` entre o `<ol>` e o item, e as duas
+   * pontas quebram: a lista deixa de conter apenas `<li>`, e o `<li>` deixa de
+   * ter lista como pai. Leitor de tela para de anunciar "lista de 3 itens", que
+   * e justamente o que os passos 01/02/03 sao.
+   *
+   * Achado pelo PageSpeed em 03/09, e confirmado no DOM de producao: era o
+   * unico lugar do site com o defeito, os tres passos de "Como funciona".
+   *
+   * A alternativa — mover o RevealOnScroll para DENTRO do `<li>` — anima o
+   * conteudo e deixa o cartao parado, que e pior do que nao animar.
+   */
+  as?: 'div' | 'li'
 }) {
-  const ref = React.useRef<HTMLDivElement>(null)
+  const ref = React.useRef<HTMLElement>(null)
   const [visible, setVisible] = React.useState(true)
   const [hydrated, setHydrated] = React.useState(false)
   // `will-change` avisa o navegador para promover o elemento a camada própria
@@ -107,8 +124,8 @@ export function RevealOnScroll({
   }, [])
 
   return (
-    <div
-      ref={ref}
+    <Elemento
+      ref={ref as React.RefObject<HTMLDivElement & HTMLLIElement>}
       className={cn(className)}
       // Assim que a transição termina, a camada de GPU é devolvida. Dispara
       // uma vez por propriedade (opacidade e transform), e `setAnimando(false)`
@@ -123,7 +140,9 @@ export function RevealOnScroll({
               // eixo costuma ser promovida também, mas "costuma" não é
               // garantia, e é justamente no celular mais fraco, onde a
               // diferença aparece, que ela falha.
-              transform: visible ? 'translate3d(0,0,0)' : `translate3d(0,${DISTANCIA}px,0)`,
+              transform: visible
+                ? 'translate3d(0,0,0)'
+                : `translate3d(0,${DISTANCIA}px,0)`,
               transition: `opacity ${DURACAO}ms ${CURVA} ${delay}ms, transform ${DURACAO}ms ${CURVA} ${delay}ms`,
               // Só opacidade e transform são animadas, e as duas o
               // compositor resolve sozinho, sem recalcular layout nem
@@ -134,6 +153,6 @@ export function RevealOnScroll({
       }
     >
       {children}
-    </div>
+    </Elemento>
   )
 }

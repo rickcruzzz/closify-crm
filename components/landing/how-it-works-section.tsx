@@ -69,34 +69,43 @@ export function HowItWorksSection() {
             Do &quot;me manda o orçamento&quot; até o dinheiro na conta
           </h2>
           <p className="text-muted-foreground text-lg text-balance">
-            O cliente chama, você responde, e a negociação anda. O que o Velo Funil faz
-            é não deixar nenhuma delas parar no meio do caminho.
+            O cliente chama, você responde, e a negociação anda. O que o Velo Funil faz é
+            não deixar nenhuma delas parar no meio do caminho.
           </p>
         </RevealOnScroll>
 
+        {/* `as="li"` no RevealOnScroll, e nao um `<li>` dentro dele: com o
+            wrapper, o DOM ficava `<ol><div><li>`, e isso quebra a lista dos
+            dois lados — ela deixa de conter apenas `<li>`, e o item deixa de
+            ter lista como pai. Leitor de tela para de anunciar "lista de 3
+            itens", que e exatamente a informacao que 01/02/03 carregam.
+            Achado pelo PageSpeed em 03/09; era o unico lugar do site. */}
         <ol className="grid gap-4 md:grid-cols-3">
           {passos.map((passo, i) => (
-            <RevealOnScroll key={passo.numero} delay={i * 130}>
-              <li className="ring-border bg-card superficie-elevada flex h-full flex-col gap-3 rounded-xl p-6 ring-1">
-                <div className="flex items-center gap-3">
-                  {/* Um acento so, o da marca.
-                      Ate 26/08 cada passo tinha uma cor propria (azul, roxo,
-                      verde) e nenhuma delas codificava informacao: passo 1 nao
-                      e "categoria azul". Cor sem significado le como template,
-                      e no modo claro isso fica gritante. O que diferencia os
-                      tres continua sendo o icone, que ja e diferente. */}
-                  <span className="bg-primary/10 flex size-10 shrink-0 items-center justify-center rounded-lg">
-                    <passo.icone aria-hidden className="text-primary size-5" />
-                  </span>
-                  <span className="text-muted-foreground font-mono text-xs tracking-wide">
-                    {passo.numero}
-                  </span>
-                </div>
-                <h3 className="font-semibold">{passo.titulo}</h3>
-                <p className="text-muted-foreground text-sm leading-relaxed">
-                  {passo.descricao}
-                </p>
-              </li>
+            <RevealOnScroll
+              key={passo.numero}
+              delay={i * 130}
+              as="li"
+              className="ring-border bg-card superficie-elevada flex h-full flex-col gap-3 rounded-xl p-6 ring-1"
+            >
+              <div className="flex items-center gap-3">
+                {/* Um acento so, o da marca.
+                    Ate 26/08 cada passo tinha uma cor propria (azul, roxo,
+                    verde) e nenhuma delas codificava informacao: passo 1 nao
+                    e "categoria azul". Cor sem significado le como template,
+                    e no modo claro isso fica gritante. O que diferencia os
+                    tres continua sendo o icone, que ja e diferente. */}
+                <span className="bg-primary/10 flex size-10 shrink-0 items-center justify-center rounded-lg">
+                  <passo.icone aria-hidden className="text-primary size-5" />
+                </span>
+                <span className="text-muted-foreground font-mono text-xs tracking-wide">
+                  {passo.numero}
+                </span>
+              </div>
+              <h3 className="font-semibold">{passo.titulo}</h3>
+              <p className="text-muted-foreground text-sm leading-relaxed">
+                {passo.descricao}
+              </p>
             </RevealOnScroll>
           ))}
         </ol>
@@ -128,8 +137,8 @@ export function HowItWorksSection() {
               E aí é só abrir e trabalhar
             </h3>
             <p className="text-muted-foreground text-balance">
-              Todo dia o sistema já sabe com quem você precisa falar: o que venceu,
-              o que é de hoje e o que vem em seguida.
+              Todo dia o sistema já sabe com quem você precisa falar: o que venceu, o que
+              é de hoje e o que vem em seguida.
             </p>
           </div>
           <ProdutoPrint nome="hoje" alt="o que precisa da sua atenção · Acme Corp" />
