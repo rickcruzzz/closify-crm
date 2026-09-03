@@ -6,7 +6,7 @@
 > **Conferido contra produção em 02/09/2026, noite.** Números de tabela, RPC,
 > migration e teste vieram do catálogo real e do gate, não de memória:
 > **20 tabelas**, **34 RPCs do projeto**, **31 foreign keys**, **15 triggers**,
-> **8 enums**, 67 arquivos de migration (a maior é `0068`) e **944 testes**.
+> **8 enums**, 68 arquivos de migration (a maior é `0069`) e **966 testes**.
 >
 > **`34 RPCs` precisa de ressalva, e ela é nova.** O catálogo devolve **65**
 > funções, e 31 delas são da extensão `pg_trgm` (`gin_*`, `gtrgm_*`,
@@ -15,7 +15,14 @@
 > 65 infla o número em 91% e mede a extensão, não o produto. O comando abaixo
 > exclui o prefixo delas.
 >
-> **O que a estrutura ganhou nesta rodada:** `notificacoes` (0066, o sino de
+> **Reconferido em 03/09.** Migrations e testes mudaram; tabela, RPC, FK,
+> trigger e enum **não** — a 0069 acrescenta uma COLUNA
+> (`workspaces.utm_content`, qual peça de anúncio trouxe o cliente) e não cria
+> função nem tabela. É o quarto caso da mesma classe já registrada aqui: a
+> estrutura fica parada enquanto a regra de negócio anda, e quem monitorasse
+> só a contagem de RPCs não teria visto nada.
+>
+> **O que a estrutura ganhou na rodada anterior:** `notificacoes` (0066, o sino de
 > avisos dentro do produto), `purge_old_rate_limit_attempts` (0067, a purga
 > que faltava na tabela mais escrita do sistema) e `purge_old_feedback`
 > reescrita (0068) — ela **nunca havia funcionado**: apagava anexo direto de

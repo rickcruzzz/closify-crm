@@ -1952,6 +1952,60 @@ presentes. Ressalva: `delivered` prova o primeiro salto — o Cloudflare aceitou
 confirma. E o Email Routing **só recebe**: responder daquele endereço exige
 configurar "enviar como" no Gmail.
 
+## A ponte do WhatsApp SAIU do produto em 28/08 — leia antes das seis seções abaixo
+
+> **As seis seções de WhatsApp que seguem descrevem código que não existe
+> mais.** Elas ficam porque explicam decisões que ainda governam o projeto — a
+> capacidade da VPS, o risco de fingerprint da Meta, o dedupe antes do
+> processamento — e apagá-las jogaria fora o porquê junto com o o quê.
+>
+> Mas quem procurar os arquivos citados nelas não vai achar. Removidos pelo
+> commit `c52a718`, de 28/08:
+>
+> ```
+> components/settings/evolution-connect-dialog.tsx
+> lib/emails/whatsapp-desconectado.ts
+> scripts/diagnostico/vigiar-sessao-whatsapp.mjs
+> app/api/webhooks/evolution/.../route.ts
+> ```
+>
+> **O motivo foi de segurança, não de produto.** O dono cancelou a VPS do
+> Evolution para migrar à API oficial da Meta, e isso transformou um achado da
+> auditoria em urgência: `podeConectarWhatsapp()` desligava a INTERFACE — o
+> card dizia "Em breve" — mas era consultado em dois componentes de TELA e em
+> nenhum lugar do servidor. Medido: a rota do webhook consultava a fase ZERO
+> vezes e continuava aceitando e GRAVANDO, com service role, ignorando RLS por
+> desenho.
+>
+> Enquanto a VPS existia isso era fraqueza de arquitetura. Com ela desligada,
+> virava porta aberta para um serviço que ninguém mais operava.
+>
+> **Confirmado pelo dono em 03/09, e com dois motivos, não um:** a Evolution
+> saiu porque **estava dando problema** — o que a série medida aqui já
+> mostrava, 63% → 26% → 0% → 100% de sessão viva em quatro medições —, e a API
+> oficial da Meta **ainda não foi aprovada**.
+>
+> Ou seja: não é uma migração em andamento com data. É um produto **sem
+> WhatsApp** até a aprovação sair, e a escada da Meta registrada mais acima
+> (CNPJ ativo → site com dados cadastrais → verificação do negócio → App
+> Business + WABA → App Review → Tech Provider) continua parada no passo 3,
+> agora também travada pela restrição de perfil de 06/07.
+>
+> **Isso governa o marketing.** É a razão de o WhatsApp ter saído da landing e
+> das peças de anúncio em 02/09: prometer integração que não roda é a mesma
+> classe do "contatos ilimitados" removido em 23/08.
+>
+> **Hoje:** `FASE_DO_WHATSAPP = 'migrando'` em
+> `lib/integrations/whatsapp-estado.ts`. O que sobrou no código é o link
+> `wa.me` (que nunca dependeu de nada disso) e o estado que mostra "Em breve"
+> na tela de Integrações.
+>
+> **Esta nota existe porque a ausência dela é a classe de defeito que este
+> documento combate.** Ele é lido no começo de toda sessão; sem o aviso, uma
+> conversa nova leria a auditoria de 24/08 e concluiria que a ponte está de
+> pé. Achado em 03/09, varrendo cada arquivo citado nos documentos contra o
+> que existe no disco.
+
 ## WhatsApp: auditoria da arquitetura inteira (24/08, noite)
 
 Pedido: garantir que funcione para todos os usuários, sem cair. Auditado
@@ -3902,8 +3956,30 @@ sessão.
 
 ## Fila técnica, na ordem
 
-1. **Exportar para Excel/CSV.** Tira a objeção "vou ficar preso no sistema" na
-   hora da venda. É o próximo, e o mais barato dos que restam.
+1. ~~**Exportar para Excel/CSV.**~~ **ENTREGUE em 03/09.** Botão na tela de
+   Contatos, ao lado de Importar — as duas setas juntas são o argumento: entra
+   e sai pela mesma porta.
+
+   Três decisões fazem o arquivo abrir certo no Excel brasileiro, e as três
+   estão em `lib/leads/exportar-csv.ts`: separador `;` (com vírgula, a
+   planilha vira uma coluna só), BOM UTF-8 (sem ele "José" vira "JosÃ©") e
+   vírgula decimal no valor (com ponto, a coluna perde a soma). Um teste
+   importa de volta o que a exportação gera, pelo mesmo `lib/leads/csv.ts` da
+   importação — sem ele, "exporte e reimporte" seria promessa não verificada.
+
+   **O teste que mais importa é o de injeção de fórmula.** Célula começando
+   com `=`, `+`, `-` ou `@` é EXECUTADA pelo Excel e pelo Sheets: um contato
+   chamado `=cmd|'/c calc'!A1`, que qualquer um cadastra no produto, viraria
+   execução de comando na máquina de quem abre. O alvo não é o servidor, é o
+   CLIENTE que exportou.
+
+   E a rota pagina por cursor: o PostgREST corta em 1.000 sem avisar, e numa
+   exportação isso significaria levar embora uma base incompleta achando que
+   levou tudo.
+
+   **Não confundir com o "Exportar relatório" do Dashboard**, que gera PDF de
+   métricas. Aquele é apresentação; este é o dado, e só ele tira a objeção.
+
 2. **Dashboard de receita.** Ganho no mês e ticket médio saem do que já existe.
    Tempo médio de fechamento ainda não: exige histórico de MUDANÇA de etapa, e
    a 0033 guarda só a última, saber que um negócio está em "Negociação" há 12
@@ -3916,7 +3992,8 @@ sessão.
    O argumento enfraquece e **não cai**: o risco continua sendo criar cobrança
    real no nome de terceiro no dia em que houver terceiro. O que muda é a
    urgência — hoje o custo é lixo no Asaas, não constrangimento com cliente.
-4. **Campos e pipelines customizáveis.** `deal_stage` é enum do Postgres; virar
+4. **Campos e pipelines customizáveis.** `deal_stage` é enum do Postgres, usado
+   em **19 arquivos** (contado em 03/09; um texto anterior dizia 22); virar
    tabela é mudança grande. Só com cliente pagante pedindo.
 
 **Entregues em 12/08, saíram desta fila:** paginação do que não paginava
