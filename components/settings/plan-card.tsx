@@ -31,12 +31,23 @@ import {
  * checkout ali mesmo, reusando o `SubscribeButton` (que já faz máscara e
  * validação de CPF/CNPJ antes de chamar o Asaas).
  */
+/**
+ * A MESMA lista da landing e da tabela de comparação, na mesma ordem.
+ *
+ * As três descreviam o mesmo plano e discordavam: esta era a única que já dizia
+ * "empresas ilimitadas", nenhuma dizia "Tudo do Free", e nenhuma citava o funil
+ * e o painel do lado do Pro — o cartão mais caro descrevia os extras e omitia o
+ * principal.
+ */
 const GANHOS_DO_PRO = [
-  'Empresas ilimitadas no mesmo login',
+  'Tudo do Free',
+  'Agenda ligada ao Google Calendar',
+  'E-mail pelo Gmail, registrado no cliente',
+  'Empresas ilimitadas',
   'Colaboradores ilimitados',
   'Contatos ilimitados',
   /**
-   * Era "Suporte prioritário", e era FALSO.
+   * NÃO volta a ser "Suporte prioritário". Aquilo era FALSO.
    *
    * Não existe fila, SLA nem sistema de chamado no produto: suporte é
    * `suporte@velofunil.com.br` encaminhando para uma caixa pessoal. Free e Pro
@@ -46,10 +57,11 @@ const GANHOS_DO_PRO = [
    * Mesma classe do "contatos ilimitados" removido da landing em 23/08 e do
    * CNPJ exibido como prova de confiança estando baixado.
    *
-   * Corrigido nos TRÊS lugares onde aparecia, não só na landing: deixar a
-   * promessa viva aqui dentro seria pior — é o que quem JÁ PAGOU lê.
+   * O prazo entra no lugar, e a diferença é essa: 24h úteis é promessa sobre o
+   * PRÓPRIO COMPORTAMENTO, que uma pessoa só cumpre; "prioritário" é afirmação
+   * sobre um sistema que não existe.
    */
-  'Suporte direto com quem faz o produto',
+  'Resposta em até 24h úteis, de quem faz o produto',
 ]
 
 export function PlanCard({

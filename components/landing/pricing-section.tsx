@@ -1,13 +1,14 @@
-import Link from 'next/link'
 import {
+  ArrowLeftRight,
   Building2,
   CalendarDays,
+  Check,
   Contact,
   Filter,
   Headset,
-  Infinity as InfinityIcon,
   LayoutDashboard,
   Mail,
+  Send,
   Users,
   type LucideIcon,
 } from 'lucide-react'
@@ -15,8 +16,8 @@ import {
 import { cn } from '@/lib/utils'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
-import { buttonVariants } from '@/components/ui/button'
 import { RevealOnScroll } from '@/components/landing/reveal-on-scroll'
+import { CtaDoPlano } from '@/components/landing/cta-do-plano'
 import { EventoAoVer } from '@/components/analytics/evento-ao-ver'
 import {
   FREE_LEAD_LIMIT,
@@ -49,6 +50,13 @@ type Plan = {
   features: { texto: string; icone: LucideIcon }[]
   cta: string
   /**
+   * Para onde o botao leva quem JA TEM sessao, e o que ele passa a dizer.
+   *
+   * So o Pro define: o CTA do Free leva a `/cadastro`, e quem ja tem conta nao
+   * tem o que fazer la. Ausente, o botao nao muda com a sessao.
+   */
+  logado?: { href: string; cta: string }
+  /**
    * A ultima frase antes do botao.
    *
    * Existe nos DOIS cartoes por medida, nao por simetria: o Pro cresceu com a
@@ -78,6 +86,29 @@ const plans: Plan[] = [
       { texto: `Até ${FREE_LEAD_LIMIT} contatos`, icone: Contact },
       { texto: 'Funil visual, arrasta e solta', icone: Filter },
       { texto: 'Painel de resultados', icone: LayoutDashboard },
+      /**
+       * Estes dois entraram por MEDIDA, e sao verdade.
+       *
+       * Com o Pro indo de 5 para 7 linhas, o cartao do Free ficou com 188px de
+       * vao entre o ultimo item e a frase de fecho, contra 16px do Pro —
+       * medido em 768 e 1440. Vao desse tamanho le como cartao inacabado, que
+       * e o mesmo defeito que fez a frase de fecho nascer nos dois cartoes.
+       *
+       * O que preenche e verdade conferida, nao enchimento:
+       *
+       *     convite por e-mail   o teto de 2 colaboradores e o limite, mas
+       *                          convidar E do Free (0050 so libera ACIMA do
+       *                          teto para quem tem Pro)
+       *     importar/exportar    nenhum gate de plano no caminho, conferido
+       *                          em `api/leads/exportar` e no dialogo de
+       *                          importacao
+       *
+       * E os dois trabalham a favor: contra quem nao usa CRM nenhum, o grátis
+       * nao e isca, e o produto. "Traga e leve seus contatos" responde a
+       * objecao de ficar preso antes de ela ser feita.
+       */
+      { texto: 'Convites por e-mail', icone: Send },
+      { texto: 'Importe e exporte seus contatos', icone: ArrowLeftRight },
     ],
     // A pergunta que trava quem considera um plano gratis e sempre a mesma:
     // "e se eu bater no limite, perco o que ja cadastrei?". A trigger da 0023
@@ -111,32 +142,74 @@ const plans: Plan[] = [
      * Os dois primeiros dizem o que a pessoa FAZ ("marcar reuniao", "responder
      * o cliente"), nao o nome da integracao — o nome so importa depois de a
      * pessoa querer a coisa.
+     *
+     * ## "Tudo do Free" abre a lista, e conserta uma omissao
+     *
+     * O cartao do Pro NUNCA dizia que o Pro tem o funil e o painel: os dois so
+     * apareciam do lado do Free. Quem lia a coluna da direita de cima a baixo
+     * via integracao, limite e suporte — e nao encontrava a coisa central do
+     * produto. O cartao mais caro descrevia os extras e omitia o principal.
+     *
+     * A linha nao e beneficio, e a ponte que torna o resto legivel. Por isso
+     * vem primeiro, e por isso nao leva "sem os limites": as tres linhas de
+     * ilimitado logo abaixo ja mostram isso, e dizer mais mostrar a mesma
+     * coisa gasta uma linha.
      */
     features: [
+      { texto: 'Tudo do Free', icone: Check },
       { texto: 'Marque a reunião no Google Calendar sem sair do funil', icone: CalendarDays },
       { texto: 'Responda o cliente por e-mail, e fica no histórico dele', icone: Mail },
-      // Os dois "ilimitados" na mesma linha: separados, gastavam duas das
-      // cinco linhas para dizer a mesma ideia, e empurravam para baixo o que
-      // o Free nao tem. O simbolo de infinito carrega o beneficio sem repetir
-      // os icones de Users e Contact que o cartao do Free ja usa.
-      { texto: 'Contatos e colaboradores ilimitados', icone: InfinityIcon },
-      { texto: 'Várias empresas no mesmo login', icone: Building2 },
       /**
-       * Era "Suporte prioritário", e era FALSO.
+       * Os tres limites do Free, respondidos um a um, COM OS MESMOS ICONES.
+       *
+       * Antes eram uma linha so (`Contatos e colaboradores ilimitados`, com o
+       * simbolo de infinito), e o comentario de entao dizia que separa-los
+       * gastava duas das cinco linhas para a mesma ideia. Com "Tudo do Free"
+       * assumindo o trabalho de listar o que se herda, as linhas sobraram.
+       *
+       * E "empresa" ficava de fora: "Varias empresas no mesmo login" nao diz
+       * ilimitado, e diz. Conferido na 0057 — o teto de 1 empresa so existe
+       * `if not tem_plano_pro`; com Pro nao ha teto nenhum. Mesma conferencia
+       * para contatos (0052) e colaboradores (0050), porque esta pagina tem
+       * uma secao chamada "O que a gente garante por escrito".
+       *
+       * O reuso de `Building2`, `Users` e `Contact` — os mesmos tres icones do
+       * cartao do Free — e o desenho, nao economia de import: as duas colunas
+       * passam a rimar linha a linha, e o olho compara sem ler.
+       *
+       *     [empresa] 1 empresa           [empresa] Empresas ilimitadas
+       *     [pessoas] Ate 2 colaboradores [pessoas] Colaboradores ilimitados
+       *     [contato] Ate 50 contatos     [contato] Contatos ilimitados
+       *
+       * Isso responde a objecao registrada acima contra icone repetido ("viram
+       * enfeite"): aqui o icone CARREGA a comparacao, nao decora.
+       *
+       * **A ORDEM e parte do desenho, nao gosto.** A primeira versao listava
+       * contatos, colaboradores, empresas — o espelho do Free —, e visto na
+       * tela os icones apareciam em sequencia invertida: o olho tinha que
+       * cruzar as colunas para parear. Segue a mesma ordem do Free.
+       */
+      { texto: 'Empresas ilimitadas', icone: Building2 },
+      { texto: 'Colaboradores ilimitados', icone: Users },
+      { texto: 'Contatos ilimitados', icone: Contact },
+      /**
+       * NAO volta a ser "Suporte prioritário". Aquilo era FALSO.
        *
        * Nao existe fila, SLA nem sistema de chamado no produto: suporte e
        * `suporte@velofunil.com.br` encaminhando para uma caixa pessoal. Free
        * e Pro escrevem para o mesmo endereco e chegam na mesma pessoa — nao
-       * ha o que priorizar.
+       * ha o que priorizar. Mesma classe do "contatos ilimitados" removido
+       * daqui em 23/08 e do CNPJ exibido como prova estando baixado.
        *
-       * Mesma classe do "contatos ilimitados" removido daqui em 23/08 e do
-       * CNPJ exibido como prova estando baixado. E esta pagina tem uma secao
-       * chamada "O que a gente garante por escrito", que convida a conferir.
+       * O prazo entra no lugar, e a diferenca e essa: **24h uteis e promessa
+       * sobre o proprio comportamento**, que uma pessoa so cumpre; "prioritario"
+       * e afirmacao sobre um sistema que nao existe.
        *
-       * O que ficou e verdade E mais forte: quem responde e quem faz o
-       * produto. Concorrente grande nao consegue prometer isso.
+       * "de quem faz o produto" fica porque e o que concorrente grande nao
+       * consegue prometer. So "resposta em 24h uteis" seria a frase que todo
+       * SaaS tem.
        */
-      { texto: 'Suporte direto com quem faz o produto', icone: Headset },
+      { texto: 'Resposta em até 24h úteis, de quem faz o produto', icone: Headset },
     ],
     // Dizia "Voce ja esta usando tudo isso nos seus 7 dias", verdade enquanto
     // a empresa nascia com trial. Com a 0057 deixou de ser, e frase que
@@ -164,6 +237,22 @@ const plans: Plan[] = [
     // atravessa a ida ao e-mail de confirmação, para o checkout abrir assim
     // que a empresa nascer.
     href: '/cadastro?plano=pro',
+    /**
+     * Quem JA criou a conta gratis clicava aqui e caia no painel.
+     *
+     * O `middleware.ts:168` desvia quem tem sessao de `/cadastro` para
+     * `/dashboard` — o que esta certo, e transformava este botao num beco: a
+     * pessoa decidiu pagar, clicou em "Comecar com o Pro", e chegou no produto
+     * em Free, tendo que descobrir Configuracoes -> Cobranca sozinha.
+     *
+     * E o pior momento possivel para perder alguem: e o unico instante do
+     * funil em que a pessoa esta com o cartao na mao.
+     *
+     * `?assinar=1` e o mesmo destino que o e-mail de fim de trial usa, e abre o
+     * dialogo de CPF/CNPJ direto. `?pagar=1` seria o outro caminho, de quem JA
+     * tem assinatura esperando pagamento — nao e este caso.
+     */
+    logado: { href: '/settings/billing?assinar=1', cta: 'Assinar o Pro' },
     highlighted: true,
     delay: 160,
   },
@@ -327,22 +416,23 @@ export function PricingSection() {
                       {plan.fecho}
                     </p>
                   )}
-                  <Link
-                    href={plan.href}
-                    className={cn(
-                      buttonVariants({
-                        variant: plan.highlighted ? 'default' : 'outline',
-                      }),
-                      // `mt-auto` so quando nao ha o fecho: com os dois, o
-                      // espaco sobraria entre a frase e o botao em vez de
-                      // acima dela, e os dois cartoes deixariam de alinhar.
-                      // `mt-auto` so quando NAO ha fecho: com os dois, o espaco
-                      // sobraria entre a frase e o botao em vez de acima dela.
-                      plan.fecho ? 'min-h-11 w-full' : 'mt-auto min-h-11 w-full',
-                    )}
-                  >
-                    {plan.cta}
-                  </Link>
+                  {/* O unico pedaco de cliente deste cartao, e so por causa
+                      do destino: quem JA tem sessao precisa ir para o
+                      pagamento, nao para `/cadastro` (de onde o middleware o
+                      manda ao painel). A secao continua Server Component, que
+                      e o que preserva o LCP da pagina que recebe trafego pago
+                      — ver o cabecalho de `cta-do-plano.tsx`. */}
+                  <CtaDoPlano
+                    hrefDeslogado={plan.href}
+                    textoDeslogado={plan.cta}
+                    hrefLogado={plan.logado?.href}
+                    textoLogado={plan.logado?.cta}
+                    variant={plan.highlighted ? 'default' : 'outline'}
+                    // `mt-auto` so quando NAO ha fecho: com os dois, o espaco
+                    // sobraria entre a frase e o botao em vez de acima dela, e
+                    // os dois cartoes deixariam de alinhar.
+                    className={plan.fecho ? 'min-h-11 w-full' : 'mt-auto min-h-11 w-full'}
+                  />
                 </CardContent>
               </Card>
             </RevealOnScroll>

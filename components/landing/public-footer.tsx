@@ -157,11 +157,33 @@ export function PublicFooter() {
             O bloco inteiro é condicionado ao CNPJ porque os três campos
             chegam e partem juntos: sem inscrição, `endereco` e
             `telefoneCadastral` também são nulos, e o que sobraria é uma linha
-            solta com o nome civil do titular — exatamente o que a decisão de
-            24/08 tirou daqui. */}
+            solta — e o CNPJ é o que dá sentido ao endereço estar publicado.
+
+            ## Nome fantasia aqui, razão social nas páginas legais
+
+            A razão social é `ORLANDO HENRIQUE BASTOS DA CRUZ LTDA` — a LTDA
+            leva o nome civil do dono, e esta linha é a única superfície de
+            marca que ainda o exibia. Passou a usar `nomeFantasia`, que também
+            é o que a Receita registra (MEI não podia ter nome fantasia; a
+            LTDA tem, desde 31/08).
+
+            **Isso não tira a razão social do site**, e é o que torna a troca
+            barata: `/privacidade` e `/termos` a publicam por
+            `identificacaoDoControlador()`, junto do CNPJ — conferido no HTML
+            servido. É onde ela pertence por lei, porque o art. 9º, I pede
+            identificação clara de quem responde pelo dado, e é lá que alguém
+            procurando o controlador vai olhar.
+
+            **O resíduo, para quem for submeter a verificação da Meta:** ela
+            procura razão social, endereço e telefone no site, e os três agora
+            moram em DUAS páginas em vez de uma — endereço e telefone aqui,
+            razão social e CNPJ nas legais, que este mesmo rodapé linka. É
+            arranjo comum e não deve reprovar, mas é diferente do que a decisão
+            de 31/08 montou. Se a verificação reprovar por dado não encontrado,
+            este é o primeiro lugar a olhar. */}
         {CONTROLADOR.cnpj ? (
           <p className="text-muted-foreground text-center text-[11px] text-balance">
-            {CONTROLADOR.razaoSocial}
+            {CONTROLADOR.nomeFantasia}
             {CONTROLADOR.endereco ? ` · ${CONTROLADOR.endereco}` : ''}
             {CONTROLADOR.telefoneCadastral
               ? ` · Telefone cadastral: ${CONTROLADOR.telefoneCadastral}`

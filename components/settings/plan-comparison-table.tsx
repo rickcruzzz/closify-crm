@@ -13,27 +13,48 @@ import {
 const FREE_FEATURES = [
   `${FREE_WORKSPACE_LIMIT} empresa`,
   `Até ${FREE_MEMBER_LIMIT} colaboradores`,
-  `Até ${FREE_LEAD_LIMIT} leads`,
+  // Dizia "leads", que é uma das palavras que o `docs/prd-copy-sem-jargao.md`
+  // bane por nome e que a renomeação de 19/08 tirou do produto inteiro. A
+  // landing já dizia "contatos"; esta tela, que é o que quem PAGA lê, ficou
+  // para trás — duas superfícies do mesmo limite, com dois nomes.
+  `Até ${FREE_LEAD_LIMIT} contatos`,
   'Funil visual, arrasta e solta',
   'Painel de resultados',
   'Convites por e-mail',
+  // Nenhum gate de plano no caminho, conferido em `api/leads/exportar` e no
+  // diálogo de importação. A landing lista os dois; esta ficaria a menos.
+  'Importe e exporte seus contatos',
 ]
 
+/**
+ * A MESMA lista da seção de planos da landing, na mesma ordem.
+ *
+ * Antes eram três descrições diferentes do mesmo plano — aqui, no
+ * `plan-card.tsx` e na landing — e as três discordavam: só uma dizia "empresas
+ * ilimitadas", nenhuma dizia "Tudo do Free", e esta repetia funil, painel e
+ * convites nos dois planos, gastando três das nove linhas para dizer o que a
+ * pessoa já tem.
+ *
+ * Divergência entre superfícies é a classe que este projeto já pagou com o CNPJ
+ * em dois lugares e com a promessa de trial em três. Ao mexer numa, mexer nas
+ * três.
+ */
 const PRO_FEATURES = [
-  'Várias empresas no mesmo login',
-  'Colaboradores ilimitados',
-  'Contatos ilimitados',
+  'Tudo do Free',
   // Google Calendar e Gmail são exclusivos do Pro desde 12/08 e estavam fora
   // desta lista, que é justamente a que existe para convencer alguém a pagar.
   // São o recurso mais concreto do plano: o resto é "mais do mesmo, sem
   // limite", estes dois são coisa que o Free não faz de jeito nenhum.
   'Agenda ligada ao Google Calendar',
   'E-mail pelo Gmail, registrado no cliente',
-  'Funil visual, arrasta e solta',
-  'Painel de resultados',
-  'Convites por e-mail',
+  // Os três limites do Free, respondidos um a um. "Várias empresas no mesmo
+  // login" não dizia ilimitado, e é — conferido na 0057: o teto de 1 empresa
+  // só existe `if not tem_plano_pro`.
+  'Empresas ilimitadas',
+  'Colaboradores ilimitados',
+  'Contatos ilimitados',
   /**
-   * Era "Suporte prioritário", e era FALSO.
+   * NÃO volta a ser "Suporte prioritário". Aquilo era FALSO.
    *
    * Não existe fila, SLA nem sistema de chamado no produto: suporte é
    * `suporte@velofunil.com.br` encaminhando para uma caixa pessoal. Free e Pro
@@ -43,10 +64,13 @@ const PRO_FEATURES = [
    * Mesma classe do "contatos ilimitados" removido da landing em 23/08 e do
    * CNPJ exibido como prova de confiança estando baixado.
    *
-   * Corrigido nos TRÊS lugares onde aparecia, não só na landing: deixar a
-   * promessa viva aqui dentro seria pior — é o que quem JÁ PAGOU lê.
+   * O prazo entra no lugar, e a diferença é essa: 24h úteis é promessa sobre o
+   * PRÓPRIO COMPORTAMENTO, que uma pessoa só cumpre; "prioritário" é afirmação
+   * sobre um sistema que não existe.
+   *
+   * Aqui dentro doeria mais que na landing — é o que quem JÁ PAGOU lê.
    */
-  'Suporte direto com quem faz o produto',
+  'Resposta em até 24h úteis, de quem faz o produto',
 ]
 
 export function PlanComparisonTable({ plan }: { plan: 'free' | 'pro' }) {
