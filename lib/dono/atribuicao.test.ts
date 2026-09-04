@@ -13,7 +13,9 @@ function empresa(sobrescrever: Partial<EmpresaAtribuivel> = {}): EmpresaAtribuiv
     id: 'w1',
     nome: 'Empresa',
     utmCampaign: null,
+    utmContent: null,
     veioDeCliqueDeAnuncio: false,
+    ativou: false,
     pagando: false,
     criadoEm: '2026-08-20T00:00:00Z',
     ...sobrescrever,
@@ -104,6 +106,154 @@ describe('cruzarCampanhasComClientes', () => {
       expect(r.desperdicio).toBe(false)
     })
   })
+
+  // ## Ativação: o degrau que separa dois fracassos que parecem iguais
+  //
+  // Sem ele, "20 cadastros" e "4 cadastros" só se comparam pelo volume, e a
+  // peça que traz muita gente que nunca usa o produto ganha o relatório.
+  describe('ativação', () => {
+    it('conta quem ativou separado de quem paga, e o custo de cada um', () => {
+      const [r] = cruzarCampanhasComClientes(
+        [campanha({ gasto: 300 })],
+        [
+          empresa({ id: 'a', utmCampaign: 'Funil frio', ativou: true, pagando: true }),
+          empresa({ id: 'b', utmCampaign: 'Funil frio', ativou: true, pagando: false }),
+          empresa({ id: 'c', utmCampaign: 'Funil frio', ativou: false, pagando: false }),
+        ],
+        MENSALIDADE,
+      )
+
+      expect(r.cadastros).toBe(3)
+      expect(r.ativaram).toBe(2)
+      expect(r.clientesPagantes).toBe(1)
+      expect(r.custoPorAtivacao).toBe(150)
+      expect(r.custoPorCliente).toBe(300)
+    })
+
+    it('não inventa custo por ativação quando ninguém ativou', () => {
+      const [r] = cruzarCampanhasComClientes(
+        [campanha({ gasto: 300 })],
+        [empresa({ utmCampaign: 'Funil frio', ativou: false })],
+        MENSALIDADE,
+      )
+
+      expect(r.ativaram).toBe(0)
+      expect(r.custoPorAtivacao).toBeNull()
+    })
+  })
+
+  // ## As peças: o motivo desta rodada existir
+  //
+  // Os seis criativos apontam para o mesmo `/cadastro` e só se distinguem por
+  // `utm_content`. A coluna existe desde a migration 0069 e nunca foi lida —
+  // até 04/09 o relatório juntava os seis num número só, e o teste de seis
+  // argumentos rodaria sem concluir qual deles vendeu.
+  describe('desdobramento por peça', () => {
+    it('quebra a campanha nas peças que trouxeram cada conta', () => {
+      const [r] = cruzarCampanhasComClientes(
+        [campanha({ nome: 'Funil frio' })],
+        [
+          empresa({ id: 'a', utmCampaign: 'Funil frio', utmContent: 'a1_ancora_preco', ativou: true, pagando: true }),
+          empresa({ id: 'b', utmCampaign: 'Funil frio', utmContent: 'a1_ancora_preco', ativou: true }),
+          empresa({ id: 'c', utmCampaign: 'Funil frio', utmContent: 'a2_perda_memoria' }),
+        ],
+        MENSALIDADE,
+      )
+
+      expect(r.pecas).toHaveLength(2)
+      expect(r.pecas[0]).toMatchObject({
+        rotulo: 'a1_ancora_preco',
+        cadastros: 2,
+        ativaram: 2,
+        clientesPagantes: 1,
+      })
+      expect(r.pecas[1]).toMatchObject({
+        rotulo: 'a2_perda_memoria',
+        cadastros: 1,
+        ativaram: 0,
+        clientesPagantes: 0,
+      })
+    })
+
+    // O caso que decide o dinheiro: a peça de mais VOLUME não é a que vence.
+    it('ordena por pagante, não por cadastro', () => {
+      const [r] = cruzarCampanhasComClientes(
+        [campanha({ nome: 'C' })],
+        [
+          ...Array.from({ length: 5 }, (_, i) =>
+            empresa({ id: `vol${i}`, utmCampaign: 'C', utmContent: 'muito_volume' }),
+          ),
+          empresa({ id: 'p', utmCampaign: 'C', utmContent: 'pouco_e_bom', pagando: true }),
+        ],
+        MENSALIDADE,
+      )
+
+      expect(r.pecas.map((p) => p.rotulo)).toEqual(['pouco_e_bom', 'muito_volume'])
+    })
+
+    // Quem monta a URL digita à mão, mesmo motivo do casamento de campanha.
+    it('agrupa a mesma peça escrita com caixa e espaço diferentes', () => {
+      const [r] = cruzarCampanhasComClientes(
+        [campanha({ nome: 'C' })],
+        [
+          empresa({ id: 'a', utmCampaign: 'C', utmContent: 'A1_Ancora_Preco' }),
+          empresa({ id: 'b', utmCampaign: 'C', utmContent: ' a1_ancora_preco ' }),
+        ],
+        MENSALIDADE,
+      )
+
+      expect(r.pecas).toHaveLength(1)
+      expect(r.pecas[0].cadastros).toBe(2)
+      // O rótulo é o valor CRU da primeira ocorrência: é assim que a peça
+      // aparece no Gerenciador da Meta, e é lá que o dono vai procurar.
+      expect(r.pecas[0].rotulo).toBe('A1_Ancora_Preco')
+    })
+
+    // ## O caso que separa "corrigi" de "escondi"
+    //
+    // Descartar quem não tem `utm_content` faria o total das peças ficar menor
+    // que o da campanha, sem nada na tela explicando — e o gasto continuaria
+    // inteiro no denominador, deixando toda peça melhor do que é.
+    it('mostra quem veio pela campanha sem dizer a peça, e não o chama de peça', () => {
+      const [r] = cruzarCampanhasComClientes(
+        [campanha({ nome: 'C' })],
+        [
+          empresa({ id: 'a', utmCampaign: 'C', utmContent: 'a1', pagando: true }),
+          empresa({ id: 'b', utmCampaign: 'C', utmContent: null }),
+          empresa({ id: 'c', utmCampaign: 'C', utmContent: '  ' }),
+        ],
+        MENSALIDADE,
+      )
+
+      const somaDasPecas = r.pecas.reduce((total, p) => total + p.cadastros, 0)
+      expect(somaDasPecas).toBe(r.cadastros)
+
+      const naoIdentificada = r.pecas.find((p) => !p.identificada)
+      expect(naoIdentificada?.cadastros).toBe(2)
+      expect(naoIdentificada?.rotulo).toBe('Peça não identificada')
+    })
+
+    // Controle negativo da ordenação: mesmo ganhando em cadastro E em pagante,
+    // o balde desce. Ele não é um criativo que venceu, é o que a URL não disse.
+    it('mantém o balde não identificado por último mesmo quando ele lidera', () => {
+      const [r] = cruzarCampanhasComClientes(
+        [campanha({ nome: 'C' })],
+        [
+          empresa({ id: 'a', utmCampaign: 'C', utmContent: null, pagando: true }),
+          empresa({ id: 'b', utmCampaign: 'C', utmContent: null, pagando: true }),
+          empresa({ id: 'c', utmCampaign: 'C', utmContent: 'a1' }),
+        ],
+        MENSALIDADE,
+      )
+
+      expect(r.pecas.map((p) => p.identificada)).toEqual([true, false])
+    })
+
+    it('campanha sem ninguém não inventa peça nenhuma', () => {
+      const [r] = cruzarCampanhasComClientes([campanha()], [], MENSALIDADE)
+      expect(r.pecas).toEqual([])
+    })
+  })
 })
 
 describe('resumirAtribuicao', () => {
@@ -139,10 +289,57 @@ describe('resumirAtribuicao', () => {
     expect(resumirAtribuicao([], empresas, MENSALIDADE).semCampanhaIdentificada).toBe(1)
   })
 
+  it('soma a ativação das campanhas', () => {
+    const empresas = [
+      empresa({ id: 'a', utmCampaign: 'A', ativou: true }),
+      empresa({ id: 'b', utmCampaign: 'B', ativou: true }),
+      empresa({ id: 'c', utmCampaign: 'B', ativou: false }),
+    ]
+    const desempenho = cruzarCampanhasComClientes(
+      [campanha({ id: 'c1', nome: 'A' }), campanha({ id: 'c2', nome: 'B' })],
+      empresas,
+      MENSALIDADE,
+    )
+
+    expect(resumirAtribuicao(desempenho, empresas, MENSALIDADE).ativaram).toBe(2)
+  })
+
+  // ## O aviso um nível abaixo do de campanha
+  //
+  // A campanha bate, a peça não: o total está certo e o que falta é saber qual
+  // criativo pagou por ele.
+  it('conta quem veio pela campanha sem peça identificada', () => {
+    const empresas = [
+      empresa({ id: 'a', utmCampaign: 'A', utmContent: null }),
+      empresa({ id: 'b', utmCampaign: 'A', utmContent: 'a1' }),
+    ]
+    const desempenho = cruzarCampanhasComClientes([campanha({ nome: 'A' })], empresas, MENSALIDADE)
+
+    expect(resumirAtribuicao(desempenho, empresas, MENSALIDADE).semPecaIdentificada).toBe(1)
+  })
+
+  // ## A armadilha que o cálculo por `empresas` teria caído
+  //
+  // TODA conta orgânica tem `utm_content` nulo. Contar direto na lista de
+  // empresas somaria o cadastro que nunca viu um anúncio, e o aviso passaria a
+  // acusar um defeito de URL que não existe — número plausível, conclusão
+  // errada, a classe de erro mais cara deste projeto.
+  it('não acusa quem nunca veio de anúncio nenhum', () => {
+    const empresas = [
+      empresa({ id: 'organica1', utmCampaign: null, utmContent: null }),
+      empresa({ id: 'organica2', utmCampaign: null, utmContent: null }),
+    ]
+    const desempenho = cruzarCampanhasComClientes([campanha({ nome: 'A' })], empresas, MENSALIDADE)
+
+    expect(resumirAtribuicao(desempenho, empresas, MENSALIDADE).semPecaIdentificada).toBe(0)
+  })
+
   it('sem gasto nenhum, não inventa custo', () => {
     const r = resumirAtribuicao([], [], MENSALIDADE)
     expect(r.gastoTotal).toBe(0)
     expect(r.custoPorCliente).toBeNull()
     expect(r.mesesParaSePagar).toBeNull()
+    expect(r.ativaram).toBe(0)
+    expect(r.semPecaIdentificada).toBe(0)
   })
 })

@@ -29,6 +29,8 @@ type LinhaDeEmpresa = {
   telefone: string | null
   whatsapp: string | null
   utm_campaign: string | null
+  /** Qual criativo trouxe (migration 0069). Ver `atribuicao.ts`. */
+  utm_content: string | null
   fbc: string | null
   /**
    * Fim do trial. É o que separa "tem Pro porque paga" de "tem Pro porque
@@ -101,7 +103,7 @@ export async function lerBanco(): Promise<LeituraDoBanco> {
       supabase
         .from('workspaces')
         .select(
-          'id, name, created_at, created_by, telefone, whatsapp, utm_campaign, fbc, trial_ate',
+          'id, name, created_at, created_by, telefone, whatsapp, utm_campaign, utm_content, fbc, trial_ate',
         )
         .order('created_at', { ascending: false })
         .limit(TETO),
@@ -195,6 +197,7 @@ export async function lerBanco(): Promise<LeituraDoBanco> {
       quantidadeDeContatos: contatosPorEmpresa.get(empresa.id) ?? 0,
       quantidadeDeNegocios: negociosPorEmpresa.get(empresa.id) ?? 0,
       utmCampaign: empresa.utm_campaign,
+      utmContent: empresa.utm_content,
       // `fbc` só existe quando a pessoa chegou por um clique de anúncio do
       // Meta (`fbclid` na URL), gravado por `components/landing/utm-capture.tsx`.
       veioDeCliqueDeAnuncio: Boolean(empresa.fbc),

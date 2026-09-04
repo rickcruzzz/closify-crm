@@ -4,9 +4,9 @@ Documento de continuidade. É lido no começo de toda sessão (referenciado no
 [CLAUDE.md](../CLAUDE.md)) para que uma conversa nova, ou outra conta, comece
 sabendo o que já foi feito, o que foi decidido e onde estão as armadilhas.
 
-**Atualizado em:** 03/09/2026, noite (o Cloudflare reescrevia o HTML que o
-React hidrata; um `filter` de valor ZERO tirava a entrada do hero da GPU; e o
-telefone baixava 3840px para desenhar 1025)
+**Atualizado em:** 04/09/2026 (o banco guardava qual PECA trouxe o cliente
+desde a vespera e ninguem lia; e o relatorio pulava de "cadastrou" direto para
+"pagou", sem o degrau que se move no mesmo dia)
 
 ## O histórico de agosto mora em outro arquivo
 
@@ -24,6 +24,83 @@ história:** o produto **não tem WhatsApp**. A ponte saiu em 28/08 (`c52a718`)
 porque a Evolution dava problema e a API oficial da Meta não foi aprovada. Hoje
 `FASE_DO_WHATSAPP = 'migrando'` em `lib/integrations/whatsapp-estado.ts`, e o
 que sobrou é o link `wa.me`. O porquê inteiro está no arquivo.
+
+---
+## O `utm_content` era gravado e NUNCA lido (04/09)
+
+A migration 0069 criou a coluna em 03/09, `utm-capture.tsx` captura, o
+onboarding grava. Nada lia. E o buraco tinha tres degraus, nao um:
+
+    dono/queries.ts:104   select(... utm_campaign, fbc ...)   nem SAIA do banco
+    dono/tipos.ts         EmpresaNaCentral sem o campo
+    atribuicao.ts:87      agrupava so por utm_campaign
+
+Os seis criativos apontam para o mesmo `/cadastro` e so se distinguem por ele.
+O relatorio dizia "a campanha custou R$ X por cliente" e **os seis colapsavam
+num numero so** — o teste de seis argumentos rodaria e nao concluiria qual
+vendeu.
+
+### Nao ha custo por peca, e a AUSENCIA e a decisao
+
+`meta-ads.ts:213` le os anuncios com `fields=id,adset_id,campaign_id`, **sem
+`insights`**. A Meta devolve gasto por CAMPANHA. Dividir esse gasto entre as
+pecas — por igual ou proporcional aos cadastros — produziria custo por cliente
+com cara de medicao e origem em chute, e erraria justamente na peca que mais
+importa, porque a Meta concentra orcamento em quem performa.
+
+**As contagens sozinhas ja ordenam:** 20 cadastros com 1 ativacao perde para 4
+cadastros com 3 ativacoes e 2 pagantes, sem saber quanto custou cada uma. O
+campo entra quando o gasto por anuncio for lido de verdade, e nao antes.
+
+### A ativacao nao precisou de coluna nova
+
+`queries.ts:195` ja devolve `quantidadeDeContatos`. Ativou e `> 0` — a MESMA
+definicao de `primeiro_contato` em `montarFunilDeAtivacao` e do
+`CustomizeProduct` que a Meta recebe. Tres superficies, uma definicao.
+
+Ele separa dois fracassos que parecem iguais no total: a peca que traz muita
+gente e ninguem usa (promessa errada) e a que traz pouca e todas usam (publico
+certo, alcance pequeno). E `custoPorAtivacao` da sinal enquanto `custoPorCliente`
+ainda e `null`, que sao justamente os dias em que se decide manter ou pausar.
+
+**Um degrau so, nao o funil de seis.** Com R$ 25/dia dividido em seis pecas,
+cada uma tem 2 a 5 cadastros — e `maiorVazamento` ja se recusa a opinar abaixo
+de 5 contas. Seis degraus sobre tres pessoas e ruido com aparencia de grafico.
+
+### Quem chega sem `utm_content` aparece, e nao vira peca chamada "null"
+
+Descartar faria a soma das pecas ficar menor que a da campanha sem nada
+explicando na tela — e o gasto continuaria inteiro no denominador, deixando
+toda peca melhor do que e. O balde e visivel, rotulado "Peca nao identificada",
+e **desce sempre na ordenacao, mesmo quando lidera em cadastro e em pagante**:
+ele nao e um criativo que venceu, e a medida do que a URL deixou de dizer.
+
+`semPecaIdentificada` sai do `desempenho`, nao de `empresas`. **TODA conta
+organica tem `utm_content` nulo** — contar na lista de empresas acusaria um
+defeito de URL que nao existe. Numero plausivel, conclusao errada: a classe de
+erro mais cara deste projeto. Tem teste travando.
+
+### Provado contra producao, e a tela renderizada
+
+8 de 8 no banco real, com 4 empresas descartaveis apagadas num `finally`. O
+achado que justifica o script: se a 0069 nao estivesse aplicada la, o `select`
+novo devolveria 400 e a **Central inteira** pararia de carregar — nenhum teste
+pega isso. Controle negativo: coluna inventada toma `42703`.
+
+E o caminho da TELA nunca tinha rodado. Semeadas 4 empresas com a campanha
+real (`Velo Funil — aquisicao (cadastro)`) e pecas variadas:
+
+    A1_Ancora_Preco        2 cadastros   2 usaram   1 paga
+    a2_perda_memoria       1             0          0
+    Peca nao identificada  1             0          0   <- por ultimo
+
+Desktop 5 colunas, telefone 2, sem rolagem lateral da pagina; a tabela rola
+dentro da propria caixa (326px de caixa, 352 de tabela). 977 testes.
+
+**O resumo do topo so aparece com gasto > 0**, e a conta nunca gastou — entao
+o bloco novo foi conferido forcando `jaGastou` num experimento revertido em
+seguida. Decisao existente, nao defeito: painel de resultado sobre gasto zero
+afirmaria resultado que nao houve.
 
 ---
 ## O PageSpeed do telefone, medido item por item (03/09, noite)

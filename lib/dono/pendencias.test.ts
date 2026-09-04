@@ -30,6 +30,7 @@ function empresa(sobrescrever: Partial<EmpresaComEstado> = {}): EmpresaComEstado
     quantidadeDeContatos: 0,
     quantidadeDeNegocios: 0,
     utmCampaign: null,
+    utmContent: null,
     veioDeCliqueDeAnuncio: false,
     ...sobrescrever,
   }

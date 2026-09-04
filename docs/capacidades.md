@@ -30,6 +30,8 @@ envelhecer em silêncio, que é o defeito de todo documento desse tipo.
 | Os 8 eventos da Meta (pixel + CAPI) | `lib/analytics/meta-conversions.ts` | 13/08 |
 | Consentimento de cookie, e a recusa respeitada | `lib/analytics/consentimento.ts` | 23/08 |
 | Captura de UTM na chegada | `components/landing/utm-capture.tsx` | 20/08 |
+| Custo por cliente, por campanha **e por peça** | `lib/dono/atribuicao.ts` | 04/09 |
+| Funil de ativação da base inteira | `lib/dono/ativacao.ts` | 31/08 |
 | Erro de produção gravado no banco | `app/api/log-erro/route.ts` | 18/08 |
 
 ## Contatos, funil e rotina

@@ -22,7 +22,11 @@ import {
   mudarOrcamentoDiario,
   pausarCampanha,
 } from '@/lib/dono/anuncio-actions'
-import type { DesempenhoDaCampanha, ResumoDaAtribuicao } from '@/lib/dono/atribuicao'
+import type {
+  DesempenhoDaCampanha,
+  DesempenhoDaPeca,
+  ResumoDaAtribuicao,
+} from '@/lib/dono/atribuicao'
 import {
   diagnosticar,
   rotuloDoObjetivo,
@@ -407,9 +411,27 @@ function Resultado({
     <section className="flex flex-col gap-4">
       <h2 className="text-lg font-semibold">O que o anúncio trouxe</h2>
 
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+      {/* A ordem é a do funil, da esquerda para a direita: o que saiu, quantos
+          entraram, quantos USARAM, quantos pagaram, e o que cada um custou.
+          Lida assim, a linha já mostra onde a perda acontece sem ninguém
+          comparar número com número. */}
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
         <Numero rotulo="Gasto" valor={formatarDinheiro(resumo.gastoTotal)} />
         <Numero rotulo="Contas criadas" valor={String(resumo.cadastros)} />
+        {/* ## Por que "usaram" fica entre cadastro e pagamento
+            Cadastro sem uso não vira cliente, e o pagamento demora dias para
+            acontecer. Este é o único degrau que se move no mesmo dia e já
+            separa tráfego que serve de tráfego que só entra. Mesma definição
+            de `primeiro_contato` no funil de ativação. */}
+        <Numero
+          rotulo="Usaram o produto"
+          valor={String(resumo.ativaram)}
+          nota={
+            resumo.cadastros === 0
+              ? undefined
+              : `${Math.round((resumo.ativaram / resumo.cadastros) * 100)}% de quem se cadastrou`
+          }
+        />
         <Numero rotulo="Viraram pagante" valor={String(resumo.clientesPagantes)} />
         <Numero
           rotulo="Custo por cliente"
@@ -438,6 +460,18 @@ function Resultado({
           {resumo.semCampanhaIdentificada} conta(s) vieram de clique de anúncio, mas sem dizer de
           qual campanha: falta o <code>utm_campaign</code> na URL do anúncio. Os números por
           campanha abaixo estão subestimados.
+        </p>
+      )}
+
+      {/* Um nível abaixo do aviso acima, e um problema diferente: a campanha
+          bate, o total está certo, e o que falta é saber qual CRIATIVO pagou
+          por ele. Com seis anúncios no mesmo `/cadastro`, este número subindo
+          significa que o teste de argumento não vai concluir nada. */}
+      {resumo.semPecaIdentificada > 0 && (
+        <p className="text-muted-foreground rounded-xl p-4 text-sm text-pretty ring-1 ring-white/10">
+          {resumo.semPecaIdentificada} conta(s) vieram de uma campanha conhecida, mas sem dizer de
+          qual peça: falta o <code>utm_content</code> na URL desses anúncios. Dá para saber quanto
+          a campanha rendeu, não qual criativo rendeu.
         </p>
       )}
     </section>
@@ -572,7 +606,8 @@ function LinhaDeCampanha({
             {jaGastou && (
               <>
                 {' '}
-                · {campanha.cadastros} cadastro(s) · {campanha.clientesPagantes} pagante(s)
+                · {campanha.cadastros} cadastro(s) · {campanha.ativaram} usaram ·{' '}
+                {campanha.clientesPagantes} pagante(s)
               </>
             )}
             {campanha.orcamentoDiario !== null && (
@@ -580,13 +615,27 @@ function LinhaDeCampanha({
             )}
           </p>
 
-          {campanha.custoPorCliente !== null && (
+          {campanha.custoPorCliente !== null ? (
             <p className="text-sm">
               <span className="text-muted-foreground">Cada cliente pagante custou</span>{' '}
               <span className="font-medium tabular-nums">
                 {formatarDinheiro(campanha.custoPorCliente)}
               </span>
             </p>
+          ) : (
+            // Enquanto ninguém pagou, o custo por ativação é o que dá sinal. Sem
+            // ele a campanha nova aparece sem número nenhum por dias — e é
+            // justamente nesses dias que se decide manter ou pausar.
+            campanha.custoPorAtivacao !== null && (
+              <p className="text-sm">
+                <span className="text-muted-foreground">
+                  Ninguém pagou ainda. Cada pessoa que USOU custou
+                </span>{' '}
+                <span className="font-medium tabular-nums">
+                  {formatarDinheiro(campanha.custoPorAtivacao)}
+                </span>
+              </p>
+            )
           )}
 
           {campanha.desperdicio && (
@@ -649,6 +698,8 @@ function LinhaDeCampanha({
         </div>
       </div>
 
+      {campanha.pecas.length > 0 && <Pecas pecas={campanha.pecas} />}
+
       {editandoOrcamento && (
         <FormularioDeOrcamento
           atual={campanha.orcamentoDiario}
@@ -658,6 +709,99 @@ function LinhaDeCampanha({
         />
       )}
     </li>
+  )
+}
+
+/**
+ * Qual PEÇA da campanha trouxe cada conta.
+ *
+ * ## Por que isto vale mais que o número da campanha
+ *
+ * Os seis criativos apontam para o mesmo `/cadastro` e só se distinguem pelo
+ * `utm_content`. Sem este bloco, a campanha diz "custou R$ X por cliente" e não
+ * diz qual dos seis argumentos vendeu — que é o que decide onde vai o dinheiro
+ * da semana seguinte.
+ *
+ * ## Não há coluna de custo, e a ausência é a decisão
+ *
+ * A Meta devolve gasto por campanha, não por criativo (`meta-ads.ts` lê os
+ * anúncios sem `insights`). Dividir o gasto entre as peças produziria um custo
+ * por cliente com cara de medição e origem em chute — e erraria justamente na
+ * peça que mais importa, porque a Meta concentra orçamento em quem performa.
+ * As contagens sozinhas já ordenam: ver `atribuicao.ts`.
+ *
+ * ## Só aparece com duas peças ou mais
+ *
+ * Com uma peça só, a tabela repetiria os números da campanha logo acima com
+ * outro rótulo. Uma linha que não acrescenta informação ensina a pular o bloco.
+ */
+function Pecas({ pecas }: { pecas: DesempenhoDaPeca[] }) {
+  if (pecas.length < 2) return null
+
+  const melhor = pecas[0]
+  // Só vale apontar vencedora quando ela GANHOU de alguém: com todo mundo em
+  // zero, a primeira da lista é só a primeira em ordem alfabética, e chamá-la
+  // de melhor seria inventar conclusão a partir de empate.
+  const temVencedora =
+    melhor.identificada && (melhor.clientesPagantes > 0 || melhor.ativaram > 0)
+
+  return (
+    <div className="flex flex-col gap-2 border-t border-white/5 pt-3">
+      <p className="text-muted-foreground text-xs font-medium tracking-wide uppercase">
+        Por peça
+      </p>
+
+      {/* `overflow-x-auto` porque o nome do criativo é escrito por quem monta a
+          URL e pode ser longo: em telefone a tabela rola dentro do próprio
+          bloco, sem empurrar a página inteira para o lado. */}
+      <div className="overflow-x-auto">
+        <table className="w-full min-w-[22rem] text-sm">
+          <thead>
+            <tr className="text-muted-foreground text-xs">
+              <th className="py-1 pr-3 text-left font-medium">Peça</th>
+              <th className="py-1 px-2 text-right font-medium">Cadastros</th>
+              <th className="py-1 px-2 text-right font-medium">Usaram</th>
+              <th className="py-1 pl-2 text-right font-medium">Pagam</th>
+            </tr>
+          </thead>
+          <tbody>
+            {pecas.map((peca) => (
+              <tr
+                key={peca.chave}
+                className={cn(
+                  'border-t border-white/5',
+                  // O balde não identificado é dado faltando, não resultado.
+                  // Recuado para não competir visualmente com as peças reais.
+                  !peca.identificada && 'text-muted-foreground',
+                )}
+              >
+                <td className="max-w-[14rem] truncate py-1.5 pr-3" title={peca.rotulo}>
+                  {peca.rotulo}
+                </td>
+                <td className="px-2 py-1.5 text-right tabular-nums">{peca.cadastros}</td>
+                <td className="px-2 py-1.5 text-right tabular-nums">{peca.ativaram}</td>
+                <td
+                  className={cn(
+                    'py-1.5 pl-2 text-right tabular-nums',
+                    peca.clientesPagantes > 0 && 'text-emerald-500 font-medium',
+                  )}
+                >
+                  {peca.clientesPagantes}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      {temVencedora && (
+        <p className="text-muted-foreground text-xs text-pretty">
+          <span className="text-foreground font-medium">{melhor.rotulo}</span> é a peça que mais
+          rende. Passar o orçamento para ela é a mudança de maior efeito por aqui — e não precisa
+          do gasto por criativo para ser decidida.
+        </p>
+      )}
+    </div>
   )
 }
 

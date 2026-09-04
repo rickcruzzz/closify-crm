@@ -55,14 +55,20 @@ export default async function PaginaDoAnuncio() {
     )
   }
 
-  // `utm_campaign` e `fbc` são o que liga uma empresa ao anúncio que a trouxe.
-  // Ver `lib/dono/atribuicao.ts` para por que este cruzamento é o número mais
-  // valioso da Central.
+  // `utm_campaign` e `fbc` são o que liga uma empresa ao anúncio que a trouxe;
+  // `utm_content` diz qual PEÇA, dentro da campanha. Ver `lib/dono/atribuicao.ts`
+  // para por que este cruzamento é o número mais valioso da Central.
   const empresas: EmpresaAtribuivel[] = banco.empresas.map((e) => ({
     id: e.id,
     nome: e.nome,
     utmCampaign: e.utmCampaign,
+    utmContent: e.utmContent,
     veioDeCliqueDeAnuncio: e.veioDeCliqueDeAnuncio,
+    // Ativação é ter cadastrado o primeiro contato, e a contagem já vem do
+    // banco na mesma leitura. Derivar daqui em vez de criar coluna nova mantém
+    // uma definição só, igual à de `montarFunilDeAtivacao` e à do evento
+    // `CustomizeProduct` que a Meta recebe.
+    ativou: e.quantidadeDeContatos > 0,
     pagando: e.pagando,
     criadoEm: e.criadoEm,
   }))

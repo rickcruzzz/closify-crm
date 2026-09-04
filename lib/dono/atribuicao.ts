@@ -27,10 +27,69 @@ export type EmpresaAtribuivel = {
   nome: string
   /** Campanha que trouxe a pessoa, quando ela chegou por um anúncio. */
   utmCampaign: string | null
+  /**
+   * Qual PEÇA trouxe, dentro da campanha.
+   *
+   * Os seis criativos apontam para o mesmo `/cadastro` e só se distinguem por
+   * este campo. Sem ele, o relatório sabe que a campanha custou R$ X por
+   * cliente e não sabe qual dos seis argumentos vendeu — que é a pergunta que
+   * decide onde vai o dinheiro da semana seguinte.
+   */
+  utmContent: string | null
   /** Se veio de um clique de anúncio do Meta (o `fbclid` da URL). */
   veioDeCliqueDeAnuncio: boolean
+  /**
+   * Cadastrou o primeiro contato, ou seja, chegou a USAR o produto.
+   *
+   * É o mesmo degrau que `montarFunilDeAtivacao` chama de `primeiro_contato` e
+   * o mesmo que dispara `CustomizeProduct` na Meta (`lib/analytics/ativacao.ts`).
+   * Três superfícies, uma definição — divergirem faria a mesma pessoa contar
+   * como ativada num lugar e não no outro.
+   *
+   * Está aqui porque separa dois fracassos que parecem iguais no total: a peça
+   * que traz muita gente e ninguém usa (promessa errada) e a que traz pouca e
+   * todas usam (público certo, alcance pequeno). A primeira precisa trocar de
+   * argumento; a segunda, de orçamento.
+   */
+  ativou: boolean
   pagando: boolean
   criadoEm: string
+}
+
+/**
+ * O que UMA peça (criativo) trouxe, dentro de uma campanha.
+ *
+ * ## Não há custo por peça, e isso é decisão, não esquecimento
+ *
+ * A Meta devolve gasto por CAMPANHA
+ * (`meta-ads.ts`, `campaigns?fields=...insights{spend}`); os anúncios são lidos
+ * com `fields=id,adset_id,campaign_id`, sem `insights`. Ou seja: **o gasto por
+ * criativo não está disponível hoje.**
+ *
+ * Dividir o gasto da campanha entre as peças — por igual ou proporcional aos
+ * cadastros — produziria um "custo por cliente" com aparência de medição e
+ * origem em chute. A Meta não entrega orçamento igualmente entre criativos:
+ * ela concentra em quem performa, então a divisão erraria justamente na peça
+ * que mais importa. É a mesma classe de defeito que fez a Central declarar
+ * R$ 490/mês de receita com R$ 0,00 real em 30/08.
+ *
+ * As contagens, sozinhas, já decidem: 20 cadastros com 1 ativação perde para 4
+ * cadastros com 3 ativações e 2 pagantes, sem precisar saber quanto custou
+ * cada uma. Quando o gasto por anúncio for lido de verdade, o campo entra
+ * aqui — e não antes.
+ */
+export type DesempenhoDaPeca = {
+  /** A chave normalizada. Estável, serve de `key` no React. */
+  chave: string
+  /** O `utm_content` como veio, ou o rótulo do balde não identificado. */
+  rotulo: string
+  /** Falso no balde de quem chegou pela campanha sem `utm_content` na URL. */
+  identificada: boolean
+  cadastros: number
+  /** Desses, quantos cadastraram o primeiro contato. */
+  ativaram: number
+  /** Desses, quantos estão pagando agora. */
+  clientesPagantes: number
 }
 
 /** O que uma campanha custou e trouxe. */
@@ -44,12 +103,31 @@ export type DesempenhoDaCampanha = {
   orcamentoDiario: number | null
   /** Contas criadas que se identificaram como vindas desta campanha. */
   cadastros: number
+  /** Dessas contas, quantas chegaram a cadastrar o primeiro contato. */
+  ativaram: number
   /** Dessas contas, quantas estão pagando agora. */
   clientesPagantes: number
   /** Gasto ÷ cadastros. `null` quando ninguém se cadastrou ainda. */
   custoPorCadastro: number | null
+  /**
+   * Gasto ÷ quem ativou. `null` quando ninguém ativou ainda.
+   *
+   * O degrau intermediário, e o mais honesto para julgar campanha nova: o
+   * pagamento demora dias para acontecer, então uma campanha boa parece ruim
+   * pelo custo por cliente enquanto ninguém pagou ainda. Custo por ativação se
+   * move no mesmo dia e já separa tráfego que usa de tráfego que só entra.
+   */
+  custoPorAtivacao: number | null
   /** Gasto ÷ clientes pagantes. O número que decide se dá para escalar. */
   custoPorCliente: number | null
+  /**
+   * O desdobramento por criativo. Vazio quando ninguém veio desta campanha.
+   *
+   * Ordenado por resultado, do melhor para o pior — e o balde não identificado
+   * sempre por último, porque ele não é um concorrente das peças, é a medida do
+   * que a URL do anúncio deixou de dizer.
+   */
+  pecas: DesempenhoDaPeca[]
   /**
    * Quantos meses de mensalidade para o cliente se pagar.
    *
@@ -62,11 +140,86 @@ export type DesempenhoDaCampanha = {
 }
 
 /**
+ * Compara UTM sem diferenciar maiúscula nem espaço nas pontas: quem monta a URL
+ * do anúncio digita à mão, e um espaço a mais não pode fazer um cliente pagante
+ * desaparecer do relatório.
+ */
+const normalizar = (valor: string | null) => valor?.trim().toLowerCase() ?? ''
+
+/** O balde de quem veio pela campanha sem dizer por qual peça. */
+const PECA_NAO_IDENTIFICADA = '__sem_peca__'
+
+/**
+ * Quebra as empresas de UMA campanha nas peças que as trouxeram.
+ *
+ * ## Quem não tem `utm_content` aparece, e não vira uma peça chamada "null"
+ *
+ * Descartar essas contas faria o total das peças ser menor que o da campanha
+ * sem nada na tela explicando a diferença — e o gasto continuaria inteiro no
+ * denominador, então toda peça pareceria melhor do que é. Agrupá-las sob o
+ * rótulo cru (`null`, `""`) inventaria um criativo que não existe.
+ *
+ * O balde é visível e nomeado pelo que ele significa: a URL do anúncio está
+ * incompleta. Mesma decisão de `semCampanhaIdentificada`, um nível acima.
+ */
+function desdobrarEmPecas(vindas: EmpresaAtribuivel[]): DesempenhoDaPeca[] {
+  const porPeca = new Map<string, { rotulo: string; empresas: EmpresaAtribuivel[] }>()
+
+  for (const empresa of vindas) {
+    const bruto = normalizar(empresa.utmContent)
+    const chave = bruto === '' ? PECA_NAO_IDENTIFICADA : bruto
+    const atual = porPeca.get(chave)
+
+    if (atual) {
+      atual.empresas.push(empresa)
+      continue
+    }
+
+    porPeca.set(chave, {
+      // O rótulo é o valor CRU da primeira ocorrência, não o normalizado:
+      // `A1_Ancora_Preco` é o que está escrito na URL do anúncio, e é assim que
+      // quem for procurar no Gerenciador vai reconhecer a peça.
+      rotulo: chave === PECA_NAO_IDENTIFICADA ? 'Peça não identificada' : empresa.utmContent!.trim(),
+      empresas: [empresa],
+    })
+  }
+
+  // `forEach` e não espalhar o Map: o `target` do projeto é anterior a ES2015 e
+  // `[...mapa]` exige `downlevelIteration`. Ligar a flag por causa de um laço
+  // mudaria a compilação do projeto inteiro.
+  const pecas: DesempenhoDaPeca[] = []
+  porPeca.forEach(({ rotulo, empresas }, chave) => {
+    pecas.push({
+      chave,
+      rotulo,
+      identificada: chave !== PECA_NAO_IDENTIFICADA,
+      cadastros: empresas.length,
+      ativaram: empresas.filter((e) => e.ativou).length,
+      clientesPagantes: empresas.filter((e) => e.pagando).length,
+    })
+  })
+
+  return pecas.sort((a, b) => {
+    // O balde não identificado desce sempre, mesmo tendo mais cadastros: ele
+    // não é uma peça que ganhou, é a parte do resultado que não dá para atribuir.
+    if (a.identificada !== b.identificada) return a.identificada ? -1 : 1
+
+    // Pagante primeiro, ativação como desempate, cadastro por último — a ordem
+    // do que decide investimento, não a do que é mais fácil de conseguir.
+    return (
+      b.clientesPagantes - a.clientesPagantes ||
+      b.ativaram - a.ativaram ||
+      b.cadastros - a.cadastros ||
+      a.rotulo.localeCompare(b.rotulo)
+    )
+  })
+}
+
+/**
  * Cruza o gasto por campanha com as empresas que vieram dela.
  *
- * O casamento é por `utm_campaign`, comparado sem diferenciar maiúscula nem
- * espaço nas pontas: quem monta a URL do anúncio digita à mão, e um espaço a
- * mais não pode fazer um cliente pagante desaparecer do relatório.
+ * O casamento é por `utm_campaign`; dentro de cada campanha, as contas são
+ * desdobradas por `utm_content` — ver `desdobrarEmPecas`.
  */
 export function cruzarCampanhasComClientes(
   campanhas: {
@@ -80,22 +233,25 @@ export function cruzarCampanhasComClientes(
   empresas: EmpresaAtribuivel[],
   mensalidade: number,
 ): DesempenhoDaCampanha[] {
-  const normalizar = (valor: string | null) => valor?.trim().toLowerCase() ?? ''
-
   return campanhas.map((campanha) => {
     const chave = normalizar(campanha.nome)
     const vindas = empresas.filter((e) => normalizar(e.utmCampaign) === chave)
+    const ativaram = vindas.filter((e) => e.ativou).length
     const pagantes = vindas.filter((e) => e.pagando).length
 
     const custoPorCadastro = vindas.length > 0 ? campanha.gasto / vindas.length : null
+    const custoPorAtivacao = ativaram > 0 ? campanha.gasto / ativaram : null
     const custoPorCliente = pagantes > 0 ? campanha.gasto / pagantes : null
 
     return {
       ...campanha,
       cadastros: vindas.length,
+      ativaram,
       clientesPagantes: pagantes,
       custoPorCadastro,
+      custoPorAtivacao,
       custoPorCliente,
+      pecas: desdobrarEmPecas(vindas),
       mesesParaSePagar:
         custoPorCliente !== null && mensalidade > 0 ? custoPorCliente / mensalidade : null,
       // Só é desperdício depois de gastar de verdade. Uma campanha que gastou
@@ -110,6 +266,8 @@ export function cruzarCampanhasComClientes(
 export type ResumoDaAtribuicao = {
   gastoTotal: number
   cadastros: number
+  /** Quantos dos cadastros chegaram a cadastrar o primeiro contato. */
+  ativaram: number
   clientesPagantes: number
   custoPorCliente: number | null
   mesesParaSePagar: number | null
@@ -121,6 +279,15 @@ export type ResumoDaAtribuicao = {
    * está incompleta e o relatório está subestimando o resultado.
    */
   semCampanhaIdentificada: number
+  /**
+   * Quantas empresas a campanha reconhece mas a PEÇA não.
+   *
+   * Um nível abaixo de `semCampanhaIdentificada`, e um problema diferente: o
+   * total da campanha está certo, o que falta é saber qual criativo pagou por
+   * ele. Com seis anúncios apontando para o mesmo `/cadastro`, este número
+   * subindo significa que o teste de argumento não vai concluir nada.
+   */
+  semPecaIdentificada: number
 }
 
 export function resumirAtribuicao(
@@ -130,17 +297,28 @@ export function resumirAtribuicao(
 ): ResumoDaAtribuicao {
   const gastoTotal = desempenho.reduce((total, c) => total + c.gasto, 0)
   const cadastros = desempenho.reduce((total, c) => total + c.cadastros, 0)
+  const ativaram = desempenho.reduce((total, c) => total + c.ativaram, 0)
   const clientesPagantes = desempenho.reduce((total, c) => total + c.clientesPagantes, 0)
   const custoPorCliente = clientesPagantes > 0 ? gastoTotal / clientesPagantes : null
 
   return {
     gastoTotal,
     cadastros,
+    ativaram,
     clientesPagantes,
     custoPorCliente,
     mesesParaSePagar:
       custoPorCliente !== null && mensalidade > 0 ? custoPorCliente / mensalidade : null,
     semCampanhaIdentificada: empresas.filter((e) => e.veioDeCliqueDeAnuncio && !e.utmCampaign)
       .length,
+    // Sai do `desempenho`, não de `empresas`: só conta quem JÁ casou com uma
+    // campanha. Contar direto na lista de empresas somaria quem não veio de
+    // anúncio nenhum — toda conta orgânica tem `utm_content` nulo, e o aviso
+    // passaria a acusar um defeito de URL que não existe.
+    semPecaIdentificada: desempenho.reduce(
+      (total, c) =>
+        total + c.pecas.filter((p) => !p.identificada).reduce((n, p) => n + p.cadastros, 0),
+      0,
+    ),
   }
 }

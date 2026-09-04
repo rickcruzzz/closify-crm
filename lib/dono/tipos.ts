@@ -49,6 +49,15 @@ export type EmpresaNaCentral = {
    * permite dizer quanto custou cada cliente pagante — ver `atribuicao.ts`.
    */
   utmCampaign: string | null
+  /**
+   * A PEÇA (criativo) que trouxe, dentro da campanha.
+   *
+   * Coluna criada pela migration 0069 e gravada desde então, mas lida pela
+   * primeira vez em 04/09: os seis criativos apontam para o mesmo `/cadastro` e
+   * só se distinguem por aqui, então sem este campo o relatório junta os seis
+   * num número só e o teste de argumento não conclui nada.
+   */
+  utmContent: string | null
   /** Se chegou por um clique de anúncio do Meta (o `fbclid` da URL). */
   veioDeCliqueDeAnuncio: boolean
 }
