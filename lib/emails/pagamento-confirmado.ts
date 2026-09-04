@@ -1,4 +1,5 @@
 import { escapeHtml, paragraph, rawParagraph, renderEmail } from '@/lib/emails/layout'
+import { CICLOS, type CicloDeCobranca } from '@/lib/plans'
 
 /**
  * E-mail de "seu Pro está ativo".
@@ -15,6 +16,13 @@ import { escapeHtml, paragraph, rawParagraph, renderEmail } from '@/lib/emails/l
 export function renderPagamentoConfirmadoEmail(params: {
   workspaceName: string
   valor: number
+  /**
+   * Mensal ou anual. Sem ele, o e-mail de boas-vindas ao Pro dizia "a
+   * renovação é mensal" para quem acabou de pagar um ANO — a primeira
+   * mensagem que a pessoa recebe depois de gastar R$ 490, contradizendo o
+   * que ela comprou.
+   */
+  ciclo: CicloDeCobranca
   appUrl: string
 }): { subject: string; html: string } {
   const nome = escapeHtml(params.workspaceName)
@@ -43,7 +51,7 @@ export function renderPagamentoConfirmadoEmail(params: {
       ].join('\n'),
       action: { label: 'Abrir o Velo Funil', url: `${params.appUrl}/dashboard` },
       footnote:
-        'A renovação é mensal e automática. Você pode cancelar quando quiser em Configurações → Cobrança.',
+        `A renovação é ${CICLOS[params.ciclo].periodo} e automática. Você pode cancelar quando quiser em Configurações → Cobrança.`,
     }),
   }
 }

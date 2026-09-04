@@ -3,6 +3,7 @@ import { test, expect, type BrowserContext, type Page } from '@playwright/test'
 import { asaas, bancoAdmin, emailsEnviados, TOKEN_WEBHOOK, URL_BASE } from './helpers/ambiente'
 import { criarIdentidade, type IdentidadeDeTeste } from './helpers/identidade'
 import { conferirQueNadaSobrou, limpar, type Rastros } from './helpers/limpeza'
+import { PRO_PLAN_PRICE } from '@/lib/plans'
 
 /**
  * O funil inteiro, da landing até o Pro liberado e o e-mail entregue.
@@ -323,10 +324,14 @@ test.describe('funil completo: landing → cadastro → Pro → e-mail', () => {
     expect(assinatura!.status, 'antes de pagar o status não pode ser active').not.toBe('active')
 
     // Confere no Asaas que a assinatura existe mesmo, com o valor certo.
-    const noAsaas = await asaas<{ value: number; status: string }>(
+    const noAsaas = await asaas<{ value: number; status: string; cycle: string }>(
       `/subscriptions/${rastros.asaasSubscriptionId}`,
     )
-    expect(noAsaas.value).toBe(49)
+    expect(noAsaas.value).toBe(PRO_PLAN_PRICE)
+    // O ciclo entra aqui porque o checkout passou a escolher entre mensal e
+    // anual (04/09). No dia em que alguém inverter o padrão do formulário, é
+    // esta linha que grita — antes de alguém ser cobrado R$ 490 sem pedir.
+    expect(noAsaas.cycle).toBe('MONTHLY')
   })
 
   test('5. pagamento confirmado libera o Pro e manda o e-mail', async () => {

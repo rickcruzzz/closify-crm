@@ -17,7 +17,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { getCurrentUserAndWorkspace } from '@/lib/supabase/workspace'
 import { dadosDeCorrespondencia } from '@/lib/analytics/dados-de-correspondencia'
 import { cancelSubscriptionSchema, checkoutSchema } from '@/lib/validations/billing'
-import { PRO_PLAN_PRICE } from '@/lib/plans'
+import { CICLOS, PRO_PLAN_PRICE, valorDoCiclo } from '@/lib/plans'
 import { CONTROLADOR } from '@/lib/legal'
 import { prepararPixParaExibir, type QrCodePixDoAsaas } from '@/lib/asaas/pix'
 import { prepararBoletoParaExibir, type LinhaDigitavelDoAsaas } from '@/lib/asaas/boleto'
@@ -102,8 +102,12 @@ async function desligarNotificacoesDoCliente(customerId: string) {
 export async function createCheckout(values: unknown) {
   const parsed = checkoutSchema.safeParse(values)
   if (!parsed.success) {
-    return { error: parsed.error.issues[0]?.message ?? 'CPF ou CNPJ inválido.' }
+    // Fallback neutro: o schema deixou de ter um campo só, e dizer
+    // "CPF ou CNPJ inválido" para um ciclo desconhecido mandaria a pessoa
+    // conferir o documento certo.
+    return { error: parsed.error.issues[0]?.message ?? 'Não foi possível iniciar a assinatura.' }
   }
+  const ciclo = parsed.data.ciclo
 
   const { user, workspaceId } = await getCurrentUserAndWorkspace()
   const supabase = await createClient()
@@ -143,12 +147,40 @@ export async function createCheckout(values: unknown) {
 
   const { data: existingSubscription } = await supabase
     .from('subscriptions')
-    .select('asaas_customer_id, asaas_subscription_id, status')
+    .select('asaas_customer_id, asaas_subscription_id, status, ciclo')
     .eq('workspace_id', workspaceId)
     .maybeSingle()
 
   if (existingSubscription?.status === 'active') {
     return { error: 'Este workspace já tem uma assinatura Pro ativa.' }
+  }
+
+  // ## Trocar de ciclo com assinatura viva é recusado, e o motivo é dinheiro
+  //
+  // Logo abaixo, `subscriptionId` é reaproveitado quando a assinatura anterior
+  // não está `canceled` — e nesse caso o `if (!subscriptionId)` PULA a criação
+  // no Asaas. A assinatura lá continuaria MONTHLY, cobrando R$ 49, enquanto o
+  // upsert daqui gravaria `ciclo = 'YEARLY'`. A pessoa pagaria R$ 49 e a RPC
+  // lhe daria um ano.
+  //
+  // Cancelar-e-recriar e `PUT /subscriptions` foram considerados e ficaram de
+  // fora: o primeiro reproduz o estado do workspace "pedro eee" se o POST
+  // falhar depois do DELETE (ver o comentário logo abaixo), e o segundo depende
+  // de `updatePendingPayments`, que nunca foi medido nesta conta — e mexeria no
+  // valor de um boleto que a pessoa pode estar com a tela aberta.
+  //
+  // Recusar nomeia a ação que resolve. Trocar em silêncio não.
+  const temAssinaturaViva =
+    Boolean(existingSubscription?.asaas_subscription_id) &&
+    existingSubscription?.status !== 'canceled'
+
+  if (temAssinaturaViva && existingSubscription!.ciclo !== ciclo) {
+    const atual = CICLOS[existingSubscription!.ciclo]
+    return {
+      error:
+        `Já existe uma cobrança ${atual.periodo} de R$ ${atual.valor} em aberto nesta empresa. ` +
+        'Cancele a assinatura atual em Configurações → Cobrança para trocar de plano.',
+    }
   }
 
   let customerId = existingSubscription?.asaas_customer_id ?? null
@@ -237,9 +269,12 @@ export async function createCheckout(values: unknown) {
         method: 'POST',
         body: JSON.stringify({
           customer: customerId,
+          // `UNDEFINED` continua: é o que faz a MESMA cobrança oferecer Pix,
+          // boleto e cartão no `PagarDialog`. Um Pix de R$ 490 fechado na
+          // visita é exatamente o caso de uso do plano anual.
           billingType: 'UNDEFINED',
-          cycle: 'MONTHLY',
-          value: PRO_PLAN_PRICE,
+          cycle: ciclo,
+          value: valorDoCiclo(ciclo),
           nextDueDate: new Date().toISOString().slice(0, 10),
           // Aparece na fatura, no boleto e no extrato do cartão. É o único
           // texto de marca que controlamos nessa tela: o nome do recebedor vem
@@ -256,7 +291,7 @@ export async function createCheckout(values: unknown) {
           //
           // Só vale para assinaturas novas, as já criadas mantêm a descrição
           // gravada no Asaas, que é a fonte da verdade da cobrança.
-          description: `Velo Funil, Plano Pro · CRM de vendas · Assinatura mensal · ${CONTROLADOR.email}`,
+          description: `Velo Funil, Plano Pro · CRM de vendas · Assinatura ${CICLOS[ciclo].periodo} · ${CONTROLADOR.email}`,
           externalReference,
         }),
       })
@@ -296,6 +331,22 @@ export async function createCheckout(values: unknown) {
       asaas_customer_id: customerId,
       asaas_subscription_id: subscriptionId,
       status: subscriptionFoiRecriada ? 'trialing' : (existingSubscription?.status ?? 'trialing'),
+      // ## `ciclo` só entra quando a assinatura NASCEU nesta chamada
+      //
+      // A coluna decide se um pagamento compra 30 dias ou um ano
+      // (`intervalo_do_ciclo`, migration 0070), e este upsert usa o admin
+      // client — não há RLS por baixo para segurar erro de código. A única
+      // defesa é esta condição.
+      //
+      // Gravá-la sempre permitiria que ela descrevesse um ciclo que a
+      // assinatura do Asaas não tem: reusando uma assinatura MONTHLY, a
+      // cobrança continuaria R$ 49 e a coluna diria YEARLY. Amarrada ao id
+      // recém-criado, a coluna é consequência do que o gateway aceitou —
+      // que é o que a torna entrada confiável, e não mais um palpite (0027).
+      //
+      // O guard lá em cima é a educação; isto é a trava. Se alguém remover
+      // aquele, este continua impedindo a divergência.
+      ...(subscriptionFoiRecriada ? { ciclo } : {}),
     },
     { onConflict: 'workspace_id' },
   )
@@ -342,7 +393,10 @@ export async function createCheckout(values: unknown) {
       // de novo depois de fechar o diálogo cairia como segunda intenção de
       // compra, inflando o número que a campanha usa para otimizar.
       eventId: `checkout:${subscriptionId}`,
-      valor: PRO_PLAN_PRICE,
+      // O valor do ciclo escolhido, nao a constante mensal: reportar um
+      // checkout de R$ 490 como R$ 49 ensinaria a Meta que o comprador anual
+      // vale o mesmo que o mensal, e ela pararia de procurar o anual.
+      valor: valorDoCiclo(ciclo),
       userId: user.id,
       fbc: workspace.fbc,
       fbp: workspace.fbp,
@@ -509,9 +563,13 @@ export async function obterFormasDePagamento() {
     return { error: 'Só administradores podem ver os dados de pagamento.' }
   }
 
+  // `ciclo` vem junto para o diálogo de pagamento saber dizer "por mês" ou
+  // "por ano". Sem ele, a tela mostraria o valor certo (490, que vem da
+  // cobrança) com o período errado — e "R$ 490 por mês" é pior que os dois
+  // errados, porque parece correto.
   const { data: assinatura } = await supabase
     .from('subscriptions')
-    .select('asaas_subscription_id')
+    .select('asaas_subscription_id, ciclo')
     .eq('workspace_id', workspaceId)
     .maybeSingle()
 
@@ -586,7 +644,10 @@ export async function obterFormasDePagamento() {
 
   return {
     pagamento: {
+      // O valor real da cobrança, do gateway. O fallback só existe para o caso
+      // de o Asaas omitir o campo, e nesse caso o mensal é o palpite seguro.
       valor: cobranca.value ?? PRO_PLAN_PRICE,
+      ciclo: assinatura?.ciclo ?? 'MONTHLY',
       pix: prepararPixParaExibir(pixBruto),
       boleto: prepararBoletoParaExibir(boletoBruto),
       boletoPdfUrl: cobranca.bankSlipUrl ?? null,

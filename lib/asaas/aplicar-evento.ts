@@ -9,7 +9,7 @@ import { registrarNotificacao } from '@/lib/notificacoes/registrar'
 import { renderPagamentoConfirmadoEmail } from '@/lib/emails/pagamento-confirmado'
 import { renderPagamentoAtrasadoEmail } from '@/lib/emails/pagamento-atrasado'
 import { enviarConversaoDeCompra } from '@/lib/analytics/meta-conversions'
-import { PRO_PLAN_PRICE } from '@/lib/plans'
+import { valorDoCiclo, type CicloDeCobranca } from '@/lib/plans'
 import { appUrl } from '@/lib/app-url'
 import type { SubscriptionStatus } from '@/types/supabase'
 
@@ -252,10 +252,19 @@ export async function buscarAssinante(
   /** Telefone do dono, quando cadastrado no Auth — vira `ph` no evento do Meta. */
   telefone: string | null
   userId: string
+  /** Mensal ou anual: decide o valor do e-mail e do `Purchase`. */
+  ciclo: CicloDeCobranca
 } | null> {
+  // `ciclo` entra no select que já existia: custo zero, e ele decide o VALOR
+  // que vai no e-mail e no `Purchase` da Meta.
+  //
+  // Lido DEPOIS de a RPC ter rodado, e isso só é correto porque
+  // `apply_asaas_subscription_status` não escreve `ciclo` — o valor lido é o
+  // vigente para este pagamento. No dia em que alguém fizer a RPC escrever a
+  // coluna, esta leitura passa a estar errada.
   const { data: assinatura } = await supabase
     .from('subscriptions')
-    .select('workspace_id')
+    .select('workspace_id, ciclo')
     .eq('asaas_subscription_id', subscriptionId)
     .maybeSingle()
 
@@ -277,6 +286,7 @@ export async function buscarAssinante(
     workspaceName: workspace.name,
     workspaceId: assinatura.workspace_id,
     consentimento: workspace.consentimento_analitico ?? null,
+    ciclo: assinatura.ciclo,
     email,
     fbc: workspace.fbc,
     fbp: workspace.fbp,
@@ -300,7 +310,12 @@ export async function buscarAssinante(
 async function enviarEmailDoWebhook(
   supabase: ReturnType<typeof createAdminClient>,
   subscriptionId: string,
-  render: (params: { workspaceName: string; valor: number; appUrl: string }) => {
+  render: (params: {
+    workspaceName: string
+    valor: number
+    ciclo: CicloDeCobranca
+    appUrl: string
+  }) => {
     subject: string
     html: string
   },
@@ -322,7 +337,8 @@ async function enviarEmailDoWebhook(
 
     const { subject, html } = render({
       workspaceName: assinante.workspaceName,
-      valor: PRO_PLAN_PRICE,
+      valor: valorDoCiclo(assinante.ciclo),
+      ciclo: assinante.ciclo,
       appUrl: appUrl(),
     })
 
@@ -371,7 +387,18 @@ async function enviarConversaoParaMeta(
     await enviarConversaoDeCompra({
       ...correspondencia,
       email: assinante.email,
-      valor: PRO_PLAN_PRICE,
+      // ## O valor do CICLO, e isso não é cosmético
+      //
+      // A campanha da Meta otimiza por valor de conversão. Reportar uma venda
+      // de R$ 490 como R$ 49 ensina o algoritmo que o comprador anual vale o
+      // mesmo que o mensal — e ele para de procurar justamente quem paga dez
+      // vezes mais.
+      //
+      // Sai da COLUNA e não do payload do webhook, pelo mesmo motivo da 0027:
+      // com o token, alguém inflaria a receita reportada à Meta e corromperia
+      // a otimização da campanha junto com a leitura de receita do dono. Por
+      // isso `aplicarEventoAsaas` continua sem `value` na assinatura.
+      valor: valorDoCiclo(assinante.ciclo),
       eventId,
       fbc: assinante.fbc,
       fbp: assinante.fbp,

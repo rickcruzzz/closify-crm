@@ -12,7 +12,7 @@ import { buscarPagamentoMaisRecente } from '@/lib/asaas/status-real'
 import { getResend } from '@/lib/resend/client'
 import { renderPlanoVencendoEmail } from '@/lib/emails/plano-vencendo'
 import { renderTrialTerminandoEmail } from '@/lib/emails/trial-terminando'
-import { PRO_PLAN_PRICE } from '@/lib/plans'
+import { CICLOS, PRO_PLAN_PRICE, valorDoCiclo } from '@/lib/plans'
 import { AVISAR_A_PARTIR_DE } from '@/lib/plans/trial'
 import { appUrl } from '@/lib/app-url'
 import { registrarNotificacao } from '@/lib/notificacoes/registrar'
@@ -216,8 +216,10 @@ async function avisarQuemEstaPertoDeVencer(supabase: ReturnType<typeof createAdm
     .from('subscriptions')
     // `workspace_id` entra aqui e não numa segunda consulta: o sino precisa
     // dele para saber de quem é o aviso, e a linha já está sendo lida.
+    // `ciclo` entra no mesmo select: o aviso cita VALOR, e cotar R$ 49 para
+    // quem paga R$ 490 por ano faria a pessoa achar que a cobrança mudou.
     .select(
-      'workspace_id, asaas_subscription_id, current_period_end, aviso_vencimento_enviado_em',
+      'workspace_id, asaas_subscription_id, current_period_end, aviso_vencimento_enviado_em, ciclo',
     )
     .eq('status', 'active')
     .not('asaas_subscription_id', 'is', null)
@@ -260,7 +262,7 @@ async function avisarQuemEstaPertoDeVencer(supabase: ReturnType<typeof createAdm
 
     const { subject, html } = renderPlanoVencendoEmail({
       workspaceName: assinante.workspaceName,
-      valor: PRO_PLAN_PRICE,
+      valor: valorDoCiclo(linha.ciclo),
       diasRestantes: restam,
       appUrl: appUrl(),
     })
@@ -302,7 +304,7 @@ async function avisarQuemEstaPertoDeVencer(supabase: ReturnType<typeof createAdm
       tipo: 'plano_vencendo',
       titulo:
         restam <= 1 ? 'Seu Pro vence amanhã.' : `Seu Pro vence em ${restam} dias.`,
-      corpo: `R$ ${PRO_PLAN_PRICE}/mês pela empresa inteira. Nada é apagado se vencer.`,
+      corpo: `R$ ${valorDoCiclo(linha.ciclo)}${CICLOS[linha.ciclo].sufixo} pela empresa inteira. Nada é apagado se vencer.`,
       href: '/settings/billing?pagar=1',
     })
 
@@ -394,6 +396,13 @@ async function avisarQuemEstaSaindoDoTrial(supabase: ReturnType<typeof createAdm
 
     const { subject, html } = renderTrialTerminandoEmail({
       workspaceName: empresa.name,
+      // ## Fim de trial cita o MENSAL, e isso é decisão
+      //
+      // Diferente do aviso de vencimento, aqui não existe assinatura nem ciclo
+      // escolhido — a pessoa ainda não comprou nada. Cotar R$ 490 para quem
+      // não pediu o anual é cotar um preço que ela não perguntou, e o mensal é
+      // o ponto de entrada mais barato. Quem quiser o anual escolhe no
+      // checkout.
       valor: PRO_PLAN_PRICE,
       diasRestantes: restam,
       appUrl: appUrl(),

@@ -1,4 +1,5 @@
 import { escapeHtml, paragraph, rawParagraph, renderEmail } from '@/lib/emails/layout'
+import type { CicloDeCobranca } from '@/lib/plans'
 
 /**
  * E-mail de "seu pagamento não foi confirmado".
@@ -15,6 +16,12 @@ import { escapeHtml, paragraph, rawParagraph, renderEmail } from '@/lib/emails/l
 export function renderPagamentoAtrasadoEmail(params: {
   workspaceName: string
   valor: number
+  /**
+   * Aceito porque `enviarEmailDoWebhook` compartilha o mesmo tipo de `render`
+   * com o e-mail de pagamento confirmado. Não é usado aqui de propósito: este
+   * e-mail fala do valor que não entrou, e o período não muda o que fazer.
+   */
+  ciclo?: CicloDeCobranca
   appUrl: string
 }): { subject: string; html: string } {
   const nome = escapeHtml(params.workspaceName)

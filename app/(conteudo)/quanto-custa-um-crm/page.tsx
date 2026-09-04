@@ -16,6 +16,8 @@ import {
   FREE_LEAD_LIMIT,
   PRECOS_CONFERIDOS_EM,
   PRECO_MEDIANA_POR_USUARIO,
+  PRO_ANUAL_MESES_COBRADOS,
+  PRO_ANUAL_PRICE,
   PRO_PLAN_PRICE,
 } from '@/lib/plans'
 
@@ -55,6 +57,10 @@ import {
 const TIME = 5
 const MESES = 12
 const custoPorAssento = PRECO_MEDIANA_POR_USUARIO * TIME
+// Um ano pagando MÊS A MÊS. Não é o único preço de um ano aqui desde 04/09:
+// o plano anual custa `PRO_ANUAL_PRICE`, e a página cita os dois. Publicar só
+// este seria dizer ao leitor que um ano custa R$ 588 enquanto o produto vende
+// o ano por R$ 490 — a classe de defeito do CNPJ que ficou 17 dias na landing.
 const custoFixoAno = PRO_PLAN_PRICE * MESES
 const custoAssentoAno = custoPorAssento * MESES
 
@@ -183,7 +189,9 @@ export default function QuantoCustaUmCrm() {
           frente. A partir de três, a distância abre rápido. Em um ano, uma equipe
           de cinco pessoas paga <strong>R$ {custoAssentoAno.toLocaleString('pt-BR')}</strong>{' '}
           no modelo por assento contra{' '}
-          <strong>R$ {custoFixoAno.toLocaleString('pt-BR')}</strong> no preço fixo.
+          <strong>R$ {custoFixoAno.toLocaleString('pt-BR')}</strong> no preço fixo — ou{' '}
+          <strong>R$ {PRO_ANUAL_PRICE.toLocaleString('pt-BR')}</strong> pagando o ano de
+          uma vez, que sai por {PRO_ANUAL_MESES_COBRADOS} meses em vez de {MESES}.
         </LegalP>
 
         <LegalP>

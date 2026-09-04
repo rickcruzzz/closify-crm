@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
 import { CONTROLADOR } from '@/lib/legal'
-import { FREE_LEAD_LIMIT, PRO_PLAN_PRICE } from '@/lib/plans'
+import { FREE_LEAD_LIMIT, PRO_ANUAL_MESES, PRO_PLAN_PRICE } from '@/lib/plans'
 
 import { aplicacao, organizacao, perguntasFrequentes } from './dados-estruturados'
 
@@ -17,9 +17,9 @@ describe('dados estruturados da landing', () => {
    * pessoa a procurar na página para saber se cabe nela — a mesma razão que a
    * FAQ da landing registra para citar o número lá.
    */
-  it('mostra os DOIS planos, e o grátis com preço zero', () => {
+  it('mostra os TRÊS planos, e o grátis com preço zero', () => {
     const ofertas = aplicacao().offers
-    expect(ofertas).toHaveLength(2)
+    expect(ofertas).toHaveLength(3)
 
     const gratis = ofertas.find((o) => o.name === 'Grátis')
     expect(gratis?.price).toBe('0')
@@ -92,5 +92,44 @@ describe('dados estruturados da landing', () => {
   it('identifica o controlador pela razão social do cadastro', () => {
     expect(organizacao().legalName).toBe(CONTROLADOR.razaoSocial)
     expect(organizacao().name).toBe(CONTROLADOR.nomeFantasia)
+  })
+})
+
+/**
+ * ## O risco específico de publicar duas ofertas Pro
+ *
+ * Esta página existe para ser lida por buscador e por IA. Com `price: '49'` e
+ * `price: '490'` lado a lado e nada dizendo o período de cada um, um LLM pode
+ * passar a responder "R$ 490" como O preço do Velo Funil — dez vezes o que a
+ * pessoa pagaria para começar.
+ *
+ * Os dois casos abaixo travam a desambiguação. Não são cosméticos: eles
+ * protegem a primeira impressão de preço que um comprador tem.
+ */
+describe('as duas ofertas Pro não se confundem', () => {
+  it('a oferta de menor preço continua sendo a mensal', () => {
+    const pagas = aplicacao()
+      .offers.filter((o) => Number(o.price) > 0)
+      .sort((a, b) => Number(a.price) - Number(b.price))
+    expect(pagas[0]?.name).toBe('Pro')
+    expect(pagas[0]?.price).toBe(String(PRO_PLAN_PRICE))
+  })
+
+  it('cada oferta paga declara o período que cobre', () => {
+    for (const oferta of aplicacao().offers.filter((o) => Number(o.price) > 0)) {
+      expect(oferta.priceSpecification, oferta.name).toBeDefined()
+      expect(oferta.priceSpecification?.unitCode, oferta.name).toBe('MON')
+    }
+    const mensal = aplicacao().offers.find((o) => o.name === 'Pro')
+    const anual = aplicacao().offers.find((o) => o.name === 'Pro anual')
+    expect(mensal?.priceSpecification?.billingDuration).toBe(1)
+    expect(anual?.priceSpecification?.billingDuration).toBe(PRO_ANUAL_MESES)
+  })
+
+  // Publicar um "anual" que custa doze mensalidades seria anunciar um desconto
+  // que não existe, na superfície que o Google lê.
+  it('o anual publicado é mais barato que doze mensais', () => {
+    const anual = aplicacao().offers.find((o) => o.name === 'Pro anual')
+    expect(Number(anual?.price)).toBeLessThan(PRO_PLAN_PRICE * PRO_ANUAL_MESES)
   })
 })

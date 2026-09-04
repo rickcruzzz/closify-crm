@@ -2,7 +2,12 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 
 import { ATUALIZADO_EM, CONTROLADOR, identificacaoDoControlador } from '@/lib/legal'
-import { FREE_LEAD_LIMIT, FREE_MEMBER_LIMIT, PRO_PLAN_PRICE } from '@/lib/plans'
+import {
+  FREE_LEAD_LIMIT,
+  FREE_MEMBER_LIMIT,
+  PRO_ANUAL_PRICE,
+  PRO_PLAN_PRICE,
+} from '@/lib/plans'
 import {
   LegalBackLink,
   LegalList,
@@ -77,15 +82,32 @@ export default function TermosPage() {
             {FREE_LEAD_LIMIT} leads e {FREE_MEMBER_LIMIT} membros por workspace.
           </li>
           <li>
-            <strong className="text-foreground">Plano Pro:</strong> R$ {PRO_PLAN_PRICE}
+            <strong className="text-foreground">Plano Pro mensal:</strong> R${' '}
+            {PRO_PLAN_PRICE}
             {',00'} por mês, sem limite de leads ou membros.
+          </li>
+          <li>
+            <strong className="text-foreground">Plano Pro anual:</strong> R${' '}
+            {PRO_ANUAL_PRICE}
+            {',00'} por ano, pago de uma vez, com os mesmos recursos do mensal.
           </li>
         </LegalList>
         <LegalP>
-          A cobrança é mensal e recorrente, processada pelo Asaas, com aceite de Pix,
-          boleto e cartão. Não recebemos nem armazenamos dados de cartão de crédito. O
-          plano é ativado após a confirmação do pagamento e renovado automaticamente até
-          que você cancele.
+          A cobrança é recorrente no período escolhido — mensal ou anual —, processada
+          pelo Asaas, com aceite de Pix, boleto e cartão. Não recebemos nem armazenamos
+          dados de cartão de crédito. O plano é ativado após a confirmação do pagamento e
+          renovado automaticamente até que você cancele.
+        </LegalP>
+        {/* ## O que acontece ao cancelar no meio do período pago
+            Está aqui porque é contrato, e no anual a pergunta vale onze meses.
+            A regra é a mesma dos dois planos e já é o comportamento do código:
+            `pro_vigente()` compara `current_period_end` com agora, então
+            cancelar interrompe a RENOVAÇÃO, nunca o acesso já pago. */}
+        <LegalP>
+          O cancelamento interrompe as cobranças futuras e não gera multa. O acesso ao
+          plano Pro permanece até o fim do período já pago — inclusive no plano anual,
+          em que o acesso segue até completar os doze meses contratados. Não há reembolso
+          proporcional do período restante.
         </LegalP>
         <LegalP>
           Em caso de falha no pagamento, a assinatura pode ser suspensa e o workspace

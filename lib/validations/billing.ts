@@ -17,9 +17,36 @@ export const checkoutSchema = z.object({
     .refine(validarCpfCnpj, {
       message: 'Documento inválido. Confira os números digitados.',
     }),
+
+  /**
+   * Mensal ou anual, no vocabulário do Asaas.
+   *
+   * ## `.default()` e não `.catch()`, e a diferença custa dinheiro
+   *
+   * `.default()` age só na AUSÊNCIA do campo: quem não manda nada — todo
+   * chamador que existia antes desta linha — continua mensal, correto. Mas um
+   * valor DESCONHECIDO reprova a validação e aparece na tela.
+   *
+   * `.catch()` engoliria o desconhecido e devolveria mensal em silêncio. Num
+   * campo que decide entre cobrar R$ 49 e R$ 490, silêncio é a pior resposta:
+   * o dono venderia o anual na visita, o sistema cobraria o mensal, e nada na
+   * tela diria que a escolha se perdeu.
+   */
+  ciclo: z.enum(['MONTHLY', 'YEARLY']).default('MONTHLY'),
 })
 
+/** O que a Server Action recebe DEPOIS da validação: `ciclo` já resolvido. */
 export type CheckoutValues = z.infer<typeof checkoutSchema>
+
+/**
+ * O que o formulário segura ANTES da validação, com `ciclo` opcional.
+ *
+ * São dois tipos porque `.default()` os torna diferentes, e o react-hook-form
+ * precisa dos dois: ele guarda a entrada e entrega a saída ao `onSubmit`.
+ * Usar só `z.infer` faz o resolver não bater com o formulário, e o erro que o
+ * `tsc` dá para isso não menciona `default` em lugar nenhum.
+ */
+export type CheckoutInput = z.input<typeof checkoutSchema>
 
 /** Confirmação exigida para cancelar a assinatura, digitada pela pessoa. */
 export const cancelSubscriptionSchema = z.object({

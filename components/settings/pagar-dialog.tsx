@@ -17,11 +17,14 @@ import { obterFormasDePagamento, pagamentoFoiConfirmado } from '@/lib/asaas/acti
 import { avisoDeValidade } from '@/lib/asaas/pix'
 import { cn } from '@/lib/utils'
 import { CONTROLADOR } from '@/lib/legal'
+import { CICLOS, type CicloDeCobranca } from '@/lib/plans'
 
 type Metodo = 'pix' | 'boleto' | 'cartao'
 
 type Pagamento = {
   valor: number
+  /** Mensal ou anual: decide se a tela diz "por mês" ou "por ano". */
+  ciclo: CicloDeCobranca
   pix: { imagemDataUrl: string; copiaECola: string; expiraEm: string | null } | null
   boleto: { linhaFormatada: string; linhaParaCopiar: string } | null
   boletoPdfUrl: string | null
@@ -177,8 +180,17 @@ export function PagarDialog({
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>Assinar o Plano Pro</DialogTitle>
+          {/* ## Sem preço inventado, e sem período errado
+              O `?? 49` que estava aqui inventava um valor quando a leitura
+              falhava — numa tela de PAGAMENTO, não mostrar o preço é melhor
+              que mostrar o errado. E o período agora vem do ciclo da
+              assinatura: com o anual, o valor já sairia certo (490) e o texto
+              diria "por mês", que é pior que os dois errados, porque parece
+              correto. */}
           <DialogDescription>
-            R$ {pagamento?.valor ?? 49} por mês, pela empresa inteira. Cancele quando quiser.
+            {pagamento
+              ? `R$ ${pagamento.valor} ${CICLOS[pagamento.ciclo].porPeriodo}, pela empresa inteira. Cancele quando quiser.`
+              : 'Pela empresa inteira, sem cobrar por pessoa. Cancele quando quiser.'}
           </DialogDescription>
         </DialogHeader>
 

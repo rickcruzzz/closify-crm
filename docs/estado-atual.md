@@ -80,6 +80,92 @@ duas. Levar duas ou tres perguntas para baixo do formulario e a proxima
 melhoria de conversao, e nao foi feita.
 
 ---
+## O plano anual, e o `interval '30 days'` que o teria matado (04/09)
+
+Pedido do dono: vender porta a porta em Salvador. A conta que motiva:
+
+    1 visita               ~1h entre deslocamento, demo e retorno
+    fechamento presencial  10% a 20%  ->  5 a 10 HORAS por cliente
+    resultado a R$ 49      sete horas de trabalho por R$ 49
+
+**R$ 490 a vista na mesma visita** e o que faz porta a porta fechar. E trava 12
+meses de retencao, numero que este produto nunca teve.
+
+### O ponto unico de falha, e ele nao estava em nenhum `.ts`
+
+`0044:155-157`, dentro de `apply_asaas_subscription_status`:
+
+    current_period_end = now() + interval '30 days'
+
+Trinta dias literais, sem olhar o que foi pago. **E a UNICA fonte de validade
+de acesso para pagamento real do sistema inteiro.** Quem pagasse R$ 490
+receberia trinta dias.
+
+`pro_vigente()` (0055) nao muda: ela compara `current_period_end + graca > now()`
+e e cycle-agnostic. As quatro triggers de limite tambem nao — todas leem so
+`pro_vigente()`. **O raio de explosao em SQL era uma expressao `CASE`.**
+
+### O ciclo nasce no NOSSO servidor, nunca no webhook
+
+A 0027 proibe em texto derivar validade do payload: *"deixaria alguem com o
+token estender o proprio plano."* Entao `subscriptions.ciclo` (0070) e escrito
+por `createCheckout`, e a RPC le a coluna. `aplicarEventoAsaas` e o webhook
+**nao mudaram uma linha** — que e a prova de que a 0027 foi respeitada.
+
+**A emenda que fecha a fuga de dinheiro:** `actions.ts:235` pula a criacao no
+Asaas quando reusa assinatura viva. Gravar `ciclo` sempre deixaria a coluna
+dizer YEARLY numa assinatura que cobra R$ 49 — pagaria 49, receberia um ano.
+Por isso `ciclo` so entra no upsert quando `subscriptionFoiRecriada`. O guard
+que recusa a troca e a educacao; **a condicao no upsert e a trava**.
+
+### `interval '1 year'`, e nao `365 days`
+
+O Asaas cobra o YEARLY na mesma data do calendario. Em ano bissexto, 365 dias
+cortariam o acesso **um dia antes** da proxima cobranca — cliente cortado com o
+dinheiro ja pago. E o default do desconhecido e o valor MENOR, ao contrario de
+`dias_de_graca`: la a diferenca sao 2 dias, aqui sao **onze meses de produto de
+graca**.
+
+### Provado contra producao
+
+    migration isolada   mensal via DEFAULT 30 dias | anual 365 | rollback pelo raise
+    ponta a ponta       YEARLY no gateway, R$ 490 cobrados, banco == gateway
+                        receiveInCash -> cron real -> 365 dias, pro_vigente=true
+    seguranca           usuario logado tentando virar o proprio ciclo: NEGADO
+    tela                mensal R$ 49/mes (padrao) | anual R$ 490/ano, 2 meses
+                        gratis, economize R$ 98 — clique troca a selecao
+
+1.009 testes. O mensal continua 30 dias, medido no mesmo lugar — sem esse
+controle, um defeito que desse um ano para TODO MUNDO passaria feliz.
+
+### O achado que nao era da rodada: o webhook do Asaas estava INTERROMPIDO
+
+Descoberto porque a prova ponta a ponta nao recebia evento nenhum.
+`interrupted: true`, com `sendType: SEQUENTIALLY` — **um evento travado bloqueia
+todos os seguintes**. Pagamento confirmado nao chegava ao produto.
+
+A rede de seguranca funcionou: o cron diario de reconciliacao aplicou o
+pagamento do mesmo jeito, e foi por ele que a prova passou. Mas o caminho
+rapido estava morto, e nada avisava.
+
+**Religado** (`PUT /webhooks/{id}`, `interrupted: false`). Os 106 eventos ja
+estavam assinados — a lista nunca foi o problema.
+
+**Fica em aberto:** nada vigia esse estado. Um webhook interrompido e
+indistinguivel de "ninguem pagou" ate alguem conferir na API.
+
+### Duas coisas anotadas, nao resolvidas
+
+**O banner de consentimento parece cobrir o botao Entrar.** O login por
+Playwright so passou depois de responder o banner. Seria a QUARTA reincidencia
+da familia documentada em 23/08, 24/08 e 02/09. Nao foi medido com
+`elementFromPoint` — e suspeita, nao achado.
+
+**A Central conta todo Pro como R$ 49/mes** (`lib/dono/central.ts:95`,
+`dono/anuncio/page.tsx`). Vai errar em silencio na primeira venda anual.
+Obrigatorio antes do primeiro anual ser CONTADO, nao antes de ser vendido.
+
+---
 ## O nome da campanha NUNCA vai bater com o `utm_campaign` (04/09)
 
 Achado conferindo a outra ponta na API da Meta, logo depois da rodada abaixo.

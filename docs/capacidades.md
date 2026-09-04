@@ -53,6 +53,7 @@ envelhecer em silêncio, que é o defeito de todo documento desse tipo.
 | Reconciliar assinatura, diária | `app/api/cron/reconciliar-assinaturas/route.ts` | 13/08 |
 | Classificar acesso: pagante, trial, cortesia | `lib/dono/receita.ts` | 30/08 |
 | Preços e limites de plano, num lugar só | `lib/plans.ts` | 07/08 |
+| Plano **anual** (R$ 490, ciclo na assinatura) | `supabase/migrations/0070_ciclo_da_assinatura.sql` | 04/09 |
 
 ## Integrações
 

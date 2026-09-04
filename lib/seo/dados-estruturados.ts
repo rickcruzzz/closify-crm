@@ -1,5 +1,11 @@
 import { CONTROLADOR } from '@/lib/legal'
-import { FREE_LEAD_LIMIT, PRO_PLAN_PRICE } from '@/lib/plans'
+import {
+  FREE_LEAD_LIMIT,
+  PRO_ANUAL_MESES,
+  PRO_ANUAL_MESES_COBRADOS,
+  PRO_ANUAL_PRICE,
+  PRO_PLAN_PRICE,
+} from '@/lib/plans'
 
 /**
  * Os dados estruturados (JSON-LD) que a landing publica para o Google.
@@ -115,6 +121,42 @@ export function aplicacao() {
         description:
           `R$ ${PRO_PLAN_PRICE} por mês pela empresa inteira, ` +
           'com uma pessoa ou com vinte. Não cobramos por vendedor.',
+        // ## `priceSpecification` não é enfeite aqui
+        //
+        // Com duas ofertas Pro no mesmo bloco, `price: '49'` e `price: '490'`
+        // ficam ambíguos para quem lê a máquina: nada diz que uma é por mês e
+        // a outra por ano. Um LLM pode passar a responder "R$ 490" como O
+        // preço do produto — e a página existe justamente para ser lida por
+        // buscador e por IA.
+        //
+        // `billingDuration` + `unitCode` desfazem a ambiguidade. `MON` é o
+        // código UN/CEFACT para mês, que é o vocabulário que o schema.org
+        // espera aqui.
+        priceSpecification: {
+          '@type': 'UnitPriceSpecification',
+          price: String(PRO_PLAN_PRICE),
+          priceCurrency: 'BRL',
+          billingDuration: 1,
+          billingIncrement: 1,
+          unitCode: 'MON',
+        },
+      },
+      {
+        '@type': 'Offer',
+        name: 'Pro anual',
+        price: String(PRO_ANUAL_PRICE),
+        priceCurrency: 'BRL',
+        description:
+          `R$ ${PRO_ANUAL_PRICE} por ano pela empresa inteira, ` +
+          `equivalente a ${PRO_ANUAL_MESES_COBRADOS} meses em vez de ${PRO_ANUAL_MESES}.`,
+        priceSpecification: {
+          '@type': 'UnitPriceSpecification',
+          price: String(PRO_ANUAL_PRICE),
+          priceCurrency: 'BRL',
+          billingDuration: PRO_ANUAL_MESES,
+          billingIncrement: 1,
+          unitCode: 'MON',
+        },
       },
     ],
   }

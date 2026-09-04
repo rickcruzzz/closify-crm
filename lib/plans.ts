@@ -74,3 +74,80 @@ export const PRECO_MEDIANA_POR_USUARIO = 60
 /** Quando os preços acima foram conferidos. Aparece na landing. */
 export const PRECOS_CONFERIDOS_EM = '31/08/2026'
 export const FREE_PLAN_PRICE = 0
+
+/**
+ * ## O plano anual, e por que o preço é DERIVADO
+ *
+ * A oferta é "paga 10, leva 12". O preço é consequência dela, nunca o
+ * contrário — e é isso que impede a copy de mentir: "dois meses grátis" sai de
+ * `PRO_ANUAL_MESES - PRO_ANUAL_MESES_COBRADOS`, exato por construção. Escrever
+ * `= 490` literal deixaria os dois livres para divergir no dia em que alguém
+ * mexesse num e não no outro, e a frase continuaria na tela.
+ *
+ * É a mesma disciplina de `lib/marketing/oferta-nas-artes.test.ts`: derivar de
+ * constante protege contra mudança de VALOR; derivar da OFERTA protege contra
+ * mudança de oferta, que é o erro mais caro dos dois.
+ *
+ * ## Por que ele existe
+ *
+ * Venda presencial. Uma visita custa cerca de uma hora entre deslocamento,
+ * demonstração e retorno, e fecha em 10% a 20% — cinco a dez horas por cliente.
+ * A R$ 49 isso não se paga; a R$ 490 à vista, sim. E trava 12 meses de
+ * retenção, que é o número que este produto nunca teve.
+ *
+ * `PRO_PLAN_PRICE` continua sendo o preço MENSAL e não muda de forma: os 18
+ * arquivos que o importam significam exatamente isso, e
+ * `scripts/marketing/gerar-stories.py` o lê por regex de `export const NOME = <int>`.
+ */
+export const PRO_ANUAL_MESES = 12
+export const PRO_ANUAL_MESES_COBRADOS = 10
+
+/** R$ 490. Doze meses pelo preço de dez. */
+export const PRO_ANUAL_PRICE = PRO_PLAN_PRICE * PRO_ANUAL_MESES_COBRADOS
+
+/** Dois. O que a peça de venda promete, calculado e não escrito. */
+export const PRO_ANUAL_MESES_GRATIS = PRO_ANUAL_MESES - PRO_ANUAL_MESES_COBRADOS
+
+/** R$ 98. Quanto a pessoa deixa de gastar ao pagar o ano de uma vez. */
+export const PRO_ANUAL_ECONOMIA = PRO_PLAN_PRICE * PRO_ANUAL_MESES_GRATIS
+
+/**
+ * Os ciclos de cobrança, **no vocabulário do Asaas**.
+ *
+ * Maiúsculas e em inglês de propósito, mesmo num projeto que nomeia tudo em
+ * português: é o valor que vai no corpo do `POST /subscriptions`, o que volta
+ * em `GET /subscriptions/{id}.cycle`, e o que a coluna `subscriptions.ciclo`
+ * guarda. Um vocabulário só, do botão ao gateway à coluna.
+ *
+ * Traduzir em qualquer ponto exigiria uma tabela de correspondência — e tabela
+ * de correspondência é exatamente onde um bug de ciclo se esconderia, porque
+ * ela erra em silêncio e o `tsc` não vê. Com o mesmo termo dos dois lados, a
+ * reconciliação contra o Asaas vira igualdade de string crua.
+ *
+ * Precedente direto: `subscriptions.ultimo_billing_type` (migration 0044)
+ * guarda `CREDIT_CARD`/`PIX`/`BOLETO` verbatim, pelo mesmo motivo.
+ */
+export const CICLOS = {
+  MONTHLY: {
+    valor: PRO_PLAN_PRICE,
+    /** O substantivo, para texto corrido: "assinatura mensal". */
+    periodo: 'mensal',
+    /** O sufixo de tela, colado ao preço: "R$ 49/mês". */
+    sufixo: '/mês',
+    /** A forma solta, para frase corrida: "R$ 49 por mês". */
+    porPeriodo: 'por mês',
+  },
+  YEARLY: {
+    valor: PRO_ANUAL_PRICE,
+    periodo: 'anual',
+    sufixo: '/ano',
+    porPeriodo: 'por ano',
+  },
+} as const
+
+export type CicloDeCobranca = keyof typeof CICLOS
+
+/** O que se cobra por um ciclo, em reais. */
+export function valorDoCiclo(ciclo: CicloDeCobranca): number {
+  return CICLOS[ciclo].valor
+}

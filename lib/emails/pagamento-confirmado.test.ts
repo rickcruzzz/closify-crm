@@ -6,6 +6,7 @@ import { CONTROLADOR } from '@/lib/legal'
 const base = {
   workspaceName: 'Acme Serviços',
   valor: 49,
+  ciclo: 'MONTHLY' as const,
   appUrl: 'https://www.velofunil.com.br',
 }
 
@@ -58,5 +59,35 @@ describe('renderPagamentoConfirmadoEmail', () => {
     const { html } = renderPagamentoConfirmadoEmail(base)
     expect(html).toContain('mensal e automática')
     expect(html).toContain('Cobrança')
+  })
+})
+
+/**
+ * ## A frase que mentiria para quem pagou o ano
+ *
+ * "A renovação é mensal e automática" estava cravada no rodapé, sem
+ * interpolação. É a PRIMEIRA mensagem que a pessoa recebe depois de gastar
+ * R$ 490 — e contradizia exatamente o que ela acabou de comprar.
+ */
+describe('o ciclo aparece na renovação', () => {
+  const base = { workspaceName: 'Clínica Norte', appUrl: 'https://www.velofunil.com.br' }
+
+  it('diz "mensal" para quem assinou mensal', () => {
+    const { html } = renderPagamentoConfirmadoEmail({ ...base, valor: 49, ciclo: 'MONTHLY' })
+    expect(html).toContain('renovação é mensal')
+    expect(html).not.toContain('renovação é anual')
+  })
+
+  it('diz "anual" para quem pagou o ano', () => {
+    const { html } = renderPagamentoConfirmadoEmail({ ...base, valor: 490, ciclo: 'YEARLY' })
+    expect(html).toContain('renovação é anual')
+    expect(html).not.toContain('renovação é mensal')
+  })
+
+  // O valor vem do ciclo, então o e-mail do anual não pode citar R$ 49.
+  it('o anual mostra R$ 490, não a mensalidade', () => {
+    const { html } = renderPagamentoConfirmadoEmail({ ...base, valor: 490, ciclo: 'YEARLY' })
+    expect(html).toContain('490,00')
+    expect(html).not.toContain('49,00</strong>')
   })
 })

@@ -19,8 +19,8 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { createCheckout } from '@/lib/asaas/actions'
 import { PagarDialog } from '@/components/settings/pagar-dialog'
-import { checkoutSchema, type CheckoutValues } from '@/lib/validations/billing'
-import { PRO_PLAN_PRICE } from '@/lib/plans'
+import { checkoutSchema, type CheckoutInput, type CheckoutValues } from '@/lib/validations/billing'
+import { CICLOS, PRO_ANUAL_ECONOMIA, PRO_ANUAL_MESES_GRATIS, PRO_PLAN_PRICE } from '@/lib/plans'
 import { formatarCpfCnpj } from '@/lib/documento-br'
 import { CONTROLADOR, identificacaoDoControlador } from '@/lib/legal'
 import { cn } from '@/lib/utils'
@@ -52,14 +52,28 @@ export function SubscribeButton({
   const [pagamentoAberto, setPagamentoAberto] = React.useState(false)
   const [isSubmitting, setIsSubmitting] = React.useState(false)
 
+  /**
+   * ## Por que o padrão é MENSAL, e não o plano que rende mais
+   *
+   * Este é o caminho de quem chega sozinho pelo site, sem ninguém ao lado. Uma
+   * cobrança de R$ 49 indevida se resolve com um estorno; uma de R$ 490 vira
+   * caso de suporte e pedido de reembolso. O lado seguro de errar é o barato.
+   *
+   * O anual existe para a venda presencial, onde há alguém explicando — e ali
+   * a escolha é deliberada, feita na frente do cliente.
+   */
   const {
     control,
     handleSubmit,
+    watch,
+    setValue,
     formState: { errors },
-  } = useForm<CheckoutValues>({
+  } = useForm<CheckoutInput, unknown, CheckoutValues>({
     resolver: zodResolver(checkoutSchema),
-    defaultValues: { cpfCnpj: '' },
+    defaultValues: { cpfCnpj: '', ciclo: 'MONTHLY' },
   })
+
+  const ciclo = watch('ciclo')
 
   /**
    * Cria a assinatura e abre o pagamento AQUI DENTRO.
@@ -113,10 +127,54 @@ export function SubscribeButton({
           <DialogHeader>
             <DialogTitle>Assinar plano Pro</DialogTitle>
             <DialogDescription>
-              Precisamos do CPF ou CNPJ para emitir a cobrança. Na próxima tela você escolhe
+              Escolha como quer pagar e informe o CPF ou CNPJ. Na próxima tela você escolhe
               entre Pix, boleto e cartão.
             </DialogDescription>
           </DialogHeader>
+
+          {/* ## A escolha do ciclo vem ANTES do documento
+              É a decisão que muda o valor da cobrança; pedi-la depois do CPF
+              faria a pessoa preencher um formulário para só então descobrir
+              que existia outra opção. */}
+          <fieldset className="flex flex-col gap-2">
+            <legend className="sr-only">Período da assinatura</legend>
+            <div className="grid grid-cols-2 gap-2">
+              {(['MONTHLY', 'YEARLY'] as const).map((opcao) => {
+                const escolhido = ciclo === opcao
+                const dados = CICLOS[opcao]
+                return (
+                  <button
+                    key={opcao}
+                    type="button"
+                    aria-pressed={escolhido}
+                    onClick={() => setValue('ciclo', opcao, { shouldDirty: true })}
+                    disabled={isSubmitting}
+                    className={cn(
+                      // `min-h-11` pelo mesmo motivo do resto do produto: é
+                      // alvo de toque, e esta tela é usada no telefone.
+                      'flex min-h-11 flex-col items-start gap-0.5 rounded-lg border p-3 text-left transition-colors',
+                      escolhido
+                        ? 'border-primary bg-primary/5'
+                        : 'border-border hover:border-foreground/20',
+                    )}
+                  >
+                    <span className="text-sm font-medium capitalize">{dados.periodo}</span>
+                    <span className="text-lg font-semibold tabular-nums">
+                      R$ {dados.valor}
+                      <span className="text-muted-foreground text-xs font-normal">
+                        {dados.sufixo}
+                      </span>
+                    </span>
+                    {opcao === 'YEARLY' && (
+                      <span className="text-xs text-emerald-600 dark:text-emerald-400">
+                        {PRO_ANUAL_MESES_GRATIS} meses grátis · economize R$ {PRO_ANUAL_ECONOMIA}
+                      </span>
+                    )}
+                  </button>
+                )
+              })}
+            </div>
+          </fieldset>
 
           <form
             onSubmit={handleSubmit(onSubmit)}

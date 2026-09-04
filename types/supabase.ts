@@ -3,6 +3,17 @@ export type Json =
 
 export type WorkspaceRole = 'admin' | 'membro'
 export type WorkspacePlan = 'free' | 'pro'
+/**
+ * O ciclo de cobrança de uma assinatura, espelhando o `check` da migration
+ * 0070. Vocabulário do Asaas, cru: é o mesmo termo que vai no
+ * `POST /subscriptions` e volta em `GET /subscriptions/{id}.cycle`.
+ *
+ * Declarado aqui e não importado de `lib/plans` porque este arquivo não tem
+ * import nenhum, por convenção — ele descreve o banco, não o produto. A
+ * equivalência entre os dois é travada em tempo de compilação por
+ * `lib/plans/anual.test.ts`, que para de compilar se divergirem.
+ */
+export type CicloDeCobranca = 'MONTHLY' | 'YEARLY'
 export type DealStage =
   | 'novo'
   | 'contato_realizado'
@@ -740,6 +751,10 @@ export type Database = {
           ultimo_billing_type: string | null
           // Trava de idempotência do aviso de vencimento (migration 0044).
           aviso_vencimento_enviado_em: string | null
+          // MONTHLY ou YEARLY, no vocabulário do Asaas (migration 0070). É o
+          // que `intervalo_do_ciclo()` lê para decidir se um pagamento compra
+          // 30 dias ou um ano. `not null default 'MONTHLY'` no banco.
+          ciclo: CicloDeCobranca
           created_at: string
         }
         Insert: {
@@ -751,6 +766,7 @@ export type Database = {
           current_period_end?: string | null
           ultimo_billing_type?: string | null
           aviso_vencimento_enviado_em?: string | null
+          ciclo?: CicloDeCobranca
           created_at?: string
         }
         Update: {
@@ -762,6 +778,7 @@ export type Database = {
           current_period_end?: string | null
           ultimo_billing_type?: string | null
           aviso_vencimento_enviado_em?: string | null
+          ciclo?: CicloDeCobranca
           created_at?: string
         }
         Relationships: []
