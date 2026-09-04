@@ -202,12 +202,42 @@ function comSeparador(n) {
   return String(n).replace(/\B(?=(\d{3})+(?!\d))/g, '.')
 }
 
+/**
+ * As linhas que estao dentro de bloco de codigo cercado.
+ *
+ * Um carimbo escrito como EXEMPLO — em `estado-atual.md`, explicando o proprio
+ * mecanismo — nao e uma afirmacao sobre o repositorio. Sem esta distincao, o
+ * documento que descreve o conferidor faz o conferidor reprovar, e o unico
+ * conserto seria parar de documentar como ele funciona.
+ *
+ * Achado pelo proprio mecanismo, no commit que o registrava.
+ */
+function linhasDentroDeCerca(linhas) {
+  const dentro = new Set()
+  let aberto = false
+  linhas.forEach((linha, i) => {
+    if (/^\s*```/.test(linha)) {
+      aberto = !aberto
+      dentro.add(i)
+      return
+    }
+    if (aberto) dentro.add(i)
+  })
+  return dentro
+}
+
 function conferirCarimbos(doc, txt, medidas) {
   const achados = []
   const linhas = txt.split('\n')
+  const emCerca = linhasDentroDeCerca(linhas)
 
   for (const m of txt.matchAll(CARIMBO)) {
     const linhaDoCarimbo = txt.slice(0, m.index).split('\n').length - 1
+    // Markdown tem DUAS formas de bloco de codigo, e a segunda quase escapou:
+    // cerca de crases, e indentacao de quatro espacos. O exemplo que este
+    // proprio documento usa para explicar o mecanismo e do segundo tipo.
+    const indentado = /^ {4,}/.test(linhas[linhaDoCarimbo] ?? '')
+    if (emCerca.has(linhaDoCarimbo) || indentado) continue
     const prosa = linhas.slice(linhaDoCarimbo + 1, linhaDoCarimbo + 1 + ALCANCE_DA_PROSA).join('\n')
 
     for (const par of m[1].trim().split(/\s+/).filter(Boolean)) {

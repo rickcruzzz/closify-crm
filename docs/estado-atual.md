@@ -149,6 +149,81 @@ do mesmo jeito, e foi por ele que a prova do plano anual passou. O que estava
 morto era o caminho rapido, e quem paga por Pix as 9h esperava o dia seguinte.
 
 ---
+## 20 afirmacoes erradas em 6 documentos, e o conferidor passava limpo (04/09)
+
+Auditoria a pedido do dono. O achado maior nao e a lista: e que
+`conferir-documentos.mjs` **passava limpo sobre os arquivos que continham os
+erros**. Ele confere se CAMINHO citado existe, e o cabecalho dele declara a
+lacuna desde que nasceu — *"Nao pega afirmacao errada em prosa"* —, citando o
+caso historico do PRD que afirmou 687 testes e 17 tabelas quando eram 774 e 18.
+
+**A classe era conhecida, documentada, e aconteceu de novo.**
+
+### O mais grave nao era numero
+
+`CLAUDE.md:56` afirmava *"nao existe nada medindo ativacao"*. Existe desde
+31/08, em DOIS arquivos. **E o proprio erro que fez `capacidades.md` nascer**,
+repetido dentro do arquivo lido no comeco de toda sessao.
+
+### O que era reescrita, e nao renumeracao
+
+`CLAUDE.md:207` dizia *"Oito nos apontam para nome de PACOTE (`next`,
+`jspdf`)"*. Hoje ha ZERO nos de pacote: sao 103 sem `source_file`, a maioria
+objetos do banco. Trocar 8 por 103 mantendo a explicacao deixaria o texto
+numericamente certo e semanticamente falso — pior do que estava.
+
+### O carimbo, conferido nos DOIS sentidos
+
+    <!-- contagem: grafo.nos>=4000 migrations.arquivos=69 -->
+
+A metrica bate com o carimbo, **e** o valor aparece na prosa das 12 linhas
+seguintes. Sem a segunda metade o carimbo e enfeite: alguem edita o numero na
+FRASE, esquece o comentario, e o script aprova um comentario verdadeiro acima
+de uma frase mentirosa.
+
+**PISO onde o crescimento e rotineiro, EXATO onde a mudanca deve provocar
+revisao.** O grafo se reconstroi a cada commit — esta rodada o moveu de 4.279
+para 4.293 —, entao valor exato viraria ruido diario; o piso so falha quando o
+grafo ENCOLHE, que e o acidente que importa. Migration continua exata de
+proposito: quando uma entra, o PRD e o schema DEVEM ser reconsiderados.
+
+### Os controles negativos acharam QUATRO defeitos MEUS
+
+Escrevi cinco casos, rodei, e quatro reprovaram — no meu codigo:
+
+    CARIMBO = /([^>]+?)/   nao podia conter `>`, e o operador `>=` TEM um.
+                           NENHUM carimbo de piso era lido, sem aviso.
+    chave [a-z_.]          `e2e.specs` tem digito -> "carimbo ilegivel"
+    graphify-out/graph.json  citado nos docs e em pasta gitignorada
+    e2e.specs carimbado 12 linhas longe da frase dele
+
+O primeiro e da mesma familia que o mecanismo existe para curar: conferidor
+passando limpo sobre o que nao conseguiu ler. Sem os cinco casos, os quatro
+teriam ido para producao com o script imprimindo "documentos batem".
+
+### E o `.yml` era defeito do conferidor, nao do documento
+
+`docs/testes.md` afirmava por 16 dias que o workflow de CI **nao estava no
+repositorio**, contradizendo o diagrama do proprio arquivo. Esta versionado
+desde 19/08. O script nunca poderia te-lo achado: `.yml` estava fora das
+extensoes conferidas, e `listarArquivos` pulava toda pasta comecada com ponto.
+
+### O grafo: codigo em dia, documentos PENDENTES
+
+`graphify-out/graph.json` esta atualizado para o lado de CODIGO — 4.293 nos,
+reconstruido pelo hook de post-commit. E o que responde "quem chama X".
+
+**A reindexacao SEMANTICA dos 10 documentos nao foi concluida:** os quatro
+subagentes bateram no limite de sessao e nenhum escreveu seu bloco. Nada se
+perdeu — o manifesto so e salvo no fim, entao os 10 continuam na fila do
+proximo `/graphify . --update`.
+
+O que sobreviveu da tentativa: `marketing/marca/` entrou no `.graphifyignore`.
+Oito SVGs de logo exigiam extracao com visao a cada rodada para responder
+exatamente nada sobre onde o preco e lido — mesma razao que ja excluia o
+binario de marketing. Os geradores continuam dentro, porque sao codigo.
+
+---
 ## O plano anual, e o `interval '30 days'` que o teria matado (04/09)
 
 Pedido do dono: vender porta a porta em Salvador. A conta que motiva:

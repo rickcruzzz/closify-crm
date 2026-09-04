@@ -56,3 +56,9 @@ criativos/
 # alcançar.
 marketing/claude-designer/runtime/
 marketing/claude-designer/briefing/*.dc.html
+
+# Artes de marca em vetor. Mesma razao que excluiu o binario de marketing: um
+# logo nao responde "onde o preco e lido" nem "quem chama X", e cada rodada de
+# `--update` pagava extracao com visao por 8 arquivos que nao mudam o mapa.
+# Os GERADORES continuam dentro — eles sao codigo.
+marketing/marca/
