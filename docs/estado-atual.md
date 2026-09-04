@@ -26,6 +26,60 @@ porque a Evolution dava problema e a API oficial da Meta não foi aprovada. Hoje
 que sobrou é o link `wa.me`. O porquê inteiro está no arquivo.
 
 ---
+## Seis anuncios, seis promessas, e uma porta que nao repetia nenhuma (04/09)
+
+Auditoria de copy antes de subir, lendo o texto REAL dos criativos na API da
+Meta. As pecas sao boas: especificas, na linguagem do cliente, uma mecanica
+psicologica cada. **E as tres afirmacoes de fato tem fonte** — conferido:
+
+    "42 horas"          HBR, 2.241 empresas   plano-de-conteudo-instagram.md
+    "R$ 300 por mes"    mediana R$ 60/usuario  google-ads.md
+    "gratis ate 50"     FREE_LEAD_LIMIT = 50   lib/plans.ts
+
+O problema estava no DESTINO. Os seis apontam para `/cadastro`, que dizia uma
+coisa so — "Criar conta / Comece a organizar seu funil de vendas hoje" — e mais
+quatro campos, 926px de altura:
+
+    "R$ 49 pela empresa inteira"   a pagina nao mencionava preco
+    "traga sua planilha"           nao mencionava importacao
+    "gratis ate 50, sem cartao"    nao mencionava gratis nem cartao
+    "Veja o funil por dentro"      nao mostrava nada, pedia cadastro
+
+`lib/marketing/eco-da-peca.ts` resolve com UMA porta: o titulo e a descricao
+saem do `utm_content`, no SERVIDOR (`searchParams`, sem hook), entao a promessa
+vem no primeiro byte. Seis landings seriam seis coisas para manter e fariam o
+teste comparar pagina junto com argumento.
+
+**Duas regras governam o texto.** Nada de prometer o que o Free nao entrega —
+`a6_google` vende Agenda e Gmail, que sao Pro, e o eco DIZ isso. E todo eco
+repete o removedor de atrito, porque a pessoa esta diante de quatro campos e ali
+"gratis, sem cartao" vale mais que beneficio. Numeros vindos de `lib/plans.ts`.
+
+`chaveDeUtm` saiu de `lib/dono/` para `lib/marketing/utm.ts`: duas superficies
+leem `utm_content` agora, e uma e publica enquanto a Central devolve 404 em
+producao.
+
+### A landing foi auditada e NAO e o gargalo
+
+11.241px no telefone, 8 secoes. O que ela ja faz certo, medido:
+
+    h1        "A planilha organiza. Ela nao avisa quem esta esperando."
+              (o prefixo de SEO e `sr-only`, invisivel — conferido)
+    sub-hero  "Gratis ate 50 contatos, sem cartao" JA no topo
+    barra     50 contatos / 2 min / R$ 49 / dados em Sao Paulo
+    CTA fixo  "Comecar gratis" sempre disponivel
+    FAQ       as 6 objecoes reais, inclusive "e gratis mesmo?"
+
+**Zero prova social, e esta certo assim.** Nao ha cliente externo, entao nao ha
+nada honesto a acrescentar. A barra de numeros e a secao de garantias sao o
+substituto correto, e ja existem.
+
+**O que fica em aberto:** a FAQ e a garantia moram a ~10.000px de onde a decisao
+acontece. Quem chega de anuncio cai em `/cadastro`, que nao tem nenhuma das
+duas. Levar duas ou tres perguntas para baixo do formulario e a proxima
+melhoria de conversao, e nao foi feita.
+
+---
 ## O nome da campanha NUNCA vai bater com o `utm_campaign` (04/09)
 
 Achado conferindo a outra ponta na API da Meta, logo depois da rodada abaixo.
@@ -1198,11 +1252,21 @@ temporizador fingindo progresso.
 
 ## Pendente do dono (não é código)
 
-- [ ] **A campanha da Meta não tem NENHUM anúncio, e otimiza por clique.**
-      Medido em 02/09: campanha + conjunto + criativo, e zero `ads`. Ligar não
-      veicula nada. O conjunto usa `LINK_CLICKS`, que busca clique barato e
-      **não usa o pixel para conversão** — para aquisição de SaaS é a
-      configuração errada.
+- [ ] **A campanha da Meta não tem NENHUM anúncio.** Medido de novo em 04/09:
+      campanha + conjunto + 6 criativos com UTM completa, e **zero `ads`**.
+      Ligar não veicula nada.
+
+      **A parte de "otimiza por clique" DEIXOU DE SER VERDADE**, e a entrada
+      dizia isso desde 02/09. Conferido na API:
+
+          campanha   OUTCOME_LEADS                        PAUSED
+          conjunto   OFFSITE_CONVERSIONS                  PAUSED
+          alvo       pixel 1566349361566072, evento LEAD
+          cobranca   IMPRESSIONS
+          orcamento  R$ 25/dia, no nivel da campanha
+
+      É a configuração CERTA, e no pixel que o site de fato alimenta. Pendência
+      falsa desvia atenção das reais — mesma lição do `CRON_SECRET` em 25/08.
 
       Nenhuma linha de código muda isso: criar anúncio e trocar objetivo são
       ~15 campos onde errar um queima dinheiro em silêncio, e a decisão de
