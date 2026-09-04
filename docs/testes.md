@@ -25,7 +25,7 @@ pegava porque `.yml` não estava na lista de extensões que ele confere.
 
 ## O que existe, em números
 
-<!-- contagem: testes.arquivos>=85 e2e.specs=4 -->
+<!-- contagem: testes.arquivos>=85 -->
 - **Mais de 85 arquivos de teste unitário** (Vitest, `lib/**/*.test.ts`), e
   **1.013 testes** na última execução. Cobrem só lógica pura — schema de validação, parser de
   CSV/planilha, formatador de data/telefone, medidor de força de senha,
@@ -40,6 +40,7 @@ pegava porque `.yml` não estava na lista de extensões que ele confere.
   rode queries reais dentro da suite automatizada. A "prova contra produção"
   que o projeto pratica (RLS com sessão simulada, webhook real, etc.) é feita
   por scripts descartáveis em Node, à mão, não por uma suite que roda sozinha.
+<!-- contagem: e2e.specs=4 -->
 - **4 specs E2E** (Playwright), cada uma com projeto próprio no
   `playwright.config.ts`:
   - `security-audit.spec.ts` — rotas públicas, sem sessão, chave vazada,
