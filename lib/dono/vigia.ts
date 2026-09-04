@@ -53,6 +53,16 @@ export type LeituraDoVigia = {
   /** Cobranças vencidas e não pagas no Asaas. */
   cobrancasVencidas: number | null
   /**
+   * Webhooks do Asaas com a fila INTERROMPIDA.
+   *
+   * Achado em 04/09: o webhook desta conta estava parado desde 30/08 às 23:18,
+   * cinco dias, e nada avisava. Pagamento confirmado não chegava ao produto.
+   *
+   * Lista, e não booleano: com mais de um webhook, o alerta precisa dizer qual.
+   * Ver `webhooksInterrompidos` em `lib/dono/dinheiro-do-vigia.ts`.
+   */
+  webhooksParados: string[] | null
+  /**
    * Credenciais externas que pararam de responder.
    *
    * ## Por que isto entrou no vigia, e não numa checagem manual
@@ -103,6 +113,24 @@ export function montarAlertas(leitura: LeituraDoVigia): Alerta[] {
       detalhe:
         'O Asaas confirma a assinatura e o banco não liberou o plano. ' +
         'A pessoa está pagando e usando o Free.',
+      ondeOlhar: '/dono',
+    })
+  }
+
+  // ## Vem ANTES de cobrança vencida, e a ordem é a gravidade
+  //
+  // Cobrança vencida é dinheiro que não entrou. Webhook parado é dinheiro que
+  // ENTROU e o produto não soube — a pessoa pagou, está esperando o Pro, e do
+  // lado de fora isso é idêntico a não ter pago. É o pior estado possível.
+  if (leitura.webhooksParados && leitura.webhooksParados.length > 0) {
+    alertas.push({
+      gravidade: 'dinheiro',
+      titulo: `Webhook do Asaas parado: ${leitura.webhooksParados.join(', ')}`,
+      detalhe:
+        'A fila de eventos está interrompida e não volta sozinha. Pagamento confirmado ' +
+        'não chega ao produto em tempo real — o cron de reconciliação corrige no dia ' +
+        'seguinte, mas quem pagou por Pix fica esperando. Religue em Integrações → ' +
+        'Webhooks, no painel do Asaas.',
       ondeOlhar: '/dono',
     })
   }
@@ -177,6 +205,7 @@ export function leiturasQueFalharam(leitura: LeituraDoVigia): string[] {
     suporteParado: 'fila de suporte',
     cobrancasVencidas: 'cobranças vencidas',
     credenciaisMortas: 'credenciais externas',
+    webhooksParados: 'fila do webhook do Asaas',
   }
   return (Object.keys(nomes) as (keyof LeituraDoVigia)[])
     .filter((chave) => leitura[chave] === null)

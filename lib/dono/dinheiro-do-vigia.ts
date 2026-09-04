@@ -103,3 +103,64 @@ export async function contarCobrancasVencidas(): Promise<number> {
   // um número menor que o real é pior que nenhum número.
   return r.totalCount
 }
+
+type WebhookDoAsaas = {
+  id: string
+  name?: string
+  enabled?: boolean
+  interrupted?: boolean
+  sendType?: string
+  url?: string
+}
+
+/**
+ * Webhooks do Asaas que pararam de entregar.
+ *
+ * ## O achado que criou esta função, em 04/09
+ *
+ * O webhook desta conta estava **`interrupted: true` desde 30/08 às 23:18** —
+ * cinco dias. Pagamento confirmado não chegava ao produto, e nada avisava.
+ * Descobri por acaso, ao provar outra coisa: a prova não recebia evento
+ * nenhum.
+ *
+ * ## Por que é o alerta mais caro que existe aqui
+ *
+ * A rede de segurança funciona: o cron de reconciliação varre o Asaas uma vez
+ * por dia e aplica o que o webhook perdeu. Ninguém deixa de receber o Pro.
+ *
+ * Mas a fila interrompida é **indistinguível de "ninguém pagou"** de fora, e
+ * some justamente quando mais se confia nela. Quem paga por Pix às 9h espera
+ * o Pro em segundos e recebe no dia seguinte — no exato momento em que a
+ * pessoa está com o cartão na mão decidindo se o produto funciona.
+ *
+ * ## E o gatilho não importa tanto quanto a permanência
+ *
+ * O Asaas penaliza a entrega que falha e interrompe a fila depois de algumas
+ * (`penalizedRequestsCount: 4`, nesta conta). Falha transitória é inevitável —
+ * deploy, indisponibilidade do banco, rede. O defeito não é ela.
+ *
+ * O defeito é que a fila **não se recupera sozinha e não avisa**: uma vez
+ * interrompida, fica assim até alguém consultar a API. Medido em 04/09: a
+ * rota responde em 209ms sem correspondência e 369ms ativando o Pro, com o
+ * token conferido — ou seja, o endpoint estava são o tempo todo em que a fila
+ * esteve parada.
+ *
+ * ## `sendType: SEQUENTIALLY` multiplica o estrago, e fica assim de propósito
+ *
+ * Um evento travado bloqueia todos os seguintes. `NON_SEQUENTIALLY` evitaria
+ * isso e traria um problema pior num sistema de cobrança: `canceled` podendo
+ * ser aplicado depois de `active`, fora de ordem. Ordem importa aqui; o que
+ * faltava era o alarme.
+ *
+ * Devolve os nomes, não `true`/`false`: com mais de um webhook configurado, o
+ * alerta precisa dizer QUAL parou.
+ */
+export async function webhooksInterrompidos(): Promise<string[]> {
+  const { data } = await asaasFetch<{ data: WebhookDoAsaas[] }>('/webhooks')
+
+  return (data ?? [])
+    // `enabled: false` é escolha de quem configurou, não falha. Só interessa o
+    // webhook que deveria estar entregando e não está.
+    .filter((w) => w.enabled !== false && w.interrupted === true)
+    .map((w) => (w.name ?? w.url ?? w.id).trim())
+}

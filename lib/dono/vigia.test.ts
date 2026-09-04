@@ -20,6 +20,7 @@ const LIMPO: LeituraDoVigia = {
   suporteParado: 0,
   cobrancasVencidas: 0,
   credenciaisMortas: [],
+  webhooksParados: [],
 }
 
 describe('montarAlertas', () => {
@@ -38,9 +39,14 @@ describe('montarAlertas', () => {
       suporteParado: null,
       cobrancasVencidas: null,
       credenciaisMortas: null,
+      webhooksParados: null,
     }
     expect(montarAlertas(semLeitura)).toEqual([])
-    expect(leiturasQueFalharam(semLeitura)).toHaveLength(6)
+    // Derivado, e não o número 6 escrito à mão: com o número fixo, toda
+    // leitura nova reprovava este caso sem nada estar errado — e o reflexo é
+    // subir o número, que esvazia a asserção. O que importa é que TODA leitura
+    // que falhou seja nomeada, quantas forem.
+    expect(leiturasQueFalharam(semLeitura)).toHaveLength(Object.keys(semLeitura).length)
   })
 
   it('põe dinheiro antes de defeito', () => {
@@ -173,5 +179,49 @@ describe('alertasNaoAvisados', () => {
 
   it('lê a quantidade do próprio título, sem campo paralelo', () => {
     expect(quantidadeDoAlerta(trintaErros[0])).toBe(30)
+  })
+})
+
+/**
+ * ## O alerta que existe porque o silêncio mentiu por cinco dias
+ *
+ * O webhook do Asaas ficou `interrupted: true` de 30/08 às 23:18 até 04/09.
+ * Pagamento confirmado não chegava ao produto, e do lado de fora isso é
+ * idêntico a "ninguém pagou". Foi descoberto por acaso.
+ */
+describe('webhook do Asaas parado', () => {
+  it('vira alerta de DINHEIRO, e nomeia qual parou', () => {
+    const [alerta] = montarAlertas({
+      ...LIMPO,
+      webhooksParados: ['Velo Funil - assinaturas'],
+    })
+    expect(alerta?.gravidade).toBe('dinheiro')
+    expect(alerta?.titulo).toContain('Velo Funil - assinaturas')
+  })
+
+  // Um pagamento parado no caminho é pior que uma cobrança que ninguém pagou:
+  // o dinheiro já saiu da conta da pessoa e ela está esperando o produto.
+  it('aparece antes da cobrança vencida', () => {
+    const alertas = montarAlertas({
+      ...LIMPO,
+      cobrancasVencidas: 3,
+      webhooksParados: ['Velo Funil - assinaturas'],
+    })
+    expect(alertas[0]?.titulo).toContain('Webhook')
+  })
+
+  // Controle negativo: um alarme que toca com a fila sã ensina a ignorá-lo,
+  // que é a lição de 20/08 com 8 dos 11 alertas sendo ruído.
+  it('cala quando nenhuma fila está parada', () => {
+    expect(montarAlertas({ ...LIMPO, webhooksParados: [] })).toEqual([])
+  })
+
+  it('lista vazia é diferente de null: null é "não consegui olhar"', () => {
+    expect(leiturasQueFalharam({ ...LIMPO, webhooksParados: [] })).not.toContain(
+      'fila do webhook do Asaas',
+    )
+    expect(leiturasQueFalharam({ ...LIMPO, webhooksParados: null })).toContain(
+      'fila do webhook do Asaas',
+    )
   })
 })

@@ -80,6 +80,75 @@ duas. Levar duas ou tres perguntas para baixo do formulario e a proxima
 melhoria de conversao, e nao foi feita.
 
 ---
+## Duas investigacoes de raiz, e uma delas me desmentiu (04/09)
+
+### O banner NAO cobre o botao Entrar. A suspeita era minha, e era falsa.
+
+Levantei a hipotese porque o login por Playwright so passou depois de
+responder o banner. Medido com `elementFromPoint`, o metodo do proprio projeto,
+em quatro larguras e com a pagina **rolada ate o fim**:
+
+    390x659   /login  botao 376..420  banner 533..659  ALCANCA
+    390x659   /cadastro 413..457      banner 533..659  ALCANCA
+    700x800   /login  botao 422..466  banner 650..800  ALCANCA
+    700x800   /cadastro 520..564      banner 650..800  ALCANCA
+
+**A primeira medicao deu falso positivo** e quase virou achado: eu rolava com
+`scrollTo` e lia a posicao no mesmo `evaluate`, sem esperar aplicar. Media a
+pagina NAO rolada. `scroll 0/150` estava no proprio resultado dizendo isso, e
+eu quase nao olhei.
+
+E o A/B fechou: mesma conta, mesmo tempo, mudando so responder ou nao o banner.
+
+    banner ABERTO      botao alcanca | cookie de sessao true | -> /onboarding
+    banner RESPONDIDO  botao alcanca | cookie de sessao true | -> /onboarding
+
+**Identico.** A causa da falha original era primeira compilacao do `npm run
+dev` — o `playwright.config.ts` documenta `timeout: 120_000` exatamente por
+isso, e eu esperei 9 segundos.
+
+O reparo de 02/09 (`--altura-do-banner` reservando espaco no `body`) esta
+intacto nas quatro larguras.
+
+### O webhook do Asaas: o endpoint estava sao o tempo todo
+
+O que a medicao descartou, um a um:
+
+    token           producao aceita o do .env.local -> 200, mesmo segredo
+    rota            209ms sem correspondencia, 369ms ativando o Pro
+    evento estranho 106 eventos assinados; a rota devolve 200 no que nao mapeia
+    500             so em erro de banco (dedupe ou RPC)
+
+**Nao determinei o gatilho exato das 4 penalizacoes.** A ultima entrega foi em
+**30/08 as 23:18**, numa rajada de 5 cancelamentos em 24 segundos; depois,
+cinco dias de silencio. O Vercel MCP esta desconectado e nao deu para datar o
+deploy da janela. Fica registrado como nao sabido, em vez de suposto.
+
+### E a raiz nao e o gatilho — e a permanencia
+
+Falha transitoria e inevitavel: deploy, banco fora do ar, rede. O defeito e que
+a fila **nao se recupera sozinha e nao avisa**. Uma vez interrompida, fica
+assim ate alguem consultar a API — e de fora, fila parada e "ninguem pagou" sao
+o mesmo silencio.
+
+`sendType: SEQUENTIALLY` multiplica: um evento travado bloqueia todos os
+seguintes. **Fica assim de proposito.** `NON_SEQUENTIALLY` traria problema pior
+num sistema de cobranca — `canceled` aplicado depois de `active`, fora de
+ordem. Ordem importa aqui; o que faltava era o alarme.
+
+`webhooksInterrompidos()` entrou no vigia de hora em hora, como alerta de
+**dinheiro**, acima de cobranca vencida: cobranca vencida e dinheiro que nao
+entrou; webhook parado e dinheiro que ENTROU e o produto nao soube.
+
+Provado nos dois sentidos contra o Asaas real: com a fila sa o vigia cala; eu
+interrompo de proposito e ele detecta e nomeia qual parou; religado no
+`finally`. 1.013 testes.
+
+**A rede de seguranca sempre funcionou** — o cron diario aplicou os pagamentos
+do mesmo jeito, e foi por ele que a prova do plano anual passou. O que estava
+morto era o caminho rapido, e quem paga por Pix as 9h esperava o dia seguinte.
+
+---
 ## O plano anual, e o `interval '30 days'` que o teria matado (04/09)
 
 Pedido do dono: vender porta a porta em Salvador. A conta que motiva:
@@ -156,10 +225,11 @@ indistinguivel de "ninguem pagou" ate alguem conferir na API.
 
 ### Duas coisas anotadas, nao resolvidas
 
-**O banner de consentimento parece cobrir o botao Entrar.** O login por
-Playwright so passou depois de responder o banner. Seria a QUARTA reincidencia
-da familia documentada em 23/08, 24/08 e 02/09. Nao foi medido com
-`elementFromPoint` — e suspeita, nao achado.
+**A suspeita do banner cobrindo o botao Entrar foi MEDIDA e e FALSA.** Ver a
+secao propria abaixo — `elementFromPoint` em quatro larguras, com a pagina
+rolada ate o fim, e um A/B do login com o banner aberto e respondido. O reparo
+de 02/09 esta intacto. A falha original era primeira compilacao do servidor de
+desenvolvimento, e eu esperei 9s onde o `playwright.config.ts` documenta 120.
 
 **A Central conta todo Pro como R$ 49/mes** (`lib/dono/central.ts:95`,
 `dono/anuncio/page.tsx`). Vai errar em silencio na primeira venda anual.

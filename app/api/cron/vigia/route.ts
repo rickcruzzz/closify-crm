@@ -17,6 +17,7 @@ import {
 import {
   contarAssinaturasSemPro,
   contarCobrancasVencidas,
+  webhooksInterrompidos,
 } from '@/lib/dono/dinheiro-do-vigia'
 import { EMAIL_DE_AVISO_DO_DONO } from '@/lib/emails/destinatario'
 import { renderVigiaEmail } from '@/lib/emails/vigia'
@@ -152,6 +153,7 @@ export async function GET(request: Request) {
     credenciaisMortas,
     assinaturasSemPro,
     cobrancasVencidas,
+    webhooksParados,
   ] = await Promise.all([
     medir('error_logs', async () => {
       const { count, error } = await admin
@@ -246,6 +248,10 @@ export async function GET(request: Request) {
     // dado financeiro de cliente.
     medir('assinaturas no Asaas', () => contarAssinaturasSemPro()),
     medir('cobrancas vencidas', () => contarCobrancasVencidas()),
+
+    // A fila do webhook. Uma chamada, e ela responde a pergunta que ninguém
+    // estava fazendo: o dinheiro que entra ainda chega ao produto?
+    medirLista('webhook do asaas', () => webhooksInterrompidos()),
   ])
 
   const leitura: LeituraDoVigia = {
@@ -256,6 +262,7 @@ export async function GET(request: Request) {
 
     assinaturasSemPro,
     cobrancasVencidas,
+    webhooksParados,
   }
 
   const alertas = montarAlertas(leitura)

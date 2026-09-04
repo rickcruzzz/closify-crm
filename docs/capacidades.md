@@ -92,6 +92,7 @@ plausível é o mais caro que existe.**
 | O site como o buscador lê, por HTTP | `scripts/marketing/auditar-descoberta.mjs` | 03/09 |
 | A LCP com o perfil do PageSpeed | `scripts/diagnostico/medir-lcp.mjs` | 03/09 |
 | Alerta por e-mail, de hora em hora | `app/api/cron/vigia/route.ts` | 01/09 |
+| Fila do webhook do Asaas parada | `lib/dono/dinheiro-do-vigia.ts` | 04/09 |
 | O vigia do vigia, por `pg_cron`, fora da Vercel | `supabase/migrations/0063_vigilante_do_vigia.sql` | 02/09 |
 
 ## O que NÃO existe, e é perguntado com frequência
