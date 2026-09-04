@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 
 import { SignUpForm } from '@/components/auth/signup-form'
+import { ecoDaPeca } from '@/lib/marketing/eco-da-peca'
 
 export const metadata: Metadata = {
   title: 'Criar conta',
@@ -36,9 +37,28 @@ export const metadata: Metadata = {
 export default async function SignUpPage({
   searchParams,
 }: {
-  searchParams: Promise<{ convite?: string; plano?: string; email?: string }>
+  searchParams: Promise<{
+    convite?: string
+    plano?: string
+    email?: string
+    utm_content?: string
+  }>
 }) {
   const params = await searchParams
+
+  // ## O eco da peça sai daqui, e não de um hook
+  //
+  // `utm-capture.tsx` também lê `utm_content`, mas para GRAVAR a atribuição —
+  // é `'use client'`, roda depois da hidratação e não pode decidir o que o HTML
+  // diz. Aqui a mesma informação chega pronta no `searchParams`, então a
+  // promessa do anúncio já vem no primeiro byte: quem clicou com rede ruim lê o
+  // motivo pelo qual clicou antes de qualquer JavaScript baixar. Os dois usos
+  // não competem — um escreve no banco, o outro escreve na tela.
+  //
+  // Convite tem precedência: quem foi convidado por um colega não veio de
+  // anúncio nenhum, e ecoar oferta de preço para essa pessoa seria responder
+  // uma pergunta que ela não fez.
+  const eco = params.convite ? undefined : ecoDaPeca(params.utm_content)
 
   return (
     <SignUpForm
@@ -47,6 +67,7 @@ export default async function SignUpPage({
       // seguir para a Server Action, que grava isso num cookie de intenção.
       plano={params.plano === 'pro' ? 'pro' : undefined}
       emailConvidado={params.email ?? ''}
+      eco={eco}
     />
   )
 }

@@ -21,6 +21,8 @@
  * Sem `server-only`: função pura, testável.
  */
 
+import { chaveDeUtm } from '@/lib/marketing/utm'
+
 /** Uma empresa, pelo pouco que a atribuição precisa saber dela. */
 export type EmpresaAtribuivel = {
   id: string
@@ -138,38 +140,6 @@ export type DesempenhoDaCampanha = {
   /** Gastou e não trouxe ninguém — é onde o dinheiro vaza. */
   desperdicio: boolean
 }
-
-/**
- * A faixa Unicode dos acentos que o `NFD` separa da letra (U+0300 a U+036F).
- *
- * Montada por `fromCharCode` de propósito, em vez de escrita direta no regex:
- * são caracteres COMBINANTES, invisíveis no editor, e o formatador do projeto
- * os reescreve para a forma literal em toda gravação. `\p{M}` seria o certo e
- * exige a flag `u`, que o `target` deste projeto não aceita (TS1501).
- */
-const MARCAS_COMBINANTES = new RegExp(
-  `[${String.fromCharCode(0x300)}-${String.fromCharCode(0x36f)}]`,
-  'g',
-)
-
-/**
- * Reduz nome de campanha e valor de UTM à mesma forma comparável.
- *
- * Tudo que não é letra ou número vira separador, o acento sai, e a caixa é
- * baixada. `Velo Funil — aquisicao (cadastro)` e `aquisicao_cadastro` viram
- * `velo-funil-aquisicao-cadastro` e `aquisicao-cadastro`.
- *
- * O `trim` sozinho não bastava: quem monta a URL não pode escrever espaço,
- * travessão nem parêntese nela, então o nome da campanha e o `utm_campaign`
- * NUNCA vão ser idênticos por escrito. Ver `casarComCampanha`.
- */
-const chaveDeUtm = (valor: string | null): string =>
-  (valor ?? '')
-    .normalize('NFD')
-    .replace(MARCAS_COMBINANTES, '')
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '')
 
 const segmentos = (valor: string | null): string[] =>
   chaveDeUtm(valor)

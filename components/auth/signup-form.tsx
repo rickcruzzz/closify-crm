@@ -19,6 +19,7 @@ import { passo3, passo4, passo5 } from '@/components/auth/animacao'
 import { signUpSchema, type SignUpValues } from '@/lib/validations/auth'
 import { signUp } from '@/lib/supabase/actions'
 import { signInWithGoogleClient } from '@/lib/supabase/google-auth'
+import { ECO_PADRAO, type EcoDaPeca } from '@/lib/marketing/eco-da-peca'
 
 /**
  * O formulário de criar conta.
@@ -39,6 +40,7 @@ export function SignUpForm({
   convite,
   plano,
   emailConvidado = '',
+  eco,
 }: {
   /** Token do convite, quando a pessoa veio de `/convite/[token]`. */
   convite?: string
@@ -46,6 +48,14 @@ export function SignUpForm({
   plano?: 'pro'
   /** E-mail já preenchido, quando vem de convite. */
   emailConvidado?: string
+  /**
+   * O cabeçalho que continua a promessa do anúncio que trouxe a pessoa.
+   *
+   * Decidido no servidor a partir do `utm_content` — ver
+   * `lib/marketing/eco-da-peca.ts`. Ausente para quem não veio de peça
+   * conhecida, e aí vale o texto padrão.
+   */
+  eco?: EcoDaPeca
 }) {
   const [isSubmitting, setIsSubmitting] = React.useState(false)
   const [isGoogleLoading, setIsGoogleLoading] = React.useState(false)
@@ -130,8 +140,8 @@ export function SignUpForm({
     <>
       <AuthCabecalho
         variante="pagina"
-        titulo="Criar conta"
-        descricao="Comece a organizar seu funil de vendas hoje."
+        titulo={(eco ?? ECO_PADRAO).titulo}
+        descricao={(eco ?? ECO_PADRAO).descricao}
       />
 
       <div className="mt-8 flex flex-col gap-4">
