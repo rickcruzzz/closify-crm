@@ -1,9 +1,12 @@
 # Esteira de testes do Velo Funil — como funciona de verdade
 
-**Fonte:** leitura direta de `vitest.config.ts`, `playwright.config.ts`,
-`tests/e2e/*.spec.ts`, `.github/workflows/deploy-com-auditoria.yml` e os 30
-arquivos `lib/**/*.test.ts`, em 18/08/2026. Sem suposição — o que não existe
-está marcado como não existe, não fica implícito.
+**Fonte:** leitura direta de `vitest.config.mts`, `playwright.config.ts`,
+`tests/e2e/*.spec.ts`, `.github/workflows/deploy-com-auditoria.yml` e os
+arquivos `lib/**/*.test.ts`. Escrito em 18/08/2026, **contagens remedidas em
+04/09** — o arquivo do vitest era citado como `.ts` e é `.mts`, e o conferidor
+de documentos não pegava porque ignorava caminho sem barra.
+
+As contagens saem de `node scripts/ci/contagens.mjs`, não de memória.
 
 **Nota de metodologia.** O pedido original descrevia um "robô rodando o
 sistema inteiro a cada alteração de código" que "grita antes do cliente
@@ -12,30 +15,52 @@ Diagramar esse fluxo como se existisse seria a mesma classe de erro que o
 projeto evita em tudo o mais — "provar contra produção, não supor"
 (`CLAUDE.md`). Os dois diagramas abaixo descrevem o real: testes unitários
 rodados à mão antes de todo commit, e dois testes E2E, um deles com workflow
-de CI pronto no disco mas **não commitado** (bloqueio de escopo de token,
-ver `docs/estado-atual.md`, "Gate de segurança no deploy").
+de CI **já versionado** desde 19/08 (ver "Gate de segurança no deploy", em
+`docs/estado-atual.md`).
+
+Este parágrafo dizia "não commitado" até 04/09, contradizendo o diagrama de
+sequência mais abaixo neste mesmo arquivo, que já dizia o contrário. `git
+ls-files .github/` resolve em um comando — e o conferidor de documentos não
+pegava porque `.yml` não estava na lista de extensões que ele confere.
 
 ## O que existe, em números
 
-- **45 arquivos de teste unitário** (Vitest, `lib/**/*.test.ts`), 436 testes,
-  ~1.5s de execução. Cobrem só lógica pura — schema de validação, parser de
+<!-- contagem: testes.arquivos>=85 e2e.specs=4 -->
+- **Mais de 85 arquivos de teste unitário** (Vitest, `lib/**/*.test.ts`), e
+  **1.013 testes** na última execução. Cobrem só lógica pura — schema de validação, parser de
   CSV/planilha, formatador de data/telefone, medidor de força de senha,
   criptografia de token, template de e-mail. Deliberadamente sem
-  componente/DOM: `vitest.config.ts` roda em `environment: 'node'`.
+  componente/DOM: `vitest.config.mts` roda em `environment: 'node'`.
+
+  O número de arquivos é declarado como **piso**: ele sobe a cada rodada, e um
+  valor exato aqui estaria errado no commit seguinte. O total de casos não é
+  carimbado porque obtê-lo exige rodar o vitest — contá-los estaticamente erra
+  15%, por causa dos `.each`. Rode `npm test`.
 - **Zero teste de integração formal.** Nada que suba um Postgres de teste e
   rode queries reais dentro da suite automatizada. A "prova contra produção"
   que o projeto pratica (RLS com sessão simulada, webhook real, etc.) é feita
   por scripts descartáveis em Node, à mão, não por uma suite que roda sozinha.
-- **2 specs E2E** (Playwright): `security-audit.spec.ts` (rotas públicas, sem
-  sessão, chave vazada/headers/stack trace) e `funil-completo.spec.ts` (cria
-  conta e cobrança REAIS no Asaas de produção — por isso fica fora do CI de
-  propósito, rodado só à mão via `npm run test:funil`).
-- **1 workflow de CI no disco, não no repositório**:
+- **4 specs E2E** (Playwright), cada uma com projeto próprio no
+  `playwright.config.ts`:
+  - `security-audit.spec.ts` — rotas públicas, sem sessão, chave vazada,
+    cabeçalhos, stack trace. É a única no CI.
+  - `funil-completo.spec.ts` — cria conta e cobrança REAIS no Asaas de
+    produção; fora do CI de propósito, `npm run test:funil`.
+  - `produto-logado.spec.ts` — senha, planilha, convite, calendário e o portão
+    do OAuth. Escreve no banco de produção, `npm run test:produto`.
+  - `suporte.spec.ts` — o canal de suporte com e-mail saindo de verdade,
+    `npm run test:suporte`.
+
+  Eram 2 até 18/08 e o documento nunca foi atualizado; as duas novas trouxeram
+  scripts próprios ao `package.json` que este arquivo também não citava.
+- **1 workflow de CI, versionado**:
   `.github/workflows/deploy-com-auditoria.yml` builda, roda
-  `security-audit.spec.ts` contra um deploy de preview, e só promoveria para
-  produção se passar. Nunca rodou de verdade: falta o arquivo estar no git
-  (push recusado por falta do escopo `workflow` no token), os secrets da
-  Vercel, e desligar o deploy automático nativo que ainda promove sozinho.
+  `security-audit.spec.ts` contra um deploy de preview e publica o link para
+  promoção. Os três passos manuais que faltavam — arquivo no repositório,
+  Secrets, desligar o auto-deploy — foram concluídos em 19/08. **A promoção
+  final continua sendo manual**, e não por descuido: `POST /promote` devolve
+  `422` para deployment de target `staging`, testado inclusive já com Vercel
+  Pro contratado.
 
 ## Diagrama de classes — o que cada teste cobre
 
@@ -43,9 +68,8 @@ ver `docs/estado-atual.md`, "Gate de segurança no deploy").
 classDiagram
     class TestesUnitarios {
         <<Vitest — lib/**/*.test.ts>>
-        45 arquivos, 436 testes
+        88 arquivos, 1.013 testes
         environment: node
-        ~1.5s de execução
     }
 
     class ValidacaoDeSchema {
@@ -156,7 +180,7 @@ sequenceDiagram
     TSC-->>Dev: erro de tipo? para aqui, corrige antes de seguir
     Dev->>Lint: roda manualmente
     Lint-->>Dev: warning/erro? corrige antes de seguir
-    Dev->>Vitest: roda manualmente (436 testes, ~1.5s)
+    Dev->>Vitest: roda manualmente (1.013 testes)
     Vitest-->>Dev: falha? o teste documenta QUAL defeito pegou
     Dev->>Build: roda manualmente
     Build-->>Dev: build quebrado? não segue para commit
@@ -191,7 +215,7 @@ sequenceDiagram
    para `main` — sem isso a Vercel promove em paralelo ao Actions e o gate
    não impede nada.
 3. **Somar `npm test` ao workflow**, hoje ele só roda `security-audit.spec.ts`
-   E2E; os 436 testes unitários não fazem parte do gate de CI nenhum, só do
+   E2E; os 1.013 testes unitários não fazem parte do gate de CI nenhum, só do
    checklist manual do desenvolvedor.
 4. **Alerta automático quando `error_logs` recebe uma linha nova** — hoje é
    consulta manual (SQL/MCP), sem push/e-mail/Slack quando algo quebra.

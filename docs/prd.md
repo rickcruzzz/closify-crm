@@ -3,10 +3,24 @@
 > Iniciativa de conversão Free→Pro (copy da landing, limites, checkout) tem
 > PRD próprio: [prd-conversao-pro.md](prd-conversao-pro.md).
 >
-> **Conferido contra produção em 02/09/2026, noite.** Números de tabela, RPC,
-> migration e teste vieram do catálogo real e do gate, não de memória:
-> **20 tabelas**, **34 RPCs do projeto**, **31 foreign keys**, **15 triggers**,
-> **8 enums**, 68 arquivos de migration (a maior é `0069`) e **966 testes**.
+> **Estrutura conferida contra o catálogo em 02/09/2026**, e as contagens de
+> arquivo remedidas em 04/09: **20 tabelas**, **34 RPCs do projeto**,
+> **31 foreign keys**, **15 triggers**, **8 enums**.
+>
+> <!-- contagem: migrations.arquivos=69 migrations.maior=0070 -->
+> **69 arquivos de migration, e a maior é `0070`.** Os dois juntos, sempre: o
+> número de arquivos sozinho convida a inferir `0069`, e o `0049` não existe —
+> foi provado desnecessário e removido em 22/08. `node scripts/ci/contagens.mjs`
+> imprime o invariante que reconcilia os dois.
+>
+> **As cinco contagens de estrutura acima expiram quando uma migration nova
+> entra.** Não é prazo em dias: é a sentinela do repositório. Migration nova
+> pode não mexer em tabela nenhuma — a 0069 acrescentou só uma coluna —, e a
+> resposta certa costuma ser "conferi, não mudou". O que não pode é ninguém
+> perguntar.
+>
+> **Testes não entram nesta lista.** O número exige rodar o vitest (8s), e
+> contá-los estaticamente erra 15% por causa dos `.each`. Rode `npm test`.
 >
 > **`34 RPCs` precisa de ressalva, e ela é nova.** O catálogo devolve **65**
 > funções, e 31 delas são da extensão `pg_trgm` (`gin_*`, `gtrgm_*`,
@@ -140,8 +154,13 @@ dado real; o que não está tem o motivo escrito ao lado.
       preso no sistema" na hora da venda
 - [ ] Dashboard de receita — ganho no mês e ticket médio saem do que já existe;
       tempo médio de fechamento não, exige histórico de MUDANÇA de etapa
-- [ ] Campos e etapas customizáveis — `deal_stage` é enum do Postgres usado em
-      22 arquivos; virar tabela é projeto próprio. Só com cliente pagante pedindo
+<!-- contagem: deal_stage.arquivos_de_codigo=9 -->
+- [ ] Campos e etapas customizáveis — `deal_stage` é enum do Postgres, citado em
+      9 arquivos de código; virar tabela é projeto próprio. Só com cliente
+      pagante pedindo. (Dizia 22 até 04/09, e `capacidades.md` dizia 19: não
+      eram três erros de contagem, eram três definições — com documentos, com o
+      `.svg` do diagrama, e só código. A métrica agora carrega a definição no
+      nome.)
 
 ### Funcionalidades Principais
 
@@ -795,6 +814,29 @@ host de fora (unsplash) continua bloqueado. O controle negativo é o que separa
 "corrigiu" de "abriu demais".
 
 ### Monetização (Asaas)
+
+**Dois planos pagos desde 04/09: R$ 49/mês e R$ 490/ano.** O anual nasceu para a
+venda presencial — uma visita custa cerca de uma hora entre deslocamento,
+demonstração e retorno e fecha em 10% a 20%, então cinco a dez horas por
+cliente. A R$ 49 isso não se paga; a R$ 490 à vista, sim. E trava 12 meses de
+retenção, número que este produto nunca teve porque nunca teve cliente externo.
+
+O preço é **derivado da oferta**, em `lib/plans.ts`:
+`PRO_ANUAL_PRICE = PRO_PLAN_PRICE * PRO_ANUAL_MESES_COBRADOS` — paga 10, leva
+12. Escrever `490` literal deixaria os dois livres para divergir, e a frase
+"dois meses grátis" continuaria na tela depois de deixar de ser verdade.
+
+**O ciclo é decidido pelo nosso servidor e gravado em `subscriptions.ciclo`
+(migration 0070), nunca pelo webhook.** A RPC `apply_asaas_subscription_status`
+lia `interval '30 days'` literal: um pagamento de R$ 490 liberaria trinta dias.
+Ela passou a ler `intervalo_do_ciclo(subscriptions.ciclo)`. `aplicarEventoAsaas`
+e o webhook não mudaram uma linha — que é a prova de que a regra da 0027 foi
+respeitada: *"payload de webhook é entrada externa, e derivar a validade do
+acesso a partir dele deixaria alguém com o token estender o próprio plano."*
+
+**O anual só aparece dentro do produto**, em Configurações → Cobrança. A landing
+continua com um preço só, o mensal: um seletor lá tornaria a seção um componente
+de cliente e custaria o LCP da página que recebe tráfego pago.
 
 **O reverse trial acabou em 29/08 (migration 0057), por decisão do dono.**
 Empresa nova **nasce no Free**. Entre 24/08 e 29/08 ela nascia com 7 dias de

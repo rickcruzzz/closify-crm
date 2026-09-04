@@ -101,7 +101,7 @@ plausível é o mais caro que existe.**
 importar conversa exportada do WhatsApp (.txt)   proposto em docs/dor-de-mercado.md,
                                                  nenhuma linha escrita
 WhatsApp por API                                 a ponte saiu em 28/08 (c52a718)
-campos e etapas customizaveis                    deal_stage e enum, em 19 arquivos
+campos e etapas customizaveis                    deal_stage e enum, em 9 arquivos de codigo
 snapshot mensal de metricas                      nao ha tabela; por isso a landing
                                                  nao mostra "+18% vs mes anterior"
 fila ou SLA de suporte                           nao existe; por isso "suporte

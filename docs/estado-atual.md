@@ -1673,9 +1673,14 @@ temporizador fingindo progresso.
    O argumento enfraquece e **não cai**: o risco continua sendo criar cobrança
    real no nome de terceiro no dia em que houver terceiro. O que muda é a
    urgência — hoje o custo é lixo no Asaas, não constrangimento com cliente.
-4. **Campos e pipelines customizáveis.** `deal_stage` é enum do Postgres, usado
-   em **19 arquivos** (contado em 03/09; um texto anterior dizia 22); virar
-   tabela é mudança grande. Só com cliente pagante pedindo.
+4. **Campos e pipelines customizáveis.** `deal_stage` é enum do Postgres, citado
+   em **9 arquivos de código**; virar tabela é mudança grande. Só com cliente
+   pagante pedindo.
+
+   Este item já disse 22 e já disse 19. Não eram erros de contagem: eram três
+   definições implícitas — com documentos, com o `.svg` do diagrama, e só
+   código. A métrica passou a carregar a definição no nome
+   (`deal_stage.arquivos_de_codigo`, em `scripts/ci/contagens.mjs`).
 
 **Entregues em 12/08, saíram desta fila:** paginação do que não paginava
 (0032), e negócio parado (0033).

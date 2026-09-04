@@ -54,9 +54,12 @@ porquê de cada decisão e são a memória real daqui.
 - **Pagamento:** Asaas, clientes, assinaturas recorrentes, webhooks, Pix/boleto/cartão
 - **Deploy:** Vercel
 - **Analytics:** Vercel Analytics. **PostHog não está instalado**, esta linha
-  já afirmou os dois, conferido no `package.json` em 12/08/2026. Não existe
-  nada medindo ativação: quantos que criam conta chegam ao primeiro lead é uma
-  pergunta que hoje ninguém responde
+  já afirmou os dois, conferido no `package.json` em 12/08/2026. **A ativação é
+  medida** desde 31/08, sem rastreador de terceiro: `lib/analytics/ativacao.ts`
+  dispara o evento do primeiro contato, e `lib/dono/ativacao.ts` monta o funil
+  de seis degraus. Esta linha afirmou o contrário até 04/09 — e era o erro que
+  fez `docs/capacidades.md` nascer, repetido dentro do arquivo lido no começo
+  de toda sessão
 - **Automação futura:** n8n, Notion API, Linear API
 
 > **Importante:** este projeto usa **Asaas**, não Stripe, para pagamentos.
@@ -79,12 +82,21 @@ Estrutura em uso, organizada por domínio (já implementada, não é proposta):
 app/
   (auth)/              # login, cadastro, recuperação de senha, boas-vindas
   (dashboard)/
+    hoje/              # o que vence hoje, a tela de abrir de manhã
     kanban/            # pipeline de vendas
     leads/             # listagem, busca, detalhe/timeline
     dashboard/         # métricas e gráfico de funil
+    calendario/        # mês, semana e agenda sobre as tarefas
+    conversas/         # WhatsApp — hoje em `migrando`, só o link wa.me
+    perfil/            # dados da pessoa, senha, exclusão de conta
     settings/          # workspace, colaboradores, permissões, billing
+  (conteudo)/          # páginas de SEO escritas para quem não conhece o produto
+  (legal)/             # privacidade e termos, exigidos pela LGPD
+  (dono)/              # a Central do Dono — 404 fora de localhost, ver abaixo
+  convite/[token]/     # aceite de convite, aceita sozinho quando dá
   api/
     webhooks/asaas/    # ativação de plano via webhook
+    cron/              # vigia, reconciliação de assinatura, purga
 components/
   ui/                  # shadcn/ui (não editar diretamente, apenas via CLI)
   kanban/
@@ -121,8 +133,13 @@ Convenções:
 ## Processo de Desenvolvimento
 
 Os milestones **auth → kanban → leads → dashboard → multi-empresa/permissões →
-billing (Asaas)** estão entregues e em produção. O que resta são integrações,
-a próxima é importação de Excel/planilha.
+billing (Asaas)** estão entregues e em produção, e a importação de planilha
+saiu em 11/08. **Não há próximo milestone definido**: o que resta está na fila
+técnica do `docs/estado-atual.md`, e a decisão de prioridade espera cliente
+externo — que este produto ainda não teve.
+
+Esta linha dizia "a próxima é importação de Excel/planilha" até 04/09, apontando
+o roadmap do arquivo mais lido do projeto para algo pronto havia um mês.
 
 ### Verificar contra produção, não supor
 
@@ -155,9 +172,17 @@ próprio gate. `build:check` escreve em `.next-check`
 
 ## O mapa do projeto (grafo do graphify)
 
-`graphify-out/graph.json` é um índice navegável de todo este repositório:
-**3.989 nós e 8.959 arestas em 310 comunidades** (02/09/2026), ligando arquivo,
+<!-- contagem: grafo.nos>=4000 grafo.arestas>=9000 grafo.comunidades>=300 -->
+`graphify-out/graph.json` é um índice navegável de todo este repositório: **mais
+de 4000 nós e 9000 arestas, em mais de 300 comunidades**, ligando arquivo,
 função, componente, tabela e conceito de documentação.
+
+O número é declarado como **piso, e não como valor exato**, e isso é decisão. O
+hook de `post-commit` reconstrói o grafo a cada commit: qualquer arquivo novo
+move a contagem, e um número exato aqui estaria errado no commit seguinte —
+tornando o alarme ruído diário. O piso só falha quando o grafo **encolhe**, que
+é exatamente o acidente que importa: foi assim que 13.502 nós de outro projeto
+entraram, e é assim que uma poda mal feita apareceria.
 Serve para achar coisa rápido, e **é a primeira parada antes de sair lendo
 arquivo atrás de arquivo** para perguntas do tipo "quem chama X", "onde isso é
 usado", "o que quebra se eu mexer aqui".
@@ -193,8 +218,13 @@ de corte abaixo. Ficaram de fora `.claude/skills/` e `.deepsec/` (ferramentas
 instaladas, que se atualizam por fora do Git), `graphify-out/` (sem isso cada
 rebuild indexa o relatório do anterior) e o binário de marketing — as artes
 continuam versionadas, mas um PNG não responde "onde o preço é lido"; os
-geradores, que são código, continuam dentro. Medido: 249 dos 3.966 nós vinham
-de `.claude/`, e a poda tirou 235 de 53 arquivos.
+geradores, que são código, continuam dentro. Medido em 01/09: 249 dos 3.966 nós
+vinham de `.claude/`, e a poda tirou 235 de 53 arquivos.
+
+<!-- contagem: grafo.nos_de_claude=28 -->
+**Hoje sobram 28**, em cinco arquivos de `.claude/agents/`. Não é regressão: o
+`.graphifyignore` corta `.claude/skills/`, e os agentes nunca estiveram na
+regra. Fica registrado para a próxima leitura não concluir que a poda falhou.
 
 **A regra de corte, aprendida caro em 27/08:** só entra no grafo o nó cujo
 arquivo existe no disco **e mora dentro deste repositório**. O grafo chegou a
@@ -204,8 +234,16 @@ uma rodada antiga —, e nada na resposta de uma consulta avisava disso. Só
 instalado na pasta pessoal do usuário, fora daqui. O que foi retirado está
 inteiro em `graphify-out/arquivo/`, nada foi descartado.
 
-**Oito nós apontam para nome de PACOTE** (`next`, `jspdf`, `@playwright/test`,
-`node:fs/promises`…) e **não são fantasmas**: são dependências declaradas no
-`package.json` que o extrator AST representa como nó de import. Elas não
-violam a regra, porque não apontam para outro projeto. O custo é cosmético,
-três delas viram comunidade de um nó só no relatório.
+<!-- contagem: grafo.nos_sem_arquivo=103 -->
+**103 nós não têm arquivo de origem, e nenhum deles é fantasma.** A grande
+maioria são objetos do banco que o extrator representa sem arquivo —
+`public.workspaces`, `auth.users`, `public.checar_teto_de_mensagens` —, mais
+alguns símbolos importados pelos geradores em Python (`FreeTypeFont`, `Image`,
+`Path`). Não violam a regra de corte: não apontam para outro projeto, apontam
+para lugar nenhum, de propósito.
+
+**Esta frase dizia "oito nós apontam para nome de PACOTE (`next`, `jspdf`…)"
+até 04/09**, e o erro não era o número: era a natureza. Hoje não há um único nó
+de pacote. Trocar 8 por 103 mantendo a explicação teria deixado o texto
+numericamente certo e semanticamente falso — pior do que estava, porque estava
+obviamente velho.

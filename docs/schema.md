@@ -7,10 +7,21 @@ Migrations novas mudam este arquivo com o tempo; ao suspeitar de
 desatualização, reconsulte o catálogo em vez de confiar cegamente nele (mesma
 regra de `docs/estado-atual.md`).
 
-**Reconferido em 02/09/2026, noite — duas tabelas novas, e a fonte mudou.**
-Lido de `pg_catalog` e não do OpenAPI: **20 tabelas**, **34 RPCs do projeto**
-(65 no catálogo, 31 são da extensão `pg_trgm`), **31 foreign keys**, **15
-triggers**, **8 enums**, 67 arquivos de migration (a maior é `0068`).
+**Estrutura reconferida em 02/09/2026, noite — e a fonte mudou.** Lida de
+`pg_catalog` e não do OpenAPI: **20 tabelas**, **34 RPCs do projeto** (65 no
+catálogo, 31 são da extensão `pg_trgm`), **31 foreign keys**, **15 triggers**,
+**8 enums**.
+
+<!-- contagem: migrations.arquivos=69 migrations.maior=0070 -->
+**69 arquivos de migration, e a maior é `0070`** (remedido em 04/09; o `0049`
+não existe, removido em 22/08). Os dois números vêm sempre juntos: a contagem
+sozinha convida a inferir `0069`.
+
+**Duas migrations entraram depois da última leitura do catálogo** e as colunas
+delas estão no diagrama abaixo, mas a estrutura acima ainda é a de 02/09:
+`workspaces.utm_content` (0069) e `subscriptions.ciclo` (0070). Nenhuma cria
+tabela, função ou chave — é o quarto caso da mesma classe já registrada aqui:
+a estrutura fica parada enquanto a regra de negócio anda.
 
 As tabelas novas são `vigia_ultimo_aviso` (0062) e `notificacoes` (0066). A
 mudança de fonte está explicada no "Resumo do catálogo", no fim — em resumo, o
@@ -26,8 +37,16 @@ exclusão da empresa que o escreveu, senão a fila perde justamente o caso que
 motivou a saída.
 
 As duas RPCs novas são de purga (`purge_old_error_logs`, `purge_old_feedback`),
-chamadas pelo cron de limpeza. As foreign keys **não se mexeram**: seguem 17,
-o mesmo número de 26/08.
+chamadas pelo cron de limpeza. As foreign keys **não se mexeram** — mas o
+número aqui dizia **17** enquanto o "Resumo do catálogo", no fim deste mesmo
+documento, dizia **31**, e as duas linhas foram escritas na mesma revisão de
+02/09.
+
+**Não são duas medições: são dois métodos.** 17 é o que o OpenAPI expõe, 31 é o
+que `pg_constraint` conta. A segunda é a certa para um diagrama de schema, e é a
+que vale — **31**. A linha ficou aqui contando o número antigo porque quem
+corrigiu o fim do documento não voltou ao começo, e quem lê o cabeçalho para de
+ler antes do resumo.
 
 **Reconferido em 29/08/2026 — estrutura IDÊNTICA, comportamento diferente.**
 Lido do OpenAPI do PostgREST de produção: **17 tabelas**, **30 RPCs**, **17
@@ -164,6 +183,13 @@ classDiagram
         +text logo_url
         +timestamptz trial_ate "nullable, migration 0051"
         +timestamptz aviso_trial_enviado_em "nullable, migration 0055"
+        +text utm_source "nullable, migration 0041"
+        +text utm_medium "nullable, migration 0041"
+        +text utm_campaign "nullable, migration 0041"
+        +text utm_content "nullable, migration 0069 — qual PECA trouxe"
+        +text fbc "nullable, migration 0042 — clique de anuncio do Meta"
+        +text fbp "nullable, migration 0042"
+        +boolean consentimento_analitico "nullable, migration 0065 — LGPD"
         +uuid created_by "→ auth.users, sem FK"
         +timestamptz created_at
     }
@@ -236,6 +262,7 @@ classDiagram
         +timestamptz current_period_end
         +text ultimo_billing_type
         +timestamptz aviso_vencimento_enviado_em
+        +text ciclo "MONTHLY|YEARLY, migration 0070 — decide 30 dias ou 1 ano"
         +timestamptz created_at
     }
 
