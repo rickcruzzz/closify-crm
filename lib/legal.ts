@@ -162,7 +162,12 @@ export const PRAZO_RESPOSTA_TITULAR_DIAS = 15
 // dado pessoal aparecendo na declaracao, que e exatamente o que o Art. 9o, I
 // da LGPD manda informar ao titular. Mesma regra que moveu esta data em 31/08,
 // quando o controlador mudou de pessoa juridica.
-export const ATUALIZADO_EM = '3 de setembro de 2026'
+//
+// 04/09: o Google Ads, pelo mesmo motivo — outro destinatario, outra
+// finalidade, e a secao 3 nomeava so a Meta enquanto duas ferramentas passam a
+// carregar pelo mesmo aceite. A data anda porque a lista mudou, nunca porque
+// alguem releu o texto.
+export const ATUALIZADO_EM = '4 de setembro de 2026'
 
 export type Suboperador = {
   nome: string
@@ -228,6 +233,31 @@ export const SUBOPERADORES: Suboperador[] = [
     dados:
       'Endereço IP, identificador do navegador e, no cadastro, e-mail, ' +
       'telefone, nome, cidade, estado e CEP — todos transmitidos com hash',
+    paisDeProcessamento: 'Estados Unidos',
+  },
+  // ## Entrada SEPARADA do "Google" acima, e a separação é o que informa
+  //
+  // O Google já estava na lista, para login com conta Google. Ampliar aquela
+  // entrada faria uma linha só cobrir duas coisas que a LGPD trata de forma
+  // diferente: o login é execução do contrato (a pessoa pediu para entrar
+  // assim), e a medição de anúncio depende de CONSENTIMENTO e só acontece para
+  // quem aceita no banner.
+  //
+  // Uma linha misturada diria ao titular que ele não pode recusar o que ele
+  // pode. Duas linhas dizem a verdade sobre cada uma.
+  //
+  // Entra JUNTO da tag, não depois: a política é onde o tratamento é declarado,
+  // e declarar depois de começar a tratar é o erro que a Meta já custou aqui —
+  // o consentimento foi construído em 02/09 e a política só foi corrigida em
+  // 03/09, um dia inteiro afirmando o contrário do que o código fazia.
+  {
+    nome: 'Google Ads',
+    finalidade:
+      'Medição de anúncios de busca: identificar qual palavra-chave trouxe ' +
+      'cada visita e cadastro. Só ocorre para quem aceita os cookies no banner',
+    dados:
+      'Endereço IP, identificador do clique no anúncio (gclid) e o registro ' +
+      'de que uma conta foi criada — sem nome, e-mail ou telefone',
     paisDeProcessamento: 'Estados Unidos',
   },
 ]

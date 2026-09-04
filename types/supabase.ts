@@ -106,6 +106,7 @@ export type Database = {
           utm_source: string | null
           utm_medium: string | null
           utm_campaign: string | null
+          gclid: string | null
           utm_content: string | null
           // Âncoras de match da Conversions API do Meta, ver 0042_fbc_fbp.sql.
           fbc: string | null
@@ -140,6 +141,7 @@ export type Database = {
           utm_source?: string | null
           utm_medium?: string | null
           utm_campaign?: string | null
+          gclid?: string | null
           utm_content?: string | null
           fbc?: string | null
           fbp?: string | null
@@ -155,6 +157,7 @@ export type Database = {
           utm_source?: string | null
           utm_medium?: string | null
           utm_campaign?: string | null
+          gclid?: string | null
           utm_content?: string | null
           fbc?: string | null
           fbp?: string | null

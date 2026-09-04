@@ -47,3 +47,61 @@ export const chaveDeUtm = (valor: string | null | undefined): string =>
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-+|-+$/g, '')
+
+/**
+ * Os parâmetros que dizem de onde a visita veio. Nada além deles atravessa.
+ *
+ * `utm_term` entra porque é onde o Google Ads escreve a palavra-chave; os
+ * outros são os mesmos que `components/landing/utm-capture.tsx` captura.
+ */
+const PARAMETROS_DE_ORIGEM = [
+  'utm_source',
+  'utm_medium',
+  'utm_campaign',
+  'utm_content',
+  'utm_term',
+  'gclid',
+  'fbclid',
+]
+
+/**
+ * Filtra uma query string, deixando só o que identifica a origem da visita.
+ *
+ * ## O vazamento que isto fecha
+ *
+ * O anúncio de busca leva a `/quanto-custa-um-crm`, não direto a `/cadastro` —
+ * casar o título da página com o que a pessoa digitou sobe o Índice de
+ * Qualidade e derruba o CPC, que é a única alavanca que faz R$ 25/dia caber.
+ *
+ * O CTA daquela página apontava para `/cadastro` **sem query nenhuma**. A
+ * atribuição sobrevive (o `UtmCapture` mora no layout raiz e já gravou o cookie
+ * na primeira página), mas `ecoDaPeca` lê a URL — e sem `utm_content` ele cai no
+ * texto padrão, tirando o "grátis, sem cartão" justamente diante dos quatro
+ * campos, que é o ponto de maior atrito do funil inteiro.
+ *
+ * ## Por que uma lista, e não repassar a query inteira
+ *
+ * Repassar tudo carregaria para a página de cadastro qualquer parâmetro que
+ * alguém pendurasse na URL — inclusive os que este projeto trata como
+ * credencial. `/convite/<token>` já ensinou que caminho de URL vira dado
+ * sensível sem avisar, e é por isso que o wrapper do Vercel Analytics higieniza
+ * a rota antes de enviar. Lista fechada é a única forma de o comportamento não
+ * mudar sozinho quando aparecer um parâmetro novo.
+ */
+export function parametrosDeOrigem(busca: string | null | undefined): string {
+  if (!busca) return ''
+
+  const entrada = new URLSearchParams(busca)
+  const saida = new URLSearchParams()
+
+  for (const nome of PARAMETROS_DE_ORIGEM) {
+    const valor = entrada.get(nome)
+    // Descarta valor vazio: `?utm_content=` na URL não diz de onde a visita
+    // veio, e repassá-lo faria `ecoDaPeca` receber string vazia em vez de nada
+    // — mesmo resultado, com uma URL mais suja para depurar.
+    if (valor) saida.set(nome, valor)
+  }
+
+  const texto = saida.toString()
+  return texto ? `?${texto}` : ''
+}

@@ -93,6 +93,33 @@ const POR_PECA: Record<string, EcoDaPeca> = {
     titulo: 'Agenda e Gmail, ligados ao seu funil',
     descricao: `Comece grátis; a conexão com Google Agenda e Gmail entra no Pro. ${PRO}`,
   },
+
+  // ## Google Ads, e por que a chave é OUTRA e não `a1-ancora-preco`
+  //
+  // `lib/dono/atribuicao.ts` agrupa por `utm_content`. Reaproveitar a chave do
+  // criativo da Meta faria o relatório somar num balde só a peça de feed e o
+  // grupo de busca — dois canais com custo e intenção diferentes aparecendo
+  // como um número. O teste rodaria e não concluiria qual dos dois vendeu, que
+  // é o mesmo defeito que a migration 0069 existiu para fechar.
+  //
+  // ## A pessoa que chega aqui pelo Google já leu a resposta
+  //
+  // O anúncio de busca leva a `/quanto-custa-um-crm`, não direto ao formulário
+  // — casar o título da página com o que foi digitado sobe o Índice de
+  // Qualidade e derruba o CPC, que é a única alavanca que faz R$ 25/dia caber.
+  // Quando ela clica no CTA de lá, o argumento de preço já foi feito.
+  //
+  // Então o eco não repete o argumento: ele fecha. O que falta a quem já se
+  // convenceu do preço e está diante de quatro campos é saber que não vai pagar
+  // agora — daí o removedor de atrito vir no título, e não na descrição.
+  'g1-preco': {
+    titulo: 'Comece grátis, sem cartão',
+    // Escrito com os mesmos números de `lib/plans.ts`, e não recortando a
+    // constante `GRATIS` acima: um `replace` sobre texto compartilhado falha em
+    // silêncio no dia em que a outra frase mudar de palavra, deixando este eco
+    // com a metade errada da promessa.
+    descricao: `Até ${FREE_LEAD_LIMIT} contatos sem pagar nada. Depois, R$ ${PRO_PLAN_PRICE} por mês pela empresa inteira, e cancela sem multa.`,
+  },
 }
 
 /**

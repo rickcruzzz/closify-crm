@@ -52,8 +52,19 @@ function CapturaInterna() {
     // "qual peca trouxe quem virou Pro" so existe deste lado.
     const content = searchParams.get('utm_content')
     const fbclid = searchParams.get('fbclid')
+    // ## `gclid` e o que ele responde que nenhum outro campo responde
+    //
+    // A marcacao automatica do Google Ads acrescenta este parametro a toda URL
+    // de destino, e ele e o UNICO dado que a importacao de conversao offline
+    // aceita para dizer ao Google "este clique virou assinatura paga".
+    //
+    // O relatorio do Google sabe quem clicou e quem se cadastrou; quem PAGOU
+    // acontece dias depois no Asaas, fora do alcance de qualquer tag. Guardar
+    // hoje e o que torna essa reconciliacao possivel amanha — histórico nao se
+    // cria depois. Ver a migration 0071.
+    const gclid = searchParams.get('gclid')
 
-    if (!source && !medium && !campaign && !content && !fbclid) return
+    if (!source && !medium && !campaign && !content && !fbclid && !gclid) return
 
     jaEnviou.current = true
 
@@ -65,6 +76,9 @@ function CapturaInterna() {
         content: content ?? undefined,
         fbc: fbclid ? montarFbc(fbclid) : undefined,
         fbp: lerCookie('_fbp'),
+        // Cru, sem transformar: a Meta exige `fb.1.<ms>.<fbclid>`, o Google
+        // quer o valor exatamente como chegou.
+        gclid: gclid ?? undefined,
       })
     }
 

@@ -9,25 +9,20 @@ import {
   lerConsentimentoDoNavegador,
 } from '@/components/analytics/banner-consentimento'
 import { pixelIdSeguro } from '@/lib/analytics/pixel-id'
+import { DOMINIO_DE_PRODUCAO, ehAreaPrivada } from '@/lib/analytics/superficie-publica'
 
 /**
  * Meta Pixel, só nas páginas públicas.
  *
- * O CRM logado (`/dashboard`, `/kanban`, `/leads`, `/settings`, `/perfil`,
- * `/onboarding`, `/bem-vindo`, `/hoje`, `/calendario`) nunca carrega isto:
- * quem já é cliente não é alvo de atribuição de anúncio, e reduzir o pixel às
- * páginas que uma visita paga de fato alcança (landing, cadastro, login,
- * termos, privacidade) é o que mantém a superfície de rastreamento do tamanho
- * do que se justifica.
+ * A lista de rotas privadas e o domínio de produção saíram deste arquivo para
+ * `lib/analytics/superficie-publica.ts` quando o Google Ads entrou: dois
+ * rastreadores com duas cópias da mesma regra divergem, e o porquê inteiro —
+ * inclusive o caso de `/hoje` e `/calendario`, que faltavam na lista e só
+ * apareceram em 21/08 pelo erro #418/#423 que produziam — está lá.
  *
- * `/hoje` e `/calendario` faltavam nesta lista (achado em 21/08 investigando
- * lentidão percebida): o pixel carregava nelas de verdade, `<Script
- * strategy="afterInteractive">` competindo com o React durante hidratação —
- * medido com erro #418/#423 do React só nessas duas rotas, ausente nas outras
- * do CRM. A página inteira era descartada e re-renderizada do zero no
- * navegador, o que soma tempo real de carregamento em cima do que já é lento.
- * Mesma classe de lacuna que o `middleware.ts` já pagou (rotas existem, na
- * sidebar, mas ficaram fora de uma lista de exclusão).
+ * **O pixel NÃO recebe a exceção de `/bem-vindo`** que o Google Ads recebe, e
+ * isso é decisão: as conversões da Meta nascem no servidor (Conversions API),
+ * então ele não perde nada ficando fora da área logada inteira.
  *
  * Conformidade (fechado em 23/08): este pixel grava cookie de terceiro
  * (`_fbp`) e é rastreamento de marketing sob a LGPD — a mesma razão pela qual
@@ -37,37 +32,6 @@ import { pixelIdSeguro } from '@/lib/analytics/pixel-id'
  * portanto nenhum cookie é gravado. Consentimento pedido depois do
  * rastreamento não é consentimento.
  */
-const PREFIXOS_PRIVADOS = [
-  '/dashboard',
-  '/kanban',
-  '/leads',
-  '/settings',
-  '/perfil',
-  '/onboarding',
-  '/bem-vindo',
-  '/hoje',
-  '/calendario',
-]
-
-/**
- * O domínio de produção. Só ele alimenta o pixel.
- *
- * Medido em 20/08/2026, olhando os eventos que a Meta de fato recebeu: além de
- * `www.velofunil.com.br`, chegavam eventos de `localhost` e de previews
- * `closify-crm-dr3t-*.vercel.app`. Num único dia (13/08), **18.192 PageViews
- * vieram de `localhost`** — provavelmente recarregamento em laço durante o
- * desenvolvimento.
- *
- * Isso não é ruído inofensivo: o pixel é o conjunto de dados com que a Meta
- * aprende quem é o público a perseguir. Milhares de visitas falsas de uma
- * máquina só ensinam o algoritmo a procurar gente que não existe, e a conta
- * disso chega em dinheiro de anúncio gasto no alvo errado.
- *
- * A checagem é por `hostname` do navegador porque é o que separa os três casos
- * de verdade. `NODE_ENV` não serve: preview da Vercel roda como `production`.
- */
-const DOMINIO_DE_PRODUCAO = 'www.velofunil.com.br'
-
 export function MetaPixel() {
   const pathname = usePathname()
   // NUNCA usar `process.env.NEXT_PUBLIC_META_PIXEL_ID` cru aqui: o valor é
@@ -76,9 +40,7 @@ export function MetaPixel() {
   // preta para quem aceitasse os cookies. Ver `lib/analytics/pixel-id.ts`.
   const pixelId = pixelIdSeguro(process.env.NEXT_PUBLIC_META_PIXEL_ID)
 
-  const eAreaPrivada = PREFIXOS_PRIVADOS.some(
-    (prefixo) => pathname === prefixo || pathname.startsWith(`${prefixo}/`),
-  )
+  const eAreaPrivada = ehAreaPrivada(pathname)
 
   // `undefined` no servidor: durante a renderização inicial não há `window`, e
   // deixar passar aqui faria o script entrar no HTML e disparar antes de

@@ -225,6 +225,10 @@ export async function finalizarOnboarding(values: unknown) {
           utm_content: atribuicao.content ?? null,
           fbc: atribuicao.fbc ?? null,
           fbp: atribuicao.fbp ?? null,
+          // O id de clique do Google, que e o unico dado aceito pela importacao
+          // de conversao offline — a ponte entre "clicou no anuncio" e "pagou
+          // R$ 49", que acontece dias depois no Asaas. Ver 0071.
+          gclid: atribuicao.gclid ?? null,
           // Guardado aqui porque o `Purchase` nasce no webhook do Asaas, onde
           // não há cookie nem visitante. Sem isto, o evento que mais manda
           // dado pessoal seria o único fora da regra do banner. Ver 0065.

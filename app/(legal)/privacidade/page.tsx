@@ -112,14 +112,27 @@ export default function PrivacidadePage() {
             O que entra no lugar não suaviza — descreve o que acontece, diz que
             depende de aceite e aponta como recusar. Uma página que existe para
             declarar tratamento de dado não pode ser o lugar onde ele fica
-            escondido. */}
+            escondido.
+
+            04/09: o Google Ads entrou aqui junto com a tag, e não depois. Este
+            parágrafo nomeava só a Meta; com uma segunda ferramenta carregando
+            pelo MESMO aceite, deixar o texto como estava o tornaria falso de
+            novo — a mesma frase, o mesmo defeito, um mês depois.
+
+            As duas são descritas separadamente porque mandam coisas diferentes:
+            a Meta recebe dados de contato com hash, o Google recebe só o
+            identificador do clique e o fato de a conta ter nascido. Juntá-las
+            numa frase só faria a menor parecer a maior, ou a maior parecer a
+            menor. */}
         <LegalP>
           <strong className="text-foreground">Cookies de publicidade:</strong> quando
-          você aceita no aviso de cookies, usamos o pixel da Meta para saber de qual
-          anúncio veio a sua visita. Ele grava um identificador no seu navegador e,
-          se você criar conta, envia à Meta seus dados de contato transmitidos com
-          hash, para medir a conversão do anúncio. Enquanto você não aceitar, nada
-          disso é carregado — e recusar é tão simples quanto aceitar, no mesmo aviso.
+          você aceita no aviso de cookies, usamos duas ferramentas de medição para
+          saber de qual anúncio veio a sua visita. O pixel da Meta grava um
+          identificador no seu navegador e, se você criar conta, envia à Meta seus
+          dados de contato transmitidos com hash. A tag do Google Ads registra o
+          identificador do clique no anúncio e o fato de uma conta ter sido criada,
+          sem enviar nome, e-mail ou telefone. Enquanto você não aceitar, nada disso
+          é carregado — e recusar é tão simples quanto aceitar, no mesmo aviso.
         </LegalP>
         <LegalP>
           Sobre o CPF ou CNPJ: ele é transmitido diretamente ao processador de pagamentos

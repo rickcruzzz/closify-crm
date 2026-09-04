@@ -7,6 +7,7 @@ import { ThemeProvider } from '@/components/theme-provider'
 import { Toaster } from '@/components/ui/sonner'
 import { Analytics } from '@/components/analytics'
 import { MetaPixel } from '@/components/analytics/meta-pixel'
+import { GoogleAds } from '@/components/analytics/google-ads'
 import { IsolarAnalytics } from '@/components/analytics/isolar-analytics'
 import { BannerConsentimento } from '@/components/analytics/banner-consentimento'
 import { UtmCapture } from '@/components/landing/utm-capture'
@@ -133,6 +134,14 @@ export default function RootLayout({
           </IsolarAnalytics>
           <IsolarAnalytics nome="Meta Pixel">
             <MetaPixel />
+          </IsolarAnalytics>
+          {/* A tag do Google Ads mede a campanha de busca, e é a única que
+              alcança uma rota da área logada (`/bem-vindo`), porque a conversão
+              dela nasce no navegador — ver lib/analytics/superficie-publica.ts.
+              Mesma cerca de erro que as outras três: ela não pode derrubar a
+              página em que a pessoa acabou de criar a conta. */}
+          <IsolarAnalytics nome="Google Ads">
+            <GoogleAds />
           </IsolarAnalytics>
           <IsolarAnalytics nome="Captura de UTM">
             <UtmCapture />

@@ -79,6 +79,17 @@ export type AtribuicaoUtm = {
   fbc?: string
   /** Cookie `_fbp` do próprio Pixel, âncora de identidade do navegador. */
   fbp?: string
+  /**
+   * Id de clique do Google Ads, vindo cru do `gclid` da URL.
+   *
+   * Não é transformado como o `fbc` — a Meta exige o formato
+   * `fb.1.<ms>.<fbclid>`, o Google quer o valor exatamente como veio.
+   *
+   * É o único dado que a importação de conversão offline aceita para dizer ao
+   * Google "este clique virou assinatura paga cinco dias depois". Sem ele, o
+   * relatório sabe quem se cadastrou e nunca quem pagou. Ver 0071.
+   */
+  gclid?: string
 }
 
 export async function guardarIntencao(intencao: {
@@ -121,13 +132,19 @@ export async function guardarAtribuicaoUtm(utm: AtribuicaoUtm) {
   // `fbc` sozinho é comum: clique em anúncio do Meta que não levou `utm_*`
   // na URL de destino (o link do anúncio nem sempre carrega UTM) ainda
   // carrega `fbclid`, vale capturar mesmo sem os três UTMs.
+  //
+  // `gclid` sozinho é ainda mais comum: a marcação automática do Google Ads
+  // acrescenta o parâmetro a TODA URL de destino, independentemente de alguém
+  // ter escrito UTM à mão. Deixá-lo fora desta lista faria o clique de busca
+  // sem UTM ser descartado inteiro — exatamente o caso em que só ele existe.
   if (
     !utm.source &&
     !utm.medium &&
     !utm.campaign &&
     !utm.content &&
     !utm.fbc &&
-    !utm.fbp
+    !utm.fbp &&
+    !utm.gclid
   ) {
     return
   }

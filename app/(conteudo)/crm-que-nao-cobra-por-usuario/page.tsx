@@ -1,6 +1,8 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 
+import { LinkComOrigem } from '@/components/landing/link-com-origem'
+
 import { buttonVariants } from '@/components/ui/button'
 import {
   LegalList,
@@ -240,12 +242,12 @@ export default function CrmQueNaoCobraPorUsuario() {
           continua com tudo que já cadastrou, só não adiciona novos até assinar.
         </LegalP>
         <div className="flex flex-wrap gap-3">
-          <Link
+          <LinkComOrigem
             href="/cadastro"
             className={cn(buttonVariants({ size: 'lg' }), 'min-h-11')}
           >
             Começar grátis
-          </Link>
+          </LinkComOrigem>
           <Link
             href="/quanto-custa-um-crm"
             className={cn(

@@ -67,7 +67,7 @@ async function pegar(caminho) {
     headers: { 'Cache-Control': 'no-cache', 'User-Agent': 'auditoria-velofunil' },
     redirect: 'follow',
   })
-  return { status: r.status, texto: await r.text(), url: r.url }
+  return { status: r.status, texto: await r.text(), url: r.url, cabecalhos: r.headers }
 }
 
 console.log(`\nAUDITORIA DE DESCOBERTA — ${BASE}\n${'='.repeat(60)}`)
@@ -195,6 +195,67 @@ for (const url of urlsDoSitemap) {
   } catch (e) {
     falha(`${rotulo}: ${String(e).slice(0, 50)}`)
   }
+}
+
+// ------------------------------------------------- CSP servida (medicao paga)
+//
+// ## Por que isto mora aqui, e nao num teste
+//
+// A CSP deste projeto e bloqueio de verdade desde 27/08, e `script-src` decide
+// quais scripts o navegador aceita. A tag do Google Ads vem de
+// `www.googletagmanager.com`: sem o host declarado, o navegador RECUSA em
+// silencio — sem erro na tela, sem teste falhando, com o registro so no console
+// de quem estivesse olhando.
+//
+// O estrago e especifico: campanha rodando, dinheiro saindo, e ZERO conversao
+// no painel do Google. Erro de configuracao com aparencia de anuncio ruim, e a
+// decisao seguinte seria pausar a campanha que funciona.
+//
+// Nenhum dos quatro portoes alcanca isso. `tsc`, `lint`, `test` e `build` leem o
+// codigo que GERA o header, nunca o que e SERVIDO — e os dois ja discordaram
+// aqui por 61 linhas, no caso do `robots.txt` reescrito pelo Cloudflare. Mesma
+// classe do CNPJ baixado na landing e do pixel com quebra de linha na Vercel:
+// configuracao fora do repositorio que muda o comportamento do produto.
+console.log('\nCSP servida (medicao de anuncio)')
+try {
+  const { cabecalhos } = await pegar('/')
+  const csp = cabecalhos.get('content-security-policy') ?? ''
+
+  if (!csp) {
+    falha('sem Content-Security-Policy na resposta — o header nao esta chegando')
+  } else {
+    // Recorta a diretiva antes de procurar o host: `googletagmanager` presente
+    // em `img-src` e ausente em `script-src` daria verde numa CSP que continua
+    // recusando o script. A pergunta e "o script pode CARREGAR", nao "a string
+    // aparece em algum lugar do header".
+    const diretiva = (nome) =>
+      csp
+        .split(';')
+        .map((d) => d.trim())
+        .find((d) => d.startsWith(`${nome} `)) ?? ''
+
+    const exigencias = [
+      ['script-src', 'https://www.googletagmanager.com', 'o gtag.js nem carrega'],
+      ['connect-src', 'https://www.googletagmanager.com', 'a tag carrega e nao envia'],
+      ['img-src', 'https://www.google.com', 'o ping de conversao e recusado'],
+      // O Google manda o ping pelo TLD do pais de quem clicou, e o alvo daqui
+      // e o Brasil inteiro. Sem o `.com.br` some justamente a conversao que a
+      // campanha existe para medir.
+      ['img-src', 'https://www.google.com.br', 'perde a conversao de quem clicou no Brasil'],
+    ]
+
+    const faltando = exigencias.filter(([nome, host]) => !diretiva(nome).includes(host))
+
+    if (faltando.length) {
+      faltando.forEach(([nome, host, efeito]) =>
+        falha(`CSP: ${host} fora de ${nome} — ${efeito}`),
+      )
+    } else {
+      ok('googletagmanager e o ping de conversao liberados nas tres diretivas')
+    }
+  }
+} catch (e) {
+  falha(`CSP: ${String(e).slice(0, 60)}`)
 }
 
 // ---------------------------------------------------------------- resumo

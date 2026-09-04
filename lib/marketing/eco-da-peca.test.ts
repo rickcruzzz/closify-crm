@@ -84,4 +84,51 @@ describe('ecoDaPeca', () => {
     expect(ecoDaPeca('a1-ancora-preco')).toEqual(esperado)
     expect(ecoDaPeca(' a1 ancora preco ')).toEqual(esperado)
   })
+
+  /**
+   * O grupo de busca do Google Ads, que é outro canal e por isso outra chave.
+   *
+   * Só `g1_preco` existe porque só ele vai ao ar: `docs/google-ads.md` propõe
+   * três grupos, e R$ 25/dia repartido em três dá R$ 8 cada, sem nenhum juntar
+   * cliques suficientes para dizer coisa alguma. Eco para grupo que não existe
+   * seria código morto com aparência de recurso — a razão que já recusou o tipo
+   * `whatsapp_caiu` nas notificações.
+   */
+  describe('grupo de busca do Google', () => {
+    it('tem eco próprio', () => {
+      expect(ecoDaPeca('g1_preco')).not.toEqual(ECO_PADRAO)
+    })
+
+    // ## A chave é OUTRA de propósito, e é isto que separa os dois canais
+    //
+    // `lib/dono/atribuicao.ts` agrupa por `utm_content`. Reaproveitar
+    // `a1_ancora_preco` faria o relatório somar num balde só a peça de feed da
+    // Meta e o grupo de busca do Google — dois canais com custo e intenção
+    // diferentes aparecendo como um número. Saber o total e não saber a
+    // divisão é o mesmo que não medir.
+    it('não colide com a peça de preço da Meta', () => {
+      expect(ecoDaPeca('g1_preco')).not.toEqual(ecoDaPeca('a1_ancora_preco'))
+    })
+
+    it('não repete título de nenhuma peça da Meta', () => {
+      const daMeta = PECAS.map((p) => ecoDaPeca(p).titulo)
+      expect(daMeta).not.toContain(ecoDaPeca('g1_preco').titulo)
+    })
+
+    // Mesma regra que governa os seis ecos da Meta: a pessoa está diante de
+    // quatro campos, e aqui "grátis, sem cartão" vale mais que benefício.
+    it('remove atrito, e no TÍTULO', () => {
+      // No título e não só na descrição porque quem chega pelo Google já leu o
+      // argumento de preço na página de conteúdo: o que falta não é convencer,
+      // é dizer que não vai pagar agora.
+      expect(ecoDaPeca('g1_preco').titulo).toContain('rátis')
+      expect(ecoDaPeca('g1_preco').titulo).toContain('cartão')
+    })
+
+    it('cita os números reais de lib/plans.ts, não escritos à mão', () => {
+      const { descricao } = ecoDaPeca('g1_preco')
+      expect(descricao).toContain(String(FREE_LEAD_LIMIT))
+      expect(descricao).toContain(`R$ ${PRO_PLAN_PRICE}`)
+    })
+  })
 })

@@ -7,8 +7,8 @@
 > arquivo remedidas em 04/09: **20 tabelas**, **34 RPCs do projeto**,
 > **31 foreign keys**, **15 triggers**, **8 enums**.
 >
-> <!-- contagem: migrations.arquivos=69 migrations.maior=0070 -->
-> **69 arquivos de migration, e a maior é `0070`.** Os dois juntos, sempre: o
+> <!-- contagem: migrations.arquivos=70 migrations.maior=0071 -->
+> **70 arquivos de migration, e a maior é `0071`.** Os dois juntos, sempre: o
 > número de arquivos sozinho convida a inferir `0069`, e o `0049` não existe —
 > foi provado desnecessário e removido em 22/08. `node scripts/ci/contagens.mjs`
 > imprime o invariante que reconcilia os dois.

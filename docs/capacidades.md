@@ -29,7 +29,11 @@ envelhecer em silêncio, que é o defeito de todo documento desse tipo.
 | Ativação — evento do 1º contato criado | `lib/analytics/ativacao.ts` | 31/08 |
 | Os 8 eventos da Meta (pixel + CAPI) | `lib/analytics/meta-conversions.ts` | 13/08 |
 | Consentimento de cookie, e a recusa respeitada | `lib/analytics/consentimento.ts` | 23/08 |
-| Captura de UTM na chegada | `components/landing/utm-capture.tsx` | 20/08 |
+| Captura de UTM na chegada (e do `gclid`) | `components/landing/utm-capture.tsx` | 20/08 |
+| Tag do Google Ads, com as 4 cercas | `components/analytics/google-ads.tsx` | 04/09 |
+| Conversão do Google: a decisão de disparar | `lib/analytics/conversao-google.ts` | 04/09 |
+| Onde pode existir rastreador de anúncio | `lib/analytics/superficie-publica.ts` | 04/09 |
+| Levar a origem adiante nos CTAs públicos | `components/landing/usar-destino-com-origem.ts` | 04/09 |
 | Custo por cliente, por campanha **e por peça** | `lib/dono/atribuicao.ts` | 04/09 |
 | Funil de ativação da base inteira | `lib/dono/ativacao.ts` | 31/08 |
 | Erro de produção gravado no banco | `app/api/log-erro/route.ts` | 18/08 |
@@ -89,7 +93,7 @@ plausível é o mais caro que existe.**
 | o que vigia | onde | desde |
 |---|---|---|
 | Documento que cita arquivo inexistente | `scripts/ci/conferir-documentos.mjs` | 03/09 |
-| O site como o buscador lê, por HTTP | `scripts/marketing/auditar-descoberta.mjs` | 03/09 |
+| O site como o buscador lê, **e a CSP servida** | `scripts/marketing/auditar-descoberta.mjs` | 03/09 |
 | A LCP com o perfil do PageSpeed | `scripts/diagnostico/medir-lcp.mjs` | 03/09 |
 | Alerta por e-mail, de hora em hora | `app/api/cron/vigia/route.ts` | 01/09 |
 | Fila do webhook do Asaas parada | `lib/dono/dinheiro-do-vigia.ts` | 04/09 |

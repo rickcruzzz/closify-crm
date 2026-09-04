@@ -12,16 +12,17 @@ regra de `docs/estado-atual.md`).
 catálogo, 31 são da extensão `pg_trgm`), **31 foreign keys**, **15 triggers**,
 **8 enums**.
 
-<!-- contagem: migrations.arquivos=69 migrations.maior=0070 -->
-**69 arquivos de migration, e a maior é `0070`** (remedido em 04/09; o `0049`
+<!-- contagem: migrations.arquivos=70 migrations.maior=0071 -->
+**70 arquivos de migration, e a maior é `0071`** (remedido em 04/09; o `0049`
 não existe, removido em 22/08). Os dois números vêm sempre juntos: a contagem
-sozinha convida a inferir `0069`.
+sozinha convida a inferir `0070`.
 
-**Duas migrations entraram depois da última leitura do catálogo** e as colunas
+**Três migrations entraram depois da última leitura do catálogo** e as colunas
 delas estão no diagrama abaixo, mas a estrutura acima ainda é a de 02/09:
-`workspaces.utm_content` (0069) e `subscriptions.ciclo` (0070). Nenhuma cria
-tabela, função ou chave — é o quarto caso da mesma classe já registrada aqui:
-a estrutura fica parada enquanto a regra de negócio anda.
+`workspaces.utm_content` (0069), `subscriptions.ciclo` (0070) e
+`workspaces.gclid` (0071). Nenhuma cria tabela, função ou chave — é o quinto
+caso da mesma classe já registrada aqui: a estrutura fica parada enquanto a
+regra de negócio anda.
 
 As tabelas novas são `vigia_ultimo_aviso` (0062) e `notificacoes` (0066). A
 mudança de fonte está explicada no "Resumo do catálogo", no fim — em resumo, o
@@ -187,6 +188,7 @@ classDiagram
         +text utm_medium "nullable, migration 0041"
         +text utm_campaign "nullable, migration 0041"
         +text utm_content "nullable, migration 0069 — qual PECA trouxe"
+        +text gclid "nullable, migration 0071 — id do clique no Google Ads"
         +text fbc "nullable, migration 0042 — clique de anuncio do Meta"
         +text fbp "nullable, migration 0042"
         +boolean consentimento_analitico "nullable, migration 0065 — LGPD"

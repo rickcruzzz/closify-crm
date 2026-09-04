@@ -1,6 +1,8 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 
+import { LinkComOrigem } from '@/components/landing/link-com-origem'
+
 import { buttonVariants } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import {
@@ -284,12 +286,12 @@ export default function QuantoCustaUmCrm() {
             projeto não tem `asChild`, e é o mesmo padrão que a `cta-section`
             da landing já usa. `min-h-11` mantém o alvo de toque de 44px. */}
         <div className="flex flex-wrap gap-3">
-          <Link
+          <LinkComOrigem
             href="/cadastro"
             className={cn(buttonVariants({ size: 'lg' }), 'min-h-11')}
           >
             Começar grátis
-          </Link>
+          </LinkComOrigem>
           <Link
             href="/"
             className={cn(

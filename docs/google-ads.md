@@ -140,32 +140,100 @@ do mercado e o que o produto de fato faz.
 
 ---
 
-## Medição: o que precisa existir antes de gastar
+## Medição: CONSTRUÍDA em 04/09
 
 **Sem conversão configurada, a campanha é dinheiro no escuro.** É o mesmo erro
 que a campanha `OUTCOME_TRAFFIC` da Meta cometia — otimizar por clique não usa
 o sinal que importa.
 
-O que precisa entrar no site:
+Esta seção era uma lista do que precisava existir. Passou a descrever o que
+existe:
 
 ```
-1. tag do Google (gtag.js)          uma vez, no layout raiz
-2. conversao "cadastro concluido"   no mesmo ponto onde o `Lead` da Meta dispara
-3. consentimento                    a MESMA cerca do pixel da Meta
+lib/analytics/google-ads-id.ts       higieniza o AW- e o rotulo
+lib/analytics/conversao-google.ts    a decisao de disparar, testavel sem DOM
+lib/analytics/superficie-publica.ts  onde pode existir rastreador
+components/analytics/google-ads.tsx  a tag, com as 4 cercas do Meta Pixel
+supabase/migrations/0071_gclid…      guarda o id de clique
+components/landing/usar-destino…     leva a origem adiante nos CTAs
 ```
 
-O ponto 3 não é opcional e já tem precedente caro neste projeto: a Conversions
-API enviava dado de quem clicou "Recusar" porque a decisão vive em
-`localStorage` e o servidor não lê `localStorage`. A tag do Google entra pelo
-mesmo caminho de `components/analytics/isolar-analytics.tsx`, com
-`podeRastrear` decidindo — nunca antes do aceite.
+### A armadilha que quase engoliu tudo: a CSP
 
-**A Política de Privacidade já foi preparada para isso em 03/09**: a seção 3
-deixou de negar cookie de publicidade e a lista de suboperadores passou a
-declarar quem recebe dado. Adicionar o Google como destinatário de medição é
-acrescentar uma linha em `SUBOPERADORES` — a finalidade declarada no banner
-("medir de onde vêm as visitas") **não muda**, então o consentimento de quem já
-respondeu continua válido e não é preciso refazer a pergunta.
+`next.config.mjs:57` liberava `connect.facebook.net` e mais nada. O script da
+tag vem de `www.googletagmanager.com`, e **a CSP é bloqueio de verdade desde 27/08** —
+o navegador recusaria o script em silêncio.
+
+O estrago seria: campanha rodando, dinheiro saindo, **zero conversão no
+painel**. Erro de configuração com aparência de anúncio ruim, e a decisão
+seguinte seria pausar a campanha que funciona.
+
+Nenhum dos quatro portões alcança isso: eles leem o código que GERA o header,
+nunca o que é SERVIDO — e os dois já discordaram aqui por 61 linhas, no
+`robots.txt` reescrito pelo Cloudflare. Por isso a conferência entrou em
+`scripts/marketing/auditar-descoberta.mjs`, que lê por HTTP.
+
+### O ponto de conversão: `/bem-vindo`, e por que só ele serve
+
+Rastreado no código, não suposto:
+
+```
+cadastro por e-mail   lib/supabase/actions.ts:137,155,215 -> /verifique-email
+                      confirmar/page.tsx:82               -> /bem-vindo
+entrada pelo Google   app/auth/callback/route.ts:55       -> /bem-vindo
+```
+
+Disparar em `/verifique-email` perderia **toda conta criada pelo Google**, que é
+o caminho de menor atrito e o mais provável em tráfego pago. É a única rota da
+área logada onde a tag entra — a do Meta continua fora dela inteira, porque as
+conversões da Meta nascem no servidor e não precisam da exceção.
+
+**Conta criada, e não "virou Pro".** Com 2 a 9 conversões por mês nenhum lance
+automático funciona (o Smart Bidding pede 15 a 30), então a conversão não serve
+para o algoritmo lançar: serve para o relatório dizer qual palavra trouxe
+cadastro. Lance fica em **CPC manual**.
+
+### Consentimento e política, fechados junto
+
+A cerca é a mesma do pixel, e o precedente é caro: a Conversions API enviava
+dado de quem clicou "Recusar" porque a decisão vive em `localStorage` e o
+servidor não lê `localStorage`. Aqui a tag é do navegador, e as três condições
+(aceite, `gtag` presente, ainda não contado) são função pura com teste.
+
+**A política foi junto, não depois.** O Google Ads entrou em `SUBOPERADORES` em
+entrada SEPARADA da do login com Google — login é execução de contrato, medição
+depende de consentimento, e uma linha misturada diria ao titular que ele não
+pode recusar o que pode. A seção 3 nomeava só a Meta e passou a nomear as duas.
+
+A finalidade declarada no banner ("medir de onde vêm as visitas") **não muda**,
+então o consentimento de quem já respondeu continua válido.
+
+### O `gclid`, guardado hoje pelo que ele vai responder amanhã
+
+O relatório do Google sabe quem clicou e quem se cadastrou. Quem **pagou**
+acontece dias depois no Asaas, fora do alcance de qualquer tag. O caminho
+oficial é a importação de conversão offline, e ela exige exatamente um dado: o
+`gclid` daquele clique.
+
+A importação **não** entra agora (OAuth, developer token e aprovação do Google,
+semanas). Mas ela é impossível sem histórico, e histórico não se cria depois:
+cada dia rodando sem a coluna é um dia de cliques que nunca poderão ser
+reconciliados com o dinheiro que trouxeram.
+
+### O eco, e o segundo botão que quase ficou de fora
+
+O anúncio leva a `/quanto-custa-um-crm`, não a `/cadastro`. `ecoDaPeca` lê
+`utm_content` da URL, então o CTA precisa levar a origem adiante — senão o
+"grátis, sem cartão" some diante dos quatro campos.
+
+**Corrigir só o CTA do corpo não bastava.** Medido no navegador: a mesma página
+tem DOIS botões "Começar grátis" — o do texto e o da `PublicNavbar` —, e qual
+promessa a pessoa veria dependia de qual dos dois idênticos ela clicasse. A
+regra virou um hook usado pelos dois.
+
+Só `g1_preco` tem eco, porque só ele vai ao ar. Eco para grupo que não existe
+seria código morto com aparência de recurso — a razão que já recusou o tipo
+`whatsapp_caiu` nas notificações.
 
 ---
 
@@ -224,11 +292,36 @@ mesmo pequeno.
 
 ## O que falta, e é do dono
 
-- [ ] **Conta no Google Ads.** Leva minutos em <https://ads.google.com>. Se já
-      existir uma, o ID de 10 dígitos (formato `123-456-7890`) é o que preciso.
-- [ ] **Método de pagamento** na conta nova. Não é o mesmo sistema da Meta,
-      então o bloqueio de lá não afeta este.
+O código está pronto e provado. O que falta não tem linha de código nenhuma.
 
-Com o ID em mãos, o que entra no código é a tag e a conversão; o resto —
-campanha, grupos, palavras-chave, negativas e textos — está acima, pronto para
-ser criado.
+- [ ] **Conta no Google Ads**, em <https://ads.google.com>, com método de
+      pagamento. Não é o mesmo sistema da Meta, então o bloqueio de lá não
+      afeta este.
+- [ ] **Criar a ação de conversão** (Ferramentas → Conversões → Site → "Enviar
+      formulário"). Dela saem **dois** valores.
+- [ ] **Colar os dois na Vercel**, em `production` e `preview`:
+
+      NEXT_PUBLIC_GOOGLE_ADS_ID                  AW-123456789
+      NEXT_PUBLIC_GOOGLE_ADS_CONVERSION_LABEL    AbC-dEfG_hIj
+
+      **Sem o segundo, a tag carrega e nenhuma conversão é contada.** É a falha
+      mais silenciosa daqui, e por isso o componente exige os dois para
+      desenhar qualquer coisa.
+
+      São `NEXT_PUBLIC_` porque a tag roda no navegador — não são segredo, e o
+      valor aparece no HTML por desenho, como o do pixel da Meta.
+
+- [ ] **Criar a campanha** com a estrutura acima: um grupo só, CPC manual,
+      Rede de Pesquisa apenas, correspondência de frase ou exata.
+
+### E a ordem importa
+
+Colar as variáveis **antes** de promover o deploy que traz a CSP nova faz a tag
+tentar carregar contra a política antiga e ser recusada em silêncio. Depois de
+promover, `node scripts/marketing/auditar-descoberta.mjs` diz se o header
+chegou — hoje ele reprova de propósito, porque produção ainda serve a CSP sem o
+`googletagmanager`.
+
+**A primeira coisa a olhar não é venda, é CPC real.** Se as palavras saírem a
+R$ 2-3, o desenho funciona e volume é questão de tempo. Se saírem a R$ 10, o
+leilão recusou o argumento e a decisão é parar — não aumentar.

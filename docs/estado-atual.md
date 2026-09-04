@@ -4,9 +4,9 @@ Documento de continuidade. É lido no começo de toda sessão (referenciado no
 [CLAUDE.md](../CLAUDE.md)) para que uma conversa nova, ou outra conta, comece
 sabendo o que já foi feito, o que foi decidido e onde estão as armadilhas.
 
-**Atualizado em:** 04/09/2026 (o banco guardava qual PECA trouxe o cliente
-desde a vespera e ninguem lia; e o relatorio pulava de "cadastrou" direto para
-"pagou", sem o degrau que se move no mesmo dia)
+**Atualizado em:** 04/09/2026 (a medicao do Google Ads inteira, e a CSP que a
+mataria em silencio: campanha rodando, dinheiro saindo e zero conversao no
+painel, com aparencia de anuncio ruim)
 
 ## O histórico de agosto mora em outro arquivo
 
@@ -24,6 +24,125 @@ história:** o produto **não tem WhatsApp**. A ponte saiu em 28/08 (`c52a718`)
 porque a Evolution dava problema e a API oficial da Meta não foi aprovada. Hoje
 `FASE_DO_WHATSAPP = 'migrando'` em `lib/integrations/whatsapp-estado.ts`, e o
 que sobrou é o link `wa.me`. O porquê inteiro está no arquivo.
+
+---
+## Google Ads: a medicao inteira, e a CSP que a mataria em silencio (04/09)
+
+Pedido do dono, depois de o Meta Pay seguir bloqueado: *"vamos de uma vez por
+todas investir em google ads, tenho paciencia, tenho condicoes de pagar 25 todo
+dia"*. Google Ads e outra plataforma, outra conta e outro sistema de cobranca —
+**nao herda o bloqueio da Meta**.
+
+`docs/google-ads.md` ja tinha estrutura, palavras e textos desde 03/09. Faltava
+o codigo, e ele tinha uma armadilha que nenhum dos quatro portoes ve.
+
+### `script-src` liberava so o Facebook, e a CSP e bloqueio desde 27/08
+
+    next.config.mjs:57   script-src 'self' 'unsafe-inline' https://connect.facebook.net
+    o script da tag      https://www.googletagmanager.com   <- fora da lista
+
+O navegador **recusaria em silencio**: sem erro na tela, sem teste falhando. O
+estrago seria campanha rodando, dinheiro saindo e **zero conversao no painel** —
+erro de configuracao com aparencia de anuncio ruim, e a decisao seguinte seria
+pausar a campanha que funciona.
+
+Mesma classe do `robots.txt` do Cloudflare com 76 linhas contra 15 no codigo, da
+logo do Storage bloqueada por esta mesma CSP e do pixel com quebra de linha na
+Vercel. Por isso a conferencia entrou em `auditar-descoberta.mjs`, que le o
+header **da resposta real**, e nao o codigo que o gera.
+
+**O controle negativo rodou de graca:** contra producao, que ainda serve a CSP
+antiga, o portao reprova nos quatro hosts e nomeia o efeito de cada um.
+
+### O ponto de conversao e `/bem-vindo`, e e o unico que serve
+
+Rastreado no codigo, nao suposto:
+
+    cadastro por e-mail   actions.ts:137,155,215 -> /verifique-email
+                          confirmar/page.tsx:82  -> /bem-vindo
+    entrada pelo Google   callback/route.ts:55   -> /bem-vindo
+
+Disparar em `/verifique-email` perderia **toda conta criada pelo Google**, que e
+o caminho de menor atrito e o mais provavel em trafego pago.
+
+E ele exige uma excecao na area logada — a **unica**. Faz sentido: a conversao
+da Meta nasce no servidor (CAPI) e por isso o pixel fica fora da area logada
+inteira; a do Google nasce no navegador. `PREFIXOS_PRIVADOS` e
+`DOMINIO_DE_PRODUCAO` sairam do `meta-pixel.tsx` para
+`lib/analytics/superficie-publica.ts`: duas copias da mesma lista divergem, e o
+comentario original ja registra que `/hoje` e `/calendario` faltavam nela.
+
+**Dispara uma vez por conta.** `app/(dashboard)/layout.tsx:74` devolve para
+`/bem-vindo` toda vez que alguem volta com o onboarding pela metade; sem a
+marca, a mesma pessoa contaria varias vezes e o custo por conversao apareceria
+**menor do que e**.
+
+**E a conversao e "conta criada", nao "virou Pro":** com 2 a 9 conversoes por
+mes nenhum lance automatico funciona (o Smart Bidding pede 15 a 30). Ela nao
+serve para o algoritmo lancar, serve para o relatorio dizer qual palavra trouxe
+cadastro. Lance fica em CPC manual.
+
+### O teste achou um defeito MEU, e o navegador achou outro
+
+`google-ads-id.ts` copiava a limpeza de `pixel-id.ts`, que remove espaco em
+qualquer posicao. La e inofensivo — o resultado ainda tem que ser so digitos.
+Aqui o rotulo aceita letras, e `AbC dEf` virava `AbCdEf`: **um rotulo valido e
+diferente do colado**, que faria a tag carregar, a chamada sair e o Google nao
+achar a acao de conversao. Passou a recusar em vez de adivinhar.
+
+E medindo no navegador apareceu o segundo: `/quanto-custa-um-crm` tem **DOIS**
+botoes "Comecar gratis" — o do corpo e o da `PublicNavbar`. Eu tinha corrigido
+so o primeiro, entao qual promessa a pessoa via em `/cadastro` dependia de qual
+dos dois identicos ela clicasse. A regra virou `useDestinoComOrigem`, usada
+pelos dois.
+
+### O `gclid` entra hoje pelo que ele responde amanha
+
+O relatorio do Google sabe quem clicou e quem se cadastrou. Quem **pagou**
+acontece dias depois no Asaas. A ponte oficial e a importacao de conversao
+offline, que exige exatamente o `gclid` daquele clique.
+
+A importacao **nao** entra agora (OAuth, developer token, semanas). Mas ela e
+impossivel sem historico, e historico nao se cria depois: cada dia sem a coluna
+e um dia de cliques que nunca poderao ser reconciliados com o dinheiro.
+
+E a 0069 ja tinha ensinado isso com outro nome, um dia antes.
+
+### A politica foi junto, nao depois
+
+Entrada **separada** da do "Google" que ja existia: login e execucao de
+contrato, medicao depende de consentimento, e uma linha misturada diria ao
+titular que ele nao pode recusar o que pode. A secao 3 nomeava so a Meta e
+passou a nomear as duas, descrevendo o que cada uma recebe — a Meta leva dado de
+contato com hash, o Google leva o id do clique e o fato da conta ter nascido.
+
+O erro que isso evita e recente: o consentimento foi construido em 02/09 e a
+politica so acompanhou em 03/09, um dia inteiro afirmando o contrario do codigo.
+
+### Provado, e o que fica em aberto
+
+    CSP        o portao reprova contra producao (4 hosts), e o config novo passa
+    CTA        os DOIS botoes levam a origem; `token=segredo` descartado
+    eco        /cadastro mostra "Comece gratis, sem cartao" com o g1_preco
+    negativo   sem query, nenhum `?` pendurado nos links
+    tag        NAO carrega em localhost (dominio errado, sem ID) — cerca ok
+    0071       aplicada em producao, controle negativo toma 42703
+
+1.066 testes. **A tag nunca carregou de verdade**, porque o `AW-` ainda nao
+existe: depende da conta do dono. O caminho do navegador ate o Google e o unico
+trecho nao exercitado, e so a primeira conversao real fecha isso.
+
+**Um so grupo de anuncio, e um so eco.** R$ 25/dia repartido em tres da R$ 8
+cada, sem nenhum juntar cliques suficientes para dizer coisa alguma. Eco para
+grupo que nao existe seria codigo morto com aparencia de recurso — a razao que
+ja recusou `whatsapp_caiu`.
+
+**A conta honesta, sem otimismo:** R$ 750/mes da 60 a 180 cliques e 2 a 9
+cadastros. Quantos viram pagantes e um numero que este produto nunca teve. O
+minimo praticado pelo setor e 3 a 5 vezes maior — cauda longa, correspondencia
+exata e pagina de conteudo casando com a busca sao a unica forma de o valor
+caber, porque atacam o CPC em vez do volume. **A primeira coisa a olhar nao e
+venda, e CPC real.**
 
 ---
 ## Seis anuncios, seis promessas, e uma porta que nao repetia nenhuma (04/09)

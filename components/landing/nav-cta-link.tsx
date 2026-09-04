@@ -4,6 +4,7 @@ import * as React from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 
+import { useDestinoComOrigem } from '@/components/landing/usar-destino-com-origem'
 import { cn } from '@/lib/utils'
 
 /** Mesmo valor do ScrollLink, consistência de toque na navbar inteira. */
@@ -33,6 +34,16 @@ export const NavCtaLink = React.forwardRef<HTMLAnchorElement, Props>(function Na
   const router = useRouter()
   const [pressionado, setPressionado] = React.useState(false)
 
+  /**
+   * Este botão é o SEGUNDO caminho para `/cadastro` em toda página pública, e
+   * sem isto ele perdia a origem enquanto o CTA do corpo a mantinha.
+   *
+   * Medido no navegador em 04/09: `/quanto-custa-um-crm` tem dois botões
+   * "Começar grátis" idênticos, e qual promessa a pessoa via em `/cadastro`
+   * dependia de qual dos dois ela clicasse. Ver `useDestinoComOrigem`.
+   */
+  const destino = useDestinoComOrigem(href.toString())
+
   function aoClicar(evento: React.MouseEvent<HTMLAnchorElement>) {
     onClick?.(evento)
     if (evento.defaultPrevented) return
@@ -43,7 +54,10 @@ export const NavCtaLink = React.forwardRef<HTMLAnchorElement, Props>(function Na
     setPressionado(true)
 
     window.setTimeout(() => {
-      router.push(href.toString())
+      // `destino`, não `href`: a navegação aqui é programática, e usar o `href`
+      // cru faria o link MOSTRAR a origem na barra de status e navegar sem ela.
+      // Discordância invisível — o caso mais difícil de achar depois.
+      router.push(destino)
     }, DELAY_MS)
     // Sem reset de `pressionado`: a navegação troca a página, o componente
     // desmonta sozinho, resetar aqui não teria efeito útil.
@@ -52,7 +66,7 @@ export const NavCtaLink = React.forwardRef<HTMLAnchorElement, Props>(function Na
   return (
     <Link
       ref={ref}
-      href={href}
+      href={destino}
       onClick={aoClicar}
       className={cn(
         'transition-all duration-150 ease-out',

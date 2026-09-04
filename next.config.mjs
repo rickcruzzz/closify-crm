@@ -47,6 +47,41 @@
  */
 const emDesenvolvimento = process.env.NODE_ENV === 'development'
 
+/**
+ * Os hosts do Google Ads, e por que eles precisam estar aqui ANTES da tag.
+ *
+ * ## O modo de falha que isto evita
+ *
+ * A CSP deste projeto é bloqueio de verdade desde 27/08 (ver o comentário do
+ * header, abaixo). Um `gtag.js` servido de `www.googletagmanager.com` sem esta
+ * entrada é **recusado em silêncio**: sem erro na tela, sem teste falhando, com
+ * o registro só no console de quem estivesse olhando.
+ *
+ * A campanha rodaria, o dinheiro sairia, e o painel do Google mostraria zero
+ * conversão — erro de configuração com **aparência de anúncio ruim**. A decisão
+ * seguinte seria pausar a campanha que funciona.
+ *
+ * É a mesma classe que já custou caro aqui três vezes: a logo do Storage
+ * bloqueada por esta mesma CSP, o pixel com quebra de linha colada na Vercel, e
+ * o `robots.txt` do Cloudflare com 76 linhas contra 15 no código. **Configuração
+ * fora do repositório que mudaria o comportamento do produto.**
+ *
+ * Por isso `scripts/marketing/auditar-descoberta.mjs` confere este header na
+ * RESPOSTA REAL, por HTTP. "A tag está no código" e "a tag consegue carregar"
+ * são duas coisas diferentes, e é a segunda que gasta dinheiro.
+ */
+const GTAG = 'https://www.googletagmanager.com'
+
+/**
+ * Para onde o ping de conversão sai depois que o `gtag` carrega.
+ *
+ * `www.google.com.br` entra junto do `.com` porque o Google manda o ping pelo
+ * TLD do país de quem clicou, e o alvo daqui é o Brasil inteiro. Omitir o
+ * `.com.br` perderia exatamente as conversões que a campanha existe para medir.
+ */
+const PING_DE_CONVERSAO =
+  'https://googleads.g.doubleclick.net https://www.google.com https://www.google.com.br'
+
 const csp = [
   "default-src 'self'",
   // `unsafe-inline` é inevitável enquanto as páginas forem estáticas: o Next
@@ -54,7 +89,7 @@ const csp = [
   // vale, porque bloqueia script vindo de origem externa. `connect.facebook.net`
   // é o loader do Meta Pixel (components/analytics/meta-pixel.tsx), só nas
   // páginas públicas, mas a CSP é do site inteiro, não dá pra restringir por rota.
-  `script-src 'self' 'unsafe-inline'${emDesenvolvimento ? " 'unsafe-eval'" : ''} https://connect.facebook.net`,
+  `script-src 'self' 'unsafe-inline'${emDesenvolvimento ? " 'unsafe-eval'" : ''} https://connect.facebook.net ${GTAG}`,
   // O next-themes escreve `style` inline no elemento raiz antes da hidratação
   // para evitar flash de tema; sem `unsafe-inline` a página perde formatação.
   "style-src 'self' 'unsafe-inline'",
@@ -76,12 +111,12 @@ const csp = [
   // Lido da mesma variável de `connect-src` em vez de escrito à mão: o
   // projeto do Supabase já mudou uma vez (a migração para São Paulo, em
   // 12/08), e um host fixo aqui voltaria a quebrar na próxima.
-  `img-src 'self' data: blob: ${process.env.NEXT_PUBLIC_SUPABASE_URL ?? ''} https://www.facebook.com`,
+  `img-src 'self' data: blob: ${process.env.NEXT_PUBLIC_SUPABASE_URL ?? ''} https://www.facebook.com ${GTAG} ${PING_DE_CONVERSAO}`,
   "font-src 'self'",
   // Supabase por HTTPS e por WebSocket (realtime), e o Meta Pixel manda o
   // evento de rastreamento por fetch/beacon pra www.facebook.com quando JS
   // está ativo (o `<img>` do noscript acima cobre só quem desativou).
-  `connect-src 'self' ${process.env.NEXT_PUBLIC_SUPABASE_URL ?? ''} ${(process.env.NEXT_PUBLIC_SUPABASE_URL ?? '').replace('https://', 'wss://')} https://www.facebook.com`,
+  `connect-src 'self' ${process.env.NEXT_PUBLIC_SUPABASE_URL ?? ''} ${(process.env.NEXT_PUBLIC_SUPABASE_URL ?? '').replace('https://', 'wss://')} https://www.facebook.com ${GTAG} ${PING_DE_CONVERSAO}`,
   // ## As duas violações do Meta Pixel são ESPERADAS. Não "conserte".
   //
   // Com o pixel ativo, o console registra duas recusas em `/cadastro`:
@@ -105,6 +140,17 @@ const csp = [
   // de exfiltrar dado por submit de formulário — em troca de zero evento
   // recuperado. O `fbp` continua sendo gerado sem o iframe, conferido na
   // própria requisição que chega com 200.
+  //
+  // ## O Google Ads segue a MESMA disciplina, e por isso `frame-src` fica fechado
+  //
+  // O `gtag` moderno manda a conversão por `img`/`fetch`, que as duas diretivas
+  // acima já cobrem. Implementações antigas caíam num iframe de
+  // `googleads.g.doubleclick.net`, e abri-lo preventivamente seria pagar uma
+  // diretiva de segurança por um caminho que talvez nem exista aqui.
+  //
+  // A ordem é a mesma que tornou seguro ligar esta CSP: **medir primeiro**. Se
+  // o console de produção acusar recusa de `frame-src` E uma conversão real se
+  // perder, abre-se então — com o número na mão, não por precaução.
   "form-action 'self'",
   // Redundante com X-Frame-Options, mas é a diretiva moderna e vale manter.
   "frame-ancestors 'none'",
