@@ -13,10 +13,31 @@ roda, o que é manual, o que falta pro CI existir de verdade) em
 Kanban, leads, dashboard, multi-empresa, billing pelo Asaas e e-mails
 transacionais funcionando. Não é greenfield, não recrie nada do zero.
 
-O estado atual do projeto, o que está pendente, as decisões que não devem ser
-refeitas e as armadilhas já pagas, vem importado logo abaixo. É `@` e não link
-markdown de propósito: o `@` embute o conteúdo do arquivo neste, e link
-dependeria de alguém decidir abrir.
+## Antes de propor construir qualquer coisa: [docs/capacidades.md](docs/capacidades.md)
+
+Índice de uma linha por capacidade, com o arquivo onde ela vive. Responde
+**"isso já existe?"** numa leitura, e tem uma seção `O que NÃO existe` para a
+outra metade da pergunta.
+
+Ele nasceu de um erro concreto: em 03/09 foi proposto construir um rastreamento
+de ativação que existia desde 31/08, com o raciocínio já escrito no comentário
+do próprio arquivo. O fato estava no `estado-atual.md` — não perdido, mas entre
+250 KB, e não encontrado na hora em que decidia alguma coisa.
+
+Os caminhos citados lá são conferidos por `scripts/ci/conferir-documentos.mjs`,
+então o índice não envelhece em silêncio.
+
+## O estado atual, importado
+
+O que está pendente, as decisões que não devem ser refeitas e as armadilhas já
+pagas vêm importados logo abaixo. É `@` e não link markdown de propósito: o `@`
+embute o conteúdo do arquivo neste, e link dependeria de alguém decidir abrir.
+
+**Ele guarda setembro e o que é perene.** As rodadas de agosto foram para
+[docs/historico-agosto.md](docs/historico-agosto.md) em 04/09, inteiras e sem
+resumo — o documento tinha chegado a 250 KB e parado de funcionar como memória.
+O arquivo é a leitura de quando você precisa do porquê inteiro de uma decisão
+de agosto.
 
 @docs/estado-atual.md
 

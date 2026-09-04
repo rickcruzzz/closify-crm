@@ -47,15 +47,15 @@ const RAIZ = resolve(join(dirname(fileURLToPath(import.meta.url)), '..', '..'))
 const REMOVIDOS_COM_REGISTRO = new Map([
   [
     'components/settings/evolution-connect-dialog.tsx',
-    'ponte do WhatsApp, removida em 28/08 (c52a718) — ver estado-atual.md',
+    'ponte do WhatsApp, removida em 28/08 (c52a718) — ver historico-agosto.md',
   ],
   [
     'lib/emails/whatsapp-desconectado.ts',
-    'ponte do WhatsApp, removida em 28/08 (c52a718) — ver estado-atual.md',
+    'ponte do WhatsApp, removida em 28/08 (c52a718) — ver historico-agosto.md',
   ],
   [
     'scripts/diagnostico/vigiar-sessao-whatsapp.mjs',
-    'ponte do WhatsApp, removida em 28/08 (c52a718) — ver estado-atual.md',
+    'ponte do WhatsApp, removida em 28/08 (c52a718) — ver historico-agosto.md',
   ],
 ])
 
