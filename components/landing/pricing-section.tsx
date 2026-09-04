@@ -5,7 +5,6 @@ import {
   Check,
   Contact,
   Filter,
-  Headset,
   LayoutDashboard,
   Mail,
   Send,
@@ -154,6 +153,18 @@ const plans: Plan[] = [
      * vem primeiro, e por isso nao leva "sem os limites": as tres linhas de
      * ilimitado logo abaixo ja mostram isso, e dizer mais mostrar a mesma
      * coisa gasta uma linha.
+     *
+     * ## Nao ha linha de suporte aqui, e ela NAO deve voltar como "prioritario"
+     *
+     * Ja existiu, e era FALSO: nao ha fila, SLA nem sistema de chamado —
+     * Free e Pro escrevem para o mesmo endereco e chegam na mesma pessoa. Foi
+     * removida de tres superficies por isso, virou prazo por um dia, e o dono
+     * decidiu tirar de vez.
+     *
+     * Se alguem quiser vender suporte aqui de novo, o unico texto honesto e um
+     * PRAZO que a pessoa cumpra — nunca uma palavra que descreva um mecanismo
+     * inexistente. Mesma classe do "contatos ilimitados" removido em 23/08 e do
+     * CNPJ exibido como prova estando baixado.
      */
     features: [
       { texto: 'Tudo do Free', icone: Check },
@@ -192,24 +203,6 @@ const plans: Plan[] = [
       { texto: 'Empresas ilimitadas', icone: Building2 },
       { texto: 'Colaboradores ilimitados', icone: Users },
       { texto: 'Contatos ilimitados', icone: Contact },
-      /**
-       * NAO volta a ser "Suporte prioritário". Aquilo era FALSO.
-       *
-       * Nao existe fila, SLA nem sistema de chamado no produto: suporte e
-       * `suporte@velofunil.com.br` encaminhando para uma caixa pessoal. Free
-       * e Pro escrevem para o mesmo endereco e chegam na mesma pessoa — nao
-       * ha o que priorizar. Mesma classe do "contatos ilimitados" removido
-       * daqui em 23/08 e do CNPJ exibido como prova estando baixado.
-       *
-       * O prazo entra no lugar, e a diferenca e essa: **24h uteis e promessa
-       * sobre o proprio comportamento**, que uma pessoa so cumpre; "prioritario"
-       * e afirmacao sobre um sistema que nao existe.
-       *
-       * "de quem faz o produto" fica porque e o que concorrente grande nao
-       * consegue prometer. So "resposta em 24h uteis" seria a frase que todo
-       * SaaS tem.
-       */
-      { texto: 'Resposta em até 24h úteis, de quem faz o produto', icone: Headset },
     ],
     // Dizia "Voce ja esta usando tudo isso nos seus 7 dias", verdade enquanto
     // a empresa nascia com trial. Com a 0057 deixou de ser, e frase que

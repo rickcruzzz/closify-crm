@@ -53,24 +53,8 @@ const PRO_FEATURES = [
   'Empresas ilimitadas',
   'Colaboradores ilimitados',
   'Contatos ilimitados',
-  /**
-   * NÃO volta a ser "Suporte prioritário". Aquilo era FALSO.
-   *
-   * Não existe fila, SLA nem sistema de chamado no produto: suporte é
-   * `suporte@velofunil.com.br` encaminhando para uma caixa pessoal. Free e Pro
-   * escrevem para o mesmo endereço e chegam na mesma pessoa — não há o que
-   * priorizar.
-   *
-   * Mesma classe do "contatos ilimitados" removido da landing em 23/08 e do
-   * CNPJ exibido como prova de confiança estando baixado.
-   *
-   * O prazo entra no lugar, e a diferença é essa: 24h úteis é promessa sobre o
-   * PRÓPRIO COMPORTAMENTO, que uma pessoa só cumpre; "prioritário" é afirmação
-   * sobre um sistema que não existe.
-   *
-   * Aqui dentro doeria mais que na landing — é o que quem JÁ PAGOU lê.
-   */
-  'Resposta em até 24h úteis, de quem faz o produto',
+  // Não há linha de suporte, e ela NÃO deve voltar como "prioritário": era
+  // falso, não existe fila nem SLA. Se um dia voltar, só como PRAZO cumprível.
 ]
 
 export function PlanComparisonTable({ plan }: { plan: 'free' | 'pro' }) {
