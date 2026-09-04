@@ -140,11 +140,101 @@ export type DesempenhoDaCampanha = {
 }
 
 /**
- * Compara UTM sem diferenciar maiúscula nem espaço nas pontas: quem monta a URL
- * do anúncio digita à mão, e um espaço a mais não pode fazer um cliente pagante
- * desaparecer do relatório.
+ * A faixa Unicode dos acentos que o `NFD` separa da letra (U+0300 a U+036F).
+ *
+ * Montada por `fromCharCode` de propósito, em vez de escrita direta no regex:
+ * são caracteres COMBINANTES, invisíveis no editor, e o formatador do projeto
+ * os reescreve para a forma literal em toda gravação. `\p{M}` seria o certo e
+ * exige a flag `u`, que o `target` deste projeto não aceita (TS1501).
  */
-const normalizar = (valor: string | null) => valor?.trim().toLowerCase() ?? ''
+const MARCAS_COMBINANTES = new RegExp(
+  `[${String.fromCharCode(0x300)}-${String.fromCharCode(0x36f)}]`,
+  'g',
+)
+
+/**
+ * Reduz nome de campanha e valor de UTM à mesma forma comparável.
+ *
+ * Tudo que não é letra ou número vira separador, o acento sai, e a caixa é
+ * baixada. `Velo Funil — aquisicao (cadastro)` e `aquisicao_cadastro` viram
+ * `velo-funil-aquisicao-cadastro` e `aquisicao-cadastro`.
+ *
+ * O `trim` sozinho não bastava: quem monta a URL não pode escrever espaço,
+ * travessão nem parêntese nela, então o nome da campanha e o `utm_campaign`
+ * NUNCA vão ser idênticos por escrito. Ver `casarComCampanha`.
+ */
+const chaveDeUtm = (valor: string | null): string =>
+  (valor ?? '')
+    .normalize('NFD')
+    .replace(MARCAS_COMBINANTES, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+
+const segmentos = (valor: string | null): string[] =>
+  chaveDeUtm(valor)
+    .split('-')
+    .filter((s) => s !== '')
+
+/**
+ * Se `procurados` aparece dentro de `dentro` como sequência CONTÍGUA.
+ *
+ * Por segmento, e não por `includes` de texto cru: `pro` é substring de
+ * `producao`, e casar campanha por pedaço de palavra atribuiria cliente à
+ * campanha errada — pior que não atribuir, porque parece resultado.
+ */
+function contemSequencia(dentro: string[], procurados: string[]): boolean {
+  if (procurados.length === 0 || procurados.length > dentro.length) return false
+
+  for (let i = 0; i <= dentro.length - procurados.length; i += 1) {
+    if (procurados.every((s, j) => dentro[i + j] === s)) return true
+  }
+  return false
+}
+
+/**
+ * Decide de qual campanha veio UMA empresa. `null` quando não dá para dizer.
+ *
+ * ## Por que não é comparação de igualdade, e o defeito que provou isso
+ *
+ * A campanha real se chama `Velo Funil — aquisicao (cadastro)` e os seis
+ * criativos apontam para `...&utm_campaign=aquisicao_cadastro`. Conferido na
+ * API da Meta em 04/09: os seis carregam `utm_content` corretamente, e **nenhum
+ * casava com a campanha**. Todo cadastro cairia em "sem campanha identificada",
+ * a tabela por peça apareceria vazia, e a campanha mostraria gasto com zero
+ * resultado — atribuição quebrada com aparência de anúncio ruim.
+ *
+ * Não é erro de digitação: espaço, travessão e parêntese não cabem numa URL, e
+ * o nome de campanha existe para ser lido no painel da Meta. **Os dois nunca vão
+ * ser idênticos por escrito.** Casar por igualdade é frágil por construção — e
+ * renomear a campanha no painel quebraria a atribuição em silêncio, sem nada na
+ * tela avisando.
+ *
+ * ## A trava: ambiguidade não vira palpite
+ *
+ * Exato ganha de contido. Se sobrar mais de uma candidata, devolve `null` — a
+ * empresa conta como "veio de anúncio, campanha desconhecida", que é
+ * exatamente o que se sabe dela. Atribuir ao acaso poria receita de uma
+ * campanha na conta de outra, e a decisão seguinte seria pausar a que funciona.
+ */
+function casarComCampanha(
+  utmCampaign: string | null,
+  campanhas: { id: string; nome: string }[],
+): string | null {
+  const alvo = segmentos(utmCampaign)
+  if (alvo.length === 0) return null
+  const chaveAlvo = alvo.join('-')
+
+  const exatas = campanhas.filter((c) => chaveDeUtm(c.nome) === chaveAlvo)
+  if (exatas.length === 1) return exatas[0].id
+  // Duas campanhas com o mesmo nome: nem o dono saberia de qual veio.
+  if (exatas.length > 1) return null
+
+  const contidas = campanhas.filter(
+    (c) => contemSequencia(segmentos(c.nome), alvo) || contemSequencia(alvo, segmentos(c.nome)),
+  )
+  return contidas.length === 1 ? contidas[0].id : null
+}
 
 /** O balde de quem veio pela campanha sem dizer por qual peça. */
 const PECA_NAO_IDENTIFICADA = '__sem_peca__'
@@ -166,7 +256,10 @@ function desdobrarEmPecas(vindas: EmpresaAtribuivel[]): DesempenhoDaPeca[] {
   const porPeca = new Map<string, { rotulo: string; empresas: EmpresaAtribuivel[] }>()
 
   for (const empresa of vindas) {
-    const bruto = normalizar(empresa.utmContent)
+    // Mesma normalização do nome de campanha: `a1_ancora_preco` e
+    // `a1-ancora-preco` são a mesma peça escrita com separador diferente, e
+    // separá-las dividiria o resultado de um criativo em duas linhas.
+    const bruto = chaveDeUtm(empresa.utmContent)
     const chave = bruto === '' ? PECA_NAO_IDENTIFICADA : bruto
     const atual = porPeca.get(chave)
 
@@ -233,9 +326,20 @@ export function cruzarCampanhasComClientes(
   empresas: EmpresaAtribuivel[],
   mensalidade: number,
 ): DesempenhoDaCampanha[] {
+  // ## Resolver ANTES de agrupar, e não filtrar campanha por campanha
+  //
+  // O filtro por campanha permitia a mesma empresa casar com duas — e as duas
+  // contariam o mesmo cliente pagante, cada uma dividindo o próprio gasto por
+  // ele. Somando, o relatório mostraria mais clientes do que existem.
+  //
+  // Resolvido uma vez por empresa, "de qual campanha veio" passa a ter UMA
+  // resposta, e a soma das campanhas fecha com a base.
+  const campanhaDaEmpresa = new Map<string, string | null>(
+    empresas.map((e) => [e.id, casarComCampanha(e.utmCampaign, campanhas)]),
+  )
+
   return campanhas.map((campanha) => {
-    const chave = normalizar(campanha.nome)
-    const vindas = empresas.filter((e) => normalizar(e.utmCampaign) === chave)
+    const vindas = empresas.filter((e) => campanhaDaEmpresa.get(e.id) === campanha.id)
     const ativaram = vindas.filter((e) => e.ativou).length
     const pagantes = vindas.filter((e) => e.pagando).length
 
@@ -280,6 +384,20 @@ export type ResumoDaAtribuicao = {
    */
   semCampanhaIdentificada: number
   /**
+   * Empresas que trazem um `utm_campaign` que não bate com NENHUMA campanha.
+   *
+   * Problema diferente do de cima, e mais insidioso: a URL do anúncio está
+   * completa, o dado chegou inteiro, e mesmo assim a atribuição não fecha —
+   * porque o nome não corresponde a campanha nenhuma da conta. Acontece quando
+   * a campanha é renomeada no painel da Meta depois do anúncio no ar, ou quando
+   * a URL aponta para um nome que nunca existiu.
+   *
+   * Sem este número, "a campanha gastou e não trouxe ninguém" e "a campanha
+   * trouxe e o relatório não achou" são indistinguíveis na tela — e a decisão
+   * seguinte seria pausar uma campanha que está funcionando.
+   */
+  comCampanhaNaoReconhecida: number
+  /**
    * Quantas empresas a campanha reconhece mas a PEÇA não.
    *
    * Um nível abaixo de `semCampanhaIdentificada`, e um problema diferente: o
@@ -311,6 +429,14 @@ export function resumirAtribuicao(
       custoPorCliente !== null && mensalidade > 0 ? custoPorCliente / mensalidade : null,
     semCampanhaIdentificada: empresas.filter((e) => e.veioDeCliqueDeAnuncio && !e.utmCampaign)
       .length,
+    // Toda empresa contada em `cadastros` tem `utmCampaign` — `casarComCampanha`
+    // devolve `null` para valor vazio. Então quem tem a marca e não foi contado
+    // é exatamente quem não casou com campanha nenhuma, e a subtração basta:
+    // não precisa da lista de campanhas aqui.
+    comCampanhaNaoReconhecida: Math.max(
+      0,
+      empresas.filter((e) => e.utmCampaign).length - cadastros,
+    ),
     // Sai do `desempenho`, não de `empresas`: só conta quem JÁ casou com uma
     // campanha. Contar direto na lista de empresas somaria quem não veio de
     // anúncio nenhum — toda conta orgânica tem `utm_content` nulo, e o aviso

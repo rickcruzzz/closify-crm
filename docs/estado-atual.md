@@ -26,6 +26,71 @@ porque a Evolution dava problema e a API oficial da Meta não foi aprovada. Hoje
 que sobrou é o link `wa.me`. O porquê inteiro está no arquivo.
 
 ---
+## O nome da campanha NUNCA vai bater com o `utm_campaign` (04/09)
+
+Achado conferindo a outra ponta na API da Meta, logo depois da rodada abaixo.
+Os seis criativos carregam `utm_content` certinho — essa metade estava boa. A
+outra estava quebrada:
+
+    nome da campanha na Meta   "Velo Funil — aquisicao (cadastro)"
+    utm_campaign nas 6 URLs    "aquisicao_cadastro"
+
+`cruzarCampanhasComClientes` casava por IGUALDADE. Todo cadastro dos seis
+anuncios cairia em "sem campanha identificada", a tabela por peca apareceria
+vazia, e a campanha mostraria gasto com zero resultado. **Atribuicao quebrada
+com aparencia de anuncio ruim** — e a decisao seguinte seria pausar a campanha
+que funciona.
+
+**Nao e erro de digitacao, e estrutural.** Espaco, travessao e parentese nao
+cabem numa URL, e nome de campanha existe para ser lido no painel. Os dois
+nunca vao ser identicos por escrito. Casar por igualdade e frágil por
+construcao: renomear a campanha no painel quebraria tudo em silencio.
+
+### O casamento agora e por SEGMENTO, com trava de ambiguidade
+
+`chaveDeUtm` reduz os dois lados a `velo-funil-aquisicao-cadastro` e
+`aquisicao-cadastro`. Exato ganha; senao, contencao de sequencia CONTIGUA de
+segmentos.
+
+**Por segmento e nao por `includes` de texto:** `pro` e substring de
+`producao`, e casar por pedaco de palavra atribuiria o cliente a campanha
+errada — pior que nao atribuir, porque parece resultado.
+
+**Ambiguidade nao vira palpite.** Duas campanhas casando devolve `null`, e a
+empresa conta como "veio de anuncio, campanha desconhecida", que e exatamente o
+que se sabe dela.
+
+**E a resolucao passou a ser por EMPRESA, nao por campanha.** O filtro anterior
+deixava a mesma empresa casar com duas, e as duas contariam o mesmo pagante
+dividindo cada uma o proprio gasto por ele — a soma mostraria mais clientes do
+que existem.
+
+### O alarme que separa "campanha ruim" de "relatorio cego"
+
+`comCampanhaNaoReconhecida`: a URL esta completa, o dado chegou inteiro, e
+mesmo assim nao fecha. Sem esse numero, "gastou e nao trouxe ninguem" e "trouxe
+e o relatorio nao achou" sao indistinguiveis na tela.
+
+Sai por subtracao, sem precisar da lista de campanhas: toda empresa contada tem
+`utmCampaign`, entao quem tem a marca e nao foi contado e quem nao casou.
+
+### Provado, e um defeito novo achado na propria prova
+
+Semeadas 5 empresas com o `utm_campaign` EXATO dos criativos reais mais uma
+orfa. A campanha real passou a casar:
+
+    a1_ancora_preco        2 cadastros   2 usaram   1 paga
+    a3_objecao_planilha    1             0          0
+    Peca nao identificada  1             0          0
+
+Os tres alarmes aparecem distintos. 985 testes.
+
+**Achado na prova:** com gasto ZERO e um pagante, `custoPorCliente` da 0 e a
+tela dizia *"Cada cliente pagante custou R$ 0,00"* — aquisicao de graca por um
+anuncio que nunca rodou. Aritmetica certa, afirmacao falsa. Linha de custo
+agora exige `gasto > 0`.
+
+---
 ## O `utm_content` era gravado e NUNCA lido (04/09)
 
 A migration 0069 criou a coluna em 03/09, `utm-capture.tsx` captura, o

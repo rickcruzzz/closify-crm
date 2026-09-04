@@ -62,6 +62,81 @@ describe('cruzarCampanhasComClientes', () => {
     expect(r.mesesParaSePagar).toBeCloseTo(200 / 49)
   })
 
+  // ## O caso REAL, medido na API da Meta em 04/09
+  //
+  // A campanha se chama `Velo Funil — aquisicao (cadastro)` e os seis criativos
+  // apontam para `...&utm_campaign=aquisicao_cadastro`. Espaço, travessão e
+  // parêntese não cabem numa URL: os dois NUNCA vão ser idênticos por escrito.
+  //
+  // Com igualdade exata, os seis anúncios reportariam zero — a campanha
+  // apareceria com gasto e nenhum resultado, e a tabela por peça, vazia.
+  describe('o nome da campanha e o utm_campaign nunca são idênticos', () => {
+    const REAL = 'Velo Funil — aquisicao (cadastro)'
+
+    it('casa a campanha real com o utm_campaign real dos seis criativos', () => {
+      const [r] = cruzarCampanhasComClientes(
+        [campanha({ nome: REAL })],
+        [empresa({ utmCampaign: 'aquisicao_cadastro', utmContent: 'a1_ancora_preco', pagando: true })],
+        MENSALIDADE,
+      )
+
+      expect(r.cadastros).toBe(1)
+      expect(r.clientesPagantes).toBe(1)
+      expect(r.pecas[0].rotulo).toBe('a1_ancora_preco')
+    })
+
+    it('ignora acento dos dois lados', () => {
+      const [r] = cruzarCampanhasComClientes(
+        [campanha({ nome: 'Aquisição — Cadastro' })],
+        [empresa({ utmCampaign: 'aquisicao-cadastro' })],
+        MENSALIDADE,
+      )
+      expect(r.cadastros).toBe(1)
+    })
+
+    // ## A trava: ambiguidade não vira palpite
+    //
+    // Atribuir ao acaso poria receita de uma campanha na conta de outra, e a
+    // decisão seguinte seria pausar justamente a que funciona.
+    it('não atribui quando duas campanhas casam com o mesmo utm', () => {
+      const desempenho = cruzarCampanhasComClientes(
+        [
+          campanha({ id: 'c1', nome: 'Velo Funil — aquisicao (cadastro)' }),
+          campanha({ id: 'c2', nome: 'Teste aquisicao cadastro frio' }),
+        ],
+        [empresa({ utmCampaign: 'aquisicao_cadastro' })],
+        MENSALIDADE,
+      )
+
+      expect(desempenho.map((c) => c.cadastros)).toEqual([0, 0])
+    })
+
+    // `pro` é substring de `producao`. Casar por pedaço de palavra atribuiria o
+    // cliente à campanha errada — pior que não atribuir, porque parece resultado.
+    it('não casa por pedaço de palavra', () => {
+      const [r] = cruzarCampanhasComClientes(
+        [campanha({ nome: 'Campanha de producao' })],
+        [empresa({ utmCampaign: 'pro' })],
+        MENSALIDADE,
+      )
+      expect(r.cadastros).toBe(0)
+    })
+
+    // Com o filtro por campanha, a mesma empresa podia casar com duas e as duas
+    // contariam o mesmo pagante — a soma mostraria mais clientes do que existem.
+    it('cada empresa entra em UMA campanha só', () => {
+      const empresas = [empresa({ id: 'a', utmCampaign: 'aquisicao_cadastro', pagando: true })]
+      const desempenho = cruzarCampanhasComClientes(
+        [campanha({ id: 'c1', nome: REAL }), campanha({ id: 'c2', nome: 'Outra' })],
+        empresas,
+        MENSALIDADE,
+      )
+
+      const soma = desempenho.reduce((t, c) => t + c.clientesPagantes, 0)
+      expect(soma).toBe(1)
+    })
+  })
+
   // Quem monta a URL do anúncio digita à mão, e um espaço a mais não pode
   // fazer um cliente pagante sumir do relatório.
   it('casa a campanha ignorando maiúscula e espaço nas pontas', () => {
@@ -332,6 +407,48 @@ describe('resumirAtribuicao', () => {
     const desempenho = cruzarCampanhasComClientes([campanha({ nome: 'A' })], empresas, MENSALIDADE)
 
     expect(resumirAtribuicao(desempenho, empresas, MENSALIDADE).semPecaIdentificada).toBe(0)
+  })
+
+  // ## O alarme que separa "campanha ruim" de "relatório cego"
+  //
+  // A URL está completa, o dado chegou inteiro, e mesmo assim não fecha —
+  // porque o nome não corresponde a campanha nenhuma da conta. Sem este
+  // número, a decisão seguinte seria pausar uma campanha que funciona.
+  it('acusa utm_campaign que não bate com campanha nenhuma', () => {
+    const empresas = [
+      empresa({ id: 'a', utmCampaign: 'campanha_que_nao_existe' }),
+      empresa({ id: 'b', utmCampaign: 'Funil frio' }),
+    ]
+    const desempenho = cruzarCampanhasComClientes(
+      [campanha({ nome: 'Funil frio' })],
+      empresas,
+      MENSALIDADE,
+    )
+    const r = resumirAtribuicao(desempenho, empresas, MENSALIDADE)
+
+    expect(r.cadastros).toBe(1)
+    expect(r.comCampanhaNaoReconhecida).toBe(1)
+  })
+
+  // Controle negativo: com tudo casando, o alarme fica calado. Sem este caso,
+  // um alarme que acende sempre seria indistinguível de um que funciona.
+  it('cala quando todo utm_campaign bate', () => {
+    const empresas = [empresa({ id: 'a', utmCampaign: 'aquisicao_cadastro' })]
+    const desempenho = cruzarCampanhasComClientes(
+      [campanha({ nome: 'Velo Funil — aquisicao (cadastro)' })],
+      empresas,
+      MENSALIDADE,
+    )
+
+    expect(resumirAtribuicao(desempenho, empresas, MENSALIDADE).comCampanhaNaoReconhecida).toBe(0)
+  })
+
+  // Conta orgânica não tem `utm_campaign`, então não pode acender o alarme.
+  it('não acusa quem chegou sem utm nenhum', () => {
+    const empresas = [empresa({ id: 'o1' }), empresa({ id: 'o2' })]
+    expect(
+      resumirAtribuicao([], empresas, MENSALIDADE).comCampanhaNaoReconhecida,
+    ).toBe(0)
   })
 
   it('sem gasto nenhum, não inventa custo', () => {

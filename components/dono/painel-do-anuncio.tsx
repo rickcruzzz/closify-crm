@@ -455,6 +455,24 @@ function Resultado({
         </p>
       )}
 
+      {/* ## O alarme que separa "campanha ruim" de "relatório cego"
+          A URL está completa, o dado chegou inteiro, e mesmo assim não fecha —
+          o `utm_campaign` não corresponde a campanha nenhuma da conta. Sem
+          isto, "gastou e não trouxe ninguém" e "trouxe e o relatório não achou"
+          são indistinguíveis, e a decisão seguinte seria pausar a campanha que
+          está funcionando. Vem primeiro por isso: é o mais caro dos três. */}
+      {resumo.comCampanhaNaoReconhecida > 0 && (
+        <p className="rounded-xl bg-amber-500/5 p-4 text-sm text-pretty ring-1 ring-amber-500/20">
+          <span className="font-medium">
+            {resumo.comCampanhaNaoReconhecida} conta(s) dizem de qual campanha vieram, e o nome não
+            bate com nenhuma campanha desta conta.
+          </span>{' '}
+          Ou a campanha foi renomeada no painel da Meta depois de o anúncio subir, ou a URL aponta
+          para um nome que não existe. Enquanto isso, esses cadastros não entram em campanha
+          nenhuma — e o relatório mostra menos resultado do que houve.
+        </p>
+      )}
+
       {resumo.semCampanhaIdentificada > 0 && (
         <p className="text-muted-foreground rounded-xl p-4 text-sm text-pretty ring-1 ring-white/10">
           {resumo.semCampanhaIdentificada} conta(s) vieram de clique de anúncio, mas sem dizer de
@@ -615,7 +633,13 @@ function LinhaDeCampanha({
             )}
           </p>
 
-          {campanha.custoPorCliente !== null ? (
+          {/* ## Sem gasto, nenhuma linha de custo — nem a de R$ 0,00
+              `custoPorCliente` é `gasto / pagantes`, então uma campanha que
+              nunca gastou e recebeu alguém por link compartilhado calcula
+              R$ 0,00 e a tela afirma "cada cliente custou R$ 0,00" — aquisição
+              de graça por um anúncio que nunca rodou. Aritmética certa,
+              afirmação falsa. Visto na prova de 04/09. */}
+          {campanha.gasto <= 0 ? null : campanha.custoPorCliente !== null ? (
             <p className="text-sm">
               <span className="text-muted-foreground">Cada cliente pagante custou</span>{' '}
               <span className="font-medium tabular-nums">
