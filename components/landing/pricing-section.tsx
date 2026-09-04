@@ -343,7 +343,17 @@ export function PricingSection() {
                 <CardHeader className="flex flex-col gap-1">
                   <div className="flex items-center gap-2">
                     <span className="font-semibold">{plan.name}</span>
-                    {plan.highlighted && <Badge>Popular</Badge>}
+                    {/* "Recomendado", e nao "Popular".
+                        Popular afirma que MUITA GENTE escolheu — prova social,
+                        e nao existe: nao ha um cliente externo pagante nesta
+                        base. Mesma classe da metrica inventada que a
+                        `StatsSection` ja teve e da promessa de "suporte
+                        prioritario" removida daqui.
+                        Recomendado e primeira pessoa: quem faz o produto diz
+                        qual plano indica. Nao depende de ninguem ter comprado,
+                        e e o que a tela de cobranca (`plan-comparison-table`)
+                        ja dizia — a landing e que estava fora de passo. */}
+                    {plan.highlighted && <Badge>Recomendado</Badge>}
                   </div>
                   <div className="flex items-baseline gap-1">
                     <span className="text-3xl font-semibold tracking-tight">
