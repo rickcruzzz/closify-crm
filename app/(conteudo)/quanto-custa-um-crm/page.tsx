@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 
+import { CtaNoMeio } from '@/components/landing/cta-no-meio'
 import { LinkComOrigem } from '@/components/landing/link-com-origem'
 
 import { buttonVariants } from '@/components/ui/button'
@@ -201,6 +202,13 @@ export default function QuantoCustaUmCrm() {
           cobrança. No preço por assento, crescer a equipe aumenta a fatura; no
           preço fixo, não muda nada.
         </LegalP>
+
+        {/* A saida no ponto em que o argumento fecha. Medido em 04/09: entre o
+            botao da navbar (y=8) e o do rodape (y=3.986) nao havia nenhum, e
+            quem se convencia AQUI precisava rolar mais quatro telas. Ver o
+            cabecalho de `cta-no-meio.tsx` para o porque de nao trocar a pagina
+            de destino pela landing. */}
+        <CtaNoMeio chamada="Faça essa conta com os seus números, sem pagar nada para ver." />
       </LegalSection>
 
       <LegalSection titulo="Por que quase todo CRM cobra por usuário">

@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 
+import { CtaNoMeio } from '@/components/landing/cta-no-meio'
 import { LinkComOrigem } from '@/components/landing/link-com-origem'
 
 import { buttonVariants } from '@/components/ui/button'
@@ -146,6 +147,10 @@ export default function CrmQueNaoCobraPorUsuario() {
           pena dar acesso?&quot; deixa de existir, e o sistema volta a ter o que
           precisa ter: todo mundo que fala com cliente, registrando.
         </LegalP>
+
+        {/* Mesmo vao da pagina irma, e mesma correcao: o argumento fecha aqui, e
+            o proximo botao ficava no rodape. Ver `cta-no-meio.tsx`. */}
+        <CtaNoMeio chamada="Coloque a equipe inteira sem a fatura mudar." />
       </LegalSection>
 
       <LegalSection titulo="Por que a cobrança por assento virou padrão">
