@@ -1,0 +1,163 @@
+{\rtf1\ansi\ansicpg1252\deff0{\fonttbl{\f0\fnil\fcharset0 Calibri;}}
+\f0\fs22
+Velo Funil - Google Ads API Basic Access Application\par
+Tool Design Document\par
+\par
+1. COMPANY OVERVIEW\par
+\par
+Velo Funil is a B2B SaaS CRM for small service businesses in Brazil\par
+(agencies, consultancies, small clinics, real estate offices, software\par
+shops). It is operated by ORLANDO HENRIQUE BASTOS DA CRUZ LTDA,\par
+CNPJ 68.877.105/0001-67, headquartered in Brazil.\par
+\par
+Website: https://www.velofunil.com.br\par
+Product: web application (Next.js), live in production.\par
+Pricing: R$ 49/month per company (flat, not per seat), plus a free tier\par
+limited to 50 contacts.\par
+\par
+We are an ADVERTISER. We advertise our own product only. We do not manage\par
+advertising accounts for third parties, we do not resell API access, and\par
+we do not build software for other advertisers.\par
+\par
+Google Ads manager account (MCC): 534-629-0307\par
+Google Ads account being read:     784-188-3291\par
+Google Cloud project number:       472861929986\par
+\par
+\par
+2. THE PROBLEM WE ARE SOLVING\par
+\par
+We run one Google Ads Search campaign with a daily budget of R$ 25.\par
+The campaign sends traffic to a content page that answers the query the\par
+user typed, and from there to our sign-up flow.\par
+\par
+The Google Ads interface tells us how many people CLICKED and how many\par
+SIGNED UP. It cannot tell us who PAID, because payment happens days later\par
+through Asaas, our Brazilian payment gateway, entirely outside Google's\par
+systems.\par
+\par
+With a budget this small, the difference matters: a keyword that produces\par
+many free sign-ups and no paying customers must be paused, and a keyword\par
+that produces few sign-ups but converts them into subscriptions must be\par
+funded. Today we cannot tell those two apart.\par
+\par
+\par
+3. THE TOOL\par
+\par
+An internal, read-only reporting page inside our own product, available\par
+only on localhost to the company owner. It is not a public feature, it is\par
+not sold, and it is not accessible to our customers.\par
+\par
+The page already exists for Meta Ads (implemented at\par
+lib/dono/meta-ads.ts) and returns HTTP 404 when the request does not come\par
+from localhost, enforced in lib/dono/somente-local.ts. The Google Ads\par
+section will follow the exact same pattern.\par
+\par
+3.1 What it displays\par
+\par
+  - Campaign, ad group and keyword performance:\par
+    impressions, clicks, average CPC, cost, conversions\par
+  - A 30-day daily cost series\par
+  - Cost per sign-up and cost per paying customer, per keyword\par
+\par
+3.2 How the data is joined\par
+\par
+  Google Ads appends a click identifier (GCLID) to our landing page URL.\par
+  Our application stores it on the workspace record when the account is\par
+  created (database migration 0071, column workspaces.gclid), together\par
+  with the UTM parameters.\par
+\par
+  Our own database already records whether a workspace later became a\par
+  paying subscriber, through our payment gateway webhook.\par
+\par
+  The tool therefore joins:\par
+    Google Ads API  ->  spend and clicks per keyword\par
+    our database    ->  GCLID -> workspace -> paid subscription\par
+\par
+  and produces the only metric that decides whether the campaign\par
+  continues: cost per PAYING customer, per keyword.\par
+\par
+\par
+4. API USAGE\par
+\par
+4.1 Services used\par
+\par
+  GoogleAdsService.SearchStream, read-only.\par
+  No mutate operations of any kind. We will not create, modify, pause or\par
+  delete campaigns, ad groups, ads, keywords or budgets through the API.\par
+  All campaign management is done by hand in the Google Ads web interface.\par
+\par
+4.2 Resources queried\par
+\par
+  customer\par
+  campaign\par
+  ad_group\par
+  ad_group_criterion (keyword text and match type)\par
+  metrics (impressions, clicks, average_cpc, cost_micros, conversions)\par
+  segments.date\par
+\par
+4.3 Example query\par
+\par
+  SELECT\par
+    campaign.name,\par
+    ad_group.name,\par
+    ad_group_criterion.keyword.text,\par
+    ad_group_criterion.keyword.match_type,\par
+    metrics.impressions,\par
+    metrics.clicks,\par
+    metrics.average_cpc,\par
+    metrics.cost_micros,\par
+    metrics.conversions,\par
+    segments.date\par
+  FROM keyword_view\par
+  WHERE segments.date DURING LAST_30_DAYS\par
+\par
+4.4 Volume\par
+\par
+  One account. Approximately 2 to 10 requests per day, triggered manually\par
+  when the owner opens the internal page. There is no polling loop and no\par
+  scheduled job. Expected volume is far below the Basic Access limit.\par
+\par
+4.5 Authentication\par
+\par
+  OAuth 2.0 with a refresh token belonging to the account owner, stored in\par
+  a local environment file that is excluded from version control. The\par
+  developer token is stored the same way. Neither value is committed to\par
+  our repository, shipped to the browser, or deployed to our hosting\par
+  provider.\par
+\par
+\par
+5. ACCESS AND DATA HANDLING\par
+\par
+  Who has access: internal only. One person, the company owner. The page\par
+  is unreachable from the public internet by design.\par
+\par
+  What we store: aggregated performance metrics only (counts, costs,\par
+  keyword text). We do not request, store or process any end-user\par
+  personal data through the Google Ads API.\par
+\par
+  We do not use the App Conversion Tracking and Remarketing API.\par
+\par
+  We do not use a tool developed by a third party. The integration is\par
+  written and maintained by us, in TypeScript, inside our own codebase.\par
+\par
+\par
+6. CURRENT MEASUREMENT SETUP\par
+\par
+  For completeness, our conversion measurement is already implemented and\par
+  verified in production:\par
+\par
+  - Google tag (AW-18431107276) loaded only after the visitor accepts our\par
+    cookie consent banner, blocked entirely otherwise, in compliance with\par
+    the Brazilian data protection law (LGPD).\par
+  - A "Sign-up" conversion action fires once per created account.\par
+  - Our privacy policy declares Google Ads as a data recipient and\par
+    describes exactly what is sent.\par
+\par
+  The API access requested here adds no new data collection from end\par
+  users. It only reads back, on our side, the aggregated performance of\par
+  the ads we are already paying for.\par
+\par
+\par
+Contact: suporte@velofunil.com.br\par
+
+}

@@ -1684,6 +1684,70 @@ resolve isso: liga no clique real (delegação de evento em `document`,
 qualquer `<a>` interno), desliga quando a rota muda de verdade, não é
 temporizador fingindo progresso.
 
+## A campanha do Google Ads existe, e o cartao a segura (05/09)
+
+Montada inteira no painel, campo a campo, com a medicao ja no ar e provada.
+
+    MCC              534-629-0307   "velo"      criada para o API Center
+    conta            784-188-3291               jonatqpedro@gmail.com
+    tag              AW-18431107276
+    conversao        Inscricao / Conta criada / Uma / 30d / ultimo clique
+    campanha         g_preco        Rede de Pesquisa, publicada 05/09
+    orcamento        R$ 25/dia      teto do mes R$ 760
+    lance            Cliques, teto de CPC R$ 3,00
+    destino          /quanto-custa-um-crm?utm_source=google&utm_medium=cpc
+                     &utm_campaign=g_preco&utm_content=g1_preco
+
+**A primeira conta foi abandonada e o porque fica registrado.** A
+`312-959-1084` nasceu no fluxo `express` com o site
+`milacruzconfeitaria.com.br` — todas as sugestoes vinham em bolo e
+confeitaria, porque o Google rastreia o site que voce informa. Ela tambem
+queimou a promocao de "gaste R$ 1.200, ganhe R$ 2.400", que **nao existe
+mais** para a conta nova.
+
+**O que o painel esconde, e custou tempo:** o fluxo de criacao de conta
+FORCA a campanha inteligente, e o Modo Especialista so aparece depois que
+a conta existe. A saida esta no rodape de uma das telas — *"Nao quer criar
+uma campanha para ja? Configure apenas uma conta"*.
+
+### As decisoes que fizeram o CPC estimado cair pela metade
+
+A estimativa do Google mudou de **R$ 7,50 para R$ 2,40** por clique quando
+o teto de R$ 3 entrou. Nao foi sorte:
+
+    teto de R$ 3        recusa todo leilao acima disso
+    cauda longa         6 termos em correspondencia de FRASE, pouca disputa
+    pagina que casa     o h1 responde a busca -> Indice de Qualidade alto
+
+R$ 7,50 e a media do mercado de CRM, puxada por `crm`, `melhor crm` e
+`sistema de vendas` — os termos recusados, onde RD Station e Pipedrive
+pagam R$ 12.
+
+**O que o Google marca como "recomendado" e sempre o oposto:** orcamento
+de R$ 198/dia, Rede de Display ligada, parceiros de pesquisa ligados,
+"Presenca ou interesse" no local (inclui quem esta FORA do Brasil),
+Maximizar conversoes (precisa de 30 conversoes/mes, teremos 2 a 9), e
+recursos automaticos que reescrevem manchete com IA.
+
+**A nota de "Pontuacao de otimizacao" caiu para 89,7% justamente por
+recusar tudo isso.** Nota baixa ali e o desenho funcionando.
+
+### O que fica em aberto
+
+    cartao            os 4 cartoes recusados (OR_BACR2_48). A campanha esta
+                      publicada e NAO VEICULA. Alternativa: trocar para
+                      pre-pago e recarregar por Pix
+    developer token   pedido de Acesso Basico enviado em 05/09.
+                      Hoje o token e "conta de teste" e nao le producao.
+                      Documento de design em docs/google-ads-api/
+    vincular          a 784-188-3291 ainda nao esta na MCC — sem isso o
+                      token aprovado nao enxerga a campanha
+    idioma            so Portugues. O Ingles nao entrou, e importa: idioma
+                      no Google Ads e a config do NAVEGADOR, entao dono de
+                      PME com Chrome em ingles fica de fora
+    verificacao       o Google exige verificacao de anunciante em ~30 dias
+                      do primeiro anuncio veiculado, ou suspende a conta
+
 ## Pendente do dono (não é código)
 
 - [ ] **A campanha da Meta não tem NENHUM anúncio.** Medido de novo em 04/09:
