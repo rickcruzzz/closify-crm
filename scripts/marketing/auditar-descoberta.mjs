@@ -242,6 +242,22 @@ try {
       // e o Brasil inteiro. Sem o `.com.br` some justamente a conversao que a
       // campanha existe para medir.
       ['img-src', 'https://www.google.com.br', 'perde a conversao de quem clicou no Brasil'],
+      // ## O host que o `gtag` tenta PRIMEIRO
+      //
+      // Medido em 05/09, com conta descartavel caminhando ate /bem-vindo: a
+      // conversao sai para `googleadservices.com` e so cai para
+      // `google.com/1p-conversion` quando aquele falha. Com a primeira versao
+      // desta lista ela chegou — pelo caminho reserva, com o principal
+      // recusado no console.
+      //
+      // Depender de fallback de terceiro para a unica metrica que a campanha
+      // produz e fragilidade: no dia em que o Google mudar a ordem, as
+      // conversoes somem sem nada falhar.
+      [
+        'connect-src',
+        'https://www.googleadservices.com',
+        'a conversao depende do caminho reserva',
+      ],
     ]
 
     const faltando = exigencias.filter(([nome, host]) => !diretiva(nome).includes(host))

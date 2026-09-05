@@ -78,9 +78,42 @@ const GTAG = 'https://www.googletagmanager.com'
  * `www.google.com.br` entra junto do `.com` porque o Google manda o ping pelo
  * TLD do país de quem clicou, e o alvo daqui é o Brasil inteiro. Omitir o
  * `.com.br` perderia exatamente as conversões que a campanha existe para medir.
+ *
+ * ## `www.googleadservices.com` entrou DEPOIS de a conversão quase se perder
+ *
+ * A primeira lista tinha os três acima e passou na prova ponta a ponta — mas o
+ * console de produção contava outra história. Medido em 05/09, com conta
+ * descartável caminhando até `/bem-vindo`:
+ *
+ *     BLOQUEADO  www.googleadservices.com/pagead/conversion/…&en=conversion
+ *                &label=L3G3CPfg…                            connect-src
+ *     PASSOU     www.google.com/pagead/1p-conversion/…&en=conversion   302
+ *                www.google.com.br/…                                  200
+ *
+ * O `gtag` tenta o `googleadservices.com` PRIMEIRO e cai para o
+ * `google.com/1p-conversion` quando falha. A conversão chegou — pelo caminho
+ * reserva.
+ *
+ * Isso não é "violação esperada e inofensiva", que é o caso das duas do Meta
+ * Pixel: lá foi medido que **nenhum** evento se perdia. Aqui o evento só
+ * sobreviveu porque existe um segundo caminho, e depender de um fallback de
+ * terceiro para a única métrica que a campanha produz é fragilidade — no dia em
+ * que o Google mudar a ordem, as conversões somem sem nada falhar.
+ *
+ * ## O que ficou de fora, e por quê
+ *
+ * `googleads.g.doubleclick.net` em **script-src**: o `gtag` tentou carregar o
+ * ping de configuração como SCRIPT (`fmt=4`), foi recusado, e refez como imagem
+ * (`fmt=3`, HTTP 302 → 200). Abrir `script-src` para um host de anúncio é
+ * permitir execução de código arbitrário vindo dele — preço alto demais por um
+ * ping que já chega por outro formato, e que nem é a conversão.
+ *
+ * `ad.doubleclick.net/ccm/s/collect`: coleta de remarketing entre domínios.
+ * Este projeto não faz remarketing, e o evento de conversão não passa por lá.
  */
 const PING_DE_CONVERSAO =
-  'https://googleads.g.doubleclick.net https://www.google.com https://www.google.com.br'
+  'https://googleads.g.doubleclick.net https://www.googleadservices.com ' +
+  'https://www.google.com https://www.google.com.br'
 
 const csp = [
   "default-src 'self'",

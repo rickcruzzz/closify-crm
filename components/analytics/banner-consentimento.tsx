@@ -8,7 +8,9 @@ import {
   CHAVE_CONSENTIMENTO,
   COOKIE_CONSENTIMENTO,
   MAX_AGE_CONSENTIMENTO,
+  ehCookieDeRastreamento,
   interpretarConsentimento,
+  linhasQueApagam,
   type Consentimento,
 } from '@/lib/analytics/consentimento'
 
@@ -36,6 +38,35 @@ export const EVENTO_CONSENTIMENTO = 'vf:consentimento'
  * ele existe.
  */
 export const VAR_ALTURA_DO_BANNER = '--altura-do-banner'
+
+/**
+ * Apaga do navegador os cookies que só existem por causa de rastreamento.
+ *
+ * A decisão de QUAIS e de EM QUE ESCOPO mora em `lib/analytics/consentimento.ts`,
+ * em funções puras e testadas — aqui fica só a escrita, que precisa de DOM.
+ *
+ * Varre `document.cookie` em vez de escrever uma lista: o Google acrescenta
+ * variantes de `_gcl_*` conforme o produto, e o que a varredura não vê é o que
+ * não está lá.
+ */
+function apagarCookiesDeRastreamento(): void {
+  try {
+    const nomes = document.cookie
+      .split('; ')
+      .map((parte) => parte.split('=')[0])
+      .filter(ehCookieDeRastreamento)
+
+    for (const nome of nomes) {
+      for (const linha of linhasQueApagam(nome, window.location.hostname)) {
+        document.cookie = linha
+      }
+    }
+  } catch {
+    // Cookie bloqueado pelo navegador: não há o que apagar, e falhar aqui não
+    // pode impedir a escolha de ser registrada — que é o que de fato para o
+    // rastreamento daqui para frente.
+  }
+}
 
 export function lerConsentimentoDoNavegador(): Consentimento | null {
   if (typeof window === 'undefined') return null
@@ -144,6 +175,20 @@ export function BannerConsentimento() {
       // Cookie bloqueado: a CAPI não recebe o sinal e, por desenho, NÃO envia.
       // Falhar para o lado de não rastrear é o comportamento certo.
     }
+
+    // ## Recusar também APAGA o que já foi gravado
+    //
+    // Achado medindo em produção em 05/09: trocar para "recusado" impedia
+    // rastreamento novo — a tag não carrega, provado nos dois sentidos — e
+    // deixava `_fbp`, `_gcl_au` e `_gcl_aw` vivos no navegador.
+    //
+    // Não era defeito da tag do Google: o `_fbp` se comportava assim desde que
+    // este banner nasceu, em 23/08. Mesma família do buraco de 02/09 — o
+    // consentimento respeitado num lugar e ignorado em outro.
+    //
+    // Só na recusa: quem aceita quer justamente que eles existam.
+    if (resposta === 'recusado') apagarCookiesDeRastreamento()
+
     window.dispatchEvent(new CustomEvent(EVENTO_CONSENTIMENTO, { detail: resposta }))
     setDecidido(true)
   }, [])

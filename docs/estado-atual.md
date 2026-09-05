@@ -4,9 +4,9 @@ Documento de continuidade. É lido no começo de toda sessão (referenciado no
 [CLAUDE.md](../CLAUDE.md)) para que uma conversa nova, ou outra conta, comece
 sabendo o que já foi feito, o que foi decidido e onde estão as armadilhas.
 
-**Atualizado em:** 04/09/2026 (a medicao do Google Ads inteira, e a CSP que a
-mataria em silencio: campanha rodando, dinheiro saindo e zero conversao no
-painel, com aparencia de anuncio ruim)
+**Atualizado em:** 05/09/2026 (a conversao do Google chegou pelo caminho
+RESERVA, com o principal recusado no console; e recusar o banner impedia
+rastreamento novo sem apagar o que ja estava gravado)
 
 ## O histórico de agosto mora em outro arquivo
 
@@ -24,6 +24,90 @@ história:** o produto **não tem WhatsApp**. A ponte saiu em 28/08 (`c52a718`)
 porque a Evolution dava problema e a API oficial da Meta não foi aprovada. Hoje
 `FASE_DO_WHATSAPP = 'migrando'` em `lib/integrations/whatsapp-estado.ts`, e o
 que sobrou é o link `wa.me`. O porquê inteiro está no arquivo.
+
+---
+## A conversao chegou pelo caminho RESERVA, e recusar nao apagava nada (05/09)
+
+Duas coisas que so apareceram exercitando o caminho real, com a medicao ja no
+ar e provada.
+
+### A prova ponta a ponta, que faltava
+
+Conta descartavel pre-confirmada pela API admin, login em producao, ate
+`/bem-vindo`. A conversao disparou e chegou:
+
+    POST www.google.com/pagead/1p-conversion/18431107276/
+         en=conversion
+         label=L3G3CPfg3O4cEMzB0dRE
+         gclaw=TESTE_PROVA_123        <- o gclid da URL, colado na conversao
+         302 -> www.google.com.br/... -> 200
+
+**O `gclid` atribuido e a metade que faltava:** prova que clique e conversao se
+ligam, e nao so que a tag dispara.
+
+Segunda visita a `/bem-vindo`: `gtag` carregado e **zero requisicoes de
+conversao**. A dedupe segura. Conta apagada num `finally`, confirmado 404.
+
+**Um desvio a registrar:** login por e-mail de conta ja confirmada cai em
+`/onboarding`, nao em `/bem-vindo`. Nao e defeito — o cadastro REAL passa por
+`/confirmar` -> `/bem-vindo`, e quem volta depois ja converteu na primeira
+passagem. Mas foi preciso navegar direto para exercitar o disparo.
+
+### A conversao chegou pelo caminho RESERVA, e ninguem teria notado
+
+O console contava outra historia que a prova sozinha nao contava:
+
+    BLOQUEADO  www.googleadservices.com/pagead/conversion/...&en=conversion
+               &label=L3G3CPfg...                             connect-src
+    PASSOU     www.google.com/pagead/1p-conversion/...        302 -> 200
+
+O `gtag` tenta o `googleadservices.com` PRIMEIRO e cai para o
+`google.com/1p-conversion` quando falha. **A conversao chegou pelo segundo.**
+
+Isso NAO e a mesma coisa que as duas violacoes do Meta Pixel, que foram medidas
+e provadas inofensivas — la nenhum evento se perdia. Aqui o evento so sobreviveu
+porque existe fallback, e depender de fallback de terceiro para a UNICA metrica
+que a campanha produz e fragilidade: no dia em que o Google mudar a ordem, as
+conversoes somem sem nada falhar.
+
+O host entrou na CSP e no portao. **Dois ficaram de fora, de proposito:**
+`googleads.g.doubleclick.net` em `script-src` (o `gtag` tentou carregar o ping
+de configuracao como SCRIPT, `fmt=4`, foi recusado e refez como imagem,
+`fmt=3` -> 200; abrir `script-src` para host de anuncio e permitir execucao de
+codigo arbitrario vindo dele) e `ad.doubleclick.net` (coleta de remarketing,
+que este projeto nao faz).
+
+### Recusar o banner nao apagava o que ja estava gravado
+
+Medido no mesmo navegador: trocar para "recusado" impede rastreamento NOVO — a
+tag nao carrega, provado nos dois sentidos — e deixava vivos:
+
+    _fbp   _gcl_au   _gcl_aw
+
+`banner-consentimento.tsx` nao apagava cookie nenhum. **Nao era regressao da tag
+do Google:** o `_fbp` se comportava assim desde que o banner nasceu, em 23/08.
+Mesma familia do buraco de 02/09 — consentimento respeitado num lugar e ignorado
+em outro.
+
+O alcance e estreito e vale dizer: quem nunca aceitou nunca teve cookie, e o
+cookie parado nao e enviado a lugar nenhum depois que o script para de carregar.
+Mas e um identificador que a pessoa pediu para nao ter.
+
+**O escopo foi o que fez a primeira tentativa falhar.** Apagar com `Path=/` e sem
+`Domain` nao tocou nos `_gcl_*`: o `_fbp` nasce no host, o `_gcl_au` nasce no
+dominio registravel para valer em qualquer subdominio. Quase registrei "nao da
+para apagar" quando o que faltava era o escopo. `dominiosParaApagar` tenta do
+host ate o dominio registravel, com e sem ponto — dominio que nao serve o
+navegador recusa sozinho, entao gerar demais custa uma linha ignorada e
+adivinhar de menos deixa o cookie vivo.
+
+**Por prefixo, nao por lista fechada:** o Google acrescenta variantes de
+`_gcl_*` conforme o produto, e lista escrita a mao envelheceria em silencio.
+Tem teste travando que o cookie de sessao do Supabase e o proprio consentimento
+NAO sao tocados — o controle que separa "apaguei o rastreamento" de "desloguei
+a pessoa".
+
+1.072 testes.
 
 ---
 ## Google Ads: a medicao inteira, e a CSP que a mataria em silencio (04/09)
