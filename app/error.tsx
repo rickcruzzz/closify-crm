@@ -4,6 +4,7 @@ import { useEffect } from 'react'
 
 import { Button } from '@/components/ui/button'
 import { jaReportadoComArvore, reportarErro } from '@/lib/erros/reportar'
+import { tentarRecuperarDeChunk } from '@/lib/erros/recuperar-chunk'
 
 export default function Error({
   error,
@@ -18,6 +19,9 @@ export default function Error({
     // em `(auth)/(transicao)/layout.tsx`) já reportou com a árvore e relançou
     // o mesmo objeto.
     if (!jaReportadoComArvore(error)) reportarErro(error, 'publico')
+    // Ver a nota em `app/(dashboard)/error.tsx`: aba velha depois de uma
+    // promocao pede chunk que nao existe mais, e recarregar resolve.
+    tentarRecuperarDeChunk(error)
   }, [error])
 
   return (

@@ -5,8 +5,8 @@ Documento de continuidade. É lido no começo de toda sessão (referenciado no
 sabendo o que já foi feito, o que foi decidido e onde estão as armadilhas.
 
 **Atualizado em:** 06/09/2026 (o instrumento que existia so para nomear o
-componente que quebra o /kanban nunca reportou uma vez, de 20/08 a 05/09, e o
-motivo estava na propria linha que o fazia funcionar)
+componente que quebra o /kanban nunca reportou uma vez, de 20/08 a 05/09; e a
+aba velha depois de uma promocao agora se recupera sozinha)
 
 ## O histórico de agosto mora em outro arquivo
 
@@ -110,10 +110,79 @@ Soltar fora de qualquer coluna tinha o mesmo buraco, e agora desfaz junto.
 
 1.085 testes.
 
-**Fica em aberto, e e de OUTRA familia:** o erro de 27/08 e
-`__webpack_require__` recebendo fabrica indefinida — aba com os chunks da
-versao antiga depois de uma promocao. Nenhuma correcao desta rodada o alcanca, e
-`skew`/`deploymentId`/`ChunkLoadError` seguem sem uma ocorrencia no repositorio.
+**A outra familia era o erro de 27/08** — `__webpack_require__` recebendo
+fabrica indefinida, aba com os chunks da versao antiga depois de uma promocao.
+Nenhuma correcao daquela rodada o alcancava. **Fechada em 06/09, ver a secao
+propria abaixo.**
+
+---
+## A aba velha se recupera sozinha, e duas coisas que este documento afirmava eram falsas (06/09)
+
+Continuacao da rodada acima, feita sem depender do dono. O erro de 27/08 no
+`/kanban` — quatro ocorrencias de `Cannot read properties of undefined (reading
+'call')` — e `__webpack_require__` recebendo `undefined` no lugar da fabrica do
+modulo: a aba tem o mapa de chunks da versao anterior e pede um arquivo que a
+promocao apagou. **Nada esta errado no codigo, e recarregar resolve** — mas quem
+ve a tela de erro conclui que o produto quebrou.
+
+### Duas afirmacoes deste documento nao eram mais verdade
+
+**1. `skewProtectionBoundaryAt` nao definido, logo sem protecao.** Falso. Medido
+na API da Vercel e no HTML servido:
+
+    skewProtectionMaxAge   43200   (12 horas)
+    HTML de producao       ?dpl=dpl_CSCss4fY36Bw6Ziii2TkBn7dcqZb
+
+A protecao ESTA ligada, e o Next 14 pendura `?dpl=` nos assets, o que faz a
+Vercel servir o chunk da versao certa. `skewProtectionBoundaryAt` e outro campo
+— e o corte manual, nao o interruptor.
+
+**O buraco que sobra e a JANELA.** Doze horas cobrem quem recarrega no mesmo
+dia; aba deixada aberta na sexta e retomada na segunda esta fora. Um CRM e
+exatamente o tipo de produto que se deixa aberto.
+
+**2. `POST /promote` devolve 422, e por isso a promocao e manual.** Falso hoje.
+Testado promovendo o deployment que JA estava em producao (mudanca zero no que
+e servido):
+
+    HTTP 409  "The provided deploymentId is already the current
+               production deployment"
+
+409 e a API **aceitando** a chamada e recusando so porque nao ha o que mudar.
+Um 422 seria recusa em bloco, que e o que acontecia em 19/08 e 23/08. Ou seja:
+promover por API voltou a funcionar, e a promocao deixou de exigir o clique.
+
+### O que foi construido
+
+`ehErroDeChunk` reconhece a familia por seis assinaturas, incluindo a variante
+do Safari (`undefined is not an object (evaluating 'n.call')`). A terceira e
+ampla o bastante para casar com um `TypeError` de verdade — por isso a
+recuperacao **nunca** depende so dela.
+
+`deveRecarregar` limita a UMA recarga por janela de 10 minutos, com a marca em
+`sessionStorage`. **A trava e a peca que impede a pior falha possivel:** erro
+que sobrevive ao reload viraria recarregar-quebrar-recarregar, e a pessoa nao
+conseguiria nem ler a mensagem nem sair da tela. Com a trava, o pior caso e
+"recarregou uma vez a toa".
+
+`sessionStorage` e nao `localStorage`, de proposito: a marca precisa morrer com
+a aba, senao a proxima sessao comeca com a trava armada e engole justamente a
+recarga que resolveria.
+
+Chamada nos TRES boundaries, sempre DEPOIS de `reportarErro` — o relato
+sobrevive a navegacao pelo `keepalive`, mas so se ja tiver saido.
+
+### Provado no navegador, com controle
+
+    chunk, 1a vez        navegacoes=4  marca GRAVADA   -> recarregou
+    chunk, 2a vez        navegacoes=2  marca GRAVADA   -> a trava barrou
+    React #185 (controle) navegacoes=2  marca NENHUMA  -> nao recarregou
+
+O controle e o que separa "recupera de aba velha" de "recarrega em qualquer
+erro". React #185 e laco de `setState`: recarregar nao resolve e apagaria o
+rastro do defeito que a rodada de 06/09 existe para nomear.
+
+1.096 testes.
 
 ---
 ## A conversao chegou pelo caminho RESERVA, e recusar nao apagava nada (05/09)

@@ -3,6 +3,7 @@
 import { useEffect } from 'react'
 
 import { reportarErro } from '@/lib/erros/reportar'
+import { tentarRecuperarDeChunk } from '@/lib/erros/recuperar-chunk'
 
 /**
  * Último recurso: erro no PRÓPRIO layout raiz.
@@ -27,6 +28,9 @@ export default function GlobalError({
   useEffect(() => {
     console.error('Erro no layout raiz', { digest: error.digest, error })
     reportarErro(error, 'global')
+    // E aqui que a aba velha mais doi: falhou o proprio layout raiz, entao a
+    // pessoa nao tem menu nem para onde ir. Ver `app/(dashboard)/error.tsx`.
+    tentarRecuperarDeChunk(error)
   }, [error])
 
   return (

@@ -5,6 +5,7 @@ import { AlertTriangle } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
 import { jaReportadoComArvore, reportarErro } from '@/lib/erros/reportar'
+import { tentarRecuperarDeChunk } from '@/lib/erros/recuperar-chunk'
 
 /**
  * Erro dentro da área logada.
@@ -35,6 +36,11 @@ export default function DashboardError({
     // gravaria uma segunda linha do mesmo incidente, e logo a pior das duas: a
     // que não nomeia componente nenhum.
     if (!jaReportadoComArvore(error)) reportarErro(error, 'dashboard')
+    // Depois de reportar, nunca antes: o relato sobrevive à navegação por
+    // causa do `keepalive`, mas só se já tiver saído. Quando é aba velha
+    // (chunk que não existe mais após uma promoção), recarregar resolve — e
+    // o `error_logs` continua registrando que aconteceu.
+    tentarRecuperarDeChunk(error)
   }, [error])
 
   return (
