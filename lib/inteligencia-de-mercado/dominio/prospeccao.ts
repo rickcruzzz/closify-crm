@@ -194,6 +194,60 @@ export type ProspectBruto = {
   texto: string
 }
 
+/**
+ * Os sinais de PROPENSÃO A PAGAR, separados dos de alcance.
+ *
+ * A régua nasceu medindo só alcançabilidade — tem WhatsApp? tem e-mail? — e as
+ * duas coisas não são a mesma. Um consultório com WhatsApp na página é fácil de
+ * contatar e pode não ter nenhuma razão para pagar R$ 49 por mês; uma
+ * imobiliária com oito corretores tem a razão inteira, mesmo com contato
+ * escondido.
+ *
+ * A ordem abaixo é de força, e cada linha responde "por que ESTA empresa pagaria
+ * um CRM":
+ *
+ *     EQUIPE       CRM sem time e planilha com outro nome. Quem vende sozinho
+ *                  anota no papel e nao sente a dor. E o sinal mais forte
+ *     CAPTURA      quem ja captura lead no site JA perde lead, e sabe disso.
+ *                  E o momento exato da dor que este produto resolve
+ *     JA PAGA SaaS quem assina alguma ferramenta ja atravessou a barreira de
+ *                  "pagar mensalidade por software", que e metade da venda
+ *     UNIDADES     duas ou mais unidades e coordenacao, que e onde a planilha
+ *                  quebra primeiro
+ *
+ * **O que NÃO entra:** faturamento estimado e número de funcionários vindos de
+ * diretório. São chute vendido como dado, e este projeto já pagou caro por
+ * número plausível de origem fraca — "6 de 9 clientes abandonaram" nasceu
+ * assim e foi repetido em quatro documentos.
+ */
+const SINAIS_DE_PROPENSAO: { nome: string; pontos: number; regex: RegExp }[] = [
+  {
+    nome: 'tem equipe de vendas',
+    pontos: 4,
+    regex: /nossa equipe|nosso time|equipe comercial|equipe de vendas|nossos consultores|nossos corretores|nossos especialistas|fale com um (consultor|corretor|especialista)/i,
+  },
+  {
+    nome: 'captura lead no site',
+    pontos: 3,
+    regex: /agende (sua|uma) (avalia|consulta|visita)|solicite (um|uma) (or[çc]amento|proposta|demonstra)|preencha o formul[áa]rio|fa[çc]a seu or[çc]amento|agendar hor[áa]rio/i,
+  },
+  {
+    nome: 'já paga por software',
+    pontos: 3,
+    regex: /conta azul|contaazul|omie|bling|tiny erp|nibo|granatum|trello|asana|monday\.com|slack|hubspot|mailchimp|activecampaign/i,
+  },
+  {
+    nome: 'mais de uma unidade',
+    pontos: 2,
+    regex: /nossas (duas|tr[êe]s|quatro|\d+) unidades|nossas filiais|nossas lojas|unidade [ivx]+/i,
+  },
+  {
+    nome: 'contrata vendedor no próprio site',
+    pontos: 2,
+    regex: /trabalhe conosco|vagas? (aberta|dispon[íi]ve)|faça parte do (nosso )?time/i,
+  },
+]
+
 export type ProspectPontuado = {
   url: string
   dominio: string
@@ -253,11 +307,13 @@ export function pontuarProspect(p: ProspectBruto): ProspectPontuado {
   // mensalidade. `.com` genérico pode ser de qualquer lugar.
   if (dominio.endsWith('.com.br')) { pontos += 2; motivos.push('domínio .com.br') }
 
-  // Time de vendas é o que faz um CRM valer a pena: quem vende sozinho anota
-  // no papel e não sente a dor.
-  if (/nossa equipe|nosso time|equipe de vendas|consultores|corretores/i.test(p.texto)) {
-    pontos += 2
-    motivos.push('menciona equipe')
+  // Os sinais de PROPENSÃO, que são o que separa "dá para falar com" de "tem
+  // razão para comprar". Ver a nota em `SINAIS_DE_PROPENSAO`.
+  for (const sinal of SINAIS_DE_PROPENSAO) {
+    if (sinal.regex.test(p.texto)) {
+      pontos += sinal.pontos
+      motivos.push(sinal.nome)
+    }
   }
 
   // Sem NENHUM contato, o prospect exige trabalho manual para virar lead.

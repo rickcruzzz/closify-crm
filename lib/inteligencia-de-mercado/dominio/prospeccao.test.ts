@@ -145,7 +145,7 @@ describe('pontuarProspect', () => {
     })
     expect(p.motivos).toContain('WhatsApp direto')
     expect(p.motivos).toContain('domínio .com.br')
-    expect(p.motivos).toContain('menciona equipe')
+    expect(p.motivos).toContain('tem equipe de vendas')
   })
 
   it('sem contato continua qualificado, com aviso', () => {
@@ -226,5 +226,54 @@ describe('o proprio buscador nao e prospect', () => {
     // proprias paginas. Pontuou 0 e nao viraria lead pelo piso, mas ocupava
     // uma linha da lista.
     expect(ehDominioExcluido('https://exa.ai/search?q=marketing')).toBe(true)
+  })
+})
+
+describe('propensao a PAGAR, separada de alcancabilidade', () => {
+  const so = (texto: string) => pontuarProspect({ ...base, texto })
+
+  it('equipe vale mais que qualquer outro sinal isolado', () => {
+    // CRM sem time e planilha com outro nome. Quem vende sozinho anota no papel
+    // e nao sente a dor — e o sinal mais forte de que ha razao para pagar.
+    expect(so('conheça nossa equipe comercial').pontos).toBeGreaterThan(
+      so('agende sua avaliação').pontos,
+    )
+    expect(so('fale com um corretor').motivos).toContain('tem equipe de vendas')
+  })
+
+  it('captura de lead no site e sinal, porque quem captura JA perde lead', () => {
+    expect(so('Solicite um orçamento sem compromisso').motivos).toContain('captura lead no site')
+    expect(so('Agende sua avaliação gratuita').motivos).toContain('captura lead no site')
+  })
+
+  it('quem JA paga outro SaaS ja atravessou a barreira da mensalidade', () => {
+    // Metade da venda de um SaaS e convencer que software se paga por mes.
+    // Quem ja assina Conta Azul ou Trello nao precisa dessa conversa.
+    expect(so('Integramos com Conta Azul e Bling').motivos).toContain('já paga por software')
+  })
+
+  it('alcancavel NAO e o mesmo que propenso, e a nota separa os dois', () => {
+    // O ponto da mudanca: um consultorio com WhatsApp e facil de contatar e
+    // pode nao ter razao nenhuma para pagar; uma imobiliaria com oito corretores
+    // tem a razao inteira mesmo com contato escondido.
+    const facilSemRazao = pontuarProspect({
+      ...base,
+      contato: { whatsapp: '5511999998888', telefone: '(11) 3333-3333', email: 'a@b.com.br', instagram: 'x' },
+      texto: 'Atendimento personalizado',
+    })
+    const dificilComRazao = pontuarProspect({
+      ...base,
+      contato: { whatsapp: null, telefone: null, email: null, instagram: null },
+      texto: 'Fale com um de nossos corretores. Solicite uma proposta. Usamos Conta Azul. Nossas 3 unidades.',
+    })
+    expect(dificilComRazao.pontos).toBeGreaterThan(facilSemRazao.pontos)
+  })
+
+  it('NAO usa faturamento nem numero de funcionarios', () => {
+    // Sao chute de diretorio vendido como dado. "6 de 9 clientes abandonaram"
+    // nasceu de numero plausivel com origem fraca e foi repetido em quatro
+    // documentos.
+    const p = so('Faturamento estimado: R$ 2 milhões. 45 funcionários.')
+    expect(p.motivos.join(' ')).not.toMatch(/faturamento|funcion[áa]rio/i)
   })
 })

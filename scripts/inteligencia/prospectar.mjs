@@ -29,6 +29,8 @@
  */
 
 
+import { mkdir, writeFile } from 'node:fs/promises'
+
 const CHAVE = process.env.EXA_API_KEY
 const URL_SUPABASE = process.env.NEXT_PUBLIC_SUPABASE_URL
 const SERVICE_ROLE = process.env.SUPABASE_SERVICE_ROLE_KEY
@@ -48,6 +50,7 @@ const tetoDeBusca = Number(args.find((a) => a.startsWith('--teto='))?.split('=')
 // regra, lê o módulo compilado sob demanda. Duas cópias divergem, e a que
 // diverge em silêncio é a que ninguém está olhando.
 const dominio = await import('../../lib/inteligencia-de-mercado/dominio/prospeccao.ts')
+const aprendizado = await import('../../lib/inteligencia-de-mercado/dominio/aprendizado.ts')
 const {
   VERTICAIS, ehDominioExcluido, extrairContato, pontuarProspect,
   ordenarProspects, deduplicarPorDominio, MINIMO_PARA_LEAD,
@@ -300,3 +303,66 @@ if (confirmar) {
 } else {
   console.log('\nENSAIO: nada foi gravado. Rode com --confirmar para virar lead no CRM.')
 }
+
+
+// ── o que a rodada devolve para o PROJETO ────────────────────────────────────
+//
+// O texto dos sites já foi baixado e pago na mesma chamada que gerou o
+// prospect. Jogá-lo fora depois de pontuar desperdiça a coisa mais escassa que
+// este projeto tem: as palavras que o cliente usa para descrever o próprio
+// negócio, escritas por ele.
+//
+// O documento sai SEMPRE, inclusive no ensaio: ele não grava nada no banco e
+// não contata ninguém, então não há o que confirmar.
+const paginasLidas = [...detalhes.entries()]
+  .map(([url, d]) => ({ dominio: host(url), texto: d.texto ?? '' }))
+  .filter((p) => p.dominio && p.texto.length > 200)
+
+const vocabulario = aprendizado.extrairVocabulario(paginasLidas, {
+  consultas: verticais.map((v) => v.consulta),
+  minimoDeSites: 3,
+})
+const promessas = aprendizado.extrairPromessas(paginasLidas)
+
+const hoje = new Date().toISOString().slice(0, 10)
+const caminho = `docs/mercado/aprendizado-${hoje}.md`
+const linhas = [
+  `# O que a prospecção de ${hoje} ensinou`,
+  '',
+  'Gerado por `scripts/inteligencia/prospectar.mjs`, lendo ' +
+    `${paginasLidas.length} sites reais de ${verticais.map((v) => v.nome).join(', ')}.`,
+  '**Nada aqui foi escrito por mim:** cada termo é contado em domínios distintos',
+  'e cada promessa é recorte literal do site.',
+  '',
+  '## Vocabulário do ICP',
+  '',
+  'A coluna `sites` é o número de domínios DISTINTOS que usam o termo — nunca',
+  'ocorrências. Um site que repete o próprio slogan quarenta vezes é um site, e',
+  'não uma tendência de mercado.',
+  '',
+  '**Para que serve:** copy da landing e palavra-chave do Google Ads. A `g_preco`',
+  'está parada com cauda longa que EU inventei (`crm que nao cobra por usuario`,',
+  'volume zero). Termo tirado de site real é a correção empírica disso.',
+  '',
+  '| termo | sites | onde conferir |',
+  '| --- | ---: | --- |',
+  ...vocabulario.map((t) => `| ${t.termo} | ${t.sites} | ${t.exemplos.join(', ')} |`),
+  '',
+  '## O que o nicho promete, e que a nossa página enfrenta sem saber',
+  '',
+  'Cada linha é uma objeção: se o visitante ouviu isto em dez sites antes do',
+  'nosso, a frase não diferencia nada. Recorte literal, nunca paráfrase.',
+  '',
+  ...promessas.map((p) => `- "${p.frase}" — \`${p.dominio}\``),
+  '',
+  '## O que este documento NÃO é',
+  '',
+  'Não é pesquisa de volume de busca. O Exa diz o que está **publicado**, não o',
+  'que é procurado — o volume se confere no Planejador do Google antes de virar',
+  'palavra-chave paga. Do mesmo jeito que o Search Console desmentiu duas',
+  'suposições minhas em 03/09: quando a fonte oficial existe, é ela que decide.',
+  '',
+]
+await mkdir('docs/mercado', { recursive: true })
+await writeFile(caminho, linhas.join('\n'), 'utf8')
+console.log(`\naprendizado: ${vocabulario.length} termos e ${promessas.length} promessas -> ${caminho}`)
