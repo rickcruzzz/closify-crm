@@ -192,16 +192,29 @@ Vercel servir o chunk da versao certa. `skewProtectionBoundaryAt` e outro campo
 dia; aba deixada aberta na sexta e retomada na segunda esta fora. Um CRM e
 exatamente o tipo de produto que se deixa aberto.
 
-**2. `POST /promote` devolve 422, e por isso a promocao e manual.** Falso hoje.
-Testado promovendo o deployment que JA estava em producao (mudanca zero no que
-e servido):
+**2. `POST /promote` devolve 422, e por isso a promocao e manual.** Continua
+verdade — e o caminho de como eu me enganei fica registrado, porque a armadilha
+e boa.
 
-    HTTP 409  "The provided deploymentId is already the current
-               production deployment"
+Primeiro teste: promover o deployment que JA estava em producao. Devolveu
+**409**, *"already the current production deployment"*. Li isso como a API
+aceitando a chamada, e escrevi que a promocao tinha deixado de exigir o clique.
+**Errado.** O 409 so provou que o endpoint valida o id; nao provou que ele
+promoveria qualquer coisa.
 
-409 e a API **aceitando** a chamada e recusando so porque nao ha o que mudar.
-Um 422 seria recusa em bloco, que e o que acontecia em 19/08 e 23/08. Ou seja:
-promover por API voltou a funcionar, e a promocao deixou de exigir o clique.
+O teste que valia foi o A/B com o MESMO commit, mudando so o alvo:
+
+    alvo=production, READY   ->  201   promoveu
+    alvo=staging,    READY   ->  422   recusou
+
+**O gate cria os deployments com alvo `staging`** (e por isso que produzem
+`aliasAssigned` proprio sem tocar em producao), e e exatamente essa classe que a
+API recusa. O clique no painel continua sendo o unico caminho para promover o
+que o gate testou.
+
+**A licao e a mesma de sempre aqui:** um resultado que confirma o que eu queria
+concluir, obtido num caso que nao e o caso de interesse. O 409 veio de um
+deployment de producao; a pergunta era sobre um de staging.
 
 ### O que foi construido
 
