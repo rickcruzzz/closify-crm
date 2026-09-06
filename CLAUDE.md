@@ -234,13 +234,18 @@ uma rodada antiga —, e nada na resposta de uma consulta avisava disso. Só
 instalado na pasta pessoal do usuário, fora daqui. O que foi retirado está
 inteiro em `graphify-out/arquivo/`, nada foi descartado.
 
-<!-- contagem: grafo.nos_sem_arquivo=103 -->
-**103 nós não têm arquivo de origem, e nenhum deles é fantasma.** A grande
+<!-- contagem: grafo.nos_sem_arquivo=105 -->
+**105 nós não têm arquivo de origem, e nenhum deles é fantasma.** A grande
 maioria são objetos do banco que o extrator representa sem arquivo —
 `public.workspaces`, `auth.users`, `public.checar_teto_de_mensagens` —, mais
 alguns símbolos importados pelos geradores em Python (`FreeTypeFont`, `Image`,
 `Path`). Não violam a regra de corte: não apontam para outro projeto, apontam
 para lugar nenhum, de propósito.
+
+Eram 103 até 06/09, e o número subiu com as duas tabelas da 0072
+(`enriquecimento_de_lead` e `sinal_de_mercado`) — objeto de banco é exatamente o
+que o parágrafo acima descreve. Aqui, ao contrário do caso 8→103, trocar só o
+número é a correção certa: a explicação continua descrevendo o que os nós são.
 
 **Esta frase dizia "oito nós apontam para nome de PACOTE (`next`, `jspdf`…)"
 até 04/09**, e o erro não era o número: era a natureza. Hoje não há um único nó
