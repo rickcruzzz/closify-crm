@@ -33,26 +33,56 @@
  *
  * A consulta é a descrição do SITE da empresa, não da dor dela. Ver acima.
  */
+/**
+ * Os nichos onde a prospecção caça, **escolhidos por medição e não por palpite**.
+ *
+ * Em 06/09 os dez candidatos foram medidos pelo mesmo método — semente de 10
+ * sites e um lote de `contents`, duas chamadas cada — comparando quantos
+ * carregam sinal FORTE de propensão:
+ *
+ *     comunicacao-visual  5 FORTE  4 equipe  2 orcamento   <- entra
+ *     marcenaria          4        2         3             <- entra
+ *     climatizacao        4        4         1             <- entra
+ *     agencia             3        2         0
+ *     imobiliaria         2        2         0
+ *     clinica             2        2         0   agendamento: 5   <- SAI
+ *
+ * **A linha da clínica é a lição.** Ela liderava a régua antiga, e liderava
+ * pelo motivo errado: todo site de clínica diz "agende sua avaliação", e a
+ * régua lia isso como "sente a dor de perder lead". Agendamento é a dor de uma
+ * AGENDA — que este produto não tem e que Simples Dental e Dental Office já
+ * resolvem por R$ 100–200/mês. Zero pedidos de orçamento em dez sites.
+ *
+ * O eixo que a medição NÃO enxerga, e que decidiu junto: se o nicho já tem
+ * software vertical barato, o CRM genérico perde antes de começar. Os três que
+ * entraram não têm — o CRM deles hoje é a conversa fixada no topo do WhatsApp,
+ * que é o inimigo que a landing já nomeia.
+ *
+ * **Isto não é o ICP do PRD.** Lá continuam agências, consultorias, clínicas,
+ * imobiliárias e software houses: quem chegar sozinho é bem-vindo. Esta lista
+ * é onde eu vou CAÇAR, e caçar é caro — por isso segue o número.
+ */
 export const VERTICAIS = [
+  {
+    nome: 'comunicacao-visual',
+    consulta: 'site de gráfica ou empresa de comunicação visual no Brasil que atende empresas',
+  },
+  {
+    nome: 'marcenaria',
+    consulta: 'site de marcenaria ou móveis planejados sob medida no Brasil',
+  },
+  {
+    nome: 'climatizacao',
+    consulta:
+      'site de empresa de ar condicionado, elétrica ou CFTV no Brasil que faz orçamento para empresas',
+  },
   {
     nome: 'agencia',
     consulta: 'site de agência de marketing digital pequena no Brasil que atende PMEs',
   },
   {
-    nome: 'consultoria',
-    consulta: 'site de consultoria empresarial ou contabilidade pequena no Brasil',
-  },
-  {
-    nome: 'clinica',
-    consulta: 'site de clínica de estética, odontologia ou fisioterapia no Brasil com página de contato',
-  },
-  {
     nome: 'imobiliaria',
     consulta: 'site de imobiliária pequena ou corretor de imóveis no Brasil',
-  },
-  {
-    nome: 'software-house',
-    consulta: 'site de software house ou desenvolvedora de sistemas pequena no Brasil',
   },
 ] as const
 
@@ -211,7 +241,11 @@ export type ProspectBruto = {
  *     CAPTURA      quem ja captura lead no site JA perde lead, e sabe disso.
  *                  E o momento exato da dor que este produto resolve
  *     JA PAGA SaaS quem assina alguma ferramenta ja atravessou a barreira de
- *                  "pagar mensalidade por software", que e metade da venda
+ *                  "pagar mensalidade por software", que e metade da venda.
+ *                  **Medido: disparou 1 vez em 94 sites.** Fica porque quando
+ *                  dispara vale muito, mas nao espere que ele ordene nada —
+ *                  site institucional nao lista a ferramenta interna. A fonte
+ *                  certa e vaga de emprego e pagina de integracoes
  *     UNIDADES     duas ou mais unidades e coordenacao, que e onde a planilha
  *                  quebra primeiro
  *
@@ -227,9 +261,27 @@ const SINAIS_DE_PROPENSAO: { nome: string; pontos: number; regex: RegExp }[] = [
     regex: /nossa equipe|nosso time|equipe comercial|equipe de vendas|nossos consultores|nossos corretores|nossos especialistas|fale com um (consultor|corretor|especialista)/i,
   },
   {
-    nome: 'captura lead no site',
+    // Pedir ORÇAMENTO cria um negócio com valor, prazo e uma decisão pendente —
+    // que é literalmente uma linha do Kanban. É o sinal mais próximo do que
+    // este produto faz.
+    nome: 'pede orçamento no site',
     pontos: 3,
-    regex: /agende (sua|uma) (avalia|consulta|visita)|solicite (um|uma) (or[çc]amento|proposta|demonstra)|preencha o formul[áa]rio|fa[çc]a seu or[çc]amento|agendar hor[áa]rio/i,
+    regex: /solicite (um|uma|seu|sua) (or[çc]amento|proposta|cota[çc][ãa]o)|fa[çc]a (seu|sua) (or[çc]amento|cota[çc][ãa]o)|pe[çc]a (um|uma|seu) (or[çc]amento|proposta)|receba (um|uma) proposta|or[çc]amento (gratuito|sem compromisso)/i,
+  },
+  {
+    // **Agendar NÃO é o mesmo que orçar, e confundir os dois foi defeito meu.**
+    //
+    // Medido em 10 nichos: `clinica` liderou o sinal de captura porque todo
+    // site de clínica diz "agende sua avaliação". Só que agendamento é a dor
+    // de uma AGENDA — que este produto não tem e que o software vertical do
+    // setor já resolve. A régua estava lendo "precisa de um concorrente meu"
+    // como "precisa de mim".
+    //
+    // Continua valendo pouco em vez de zero: o site que agenda online tem
+    // alguém cuidando de entrada de cliente, o que é sinal de atividade.
+    nome: 'agendamento no site',
+    pontos: 1,
+    regex: /agende (sua|seu|uma|um) (avalia|consulta|visita|hor[áa]rio)|agendar (hor[áa]rio|consulta|avalia)|marque (sua|seu) (consulta|hor[áa]rio)/i,
   },
   {
     nome: 'já paga por software',

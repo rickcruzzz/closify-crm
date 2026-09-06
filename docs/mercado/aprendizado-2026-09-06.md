@@ -1,6 +1,6 @@
 # O que a prospecção de 2026-09-06 ensinou
 
-Gerado por `scripts/inteligencia/prospectar.mjs`, lendo 20 sites reais de clinica.
+Gerado por `scripts/inteligencia/prospectar.mjs`, lendo 29 sites reais de comunicacao-visual.
 **Nada aqui foi escrito por mim:** cada termo é contado em domínios distintos
 e cada promessa é recorte literal do site.
 
@@ -24,58 +24,55 @@ nao a corrige sozinho: o que ele corrige e a COPY da pagina de destino.
 
 | termo | sites | onde conferir |
 | --- | ---: | --- |
-| bem estar | 9 | faciaodontologiaestetica.com.br, differenzaodontologia.com.br, clinicaesteticadosorriso.com.br |
-| agende sua consulta | 8 | faciaodontologiaestetica.com.br, differenzaodontologia.com.br, facialodontoestetica.com.br |
-| clareamento dental | 7 | lafaceodontoestetica.com.br, odontoesteticabillrola.com.br, facialodontoestetica.com.br |
-| saude bucal | 7 | differenzaodontologia.com.br, clinicaesteticadosorriso.com.br, oralestetica.com.br |
-| harmonizacao facial | 6 | lafaceodontoestetica.com.br, clinicaesteticadosorriso.com.br, odontoesteticabillrola.com.br |
-| harmonizacao orofacial | 6 | faciaodontologiaestetica.com.br, lafaceodontoestetica.com.br, dentalfaceodontologia.com.br |
-| atendimento humanizado | 5 | faciaodontologiaestetica.com.br, differenzaodontologia.com.br, oralestetica.com.br |
-| implante dentario | 5 | clinicaesteticadosorriso.com.br, oralestetica.com.br, odontoesteticabillrola.com.br |
-| profissionais qualificados | 5 | differenzaodontologia.com.br, oralestetica.com.br, odontofacies.com.br |
-| reabilitacao oral | 5 | differenzaodontologia.com.br, clinicaesteticadosorriso.com.br, oralestetica.com.br |
-| sorriso perfeito | 5 | clinicaesteticadosorriso.com.br, odontoesteticabillrola.com.br, facesodontologia.com.br |
-| tratamentos odontologicos | 5 | faciaodontologiaestetica.com.br, differenzaodontologia.com.br, clinicaesteticadosorriso.com.br |
-| anos de experiencia | 4 | differenzaodontologia.com.br, clinicaesteticadosorriso.com.br, oralestetica.com.br |
-| atendimento personalizado | 4 | lafaceodontoestetica.com.br, clinicaesteticadosorriso.com.br, oralestetica.com.br |
-| bernardo do campo | 4 | faciaodontologiaestetica.com.br, dentistaspertodemim.com, guiafacil.com |
-| conforto e seguranca | 4 | faciaodontologiaestetica.com.br, differenzaodontologia.com.br, dentalfaceodontologia.com.br |
-| dentes perdidos | 4 | faciaodontologiaestetica.com.br, clinicaesteticadosorriso.com.br, facesodontologia.com.br |
-| horario de funcionamento | 4 | differenzaodontologia.com.br, oralestetica.com.br, odontofacern.com.br |
-| implantes dentarios | 4 | faciaodontologiaestetica.com.br, lafaceodontoestetica.com.br, facereodonto.com.br |
-| protese dentaria | 4 | clinicaesteticadosorriso.com.br, odontoesteticabillrola.com.br, facereodonto.com.br |
-| transforme seu sorriso | 4 | differenzaodontologia.com.br, clinicaesteticadosorriso.com.br, oralestetica.com.br |
-| ultima geracao | 4 | oralestetica.com.br, odontoesteticabillrola.com.br, dentalfaceodontologia.com.br |
-| acido hialuronico | 3 | differenzaodontologia.com.br, odontoesteticabillrola.com.br, facialodontoestetica.com.br |
-| agende agora | 3 | clinicaesteticadosorriso.com.br, oralestetica.com.br, facialodontoestetica.com.br |
-| alinhadores esteticos | 3 | lafaceodontoestetica.com.br, clinicaesteticadosorriso.com.br, clinicafacciaodonto.com.br |
+| impressao digital | 11 | forthlux.com.br, pandasgrafica.com.br, rossibrasil.com.br |
+| alta qualidade | 8 | brasilcv.com.br, quatropontos.com.br, imgmidiavisual.com.br |
+| ultima geracao | 7 | quatropontos.com.br, forthlux.com.br, rossibrasil.com.br |
+| anos de experiencia | 5 | quatropontos.com.br, mundocomunicacao.com.br, imagembrasil.net |
+| atendimento personalizado | 5 | pandasgrafica.com.br, rossibrasil.com.br, vbcomunicacaovisual.com.br |
+| contato conosco | 5 | pandasgrafica.com.br, rossibrasil.com.br, visualcomunicacaomg.com.br |
+| endereco rua | 5 | quatropontos.com.br, forthlux.com.br, pandasgrafica.com.br |
+| https www | 5 | quatropontos.com.br, imgmidiavisual.com.br, imagembrasil.net |
+| letra caixa | 5 | industriavisual.com.br, imgmidiavisual.com.br, mundocomunicacao.com.br |
+| vamos conversar | 5 | quatropontos.com.br, industriavisual.com.br, imgmidiavisual.com.br |
+| cartoes de visita | 4 | impactographics.com.br, curitiba.infoisinfo-br.com, vbcomunicacaovisual.com.br |
+| equipe especializada | 4 | quatropontos.com.br, rossibrasil.com.br, quatropontocom.com.br |
+| fachadas em acm | 4 | brasilcv.com.br, forthlux.com.br, pandasgrafica.com.br |
+| produtos e servicos | 4 | brasilcv.com.br, impactographics.com.br, cgvisual.com.br |
+| ribeirao preto | 4 | quatropontos.com.br, centercomunicacaovisual.com.br, cnpja.com |
+| solicite um orcamento | 4 | quatropontos.com.br, cgvisual.com.br, pontografico.com.br |
+| solucoes completas | 4 | industriavisual.com.br, mundocomunicacao.com.br, pandasgrafica.com.br |
+| alto padrao | 3 | imgmidiavisual.com.br, mundocomunicacao.com.br, quatropontocom.com.br |
+| bem estar | 3 | diariocidade.com, quattropontos.com.br, pontagraf.com.br |
+| content uploads | 3 | forthlux.com.br, imgmidiavisual.com.br, rossibrasil.com.br |
+| criar solucoes | 3 | mundocomunicacao.com.br, projetacomunicacaovisual.com.br, vbcomunicacaovisual.com.br |
+| digital de alta | 3 | pandasgrafica.com.br, tncomunicacao.com.br, cgvisual.com.br |
+| entrar em contato | 3 | diariocidade.com, vbcomunicacaovisual.com.br, zapia.digital |
+| enviar mensagem | 3 | brasilcv.com.br, vbcomunicacaovisual.com.br, pontografico.com.br |
+| estamos prontos | 3 | quatropontos.com.br, pandasgrafica.com.br, centercomunicacaovisual.com.br |
 
 ## O que o nicho promete, e que a nossa página enfrenta sem saber
 
 Cada linha é uma objeção: se o visitante ouviu isto em dez sites antes do
 nosso, a frase não diferencia nada. Recorte literal, nunca paráfrase.
 
-- "A Facia Odontologia & Estética se orgulha de ter mais de 20 anos cuidando do sorriso de nossos queridos pacientes." — `faciaodontologiaestetica.com.br`
-- "Há mais de 20 anos cuidando do sorriso de nossos queridos pacientes." — `faciaodontologiaestetica.com.br`
-- "Nosso compromisso é com a sua autoestima!" — `lafaceodontoestetica.com.br`
-- "Por isso, trabalhamos para gerar uma experiência incrível aos nossos pacientes, através de um atendimento personalizado e especializado.”" — `lafaceodontoestetica.com.br`
-- "Com profissionais experientes e infraestrutura de ponta, garantimos o melhor para você e sua família." — `differenzaodontologia.com.br`
-- "Oferecemos uma gama completa de tratamentos odontológicos, com foco em qualidade, inovação e resultados personalizados para cuidar do seu sorriso e bem-estar." — `differenzaodontologia.com.br`
-- "Cuidando da estética de nossos pacientes há mais de 20 anos" — `clinicaesteticadosorriso.com.br`
-- "Atendimento Personalizado e Ambiente Acolhedor:" — `clinicaesteticadosorriso.com.br`
-- "É a especialidade da odontologia que trabalha com pacientes com mais de 60 anos." — `oralestetica.com.br`
-- "Ser referência em excelência odontológica, aliando tecnologia de ponta, atendimento humanizado e interdisciplinar, para proporcionar saúde e bem-estar aos nossos pacientes em um ambiente seguro e moderno." — `oralestetica.com.br`
-- "O que entregamos vai muito além da cerâmica:" — `odontoesteticabillrola.com.br`
-- "Igor Ribeiro, está localizada no RioMar Trade Center e conta com mais de 40 anos de tradição (desde o Centro de Laser Bill Rôla)." — `odontoesteticabillrola.com.br`
-- "Oferecemos aos nossos pacientes beleza, saúde e autoestima." — `facialodontoestetica.com.br`
-- "Há mais de 14 anos transformando vidas através de sorriso!" — `dentalfaceodontologia.com.br`
-- "Com uma estrutura de excelência, garantimos atendimento humanizado, conforto e segurança, para que cada visita seja uma experiência positiva e transformadora." — `dentalfaceodontologia.com.br`
-- "Por isso, oferecemos atendimento com profissionais especializados, formados pelas principais instituições do país, e que são referência em tratamentos preventivos, clínicos, cirúrgicos, ortodônticos e estéticos." — `facereodonto.com.br`
-- "Nossa equipe é formada por dentistas especializados em diversas áreas da odontologia, garantindo que cada paciente receba um atendimento personalizado e completo." — `facereodonto.com.br`
-- "Oferecemos a solução ideal para você fortalecer sua marca na internet de maneira eficaz." — `guiafacil.com`
-- "Com mais de 29 anos de atuação e 80 mil clientes atendidos, oferecemos soluções em marketing para os mais variados segmentos do mercado em todo o Brasil." — `guiafacil.com`
-- "Oferecemos os mais variados tratamentos, pois priorizamos o bem-estar de todos que nos procuram" — `clinicadaface.odo.br`
-- "HÁ MAIS DE 20 ANOS RESTAURANDO SORRISOS" — `lp.faciaodontologiaestetica.com.br`
+- "Oferecemos soluções que irão facilitar e potencializar sua jornada empreendedora,independente do seu nível de experiência" — `brasilcv.com.br`
+- "Apresentamos a nova Forthlux, uma Empresa de Comunicação Visual que une a solidez de mais de 12 anos de mercado, agora com inovação tecnológica." — `forthlux.com.br`
+- "Nossa missão é transformar seus projetos em realidade com produtos personalizados e exclusivos." — `forthlux.com.br`
+- "Há mais de 10 anos no mercado de comunicação visual em Mato Grosso, entregando soluções com criatividade e qualidade." — `imgmidiavisual.com.br`
+- "Com mais de 13 anos de experiência, atendemos grandes marcas e oferecemos um portfólio completo de serviços, desde a sinalização industrial até a ambientação corporativa completa." — `mundocomunicacao.com.br`
+- "Atuamos com excelência em projetos que vão desde a impressão rápida até grandes formatos, sempre com foco em qualidade, agilidade e atendimento personalizado." — `pandasgrafica.com.br`
+- "Oferecemos identidade visual completa com qualidade e agilidade para valorizar sua marca." — `pandasgrafica.com.br`
+- "A IMAGEM BRASIL foi fundada em abril de 2002 por dois profissionais com mais de 30 anos de experiência no mercado gráfico e publicitário." — `imagembrasil.net`
+- "Atendimento personalizado via whatsapp" — `vbcomunicacaovisual.com.br`
+- "Nosso compromisso é transformar ideias em projetos que geram impacto e valorizam cada negócio." — `vbcomunicacaovisual.com.br`
+- "Oferecemos soluções integradas em impressão digital, gráfica e estamparia para destacar o seu negócio ou o seu evento !" — `tncomunicacao.com.br`
+- "Com a elegância da letra caixa e uma sinalização interna eficiente, garantimos que sua empresa seja inesquecível antes mesmo de o cliente entrar." — `tncomunicacao.com.br`
+- "Quatro.com | Há mais de 15 anos no mercado de impressão digital, encontrando soluções para realização de bons negócios" — `quatropontocom.com.br`
+- "Há mais de 15 anos no mercado de impressão digital, encontrando soluções para realização de bons negócios" — `quatropontocom.com.br`
+- "Gráfica situada na Zona Sul do Rio de Janeiro, com mais de 8 anos de mercado e liderada por uma mulher!" — `pontografica.com`
+- "Oferecemos muito mais que produtos impressos, mas sim serviços gráficos atrelados a agilidade, comprometimento e profissionalismo." — `pontagraf.com.br`
+- "Da comunicação visual à produção têxtil, entregamos materiais com responsabilidade técnica, qualidade e solução." — `pontografico.com.br`
+- "São mais de 30 anos de experiência, construindo parcerias sólidas com empresas de todos os portes em Rio Grande e região." — `pontografico.com.br`
 
 ## O que este documento NÃO é
 
