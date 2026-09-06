@@ -36,33 +36,49 @@
 /**
  * Os nichos onde a prospecção caça, **escolhidos por medição e não por palpite**.
  *
- * Em 06/09 os dez candidatos foram medidos pelo mesmo método — semente de 10
- * sites e um lote de `contents`, duas chamadas cada — comparando quantos
- * carregam sinal FORTE de propensão:
+ * Em 06/09 vinte e sete candidatos foram medidos pelo mesmo método — semente de
+ * 10 sites e um lote de `contents`, duas chamadas cada, US$ 1,06 no total. A
+ * tabela inteira está em [docs/mercado/nichos-medidos-2026-09-06.md]; aqui fica
+ * a regra e o que ela derrubou.
  *
- *     comunicacao-visual  5 FORTE  4 equipe  2 orcamento   <- entra
- *     marcenaria          4        2         3             <- entra
- *     climatizacao        4        4         1             <- entra
- *     agencia             3        2         0
- *     imobiliaria         2        2         0
- *     clinica             2        2         0   agendamento: 5   <- SAI
+ * **A regra, escrita antes de olhar o resultado**, e derivada do que o produto
+ * faz — não do que o número mostrou:
  *
- * **A linha da clínica é a lição.** Ela liderava a régua antiga, e liderava
- * pelo motivo errado: todo site de clínica diz "agende sua avaliação", e a
- * régua lia isso como "sente a dor de perder lead". Agendamento é a dor de uma
- * AGENDA — que este produto não tem e que Simples Dental e Dental Office já
- * resolvem por R$ 100–200/mês. Zero pedidos de orçamento em dez sites.
+ *     ORCAMENTO >= 2   pedir orcamento cria negocio com valor, prazo e decisao
+ *                      pendente. E literalmente uma linha do Kanban
+ *     FORTE     >= 4   metade da amostra com sinal forte de propensao
+ *     CONTATO   >= 6   sem canal na pagina, a lista nao vira ligacao
  *
- * O eixo que a medição NÃO enxerga, e que decidiu junto: se o nicho já tem
- * software vertical barato, o CRM genérico perde antes de começar. Os três que
+ * **Ela derrubou os dois nichos que eu tinha acabado de decidir manter.**
+ * `agencia` deu 3 FORTE e ZERO pedido de orçamento — agência vende por reunião e
+ * proposta por e-mail, não por formulário. `imobiliaria` deu 2 e zero, e o eixo
+ * qualitativo já pesava contra: sem integração com VivaReal/ZAP o corretor não
+ * troca de sistema.
+ *
+ * Dois que passariam por impressão e não passam pela regra, com o motivo:
+ * `ti-outsourcing` tem o maior número de equipes de vendas (6 de 10) e falha no
+ * orçamento porque MSP vive de chamado e já roda Movidesk ou GLPI — quem já tem
+ * ferramenta é a venda mais cara que existe. `serralheria` tem a maior média
+ * (8,6) com 2 FORTE: média premia alcance, e alcance não paga.
+ *
+ * O eixo que a medição NÃO enxerga, e que decide junto: se o nicho já tem
+ * software vertical barato, o CRM genérico perde antes de começar. Os quatro que
  * entraram não têm — o CRM deles hoje é a conversa fixada no topo do WhatsApp,
  * que é o inimigo que a landing já nomeia.
  *
  * **Isto não é o ICP do PRD.** Lá continuam agências, consultorias, clínicas,
- * imobiliárias e software houses: quem chegar sozinho é bem-vindo. Esta lista
- * é onde eu vou CAÇAR, e caçar é caro — por isso segue o número.
+ * imobiliárias e software houses: quem chegar sozinho é bem-vindo. Esta lista é
+ * onde eu vou CAÇAR, e caçar é caro — por isso segue o número.
  */
 export const VERTICAIS = [
+  {
+    // 6 FORTE, 5 pedidos de orçamento, 7 com contato: o melhor de 27 em todas
+    // as três colunas. Contrato recorrente B2B, orçamento por visita, e nenhum
+    // software vertical dominante.
+    nome: 'dedetizacao',
+    consulta:
+      'site de empresa de dedetização e controle de pragas no Brasil que atende empresas',
+  },
   {
     nome: 'comunicacao-visual',
     consulta: 'site de gráfica ou empresa de comunicação visual no Brasil que atende empresas',
@@ -72,17 +88,16 @@ export const VERTICAIS = [
     consulta: 'site de marcenaria ou móveis planejados sob medida no Brasil',
   },
   {
-    nome: 'climatizacao',
-    consulta:
-      'site de empresa de ar condicionado, elétrica ou CFTV no Brasil que faz orçamento para empresas',
+    nome: 'locacao-equipamentos',
+    consulta: 'site de empresa de locação de máquinas, andaimes ou equipamentos no Brasil',
   },
   {
-    nome: 'agencia',
-    consulta: 'site de agência de marketing digital pequena no Brasil que atende PMEs',
-  },
-  {
-    nome: 'imobiliaria',
-    consulta: 'site de imobiliária pequena ou corretor de imóveis no Brasil',
+    // Não passa no contato (4 de 7) e entra assim mesmo, declarado: n=7 é
+    // amostra pequena demais para reprovar, e 3 pedidos de orçamento em 7 sites
+    // é a segunda melhor densidade da tabela. Fica em observação — se a próxima
+    // rodada repetir contato baixo, sai.
+    nome: 'eventos-corporativos',
+    consulta: 'site de buffet corporativo ou empresa organizadora de eventos no Brasil',
   },
 ] as const
 

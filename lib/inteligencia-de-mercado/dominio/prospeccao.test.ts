@@ -12,9 +12,9 @@ import {
 } from './prospeccao'
 
 const base: ProspectBruto = {
-  url: 'https://agenciaexemplo.com.br',
-  titulo: 'Agência Exemplo',
-  vertical: 'agencia',
+  url: 'https://graficaexemplo.com.br',
+  titulo: 'Gráfica Exemplo',
+  vertical: 'comunicacao-visual',
   contato: { whatsapp: null, telefone: null, email: null, instagram: null },
   texto: '',
 }
