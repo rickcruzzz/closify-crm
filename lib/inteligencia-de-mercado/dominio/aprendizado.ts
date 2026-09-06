@@ -8,15 +8,26 @@
  *
  * Duas saídas, e a segunda é a que corrige um erro que está custando dinheiro:
  *
- *     VOCABULARIO  o termo que aparece em N sites DISTINTOS. Vira copy da
- *                  landing e palavra-chave do Google Ads
+ *     VOCABULARIO  o termo que aparece em N sites DISTINTOS. Vira COPY
  *     PROMESSA     o que o site promete em primeira pessoa. E a objecao que a
  *                  nossa pagina precisa responder ANTES de ser perguntada
  *
- * **A ligação com a campanha parada:** a `g_preco` foi escrita com cauda longa
- * INVENTADA por mim — `crm que nao cobra por usuario` tem volume zero. Palavra
- * tirada do site de trinta clínicas reais é a correção empírica disso, e é de
- * graça: o texto já foi baixado e pago na mesma chamada que gerou o prospect.
+ * É de graça: o texto já foi baixado e pago na mesma chamada que gerou o
+ * prospect, e hoje era descartado depois de pontuar.
+ *
+ * ## O que ele NÃO é, e a distinção custa dinheiro
+ *
+ * **Isto não é pesquisa de palavra-chave.** Quem busca `clareamento dental` é o
+ * PACIENTE da clínica, não a dona dela procurando um CRM — comprar esse clique
+ * paga por um público que nunca assinaria. O site institucional mostra como a
+ * empresa fala com o CLIENTE dela, não como ela descreveria o próprio problema
+ * de gestão, que é o que a campanha precisa.
+ *
+ * A distinção fica escrita aqui porque a primeira versão deste comentário
+ * afirmava o contrário — que o termo colhido corrigiria a cauda longa inventada
+ * da `g_preco`. Número plausível com conclusão errada é a classe de erro mais
+ * cara deste repositório, e ela reapareceu dentro do arquivo escrito para
+ * evitá-la.
  *
  * ## As três regras, e todas nasceram de defeito já pago aqui
  *
