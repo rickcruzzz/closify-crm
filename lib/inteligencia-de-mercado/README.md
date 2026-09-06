@@ -32,6 +32,21 @@ e os três eram ruído ("acesse a nova edição dos panoramas"). "Desafio" e
 "dificuldade" são vocabulário padrão de marketing. Vale a regra do sino de
 02/09: *fila com lixo dentro ensina a ignorar a fila inteira*.
 
+**4. Nome E domínio juntos; segmento fora.** A/B contra a API real, mesma
+pergunta em quatro formas: `dominio + segmento do usuario` deu **0** sinais, só
+domínio **1**, só nome **1**, e `NOME (dominio)` deu **2**. O nome é como as
+pessoas escrevem no Reclame Aqui; o domínio desambigua a homônima.
+
+O `segmento` saiu porque descrevia a **empresa errada** — é o segmento de quem
+USA o CRM, não o do lead pesquisado. Dizia ao Exa que a RD Station é "do setor de
+Tecnologia" porque quem perguntou era de tecnologia. Custou os dois sinais
+inteiros.
+
+**5. O domínio sai do e-mail, e provedor pessoal é recusado.** O CRM não tem
+campo de site — conferido no catálogo. Em B2B o e-mail corporativo é o domínio.
+Sem a lista de provedores pessoais, `joao@gmail.com` viraria uma busca sobre **o
+Gmail**, com resultado plausível e alheio ao lead.
+
 ## O que este módulo não faz, e não vai fazer
 
 **Não minera contatos de terceiros para injetar no funil do cliente.** Foi pedido
@@ -54,7 +69,15 @@ não degrada.
 
 ## Estado
 
-Pronto: `dominio/**` (puro, 32 testes), `exa/**`, `ports/**`, `index.ts`.
+Pronto e provado ponta a ponta contra produção: `dominio/**` (35 testes),
+`exa/**`, `ports/**`, `adapters/**`, `servico.ts`, a migration 0072 com RLS
+(14 de 14) e o cron `/api/cron/enriquecer-leads`, a cada 15 minutos.
 
-Falta: migration 0072 com RLS, `adapters/**`, `servico.ts`, o cron e a entrada
-do Exa na Política de Privacidade como suboperador.
+A prova da fila, com três leads descartáveis: o corporativo achou uma reclamação
+no Reclame Aqui e custou 5 centavos; o `@gmail.com` não virou busca (custo zero);
+o lead sem dados saiu da fila em vez de voltar para sempre; e a segunda passagem
+processou zero.
+
+Falta: o aviso no sino (o tipo `sinal_de_mercado` precisa entrar no `check` da
+0066), a tela que mostra os sinais, e o Exa entrar na Política de Privacidade
+como suboperador.

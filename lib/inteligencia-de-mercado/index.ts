@@ -6,7 +6,7 @@
  * aviso — inclusive o formato da resposta do Exa, que é contrato de terceiro.
  */
 
-export { montarConsulta, normalizarDominio } from './dominio/consulta'
+export { dominioDoEmail, montarConsulta, normalizarDominio } from './dominio/consulta'
 export type { AlvoDeBusca, ConsultaMontada } from './dominio/consulta'
 
 export { classificarSinal } from './dominio/sinais'

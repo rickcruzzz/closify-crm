@@ -24,6 +24,17 @@ export type DealStage =
 export type ActivityType = 'ligacao' | 'email' | 'reuniao' | 'nota' | 'whatsapp'
 export type OnboardingStatus = 'not_started' | 'in_progress' | 'skipped' | 'completed'
 export type OnboardingEtapa = 'empresa' | 'segmento' | 'venda' | 'equipe' | 'processando'
+/**
+ * Estado da consulta ao Exa para um lead (migration 0072).
+ *
+ * `sem_sinal` é resultado, não falha: a maioria das empresas não tem notícia
+ * pública, e tratar isso como erro faria o cron reconsultar para sempre.
+ */
+export type StatusDeEnriquecimento = 'pendente' | 'ok' | 'sem_sinal' | 'falhou'
+/** Natureza do sinal público encontrado (migration 0072). */
+export type TipoDeSinalDeMercado = 'dor' | 'contratacao' | 'investimento' | 'reclamacao'
+/** Força da classificação. Só `alta` é gravada hoje — ver `dominio/dor.ts`. */
+export type ConfiancaDoSinal = 'alta' | 'media' | 'baixa'
 export type TourStatus = 'not_started' | 'skipped' | 'completed'
 export type ModeloVenda = 'servicos' | 'produtos' | 'ambos'
 export type TamanhoEquipe = 'so_eu' | '2_5' | '6_20' | '21_mais'
@@ -741,6 +752,82 @@ export type Database = {
         }
         Relationships: []
       }
+      // ── Inteligência de mercado (migration 0072) ────────────────────────
+      // As duas tabelas não têm policy de escrita para `authenticated`: quem
+      // grava é o `service_role`, pelo cron. Sinal forjável é aviso de venda
+      // forjável — mesmo desenho de `notificacoes` e `error_logs`.
+      enriquecimento_de_lead: {
+        Row: {
+          id: string
+          workspace_id: string
+          // `unique` no banco: um lead tem um estado. É o que transforma a
+          // tabela em cache e o que faz `on conflict (lead_id)` funcionar.
+          lead_id: string
+          status: StatusDeEnriquecimento
+          // Nulo enquanto nunca foi consultado. É o que `deveReenriquecer` lê
+          // para decidir a janela de 30 dias.
+          consultado_em: string | null
+          // Centavos de real, inteiro: dinheiro em ponto flutuante acumula
+          // erro, e este número é somado contra o teto mensal.
+          custo_centavos: number
+          ultimo_erro: string | null
+          criado_em: string
+          // Avançado por trigger, nunca pelo código: `default` só vale no
+          // insert, e coluna de data que mente é pior que coluna ausente.
+          atualizado_em: string
+        }
+        Insert: {
+          id?: string
+          workspace_id: string
+          lead_id: string
+          status?: StatusDeEnriquecimento
+          consultado_em?: string | null
+          custo_centavos?: number
+          ultimo_erro?: string | null
+          criado_em?: string
+          atualizado_em?: string
+        }
+        Update: {
+          status?: StatusDeEnriquecimento
+          consultado_em?: string | null
+          custo_centavos?: number
+          ultimo_erro?: string | null
+        }
+        Relationships: []
+      }
+      sinal_de_mercado: {
+        Row: {
+          id: string
+          workspace_id: string
+          lead_id: string
+          tipo: TipoDeSinalDeMercado
+          // RECORTE do trecho devolvido pelo Exa, nunca paráfrase: paráfrase
+          // introduziria uma afirmação que ninguém escreveu, sobre uma empresa
+          // real. Teto de 400 no `check`.
+          resumo: string
+          // `not null` e https obrigatório. Insight sem link é opinião da
+          // máquina; com link, a pessoa confere em um clique.
+          fonte_url: string
+          publicado_em: string | null
+          confianca: ConfiancaDoSinal
+          criado_em: string
+        }
+        Insert: {
+          id?: string
+          workspace_id: string
+          lead_id: string
+          tipo: TipoDeSinalDeMercado
+          resumo: string
+          fonte_url: string
+          publicado_em?: string | null
+          confianca: ConfiancaDoSinal
+          criado_em?: string
+        }
+        // Sem `Update`: o sinal é imutável depois de gravado. O que muda é o
+        // estado da consulta, que vive na outra tabela.
+        Update: Record<string, never>
+        Relationships: []
+      }
       subscriptions: {
         Row: {
           id: string
@@ -1086,6 +1173,10 @@ export type Database = {
       // 90 dias (0066): aviso de três meses atrás não muda decisão nenhuma. O
       // histórico de dinheiro que importa vive em `assinatura_eventos` (0055),
       // append-only, e não é tocado por esta purga.
+      purge_old_sinais_de_mercado: {
+        Args: Record<string, never>
+        Returns: undefined
+      }
       purge_old_notificacoes: {
         Args: Record<string, never>
         Returns: number

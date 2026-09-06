@@ -13,9 +13,11 @@ export type LeadParaEnriquecer = {
   workspaceId: string
   nome: string
   empresa: string | null
-  /** Domínio ou URL do site. `null` quando o CRM não tem. */
-  site: string | null
-  segmento: string | null
+  /**
+   * O e-mail do lead. É de onde o domínio da empresa sai — o CRM não tem campo
+   * de site, conferido no catálogo em 06/09. Ver `dominioDoEmail`.
+   */
+  email: string | null
   /** Quando a etapa do negócio mudou pela última vez, se houver negócio. */
   etapaMudouEm: Date | null
 }

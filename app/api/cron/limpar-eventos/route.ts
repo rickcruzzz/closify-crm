@@ -85,6 +85,16 @@ export async function GET(requisicao: Request) {
     // histórico de dinheiro que importa vive em `assinatura_eventos` (0055),
     // que é append-only e não é tocado por isto.
     admin.rpc('purge_old_notificacoes'),
+    // `sinal_de_mercado` (0072), pelo mesmo motivo das duas acima: purga
+    // escrita junto com a tabela, e agendada no MESMO dia — é o que separa
+    // esta linha de `purge_old_asaas_webhook_events`, que ficou sete
+    // migrations parada.
+    //
+    // 180 dias e não 90: sinal de mercado é o histórico que dá contexto a uma
+    // negociação longa, e ciclo de venda B2B passa de três meses. Aviso de
+    // cobrança de 90 dias atrás não muda decisão; "a empresa contratou um head
+    // de vendas em março" ainda explica por que ela respondeu em setembro.
+    admin.rpc('purge_old_sinais_de_mercado'),
     // `rate_limit_attempts` era a UNICA tabela de sistema sem purga, e a mais
     // escrita de todas: ganha uma linha por TENTATIVA de login, cadastro,
     // convite, recuperacao de senha, relato e checkout. Ou seja, ela mede
