@@ -80,13 +80,30 @@ const host = (u) => {
   }
 }
 
+/**
+ * A semente NÃO manda `excludeDomains`, e isso é medido.
+ *
+ * Combinar `category: 'company'` com a lista de exclusão derruba o resultado a
+ * quase nada. Isolado em 06/09/2026, mesma consulta de clínica:
+ *
+ *     so a query                      10 resultados
+ *     + category=company              10
+ *     + excludeDomains (54 dominios)   1   <- os dois juntos
+ *     sem category, com excludeDomains 10
+ *
+ * Cada parâmetro sozinho devolve dez; juntos, um. Mandar a lista era cinto e
+ * suspensório — o filtro local (`ehDominioExcluido`) já roda sobre todo
+ * candidato depois. O cinto custava 90% da colheita.
+ *
+ * O `findSimilar` continua mandando a lista: lá não há `category`, e a
+ * combinação não aparece.
+ */
 async function semear(vertical) {
   const j = await exa('search', {
     query: vertical.consulta,
     category: 'company',
     type: 'auto',
     numResults: porVertical,
-    excludeDomains: [...dominio.DOMINIOS_EXCLUIDOS],
   })
   return (j.results ?? []).map((x) => ({ url: x.url, titulo: x.title ?? null }))
 }
