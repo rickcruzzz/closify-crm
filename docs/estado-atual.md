@@ -116,6 +116,57 @@ Nenhuma correcao daquela rodada o alcancava. **Fechada em 06/09, ver a secao
 propria abaixo.**
 
 ---
+## O webhook do Asaas parou de novo, o vigia avisou, e ninguem leu (06/09)
+
+Varredura pedida pelo dono — *"verifique a fundo se tem algo que voce consegue
+resolver"*. O achado mais caro nao estava em codigo.
+
+    webhook   Velo Funil - assinaturas
+    enabled   true
+    interrupted  TRUE        <- dinheiro que ENTRA nao chega ao produto
+    penalizedRequestsCount  3
+    sendType  SEQUENTIALLY   <- um evento travado bloqueia TODOS os seguintes
+
+**E o vigia de 04/09 funcionou.** A memoria em `vigia_ultimo_aviso` prova:
+
+    webhook-do-asaas-parado-velo-funil-assinaturas   1   06/09 03:00Z
+    __ultima_varredura                                   06/09 06:00Z
+
+Ele detectou, mandou o e-mail as 00h locais e continuou varrendo de hora em
+hora. O que falhou foi o degrau seguinte, que e humano: ninguem abriu.
+
+**Religado por API** (`PUT /webhooks/{id}`, `interrupted: false`), confirmado
+lendo de volta. E o endpoint estava SAO o tempo todo, medido contra producao:
+
+    sem token                      401
+    token certo, evento nao mapeado  200
+
+Ou seja, nao foi rota quebrada — foi falha transitoria, provavelmente durante
+uma das promocoes de hoje, exatamente a classe que a secao de 04/09 ja descreve:
+*"a raiz nao e o gatilho, e a permanencia"*.
+
+**Nenhum dinheiro se perdeu:** a conta tem UMA cobranca na historia inteira
+(R$ 1, RECEIVED em 31/08) e zero pendente ou vencida.
+
+### Duas pendencias do dono eram falsas, e as duas foram fechadas
+
+    "1 assinatura ativa no Asaas sem Pro liberado"   subscriptions = 0
+    "2 cobrancas de R$ 49 em aberto (Fani Mayara)"   PENDING = 0, OVERDUE = 0
+
+Pendencia falsa desvia atencao das reais, e esta e a terceira vez que isso
+acontece neste documento — depois do `CRON_SECRET` em 25/08 e do "conjunto
+otimiza por clique" em 04/09.
+
+### O que fica em aberto, e nao e ruido
+
+O banco tem **8 workspaces em `plan = 'pro'`** e **3 linhas `subscriptions`
+com `status = 'active'`**, todas com `asaas_subscription_id` **nulo** — nenhuma
+nasceu de pagamento. Uma delas vale ate **2027-02-16** com `ciclo MONTHLY`, o
+que so pode ter vindo de concessao manual. Sao contas do dono, entao nao ha
+dinheiro envolvido; fica anotado porque qualquer contagem de receita futura vai
+tropecar nelas.
+
+---
 ## A aba velha se recupera sozinha, e duas coisas que este documento afirmava eram falsas (06/09)
 
 Continuacao da rodada acima, feita sem depender do dono. O erro de 27/08 no
@@ -1999,10 +2050,12 @@ tempo, nao trabalho.
       `Purchase` em 17 dias, otimizar por Purchase é pagar o algoritmo para
       chutar. A escada é `Lead` → `CompleteRegistration` → `Purchase`.
 
-- [ ] **1 assinatura ativa no Asaas sem Pro liberado**, achada pelo vigia em
-      02/09. É o alerta mais caro que existe: alguém pagou, o gateway confirma,
-      e o banco não liberou o plano — a pessoa está pagando e usando o Free.
-      Pode ser conta de teste sua, mas vale conferir em `/dono`.
+- [x] **1 assinatura ativa no Asaas sem Pro liberado — RESOLVIDO, e a
+      pendência era falsa em 06/09.** Medido na API: `subscriptions` devolve
+      **zero**, e `payments` tem **uma** cobrança na história inteira da conta
+      (R$ 1, RECEIVED em 31/08). Não há ninguém pagando e usando o Free.
+      Pendência falsa desvia atenção das reais — mesma lição do `CRON_SECRET`
+      em 25/08.
 
 - [ ] **Apagar o post antigo do Instagram** não é mais necessário — feito em
       02/09. Fica registrado que a Content Publishing API **publica mas não
@@ -2130,12 +2183,12 @@ tempo, nao trabalho.
       lido apenas em `lib/dono/`, e toda a Central devolve 404 em produção —
       colá-lo lá poria um token que gasta dinheiro num ambiente onde o código
       nunca roda.
-- [ ] **Cobrança da Fani Mayara** (`fanimayara67@gmail.com`): esta entrada
-      dizia "usuária real". **É conta do dono**, confirmado em 31/08 — como
-      todas as desta base. Plano `free`, começou o checkout e nunca pagou, com
-      2 cobranças de R$ 49 em aberto no Asaas. Segue como pendência porque
-      cobrança aberta gera aviso de vencimento e cabe cancelar; o que muda é
-      que **não é cliente para recuperar**.
+- [x] **Cobrança da Fani Mayara — não existe mais.** Medido em 06/09:
+      `payments?status=PENDING` e `status=OVERDUE` devolvem **zero**, e a conta
+      inteira tem uma cobrança só na história. As duas de R$ 49 foram embora em
+      algum momento entre 31/08 e agora. A entrada fica como registro de que
+      **não era cliente para recuperar** — é conta do dono, como todas desta
+      base (ver `ehContaDeTeste`).
 - [x] **Pix real de R$ 49 recebido.** Workspace "Orne", 13/08, confirmado no
       Asaas, mas o webhook não chegou (site fora do ar por DNS, ver acima) e
       ficou preso até reconciliação manual. Motivou o job de reconciliação
