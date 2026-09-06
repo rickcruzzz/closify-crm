@@ -1830,13 +1830,77 @@ recusar tudo isso.** Nota baixa ali e o desenho funcionando.
     developer token   pedido de Acesso Basico enviado em 05/09.
                       Hoje o token e "conta de teste" e nao le producao.
                       Documento de design em docs/google-ads-api/
-    vincular          a 784-188-3291 ainda nao esta na MCC — sem isso o
-                      token aprovado nao enxerga a campanha
+    vincular          FEITO em 06/09. Ver a secao propria abaixo — o
+                      convite anterior nunca chegou a gravar, e o motivo
+                      nao era o que a tela sugeria
     idioma            so Portugues. O Ingles nao entrou, e importa: idioma
                       no Google Ads e a config do NAVEGADOR, entao dono de
                       PME com Chrome em ingles fica de fora
     verificacao       o Google exige verificacao de anunciante em ~30 dias
                       do primeiro anuncio veiculado, ou suspende a conta
+
+## A 784-188-3291 entrou na MCC, e o painel escondia o motivo de nao ter entrado (06/09)
+
+Ultimo degrau antes de a API do Google Ads enxergar a campanha. O vinculo
+existe, conferido nos DOIS sentidos:
+
+    na conta 784-188-3291, aba Administradores
+       velo  534-629-0307  6 de set. de 2026  Google Ads  [Remover acesso]
+
+    na MCC velo, Subcontas
+       Velo Funil  784-188-3291  velo (Este administrador) 534-629-0307
+
+### O convite anterior nunca gravou, e a tela dizia outra coisa
+
+A tabela de subcontas vinha com dois filtros salvos, e os dois escondiam o
+resultado por razoes diferentes:
+
+    Status da conta: Ativa, Rascunho    convite entra como Pendente, que nao
+                                        e nenhum dos dois
+    Nome da conta contem 784-188-3291   filtra por NOME. O nome e "Velo Funil".
+                                        Nunca casaria, nem depois de vinculada
+
+Com os filtros limpos o total era **`0 administradores, 0 contas`** — ou seja,
+a MCC estava vazia de verdade. Nao era filtro escondendo um vinculo que
+existia; era filtro escondendo que o vinculo NAO existia. As duas leituras
+produzem a mesma tela, e so a limpeza separa uma da outra.
+
+### O 2FA e parte do fluxo, nao acidente
+
+Reenviado o convite, o Google interrompeu com *"Confirme sua identidade"* e
+so gravou depois da confirmacao no celular. Vincular administrador da a outra
+conta poder de alterar anuncios e aceitar Termos em nome desta — por isso
+reautentica. **A acao anterior se perde na interrupcao**, e e ai que a primeira
+tentativa morreu: o painel avisa em texto miudo *"Apos a confirmacao, voce
+precisara concluir sua acao"*, e ninguem conclui o que acha que ja fez.
+
+Do outro lado o aceite tem dialogo proprio (*"Permitir o acesso de velo a essa
+conta?"*), tambem explicito sobre o alcance.
+
+### O metodo: Chrome com porta de depuracao, e a limpeza que ele exige
+
+O painel nao tem API acessivel aqui (e justamente a pendencia), entao a saida
+foi dirigir o navegador. Dois obstaculos, os dois registrados porque vao voltar:
+
+    copiar os cookies      NAO funciona. App-Bound Encryption prende a chave
+                           ao diretorio de perfil original; o arquivo copiado
+                           cai na tela de login
+    --remote-debugging-port  Chrome 136+ RECUSA no perfil padrao. Exige
+                           --user-data-dir apontando para outro lugar
+
+O que resolve: perfil temporario proprio, login feito PELO DONO na janela
+(senha nunca passa por aqui), e **a pasta apagada no fim** — sessao viva do
+Google em pasta temporaria e credencial largada.
+
+### O que ainda falta para a API ler a campanha
+
+    vincular na MCC          FEITO
+    developer token Basico   pedido em 05/09, aguardando
+    refresh token OAuth      travado ate ~11/09, atraso de seguranca da conta
+
+`GOOGLE_ADS_LOGIN_CUSTOMER_ID=5346290307` ja esta no `.env.local` e agora tem
+caminho valido ate a `784-188-3291`. Faltam os dois de cima, e os dois sao
+tempo, nao trabalho.
 
 ## Pendente do dono (não é código)
 
