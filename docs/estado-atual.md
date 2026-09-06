@@ -116,6 +116,66 @@ Nenhuma correcao daquela rodada o alcancava. **Fechada em 06/09, ver a secao
 propria abaixo.**
 
 ---
+## O OAuth do Google Ads esta pronto, e sobra UM bloqueio (06/09)
+
+A cadeia inteira foi montada e provada. O que impede a API de responder agora e
+so o nivel do developer token — que e analise do Google.
+
+    listAccessibleCustomers   HTTP 200
+                              customers/7841883291  <- a conta da campanha
+                              customers/3129591084
+
+### O caminho, e por que cada peca existiu
+
+`jonatqpedro` ve a conta de anuncio e a MCC, mas o Google respondeu *"Tente de
+novo em 6 dias"* ao consentimento — atraso de seguranca da conta. `henriquestn24`
+e dono do projeto no Cloud, mas nao via a conta de anuncio. **Cada um tinha
+metade.**
+
+Resolvido dando ao `henriquestn24` acesso **Padrao** (nao Adm.) a conta
+`784-188-3291`: Padrao ja cobre relatorio e importacao de conversao offline, que
+e tudo que a API vai fazer; Adm. acrescentaria poder sobre usuarios e
+faturamento, que nao e preciso. Menor privilegio que resolve.
+
+### Tres armadilhas de transporte, e nenhuma era o que parecia
+
+    1a tentativa   "entrei no site"        o `npm run dev` tomou a porta 3000 e a
+                                           propria rota do produto engoliu o code
+    2a tentativa   redirect_uri_mismatch   URI novo (8787) ainda nao propagado
+    3a tentativa   response_type ausente   a URL de sete parametros chegou
+                                           TRUNCADA na colagem
+    4a tentativa   Google 500              janela ANONIMA: sem sessao, ele exigiu
+                                           login e a propria tela dele quebrou
+
+A correcao que fechou as duas ultimas foi um atalho `localhost:3000/ir` no
+capturador, que responde 302 para a URL completa — **nada para copiar, nada para
+truncar**.
+
+**E uma verificacao minha nao provou nada, denunciada pelo proprio controle:**
+testei os `redirect_uri` chamando o endpoint de autorizacao e os tres devolveram
+302, inclusive um endereco NUNCA registrado. O Google so valida o `redirect_uri`
+depois de autenticar. Sem o controle, eu teria lido os 302 como "esta tudo certo,
+e so propagacao" e mandado esperar horas a toa.
+
+### O que a API responde hoje, e o que isso prova
+
+    login-customer-id = MCC 5346290307   403  USER_PERMISSION_DENIED
+    login-customer-id = a propria conta  403  DEVELOPER_TOKEN_NOT_APPROVED
+    sem login-customer-id                403  DEVELOPER_TOKEN_NOT_APPROVED
+
+A diferenca entre a primeira linha e as outras duas e a prova de que a cadeia de
+permissao esta sa: sem o cabecalho da MCC a chamada **passa** pela checagem de
+permissao e so entao esbarra no nivel do token.
+
+**Consequencia pratica para quando o token for aprovado:** o
+`GOOGLE_ADS_LOGIN_CUSTOMER_ID=5346290307` do `.env.local` **nao deve ser
+enviado** com este refresh token — o `henriquestn24` tem acesso a conta, nao a
+MCC. Ou se omite o cabecalho, ou se da a ele acesso a MCC tambem.
+
+**A versao da API e a v22.** As anteriores (v16 a v21) devolvem 404 — foram
+aposentadas.
+
+---
 ## O Pix resolveu o cartao, e a campanha continua parada por outro motivo (06/09)
 
 Tres coisas medidas no painel, com o navegador dirigido. Nenhuma delas era o
