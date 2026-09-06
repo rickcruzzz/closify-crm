@@ -6,8 +6,12 @@ import {
   DragOverlay,
   KeyboardSensor,
   PointerSensor,
+  closestCorners,
+  pointerWithin,
   useSensor,
   useSensors,
+  type CollisionDetection,
+  type DragCancelEvent,
   type DragEndEvent,
   type DragOverEvent,
   type DragStartEvent,
@@ -17,6 +21,7 @@ import { toast } from 'sonner'
 
 import { dealStageLabels, dealStages, type DealStage } from '@/lib/deals/types'
 import { estadoDeMovimento } from '@/lib/deals/parado'
+import { deveAplicarPreview, escolherColisao } from '@/lib/deals/arrasto'
 import { createDeal, updateDealStage } from '@/lib/deals/actions'
 import type { DealLeadRow, DealRow } from '@/lib/deals/queries'
 import type { WorkspaceMember } from '@/lib/leads/queries'
@@ -60,6 +65,18 @@ function dealsIguais(a: DealRow, b: DealRow) {
     a.owner_name === b.owner_name
   )
 }
+
+/**
+ * Colisão por ponteiro, com o canto mais próximo só quando não há ponteiro.
+ *
+ * Fora do componente de propósito: não depende de nada do render, e o dnd-kit
+ * a chama a cada movimento do cursor. O porquê inteiro está em
+ * `lib/deals/arrasto.ts` — em resumo, o padrão `rectIntersection` decide pelo
+ * retângulo do card, que MUDA quando o card entra na outra coluna, e essa
+ * realimentação é o laço que produzia React #185.
+ */
+const detectarColisao: CollisionDetection = (args) =>
+  escolherColisao(pointerWithin(args), () => closestCorners(args))
 
 export function KanbanBoard({
   initialDeals,
@@ -185,6 +202,16 @@ export function KanbanBoard({
   )
 
   const dragStartStage = React.useRef<DealStage | null>(null)
+  /**
+   * A última etapa para a qual a pré-visualização já moveu o card, neste
+   * arrasto.
+   *
+   * `ref` e não estado: o `dragOver` dispara várias vezes dentro do mesmo lote
+   * do React, e ali `deals` ainda é o valor anterior. A guarda antiga lia o
+   * estado e por isso deixava passar tanto a repetição quanto a alternância
+   * `A -> B -> A`, que é a forma do laço de React #185.
+   */
+  const etapaPrevista = React.useRef<DealStage | null>(null)
 
   function stageOf(id: string): DealStage | undefined {
     if (dealStages.includes(id as DealStage)) return id as DealStage
@@ -195,6 +222,7 @@ export function KanbanBoard({
     const id = String(event.active.id)
     setActiveId(id)
     dragStartStage.current = deals.find((deal) => deal.id === id)?.stage ?? null
+    etapaPrevista.current = null
   }
 
   function handleDragOver(event: DragOverEvent) {
@@ -203,34 +231,86 @@ export function KanbanBoard({
 
     const activeStage = stageOf(String(active.id))
     const overStage = stageOf(String(over.id))
-    if (!activeStage || !overStage || activeStage === overStage) return
 
+    if (
+      !overStage ||
+      !deveAplicarPreview({
+        etapaPrevista: etapaPrevista.current,
+        etapaAtual: activeStage,
+        etapaAlvo: overStage,
+      })
+    ) {
+      return
+    }
+
+    etapaPrevista.current = overStage
     setDeals((prev) =>
       prev.map((deal) => (deal.id === active.id ? { ...deal, stage: overStage } : deal)),
     )
   }
 
+  /**
+   * Põe um negócio numa etapa, preservando a referência quando ele já está lá.
+   *
+   * O `prev` devolvido igual faz o React descartar o render — importante aqui
+   * porque este caminho é chamado no fim de todo arrasto, inclusive nos que já
+   * tiveram a etapa aplicada pela pré-visualização.
+   */
+  function moverPara(dealId: string, stage: DealStage) {
+    setDeals((prev) =>
+      prev.some((deal) => deal.id === dealId && deal.stage !== stage)
+        ? prev.map((deal) => (deal.id === dealId ? { ...deal, stage } : deal))
+        : prev,
+    )
+  }
+
+  /**
+   * Arrasto abandonado: Escape, ou o navegador cancelando o gesto.
+   *
+   * Sem isto, `activeId` ficava preso — o card seguia com aparência de
+   * arrastado — e a pré-visualização do `dragOver` continuava aplicada **sem
+   * nunca ser persistida**: o card ficava numa coluna que o banco não conhece
+   * até a próxima revalidação da rota, que pode demorar a acontecer.
+   */
+  function handleDragCancel(event: DragCancelEvent) {
+    setActiveId(null)
+    const startStage = dragStartStage.current
+    dragStartStage.current = null
+    etapaPrevista.current = null
+
+    if (startStage) moverPara(String(event.active.id), startStage)
+  }
+
   async function handleDragEnd(event: DragEndEvent) {
     const { active, over } = event
     setActiveId(null)
-    if (!over) return
 
     const dealId = String(active.id)
-    const finalStage = stageOf(String(over.id))
+    const finalStage = over ? stageOf(String(over.id)) : undefined
     const startStage = dragStartStage.current
     dragStartStage.current = null
+    etapaPrevista.current = null
 
-    if (!finalStage || finalStage === startStage) return
+    // Soltar fora de qualquer coluna, depois de a pré-visualização já ter
+    // movido o card, deixaria ele numa etapa que ninguém vai gravar. É o mesmo
+    // caso do cancelamento, e antes desta linha o `return` seco deixava passar.
+    if (!finalStage) {
+      if (startStage) moverPara(dealId, startStage)
+      return
+    }
 
-    // Update otimista já aplicado no dragOver, se a Server Action falhar,
-    // desfaz para o estado anterior em vez de deixar a UI mentir sobre o
-    // que está persistido no banco.
+    if (finalStage === startStage) return
+
+    // A pré-visualização do `dragOver` já costuma ter aplicado isto; aqui é
+    // idempotente e cobre o caso de o `over` só existir no `dragEnd`. Se a
+    // Server Action falhar, desfaz para o estado anterior em vez de deixar a
+    // UI mentir sobre o que está persistido no banco.
+    moverPara(dealId, finalStage)
+
     const result = await updateDealStage(dealId, finalStage)
     if (result?.error) {
       toast.error(result.error)
-      setDeals((prev) =>
-        prev.map((deal) => (deal.id === dealId ? { ...deal, stage: startStage! } : deal)),
-      )
+      if (startStage) moverPara(dealId, startStage)
       return
     }
 
@@ -491,9 +571,11 @@ export function KanbanBoard({
 
       <DndContext
         sensors={sensors}
+        collisionDetection={detectarColisao}
         onDragStart={handleDragStart}
         onDragOver={handleDragOver}
         onDragEnd={handleDragEnd}
+        onDragCancel={handleDragCancel}
       >
         {/* Margem negativa + padding devolvem a faixa de scroll até a borda da
             viewport: sem isso as colunas eram cortadas pelo padding do `main`

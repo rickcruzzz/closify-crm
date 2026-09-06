@@ -4,9 +4,9 @@ Documento de continuidade. É lido no começo de toda sessão (referenciado no
 [CLAUDE.md](../CLAUDE.md)) para que uma conversa nova, ou outra conta, comece
 sabendo o que já foi feito, o que foi decidido e onde estão as armadilhas.
 
-**Atualizado em:** 05/09/2026 (a conversao do Google chegou pelo caminho
-RESERVA, com o principal recusado no console; e recusar o banner impedia
-rastreamento novo sem apagar o que ja estava gravado)
+**Atualizado em:** 06/09/2026 (o instrumento que existia so para nomear o
+componente que quebra o /kanban nunca reportou uma vez, de 20/08 a 05/09, e o
+motivo estava na propria linha que o fazia funcionar)
 
 ## O histórico de agosto mora em outro arquivo
 
@@ -24,6 +24,96 @@ história:** o produto **não tem WhatsApp**. A ponte saiu em 28/08 (`c52a718`)
 porque a Evolution dava problema e a API oficial da Meta não foi aprovada. Hoje
 `FASE_DO_WHATSAPP = 'migrando'` em `lib/integrations/whatsapp-estado.ts`, e o
 que sobrou é o link `wa.me`. O porquê inteiro está no arquivo.
+
+---
+## O instrumento do erro nunca reportou, e o motivo era a linha que o fazia "funcionar" (06/09)
+
+Dois prints de producao: `/kanban` trocado por *"Nao foi possivel carregar esta
+tela"*, com o toast **"Negocio movido para Negociacao - Sem proximo passo
+marcado"** ainda por cima. O `error_logs` mostra que nao e a primeira vez:
+
+    05/09 23:42  React #185                                       stack VAZIO
+    02/09 04:15  React #185                                       stack VAZIO
+    02/09 04:12  React #185                                       stack VAZIO
+    27/08 20:45  "Cannot read properties of undefined (reading 'call')"  x4
+
+React #185 e *Maximum update depth exceeded*, laco de `setState`.
+
+### `componentDidCatch` roda no COMMIT, e o relance no render impede o commit
+
+`CapturaDeComponente` e a unica classe do projeto e existe para uma coisa:
+`info.componentStack` so existe la. Ela se anulava sozinha:
+
+    render() { if (this.state.erro) throw this.state.erro; ... }
+
+O React agenda `componentDidCatch` como **callback da update de erro**, e
+callback de update e chamado no commit. Relancar no render descarta a fila
+junto com a subarvore: o callback nunca acontece, o erro sobe para o `error.tsx`
+do segmento e ele reporta **sem** arvore.
+
+**A prova estava na CONTAGEM, nao no conteudo.** Se os dois caminhos
+reportassem, cada incidente gravaria DUAS linhas — uma com arvore, uma sem.
+Havia UMA, sem. Inclusive depois de 02/09, quando o boundary foi movido para
+dentro da pagina: mudar de lugar nunca podia resolver, porque o defeito era o
+relance.
+
+Agora sao duas fases: renderiza `null` (commita, `componentDidCatch` roda,
+arvore capturada), marca `reportado` e so entao relanca. A tela que a pessoa ve
+continua sendo a do `error.tsx`.
+
+**Provado no navegador, nos dois sentidos.** Componente descartavel lancando sob
+o boundary, lendo o corpo do POST para `/api/log-erro`:
+
+    duas fases   componentStack PREENCHIDO, "at QuebraDeProva" no topo
+    uma fase     a chave componentStack nem existe no corpo   <- controle
+    contagem     UM POST nos dois, nunca dois
+
+### E o controle achou um segundo defeito: 400 descarta a linha inteira
+
+Com a arvore preenchida, a rota respondeu **400**. `payloadSchema` valida
+`componentStack` em 8000 caracteres e **recusa**, nao corta — e uma arvore real
+do App Router passa disso com folga. O relato mais valioso era justamente o que
+sempre seria recusado.
+
+`cortarParaCaber` corta no CLIENTE, **preservando o comeco**: tanto no stack
+quanto na arvore, o quadro que nomeia quem quebrou vem PRIMEIRO; o que se perde
+sao os wrappers do framework, iguais em todo erro. Depois disso o mesmo teste
+devolve 204 — recusado so pela regra de ruido de `localhost`, que e correta.
+
+### O laco: NAO foi reproduzido, e isso fica registrado assim
+
+`onDragOver` escrevia estado que realimentava a propria deteccao de colisao —
+o padrao `rectIntersection` decide pelo RETANGULO do card, que muda quando o
+card entra na outra coluna. E a guarda tinha dois furos independentes: lia
+`deals`, que dentro do lote do React ainda e o valor anterior, e so barrava o
+alvo IGUAL ao atual, nunca a alternancia `A -> B -> A`.
+
+Trocado por `pointerWithin` com `closestCorners` de reserva (o ponteiro nao se
+move quando a lista se reorganiza, entao o ciclo se abre; a reserva existe
+porque arrasto por TECLADO nao tem ponteiro) mais guarda por `ref`, que e
+sincrona. Os dois furos tem teste.
+
+**Medido, o codigo novo e o antigo dao o MESMO numero:** 60 alternancias entre
+duas colunas em 2s, 3.275 mutacoes de DOM nos dois, zero React #185. **Nao
+reproduzi o laco**, entao a correcao e endurecimento de uma familia conhecida,
+nao causa provada. O que muda de verdade e o instrumento: a proxima ocorrencia
+NOMEIA o componente.
+
+### O que foi reproduzido e corrigido: Escape deixava o card na coluna errada
+
+`onDragCancel` nao existia. A/B com a mesma pagina e o mesmo gesto:
+
+    HEAD      arrastado ate B -> Escape -> o card FICA em B, e nada foi gravado
+    corrigido arrastado ate B -> Escape -> o card VOLTA para a origem
+
+Soltar fora de qualquer coluna tinha o mesmo buraco, e agora desfaz junto.
+
+1.085 testes.
+
+**Fica em aberto, e e de OUTRA familia:** o erro de 27/08 e
+`__webpack_require__` recebendo fabrica indefinida — aba com os chunks da
+versao antiga depois de uma promocao. Nenhuma correcao desta rodada o alcanca, e
+`skew`/`deploymentId`/`ChunkLoadError` seguem sem uma ocorrencia no repositorio.
 
 ---
 ## A conversao chegou pelo caminho RESERVA, e recusar nao apagava nada (05/09)
