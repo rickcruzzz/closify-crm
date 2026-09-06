@@ -4,7 +4,7 @@ import { useEffect } from 'react'
 import { AlertTriangle } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
-import { reportarErro } from '@/lib/erros/reportar'
+import { jaReportadoComArvore, reportarErro } from '@/lib/erros/reportar'
 
 /**
  * Erro dentro da área logada.
@@ -30,7 +30,11 @@ export default function DashboardError({
     // ele, um relato de "deu erro na tela de leads" não tem como ser cruzado
     // com a stack real, que o Next não expõe ao browser em produção.
     console.error('Erro na área logada', { digest: error.digest, error })
-    reportarErro(error, 'dashboard')
+    // `CapturaDeComponente` fica ABAIXO deste boundary e relança o MESMO objeto
+    // `Error` depois de gravar a árvore de componentes. Reportar de novo aqui
+    // gravaria uma segunda linha do mesmo incidente, e logo a pior das duas: a
+    // que não nomeia componente nenhum.
+    if (!jaReportadoComArvore(error)) reportarErro(error, 'dashboard')
   }, [error])
 
   return (

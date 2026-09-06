@@ -9,16 +9,15 @@ import { reportarErro } from '@/lib/erros/reportar'
  *
  * ## O defeito que isto fecha
  *
- * Em 20/08 e 22/08 o `/kanban` registrou dois "React #185" — o código de
- * *Maximum update depth exceeded*, um loop de `setState`. O que foi gravado
+ * Em 20/08, 22/08, 02/09 e 05/09 o `/kanban` registrou "React #185" — o código
+ * de *Maximum update depth exceeded*, um loop de `setState`. O que foi gravado
  * em `error_logs` é isto:
  *
  *     at ik (.../chunks/fd9d1056-b58fad7d2523e3e9.js:1:110229)
  *     at nf (.../chunks/fd9d1056-b58fad7d2523e3e9.js:1:26357)
  *
  * Nada ali nomeia um arquivo do projeto. Sabe-se que houve loop e não se sabe
- * em qual componente — então corrigir seria adivinhar, e por isso os dois
- * seguem sem diagnóstico.
+ * em qual componente — então corrigir seria adivinhar.
  *
  * ## Por que não bastou usar o `error.tsx`
  *
@@ -32,21 +31,39 @@ import { reportarErro } from '@/lib/erros/reportar'
  * onde o React entrega `errorInfo.componentStack`, e ele traz a árvore **por
  * nome**, legível mesmo em produção minificada.
  *
- * ## Ele reporta e sai da frente
+ * ## Por que ele passou de 20/08 a 05/09 sem reportar UMA vez
  *
- * O boundary mais interno é quem captura, então segurar o erro aqui tiraria a
- * tela de erro do Next — e ela é boa, foi escrita para responder "perdi o que
- * era meu?". A solução é a que a própria documentação indica: **relançar no
- * render**, para o erro subir ao `error.tsx` do segmento.
+ * A primeira versão relançava direto no `render`:
  *
- * O efeito é que este componente é invisível: reporta com o nome do
- * componente, e a experiência do usuário segue idêntica.
+ *     render() { if (this.state.erro) throw this.state.erro; ... }
+ *
+ * `componentDidCatch` **não roda no render, roda no commit** — o React o agenda
+ * como callback da própria update de erro, e callback de update é chamado
+ * quando o fiber commita. Relançar no render impede o commit: a fila de update
+ * é descartada junto com a subárvore, e o callback nunca acontece. O erro subia
+ * para o `error.tsx` do segmento, que reporta sem `componentStack` — que é
+ * exatamente a única linha que aparecia no banco, sempre vazia.
+ *
+ * A prova está na CONTAGEM: se os dois caminhos reportassem, cada incidente
+ * gravaria duas linhas, uma com árvore e uma sem. Havia uma, sem. Inclusive
+ * depois de 02/09, quando este boundary foi movido para dentro da página —
+ * mudar de lugar não podia resolver, porque o defeito era o relance.
+ *
+ * ## Duas fases: commitar primeiro, relançar depois
+ *
+ * Na primeira, o render devolve `null`. Isso COMMITA, o React chama
+ * `componentDidCatch`, e a árvore é capturada. Só então `reportado` libera o
+ * relance, e o erro sobe para o `error.tsx` do segmento — que continua sendo a
+ * tela que a pessoa vê, escrita para responder "perdi o que era meu?".
+ *
+ * O frame `null` dura um commit. Não é tela em branco: o layout do dashboard
+ * está acima deste boundary e não é afetado.
  */
 export class CapturaDeComponente extends React.Component<
   { children: React.ReactNode; origem: 'dashboard' | 'publico' },
-  { erro: Error | null }
+  { erro: Error | null; reportado: boolean }
 > {
-  state: { erro: Error | null } = { erro: null }
+  state: { erro: Error | null; reportado: boolean } = { erro: null, reportado: false }
 
   static getDerivedStateFromError(erro: Error) {
     return { erro }
@@ -55,12 +72,15 @@ export class CapturaDeComponente extends React.Component<
   componentDidCatch(erro: Error & { digest?: string }, info: React.ErrorInfo) {
     // O único lugar do projeto onde `componentStack` existe.
     reportarErro(erro, this.props.origem, info.componentStack ?? undefined)
+    // Libera a segunda fase. Sem este `setState` o erro ficaria preso aqui e a
+    // tela do Next nunca apareceria — o oposto do que este boundary promete.
+    this.setState({ reportado: true })
   }
 
   render() {
-    // Relança para o `error.tsx` do Next assumir a tela. Sem isto, a página
-    // ficaria em branco: este boundary capturou e não desenha nada.
-    if (this.state.erro) throw this.state.erro
+    if (this.state.erro && this.state.reportado) throw this.state.erro
+    // Primeira fase: commita para que `componentDidCatch` possa rodar.
+    if (this.state.erro) return null
     return this.props.children
   }
 }

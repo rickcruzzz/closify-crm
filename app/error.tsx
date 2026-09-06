@@ -3,7 +3,7 @@
 import { useEffect } from 'react'
 
 import { Button } from '@/components/ui/button'
-import { reportarErro } from '@/lib/erros/reportar'
+import { jaReportadoComArvore, reportarErro } from '@/lib/erros/reportar'
 
 export default function Error({
   error,
@@ -14,7 +14,10 @@ export default function Error({
 }) {
   useEffect(() => {
     console.error(error)
-    reportarErro(error, 'publico')
+    // Ver a nota em `app/(dashboard)/error.tsx`: `CapturaDeComponente` (aqui,
+    // em `(auth)/(transicao)/layout.tsx`) já reportou com a árvore e relançou
+    // o mesmo objeto.
+    if (!jaReportadoComArvore(error)) reportarErro(error, 'publico')
   }, [error])
 
   return (
