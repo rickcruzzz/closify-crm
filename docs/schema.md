@@ -12,12 +12,18 @@ regra de `docs/estado-atual.md`).
 catálogo, 31 são da extensão `pg_trgm`), **31 foreign keys**, **15 triggers**,
 **8 enums**.
 
-<!-- contagem: migrations.arquivos=70 migrations.maior=0071 -->
-**70 arquivos de migration, e a maior é `0071`** (remedido em 04/09; o `0049`
+<!-- contagem: migrations.arquivos=71 migrations.maior=0072 -->
+**71 arquivos de migration, e a maior é `0072`** (remedido em 06/09; o `0049`
 não existe, removido em 22/08). Os dois números vêm sempre juntos: a contagem
-sozinha convida a inferir `0070`.
+sozinha convida a inferir `0071`.
 
-**Três migrations entraram depois da última leitura do catálogo** e as colunas
+**A 0072 acrescentou DUAS tabelas** que ainda não estão na estrutura acima nem
+no diagrama: `enriquecimento_de_lead` e `sinal_de_mercado`, da inteligência de
+mercado (`lib/inteligencia-de-mercado/`). As duas com RLS ligada, `select` por
+`is_workspace_member` e **zero policy de escrita para `authenticated`** — quem
+grava é o `service_role`, pelo mesmo motivo de `notificacoes` e `error_logs`.
+
+**Quatro migrations entraram depois da última leitura do catálogo** e as colunas
 delas estão no diagrama abaixo, mas a estrutura acima ainda é a de 02/09:
 `workspaces.utm_content` (0069), `subscriptions.ciclo` (0070) e
 `workspaces.gclid` (0071). Nenhuma cria tabela, função ou chave — é o quinto
