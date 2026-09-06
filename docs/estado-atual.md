@@ -116,6 +116,86 @@ Nenhuma correcao daquela rodada o alcancava. **Fechada em 06/09, ver a secao
 propria abaixo.**
 
 ---
+## O Pix resolveu o cartao, e a campanha continua parada por outro motivo (06/09)
+
+Tres coisas medidas no painel, com o navegador dirigido. Nenhuma delas era o
+que estava registrado.
+
+### 1. Pix funciona, e o cartao deixou de ser bloqueio
+
+    Voce tem credito              R$ 50,00
+    Ultimo pagamento              5 de set.  R$ 50,00  Pagamento manual  Pix
+    Proximo pagamento automatico  Sem pagamentos futuros
+    Custo liquido (setembro)      R$ 0,00
+
+A documentacao oficial explica por que deu certo sem trocar nada na conta: Pix
+existe so como **pagamento manual**, e a conta esta em automatico — mas *"voce
+pode aplicar pagamentos manuais mesmo que tenha definido a configuracao de
+pagamentos automaticos"*. Migrar de automatico para manual e que o Brasil nao
+permite; **adicionar fundos**, sim.
+
+### 2. E mesmo com credito, a campanha nao pode veicular
+
+    campanha g_preco   R$ 25,00/dia   Qualificada
+    anuncio            "Quanto custa um CRM? | R$ 49 pela empresa toda"  Qualificada
+    palavras-chave     UMA
+
+E a unica que existe e:
+
+    "crm barato para pequena empresa"   Corresp. de frase
+    Nao qualificada — Baixo volume de pesquisas
+
+**Campanha qualificada + anuncio qualificado + zero palavra-chave qualificada =
+zero impressao.** Conferido que nao e filtro escondendo: zero chips na tela e
+uma linha so no DOM. O `docs/google-ads.md` registra SEIS termos; cinco nao
+existem na conta. Ha um "Rascunho em andamento: 1" na tela de campanhas, e a
+hipotese e que as seis foram configuradas num rascunho nunca aplicado.
+
+**Esse e o unico bloqueio que custa dinheiro hoje**, e nao depende de API nem
+de aprovacao de ninguem.
+
+### 3. O gargalo da API e o NIVEL do token, nao o OAuth
+
+    Seu token de desenvolvedor esta atualmente ativado para Acesso a conta de teste.
+    Nivel de acesso: Conta de teste
+
+Token de conta de teste **nao le conta de producao**. Nem com OAuth perfeito,
+nem com a MCC vinculada. Pedido de Acesso Basico enviado em 06/09 pelo
+formulario oficial (`support.google.com/adspolicy/contact/new_token_application`),
+com recibo por e-mail e prazo declarado de **cinco dias uteis**.
+
+**Uma armadilha de leitura que fica registrada:** a Central de API continua
+mostrando "Conta de teste" e o botao "Solicitar acesso basico" MESMO com pedido
+em analise — ela reflete o nivel concedido, nao o pedido. Concluir "nunca foi
+enviado" a partir do botao e erro, e eu cometi esse erro antes de enviar.
+
+### Dois bloqueios do OAuth, os dois medidos
+
+**O projeto do Cloud nao e da conta do Ads.** O `GOOGLE_OAUTH_CLIENT_ID` comeca
+com `472861929986`, e logado como `jonatqpedro` o Console responde:
+
+    Voce precisa de acesso adicional a projeto: 472861929986
+    resourcemanager.projects.get (ausente)
+
+O projeto e do `henriquestn24`. O mesmo vale para `gen-lang-client-0317261117`.
+Fica em aberto se a Google Ads API esta sequer habilitada nele — nao da para
+conferir sem o login do dono do projeto.
+
+**E o atraso de seguranca esta ativo**, palavra por palavra do Google ao tentar
+o consentimento:
+
+    Tente de novo em 6 dias
+    ...ha um atraso de seguranca antes que voce possa usar novas chaves de acesso.
+
+Dizia 6 dias em 05/09 e diz 6 dias em 06/09. Ou o contador e grosseiro, ou
+reinicia — nao tratar 11/09 como data firme.
+
+**O caminho que pula o atraso**, se houver pressa: dar acesso de administrador
+da conta `784-188-3291` ao `henriquestn24`, que ja e dono do projeto do Cloud, e
+fazer o consentimento por ele. Nao foi feito — conceder acesso administrativo e
+poder de gastar em nome do dono.
+
+---
 ## O webhook do Asaas parou de novo, o vigia avisou, e ninguem leu (06/09)
 
 Varredura pedida pelo dono — *"verifique a fundo se tem algo que voce consegue
@@ -1957,12 +2037,10 @@ recusar tudo isso.** Nota baixa ali e o desenho funcionando.
 
 ### O que fica em aberto
 
-    cartao            os 4 cartoes recusados (OR_BACR2_48). A campanha esta
-                      publicada e NAO VEICULA. Alternativa: trocar para
-                      pre-pago e recarregar por Pix
-    developer token   pedido de Acesso Basico enviado em 05/09.
-                      Hoje o token e "conta de teste" e nao le producao.
-                      Documento de design em docs/google-ads-api/
+    cartao            RESOLVIDO em 06/09 com Pix. Ver a secao propria abaixo
+    developer token   pedido de Acesso Basico enviado em 06/09, com recibo por
+                      e-mail. Hoje o token ainda e "conta de teste" e nao le
+                      producao. Documento de design em docs/google-ads-api/
     vincular          FEITO em 06/09. Ver a secao propria abaixo — o
                       convite anterior nunca chegou a gravar, e o motivo
                       nao era o que a tela sugeria
