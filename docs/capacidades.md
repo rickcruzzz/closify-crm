@@ -122,6 +122,10 @@ valendo inteira.
 | Vocabulário do ICP e promessas do nicho | `lib/inteligencia-de-mercado/dominio/aprendizado.ts` | 07/09 |
 | Quem pediu para não ser procurado | `scripts/inteligencia/nao-perturbe.txt` | 07/09 |
 | Onde o bloqueio mora (WhatsApp, e-mail, LGPD) | [docs/mercado/limites-e-bloqueios.md](mercado/limites-e-bloqueios.md) | 07/09 |
+| Praças e variantes de consulta (as 2 alavancas de volume) | `lib/inteligencia-de-mercado/dominio/prospeccao.ts` | 07/09 |
+| Corpus de vocabulário que ACUMULA entre rodadas | `lib/inteligencia-de-mercado/dominio/aprendizado.ts` | 07/09 |
+| Universo em CSV, separado da fila de contato | `scripts/inteligencia/prospectar.mjs` (`--universo`) | 07/09 |
+| Rodada diária que rotaciona nicho e praça | `scripts/inteligencia/prospectar.mjs` (`--diario`) | 07/09 |
 | Os 27 nichos medidos, e a regra que decidiu | [docs/mercado/nichos-medidos-2026-09-06.md](mercado/nichos-medidos-2026-09-06.md) | 06/09 |
 
 **O que foi construído, medido e RECUSADO — não reconstruir:**
@@ -137,6 +141,24 @@ includeText do Exa        aceito pela API e nao muda o resultado (25 vs 25)
 subpages do Exa           alvo semantico fraco: pedi "contato", veio
                           /lentes-de-contato-dental
 ```
+
+## Conversão: o que responde a objeção, e onde
+
+| capacidade | onde | desde |
+|---|---|---|
+| "A porta de saída fica aberta" (garantias) | `components/landing/confianca-section.tsx` | 24/08 |
+| "Posso cancelar quando quiser?" no FAQPage | `components/landing/faq-section.tsx` | 23/08 |
+| A saída na DOBRA, abaixo do preço | `components/landing/hero-section.tsx` | 07/09 |
+| As 3 objeções abaixo do formulário de cadastro | `components/auth/signup-form.tsx` | 07/09 |
+| "Traga e leve seus contatos, em CSV" | `components/landing/pricing-section.tsx` | 07/09 |
+| Cancelamento no JSON-LD das páginas de conteúdo | `app/(conteudo)/*/page.tsx` | 07/09 |
+| Comparação de preço com 6 concorrentes reais | `app/(conteudo)/alternativa-ao-crm-que-cobra-por-usuario/` | 07/09 |
+
+**A assimetria que isso corrigiu, medida em 07/09:** "importar" aparecia em SEIS
+superfícies com frase própria e "exportar" numa só, como item de lista sem
+frase. E o raciocínio certo — *"'Traga e leve seus contatos' responde a objeção
+de ficar preso antes de ela ser feita"* — estava escrito em COMENTÁRIO de código
+desde que o cartão de preço nasceu, e a tela nunca disse.
 
 ## O que NÃO existe, e é perguntado com frequência
 

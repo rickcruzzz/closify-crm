@@ -101,3 +101,8 @@ skills-lock.json
 # Log do vigilante que mantem a Central local de pe (scripts/local/).
 # Fica fora do Git: e diario de uma maquina so, nao estado do projeto.
 .central-local/
+
+# Diario de uma maquina, nao estado do projeto: o contador de rodadas do
+# `--diario` da prospeccao. Versionar faria duas maquinas brigarem pelo mesmo
+# indice e colherem o mesmo recorte.
+scripts/inteligencia/.rodadas.json

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
 import {
+  PRACAS,
   deduplicarPorDominio,
   ehDominioExcluido,
   extrairContato,
@@ -185,8 +186,10 @@ describe('VERTICAIS', () => {
     // `pro` é substring de `produção`, e casar por pedaço de palavra atribui
     // coisa à coisa errada.
     for (const v of VERTICAIS) {
-      expect(v.consulta.toLowerCase()).toContain('site de')
-      expect(v.consulta.toLowerCase()).not.toMatch(/reclama\w*|dor(es)?|problema\w*|planilha\w*/)
+      for (const consulta of v.consultas) {
+        expect(consulta.toLowerCase()).toContain('site de')
+        expect(consulta.toLowerCase()).not.toMatch(/reclama\w*|dor(es)?|problema\w*|planilha\w*/)
+      }
     }
   })
 })
@@ -321,5 +324,37 @@ describe('o lixo que passou na PRIMEIRA gravacao real', () => {
     // O controle que separa "cortei o lixo" de "cortei tudo".
     expect(ehDominioExcluido('https://quatrocor.com.br/')).toBe(false)
     expect(ehDominioExcluido('https://www.biodoca.com.br/orcamento')).toBe(false)
+  })
+})
+
+describe('variantes de consulta e pracas: as duas alavancas de volume', () => {
+  it('cada nicho tem VARIANTES, porque a mesma empresa tem varios nomes', () => {
+    // `dedetizadora`, `controle de pragas` e `sanitizacao` sao a mesma empresa
+    // escrita de tres jeitos. Uma consulta so por nicho deixava dois tercos do
+    // universo de fora: o Exa ancora na formulacao, entao consulta diferente
+    // devolve conjunto diferente — do mesmo jeito que praca diferente devolve.
+    for (const v of VERTICAIS) {
+      expect(v.consultas.length).toBeGreaterThanOrEqual(2)
+      // Variante repetida seria uma segunda chamada pelo mesmo resultado.
+      expect(new Set(v.consultas).size).toBe(v.consultas.length)
+    }
+  })
+
+  it('sao 25 pracas, sem repetida, e as maiores primeiro', () => {
+    // A ordem e usada por `--pracas=N`, que pega as N primeiras: sem ordem por
+    // densidade, um recorte pequeno viria aleatorio.
+    expect(PRACAS.length).toBe(25)
+    expect(new Set(PRACAS).size).toBe(PRACAS.length)
+    expect(PRACAS[0]).toBe('São Paulo')
+    expect(PRACAS.slice(0, 5)).toContain('Belo Horizonte')
+  })
+
+  it('nenhuma praca com espaco sobrando', () => {
+    // Espaco na ponta vira consulta com espaco duplo, e o Exa trata como texto
+    // diferente — duas chamadas pelo mesmo lugar.
+    for (const p of PRACAS) {
+      expect(p.trim()).toBe(p)
+      expect(p.length).toBeGreaterThan(2)
+    }
   })
 })

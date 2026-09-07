@@ -262,6 +262,22 @@ export function HeroSection() {
             <span className="text-foreground font-semibold">R$ 49/mês</span>{' '}
             <span className="text-primary font-medium">pela empresa inteira</span>.
           </p>
+
+          {/* A saída, na dobra.
+              
+              O argumento existe na página desde sempre — `ConfiancaSection` tem
+              "A porta de saída fica aberta" e a FAQ responde "posso cancelar
+              quando quiser?". O problema era POSIÇÃO: os dois moram no meio da
+              página, e quem chega de anúncio decide na primeira tela.
+
+              Sete concorrentes brasileiros já anunciam "preço fixo, sem cobrar
+              por usuário" (medido em 06/09) — um deles com estas palavras. O
+              que continua sem dono é a saída, e ela é a objeção número um do
+              mercado: as reclamações públicas contra os CRMs grandes são de
+              cancelamento e cobrança, não de preço por assento. */}
+          <p className="text-muted-foreground animate-entrada fade-in slide-in-from-bottom-3 fill-mode-both ease-entrada duration-entrada delay-passo-4 text-sm text-balance">
+            Cancela sozinho, sem multa, e leva seus contatos em CSV.
+          </p>
         </div>
 
         <div className="animate-entrada fade-in slide-in-from-bottom-3 fill-mode-both ease-entrada duration-entrada delay-passo-5">

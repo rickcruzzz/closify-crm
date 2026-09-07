@@ -76,20 +76,35 @@ export const VERTICAIS = [
     // as três colunas. Contrato recorrente B2B, orçamento por visita, e nenhum
     // software vertical dominante.
     nome: 'dedetizacao',
-    consulta:
+    consultas: [
       'site de empresa de dedetização e controle de pragas no Brasil que atende empresas',
+      'site de empresa de sanitização e desinsetização predial no Brasil',
+      'site de controladora de vetores e pragas urbanas com contrato mensal no Brasil',
+    ],
   },
   {
     nome: 'comunicacao-visual',
-    consulta: 'site de gráfica ou empresa de comunicação visual no Brasil que atende empresas',
+    consultas: [
+      'site de gráfica ou empresa de comunicação visual no Brasil que atende empresas',
+      'site de empresa de fachada, letra caixa e sinalização visual no Brasil',
+      'site de gráfica rápida que faz banner, adesivo e plotagem para empresas no Brasil',
+    ],
   },
   {
     nome: 'marcenaria',
-    consulta: 'site de marcenaria ou móveis planejados sob medida no Brasil',
+    consultas: [
+      'site de marcenaria ou móveis planejados sob medida no Brasil',
+      'site de empresa de móveis sob medida para cozinha e dormitório no Brasil',
+      'site de marcenaria que atende arquitetos e projetos corporativos no Brasil',
+    ],
   },
   {
     nome: 'locacao-equipamentos',
-    consulta: 'site de empresa de locação de máquinas, andaimes ou equipamentos no Brasil',
+    consultas: [
+      'site de empresa de locação de máquinas, andaimes ou equipamentos no Brasil',
+      'site de locadora de equipamentos para construção civil no Brasil',
+      'site de empresa que aluga betoneira, compressor e ferramentas para obra no Brasil',
+    ],
   },
   {
     // Não passa no contato (4 de 7) e entra assim mesmo, declarado: n=7 é
@@ -97,8 +112,56 @@ export const VERTICAIS = [
     // é a segunda melhor densidade da tabela. Fica em observação — se a próxima
     // rodada repetir contato baixo, sai.
     nome: 'eventos-corporativos',
-    consulta: 'site de buffet corporativo ou empresa organizadora de eventos no Brasil',
+    consultas: [
+      'site de buffet corporativo ou empresa organizadora de eventos no Brasil',
+      'site de empresa de locação de estrutura, som e iluminação para eventos no Brasil',
+      'site de assessoria e produção de eventos corporativos no Brasil',
+    ],
   },
+] as const
+
+/**
+ * As praças, e por que elas são a alavanca mais barata de volume.
+ *
+ * Medido em 06/09: a MESMA consulta com cidade diferente devolve conjunto quase
+ * disjunto — o Exa ancora forte no lugar. Cada praça custa uma chamada e não
+ * repete o que a anterior trouxe, então multiplicar por cidade cresce o
+ * universo em linha reta, enquanto pedir mais resultados da mesma consulta
+ * satura.
+ *
+ * A lista é de regiões metropolitanas com densidade de PME de serviço, não das
+ * 25 maiores cidades: Brasília aparece e Manaus não, porque o que interessa é
+ * quantas empresas de orçamento existem ali, e não quanta gente mora.
+ *
+ * Ordem importa: as primeiras são as maiores. `--pracas=8` pega as oito de
+ * maior densidade em vez de um recorte aleatório.
+ */
+export const PRACAS = [
+  'São Paulo',
+  'Rio de Janeiro',
+  'Belo Horizonte',
+  'Curitiba',
+  'Porto Alegre',
+  'Brasília',
+  'Salvador',
+  'Campinas',
+  'Recife',
+  'Fortaleza',
+  'Goiânia',
+  'Guarulhos',
+  'São Bernardo do Campo',
+  'Santo André',
+  'Osasco',
+  'Ribeirão Preto',
+  'Sorocaba',
+  'São José dos Campos',
+  'Niterói',
+  'Florianópolis',
+  'Joinville',
+  'Londrina',
+  'Uberlândia',
+  'Vitória',
+  'Natal',
 ] as const
 
 export type Vertical = (typeof VERTICAIS)[number]['nome']

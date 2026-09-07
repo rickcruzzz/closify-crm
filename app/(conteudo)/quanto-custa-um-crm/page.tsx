@@ -119,6 +119,22 @@ const PERGUNTAS = [
       `campos e etapas configuráveis. Um CRM que a equipe não usa custa 100% do ` +
       `que foi pago, independentemente do preço.`,
   },
+  {
+    // A pergunta que os sete concorrentes de preço fixo não respondem, e que a
+    // reclamação pública contra os CRMs grandes mostra ser a nº 1: o que se lê
+    // em portal de reclamação não é "é caro", é "não consigo cancelar" e
+    // "cobrança indevida depois de anos de contrato".
+    //
+    // Entra no `PERGUNTAS` e não só no texto porque este array vira o JSON-LD
+    // `FAQPage` — é a resposta que um assistente de IA cita quando alguém
+    // pergunta a ele, e nenhuma das perguntas anteriores tratava disso.
+    q: 'Como funciona o cancelamento no Velo Funil?',
+    a:
+      `Pela própria tela, sem multa e sem falar com vendedor. A conta volta para ` +
+      `o plano gratuito e os contatos continuam lá — e você pode exportar tudo em ` +
+      `CSV a qualquer momento, inclusive para levar a um concorrente. Não há ` +
+      `fidelidade nem prazo mínimo.`,
+  },
 ]
 
 export default function QuantoCustaUmCrm() {

@@ -53,7 +53,7 @@ const tetoDeBusca = Number(args.find((a) => a.startsWith('--teto='))?.split('=')
  *
  * Vazio (o padrao) roda a consulta nacional, sem cidade.
  */
-const cidades = (args.find((a) => a.startsWith('--cidades='))?.split('=')[1] ?? '')
+const cidadesPedidas = (args.find((a) => a.startsWith('--cidades='))?.split('=')[1] ?? '')
   .split(',').map((c) => c.trim()).filter(Boolean)
 const comMensagem = args.includes('--mensagem')
 /**
@@ -65,6 +65,14 @@ const comMensagem = args.includes('--mensagem')
 const quantosDecisores = Number(args.find((a) => a.startsWith('--decisores='))?.split('=')[1] ?? 0)
 /** Nome (ou parte do nome) da empresa que recebe os leads. Ver `escolherWorkspace`. */
 const workspacePedido = args.find((a) => a.startsWith('--workspace='))?.split('=')[1] ?? null
+/** Quantas praças, da lista `PRACAS` (as maiores primeiro). 0 = uma passagem nacional. */
+const quantasPracas = Number(args.find((a) => a.startsWith('--pracas='))?.split('=')[1] ?? 0)
+/** Quantos prospects do topo viram lead. O resto fica no universo. */
+const topo = Number(args.find((a) => a.startsWith('--topo='))?.split('=')[1] ?? 60)
+/** Grava TODO domínio qualificado em CSV, inclusive quem não vira lead. */
+const comUniverso = args.includes('--universo')
+/** Rotaciona nicho e praça a cada dia, sem repetir o recorte de ontem. */
+const modoDiario = args.includes('--diario')
 
 /**
  * Quem pediu para não ser procurado de novo.
@@ -100,18 +108,42 @@ const { montarAbordagem } = await import('../../lib/inteligencia-de-mercado/domi
 const { extrairDecisor } = await import('../../lib/inteligencia-de-mercado/dominio/decisor.ts')
 const { PRO_PLAN_PRICE, FREE_LEAD_LIMIT } = await import('../../lib/plans.ts')
 const {
-  VERTICAIS, ehDominioExcluido, extrairContato, pontuarProspect,
+  VERTICAIS, PRACAS, ehDominioExcluido, extrairContato, pontuarProspect,
   ordenarProspects, deduplicarPorDominio, MINIMO_PARA_LEAD,
 } = dominio
 
 let buscasFeitas = 0
 let custoTotal = 0
+let creditoAcabou = false
+
+/**
+ * O teto por FASE, e por que um balde só não servia.
+ *
+ * O teto era um número para todas as rotas juntas. Numa rodada de 5 praças, as
+ * chamadas de semente sozinhas consumiam quase os 40 — e o `contents`, que é o
+ * que transforma resultado em prospect com contato, nunca chegava a rodar. A
+ * rodada gastava o orçamento inteiro para produzir uma lista de URLs.
+ *
+ * Cada fase tem o próprio balde, então estourar a semente não come o detalhe.
+ */
+const tetos = {
+  search: tetoDeBusca,
+  findSimilar: Math.ceil(tetoDeBusca / 2),
+  contents: tetoDeBusca,
+}
+const gastas = { search: 0, findSimilar: 0, contents: 0 }
+
+class TetoDaFase extends Error {}
+class CreditoAcabou extends Error {}
 
 async function exa(rota, corpo) {
-  if (buscasFeitas >= tetoDeBusca) {
-    throw new Error(`teto de ${tetoDeBusca} chamadas atingido — PARANDO em vez de gastar mais`)
+  const fase = rota === 'findSimilar' ? 'findSimilar' : rota === 'contents' ? 'contents' : 'search'
+  if (gastas[fase] >= tetos[fase]) {
+    throw new TetoDaFase(`teto de ${tetos[fase]} chamadas de ${fase} atingido`)
   }
+  gastas[fase] += 1
   buscasFeitas += 1
+
   const r = await fetch(`https://api.exa.ai/${rota}`, {
     method: 'POST',
     headers: { 'x-api-key': CHAVE, 'Content-Type': 'application/json' },
@@ -119,6 +151,15 @@ async function exa(rota, corpo) {
   })
   const j = await r.json()
   custoTotal += Number(j?.costDollars?.total ?? 0) || 0
+
+  // 401 e 402 são a mesma coisa para quem chama: acabou o que dava para gastar.
+  // Sinalizar em vez de estourar é o que permite a rodada PARAR com relatório e
+  // gravar o que já colheu — perder a colheita porque o crédito acabou no meio
+  // seria pagar duas vezes pelo mesmo trabalho.
+  if (r.status === 401 || r.status === 402) {
+    creditoAcabou = true
+    throw new CreditoAcabou(`Exa recusou (${r.status}): credito ou chave`)
+  }
   if (!r.ok) throw new Error(`Exa ${rota} -> ${r.status}: ${JSON.stringify(j).slice(0, 200)}`)
   return j
 }
@@ -149,12 +190,12 @@ const host = (u) => {
  * O `findSimilar` continua mandando a lista: lá não há `category`, e a
  * combinação não aparece.
  */
-async function semear(vertical, cidade = null) {
+async function semear(consulta, cidade = null) {
   // `numResults` ate 50 numa chamada so: medido em 06/09, 50 devolveu 43
   // resultados e 39 dominios UNICOS pelo mesmo preco de uma busca. Pedir 10 era
   // jogar fora quatro quintos da colheita.
   const j = await exa('search', {
-    query: cidade ? `${vertical.consulta} em ${cidade}` : vertical.consulta,
+    query: cidade ? `${consulta} em ${cidade}` : consulta,
     category: 'company',
     type: 'auto',
     numResults: Math.min(porVertical, 50),
@@ -344,6 +385,44 @@ async function anotarAbordagem(cabecalho, ws, p, leadId) {
   return true
 }
 
+/**
+ * Tudo que o CRM já tem, numa leitura só.
+ *
+ * Antes era uma requisição por prospect (`leads?company=eq.<dominio>`). Com 60
+ * prospects isso é tolerável; com mil, são mil idas a São Paulo, e a rodada
+ * passa mais tempo perguntando ao banco do que buscando na web.
+ *
+ * A saída NÃO é `.in()` com mil valores: o PostgREST recebe filtro por query
+ * string, e este projeto já mediu onde ele quebra — 500 valores devolvem 400 e
+ * 2.000 devolvem 414. Foi assim que a dedupe da importação de planilha falhou
+ * em silêncio, reimportando a planilha inteira.
+ *
+ * O que funciona, e é o padrão que a importação passou a usar: ler a coluna
+ * paginada uma vez e comparar em memória.
+ */
+async function lerDominiosNoCrm(cabecalho, workspaceId) {
+  const PAGINA = 1000
+  const mapa = new Map()
+  for (let de = 0; ; de += PAGINA) {
+    const r = await fetch(
+      `${URL_SUPABASE}/rest/v1/leads?select=id,company&workspace_id=eq.${workspaceId}` +
+        `&order=created_at.asc&offset=${de}&limit=${PAGINA}`,
+      { headers: cabecalho },
+    )
+    if (!r.ok) {
+      console.error(`  leitura da base falhou: ${(await r.text()).slice(0, 120)}`)
+      break
+    }
+    const linhas = await r.json()
+    for (const l of linhas) if (l.company) mapa.set(l.company, l.id)
+    // Página incompleta é a última. Parar por `length < PAGINA` e não por um
+    // total conhecido: o total exigiria outra consulta, e ele muda enquanto
+    // lemos.
+    if (linhas.length < PAGINA) break
+  }
+  return mapa
+}
+
 async function gravarComoLeads(prospects) {
   if (!URL_SUPABASE || !SERVICE_ROLE) {
     console.error('\nFaltam credenciais do Supabase. Nada foi gravado.')
@@ -360,22 +439,18 @@ async function gravarComoLeads(prospects) {
   if (!ws) return
 
   console.log(`\ngravando em "${ws.name}" (${ws.id.slice(0, 8)}...)`)
+  const jaNoCrm = await lerDominiosNoCrm(cabecalho, ws.id)
+  console.log(`a base ja tem ${jaNoCrm.size} contatos com dominio`)
   let gravados = 0
   let jaExistiam = 0
   let anotados = 0
 
   for (const p of prospects) {
-    // Dedupe pelo que o CRM já tem: reimportar o mesmo prospect a cada rodada
-    // encheria o funil de repetido, que é exatamente o defeito que a
-    // importação de planilha já pagou.
-    const busca = await fetch(
-      `${URL_SUPABASE}/rest/v1/leads?select=id&workspace_id=eq.${ws.id}&company=eq.${encodeURIComponent(p.dominio)}&limit=1`,
-      { headers: cabecalho },
-    )
-    const [existente] = await busca.json()
-    if (existente) {
+    // Dedupe contra o mapa lido de uma vez, não uma consulta por prospect.
+    // Ver `lerDominiosNoCrm` para o porquê.
+    if (jaNoCrm.has(p.dominio)) {
       jaExistiam += 1
-      if (await anotarAbordagem(cabecalho, ws, p, existente.id)) anotados += 1
+      if (await anotarAbordagem(cabecalho, ws, p, jaNoCrm.get(p.dominio))) anotados += 1
       continue
     }
 
@@ -438,37 +513,107 @@ if (verticais.length === 0) {
   process.exit(1)
 }
 
+/**
+ * As praças desta rodada.
+ *
+ * `--cidades` manda quando informado. `--pracas=N` pega as N primeiras de
+ * `PRACAS`, ordenada por densidade de PME — sem a ordem, um recorte pequeno
+ * viria aleatório. Sem nenhum dos dois, uma passagem nacional.
+ */
+const cidades = cidadesPedidas.length
+  ? cidadesPedidas
+  : quantasPracas > 0
+    ? [...PRACAS].slice(0, quantasPracas)
+    : []
+
+/**
+ * O modo diário: rotaciona o recorte para não colher o mesmo de ontem.
+ *
+ * O checkpoint guarda quantas rodadas já aconteceram, e o índice decide o nicho
+ * e a janela de praças. Sem ele, "rodar todo dia" traria o mesmo topo toda
+ * manhã — o Exa é estável, e é a CONSULTA que precisa mudar.
+ *
+ * Arquivo fora do Git: é diário de uma máquina, não estado do projeto — a mesma
+ * razão que mantém `.central-local/` fora.
+ */
+const CAMINHO_RODADAS = 'scripts/inteligencia/.rodadas.json'
+let rodada = 0
+if (modoDiario) {
+  try {
+    rodada = JSON.parse(await readFile(CAMINHO_RODADAS, 'utf8')).rodada ?? 0
+  } catch {
+    rodada = 0
+  }
+}
+
+const verticaisDaRodada = modoDiario ? [verticais[rodada % verticais.length]] : verticais
+const cidadesDaRodada = modoDiario
+  ? // Uma janela de 5 praças que anda a cada dia: girando, a lista inteira é
+    // varrida a cada cinco rodadas do mesmo nicho.
+    [...PRACAS, ...PRACAS].slice(
+      (Math.floor(rodada / verticais.length) * 5) % PRACAS.length,
+      ((Math.floor(rodada / verticais.length) * 5) % PRACAS.length) + 5,
+    )
+  : cidades
+
 console.log(`modo: ${confirmar ? 'CONFIRMAR (grava leads)' : 'ENSAIO (nao grava nada)'}`)
-console.log(`verticais: ${verticais.map((v) => v.nome).join(', ')} | ${porVertical} por vertical | teto ${tetoDeBusca} chamadas\n`)
+if (modoDiario) console.log(`diario: rodada #${rodada}`)
+console.log(
+  `verticais: ${verticaisDaRodada.map((v) => v.nome).join(', ')} | ` +
+    `${porVertical} por consulta | pracas: ${cidadesDaRodada.length || 'nacional'} | ` +
+    `teto por fase: search ${tetos.search}, similar ${tetos.findSimilar}, contents ${tetos.contents}`,
+)
+console.log('')
 
 const candidatos = []
 try {
-  for (const v of verticais) {
-    // Sem `--cidades`, uma passagem nacional. Com, uma por praca: o Exa ancora
-    // forte no lugar, entao cada cidade traz conjunto quase disjunto pelo preco
-    // de uma chamada.
-    const pracas = cidades.length ? cidades : [null]
+  for (const v of verticaisDaRodada) {
+    const pracas = cidadesDaRodada.length ? cidadesDaRodada : [null]
     const sementes = []
+
+    // Cada VARIANTE de consulta em cada praça. As duas dimensões multiplicam
+    // porque o Exa ancora nas duas: "dedetizadora em Recife" e "controle de
+    // pragas em Recife" devolvem conjuntos diferentes.
     for (const cidade of pracas) {
-      const s = await semear(v, cidade)
-      console.log(`${v.nome.padEnd(20)} ${(cidade ?? 'nacional').padEnd(16)} semente: ${s.length}`)
-      sementes.push(...s)
+      for (const consulta of v.consultas) {
+        try {
+          sementes.push(...(await semear(consulta, cidade)))
+        } catch (erro) {
+          // Teto de fase não derruba a rodada: para de semear e vai detalhar o
+          // que já tem. Crédito acabado sobe e encerra tudo.
+          if (erro instanceof CreditoAcabou) throw erro
+          console.error(`  ${v.nome}/${cidade ?? 'nacional'}: ${erro.message}`)
+          break
+        }
+      }
+      if (gastas.search >= tetos.search) break
     }
+    console.log(`${v.nome.padEnd(20)} semente total: ${sementes.length}`)
     for (const s of sementes) candidatos.push({ ...s, vertical: v.nome })
 
-    // Expande a partir das duas primeiras — as mais relevantes segundo o Exa.
-    // Expandir todas multiplicaria o custo sem melhorar a lista: `findSimilar`
-    // de sementes vizinhas devolve muita interseção.
-    for (const s of sementes.slice(0, 2)) {
-      const parecidos = await expandir(s.url)
-      console.log(`${''.padEnd(20)} findSimilar(${host(s.url)}): +${parecidos.length}`)
-      for (const p of parecidos) candidatos.push({ ...p, vertical: v.nome })
+    // `findSimilar` PROPORCIONAL: uma expansão por praça, não duas no total.
+    // Com 25 praças, duas expansões cobriam 8% do que foi semeado — e é o
+    // findSimilar que acha quem não escreve para buscador.
+    const quantas = Math.max(2, Math.min(pracas.length, tetos.findSimilar))
+    const passo = Math.max(1, Math.floor(sementes.length / quantas))
+    for (let k = 0; k < sementes.length && k / passo < quantas; k += passo) {
+      try {
+        const parecidos = await expandir(sementes[k].url)
+        for (const q of parecidos) candidatos.push({ ...q, vertical: v.nome })
+      } catch (erro) {
+        if (erro instanceof CreditoAcabou) throw erro
+        break
+      }
     }
+    console.log(`${''.padEnd(20)} apos findSimilar: ${candidatos.length} candidatos`)
   }
 } catch (erro) {
-  console.error(`\nPAROU: ${erro.message}`)
+  console.error(`
+PAROU: ${erro.message}`)
+  if (creditoAcabou) {
+    console.error('O credito do Exa acabou. A rodada segue com o que ja foi colhido.')
+  }
 }
-
 const unicos = []
 const vistos = new Set()
 for (const c of candidatos) {
@@ -578,7 +723,7 @@ console.log(`com contato extraido: ${comContato.length} de ${pontuados.length}`)
  * Os descartados não somem: aparecem na lista impressa com "(abrir o site)",
  * que é exatamente o que se faz com eles.
  */
-const paraGravar = pontuados.filter(
+const qualificados = pontuados.filter(
   (p) =>
     p.pontos >= MINIMO_PARA_LEAD &&
     (p.contato.email || p.contato.whatsapp || p.contato.telefone),
@@ -594,7 +739,62 @@ if (semCanal.length > 0) {
       'e o banco recusa (leads_contato_minimo). Abra o site deles à mão.',
   )
 }
-console.log(`acima do piso de ${MINIMO_PARA_LEAD} pontos: ${paraGravar.length} — so estes viram lead`)
+
+/**
+ * O corte entre UNIVERSO e FILA, e por que ele existe.
+ *
+ * Descobrir cinco mil domínios custa dólares. Gravar cinco mil leads que
+ * ninguém liga transforma a fila em ruído — a lição de 20/08, quando 8 dos 11
+ * alertas da Central eram lixo e o alerta de dinheiro foi ignorado junto com
+ * eles.
+ *
+ * Então: o universo inteiro vai para CSV, e só o topo vira lead com mensagem.
+ * Os dois números aparecem lado a lado, para a diferença ser visível em vez de
+ * silenciosa.
+ */
+const paraGravar = qualificados.slice(0, topo)
+console.log(
+  `acima do piso de ${MINIMO_PARA_LEAD} pontos: ${qualificados.length} | ` +
+    `viram lead nesta rodada: ${paraGravar.length} (--topo=${topo})`,
+)
+
+if (comUniverso) {
+  // CSV e não JSON: o universo é para ser aberto no Excel e filtrado à mão
+  // quando a fila acabar. Mesmo separador `;` e BOM que `lib/leads/exportar-csv.ts`
+  // usa, pela mesma razão — com vírgula a planilha vira uma coluna só.
+  const linhasCsv = [
+    'dominio;titulo;vertical;pontos;whatsapp;telefone;email;motivos',
+    ...qualificados.map((p) =>
+      [
+        p.dominio,
+        String(p.titulo ?? '').replace(/[;\r\n]/g, ' '),
+        p.vertical,
+        p.pontos,
+        p.contato.whatsapp ?? '',
+        p.contato.telefone ?? '',
+        p.contato.email ?? '',
+        p.motivos.join(' | '),
+      ].join(';'),
+    ),
+  ]
+  const nomes = [...new Set(qualificados.map((p) => p.vertical))].join('-') || 'rodada'
+  const caminhoCsv = `docs/mercado/universo-${nomes}.csv`
+  await mkdir('docs/mercado', { recursive: true })
+  // Acrescenta em vez de sobrescrever: o universo é acumulado entre rodadas, e
+  // sobrescrever jogaria fora o que já foi pago. O cabeçalho só entra na
+  // primeira vez.
+  let existente = ''
+  try {
+    existente = await readFile(caminhoCsv, 'utf8')
+  } catch {
+    existente = ''
+  }
+  const corpo = existente
+    ? existente.trimEnd() + LINHA + linhasCsv.slice(1).join(LINHA) + LINHA
+    : '\ufeff' + linhasCsv.join(LINHA) + LINHA
+  await writeFile(caminhoCsv, corpo, 'utf8')
+  console.log(`universo: ${qualificados.length} linhas -> ${caminhoCsv}`)
+}
 
 if (confirmar) {
   await gravarComoLeads(paraGravar)
@@ -616,59 +816,86 @@ const paginasLidas = [...detalhes.entries()]
   .map(([url, d]) => ({ dominio: host(url), texto: d.texto ?? '' }))
   .filter((p) => p.dominio && p.texto.length > 200)
 
-const vocabulario = aprendizado.extrairVocabulario(paginasLidas, {
-  consultas: verticais.map((v) => v.consulta),
-  minimoDeSites: 3,
-})
-const promessas = aprendizado.extrairPromessas(paginasLidas)
+// De qual nicho é cada página. Sem isso o corpus não saberia dizer se um termo
+// atravessa setores ou é jargão de um só — a única pergunta que uma rodada
+// isolada não responde.
+const nichoPorDominio = new Map(pontuados.map((p) => [p.dominio, p.vertical]))
+
+const CAMINHO_CORPUS = 'docs/mercado/vocabulario.json'
+let corpus = aprendizado.CORPUS_VAZIO
+try {
+  corpus = JSON.parse(await readFile(CAMINHO_CORPUS, 'utf8'))
+} catch {
+  corpus = aprendizado.CORPUS_VAZIO
+}
 
 const hoje = new Date().toISOString().slice(0, 10)
-const caminho = `docs/mercado/aprendizado-${hoje}.md`
+const promessas = aprendizado.extrairPromessas(paginasLidas)
+
+for (const v of verticaisDaRodada) {
+  const paginasDoNicho = paginasLidas.filter((pg) => nichoPorDominio.get(pg.dominio) === v.nome)
+  if (paginasDoNicho.length === 0) continue
+  const termos = aprendizado.extrairVocabulario(paginasDoNicho, {
+    // Todas as variantes entram na desqualificação: a palavra que EU pus na
+    // pergunta não pode voltar como resposta, e agora são três perguntas.
+    consultas: [...v.consultas],
+    // As praças da rodada entram na desqualificação: elas são parte da pergunta
+    // que eu fiz, e sem isso "rio de janeiro" vira o termo que mais atravessa
+    // nichos — medido em 07/09.
+    pracas: cidadesDaRodada.length ? cidadesDaRodada : [],
+    minimoDeSites: 3,
+  })
+  corpus = aprendizado.mesclarVocabulario(corpus, termos, v.nome, hoje)
+  console.log(`vocabulario ${v.nome}: +${termos.length} termos de ${paginasDoNicho.length} sites`)
+}
+
+await mkdir('docs/mercado', { recursive: true })
+await writeFile(CAMINHO_CORPUS, JSON.stringify(corpus, null, 2), 'utf8')
+
+const consolidado = aprendizado.consolidarVocabulario(corpus)
+const nichosNoCorpus = Object.keys(corpus.atualizadoEm).sort()
+const caminho = 'docs/mercado/vocabulario-do-icp.md'
 const linhas = [
-  `# O que a prospecção de ${hoje} ensinou`,
+  '# O vocabulário do ICP, acumulado',
   '',
-  'Gerado por `scripts/inteligencia/prospectar.mjs`, lendo ' +
-    `${paginasLidas.length} sites reais de ${verticais.map((v) => v.nome).join(', ')}.`,
-  '**Nada aqui foi escrito por mim:** cada termo é contado em domínios distintos',
-  'e cada promessa é recorte literal do site.',
+  `Atualizado em ${hoje}. Nichos no corpus: ${nichosNoCorpus.join(', ') || '(nenhum)'}.`,
   '',
-  '## Vocabulário do ICP',
+  'Gerado por `scripts/inteligencia/prospectar.mjs` a cada rodada, **somando em',
+  'vez de sobrescrever**. Nada aqui foi escrito por mim: cada termo é contado em',
+  'domínios distintos, e a palavra que entrou na consulta é desqualificada como',
+  'resposta.',
   '',
-  'A coluna `sites` é o número de domínios DISTINTOS que usam o termo — nunca',
-  'ocorrências. Um site que repete o próprio slogan quarenta vezes é um site, e',
-  'não uma tendência de mercado.',
+  '## A coluna que decide onde a palavra é usada',
   '',
-  '**Para que serve, e para o que NAO serve.** O termo abaixo vira **copy**: e a',
-  'lingua que o cliente fala, e a landing que fala assim e reconhecida por ele.',
+  '`nichos` é em quantos setores diferentes o termo aparece — não quantas vezes.',
   '',
-  '**NAO vira palavra-chave do Google Ads**, e a distincao custa dinheiro: quem',
-  'busca `clareamento dental` e o PACIENTE da clinica, nao a dona dela procurando',
-  'um CRM. Comprar esse clique paga por um publico que nunca assinaria. O site',
-  'institucional diz como a empresa fala com o CLIENTE dela — nao como ela',
-  'descreveria o proprio problema de gestao, que e o que a `g_preco` precisa.',
+  '    em 1 nicho    jargao daquele setor. Vira copy do anuncio DELE',
+  '    em 4+ nichos  e como a PME brasileira fala. Vira copy da LANDING',
   '',
-  'A `g_preco` continua parada com cauda longa que eu inventei, e este documento',
-  'nao a corrige sozinho: o que ele corrige e a COPY da pagina de destino.',
+  '**Não vira palavra-chave do Google Ads.** Quem busca o termo do site é o',
+  'CLIENTE daquela empresa, não a dona dela procurando um CRM — comprar esse',
+  'clique paga por um público que nunca assinaria.',
   '',
-  '| termo | sites | onde conferir |',
-  '| --- | ---: | --- |',
-  ...vocabulario.map((t) => `| ${t.termo} | ${t.sites} | ${t.exemplos.join(', ')} |`),
+  '| termo | nichos | sites | onde |',
+  '| --- | ---: | ---: | --- |',
+  ...consolidado.map((t) => `| ${t.termo} | ${t.nichos} | ${t.sites} | ${t.onde.join(', ')} |`),
   '',
-  '## O que o nicho promete, e que a nossa página enfrenta sem saber',
+  '## O que o nicho promete, na rodada mais recente',
   '',
   'Cada linha é uma objeção: se o visitante ouviu isto em dez sites antes do',
   'nosso, a frase não diferencia nada. Recorte literal, nunca paráfrase.',
   '',
-  ...promessas.map((p) => `- "${p.frase}" — \`${p.dominio}\``),
-  '',
-  '## O que este documento NÃO é',
-  '',
-  'Não é pesquisa de volume de busca. O Exa diz o que está **publicado**, não o',
-  'que é procurado — o volume se confere no Planejador do Google antes de virar',
-  'palavra-chave paga. Do mesmo jeito que o Search Console desmentiu duas',
-  'suposições minhas em 03/09: quando a fonte oficial existe, é ela que decide.',
+  ...promessas.map((pr) => `- "${pr.frase}" — \`${pr.dominio}\``),
   '',
 ]
-await mkdir('docs/mercado', { recursive: true })
-await writeFile(caminho, linhas.join('\n'), 'utf8')
-console.log(`\naprendizado: ${vocabulario.length} termos e ${promessas.length} promessas -> ${caminho}`)
+await writeFile(caminho, linhas.join(LINHA), 'utf8')
+console.log(
+  `corpus: ${Object.keys(corpus.termos).length} termos em ${nichosNoCorpus.length} nichos -> ${caminho}`,
+)
+
+if (modoDiario) {
+  // Avança DEPOIS da rodada, não antes: se ela morrer no meio, amanhã repete o
+  // mesmo recorte em vez de pular um pedaço do mapa sem ter colhido nada dele.
+  await writeFile(CAMINHO_RODADAS, JSON.stringify({ rodada: rodada + 1 }), 'utf8')
+  console.log(`diario: proxima rodada sera #${rodada + 1}`)
+}

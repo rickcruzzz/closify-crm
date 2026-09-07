@@ -47,6 +47,19 @@ export default function sitemap(): MetadataRoute.Sitemap {
       changeFrequency: 'monthly',
       priority: 0.9,
     },
+    // A terceira página de conteúdo, e a de maior intenção comercial das três:
+    // quem digita "alternativa ao CRM que cobra por usuário" já decidiu trocar
+    // e está escolhendo para onde.
+    //
+    // `weekly` e não `monthly` porque ela carrega preço de CONCORRENTE, que é o
+    // dado que envelhece mais rápido do site inteiro — a data de leitura está
+    // escrita na própria página, ao lado dos números.
+    {
+      url: `${base}/alternativa-ao-crm-que-cobra-por-usuario`,
+      lastModified,
+      changeFrequency: 'weekly',
+      priority: 0.9,
+    },
     // Documentos legais entram no sitemap porque a LGPD (art. 9º) exige acesso
     // facilitado à informação sobre o tratamento, e porque são a página que
     // um titular ou a própria ANPD procura primeiro.

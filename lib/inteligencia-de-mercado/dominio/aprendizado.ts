@@ -59,6 +59,14 @@ const VAZIAS = new Set(
     'mais menos muito muita muitos muitas todo toda todos todas cada qualquer ' +
     'voce voces nos eu ele ela eles elas lhe lhes me te se ' +
     'aqui ali la onde quando como porque pois entao tambem ja nao sim ' +
+    // Conectores de discurso. Aparecem em qualquer texto do mundo e por isso
+    // atravessam TODOS os nichos — subiriam ao topo do consolidado dizendo
+    // nada. Medido em 07/09: "alem disso" apareceu em dois nichos no primeiro
+    // corpus acumulado.
+    'alem disso portanto assim porem contudo entretanto ainda apenas somente ' +
+    // Fragmento de URL. O texto do Exa traz endereços colados, e "https www"
+    // virava termo com dois nichos.
+    'https http www com br net org ' +
     'mesmo mesma outro outra outros outras qual quais quem cujo ' +
     'saiba leia veja clique acesse conheca confira aqui').split(' '),
 )
@@ -98,6 +106,11 @@ const FUNCIONAIS_EM_INGLES = new Set(
  */
 const RUIDO_DE_SITE = new Set([
   'fale conosco',
+  'contato conosco',
+  'entre em contato',
+  'alem disso',
+  'https www',
+  'www com',
   'saiba mais',
   'leia mais',
   'clique aqui',
@@ -148,9 +161,29 @@ export type PaginaLida = { dominio: string; texto: string }
  */
 export function extrairVocabulario(
   paginas: PaginaLida[],
-  { consultas = [], minimoDeSites = 3, maximo = 25 }: { consultas?: string[]; minimoDeSites?: number; maximo?: number } = {},
+  {
+    consultas = [],
+    /**
+     * As praças da rodada. Elas entram na desqualificação junto com a consulta,
+     * e a razão é a mesma — **são parte da pergunta que eu fiz**.
+     *
+     * O defeito que isto corrige apareceu no primeiro corpus acumulado, em
+     * 07/09: `rio de janeiro` era o termo que mais atravessava nichos. Claro
+     * que era: a consulta tinha sido `... em Rio de Janeiro`. É a consulta
+     * circular voltando por uma porta nova, e a porta nova é que a cidade é
+     * colada no `semear`, fora do texto da consulta.
+     */
+    pracas = [],
+    minimoDeSites = 3,
+    maximo = 25,
+  }: {
+    consultas?: string[]
+    pracas?: string[]
+    minimoDeSites?: number
+    maximo?: number
+  } = {},
 ): TermoDoIcp[] {
-  const fora = palavrasDaConsulta(consultas)
+  const fora = palavrasDaConsulta([...consultas, ...pracas])
   const porTermo = new Map<string, Set<string>>()
 
   for (const pagina of paginas) {
@@ -240,4 +273,86 @@ export function extrairPromessas(
   }
 
   return promessas.slice(0, maximo)
+}
+
+/**
+ * O corpus que ACUMULA, em vez de se destruir a cada rodada.
+ *
+ * `prospectar.mjs` escrevia `aprendizado-<data>.md`. Rodar seis nichos no mesmo
+ * dia deixava só o último: o arquivo de 07/09 tinha 51 sites de dedetização e
+ * nada dos outros cinco nichos que rodaram naquele dia. O dado já tinha sido
+ * pago, lido e jogado fora.
+ *
+ * Aqui o vocabulário vira estado: um mapa termo → nicho → nº de sites, somado a
+ * cada passagem. E isso destrava a pergunta que uma rodada sozinha não responde:
+ * **em quantos NICHOS diferentes o termo aparece.**
+ *
+ * A distinção decide onde a palavra é usada:
+ *
+ *     em 1 nicho    e jargao daquele setor. Vira copy do anuncio DELE
+ *     em 4+ nichos  e como a PME brasileira fala, e nao um setor. Vira copy da
+ *                   landing, que atende todos
+ *
+ * O maior número por nicho vence, e não a soma: rodar dedetização cinco vezes
+ * não torna "controle de pragas" mais universal — torna a amostra daquele
+ * nicho maior. Somar transformaria repetição em evidência.
+ */
+export type CorpusDeVocabulario = {
+  /** termo -> nicho -> em quantos domínios distintos daquele nicho apareceu. */
+  termos: Record<string, Record<string, number>>
+  /** nicho -> data ISO da última vez que ele foi colhido. */
+  atualizadoEm: Record<string, string>
+}
+
+export const CORPUS_VAZIO: CorpusDeVocabulario = { termos: {}, atualizadoEm: {} }
+
+export function mesclarVocabulario(
+  corpus: CorpusDeVocabulario,
+  novos: TermoDoIcp[],
+  nicho: string,
+  quando: string,
+): CorpusDeVocabulario {
+  const termos: CorpusDeVocabulario['termos'] = { ...corpus.termos }
+  for (const t of novos) {
+    const porNicho = { ...(termos[t.termo] ?? {}) }
+    // O MAIOR, nunca a soma: rodar o mesmo nicho de novo mede melhor o mesmo
+    // nicho, não descobre um nicho novo.
+    porNicho[nicho] = Math.max(porNicho[nicho] ?? 0, t.sites)
+    termos[t.termo] = porNicho
+  }
+  return { termos, atualizadoEm: { ...corpus.atualizadoEm, [nicho]: quando } }
+}
+
+export type TermoConsolidado = {
+  termo: string
+  /** Em quantos nichos distintos ele apareceu. É o que decide onde ele é usado. */
+  nichos: number
+  /** Soma dos sites, só para desempate. Não é o critério principal. */
+  sites: number
+  onde: string[]
+}
+
+/**
+ * O consolidado, ordenado por ALCANCE entre nichos e não por volume.
+ *
+ * Ordenar por nº de sites poria "controle de pragas" no topo só porque
+ * dedetização foi o nicho mais rodado — e ele é inútil para a landing. O que
+ * serve para a landing é o termo que atravessa setores.
+ */
+export function consolidarVocabulario(
+  corpus: CorpusDeVocabulario,
+  maximo = 40,
+): TermoConsolidado[] {
+  return Object.entries(corpus.termos)
+    .map(([termo, porNicho]) => {
+      const onde = Object.keys(porNicho).sort()
+      return {
+        termo,
+        nichos: onde.length,
+        sites: Object.values(porNicho).reduce((a, b) => a + b, 0),
+        onde,
+      }
+    })
+    .sort((a, b) => b.nichos - a.nichos || b.sites - a.sites || a.termo.localeCompare(b.termo))
+    .slice(0, maximo)
 }

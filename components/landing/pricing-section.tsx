@@ -107,7 +107,21 @@ const plans: Plan[] = [
        * objecao de ficar preso antes de ela ser feita.
        */
       { texto: 'Convites por e-mail', icone: Send },
-      { texto: 'Importe e exporte seus contatos', icone: ArrowLeftRight },
+      {
+        // "Traga e leve" e nao "Importe e exporte": o verbo importa aqui.
+        //
+        // O raciocinio certo estava escrito no comentario acima desde que este
+        // cartao nasceu — "responde a objecao de ficar preso antes de ela ser
+        // feita" — e a TELA nunca disse. Medido em 07/09: "importar" aparecia
+        // em seis superficies com frase propria, e "exportar" numa unica, como
+        // item de lista sem frase nenhuma.
+        //
+        // A assimetria dizia o contrario do que o produto faz: a porta de
+        // entrada anunciada seis vezes e a de saida escondida e o desenho de
+        // quem quer prender.
+        texto: 'Traga e leve seus contatos, em CSV',
+        icone: ArrowLeftRight,
+      },
     ],
     // A pergunta que trava quem considera um plano gratis e sempre a mesma:
     // "e se eu bater no limite, perco o que ja cadastrei?". A trigger da 0023

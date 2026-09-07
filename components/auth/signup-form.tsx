@@ -13,6 +13,7 @@ import { Label } from '@/components/ui/label'
 import { Separator } from '@/components/ui/separator'
 import { GoogleIcon } from '@/components/auth/google-icon'
 import { PasswordField } from '@/components/auth/password-field'
+import { FREE_LEAD_LIMIT } from '@/lib/plans'
 import { AuthCabecalho } from '@/components/auth/auth-cabecalho'
 import { AuthAlerta } from '@/components/auth/auth-alerta'
 import { passo3, passo4, passo5 } from '@/components/auth/animacao'
@@ -310,6 +311,30 @@ export function SignUpForm({
             Criar conta
           </Button>
         </form>
+
+        {/* As três objeções que travam a decisão, no lugar onde ela acontece.
+            
+            A landing responde as três — em `ConfiancaSection`, na `FaqSection`
+            e no cartão do Pro. Mas quem chega de anúncio cai DIRETO aqui, e a
+            FAQ mora a uns dez mil pixels de distância: registrado como "a
+            próxima melhoria de conversão" em 04/09 e nunca feito.
+
+            E o eco de peça só cobre quem vem com `utm_content` conhecido. Duas
+            das sete chaves falam de cancelamento; o padrão, nenhuma. Quem chega
+            por busca orgânica, indicação ou digitando o endereço não lia uma
+            palavra sobre poder sair.
+
+            **Nada aqui é promessa nova.** O Free existe (`FREE_LEAD_LIMIT`), o
+            cancelamento pela tela existe, e a exportação em CSV saiu em 03/09.
+            Escrever o que o produto não cumpre seria a única coisa pior que o
+            silêncio. */}
+        <ul
+          className={`${passo5} text-muted-foreground flex flex-col gap-1.5 text-center text-xs sm:text-sm`}
+        >
+          <li>Grátis até {FREE_LEAD_LIMIT} contatos, sem cartão.</li>
+          <li>Cancela sozinho, sem multa e sem falar com vendedor.</li>
+          <li>Seus contatos saem em CSV quando você quiser.</li>
+        </ul>
 
         <p className={`${passo5} text-muted-foreground text-center text-sm`}>
           Já tem uma conta?{' '}
