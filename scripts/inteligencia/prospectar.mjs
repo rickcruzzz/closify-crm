@@ -63,6 +63,8 @@ const comMensagem = args.includes('--mensagem')
  * barato para os dez que voce vai ligar hoje. Zero (o padrao) nao busca ninguem.
  */
 const quantosDecisores = Number(args.find((a) => a.startsWith('--decisores='))?.split('=')[1] ?? 0)
+/** Nome (ou parte do nome) da empresa que recebe os leads. Ver `escolherWorkspace`. */
+const workspacePedido = args.find((a) => a.startsWith('--workspace='))?.split('=')[1] ?? null
 
 /**
  * Quem pediu para não ser procurado de novo.
@@ -216,6 +218,69 @@ async function detalhar(urls) {
   return mapa
 }
 
+/**
+ * Em qual empresa os leads entram — e por que "a mais antiga" era um defeito.
+ *
+ * A primeira versão pegava `order=created_at.asc&limit=1`. Conferido antes da
+ * primeira gravação real, isso apontava para **"Agência Nova Era": plano Free,
+ * `created_by` nulo, duas linhas dentro.** Duas coisas quebradas de uma vez:
+ *
+ *     empresa arbitraria   a mais antiga do banco nao e a que voce trabalha.
+ *                          Os leads cairiam onde ninguem olha
+ *     limite de plano      a trigger da 0026 recusa a partir de 50 leads, e ela
+ *                          vale para o service_role tambem. Uma rodada de 400
+ *                          morreria no meio com 42501, deixando parte gravada
+ *
+ * O `service_role` ignora RLS, **não ignora trigger** — e esse é o desenho
+ * certo: limite de plano vive no banco justamente para não depender de quem
+ * chama.
+ *
+ * Agora `--workspace=<parte do nome>` manda, e sem ele o padrão é a empresa
+ * **Pro vigente** mais antiga. `pro_vigente()` e não `plan`, porque a coluna é
+ * o último valor gravado e não sabe que o tempo passou.
+ */
+async function escolherWorkspace(cabecalho, quantos) {
+  const r = await fetch(
+    `${URL_SUPABASE}/rest/v1/workspaces?select=id,name,plan&order=created_at.asc`,
+    { headers: cabecalho },
+  )
+  const todas = await r.json()
+  if (!Array.isArray(todas) || todas.length === 0) {
+    console.error('Nenhuma empresa encontrada. Nada foi gravado.')
+    return null
+  }
+
+  const candidatas = workspacePedido
+    ? todas.filter((w) => w.name.toLowerCase().includes(workspacePedido.toLowerCase()))
+    : todas
+  if (candidatas.length === 0) {
+    console.error(`Nenhuma empresa com "${workspacePedido}" no nome. Nada foi gravado.`)
+    return null
+  }
+
+  const vigentes = []
+  for (const w of candidatas) {
+    const v = await fetch(`${URL_SUPABASE}/rest/v1/rpc/pro_vigente`, {
+      method: 'POST',
+      headers: cabecalho,
+      body: JSON.stringify({ target_workspace_id: w.id }),
+    })
+    if ((await v.json()) === true) vigentes.push(w)
+  }
+
+  const alvo = vigentes[0] ?? null
+  if (!alvo) {
+    console.error(
+      'ALVO SEM PRO VIGENTE. A trigger da 0026 recusa acima de 50 contatos, e ' +
+        `${quantos} leads morreriam no meio com 42501.`,
+    )
+    console.error(`Candidatas: ${candidatas.map((w) => w.name).join(', ')}`)
+    console.error('Use --workspace=<parte do nome> de uma empresa com Pro vigente.')
+    return null
+  }
+  return alvo
+}
+
 async function gravarComoLeads(prospects) {
   if (!URL_SUPABASE || !SERVICE_ROLE) {
     console.error('\nFaltam credenciais do Supabase. Nada foi gravado.')
@@ -228,15 +293,8 @@ async function gravarComoLeads(prospects) {
     Prefer: 'return=representation',
   }
 
-  const rw = await fetch(
-    `${URL_SUPABASE}/rest/v1/workspaces?select=id,name&order=created_at.asc&limit=1`,
-    { headers: cabecalho },
-  )
-  const ws = (await rw.json())[0]
-  if (!ws) {
-    console.error('Nenhum workspace encontrado. Nada foi gravado.')
-    return
-  }
+  const ws = await escolherWorkspace(cabecalho, prospects.length)
+  if (!ws) return
 
   console.log(`\ngravando em "${ws.name}" (${ws.id.slice(0, 8)}...)`)
   let gravados = 0
@@ -270,10 +328,22 @@ async function gravarComoLeads(prospects) {
         status: 'novo',
       }),
     })
-    if (r.ok) gravados += 1
-    else console.error(`  falhou ${p.dominio}: ${(await r.text()).slice(0, 120)}`)
+    if (r.ok) {
+      gravados += 1
+      continue
+    }
+    const corpo = await r.text()
+    // Dois prospects com o MESMO telefone: acontece quando o dono tem dois
+    // sites, e a 0025 tem `unique` por telefone normalizado dentro da empresa.
+    // Isso não é falha — é a dedupe do produto funcionando, e contar como erro
+    // faria a rodada parecer quebrada.
+    if (corpo.includes('23505')) {
+      jaExistiam += 1
+      continue
+    }
+    console.error(`  falhou ${p.dominio}: ${corpo.slice(0, 120)}`)
   }
-  console.log(`gravados ${gravados} | ja existiam ${jaExistiam}`)
+  console.log(`gravados ${gravados} | ja existiam ou repetiram telefone ${jaExistiam}`)
 }
 
 // ── execução ────────────────────────────────────────────────────────────────
@@ -412,7 +482,37 @@ console.log(`\n${'='.repeat(78)}`)
 console.log(`chamadas ao Exa: ${buscasFeitas} | custo US$ ${custoTotal.toFixed(4)}`)
 console.log(`com contato extraido: ${comContato.length} de ${pontuados.length}`)
 
-const paraGravar = pontuados.filter((p) => p.pontos >= MINIMO_PARA_LEAD)
+/**
+ * Quem vira lead: acima do piso **e** com canal de contato.
+ *
+ * O segundo filtro nasceu da primeira gravação real: três prospects tomaram
+ * `23514` de `leads_contato_minimo`, o `check` da 0025 que exige e-mail OU
+ * telefone. Eles tinham pontos por domínio, Instagram e sinais de propensão —
+ * e nenhum jeito de falar com eles.
+ *
+ * Espelhar a regra do banco aqui não é duplicá-la: o banco continua sendo a
+ * autoridade e recusaria de todo jeito. O que muda é a rodada parar de tentar
+ * o que o schema proíbe, e a contagem final dizer a verdade sobre o que entrou.
+ *
+ * Os descartados não somem: aparecem na lista impressa com "(abrir o site)",
+ * que é exatamente o que se faz com eles.
+ */
+const paraGravar = pontuados.filter(
+  (p) =>
+    p.pontos >= MINIMO_PARA_LEAD &&
+    (p.contato.email || p.contato.whatsapp || p.contato.telefone),
+)
+const semCanal = pontuados.filter(
+  (p) =>
+    p.pontos >= MINIMO_PARA_LEAD &&
+    !(p.contato.email || p.contato.whatsapp || p.contato.telefone),
+)
+if (semCanal.length > 0) {
+  console.log(
+    `${semCanal.length} acima do piso ficam de FORA: sem e-mail e sem telefone, ` +
+      'e o banco recusa (leads_contato_minimo). Abra o site deles à mão.',
+  )
+}
 console.log(`acima do piso de ${MINIMO_PARA_LEAD} pontos: ${paraGravar.length} — so estes viram lead`)
 
 if (confirmar) {

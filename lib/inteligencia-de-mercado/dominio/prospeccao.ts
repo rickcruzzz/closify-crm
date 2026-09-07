@@ -111,6 +111,10 @@ export type Vertical = (typeof VERTICAIS)[number]['nome']
  * vagas é gastar a busca para achar quem já é intermediário.
  */
 export const DOMINIOS_EXCLUIDOS = [
+  // Passaram na rodada de 06/09 e viraram lead: um agregador de empresas e uma
+  // rede social. Os dois falam do setor o dia inteiro, e nenhum compra nada.
+  'misterwhat.com.br',
+  'pinterest.com',
   // Agregadores de vaga: aparecem em qualquer busca com sinal de contratação.
   'vagas.com.br', 'vagas.sc', 'betavagas.com', 'remotar.com.br', 'solides.com.br',
   'catho.com.br', 'indeed.com', 'infojobs.com.br', 'trabalhabrasil.com.br',
@@ -154,9 +158,25 @@ export const DOMINIOS_EXCLUIDOS = [
  */
 export const MINIMO_PARA_LEAD = 4
 
+/**
+ * Domínios institucionais, que nunca são o cliente deste produto.
+ *
+ * Achado na PRIMEIRA gravação real: entre 243 leads escritos entraram
+ * `sindeturh.org.br`, `setpesp.org.br`, `gobsp.org.br` e `aerosp.org.br` —
+ * sindicato e associação de classe. Elas aparecem nas buscas porque falam do
+ * setor o dia inteiro; e não compram CRM de funil, porque não vendem por
+ * orçamento. `.gov.br` entra pela mesma razão, com folga.
+ *
+ * Regra por sufixo e não por lista: sindicato novo nasce toda semana, e lista
+ * escrita à mão envelheceria em silêncio — a mesma razão que fez o corte de
+ * cookies `_gcl_*` ser por prefixo em 05/09.
+ */
+const SUFIXOS_INSTITUCIONAIS = ['.org.br', '.gov.br', '.edu.br', '.mil.br', '.jus.br']
+
 export function ehDominioExcluido(url: string): boolean {
   const host = hostDe(url)
   if (!host) return true
+  if (SUFIXOS_INSTITUCIONAIS.some((sufixo) => host.endsWith(sufixo))) return true
   return DOMINIOS_EXCLUIDOS.some((d) => host === d || host.endsWith(`.${d}`))
 }
 

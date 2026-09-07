@@ -289,3 +289,37 @@ describe('propensao a PAGAR, separada de alcancabilidade', () => {
     expect(p.motivos.join(' ')).not.toMatch(/faturamento|funcion[áa]rio/i)
   })
 })
+
+describe('o lixo que passou na PRIMEIRA gravacao real', () => {
+  it('sindicato e associacao ficam de fora, por SUFIXO e nao por lista', () => {
+    // Medido em 06/09: entre 243 leads escritos entraram sindeturh.org.br,
+    // setpesp.org.br, gobsp.org.br e aerosp.org.br. Elas aparecem na busca
+    // porque falam do setor o dia inteiro, e nao compram CRM de funil porque
+    // nao vendem por orcamento.
+    for (const u of [
+      'https://sindeturh.org.br/',
+      'https://www.setpesp.org.br/',
+      'https://aerosp.org.br/contato',
+      'https://www.gov.br/algo',
+      'https://usp.edu.br/',
+    ]) {
+      expect(ehDominioExcluido(u)).toBe(true)
+    }
+  })
+
+  it('sufixo e nao lista, porque sindicato novo nasce toda semana', () => {
+    // Um dominio institucional que ninguem nunca viu tambem e barrado.
+    expect(ehDominioExcluido('https://sindicato-inventado-2026.org.br/')).toBe(true)
+  })
+
+  it('agregador e rede social que passaram entraram na lista', () => {
+    expect(ehDominioExcluido('https://misterwhat.com.br/empresa')).toBe(true)
+    expect(ehDominioExcluido('https://br.pinterest.com/pin/123')).toBe(true)
+  })
+
+  it('empresa .com.br de verdade continua passando', () => {
+    // O controle que separa "cortei o lixo" de "cortei tudo".
+    expect(ehDominioExcluido('https://quatrocor.com.br/')).toBe(false)
+    expect(ehDominioExcluido('https://www.biodoca.com.br/orcamento')).toBe(false)
+  })
+})
