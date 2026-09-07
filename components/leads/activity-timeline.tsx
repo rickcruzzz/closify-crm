@@ -1,5 +1,6 @@
 import { FileText, History, Mail, MessageCircle, Phone, Users } from 'lucide-react'
 
+import { linkificar, rotuloDoLink } from '@/lib/leads/linkificar'
 import { cn } from '@/lib/utils'
 import { EmptyState } from '@/components/ui/empty-state'
 import { ActivityActions } from '@/components/leads/activity-actions'
@@ -121,7 +122,32 @@ export function ActivityTimeline({
                   ) : null}
                 </div>
               </div>
-              <p className="text-muted-foreground text-sm">{activity.description}</p>
+              {/* Link vira link, e o resto continua texto.
+                  
+                  `linkificar` devolve PEDAÇOS e não HTML: a descrição é escrita
+                  por gente, e mandar isso para `dangerouslySetInnerHTML` seria
+                  XSS clássico. Montando elementos React, o texto é escapado
+                  sozinho e só o `href` que a função validou vira endereço.
+
+                  `whitespace-pre-wrap` porque a nota da prospecção tem
+                  parágrafos — sem isso ela vira um bloco só. */}
+              <p className="text-muted-foreground text-sm whitespace-pre-wrap">
+                {linkificar(activity.description).map((pedaco, i) =>
+                  pedaco.tipo === 'link' ? (
+                    <a
+                      key={i}
+                      href={pedaco.valor}
+                      target="_blank"
+                      rel="noopener noreferrer nofollow"
+                      className="text-foreground underline underline-offset-2 hover:text-primary"
+                    >
+                      {rotuloDoLink(pedaco.valor)}
+                    </a>
+                  ) : (
+                    <span key={i}>{pedaco.valor}</span>
+                  ),
+                )}
+              </p>
               {/* "Desconhecido" era o autor de toda mensagem de WhatsApp:
                   ela nasce do webhook, sem usuario logado, entao `author_id`
                   e nulo. Dizer "Desconhecido" sugere falha de registro quando
