@@ -1,0 +1,5 @@
+# Um dominio por linha. Quem pediu para nao ser procurado de novo entra aqui.
+# A promessa esta na PRIMEIRA mensagem que sai (lib/.../abordagem.ts):
+#   "Se nao fizer sentido, me avisa que nao te procuro de novo."
+# Sem este arquivo lido pelo prospectar, essa frase seria mentira.
+# Linha vazia e linha comecando com # sao ignoradas.

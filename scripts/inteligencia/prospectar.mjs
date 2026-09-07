@@ -29,7 +29,7 @@
  */
 
 
-import { mkdir, writeFile } from 'node:fs/promises'
+import { mkdir, readFile, writeFile } from 'node:fs/promises'
 
 const CHAVE = process.env.EXA_API_KEY
 const URL_SUPABASE = process.env.NEXT_PUBLIC_SUPABASE_URL
@@ -45,12 +45,50 @@ const confirmar = args.includes('--confirmar')
 const verticalPedido = args.find((a) => a.startsWith('--vertical='))?.split('=')[1] ?? null
 const porVertical = Number(args.find((a) => a.startsWith('--por-vertical='))?.split('=')[1] ?? 10)
 const tetoDeBusca = Number(args.find((a) => a.startsWith('--teto='))?.split('=')[1] ?? 40)
+/**
+ * As pracas. Medido em 06/09: a MESMA consulta com cidade diferente devolve
+ * conjunto quase disjunto — o Exa ancora forte no lugar. Multiplicar por cidade
+ * e o jeito mais barato de crescer o universo, porque cada praca custa uma
+ * chamada e nao repete o que a anterior trouxe.
+ *
+ * Vazio (o padrao) roda a consulta nacional, sem cidade.
+ */
+const cidades = (args.find((a) => a.startsWith('--cidades='))?.split('=')[1] ?? '')
+  .split(',').map((c) => c.trim()).filter(Boolean)
+const comMensagem = args.includes('--mensagem')
+
+/**
+ * Quem pediu para não ser procurado de novo.
+ *
+ * A promessa sai na PRIMEIRA mensagem — *"me avisa que não te procuro de novo"*
+ * — e sem este arquivo sendo lido aqui ela seria mentira: a próxima rodada
+ * traria a mesma empresa, com o mesmo texto, e a segunda abordagem depois de um
+ * "não" é o que vira denúncia de spam.
+ *
+ * Arquivo em texto e versionado de propósito: quem responde "não" responde no
+ * WhatsApp do dono, e ele acrescenta uma linha. Tabela no banco exigiria uma
+ * tela para alimentar, e tela que ninguém abre não é registro.
+ */
+async function lerNaoPerturbe() {
+  try {
+    const bruto = await readFile('scripts/inteligencia/nao-perturbe.txt', 'utf8')
+    return new Set(
+      bruto.split(/\r?\n/).map((l) => l.trim().toLowerCase())
+        .filter((l) => l && !l.startsWith('#')),
+    )
+  } catch {
+    return new Set()
+  }
+}
+const naoPerturbe = await lerNaoPerturbe()
 
 // O domínio puro é TypeScript e este script é `.mjs`; em vez de duplicar a
 // regra, lê o módulo compilado sob demanda. Duas cópias divergem, e a que
 // diverge em silêncio é a que ninguém está olhando.
 const dominio = await import('../../lib/inteligencia-de-mercado/dominio/prospeccao.ts')
 const aprendizado = await import('../../lib/inteligencia-de-mercado/dominio/aprendizado.ts')
+const { montarAbordagem } = await import('../../lib/inteligencia-de-mercado/dominio/abordagem.ts')
+const { PRO_PLAN_PRICE, FREE_LEAD_LIMIT } = await import('../../lib/plans.ts')
 const {
   VERTICAIS, ehDominioExcluido, extrairContato, pontuarProspect,
   ordenarProspects, deduplicarPorDominio, MINIMO_PARA_LEAD,
@@ -101,12 +139,15 @@ const host = (u) => {
  * O `findSimilar` continua mandando a lista: lá não há `category`, e a
  * combinação não aparece.
  */
-async function semear(vertical) {
+async function semear(vertical, cidade = null) {
+  // `numResults` ate 50 numa chamada so: medido em 06/09, 50 devolveu 43
+  // resultados e 39 dominios UNICOS pelo mesmo preco de uma busca. Pedir 10 era
+  // jogar fora quatro quintos da colheita.
   const j = await exa('search', {
-    query: vertical.consulta,
+    query: cidade ? `${vertical.consulta} em ${cidade}` : vertical.consulta,
     category: 'company',
     type: 'auto',
-    numResults: porVertical,
+    numResults: Math.min(porVertical, 50),
   })
   return (j.results ?? []).map((x) => ({ url: x.url, titulo: x.title ?? null }))
 }
@@ -219,8 +260,16 @@ console.log(`verticais: ${verticais.map((v) => v.nome).join(', ')} | ${porVertic
 const candidatos = []
 try {
   for (const v of verticais) {
-    const sementes = await semear(v)
-    console.log(`${v.nome.padEnd(16)} semente: ${sementes.length}`)
+    // Sem `--cidades`, uma passagem nacional. Com, uma por praca: o Exa ancora
+    // forte no lugar, entao cada cidade traz conjunto quase disjunto pelo preco
+    // de uma chamada.
+    const pracas = cidades.length ? cidades : [null]
+    const sementes = []
+    for (const cidade of pracas) {
+      const s = await semear(v, cidade)
+      console.log(`${v.nome.padEnd(20)} ${(cidade ?? 'nacional').padEnd(16)} semente: ${s.length}`)
+      sementes.push(...s)
+    }
     for (const s of sementes) candidatos.push({ ...s, vertical: v.nome })
 
     // Expande a partir das duas primeiras — as mais relevantes segundo o Exa.
@@ -228,7 +277,7 @@ try {
     // de sementes vizinhas devolve muita interseção.
     for (const s of sementes.slice(0, 2)) {
       const parecidos = await expandir(s.url)
-      console.log(`${''.padEnd(16)} findSimilar(${host(s.url)}): +${parecidos.length}`)
+      console.log(`${''.padEnd(20)} findSimilar(${host(s.url)}): +${parecidos.length}`)
       for (const p of parecidos) candidatos.push({ ...p, vertical: v.nome })
     }
   }
@@ -241,6 +290,10 @@ const vistos = new Set()
 for (const c of candidatos) {
   const h = host(c.url)
   if (!h || vistos.has(h) || ehDominioExcluido(c.url)) continue
+  if (naoPerturbe.has(h) || naoPerturbe.has(h.replace(/^www\./, ''))) {
+    console.log(`  nao perturbe: ${h} — pulado`)
+    continue
+  }
   vistos.add(h)
   unicos.push(c)
 }
@@ -288,6 +341,14 @@ for (const p of pontuados) {
   console.log(`     contato: ${canal}`)
   if (c.email && c.whatsapp) console.log(`     e-mail:  ${c.email}`)
   console.log(`     porque:  ${p.motivos.join(', ')}`)
+  if (comMensagem) {
+    const texto = montarAbordagem({
+      dominio: p.dominio, nome: p.titulo, vertical: p.vertical, motivos: p.motivos,
+      precoMensal: PRO_PLAN_PRICE, limiteGratis: FREE_LEAD_LIMIT,
+    })
+    console.log(texto.split('\n').map((l) => (l ? `     | ${l}` : '     |')).join('\n'))
+    if (c.whatsapp) console.log(`     abrir:   https://wa.me/${c.whatsapp}?text=${encodeURIComponent(texto)}`)
+  }
 }
 
 const comContato = pontuados.filter((p) => p.contato.whatsapp || p.contato.telefone || p.contato.email)
