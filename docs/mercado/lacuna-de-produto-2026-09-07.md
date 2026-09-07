@@ -173,3 +173,136 @@ faz alguem pagar           documento tem, e continua sendo aposta
 
 A tabela ordena o que construir. **Quem decide é a primeira conversa** — e há
 253 contatos esperando, cada um com a mensagem pronta.
+
+
+---
+
+# Segunda rodada: a anatomia do orçamento, e o que o grátis vale (07/09, madrugada)
+
+Mais 12 chamadas, US$ 0,26. Duas perguntas que a primeira rodada deixou em
+aberto: **que forma teria o orçamento**, e **o nosso plano grátis diferencia
+alguma coisa**.
+
+## O que compõe um "orçamento" nos concorrentes que o anunciam
+
+Em 56 domínios lidos:
+
+```
+43%  PDF
+27%  aprovacao online do cliente
+23%  itens / catalogo de produtos
+16%  modelo / template
+14%  envio por link ou e-mail
+13%  assinatura eletronica
+ 4%  VALIDADE / vencimento
+ 0%  AVISO de que o cliente visualizou
+```
+
+### A lacuna dentro da lacuna
+
+Os dois últimos são quase inexistentes — e são exatamente o que este produto
+já sabe fazer.
+
+O Velo Funil não é um gerador de documento: é um **relógio**. O h1 da landing
+diz isso desde sempre — *"A planilha organiza. Ela não avisa quem está
+esperando."* Tarefa, prazo e a tela `/hoje` são o motor que já existe.
+
+```
+o que 43% do mercado faz    virar o orcamento em PDF bonito
+o que 4% faz                dar VALIDADE a ele
+o que 0% faz                avisar quando ela esta acabando
+```
+
+**A forma certa do recurso aqui não é "gerar proposta". É "o orçamento tem
+prazo, e o sistema cobra o retorno".** O PDF entra depois, porque 43% do
+mercado tem e a ausência aparece na comparação — e o projeto já carrega
+`jspdf` e `html2canvas-pro`, usados no "Exportar relatório".
+
+**Ressalva de método:** os 56 domínios não são todos ferramentas de proposta —
+há artigo e página institucional na amostra. Os 4% e os 0% são **indício forte
+de ausência, não censo**. Antes de construir, vale abrir três concorrentes que
+anunciam proposta e conferir à mão.
+
+## O plano grátis não diferencia — e um pedaço dele sim
+
+Restringindo a busca aos 19 concorrentes com página de preço já mapeada:
+
+```
+12/19  tem plano gratuito de verdade
+ 5/19  so oferece teste por N dias
+ 3/19  diz "sem cartao"
+janelas de teste citadas: 7 dias (4) · 15 dias (1)
+```
+
+**Grátis é aposta de mesa.** Dizer "temos plano grátis" não distingue nada:
+dois terços têm. A landing e o `/cadastro` gastam a linha mais nobre com isso.
+
+**"Sem cartão" é o que é raro** — 3 de 19. E nós já dizemos, no sub-hero e nas
+três linhas do `/cadastro`. Essa parte está certa e não deve ser tocada.
+
+O que muda: **o grátis deixa de ser argumento e vira remoção de atrito.** O
+argumento continua sendo a conta por equipe (R$ 45/usuário × 5 = R$ 225 contra
+R$ 49) e a porta de saída.
+
+---
+
+# A decisão, com o que construir e o que ajustar
+
+## Adicionar, na ordem
+
+```
+1. ORCAMENTO COM PRAZO no negocio
+   valor + validade + o que foi proposto. Ao salvar, nasce a tarefa de
+   retorno; ao vencer, aparece em /hoje.
+   POR QUE: duas medicoes independentes apontam para o objeto (a regua de
+   nicho e os 59% do mercado), e a parte que ninguem faz — validade (4%) e
+   aviso (0%) — e exatamente o motor que ja existe aqui
+
+2. PDF do orcamento
+   43% do mercado tem. `jspdf` ja esta no projeto, usado no relatorio do
+   dashboard. E tirar uma objecao de comparacao por pouco trabalho
+
+3. CAMPOS PERSONALIZADOS
+   75% anuncia, e `deal_stage` e ENUM em 9 arquivos de codigo. A fila
+   tecnica ja registra isso e adia por falta de cliente pagante — continua
+   certo adiar, e passa a ser o proximo depois do orcamento
+```
+
+## Ajustar
+
+```
+a copy do gratis     para de carregar peso. 12/19 tem gratis; o que e raro
+                     e "sem cartao" (3/19), e isso ja esta dito
+o argumento central  a conta por EQUIPE, nao "o mais barato" — que a
+                     amostra de 18 desmentiu (avaly R$ 45, agencianooma
+                     R$ 47, idealsales R$ 50)
+a pagina de          de 6 para 18 concorrentes, com data de leitura
+comparacao
+```
+
+## Não construir agora, e o motivo
+
+```
+IA / assistente         72% anuncia. Com 50 leads e ruido caro, e a decisao
+                        travada continua valendo
+assinatura eletronica   13% no mercado, e depende de terceiro (Clicksign,
+                        Autentique). Entra junto do orcamento so se um
+                        cliente pedir
+aprovacao online        27%. Bonito, e exige pagina publica do orcamento —
+                        superficie nova, com seguranca propria
+app no celular          34%, e o produto e responsivo
+```
+
+---
+
+## O que ISTO ainda não prova
+
+A tabela diz o que o mercado anuncia e o que o produto não tem. **Não diz que
+alguém pagaria por isso.**
+
+A aposta do orçamento é a mais bem fundamentada que este documento consegue
+montar — duas medições independentes, e um motor já pronto. Continua sendo
+aposta até a primeira pessoa dizer, ao telefone, *"eu perco venda porque mando
+orçamento e esqueço de cobrar"*.
+
+E há 253 contatos com a mensagem pronta que fazem exatamente essa pergunta.
