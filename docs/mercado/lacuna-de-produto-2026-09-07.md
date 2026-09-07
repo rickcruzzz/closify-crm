@@ -306,3 +306,107 @@ aposta até a primeira pessoa dizer, ao telefone, *"eu perco venda porque mando
 orçamento e esqueço de cobrar"*.
 
 E há 253 contatos com a mensagem pronta que fazem exatamente essa pergunta.
+
+
+---
+
+# Terceira rodada: os três concorrentes abertos a fundo — e o 4%/0% CAIU
+
+Pedido do dono antes de eu concluir: *"verifique os 3 concorrentes bem a fundo,
+atue como espião sênior"*. Foi a decisão certa, e derrubou a conclusão da
+rodada anterior.
+
+Método: busca restrita a `ploomes.com`, `propo.com.br` e `moskitcrm.com`, com
+`livecrawl: preferred` — página de hoje, não a do cache. 30 páginas lidas, 9
+chamadas, US$ 0,08. **Cada achado vem com recorte literal**, porque contagem
+sem citação foi justamente o que produziu o número errado.
+
+## O que eu afirmei, e o que a leitura mostrou
+
+Eu escrevi, com base em 56 domínios: *"validade 4%, aviso de visualização 0% —
+os dois quase não existem, e são exatamente o que este produto já sabe fazer"*.
+
+**Ploomes**, na própria página de produto:
+
+> "**Notificação de Visualização.** Saiba o momento exato de ligar para o
+> cliente. O Ploomes notifica o vendedor..."
+
+E na documentação de suporte:
+
+> "Campos relacionados à proposta comercial em si, como data, **validade**,
+> status, valor total e mais."
+
+**Propo**, na home:
+
+> "Veja cada acesso **em tempo real**" · "Agilize as vendas com **aceite
+> digital**"
+
+> "...permite que você possa fazer um **follow-up na hora que o cliente está
+> prestando atenção**, além de medir o interesse dele sabendo quantas vezes
+> acessou."
+
+Ou seja: **os dois recursos que eu apontei como espaço vazio são o argumento
+CENTRAL de vendas de dois concorrentes.** Não é lacuna. É o núcleo de um
+segmento que já tem especialista.
+
+## Por que a medição anterior errou, e a lição
+
+```
+amostra errada     os 56 dominios eram CRM em geral e artigo de blog. Quem
+                   FAZ proposta a serio e um segmento proprio, e ele estava
+                   sub-representado
+regex estreita     "notifica quando o cliente visualizou" nao casa com
+                   "Notificacao de Visualizacao" — titulo, sem verbo
+contagem sem       um numero sem recorte nao pode ser conferido. Os 0% nao
+citacao            tinham como ser questionados ate alguem abrir a pagina
+```
+
+É a terceira vez nesta investigação que amostra ou regex minha produz um número
+plausível e falso — depois de `e-mail 0/52` e de `plano grátis 7%`. As três
+tinham a mesma forma: **o método não alcançava o que dizia medir.**
+
+## O que isto muda na decisão
+
+**Não muda o que construir. Muda o que dizer.**
+
+O orçamento com prazo continua sendo o item 1, e por uma razão que sobrevive
+inteira: **é o objeto que o nosso ICP manipula todo dia**, e o motor de tarefa
+e prazo já existe aqui. Isso não dependia de ser inédito.
+
+O que morre é a frase *"ninguém faz isso"*. Ela seria desmentida pela primeira
+pessoa que abrisse o site do Ploomes — e prometer ineditismo falso é pior que
+não prometer nada.
+
+### O argumento que sobrevive à conferência
+
+```
+Ploomes   proposta com validade, notificacao de visualizacao e modelo —
+          R$ 85 POR USUARIO (medido em 07/09)
+Propo     aceite digital e acesso em tempo real — cobranca por usuario,
+          R$ 60 a R$ 270 (medido em 07/09)
+aqui      R$ 49 pela empresa inteira
+```
+
+Com cinco vendedores: **R$ 425/mês no Ploomes contra R$ 49 aqui.**
+
+O posicionamento certo não é "temos o que ninguém tem". É: *"a parte do
+orçamento que faz diferença — prazo e cobrança do retorno — sem pagar por
+vendedor."*
+
+### E um limite honesto do que somos
+
+Ploomes é CPQ: catálogo, tabela de preço, aprovação de gestor, documento
+personalizado. **Não vamos competir com isso, e não devemos.** O recorte que
+cabe aqui é o mínimo que resolve a dor do nosso ICP:
+
+```
+cabe      valor, validade, e a tarefa de retorno nascendo do orcamento
+cabe      PDF simples (o `jspdf` ja esta no projeto)
+NAO cabe  catalogo de produtos, aprovacao por alcada, documento configuravel
+```
+
+## Uma nota sobre o terceiro alvo
+
+`moskitcrm.com` **não devolveu nenhuma página** de proposta nas duas consultas.
+Isso não prova que ele não tenha — prova que não é o que ele anuncia primeiro.
+Fica registrado como não medido, e não como ausência.
