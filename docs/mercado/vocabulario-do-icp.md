@@ -1,6 +1,6 @@
 # O vocabulário do ICP, acumulado
 
-Atualizado em 2026-09-07. Nichos no corpus: dedetizacao.
+Atualizado em 2026-09-07. Nichos no corpus: comunicacao-visual, dedetizacao, eventos-corporativos, locacao-equipamentos, marcenaria.
 
 Gerado por `scripts/inteligencia/prospectar.mjs` a cada rodada, **somando em
 vez de sobrescrever**. Nada aqui foi escrito por mim: cada termo é contado em
@@ -20,62 +20,79 @@ clique paga por um público que nunca assinaria.
 
 | termo | nichos | sites | onde |
 | --- | ---: | ---: | --- |
+| anos de experiencia | 5 | 154 | comunicacao-visual, dedetizacao, eventos-corporativos, locacao-equipamentos, marcenaria |
+| alta qualidade | 4 | 170 | comunicacao-visual, eventos-corporativos, locacao-equipamentos, marcenaria |
+| atendimento personalizado | 3 | 77 | comunicacao-visual, eventos-corporativos, locacao-equipamentos |
+| alto padrao | 2 | 70 | comunicacao-visual, marcenaria |
+| bem estar | 2 | 65 | dedetizacao, marcenaria |
+| solucoes completas | 2 | 54 | comunicacao-visual, locacao-equipamentos |
+| custo beneficio | 2 | 50 | locacao-equipamentos, marcenaria |
+| dia a dia | 2 | 45 | locacao-equipamentos, marcenaria |
+| solucoes personalizadas | 2 | 44 | comunicacao-visual, dedetizacao |
+| endereco rua | 2 | 41 | comunicacao-visual, eventos-corporativos |
+| segunda a sexta | 2 | 40 | locacao-equipamentos, marcenaria |
+| impressao digital | 1 | 56 | comunicacao-visual |
 | meio ambiente | 1 | 46 | dedetizacao |
 | caixa d agua | 1 | 42 | dedetizacao |
-| bem estar | 1 | 35 | dedetizacao |
 | caixas d agua | 1 | 35 | dedetizacao |
-| anos de experiencia | 1 | 33 | dedetizacao |
+| produtos e servicos | 1 | 31 | comunicacao-visual |
+| suporte tecnico | 1 | 31 | locacao-equipamentos |
 | limpeza de caixa | 1 | 29 | dedetizacao |
+| assistencia tecnica | 1 | 28 | locacao-equipamentos |
+| experiencia unica | 1 | 28 | eventos-corporativos |
+| tipo de evento | 1 | 28 | eventos-corporativos |
+| plataformas elevatorias | 1 | 27 | locacao-equipamentos |
+| evento seja | 1 | 26 | eventos-corporativos |
+| criar experiencias | 1 | 25 | eventos-corporativos |
+| experiencias memoraveis | 1 | 25 | eventos-corporativos |
+| experiencias unicas | 1 | 24 | eventos-corporativos |
 | baratas formigas | 1 | 23 | dedetizacao |
-| whatsapp web | 1 | 23 | dedetizacao |
-| get whatsapp | 1 | 22 | dedetizacao |
-| installed continue | 1 | 22 | dedetizacao |
-| looks like | 1 | 22 | dedetizacao |
-| microsoft looks | 1 | 22 | dedetizacao |
-| microsoft looks like | 1 | 22 | dedetizacao |
-| nome e mail | 1 | 22 | dedetizacao |
-| now get | 1 | 22 | dedetizacao |
-| now get whatsapp | 1 | 22 | dedetizacao |
+| design grafico | 1 | 23 | comunicacao-visual |
+| fachadas em acm | 1 | 23 | comunicacao-visual |
+| grande porte | 1 | 23 | eventos-corporativos |
+| ultima geracao | 1 | 23 | eventos-corporativos |
+| alta pressao | 1 | 22 | locacao-equipamentos |
+| painel de led | 1 | 22 | eventos-corporativos |
 | vigilancia sanitaria | 1 | 22 | dedetizacao |
-| whatsapp installed | 1 | 22 | dedetizacao |
-| whatsapp installed continue | 1 | 22 | dedetizacao |
-| mensagem enviar | 1 | 21 | dedetizacao |
+| andaime tubular | 1 | 21 | locacao-equipamentos |
+| bem vindo | 1 | 21 | eventos-corporativos |
+| pos venda | 1 | 21 | marcenaria |
+| primeiro contato | 1 | 21 | marcenaria |
 | produtos quimicos | 1 | 21 | dedetizacao |
-| formulario abaixo | 1 | 20 | dedetizacao |
-| minas gerais | 1 | 19 | dedetizacao |
-| solucoes personalizadas | 1 | 19 | dedetizacao |
-| limpeza e higienizacao | 1 | 18 | dedetizacao |
-| quanto tempo | 1 | 8 | dedetizacao |
-| rentokil initial | 1 | 7 | dedetizacao |
-| rio de janeiro | 1 | 7 | dedetizacao |
-| perguntas frequentes | 1 | 6 | dedetizacao |
-| entrar em contato | 1 | 5 | dedetizacao |
-| grande do sul | 1 | 5 | dedetizacao |
-| mato grosso | 1 | 5 | dedetizacao |
-| necessidades especificas | 1 | 5 | dedetizacao |
-| rio grande | 1 | 5 | dedetizacao |
-| santa catarina | 1 | 5 | dedetizacao |
-| belo horizonte | 1 | 4 | dedetizacao |
-| causar danos | 1 | 4 | dedetizacao |
-| depende do tipo | 1 | 4 | dedetizacao |
-| descupinizacao desratizacao | 1 | 4 | dedetizacao |
-| grande do norte | 1 | 4 | dedetizacao |
+| data do evento | 1 | 20 | eventos-corporativos |
 
 ## O que o nicho promete, na rodada mais recente
 
 Cada linha é uma objeção: se o visitante ouviu isto em dez sites antes do
 nosso, a frase não diferencia nada. Recorte literal, nunca paráfrase.
 
-- "E é com base nesse conhecimento que oferecemos soluções rápidas e eficazes, adequadas às necessidades específicas de cada cliente." — `rentokil.com`
-- "Segurança aliada a experiência global de mais de 100 anos" — `rentokil.com`
-- "Oferecemos preços especiais para serviços em apartamentos no mesmo dia da realização do condomínio." — `desintec.com.br`
-- "Preços especiais para apartamentos: Oferecemos preços especiais para serviços em apartamentos no mesmo dia da realização do condomínio." — `desintec.com.br`
-- "Oferecemos serviços de impermeabilização e limpeza de caixas d’água e cisternas, essenciais para garantir a potabilidade da água e a segurança do seu ambiente." — `noprag.com.br`
-- "Serviços que nós oferecemos" — `insetisan.com.br`
-- "Atendimento Personalizado" — `insetisan.com.br`
-- "Hoje, com mais de 40 anos de existência, possui uma posição bastante privilegiada entre as empresas do ramo no estado." — `antinsect.com.br`
-- "Nosso compromisso é oferecer atendimento profissional, seguro e eficiente — e cada feedback recebido reforça a confiança que construímos ao longo dos anos." — `antinsect.com.br`
-- "Também oferecemos assessoria jurídica empresarial e defesa contra negativas de procedimentos médicos por planos de saúde." — `spotway.com.br`
-- "A Rentokil Initial Portugal é a principal empresa multinacional de controlo de pragas em Portugal, com 40 anos de experiência no país e mais de 90 anos de experiência global." — `controlopragas.com`
-- "Conhecemos bem as Pragas, o seu ciclo de vida, bem como os seus hábitos e é com base nesse conhecimento que oferecemos soluções rápidas e eficazes, adequadas às necessidades específicas de cada Cliente." — `rentokil.pai.pt`
-- "Protegemos as casas e empresas de Portugal há mais de 35 anos." — `rentokil.pai.pt`
+- "Há mais de 30 anos realizamos casamentos, festas de 15 anos, aniversário, bodas e eventos corporativos em São Paulo — com alta gastronomia, decoração e serviço completo, em um espaço privilegiado Alto da Mooca." — `buffettulipas.com.br`
+- "Desde a escolha dos fornecedores até a curadoria da decoração e do menu, oferecemos um serviço completo e personalizado, alinhado ao seu estilo e às suas expectativas." — `buffettulipas.com.br`
+- "Sociais e Corporativos | Serviço completo de Buffet | Atendimento personalizado" — `athor.com.br`
+- "Nosso compromisso é tornar este momento inesquecível e nada melhor que uma festa para celebrar a união entre duas pessoas." — `arteventos.com.br`
+- "Cada evento é único, por isso realizamos apenas 1 por dia e oferecemos todo conforto com camarim feminino com spa e camarim masculino com sinuca e churrasqueira." — `buffetfernandes.com.br`
+- "Há mais de 20 anos criando experiências únicas." — `cozinhacriativa.com.br`
+- "O Buffet Prince, com mais de 30 anos de experiência, é uma referência na área de eventos, realizando cada evento com qualidade e dedicação no atendimento." — `buffetprince.com.br`
+- "São mais de 10 anos de tradição, e mais de 3.000 eventos realizados com sucesso!" — `appetitbuffet.com.br`
+- "Oferecemos cardápios completos para o seu evento com entradas, saladas, crepes salgados e doces e bebidas." — `appetitbuffet.com.br`
+- "Nosso compromisso é oferecer não apenas espaços," — `palatiumbuffet.com.br`
+- "Oferecemos serviços, produtos e soluções para os mais diversos e seletos segmentos e eventos." — `m3feventos.com.br`
+- "Oferecemos, de forma seria e eficaz, pessoal, produtos e serviços de alta qualidade, visando à satisfação dos clientes e contribuindo com excelência para o desenvolvimento do seu evento." — `m3feventos.com.br`
+- "Oferecemos uma ampla gama de soluções em vídeo, incluindo painéis de LED de alta definição, projetores de última geração e monitores smart." — `barrellaeventos.com.br`
+- "Oferecemos desde um simples microfone até um sofisticado sistema de sonorização, garantindo uma experiência sonora de alta qualidade para o seu evento." — `barrellaeventos.com.br`
+- "Temos mais de 30 anos no experiência no mercado de eventos" — `bkcproducoes.com.br`
+- "Com décadas de experiência no mercado, oferecemos equipamentos de som, iluminação, painéis de LED e tecnologia audiovisual de ponta, garantindo experiências únicas e inesquecíveis para o público e para os organizadores." — `bkcproducoes.com.br`
+- "Oferecemos uma estrutura completa de audiovisual para eventos empresariais, institucionais e sociais." — `dyopeventos.com.br`
+- "Oferecemos locação de som, iluminação, painel de LED, TVs, palco e estrutura completa de audiovisual para eventos corporativos, feiras, congressos, palestras e treinamentos." — `dyopeventos.com.br`
+- "Há mais de 20 anos no mercado, a Projetos Especiais é especializada em produções de eventos." — `projetosespeciais.com`
+- "Oferecemos locação de praticáveis, estrutura para som, iluminação, painéis de led, locação de banheiro trailer e vendas de equipamentos para eventos." — `projetosespeciais.com`
+- "Estamos presente em sete capitais brasileiras, com estruturas preparadas para oferecer agilidade, suporte técnico e atendimento personalizado em cada região." — `grupoplenolocacoes.com.br`
+- "POR QUE OFERECEMOS A MELHOR SOLUÇÃO PARA O SEU EVENTO?" — `dmixeventos.com.br`
+- "​Garantimos que cada nota e cada detalhe do ambiente fossem realçados com nossa expertise." — `esperanzaproducoes.com.br`
+- "Garantimos a produção técnica para o sucesso desse grande evento." — `esperanzaproducoes.com.br`
+- "Oferecemos soluções completas, desde a instalação inicial até a manutenção contínua, garantindo que sua comunicação visual seja sempre eficaz e atraente." — `ekipa.com.br`
+- "Oferecemos soluções completas para transformar qualquer espaço em um cenário único e envolvente, adequado às suas necessidades e objetivos específicos." — `ekipa.com.br`
+- "Com instalação profissional, suporte técnico durante o evento e personalização conforme as necessidades do cliente, garantimos que seu evento seja um sucesso." — `maximasolucoes.com.br`
+- "Com expertise em captação, documentários, motion graphics e animações, desenvolvimento de identidade visual, videoclipes, vídeos institucionais e vinhetas, garantimos qualidade e impacto em todas as etapas." — `maximasolucoes.com.br`
+- "Garantimos que cada detalhe seja impecável." — `arenav.com.br`
+- "Além disso, oferecemos serviços completos, incluindo sonorização, iluminação, estruturas de palco, projeção em painéis de LED e um casting diversificado de atrações artísticas." — `arenav.com.br`

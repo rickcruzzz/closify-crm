@@ -191,15 +191,18 @@ describe('a praca tambem e a minha pergunta', () => {
     // que mais atravessava nichos — porque a consulta era "... em Rio de
     // Janeiro". A consulta circular voltando por uma porta nova: a cidade e
     // colada no `semear`, fora do texto da consulta.
+    // A praça do exemplo é Joinville e não Rio de Janeiro de propósito: nome de
+    // ESTADO e de capital já é cortado por `LUGARES`, e o teste passaria pelo
+    // motivo errado. Joinville só sai porque entrou na minha pergunta.
     const paginas = Array.from({ length: 4 }, (_, i) =>
-      pagina(`s${i}.com.br`, 'Atendemos todo o Rio de Janeiro com controle de pragas certificado'),
+      pagina(`s${i}.com.br`, 'Atendemos toda Joinville com controle de pragas certificado'),
     )
     const comPraca = extrairVocabulario(paginas, {
       consultas: ['site de dedetizadora'],
-      pracas: ['Rio de Janeiro'],
+      pracas: ['Joinville'],
       minimoDeSites: 2,
     }).map((t) => t.termo)
-    expect(comPraca).not.toContain('rio de janeiro')
+    expect(comPraca).not.toContain('atendemos toda joinville')
     // E o termo do NEGÓCIO continua vindo: o corte é na pergunta, não na página.
     expect(comPraca).toContain('pragas certificado')
 
@@ -209,7 +212,7 @@ describe('a praca tambem e a minha pergunta', () => {
       consultas: ['site de dedetizadora'],
       minimoDeSites: 2,
     }).map((t) => t.termo)
-    expect(semPraca).toContain('rio de janeiro')
+    expect(semPraca).toContain('atendemos toda joinville')
   })
 
   it('conector de discurso e fragmento de URL ficam fora', () => {
@@ -260,5 +263,56 @@ describe('o widget de terceiro, achado no primeiro corpus de dois nichos', () =>
     expect(Object.keys(limpo.termos)).toEqual(['controle de pragas'])
     // A memória de quando cada nicho foi colhido não se perde na limpeza.
     expect(limpo.atualizadoEm).toEqual(sujo.atualizadoEm)
+  })
+})
+
+describe('o que sobrou no corpus de CINCO nichos', () => {
+  const cinco = (texto: string) =>
+    extrairVocabulario(
+      Array.from({ length: 4 }, (_, i) => pagina(`s${i}.com.br`, texto)),
+      { minimoDeSites: 2 },
+    ).map((t) => t.termo)
+
+  it('o fragmento do widget que NAO contem "whatsapp" tambem sai', () => {
+    // Medido em 07/09: "looks like" (5 nichos, 175 sites) e "now get" (5, 168)
+    // lideravam a tabela. Cortar a palavra `whatsapp` nao bastava — o
+    // fragmento vizinho passa sozinho.
+    const t = cinco('Now get WhatsApp. Looks like you need dedetizacao predial.')
+    expect(t).not.toContain('looks like')
+    expect(t).not.toContain('now get')
+    expect(t).toContain('dedetizacao predial')
+  })
+
+  it('nome de LUGAR nao e vocabulario, mesmo sem estar na consulta', () => {
+    // "minas gerais" apareceu em 3 nichos com 56 sites, e nenhum deles estava
+    // numa consulta minha. Geografia atravessa nichos por construcao — toda
+    // empresa fica em algum lugar —, entao sobe justamente na coluna que mede
+    // alcance entre setores.
+    const t = cinco('Atendemos Minas Gerais e Sao Paulo com locacao de andaimes')
+    expect(t).not.toContain('minas gerais')
+    expect(t).not.toContain('sao paulo')
+    expect(t).toContain('locacao de andaimes')
+  })
+
+  it('nao corta termo que so COMECA com palavra de lugar', () => {
+    // O controle que separa "cortei geografia" de "cortei tudo que tem uma
+    // palavra comum": as duas pontas precisam ser lugar.
+    const t = cinco('Trabalhamos com moveis de grande porte sob medida')
+    expect(t).toContain('grande porte')
+  })
+})
+
+describe('caminho de arquivo nao e vocabulario', () => {
+  it('descarta o fragmento de wp-content/uploads', () => {
+    // Chegou a 2 nichos com 42 sites: o texto do Exa traz o caminho da imagem
+    // colado, e `wp-content/uploads` existe em todo site WordPress.
+    const t = extrairVocabulario(
+      Array.from({ length: 4 }, (_, i) =>
+        pagina(`s${i}.com.br`, 'veja wp content uploads foto jpg do nosso projeto sob medida'),
+      ),
+      { minimoDeSites: 2 },
+    ).map((x) => x.termo)
+    expect(t).not.toContain('content uploads')
+    expect(t).toContain('projeto sob medida')
   })
 })

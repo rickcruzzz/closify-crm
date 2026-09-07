@@ -7,13 +7,18 @@
       "dedetizacao": 42
     },
     "bem estar": {
-      "dedetizacao": 35
+      "dedetizacao": 35,
+      "marcenaria": 30
     },
     "caixas d agua": {
       "dedetizacao": 35
     },
     "anos de experiencia": {
-      "dedetizacao": 33
+      "dedetizacao": 33,
+      "comunicacao-visual": 28,
+      "marcenaria": 27,
+      "locacao-equipamentos": 25,
+      "eventos-corporativos": 41
     },
     "limpeza de caixa": {
       "dedetizacao": 29
@@ -21,56 +26,15 @@
     "baratas formigas": {
       "dedetizacao": 23
     },
-    "whatsapp web": {
-      "dedetizacao": 23
-    },
-    "get whatsapp": {
-      "dedetizacao": 22
-    },
-    "installed continue": {
-      "dedetizacao": 22
-    },
-    "looks like": {
-      "dedetizacao": 22
-    },
-    "microsoft looks": {
-      "dedetizacao": 22
-    },
-    "microsoft looks like": {
-      "dedetizacao": 22
-    },
-    "nome e mail": {
-      "dedetizacao": 22
-    },
-    "now get": {
-      "dedetizacao": 22
-    },
-    "now get whatsapp": {
-      "dedetizacao": 22
-    },
     "vigilancia sanitaria": {
       "dedetizacao": 22
-    },
-    "whatsapp installed": {
-      "dedetizacao": 22
-    },
-    "whatsapp installed continue": {
-      "dedetizacao": 22
-    },
-    "mensagem enviar": {
-      "dedetizacao": 21
     },
     "produtos quimicos": {
       "dedetizacao": 21
     },
-    "formulario abaixo": {
-      "dedetizacao": 20
-    },
-    "minas gerais": {
-      "dedetizacao": 19
-    },
     "solucoes personalizadas": {
-      "dedetizacao": 19
+      "dedetizacao": 19,
+      "comunicacao-visual": 25
     },
     "limpeza e higienizacao": {
       "dedetizacao": 18
@@ -81,25 +45,10 @@
     "rentokil initial": {
       "dedetizacao": 7
     },
-    "rio de janeiro": {
-      "dedetizacao": 7
-    },
     "perguntas frequentes": {
       "dedetizacao": 6
     },
-    "entrar em contato": {
-      "dedetizacao": 5
-    },
-    "grande do sul": {
-      "dedetizacao": 5
-    },
-    "mato grosso": {
-      "dedetizacao": 5
-    },
     "necessidades especificas": {
-      "dedetizacao": 5
-    },
-    "rio grande": {
       "dedetizacao": 5
     },
     "santa catarina": {
@@ -117,12 +66,6 @@
     "descupinizacao desratizacao": {
       "dedetizacao": 4
     },
-    "grande do norte": {
-      "dedetizacao": 4
-    },
-    "grosso do sul": {
-      "dedetizacao": 4
-    },
     "higienizacao de reservatorios": {
       "dedetizacao": 4
     },
@@ -134,9 +77,153 @@
     },
     "manejo integrado": {
       "dedetizacao": 4
+    },
+    "alta qualidade": {
+      "comunicacao-visual": 66,
+      "marcenaria": 46,
+      "locacao-equipamentos": 27,
+      "eventos-corporativos": 31
+    },
+    "impressao digital": {
+      "comunicacao-visual": 56
+    },
+    "produtos e servicos": {
+      "comunicacao-visual": 31
+    },
+    "atendimento personalizado": {
+      "comunicacao-visual": 27,
+      "locacao-equipamentos": 23,
+      "eventos-corporativos": 27
+    },
+    "solucoes completas": {
+      "comunicacao-visual": 27,
+      "locacao-equipamentos": 27
+    },
+    "alto padrao": {
+      "comunicacao-visual": 25,
+      "marcenaria": 45
+    },
+    "design grafico": {
+      "comunicacao-visual": 23
+    },
+    "endereco rua": {
+      "comunicacao-visual": 23,
+      "eventos-corporativos": 18
+    },
+    "fachadas em acm": {
+      "comunicacao-visual": 23
+    },
+    "dia a dia": {
+      "marcenaria": 25,
+      "locacao-equipamentos": 20
+    },
+    "segunda a sexta": {
+      "marcenaria": 22,
+      "locacao-equipamentos": 18
+    },
+    "pos venda": {
+      "marcenaria": 21
+    },
+    "primeiro contato": {
+      "marcenaria": 21
+    },
+    "custo beneficio": {
+      "marcenaria": 20,
+      "locacao-equipamentos": 30
+    },
+    "suporte tecnico": {
+      "locacao-equipamentos": 31
+    },
+    "assistencia tecnica": {
+      "locacao-equipamentos": 28
+    },
+    "plataformas elevatorias": {
+      "locacao-equipamentos": 27
+    },
+    "alta pressao": {
+      "locacao-equipamentos": 22
+    },
+    "andaime tubular": {
+      "locacao-equipamentos": 21
+    },
+    "compactador de solo": {
+      "locacao-equipamentos": 18
+    },
+    "guincho de coluna": {
+      "locacao-equipamentos": 18
+    },
+    "mail telefone": {
+      "locacao-equipamentos": 18
+    },
+    "plataforma elevatoria": {
+      "locacao-equipamentos": 18
+    },
+    "lavadora de alta": {
+      "locacao-equipamentos": 17
+    },
+    "seguranca e eficiencia": {
+      "locacao-equipamentos": 17
+    },
+    "alta performance": {
+      "locacao-equipamentos": 16
+    },
+    "horario de atendimento": {
+      "locacao-equipamentos": 16
+    },
+    "oferecer solucoes": {
+      "locacao-equipamentos": 16
+    },
+    "experiencia unica": {
+      "eventos-corporativos": 28
+    },
+    "tipo de evento": {
+      "eventos-corporativos": 28
+    },
+    "evento seja": {
+      "eventos-corporativos": 26
+    },
+    "criar experiencias": {
+      "eventos-corporativos": 25
+    },
+    "experiencias memoraveis": {
+      "eventos-corporativos": 25
+    },
+    "experiencias unicas": {
+      "eventos-corporativos": 24
+    },
+    "grande porte": {
+      "eventos-corporativos": 23
+    },
+    "ultima geracao": {
+      "eventos-corporativos": 23
+    },
+    "painel de led": {
+      "eventos-corporativos": 22
+    },
+    "bem vindo": {
+      "eventos-corporativos": 21
+    },
+    "data do evento": {
+      "eventos-corporativos": 20
+    },
+    "equipe especializada": {
+      "eventos-corporativos": 19
+    },
+    "paineis de led": {
+      "eventos-corporativos": 19
+    },
+    "pos evento": {
+      "eventos-corporativos": 18
+    },
+    "durante o evento": {
+      "eventos-corporativos": 17
     }
   },
   "atualizadoEm": {
-    "dedetizacao": "2026-09-07"
+    "dedetizacao": "2026-09-07",
+    "comunicacao-visual": "2026-09-07",
+    "marcenaria": "2026-09-07",
+    "locacao-equipamentos": "2026-09-07",
+    "eventos-corporativos": "2026-09-07"
   }
 }

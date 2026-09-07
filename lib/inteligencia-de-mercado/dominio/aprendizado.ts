@@ -91,7 +91,13 @@ const VAZIAS = new Set(
  */
 const FUNCIONAIS_EM_INGLES = new Set(
   ('the you your don have has are was were this that these those with and for from will would ' +
-    'can could our their there here what when who how about not but its it is to of in on at by be we us an if or').split(
+    'can could our their there here what when who how about not but its it is to of in on at by be we us an if or ' +
+    // Segunda leva, achada no corpus com CINCO nichos (07/09). O widget do
+    // WhatsApp sobrevive em pedaços que NÃO contêm a palavra "whatsapp":
+    // "looks like" e "now get" lideravam a tabela com 5 nichos e 175 sites.
+    // Cortar `whatsapp` não bastava — o fragmento vizinho passa sozinho.
+    'looks like now get see click read view open close send back next start ' +
+    'free trial try login sign help support home team new best top page site').split(
     ' ',
   ),
 )
@@ -108,6 +114,9 @@ const RUIDO_DE_SITE = new Set([
   'fale conosco',
   'contato conosco',
   'entre em contato',
+  'entrar em contato',
+  'fale com a gente',
+  'solicite contato',
   'alem disso',
   'https www',
   'www com',
@@ -157,7 +166,29 @@ const RUIDO_DE_SITE = new Set([
 const PALAVRAS_DE_WIDGET = new Set(
   ('whatsapp zap telegram messenger microsoft windows android ios chrome ' +
     'download baixar instalar instalado installed continue cookie cookies ' +
-    'javascript navegador browser plugin widget captcha recaptcha').split(' '),
+    'javascript navegador browser plugin widget captcha recaptcha ' +
+    // Fragmento de caminho de arquivo. `wp-content/uploads` aparece em toda
+    // imagem de site em WordPress, e "content uploads" chegou a 2 nichos com
+    // 42 sites — o texto do Exa traz o caminho colado.
+    'wp content uploads assets static cdn img jpg jpeg png webp svg pdf').split(' '),
+)
+
+/**
+ * Nome de LUGAR. Diz onde a empresa fica, nunca o que ela faz.
+ *
+ * As praças da rodada já são desqualificadas por `pracas`, mas os sites citam
+ * o estado inteiro e a região — `minas gerais` apareceu em três nichos com 56
+ * sites, e nenhum deles estava numa consulta minha.
+ *
+ * Geografia atravessa nichos por construção (toda empresa fica em algum lugar),
+ * então ela sobe justamente na coluna que mede alcance entre setores.
+ */
+const LUGARES = new Set(
+  ('brasil brasileiro brasileira nacional sudeste sul nordeste norte centro oeste ' +
+    'sao paulo rio janeiro minas gerais espirito santo parana catarina grande ' +
+    'bahia sergipe alagoas pernambuco paraiba norte ceara piaui maranhao para ' +
+    'amapa amazonas roraima rondonia acre tocantins goias mato grosso distrito ' +
+    'federal brasilia regiao metropolitana capital interior litoral').split(' '),
 )
 
 /** Tira acento e pontuação. `Clínica` e `clinica` são a mesma palavra. */
@@ -243,6 +274,10 @@ export function extrairVocabulario(
         if (janela.some((p) => /^\d+$/.test(p))) continue
         if (janela.some((p) => FUNCIONAIS_EM_INGLES.has(p))) continue
         if (janela.some((p) => PALAVRAS_DE_WIDGET.has(p))) continue
+        // Basta que as DUAS pontas sejam lugar: "sao paulo", "minas gerais".
+        // Exigir todas as palavras cortaria "atendemos grande sao paulo", que
+        // também é geografia; exigir uma só cortaria "grande porte".
+        if (LUGARES.has(primeira) && LUGARES.has(ultima)) continue
         // O eco da consulta: desqualificado se QUALQUER palavra veio da pergunta.
         if (janela.some((p) => fora.has(p))) continue
         const termo = janela.join(' ')
@@ -411,6 +446,7 @@ export function limparCorpus(corpus: CorpusDeVocabulario): CorpusDeVocabulario {
     const palavras = termo.split(' ')
     if (RUIDO_DE_SITE.has(termo)) continue
     if (palavras.some((p) => FUNCIONAIS_EM_INGLES.has(p) || PALAVRAS_DE_WIDGET.has(p))) continue
+    if (LUGARES.has(palavras[0]) && LUGARES.has(palavras[palavras.length - 1])) continue
     termos[termo] = porNicho
   }
   return { termos, atualizadoEm: corpus.atualizadoEm }
