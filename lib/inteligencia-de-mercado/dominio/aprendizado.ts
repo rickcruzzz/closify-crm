@@ -122,7 +122,43 @@ const RUIDO_DE_SITE = new Set([
   'redes sociais',
   'app download',
   'download app',
+  // Rótulo de formulário. É o cromo do próprio formulário de contato, não a voz
+  // de quem o escreveu — e apareceu em 57 sites de dois nichos.
+  'nome e mail',
+  'mensagem enviar',
+  'formulario abaixo',
+  'preencha o formulario',
+  'campos obrigatorios',
 ])
+
+/**
+ * Texto de WIDGET de terceiro, que não é escrito por ninguém do nicho.
+ *
+ * Achado no primeiro corpus com dois nichos, 07/09. O topo do consolidado —
+ * ordenado justamente por "atravessa nichos" — era isto:
+ *
+ *     whatsapp web            2 nichos, 61 sites
+ *     now get whatsapp        2 nichos, 60 sites
+ *     microsoft looks like    2 nichos, 60 sites
+ *     whatsapp installed      2 nichos, 60 sites
+ *
+ * É o botão de conversa do WhatsApp e o aviso do navegador, presentes em
+ * praticamente todo site brasileiro. Eles atravessam nichos **porque não são de
+ * nicho nenhum** — e por isso lideravam exatamente a métrica que existe para
+ * achar a fala comum da PME.
+ *
+ * O corte de inglês por função gramatical não os pegava: `get`, `whatsapp`,
+ * `installed`, `microsoft` são palavras de conteúdo, não conectores.
+ *
+ * A lista é por PALAVRA e não por expressão, de propósito: o widget varia o
+ * texto ("get whatsapp", "whatsapp installed", "download whatsapp"), e uma
+ * lista de frases exatas envelheceria a cada versão dele.
+ */
+const PALAVRAS_DE_WIDGET = new Set(
+  ('whatsapp zap telegram messenger microsoft windows android ios chrome ' +
+    'download baixar instalar instalado installed continue cookie cookies ' +
+    'javascript navegador browser plugin widget captcha recaptcha').split(' '),
+)
 
 /** Tira acento e pontuação. `Clínica` e `clinica` são a mesma palavra. */
 function normalizar(texto: string): string {
@@ -206,6 +242,7 @@ export function extrairVocabulario(
         if ([primeira, ultima].some((p) => p.length < 3)) continue
         if (janela.some((p) => /^\d+$/.test(p))) continue
         if (janela.some((p) => FUNCIONAIS_EM_INGLES.has(p))) continue
+        if (janela.some((p) => PALAVRAS_DE_WIDGET.has(p))) continue
         // O eco da consulta: desqualificado se QUALQUER palavra veio da pergunta.
         if (janela.some((p) => fora.has(p))) continue
         const termo = janela.join(' ')
@@ -355,4 +392,26 @@ export function consolidarVocabulario(
     })
     .sort((a, b) => b.nichos - a.nichos || b.sites - a.sites || a.termo.localeCompare(b.termo))
     .slice(0, maximo)
+}
+
+/**
+ * Limpa um corpus já acumulado com as regras de ruído de HOJE.
+ *
+ * O corpus soma entre rodadas, então um termo que entrou antes de a regra
+ * existir fica lá para sempre — e como ele costuma ser cromo (aparece em todo
+ * site), ele lidera justamente a métrica de "atravessa nichos".
+ *
+ * Aplicar as regras na LEITURA, e não só na escrita, faz o corpus se curar
+ * sozinho a cada rodada conforme a lista de ruído cresce. É mais barato que
+ * apagar e recolher: o texto já foi pago.
+ */
+export function limparCorpus(corpus: CorpusDeVocabulario): CorpusDeVocabulario {
+  const termos: CorpusDeVocabulario['termos'] = {}
+  for (const [termo, porNicho] of Object.entries(corpus.termos)) {
+    const palavras = termo.split(' ')
+    if (RUIDO_DE_SITE.has(termo)) continue
+    if (palavras.some((p) => FUNCIONAIS_EM_INGLES.has(p) || PALAVRAS_DE_WIDGET.has(p))) continue
+    termos[termo] = porNicho
+  }
+  return { termos, atualizadoEm: corpus.atualizadoEm }
 }

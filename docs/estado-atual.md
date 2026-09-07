@@ -4,9 +4,9 @@ Documento de continuidade. É lido no começo de toda sessão (referenciado no
 [CLAUDE.md](../CLAUDE.md)) para que uma conversa nova, ou outra conta, comece
 sabendo o que já foi feito, o que foi decidido e onde estão as armadilhas.
 
-**Atualizado em:** 07/09/2026 (o CRM tem 257 leads reais com a primeira
-mensagem na timeline; e o nicho foi escolhido por medicao de 27, que derrubou
-os dois que eu tinha acabado de manter)
+**Atualizado em:** 07/09/2026 (o motor multiplica por praca E por variante de
+consulta; e a copy parou de esconder a porta de saida, que estava escrita em
+comentario de codigo e nunca na tela)
 
 ## O histórico de agosto mora em outro arquivo
 
@@ -24,6 +24,108 @@ história:** o produto **não tem WhatsApp**. A ponte saiu em 28/08 (`c52a718`)
 porque a Evolution dava problema e a API oficial da Meta não foi aprovada. Hoje
 `FASE_DO_WHATSAPP = 'migrando'` em `lib/integrations/whatsapp-estado.ts`, e o
 que sobrou é o link `wa.me`. O porquê inteiro está no arquivo.
+
+---
+## O motor multiplica por duas dimensoes, e a copy escondia a saida (07/09, noite)
+
+Pedido do dono: *"a quantidade de empresas espionadas esta sendo muito poucas,
+precisamos de muitas informacoes pra alimentar"*, mais uma auditoria de
+copywriter do que converte.
+
+### Duas alavancas, e as duas multiplicam
+
+    PRACAS      25 metropoles ordenadas por densidade de PME. `--pracas=N`
+    variantes   3 consultas por nicho. "dedetizadora", "controle de pragas" e
+                "sanitizacao" sao a MESMA empresa com tres nomes, e o Exa
+                ancora na formulacao
+
+Medido, mesmo nicho: **5 pracas com 1 consulta davam 90 unicos; 5 pracas com 3
+consultas dao 387.**
+
+### Tres limites que a escala teria exposto
+
+**O teto era um balde so.** Search, findSimilar e contents contavam juntos:
+numa rodada de 5 pracas as sementes consumiam quase os 40, e o `contents` — que
+e o que transforma URL em prospect com contato — nunca rodava. A rodada gastava
+o orcamento inteiro para produzir uma lista de links. Agora e um teto por FASE.
+
+**O findSimilar era fixo em 2 por vertical**, independente das pracas. Com 25
+pracas cobria 8% do que foi semeado, e e justamente ele que acha quem nao
+escreve para buscador.
+
+**A dedupe era 1-a-1**: uma requisicao ao Supabase por prospect. Trocada por
+leitura paginada da coluna, comparada em memoria — o mesmo padrao que a
+importacao de planilha adotou depois de medir que `.in()` quebra (500 valores
+devolvem 400, 2.000 devolvem 414).
+
+### Universo != fila, e a rodada sobrevive ao credito acabar
+
+`--universo` grava todo dominio qualificado em CSV; `--topo=N` limita quantos
+viram lead. Descobrir cinco mil e barato; gravar cinco mil que ninguem liga
+transforma a fila em ruido.
+
+401 e 402 sinalizam em vez de estourar: a rodada PARA com relatorio e grava o
+que ja tinha. Perder a colheita porque o credito acabou no meio seria pagar duas
+vezes pelo mesmo trabalho.
+
+### O corpus acumula, e o primeiro acumulado achou um defeito MEU
+
+`aprendizado-<data>.md` era sobrescrito: seis nichos no mesmo dia deixavam so o
+ultimo. Agora e um mapa termo -> nicho -> sites, com o MAIOR por nicho e nunca a
+soma — somar transformaria repeticao em evidencia.
+
+Isso destrava a pergunta que uma rodada sozinha nao responde: **em quantos
+NICHOS o termo aparece.** Em 1, e jargao do setor e vira copy do anuncio dele;
+em 4+, e como a PME brasileira fala e vira copy da landing.
+
+**E o defeito:** `rio de janeiro` era o termo que mais atravessava nichos. Claro
+que era — a consulta tinha sido "... em Rio de Janeiro". A consulta circular
+voltando por uma porta nova, porque a cidade e colada no `semear`, fora do texto
+da consulta. As pracas passaram a entrar na desqualificacao, com controle.
+
+### A copy: o argumento existia e estava ESCONDIDO
+
+Eu ia registrar que o nao-aprisionamento nao aparecia em lugar nenhum. **Falso**
+— ele esta em tres lugares da landing desde agosto. O problema era outro:
+
+    "importar"    6 superficies, cada uma com frase propria
+    "exportar"    1 lugar, item de lista sem frase nenhuma
+    "fidelidade"  1 lugar no site inteiro: os Termos, a dois cliques
+
+A assimetria dizia o contrario do que o produto faz: porta de entrada anunciada
+seis vezes e porta de saida escondida e o desenho de quem quer prender.
+
+E o raciocinio certo estava em COMENTARIO desde que o cartao de preco nasceu —
+*"'Traga e leve seus contatos' responde a objecao de ficar preso antes de ela
+ser feita"* — e a tela nunca disse.
+
+Quatro cortes: tres linhas abaixo do formulario de `/cadastro` (das 7 chaves de
+eco, so duas falavam de cancelamento; o padrao, nenhuma); a saida na DOBRA do
+hero; `"Traga e leve seus contatos, em CSV"` no cartao Free; e a pergunta de
+cancelamento nos DOIS `FAQPage` JSON-LD, que e o que um assistente de IA cita.
+
+**Nada que o produto nao cumpra.** O Free existe, o cancelamento pela tela
+existe, a exportacao saiu em 03/09.
+
+### A pagina de comparacao, uma e nao sete
+
+`/alternativa-ao-crm-que-cobra-por-usuario`, com o preco publico de seis
+concorrentes e a DATA em que foi lido — preco de concorrente e o dado que
+envelhece mais rapido do site. Tem secao de "quando trocar NAO compensa", no
+molde honesto das outras duas paginas. Sete paginas finas competiriam entre si e
+nenhuma ranquearia.
+
+### Provado
+
+    empresa separada   "Prospeccao" criada com Pro vigente. Controle negativo:
+                       empresa Free e RECUSADA antes de gravar, com a mensagem
+                       da trigger da 0026
+    /cadastro          4 larguras, banner de consentimento ABERTO (533..659 em
+                       390px), botao alcancado por `elementFromPoint` nas
+                       quatro. Esta pagina ja teve esse defeito TRES vezes
+    conferidor         documentos batem
+
+1.209 testes.
 
 ---
 ## 257 leads reais no CRM, e o nicho foi escolhido por medicao (07/09)

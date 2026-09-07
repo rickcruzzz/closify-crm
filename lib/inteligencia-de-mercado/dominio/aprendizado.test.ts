@@ -5,6 +5,7 @@ import {
   CORPUS_VAZIO,
   extrairPromessas,
   extrairVocabulario,
+  limparCorpus,
   mesclarVocabulario,
 } from './aprendizado'
 
@@ -221,5 +222,43 @@ describe('a praca tambem e a minha pergunta', () => {
     for (const lixo of ['alem disso', 'https www', 'contato conosco', 'entre em contato']) {
       expect(termos).not.toContain(lixo)
     }
+  })
+})
+
+describe('o widget de terceiro, achado no primeiro corpus de dois nichos', () => {
+  it('texto do botao de WhatsApp nao e vocabulario de nicho nenhum', () => {
+    // Medido em 07/09: o topo do consolidado — ordenado por "atravessa nichos" —
+    // era "whatsapp web", "now get whatsapp", "microsoft looks like". Eles
+    // atravessam nichos PORQUE nao sao de nicho nenhum, e por isso lideravam
+    // exatamente a metrica que existe para achar a fala comum da PME.
+    const paginas = Array.from({ length: 5 }, (_, i) =>
+      pagina(
+        `s${i}.com.br`,
+        'Fale conosco. Now get WhatsApp installed continue. Controle de pragas certificado.',
+      ),
+    )
+    const termos = extrairVocabulario(paginas, { minimoDeSites: 2 }).map((t) => t.termo)
+    for (const lixo of ['whatsapp installed', 'get whatsapp', 'installed continue']) {
+      expect(termos).not.toContain(lixo)
+    }
+    // O termo do negócio continua vindo: o corte é no widget, não na página.
+    expect(termos).toContain('pragas certificado')
+  })
+
+  it('o corpus ja acumulado se CURA na leitura', () => {
+    // O corpus soma entre rodadas: um termo que entrou antes da regra existir
+    // ficaria la para sempre — e como e cromo, lideraria a metrica.
+    const sujo = {
+      termos: {
+        'whatsapp web': { dedetizacao: 61, marcenaria: 60 },
+        'nome e mail': { dedetizacao: 57 },
+        'controle de pragas': { dedetizacao: 40 },
+      },
+      atualizadoEm: { dedetizacao: '2026-09-07' },
+    }
+    const limpo = limparCorpus(sujo)
+    expect(Object.keys(limpo.termos)).toEqual(['controle de pragas'])
+    // A memória de quando cada nicho foi colhido não se perde na limpeza.
+    expect(limpo.atualizadoEm).toEqual(sujo.atualizadoEm)
   })
 })

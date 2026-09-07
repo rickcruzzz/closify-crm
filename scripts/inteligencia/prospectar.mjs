@@ -824,7 +824,12 @@ const nichoPorDominio = new Map(pontuados.map((p) => [p.dominio, p.vertical]))
 const CAMINHO_CORPUS = 'docs/mercado/vocabulario.json'
 let corpus = aprendizado.CORPUS_VAZIO
 try {
-  corpus = JSON.parse(await readFile(CAMINHO_CORPUS, 'utf8'))
+  // `limparCorpus` na LEITURA: o corpus soma entre rodadas, então um termo que
+  // entrou antes de a regra de ruído existir ficaria lá para sempre — e como
+  // cromo aparece em todo site, ele lideraria justamente a métrica de "atravessa
+  // nichos". Assim o arquivo se cura sozinho conforme a lista cresce, sem
+  // precisar apagar e recolher o que já foi pago.
+  corpus = aprendizado.limparCorpus(JSON.parse(await readFile(CAMINHO_CORPUS, 'utf8')))
 } catch {
   corpus = aprendizado.CORPUS_VAZIO
 }
