@@ -410,3 +410,111 @@ NAO cabe  catalogo de produtos, aprovacao por alcada, documento configuravel
 `moskitcrm.com` **não devolveu nenhuma página** de proposta nas duas consultas.
 Isso não prova que ele não tenha — prova que não é o que ele anuncia primeiro.
 Fica registrado como não medido, e não como ausência.
+
+
+---
+
+# Quarta rodada: os nichos TÊM software vertical — e eu tinha afirmado que não
+
+15 chamadas, US$ 0,21. A pergunta que nunca foi feita: **cada nicho da
+prospecção tem software próprio?**
+
+Quando escolhi os cinco em 07/09, escrevi no `prospeccao.ts`:
+
+> *"O eixo que a medição NÃO enxerga, e que decide junto: se o nicho já tem
+> software vertical barato, o CRM genérico perde antes de começar. **Os que
+> entraram não têm** — o CRM deles hoje é a conversa fixada no topo do
+> WhatsApp."*
+
+Isso era julgamento meu. **Nunca foi medido. E é falso.**
+
+## O que existe, medido
+
+Só contando quem se anuncia como software E tem página de venda — artigo,
+diretório e rede social fora:
+
+```
+nicho                  softwares verticais   com orcamento   preco visto
+dedetizacao                    5                  2          R$ 190 (epragas)
+comunicacao-visual             4                  4          R$ 180 (sistemagrafica)
+locacao-equipamentos           4                  4          R$ 250 (nixloc)
+eventos-corporativos           3                  3          —
+marcenaria                     1                  1          R$ 189 (sismarcenaria)
+```
+
+**Todos os cinco têm.** E na maioria o orçamento já está dentro.
+
+## O que isso muda, e o que não
+
+### Muda o argumento, não o nicho
+
+O que eu dizia — *"o CRM deles é o WhatsApp"* — vale para quem não comprou
+nada, e essa parte continua de pé: os 964 domínios do universo são empresas com
+site, não clientes de ERP. Mas **existe um vendedor no páreo**, e ele custa:
+
+```
+epragas         R$ 190/mes
+sismarcenaria   R$ 189/mes
+sistemagrafica  R$ 180/mes
+nixloc          R$ 250/mes
+aqui            R$  49/mes, pela empresa inteira
+```
+
+**São 4 a 5 vezes mais caros.** E são de outra natureza: ERP de ordem de
+serviço, produção, estoque e financeiro. O orçamento deles é um **documento**;
+o nosso seria uma **linha do funil com prazo e cobrança de retorno**.
+
+Isso é uma venda mais difícil do que eu escrevi, e ao mesmo tempo mais clara:
+não é "não existe nada", é *"existe, custa quatro vezes mais, e faz muito além
+do que você precisa"*.
+
+### E derruba o orçamento como diferencial, de vez
+
+Nos cinco nichos, o software vertical já entrega orçamento. Somado ao Ploomes e
+ao Propo da rodada anterior:
+
+```
+construir orcamento    NAO diferencia. E PARIDADE
+nao construir          e uma lacuna visivel em qualquer comparacao que o
+                       prospect fizer, inclusive contra o vertical dele
+```
+
+Continua sendo o item 1 — pelo mesmo motivo de sempre, que é ser o objeto do
+dia a dia do ICP — mas o motivo mudou: **entra para não perder, não para
+ganhar.** Quem ganha é preço e simplicidade.
+
+## Um achado lateral que vale registrar
+
+`gestaoclick.com.br` apareceu em **três dos cinco nichos**. É um ERP genérico
+com landing por segmento — SEO programático de concorrente, o mesmo padrão que
+`docs/capacidades.md` descreve como possível para nós e que nunca foi feito.
+
+## Os limites desta medição
+
+```
+18 paginas por nicho    e amostra fina. Um vertical que nao ranqueia nessas
+                        consultas nao aparece aqui
+"orcamento=SIM"         e regex sobre o texto da pagina, nao uso do produto
+preco                   e o primeiro R$ que aparece na pagina; pode ser
+                        exemplo dentro de um texto, e nao a mensalidade
+```
+
+Nenhum desses invalida a conclusão principal — **cinco de cinco têm vertical** —,
+e é essa que muda a decisão.
+
+## O que fica, depois das quatro rodadas
+
+```
+PROVADO   o mercado cobra por usuario (9 de 18) e por volta de R$ 45 a R$ 97
+PROVADO   proposta/orcamento e comum: 59% do CRM geral, e nos 5 verticais
+PROVADO   validade e aviso de visualizacao EXISTEM (Ploomes, Propo)
+PROVADO   os 5 nichos tem software vertical, a R$ 180-250
+CAIU      "R$ 49 e o mais barato"          -> nao e, com 1 usuario
+CAIU      "sete players com preco fixo"    -> 2 de 18
+CAIU      "ninguem da validade ao orcamento" -> Ploomes e Propo dao
+CAIU      "os nichos nao tem vertical"     -> os cinco tem
+SOBRA     o preco por EMPRESA, num mercado que cobra por pessoa, contra
+          verticais que custam 4x
+```
+
+O que nenhuma rodada moveu continua o mesmo: **se alguém paga por isso.**

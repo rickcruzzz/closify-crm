@@ -61,10 +61,24 @@
  * ferramenta é a venda mais cara que existe. `serralheria` tem a maior média
  * (8,6) com 2 FORTE: média premia alcance, e alcance não paga.
  *
- * O eixo que a medição NÃO enxerga, e que decide junto: se o nicho já tem
- * software vertical barato, o CRM genérico perde antes de começar. Os quatro que
- * entraram não têm — o CRM deles hoje é a conversa fixada no topo do WhatsApp,
- * que é o inimigo que a landing já nomeia.
+ * **Uma afirmação daqui foi MEDIDA em 07/09 e é falsa.** Este comentário dizia
+ * que os nichos escolhidos não têm software vertical, e que "o CRM deles é a
+ * conversa fixada no topo do WhatsApp". A primeira metade não é verdade:
+ *
+ *     dedetizacao            5 softwares verticais   epragas        R$ 190
+ *     comunicacao-visual     4                       sistemagrafica R$ 180
+ *     locacao-equipamentos   4                       nixloc         R$ 250
+ *     eventos-corporativos   3
+ *     marcenaria             1                       sismarcenaria  R$ 189
+ *
+ * Cinco de cinco têm, e na maioria o orçamento já vem dentro. O que sobrevive é
+ * o preço e a natureza: eles são ERP de ordem de serviço a R$ 180–250, quatro a
+ * cinco vezes o nosso, e resolvem muito além do que o ICP precisa.
+ *
+ * Fica escrito aqui, e não só no documento, porque foi ESTE comentário que
+ * justificou a escolha dos nichos — e ele era julgamento meu apresentado como
+ * critério. Os outros três critérios (`ORCAMENTO >= 2`, `FORTE >= 4`,
+ * `CONTATO >= 6`) foram medidos e continuam de pé.
  *
  * **Isto não é o ICP do PRD.** Lá continuam agências, consultorias, clínicas,
  * imobiliárias e software houses: quem chegar sozinho é bem-vindo. Esta lista é
