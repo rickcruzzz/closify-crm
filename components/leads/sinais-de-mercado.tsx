@@ -1,6 +1,7 @@
 'use client'
 
 import * as React from 'react'
+import Link from 'next/link'
 import { ExternalLink, Loader2, Radar } from 'lucide-react'
 import { toast } from 'sonner'
 
@@ -68,19 +69,36 @@ export function SinaisDeMercado({
           Sinais de mercado
         </CardTitle>
 
-        {status === null && (
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={pedir}
-            disabled={pedindo || !ehPro}
-            // 44px em mobile: a regra de alvo de toque do projeto.
-            className="min-h-11 sm:min-h-9"
-          >
-            {pedindo && <Loader2 className="size-4 animate-spin" aria-hidden />}
-            {ehPro ? 'Pesquisar' : 'Pesquisar (Pro)'}
-          </Button>
-        )}
+        {/* Sem Pro, LINK e não botão morto.
+            
+            A primeira versão desabilitava o botão e escrevia "Pesquisar (Pro)".
+            Controle desabilitado não faz nada ao ser clicado e não diz para
+            onde ir — quem quisesse o recurso ficava sem caminho, e o card
+            gastava a mesma área da tela para bloquear em vez de converter.
+
+            É a mesma correção que `mensagem-bloqueio-pro.ts` já fez do lado do
+            servidor em 18/08: dizer o que fazer, não só que não pode. */}
+        {status === null &&
+          (ehPro ? (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={pedir}
+              disabled={pedindo}
+              // 44px em mobile: a regra de alvo de toque do projeto.
+              className="min-h-11 sm:min-h-9"
+            >
+              {pedindo && <Loader2 className="size-4 animate-spin" aria-hidden />}
+              Pesquisar
+            </Button>
+          ) : (
+            <Button
+              variant="outline"
+              size="sm"
+              className="min-h-11 sm:min-h-9"
+              render={<Link href="/settings/billing?assinar=1">Conhecer o Pro</Link>}
+            />
+          ))}
       </CardHeader>
 
       <CardContent className="text-sm">
@@ -88,7 +106,7 @@ export function SinaisDeMercado({
           <p className="text-muted-foreground">
             {ehPro
               ? 'Procura o que esta empresa publicou na web — contratação, expansão, mudança — com link para a fonte.'
-              : 'Pesquisa de mercado é um recurso Pro. Faça upgrade para usar.'}
+              : 'No Pro, o sistema procura o que esta empresa publicou na web — contratação, expansão, mudança — e mostra com link para a fonte.'}
           </p>
         )}
 

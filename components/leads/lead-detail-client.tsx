@@ -392,6 +392,19 @@ export function LeadDetailClient({
             </CardContent>
           </Card>
 
+          {/* Card IRMÃO do histórico, não filho.
+              
+              Ele nasceu dentro do `CardContent` do histórico e virou caixa
+              dentro de caixa: dois títulos, duas bordas e dois níveis de
+              elevação disputando a mesma região da tela. A hierarquia dizia que
+              o sinal de mercado é parte do histórico, e ele não é — histórico é
+              o que já aconteceu, sinal é insumo para a próxima conversa.
+
+              A ordem continua a mesma regra do resto da página: o que falta
+              fazer (Tarefas), o que ajuda a decidir (Sinais), o que já foi
+              feito (Histórico). */}
+          <SinaisDeMercado leadId={lead.id} estado={pesquisa} ehPro={ehPro} />
+
           <Card>
             <CardHeader className="flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between">
               <CardTitle>Histórico de atividades</CardTitle>
@@ -404,8 +417,6 @@ export function LeadDetailClient({
               </Button>
             </CardHeader>
             <CardContent>
-              <SinaisDeMercado leadId={lead.id} estado={pesquisa} ehPro={ehPro} />
-
               <ActivityTimeline
                 activities={activities}
                 currentUserId={currentUserId}
