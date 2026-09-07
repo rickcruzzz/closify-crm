@@ -40,6 +40,7 @@ export function TaskItem({
   atrasada,
   pendente = false,
   onConcluir,
+  onReabrir,
   confirmarConclusao = false,
   onDesfazer,
   onEditar,
@@ -53,6 +54,19 @@ export function TaskItem({
    * para o clique duplo não disparar a Server Action duas vezes. */
   pendente?: boolean
   onConcluir: (taskId: string) => void
+  /**
+   * Reabre uma tarefa já concluída, pelo mesmo checkbox.
+   *
+   * Opcional, e é o que mantém as outras telas como estão: sem ele, a caixa de
+   * uma tarefa concluída continua desabilitada, que é o comportamento de
+   * `/hoje` e da agenda — lá a linha concluída sai da lista, e não há o que
+   * reabrir na tela.
+   *
+   * No painel do lead a tarefa concluída **fica visível**, riscada e com
+   * "concluída há X dias". Uma caixa marcada que não responde ao clique não
+   * comunica "não dá": comunica que a tela travou.
+   */
+  onReabrir?: (taskId: string) => void
   /**
    * Pergunta antes de concluir.
    *
@@ -80,6 +94,7 @@ export function TaskItem({
   // renderize `TaskItem` nasce protegida sem precisar lembrar disso.
   const [confirmandoExclusao, setConfirmandoExclusao] = React.useState(false)
   const [confirmandoConclusao, setConfirmandoConclusao] = React.useState(false)
+  const [confirmandoReabertura, setConfirmandoReabertura] = React.useState(false)
 
   // Só para tarefa de WhatsApp: pôr o botão em toda tarefa com telefone
   // encheria a lista de um atalho que ninguém pediu, e diluiria o sinal
@@ -104,9 +119,18 @@ export function TaskItem({
     <li className="hover:bg-accent/40 flex items-center gap-3 rounded-lg px-2 py-2 transition-colors">
       <Checkbox
         checked={concluida}
-        disabled={concluida || pendente}
+        // Concluída SEM `onReabrir` continua travada: é o caso das telas onde
+        // a linha some depois de concluída e não há o que alternar.
+        disabled={pendente || (concluida && !onReabrir)}
         onCheckedChange={() => {
-          if (concluida || pendente) return
+          if (pendente) return
+          if (concluida) {
+            // Reabrir SEMPRE pergunta, mesmo onde concluir não pergunta:
+            // desfazer o trabalho de outra pessoa é o gesto que a equipe
+            // precisa enxergar acontecendo.
+            if (onReabrir) setConfirmandoReabertura(true)
+            return
+          }
           // Com confirmação, o estado NÃO muda aqui: quem marca a caixa é o
           // "Sim, concluir". Alterar antes deixaria a caixa marcada durante o
           // diálogo e desmarcada no cancelamento — um pisca que sugere que
@@ -222,6 +246,32 @@ export function TaskItem({
             )}
           </DropdownMenuContent>
         </DropdownMenu>
+      )}
+
+      {onReabrir && (
+        <AlertDialog open={confirmandoReabertura} onOpenChange={setConfirmandoReabertura}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Reabrir esta tarefa?</AlertDialogTitle>
+              <AlertDialogDescription>
+                &quot;{task.title}&quot; volta a contar como pendente e reaparece
+                nas listas de hoje e do calendário.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel disabled={pendente}>Cancelar</AlertDialogCancel>
+              <AlertDialogAction
+                disabled={pendente}
+                onClick={() => {
+                  setConfirmandoReabertura(false)
+                  onReabrir(task.id)
+                }}
+              >
+                Sim, reabrir
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       )}
 
       {/* `AlertDialog` direto, e não `ConfirmarExclusao`: aquele componente fixa

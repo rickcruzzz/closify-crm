@@ -21,7 +21,13 @@ import { EmptyState } from '@/components/ui/empty-state'
 import { TaskItem } from '@/components/tasks/task-item'
 import { TaskFormDialog, type TarefaEmEdicao } from '@/components/tasks/task-form-dialog'
 import { createActivity, deleteLead, updateLead } from '@/lib/leads/actions'
-import { criarTarefa, concluirTarefa, excluirTarefa, atualizarTarefa } from '@/lib/tasks/actions'
+import {
+  criarTarefa,
+  concluirTarefa,
+  reabrirTarefa,
+  excluirTarefa,
+  atualizarTarefa,
+} from '@/lib/tasks/actions'
 import { avisarTarefaConcluida } from '@/lib/tasks/avisar-concluida'
 import { enviarEmailViaGmail } from '@/lib/integrations/workflow-actions'
 import { linkDoWhatsApp } from '@/lib/leads/whatsapp'
@@ -216,6 +222,48 @@ export function LeadDetailClient({
     // seria, por isso só desmarca no erro.
   }
 
+  /**
+   * Reabre pelo mesmo checkbox que concluiu.
+   *
+   * ## A causa do "clico e nada acontece"
+   *
+   * A caixa da tarefa concluída vinha `disabled`. Aqui isso é um defeito, e não
+   * uma trava: nesta tela a tarefa concluída **continua na lista**, riscada e
+   * com "concluída há X dias". Caixa marcada que não responde ao clique não
+   * comunica "não dá" — comunica que a tela travou.
+   *
+   * Nas outras telas a linha some depois de concluída, então não havia o que
+   * reabrir e a trava passava despercebida.
+   *
+   * ## Desmarca `pendente` no sucesso, ao contrário de `concluir`
+   *
+   * `concluir` deixa o checkbox travado de propósito: a revalidação chega com
+   * `done_at` preenchido e a própria caixa se desabilita. Na reabertura é o
+   * oposto — a tarefa volta a ficar aberta, a caixa volta a ser clicável, e não
+   * destravar aqui a deixaria morta até a pessoa sair da página.
+   *
+   * O clique duplo não é problema: `reabrirTarefa` grava `done_at = null` e o
+   * segundo envio grava o mesmo valor. A operação é idempotente.
+   */
+  async function reabrir(taskId: string) {
+    if (tarefasPendentes.has(taskId)) return
+    marcarPendente(taskId)
+
+    const resultado = await reabrirTarefa(taskId)
+    desmarcarPendente(taskId)
+
+    if ('error' in resultado) {
+      // Nada a restaurar na tela: sem update otimista, a linha nunca chegou a
+      // mudar. O estado anterior é o que continua desenhado.
+      toast.error(resultado.error)
+      return
+    }
+
+    toast.success('Tarefa reaberta.')
+    // Sem router.refresh(): `reabrirTarefa` chama `revalidarTelasDeTarefa` com
+    // o `lead_id` da tarefa, e toda tarefa listada aqui é deste lead.
+  }
+
   async function excluir(taskId: string) {
     if (tarefasPendentes.has(taskId)) return
     marcarPendente(taskId)
@@ -374,6 +422,10 @@ export function LeadDetailClient({
                       }
                       pendente={tarefasPendentes.has(task.id)}
                       onConcluir={concluir}
+                      // Só aqui: nesta tela a tarefa concluída fica visível, e
+                      // o checkbox é a alternância dela.
+                      onReabrir={reabrir}
+                      confirmarConclusao
                       onEditar={(t) => {
                         setTarefaEmEdicao({
                           id: t.id,
