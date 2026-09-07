@@ -70,6 +70,60 @@ export async function marcarComoLida(id: string) {
 }
 
 /**
+ * Tira o aviso da lista.
+ *
+ * Marca `dispensada_em` **e** `lida_em` na mesma escrita: quem dispensa já viu.
+ * Deixar `lida_em` nulo faria o contador do sino continuar acusando algo que
+ * saiu da tela — e contador que aponta para o que não existe é a forma mais
+ * rápida de a pessoa parar de confiar nele.
+ *
+ * **Não apaga a linha, e isso é decisão.** Apagar exigiria uma policy de DELETE
+ * para `authenticated`, e a 0066 recusa pelo mesmo motivo que recusa `insert`:
+ * quem pode apagar aviso de cobrança pode esconder um. A linha continua no
+ * banco e some da tela; quem remove de verdade é a purga de 90 dias.
+ *
+ * `coalesce` na data de leitura preserva QUANDO a pessoa viu: sobrescrever com
+ * agora transformaria "vi isso ontem" em "vi agora", que é o mesmo defeito que
+ * `marcarTodasComoLidas` evita com o `is('lida_em', null)`.
+ */
+export async function dispensarNotificacao(id: string) {
+  const parse = idSchema.safeParse(id)
+  if (!parse.success) return { error: 'Notificação inválida.' }
+
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) return { error: 'Sessão expirada.' }
+
+  const workspaceId = await resolverWorkspaceAtivo(supabase, user.id)
+  if (!workspaceId) return { error: 'Empresa não encontrada.' }
+
+  const { data: atual } = await supabase
+    .from('notificacoes')
+    .select('lida_em')
+    .eq('id', parse.data)
+    .eq('workspace_id', workspaceId)
+    .maybeSingle()
+
+  const agora = new Date().toISOString()
+  const { error } = await supabase
+    .from('notificacoes')
+    .update({ dispensada_em: agora, lida_em: atual?.lida_em ?? agora })
+    .eq('id', parse.data)
+    .eq('workspace_id', workspaceId)
+    .is('dispensada_em', null)
+
+  if (error) {
+    console.error('Não foi possível dispensar o aviso', error)
+    return { error: 'Não foi possível dispensar o aviso.' }
+  }
+
+  revalidatePath('/', 'layout')
+  return { success: true }
+}
+
+/**
  * Marca todas de uma vez.
  *
  * `is('lida_em', null)` e não um `update` cego: sem ele, reabrir o sino

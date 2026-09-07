@@ -734,6 +734,7 @@ export type Database = {
           href: string | null
           criada_em: string
           lida_em: string | null
+          dispensada_em: string | null
         }
         Insert: {
           id?: string
@@ -745,11 +746,13 @@ export type Database = {
           href?: string | null
           criada_em?: string
           lida_em?: string | null
+          dispensada_em?: string | null
         }
         Update: {
           // Só `lida_em` muda na prática: a policy de update da 0066 existe
           // para quem LÊ marcar como lida, e nada mais.
           lida_em?: string | null
+          dispensada_em?: string | null
         }
         Relationships: []
       }

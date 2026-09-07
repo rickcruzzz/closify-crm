@@ -39,6 +39,9 @@ export async function contarNaoLidasDaEmpresaAtiva(): Promise<number> {
     .select('id', { count: 'exact', head: true })
     .eq('workspace_id', workspaceId)
     .is('lida_em', null)
+    // Dispensado nao conta: contador que aponta para o que ja saiu da tela e a
+    // forma mais rapida de a pessoa parar de confiar nele.
+    .is('dispensada_em', null)
     .or(`user_id.is.null,user_id.eq.${user.id}`)
 
   // Contador que erra para cima inventa urgência; para baixo, esconde. Zero é
@@ -70,6 +73,9 @@ export async function listarNotificacoesDaEmpresaAtiva(): Promise<Notificacao[]>
     // nível de tipo. Armadilha já paga neste projeto.
     .select('id, tipo, titulo, corpo, href, criada_em, lida_em')
     .eq('workspace_id', workspaceId)
+    // A linha dispensada continua no banco — some da lista, e so a purga de 90
+    // dias remove de verdade (0074).
+    .is('dispensada_em', null)
     .or(`user_id.is.null,user_id.eq.${user.id}`)
     .order('criada_em', { ascending: false })
     .limit(MAX_NOTIFICACOES)

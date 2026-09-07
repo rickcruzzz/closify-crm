@@ -12,8 +12,8 @@ regra de `docs/estado-atual.md`).
 catálogo, 31 são da extensão `pg_trgm`), **31 foreign keys**, **15 triggers**,
 **8 enums**.
 
-<!-- contagem: migrations.arquivos=72 migrations.maior=0073 -->
-**72 arquivos de migration, e a maior é `0073`** (remedido em 07/09; o `0049`
+<!-- contagem: migrations.arquivos=73 migrations.maior=0074 -->
+**73 arquivos de migration, e a maior é `0074`** (remedido em 07/09; o `0049`
 não existe, removido em 22/08). Os dois números vêm sempre juntos: a contagem
 sozinha convida a inferir `0071`.
 
@@ -22,6 +22,15 @@ no diagrama: `enriquecimento_de_lead` e `sinal_de_mercado`, da inteligência de
 mercado (`lib/inteligencia-de-mercado/`). As duas com RLS ligada, `select` por
 `is_workspace_member` e **zero policy de escrita para `authenticated`** — quem
 grava é o `service_role`, pelo mesmo motivo de `notificacoes` e `error_logs`.
+
+**A 0074 acrescentou `notificacoes.dispensada_em`** e, mais importante,
+**fechou uma promessa que a 0066 escrevia em texto e não impunha**: o comentário
+dela dizia "o único campo que muda é `lida_em`", mas RLS restringe LINHA e não
+COLUNA, e não havia `grant update (coluna)`. Medido antes de aplicar, um membro
+autenticado alcançava `titulo`, `corpo`, `href`, `tipo`, `user_id` e
+`workspace_id` por `PATCH` no PostgREST — a 0066 recusa `insert` porque "aviso
+forjável é aviso de cobrança forjável", e o `update` aberto chegava quase lá por
+outra porta. Agora são duas colunas: `lida_em` e `dispensada_em`.
 
 **A 0073 não criou tabela nenhuma.** Ela só acrescentou `sinal_de_mercado` ao
 `check` de `notificacoes.tipo` — e existe como migration própria porque a 0066

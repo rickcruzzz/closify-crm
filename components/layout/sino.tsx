@@ -3,7 +3,7 @@
 import * as React from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { Bell, Check, Loader2 } from 'lucide-react'
+import { Bell, Check, Loader2, X } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
 import {
@@ -14,6 +14,7 @@ import {
 import { cn } from '@/lib/utils'
 import {
   carregarNotificacoes,
+  dispensarNotificacao,
   marcarComoLida,
   marcarTodasComoLidas,
 } from '@/lib/notificacoes/actions'
@@ -92,6 +93,26 @@ export function Sino({ naoLidas }: { naoLidas: number }) {
     if (n.href) setAberto(false)
   }
 
+  /**
+   * Tira o aviso da lista.
+   *
+   * Otimista pela mesma razão de `abrirItem`: o servidor leva a viagem inteira
+   * de `revalidatePath`, e esperar deixaria o clique 1,5s sem sinal. Some da
+   * tela na hora; se o servidor recusar, ele volta e o erro aparece.
+   */
+  function dispensar(n: Notificacao) {
+    const antes = itens
+    setItens((atual) => atual?.filter((i) => i.id !== n.id) ?? null)
+    void dispensarNotificacao(n.id).then((r) => {
+      if (r && 'error' in r && r.error) {
+        setItens(antes)
+        setErro(r.error)
+        return
+      }
+      router.refresh()
+    })
+  }
+
   async function marcarTodas() {
     setMarcandoTodas(true)
     const agoraIso = new Date().toISOString()
@@ -133,6 +154,7 @@ export function Sino({ naoLidas }: { naoLidas: number }) {
       <DropdownMenuContent align="end" className="w-[min(22rem,calc(100vw-1.5rem))] p-0">
         <div className="flex items-center justify-between gap-2 border-b px-3 py-2">
           <span className="text-sm font-medium">Avisos</span>
+          <div className="flex items-center gap-1">
           {temNaoLida && (
             <Button
               type="button"
@@ -150,6 +172,23 @@ export function Sino({ naoLidas }: { naoLidas: number }) {
               Marcar todos como lidos
             </Button>
           )}
+          {/* Fechar explícito.
+              
+              O dropdown já fecha com Esc e com clique fora, e as duas coisas
+              são invisíveis: no telefone não existe Esc, e "clique fora" num
+              painel que ocupa quase a largura da tela é um alvo que a pessoa
+              não sabe que existe. */}
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            aria-label="Fechar avisos"
+            className="text-muted-foreground size-7 shrink-0 p-0"
+            onClick={() => setAberto(false)}
+          >
+            <X aria-hidden className="size-4" />
+          </Button>
+          </div>
         </div>
 
         <div className="max-h-[min(26rem,60vh)] overflow-y-auto">
@@ -168,8 +207,8 @@ export function Sino({ naoLidas }: { naoLidas: number }) {
               de receita com R$ 0,00 real em 30/08. */}
           {!carregando && !erro && itens?.length === 0 && (
             <p className="text-muted-foreground px-4 py-8 text-center text-sm text-balance">
-              Nada por aqui. Avisamos sobre cobrança, plano e integração — o
-              resto do dia a dia fica em Hoje.
+              Nada por aqui. Avisamos sobre cobrança, plano e integração. O
+              resto do dia a dia fica na tela Hoje.
             </p>
           )}
 
@@ -211,12 +250,18 @@ export function Sino({ naoLidas }: { naoLidas: number }) {
               )
 
               return (
-                <li key={n.id} className="border-b last:border-b-0">
+                // O `X` é IRMÃO da área clicável, nunca filho.
+                //
+                // Botão dentro de link é elemento interativo aninhado: HTML
+                // inválido, e na prática o clique no `X` navegaria junto. O
+                // `group` existe para o `X` aparecer no hover do item inteiro
+                // em vez de poluir a lista com um ícone por linha o tempo todo.
+                <li key={n.id} className="group flex items-start border-b last:border-b-0">
                   {n.href ? (
                     <Link
                       href={n.href}
                       onClick={() => void abrirItem(n)}
-                      className="hover:bg-muted flex min-h-11 w-full items-start gap-2.5 px-3 py-2.5 text-left transition-colors"
+                      className="hover:bg-muted flex min-h-11 flex-1 items-start gap-2.5 py-2.5 pr-1 pl-3 text-left transition-colors"
                     >
                       {conteudo}
                     </Link>
@@ -224,11 +269,22 @@ export function Sino({ naoLidas }: { naoLidas: number }) {
                     <button
                       type="button"
                       onClick={() => void abrirItem(n)}
-                      className="hover:bg-muted flex min-h-11 w-full items-start gap-2.5 px-3 py-2.5 text-left transition-colors"
+                      className="hover:bg-muted flex min-h-11 flex-1 items-start gap-2.5 py-2.5 pr-1 pl-3 text-left transition-colors"
                     >
                       {conteudo}
                     </button>
                   )}
+                  {/* Sempre visível no telefone, no hover no desktop: `hover`
+                      não existe em toque, e esconder atrás dele deixaria o
+                      recurso inalcançável em metade dos aparelhos. */}
+                  <button
+                    type="button"
+                    aria-label={`Dispensar aviso: ${n.titulo}`}
+                    onClick={() => dispensar(n)}
+                    className="text-muted-foreground hover:text-foreground hover:bg-muted flex size-11 shrink-0 items-center justify-center self-stretch transition-colors md:size-9 md:opacity-0 md:group-hover:opacity-100 md:focus-visible:opacity-100"
+                  >
+                    <X aria-hidden className="size-4" />
+                  </button>
                 </li>
               )
             })}
