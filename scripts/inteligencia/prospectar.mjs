@@ -56,6 +56,13 @@ const tetoDeBusca = Number(args.find((a) => a.startsWith('--teto='))?.split('=')
 const cidades = (args.find((a) => a.startsWith('--cidades='))?.split('=')[1] ?? '')
   .split(',').map((c) => c.trim()).filter(Boolean)
 const comMensagem = args.includes('--mensagem')
+/**
+ * Quantos prospects do TOPO recebem busca de decisor.
+ *
+ * Uma chamada por prospect, US$ 0,0196 cada — caro para rodar em noventa,
+ * barato para os dez que voce vai ligar hoje. Zero (o padrao) nao busca ninguem.
+ */
+const quantosDecisores = Number(args.find((a) => a.startsWith('--decisores='))?.split('=')[1] ?? 0)
 
 /**
  * Quem pediu para não ser procurado de novo.
@@ -88,6 +95,7 @@ const naoPerturbe = await lerNaoPerturbe()
 const dominio = await import('../../lib/inteligencia-de-mercado/dominio/prospeccao.ts')
 const aprendizado = await import('../../lib/inteligencia-de-mercado/dominio/aprendizado.ts')
 const { montarAbordagem } = await import('../../lib/inteligencia-de-mercado/dominio/abordagem.ts')
+const { extrairDecisor } = await import('../../lib/inteligencia-de-mercado/dominio/decisor.ts')
 const { PRO_PLAN_PRICE, FREE_LEAD_LIMIT } = await import('../../lib/plans.ts')
 const {
   VERTICAIS, ehDominioExcluido, extrairContato, pontuarProspect,
@@ -160,6 +168,31 @@ async function expandir(url) {
     excludeDomains: [...dominio.DOMINIOS_EXCLUIDOS],
   })
   return (j.results ?? []).map((x) => ({ url: x.url, titulo: x.title ?? null }))
+}
+
+/**
+ * O nome de quem decide, pelo indice publico do LinkedIn.
+ *
+ * Nada e raspado: o Exa devolve o que ja indexou. **Automatizar acao DENTRO do
+ * LinkedIn** — convite, mensagem, visita de perfil — e o que derruba conta, e
+ * nada disso acontece aqui.
+ *
+ * `extrairDecisor` so aceita o perfil quando o nome da empresa aparece no
+ * titulo. Sem casamento, `null` — porque nome errado na primeira palavra queima
+ * a abordagem inteira, e e pior que nao ter nome nenhum.
+ */
+async function buscarDecisor(nomeDaEmpresa) {
+  const j = await exa('search', {
+    query: `socio proprietario ou diretor da empresa ${nomeDaEmpresa} no Brasil`,
+    type: 'auto',
+    numResults: 5,
+    category: 'linkedin profile',
+  })
+  for (const r of j.results ?? []) {
+    const d = extrairDecisor({ titulo: r.title ?? null, url: r.url ?? null }, nomeDaEmpresa)
+    if (d) return d
+  }
+  return null
 }
 
 async function detalhar(urls) {
@@ -328,6 +361,26 @@ const pontuados = deduplicarPorDominio(
   ),
 )
 
+
+// Só o topo: uma chamada por prospect. Rodar em noventa custaria US$ 1,76 para
+// nomear gente que ninguém vai ligar hoje.
+const decisores = new Map()
+if (quantosDecisores > 0) {
+  console.log(`\nbuscando decisor dos ${Math.min(quantosDecisores, pontuados.length)} primeiros...`)
+  for (const p of pontuados.slice(0, quantosDecisores)) {
+    try {
+      const d = await buscarDecisor(p.titulo ?? p.dominio)
+      if (d) {
+        decisores.set(p.dominio, d)
+        console.log(`  ${p.dominio.padEnd(34)} ${d.nome} (${d.cargo})`)
+      } else {
+        console.log(`  ${p.dominio.padEnd(34)} nao casou — segue sem nome`)
+      }
+    } catch (erro) {
+      console.error(`  ${p.dominio}: ${erro.message.slice(0, 60)}`)
+    }
+  }
+}
 console.log(`\n${'='.repeat(78)}`)
 console.log(`${pontuados.length} PROSPECTS, melhores primeiro`)
 console.log('='.repeat(78))
@@ -341,10 +394,13 @@ for (const p of pontuados) {
   console.log(`     contato: ${canal}`)
   if (c.email && c.whatsapp) console.log(`     e-mail:  ${c.email}`)
   console.log(`     porque:  ${p.motivos.join(', ')}`)
+  const decisor = decisores.get(p.dominio)
+  if (decisor) console.log(`     decisor: ${decisor.nome} — ${decisor.cargo}  ${decisor.perfilUrl}`)
   if (comMensagem) {
     const texto = montarAbordagem({
       dominio: p.dominio, nome: p.titulo, vertical: p.vertical, motivos: p.motivos,
       precoMensal: PRO_PLAN_PRICE, limiteGratis: FREE_LEAD_LIMIT,
+      decisor: decisor ? decisor.nome.split(' ')[0] : null,
     })
     console.log(texto.split('\n').map((l) => (l ? `     | ${l}` : '     |')).join('\n'))
     if (c.whatsapp) console.log(`     abrir:   https://wa.me/${c.whatsapp}?text=${encodeURIComponent(texto)}`)

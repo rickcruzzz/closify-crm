@@ -12,21 +12,22 @@ import type { AvisoDeSinal, PortaDeNotificacoes } from '../ports/notificacoes'
  * próprio `insert`, o texto do sino e o do e-mail passariam a divergir sem nada
  * falhar — que é exatamente o que aquele arquivo existe para impedir.
  *
- * O tipo `sinal_de_mercado` precisa entrar no `check` da 0066 antes disto
- * funcionar. É de propósito: naquela migration está escrito que "acrescentar um
- * tipo passa a exigir uma migration, e exigir migration é o que transforma
- * 'entrou na lista' em decisão".
+ * O tipo `sinal_de_mercado` entrou no `check` pela **0073**, numa migration
+ * própria e não de carona na 0072 — porque naquele arquivo está escrito que
+ * "acrescentar um tipo passa a exigir uma migration, e exigir migration é o que
+ * transforma 'entrou na lista' em decisão".
+ *
+ * Até a 0073 existia aqui um `@ts-expect-error` dizendo que o tipo ainda não
+ * existia no banco. **Ele fez o trabalho dele:** no instante em que o valor
+ * entrou na lista, o próprio `tsc` acusou a diretiva como inútil e obrigou a
+ * removê-la. Comentário de pendência que envelhece em silêncio é o que este
+ * padrão evita.
  */
 export function criarPortaDeNotificacoes(): PortaDeNotificacoes {
   return {
     async avisar(aviso: AvisoDeSinal): Promise<void> {
       await registrarNotificacao({
         workspaceId: aviso.workspaceId,
-        // @ts-expect-error — `sinal_de_mercado` entra no `check` da 0066 numa
-        // migration própria, junto com a tela que o mostra. Até lá o tipo não
-        // existe no banco e esta chamada seria recusada com 23514. O
-        // `ts-expect-error` é a trava: quando o tipo entrar, ele passa a
-        // acusar erro e obriga a remover esta linha.
         tipo: 'sinal_de_mercado',
         titulo: aviso.titulo,
         corpo: aviso.corpo,

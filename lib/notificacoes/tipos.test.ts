@@ -35,12 +35,22 @@ describe('quem pode virar notificação', () => {
     }
   })
 
-  it('o único de gravidade média é a boa notícia', () => {
-    // Pagamento confirmado é o único tipo que não pede ação. Se um dia ele
-    // virar `alta`, o ponto vermelho passa a aparecer para dizer "deu certo" —
-    // e a cor deixa de significar "algo vai custar dinheiro".
+  it('gravidade ALTA é só o que custa dinheiro se ninguém agir', () => {
+    // A regra que este teste tranca não é a contagem: é o significado da cor.
+    // `alta` pinta o ponto vermelho, e ele só pode querer dizer "algo vai
+    // custar dinheiro ou acesso". Tudo que não custa fica em `media`.
+    //
+    // Este teste dizia "o único de gravidade média é a boa notícia" e travava
+    // a lista em `['pagamento_confirmado']`. Quebrou na 0073 — corretamente:
+    // `sinal_de_mercado` é oportunidade, não vencimento, e pintá-lo de
+    // vermelho junto com "seu pagamento falhou" dissolveria a distinção.
+    // Reescrito para afirmar a REGRA, e não o tamanho da lista de então.
+    const altas = TIPOS_DE_NOTIFICACAO.filter((t) => gravidadeDe(t) === 'alta')
+    expect(altas).toEqual(['pagamento_atrasado', 'plano_vencendo', 'trial_terminando'])
+
     const medias = TIPOS_DE_NOTIFICACAO.filter((t) => gravidadeDe(t) === 'media')
-    expect(medias).toEqual(['pagamento_confirmado'])
+    expect(medias).toContain('pagamento_confirmado')
+    expect(medias).toContain('sinal_de_mercado')
   })
 
   it('um tipo fora da lista não passa pelo tipo do TypeScript', () => {

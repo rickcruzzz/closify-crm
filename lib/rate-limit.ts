@@ -64,6 +64,18 @@ const LIMITES = {
   // errar o CPF duas ou três vezes cabe — e fecha o laço de quem clicasse
   // "Assinar Pro" cem vezes seguidas.
   checkout: { limite: 5, janelaSegundos: 60 * 60 },
+  // A SEGUNDA ação do projeto que gasta dinheiro por chamada: cada
+  // enriquecimento consulta o Exa a US$ 0,007. Diferente do checkout, aqui não
+  // há nada no meio pedindo confirmação — é um botão na tela do contato.
+  //
+  // 20 por hora é o teto de uso legítimo: quem está trabalhando uma lista
+  // enriquece um punhado por vez, e vinte cobre uma sessão inteira. Acima
+  // disso é laço, e o custo cresce linear.
+  //
+  // Por USUÁRIO e não por empresa, ao contrário do limite de plano: o dinheiro
+  // é da conta do produto, e duas pessoas da mesma empresa gastando em
+  // paralelo somam.
+  'enriquecer-lead': { limite: 20, janelaSegundos: 60 * 60 },
 } as const
 
 export type AcaoLimitada = keyof typeof LIMITES

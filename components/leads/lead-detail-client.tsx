@@ -8,6 +8,8 @@ import { ArrowLeft, Building2, Calendar, ListTodo, Mail, MessageCircle, Phone, P
 
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { SinaisDeMercado } from '@/components/leads/sinais-de-mercado'
+import type { EstadoDaPesquisa } from '@/lib/inteligencia-de-mercado/queries'
 import { PageHeader } from '@/components/layout/page-header'
 import { LeadStatusBadge } from '@/components/leads/lead-status-badge'
 import { LeadFormDialog } from '@/components/leads/lead-form-dialog'
@@ -58,6 +60,8 @@ export function LeadDetailClient({
   isAdmin,
   remetenteGmail,
   negociosAbertos,
+  pesquisa,
+  ehPro,
 }: {
   lead: LeadRow
   activities: ActivityRow[]
@@ -67,6 +71,10 @@ export function LeadDetailClient({
   isAdmin: boolean
   /** E-mail da conta Gmail conectada, mostrado como remetente no diálogo de envio. `null` se ninguém conectou. */
   remetenteGmail: string | null
+  /** O que a pesquisa de mercado já achou sobre este contato, e em que pé está a fila. */
+  pesquisa: EstadoDaPesquisa
+  /** Pro vigente. Decide se o botão de pesquisar convida ou explica. */
+  ehPro: boolean
   /**
    * Os negócios em andamento deste contato.
    *
@@ -321,6 +329,11 @@ export function LeadDetailClient({
         </Card>
 
         <div className="flex flex-col gap-4 lg:col-span-2">
+          {/* Sinais ABAIXO das tarefas e acima da timeline. A ordem é a mesma
+              regra: o que falta fazer primeiro, o que ajuda a decidir depois,
+              o histórico por último. Um sinal de mercado é insumo para a
+              próxima conversa — não é pendência, e pôr acima das tarefas
+              empurraria o que deve ser feito para baixo. */}
           {/* Tarefas acima da timeline de propósito: o que falta fazer vale
               mais do que o que já foi feito, e enterrar as pendências abaixo
               do histórico faria a pessoa rolar para descobrir o que deve. */}
@@ -391,6 +404,8 @@ export function LeadDetailClient({
               </Button>
             </CardHeader>
             <CardContent>
+              <SinaisDeMercado leadId={lead.id} estado={pesquisa} ehPro={ehPro} />
+
               <ActivityTimeline
                 activities={activities}
                 currentUserId={currentUserId}

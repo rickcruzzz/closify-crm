@@ -1,6 +1,6 @@
 # O que a prospecção de 2026-09-07 ensinou
 
-Gerado por `scripts/inteligencia/prospectar.mjs`, lendo 54 sites reais de marcenaria.
+Gerado por `scripts/inteligencia/prospectar.mjs`, lendo 38 sites reais de comunicacao-visual.
 **Nada aqui foi escrito por mim:** cada termo é contado em domínios distintos
 e cada promessa é recorte literal do site.
 
@@ -24,67 +24,59 @@ nao a corrige sozinho: o que ele corrige e a COPY da pagina de destino.
 
 | termo | sites | onde conferir |
 | --- | ---: | --- |
-| alta qualidade | 15 | marcena.com.br, fendimarcenariamoderna.com.br, a3dplanejados.com.br |
-| pos venda | 15 | innovafatto.com.br, lailaplanejados.com.br, versatilplanejados.com.br |
-| alto padrao | 14 | etris.com.br, innovafatto.com.br, fendimarcenariamoderna.com.br |
-| get whatsapp | 14 | marcena.com.br, innovafatto.com.br, lailaplanejados.com.br |
-| installed continue | 14 | marcena.com.br, innovafatto.com.br, lailaplanejados.com.br |
-| looks like | 14 | marcena.com.br, innovafatto.com.br, lailaplanejados.com.br |
-| microsoft looks | 14 | marcena.com.br, innovafatto.com.br, lailaplanejados.com.br |
-| microsoft looks like | 14 | marcena.com.br, innovafatto.com.br, lailaplanejados.com.br |
-| now get | 14 | marcena.com.br, innovafatto.com.br, lailaplanejados.com.br |
-| now get whatsapp | 14 | marcena.com.br, innovafatto.com.br, lailaplanejados.com.br |
-| whatsapp installed | 14 | marcena.com.br, innovafatto.com.br, lailaplanejados.com.br |
-| whatsapp installed continue | 14 | marcena.com.br, innovafatto.com.br, lailaplanejados.com.br |
-| whatsapp web | 14 | marcena.com.br, innovafatto.com.br, lailaplanejados.com.br |
-| acabamento impecavel | 11 | marcena.com.br, etris.com.br, fendimarcenariamoderna.com.br |
-| anos de garantia | 10 | lailaplanejados.com.br, momessomoveisplanejados.com.br, ennebeplanejados.com.br |
-| clientes dizem | 10 | lailaplanejados.com.br, fepmoveis.com.br, a3dplanejados.com.br |
-| alem disso | 9 | marcena.com.br, a3dplanejados.com.br, grmoveisplanejados.com.br |
-| prazo de entrega | 9 | marcena.com.br, a3dplanejados.com.br, versatilplanejados.com.br |
-| primeiro contato | 9 | marcena.com.br, innovafatto.com.br, versatilplanejados.com.br |
-| atendimento personalizado | 8 | versatilplanejados.com.br, grmoveisplanejados.com.br, raizesdesign.com.br |
-| design exclusivo | 8 | fendimarcenariamoderna.com.br, grmoveisplanejados.com.br, ennebeplanejados.com.br |
-| home office | 8 | marcena.com.br, innovafatto.com.br, a3dplanejados.com.br |
-| https www | 8 | marcena.com.br, lailaplanejados.com.br, ufficio.com.br |
-| solicite um orcamento | 8 | innovafatto.com.br, fendimarcenariamoderna.com.br, moveisplanejadosuriel.com.br |
-| super recomendo | 8 | marcena.com.br, innovafatto.com.br, lailaplanejados.com.br |
+| alta qualidade | 16 | inpressbrasil.com, brasilcv.com.br, quatropontos.com.br |
+| impressao digital | 11 | forthlux.com.br, pandasgrafica.com.br, rossibrasil.com.br |
+| cartoes de visita | 8 | impactographics.com.br, impressoscapao.com.br, corimpress.com.br |
+| https www | 8 | quatropontos.com.br, imgmidiavisual.com.br, grafoestudio.com.br |
+| contato conosco | 7 | pandasgrafica.com.br, rossibrasil.com.br, graficarealpara.com |
+| fachadas em acm | 7 | inpressbrasil.com, brasilcv.com.br, forthlux.com.br |
+| atendimento personalizado | 6 | pandasgrafica.com.br, rossibrasil.com.br, corimpress.com.br |
+| endereco rua | 6 | quatropontos.com.br, forthlux.com.br, pandasgrafica.com.br |
+| fortalecer sua marca | 6 | quatropontos.com.br, pandasgrafica.com.br, dinamika.com.br |
+| get whatsapp | 6 | inpressbrasil.com, brasilcv.com.br, quatropontos.com.br |
+| installed continue | 6 | inpressbrasil.com, brasilcv.com.br, quatropontos.com.br |
+| letra caixa | 6 | industriavisual.com.br, imgmidiavisual.com.br, impressoscapao.com.br |
+| looks like | 6 | inpressbrasil.com, brasilcv.com.br, quatropontos.com.br |
+| microsoft looks | 6 | inpressbrasil.com, brasilcv.com.br, quatropontos.com.br |
+| microsoft looks like | 6 | inpressbrasil.com, brasilcv.com.br, quatropontos.com.br |
+| now get | 6 | inpressbrasil.com, brasilcv.com.br, quatropontos.com.br |
+| now get whatsapp | 6 | inpressbrasil.com, brasilcv.com.br, quatropontos.com.br |
+| produtos e servicos | 6 | inpressbrasil.com, brasilcv.com.br, impactographics.com.br |
+| whatsapp installed | 6 | inpressbrasil.com, brasilcv.com.br, quatropontos.com.br |
+| whatsapp installed continue | 6 | inpressbrasil.com, brasilcv.com.br, quatropontos.com.br |
+| whatsapp web | 6 | inpressbrasil.com, brasilcv.com.br, quatropontos.com.br |
+| alem disso | 5 | artepelaarte.com.br, impressoscapao.com.br, databrasil.net |
+| anos de experiencia | 5 | quatropontos.com.br, set.etc.br, inpress-sc.com.br |
+| letras caixa | 5 | inpressbrasil.com, forthlux.com.br, impactographics.com.br |
+| mensagem enviar | 5 | inpressbrasil.com, brasilcv.com.br, set.etc.br |
 
 ## O que o nicho promete, e que a nossa página enfrenta sem saber
 
 Cada linha é uma objeção: se o visitante ouviu isto em dez sites antes do
 nosso, a frase não diferencia nada. Recorte literal, nunca paráfrase.
 
-- "É por isso que oferecemos produtos totalmente personalizáveis para que você possa criar um espaço que reflita verdadeiramente quem você é." — `marcena.com.br`
-- "Fiz o primeiro projeto há mais de 10 anos em Santo André e recentemente um outro projeto no Jardim Prudência, impecável atendimento, pós venda e compromisso com prazos e qualidade." — `innovafatto.com.br`
-- "Há mais de 26 anos, a Laila Planejados é referência em móveis planejados, especializada em transformar sonhos em realidade com soluções exclusivas para ambientes sofisticados e funcionais." — `lailaplanejados.com.br`
-- "Nossa missão é oferecer inovação, qualidade e design elegante, sempre com atenção aos mínimos detalhes e às necessidades únicas de cada cliente." — `lailaplanejados.com.br`
-- "É dessa união que nasce o nosso compromisso e o que há de mais precioso: peças com alma, design atemporal e durabilidade excepcional." — `fendimarcenariamoderna.com.br`
-- "Nossa missão é ir além da funcionalidade." — `fendimarcenariamoderna.com.br`
-- "Na A3D Planejados, somos guiados por aquilo que acreditamos ser essencial: atendimento humanizado, excelência, zelo, honestidade, transparência e qualidade." — `a3dplanejados.com.br`
-- "Atendimento Humanizado e Personalizado" — `a3dplanejados.com.br`
-- "Oferecemos serviços personalizados para garantir que você alcance tudo aquilo que deseja com seus móveis." — `versatilplanejados.com.br`
-- "Oferecemos muito mais versatilidade" — `versatilplanejados.com.br`
-- "Com a 16 anos no mercado de móveis planejados e uma equipe multidisciplinar, temos o maior índice de satisfação do mercado moveleiro, pois entregamos a solução completa para que seu projeto vire realidade." — `maxmd.com.br`
-- "Assim garantimos que não haverá erros ou divergências entre os móveis planejados comprados/aprovados e os móveis entregues." — `maxmd.com.br`
-- "Oferecemos móveis planejados de qualidade." — `moveisplanejadosuriel.com.br`
-- "Desde 1970, trabalhamos incansavelmente para conquistar nossa reputação de qualidade e confiabilidade em todos os produtos e serviços de madeira que oferecemos" — `moveisplanejadosuriel.com.br`
-- "No momento do pedido este prazo será acordado, e você não precisará se preocupar, pois honramos com nossa palavra e cumprimos com nosso compromisso." — `designerunico.com.br`
-- "Oferecemos o melhor custo-benefício da categoria de cabeceiras de cama estofadas sob medida e estofados da linha complementar." — `designerunico.com.br`
-- "Oferecemos algumas opções de pagamento para melhor atender nossos Clientes: Parcelamento no Cartão de Crédito em até 18x, Boleto Bancário em até 36x (mediante aprovação financeira) e pagamento Á Vista." — `momessomoveisplanejados.com.br`
-- "Entregamos em todo estado de São Paulo." — `momessomoveisplanejados.com.br`
-- "Oferecemos diversas opções de pagamento para atender às suas necessidades com praticidade e flexibilidade." — `grmoveisplanejados.com.br`
-- "Estaremos com você em cada etapa do processo, garantindo um atendimento personalizado e um resultado impecável." — `grmoveisplanejados.com.br`
-- "Temos parcerias sólidas e entregamos sempre no prazo, estamos presentes em lares, escritórios, prédios e hotéis de luxo, sempre trabalhando ao lado de profissionais arquitetos e paisagistas." — `raizesdesign.com.br`
-- "Atendimento personalizado e acompanhamento de todas as obras desde a entrega até a instalação." — `raizesdesign.com.br`
-- "Confiamos tanto na qualidade dos nossos móveis que oferecemos 8 anos de garantia nas chapas e 1 ano nos acessórios." — `ennebeplanejados.com.br`
-- "Oferecemos superdescontos à vista, parcelamento em até 12x no cartão ou até 24x via financeira, mediante análise de crédito." — `ennebeplanejados.com.br`
-- "Atendimento Personalizado" — `marcenaria-de-moveis-sob-medida.ueniweb.com`
-- "Somos a maior fábrica de móveis planejados da América Latina com anos de atuação e milhares de projetos entregues." — `ksadecorplanejados.com.br`
-- "Marca líder mundial em cortinas, persianas e toldos, com mais de 100 anos de história e presença em mais de 100 países." — `4edecoracoes.com.br`
-- "Coares Armários Planejados – Mais de 40 anos transformando ideias em móveis perfeitos" — `coares.com.br`
-- "Veja como a Coares vem transformando ambientes e vidas há mais de 30 anos" — `coares.com.br`
-- "A satisfação do cliente é nossa prioridade, e garantimos a qualidade dos produtos que oferecemos." — `wooddesignpe.com.br`
+- "Oferecemos soluções que irão facilitar e potencializar sua jornada empreendedora,independente do seu nível de experiência" — `brasilcv.com.br`
+- "Apresentamos a nova Forthlux, uma Empresa de Comunicação Visual que une a solidez de mais de 12 anos de mercado, agora com inovação tecnológica." — `forthlux.com.br`
+- "Nossa missão é transformar seus projetos em realidade com produtos personalizados e exclusivos." — `forthlux.com.br`
+- "Há mais de 10 anos no mercado de comunicação visual em Mato Grosso, entregando soluções com criatividade e qualidade." — `imgmidiavisual.com.br`
+- "Atuamos com excelência em projetos que vão desde a impressão rápida até grandes formatos, sempre com foco em qualidade, agilidade e atendimento personalizado." — `pandasgrafica.com.br`
+- "Oferecemos identidade visual completa com qualidade e agilidade para valorizar sua marca." — `pandasgrafica.com.br`
+- "+1 milhão de negócios utilizam o UOL HostHá mais de 18 anos ajudando empreendedores brasileiros" — `dinamika.com.br`
+- "Somos um estúdio de design gráfico com mais de 20 anos de experiência que une estratégia e criatividade para desenvolver marcas de valor." — `set.etc.br`
+- "Designer e, há mais de 20 anos, sócia-proprietária da SetDesign junto com a Grazi." — `set.etc.br`
+- "Oferecemos um serviço abrangente de consulta de CNPJ, permitindo que você acesse informações completas e atualizadas sobre qualquer empresa brasileira" — `databrasil.net`
+- "Oferecemos um serviço abrangente de consulta de CNPJ, CPF, Geolocalização e CEP, proporcionando acesso a informações completas e atualizadas sobre empresas, indivíduos e endereços no Brasil." — `databrasil.net`
+- "Na Corimpress, nos dedicamos a oferecer soluções visuais que transformam marcas, com qualidade, inovação e um atendimento personalizado." — `corimpress.com.br`
+- "Essa certificação reflete nosso compromisso em entregar soluções visuais de alta qualidade, cumprindo prazos e superando expectativas." — `corimpress.com.br`
+- "Mais de 10 anos desenvolvendo e testando seus produtos" — `inbrasfabrica.com.br`
+- "Hoje após mais de 10 anos desenvolvendo e testando seus produtos, tem orgulho de distribuir seus produtos para todo o Brasil." — `inbrasfabrica.com.br`
+- "Oferecemos uma ampla gama de materiais para fachadas, que garantem durabilidade, resistência e um visual moderno e sofisticado." — `digipress.com.br`
+- "Variedade de modelos: Oferecemos diversos tipos de luminosos, como painéis de LED, fachadas iluminadas, letreiros em caixa de luz, luminosos em acrílico e muito mais, adaptando-se a qualquer estilo e necessidade." — `digipress.com.br`
+- "Garantimos durabilidade para nossos materiais impressos" — `impressaocriativa.com.br`
+- "Com anos de experiência no mercado gráfico, oferecemos desde cartões de visita e panfletos até banners, adesivos, placas e materiais de grande formato." — `impressaocriativa.com.br`
+- "Atendimento personalizado via whatsapp" — `vbcomunicacaovisual.com.br`
+- "Nosso compromisso é transformar ideias em projetos que geram impacto e valorizam cada negócio." — `vbcomunicacaovisual.com.br`
+- "Oferecemos soluções integradas em impressão digital, gráfica e estamparia para destacar o seu negócio ou o seu evento !" — `tncomunicacao.com.br`
 
 ## O que este documento NÃO é
 

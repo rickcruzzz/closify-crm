@@ -118,3 +118,29 @@ describe('nomeCurto', () => {
     )
   })
 })
+
+describe('o nome de quem decide', () => {
+  it('chama pelo nome quando o decisor foi casado com ESTA empresa', () => {
+    const m = montarAbordagem({ ...base, decisor: 'Daniel' })
+    expect(m.startsWith('Oi, Daniel! Achei a Gráfica Quatrocor')).toBe(true)
+  })
+
+  it('volta a saudacao generica quando nao ha decisor, sem quebrar nada', () => {
+    // `null` e o caso comum: `extrairDecisor` recusa casar quando o nome da
+    // empresa nao aparece no titulo do perfil. Nome errado na primeira palavra
+    // queima a abordagem inteira — generico e melhor que arriscado.
+    for (const d of [null, undefined]) {
+      const m = montarAbordagem({ ...base, decisor: d })
+      expect(m.startsWith('Oi! Achei a')).toBe(true)
+      expect(m.endsWith('me avisa que não te procuro de novo.')).toBe(true)
+    }
+  })
+
+  it('com nome E equipe, o fim continua intocavel', () => {
+    const m = montarAbordagem({
+      ...base, vertical: 'marcenaria', decisor: 'Ana Beatriz', motivos: ['tem equipe de vendas'],
+    })
+    expect(m.length).toBeLessThanOrEqual(TETO)
+    expect(m.endsWith('me avisa que não te procuro de novo.')).toBe(true)
+  })
+})

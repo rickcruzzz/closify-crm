@@ -46,6 +46,15 @@ export type DadosDaAbordagem = {
   /** Preço e limite vêm de `lib/plans.ts`, nunca escritos à mão aqui. */
   precoMensal: number
   limiteGratis: number
+  /**
+   * O primeiro nome de quem decide, quando `dominio/decisor.ts` conseguiu casar
+   * o perfil com ESTA empresa. `null` é o caso comum e é seguro.
+   *
+   * Chamar pelo nome atravessa a recepção. Chamar pelo nome ERRADO queima a
+   * abordagem na primeira palavra — por isso o extrator devolve `null` em vez
+   * de arriscar, e por isso aqui a saudação simplesmente volta a ser genérica.
+   */
+  decisor?: string | null
 }
 
 /**
@@ -118,7 +127,9 @@ export function montarAbordagem(d: DadosDaAbordagem): string {
 
   const montar = (equipe: string) =>
     [
-      `Oi! Achei a ${nome} procurando empresas do setor no Google.`,
+      d.decisor
+        ? `Oi, ${d.decisor}! Achei a ${nome} procurando empresas do setor no Google.`
+        : `Oi! Achei a ${nome} procurando empresas do setor no Google.`,
       gancho,
       `Montei um CRM pra isso: cada orçamento vira um card, com a data do retorno. ` +
         `R$ ${d.precoMensal} pela empresa toda, sem cobrar por usuário.${equipe}`,

@@ -51,15 +51,16 @@ export type StatusDeFeedback = 'aberto' | 'em_andamento' | 'resolvido' | 'descar
 // tres itens que nascem e morrem com o relato, e nenhuma pergunta deste
 // produto comeca com "quais relatos tem PDF".
 export type AnexoDeFeedback = { caminho: string; nome: string; tamanho: number }
-// Os avisos que o produto dá dentro da própria tela (0066). A lista canônica,
-// com o porquê de cada exclusão, vive em `lib/notificacoes/tipos.ts` — aqui só
-// o formato. Quatro, e cada um tem um chamador vivo: tipo sem chamador é
-// código morto com aparência de recurso.
+// Os avisos que o produto dá dentro da própria tela (0066, mais `sinal_de_mercado`
+// em 0073). A lista canônica, com o porquê de cada exclusão, vive em
+// `lib/notificacoes/tipos.ts` — aqui só o formato. Cada um tem um chamador
+// vivo: tipo sem chamador é código morto com aparência de recurso.
 export type TipoDeNotificacao =
   | 'pagamento_confirmado'
   | 'pagamento_atrasado'
   | 'plano_vencendo'
   | 'trial_terminando'
+  | 'sinal_de_mercado'
 
 /**
  * Os campos de empresa acrescentados em 0030.

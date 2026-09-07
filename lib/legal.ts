@@ -260,4 +260,37 @@ export const SUBOPERADORES: Suboperador[] = [
       'de que uma conta foi criada — sem nome, e-mail ou telefone',
     paisDeProcessamento: 'Estados Unidos',
   },
+  // ## O Exa entra ANTES de rodar sobre a base de um cliente, não depois
+  //
+  // A pesquisa de mercado (0072) manda uma consulta ao Exa contendo o **nome da
+  // empresa e o domínio** do contato que o cliente cadastrou, para procurar o
+  // que aquela empresa publicou na web. Isso é compartilhamento de dado do
+  // titular com um terceiro, e um terceiro fora do Brasil.
+  //
+  // Três coisas que limitam o alcance, e todas são desenho e não sorte:
+  //
+  //     nome e dominio      e o que sai. Nunca e-mail, telefone, valor de
+  //                         negocio ou historico de atividade
+  //     so o que e publico  a consulta e sobre a EMPRESA, e a resposta vem de
+  //                         pagina publicada. O Exa nao recebe nada da
+  //                         carteira de ninguem
+  //     so por pedido       nada e enviado sozinho. A Server Action exige um
+  //                         clique na tela do contato, e o Free nem chega la
+  //
+  // O momento desta entrada é o ponto. A fila, o serviço e o cron existem
+  // desde 06/09 e nunca tiveram como ser acionados pela tela — a Server Action
+  // que os liga nasce agora. Declarar o tratamento **junto** com o caminho que
+  // o torna alcançável é o que a Meta custou caro aqui: o consentimento foi
+  // construído em 02/09 e esta política só acompanhou em 03/09, um dia inteiro
+  // afirmando o contrário do que o código fazia.
+  {
+    nome: 'Exa',
+    finalidade:
+      'Pesquisa de mercado sobre uma empresa contato: procurar o que ela ' +
+      'publicou na web. Só ocorre quando um usuário Pro pede, contato a contato',
+    dados:
+      'Nome e domínio do site da empresa contato — sem e-mail, telefone, ' +
+      'valor de negócio ou histórico',
+    paisDeProcessamento: 'Estados Unidos',
+  },
 ]

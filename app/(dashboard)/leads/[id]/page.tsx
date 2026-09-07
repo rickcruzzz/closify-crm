@@ -4,6 +4,7 @@ import { getLeadById, getWorkspaceMembers } from '@/lib/leads/queries'
 import { getTasksDoLead } from '@/lib/tasks/queries'
 import { getNegociosAbertosDoLead } from '@/lib/deals/queries'
 import { getIntegrationConnections } from '@/lib/integrations/queries'
+import { lerPesquisaDoLead } from '@/lib/inteligencia-de-mercado/queries'
 import { createClient } from '@/lib/supabase/server'
 import { getCurrentUserAndWorkspace } from '@/lib/supabase/workspace'
 import { LeadDetailClient } from '@/components/leads/lead-detail-client'
@@ -16,8 +17,16 @@ export default async function LeadDetailPage({ params }: { params: Promise<{ id:
   // Quem pode corrigir atividade: o autor dela ou um admin. A action refaz
   // essa checagem no servidor, aqui é só para não exibir um menu de ações
   // que resultaria em erro.
-  const [result, members, tasks, { data: isAdmin }, integracoes, negociosAbertos] =
-    await Promise.all([
+  const [
+    result,
+    members,
+    tasks,
+    { data: isAdmin },
+    integracoes,
+    negociosAbertos,
+    pesquisa,
+    { data: pro },
+  ] = await Promise.all([
       getLeadById(workspaceId, id),
       getWorkspaceMembers(workspaceId),
       getTasksDoLead(workspaceId, id),
@@ -26,6 +35,13 @@ export default async function LeadDetailPage({ params }: { params: Promise<{ id:
       // Entra no MESMO `Promise.all`: encadear seria mais uma ida de rede em
       // série até São Paulo, na página que a pessoa mais abre depois do funil.
       getNegociosAbertosDoLead(workspaceId, id),
+      // No mesmo `Promise.all` pela mesma razão que o de cima: duas idas em
+      // série a São Paulo custam mais que duas em paralelo.
+      lerPesquisaDoLead(workspaceId, id),
+      // A FUNÇÃO, nunca `workspaces.plan`: a coluna é o último valor gravado e
+      // não sabe que o tempo passou. A Server Action refaz a checagem — aqui é
+      // só para o botão explicar em vez de falhar depois do clique.
+      supabase.rpc('pro_vigente', { target_workspace_id: workspaceId }),
     ])
   if (!result) {
     notFound()
@@ -48,6 +64,8 @@ export default async function LeadDetailPage({ params }: { params: Promise<{ id:
       isAdmin={!!isAdmin}
       remetenteGmail={remetenteGmail}
       negociosAbertos={negociosAbertos}
+      pesquisa={pesquisa}
+      ehPro={!!pro}
     />
   )
 }
