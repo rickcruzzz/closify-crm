@@ -13,6 +13,16 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { Button, buttonVariants } from '@/components/ui/button'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
 import { ConfirmarExclusao } from '@/components/comum/confirmar-exclusao'
 import { rotuloDePrazo } from '@/lib/tasks/buckets'
 import { linkDoWhatsApp } from '@/lib/leads/whatsapp'
@@ -30,6 +40,7 @@ export function TaskItem({
   atrasada,
   pendente = false,
   onConcluir,
+  confirmarConclusao = false,
   onDesfazer,
   onEditar,
   onExcluir,
@@ -42,6 +53,16 @@ export function TaskItem({
    * para o clique duplo não disparar a Server Action duas vezes. */
   pendente?: boolean
   onConcluir: (taskId: string) => void
+  /**
+   * Pergunta antes de concluir.
+   *
+   * `false` por padrão, e é o que preserva as outras telas: no painel do lead e
+   * na agenda do calendário o clique continua concluindo direto, porque lá a
+   * lista é curta e o gesto é deliberado. Em `/hoje` a lista é longa e o
+   * checkbox fica na borda esquerda, ao lado de onde o olho percorre — é a tela
+   * onde o clique errado acontece.
+   */
+  confirmarConclusao?: boolean
   /**
    * Só chega preenchido enquanto a tarefa está saindo da lista — os poucos
    * segundos em que ela aparece riscada. É o que põe o desfazer AO LADO da
@@ -58,6 +79,7 @@ export function TaskItem({
   // do lead) o pai só recebe a confirmação já dada, e qualquer tela nova que
   // renderize `TaskItem` nasce protegida sem precisar lembrar disso.
   const [confirmandoExclusao, setConfirmandoExclusao] = React.useState(false)
+  const [confirmandoConclusao, setConfirmandoConclusao] = React.useState(false)
 
   // Só para tarefa de WhatsApp: pôr o botão em toda tarefa com telefone
   // encheria a lista de um atalho que ninguém pediu, e diluiria o sinal
@@ -84,7 +106,13 @@ export function TaskItem({
         checked={concluida}
         disabled={concluida || pendente}
         onCheckedChange={() => {
-          if (!concluida && !pendente) onConcluir(task.id)
+          if (concluida || pendente) return
+          // Com confirmação, o estado NÃO muda aqui: quem marca a caixa é o
+          // "Sim, concluir". Alterar antes deixaria a caixa marcada durante o
+          // diálogo e desmarcada no cancelamento — um pisca que sugere que
+          // algo aconteceu e foi desfeito, quando nada aconteceu.
+          if (confirmarConclusao) setConfirmandoConclusao(true)
+          else onConcluir(task.id)
         }}
         aria-label={`Concluir: ${task.title}`}
       />
@@ -194,6 +222,40 @@ export function TaskItem({
             )}
           </DropdownMenuContent>
         </DropdownMenu>
+      )}
+
+      {/* `AlertDialog` direto, e não `ConfirmarExclusao`: aquele componente fixa
+          `variant="destructive"` e o texto inteiro dele é sobre apagar. Concluir
+          tarefa não é destrutivo, e um botão vermelho aqui ensinaria a pessoa a
+          hesitar no gesto mais repetido do produto.
+
+          O primitivo é o mesmo que o resto do projeto padronizou: `AlertDialog`
+          prende o foco e não fecha ao clicar fora, ao contrário do `Dialog`
+          genérico. */}
+      {confirmarConclusao && (
+        <AlertDialog open={confirmandoConclusao} onOpenChange={setConfirmandoConclusao}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Concluir esta tarefa?</AlertDialogTitle>
+              <AlertDialogDescription>
+                &quot;{task.title}&quot; sai da sua lista de hoje. Ela continua no
+                histórico do contato, e você pode reabrir depois.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel disabled={pendente}>Cancelar</AlertDialogCancel>
+              <AlertDialogAction
+                disabled={pendente}
+                onClick={() => {
+                  setConfirmandoConclusao(false)
+                  onConcluir(task.id)
+                }}
+              >
+                Sim, concluir
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       )}
 
       {onExcluir && (

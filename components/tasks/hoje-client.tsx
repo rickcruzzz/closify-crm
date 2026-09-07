@@ -25,38 +25,11 @@ import {
   atualizarTarefa,
   concluirTarefa,
   excluirTarefa,
-  reabrirTarefa,
 } from '@/lib/tasks/actions'
 import type { TaskFormValues } from '@/lib/validations/task'
-import { mesclarSaindo, type EmSaida } from '@/lib/tasks/mesclar-saindo'
 import { COOKIE_ESCOPO, MAX_AGE_ESCOPO, type EscopoDeTarefas } from '@/lib/tasks/escopo'
 import { CABECALHOS } from '@/lib/telas/cabecalhos'
 
-/**
- * A tarefa concluída FICA na tela, riscada, até a pessoa sair dela.
- *
- * ## Por que o item não some mais sozinho
- *
- * Ele sumia em 4 segundos. A intenção era não deixar a lista virar cemitério
- * de coisas já feitas — mas o efeito, reportado com print, é o oposto do que
- * uma lista de tarefas precisa fazer: você marca, vê o ícone certo aparecer, e
- * a linha desaparece antes de você terminar de conferir se marcou a certa.
- *
- * Numa tela cuja pergunta é "com quem falar hoje", ver o que JÁ foi feito é
- * metade da resposta. Todoist, Things e o próprio Google Tasks mantêm o item
- * riscado à vista pelo resto da sessão, e é o comportamento que a pessoa
- * espera de um checkbox: ele fica marcado.
- *
- * ## O que ainda tira a tarefa da lista
- *
- * Sair de `/hoje` e voltar, ou recarregar. Aí o servidor manda a lista sem ela
- * e a janela local está vazia — a lista se limpa sozinha, no momento em que a
- * pessoa mudou de assunto, e não no meio do trabalho dela.
- *
- * O "Desfazer" continua ao lado enquanto o item estiver ali, e agora sem
- * prazo: era o botão que dependia de reflexo em quatro segundos.
- */
-const ATUALIZAR_CONTADOR_MS = 600
 
 export function HojeClient({
   tasks: tasksIniciais,
@@ -77,15 +50,6 @@ export function HojeClient({
 }) {
   const router = useRouter()
   const [tasks, setTasks] = React.useState(tasksIniciais)
-  /**
-   * Quem esta na janela de "riscada", com a posicao de onde saiu.
-   *
-   * NAO e so um Set de ids: o servidor ja removeu essas tarefas da lista dele,
-   * entao guardar so o id nao bastaria para desenha-las. E a posicao evita que
-   * a linha riscada pule para o fim, onde o olho a perde e o "Desfazer" fica
-   * impossivel de acertar.
-   */
-  const [saindo, setSaindo] = React.useState<Map<string, EmSaida<TaskRow>>>(new Map())
   const [emEdicao, setEmEdicao] = React.useState<TarefaEmEdicao | null>(null)
   const [trocandoEscopo, startTransitionEscopo] = React.useTransition()
 
@@ -93,31 +57,13 @@ export function HojeClient({
   // estado local ficaria preso na primeira renderização e a tarefa criada
   // noutra tela nunca apareceria aqui.
   //
-  // Sobrescrever aqui e SEGURO desde que `saindo` virou estado separado. Antes
-  // nao era: esta linha apagava a tarefa que acabara de ser concluida, poucos
-  // milissegundos depois do clique, porque `concluirTarefa` revalida `/hoje` e
-  // a lista nova ja vem sem ela. A janela de desfazer nunca chegou a existir
-  // para o usuario por causa deste efeito.
+  // Sobrescrever aqui e seguro agora que concluir remove a linha localmente e
+  // NAO pede refresh: quando esta lista chega, ela ja vem do servidor sem a
+  // tarefa concluida. Antes nao era — este efeito apagava a linha recem
+  // concluida poucos milissegundos depois do clique, e era por isso que a
+  // janela de desfazer precisava de um estado separado para sobreviver.
   React.useEffect(() => {
     setTasks(tasksIniciais)
-
-    // Quem foi reaberto so sai da janela quando o servidor CONCORDA que ela
-    // esta aberta de novo. Tirar antes fazia a linha sumir por ~1s e voltar
-    // (medido): `reabrirTarefa` retorna antes de a lista revalidada chegar, e
-    // nesse intervalo a tarefa nao existia nem na janela nem no servidor.
-    setSaindo((atual) => {
-      if (atual.size === 0) return atual
-      const doServidor = new Set(tasksIniciais.map((t) => t.id))
-      const novo = new Map(atual)
-      let mudou = false
-      for (const [id, entrada] of Array.from(atual.entries())) {
-        if (entrada.task.done_at === null && doServidor.has(id)) {
-          novo.delete(id)
-          mudou = true
-        }
-      }
-      return mudou ? novo : atual
-    })
   }, [tasksIniciais])
 
   /**
@@ -137,22 +83,11 @@ export function HojeClient({
     return () => clearInterval(timer)
   }, [])
 
-  /**
-   * A lista que a tela mostra: o servidor mais quem ainda esta saindo.
-   *
-   * Derivada, nao estado. Enquanto ela era estado, a revalidacao que
-   * `concluirTarefa` dispara substituia a lista inteira e a linha riscada
-   * evaporava em milissegundos — o "Desfazer" nunca chegou a ser clicavel em
-   * producao.
-   */
-  const lista = React.useMemo(() => mesclarSaindo(tasks, saindo), [tasks, saindo])
-
   const grupos = React.useMemo(
-    // As chaves de `saindo` sao as que continuam agrupadas mesmo concluidas:
-    // sem isso o agrupamento descarta a tarefa no instante em que ela ganha
-    // `done_at`, e a janela de desfazer nao chega a aparecer.
-    () => (agora ? agruparPorPrazo(lista, agora, new Set(saindo.keys())) : null),
-    [lista, agora, saindo],
+    // Sem o terceiro argumento: nao ha mais tarefa concluida na tela que
+    // precise continuar no grupo de origem. Quem conclui, sai.
+    () => (agora ? agruparPorPrazo(tasks, agora) : null),
+    [tasks, agora],
   )
 
   function trocarEscopo(valor: string | null) {
@@ -182,130 +117,65 @@ export function HojeClient({
   }
 
   /**
-   * Quem acabou de ser concluída e ainda está na tela, riscada.
+   * ## Por que não há mais janela de "riscada + Desfazer"
    *
-   * A tarefa sumia no mesmo instante do clique. Funcionava, mas não dava tempo
-   * de registrar o que tinha acontecido — e o "Desfazer" ficava num aviso no
-   * canto oposto da tela, longe do lugar onde a pessoa estava olhando.
+   * Ela existia porque a conclusão era imediata e sem pergunta: o comentário
+   * antigo registrava que *"um 'tem certeza?' a cada clique viraria imposto
+   * diário — o que se ganha aqui é ver o erro, não evitá-lo com atrito"*.
    *
-   * Agora ela fica alguns segundos riscada, no próprio lugar, com o desfazer
-   * ao lado. Some depois. Continua sem pedir confirmação: concluir tarefa é o
-   * gesto mais repetido do produto, e um "tem certeza?" a cada clique viraria
-   * imposto diário — o que se ganha aqui é ver o erro, não evitá-lo com atrito.
+   * O pedido de 07/09 inverteu a escolha: perguntar ANTES. As duas coisas
+   * juntas seriam atrito dobrado — confirmar e ainda esperar uma janela para se
+   * arrepender —, então a confirmação substitui a janela.
+   *
+   * O que morreu junto, e é o que torna esta troca barata: o estado `saindo`,
+   * o `mesclarSaindo`, os temporizadores e o `router.refresh()` que sincronizava
+   * tudo isso. Esse refresh era a causa do "a página recarrega" relatado.
+   *
+   * `reabrirTarefa` continua existindo e usada — `lib/tasks/avisar-concluida.ts`
+   * a chama a partir das outras telas.
    */
-  const timers = React.useRef(new Map<string, ReturnType<typeof setTimeout>>())
 
-  // Um timer que dispara depois de a tela trocar tentaria atualizar estado de
-  // um componente que já não existe.
-  React.useEffect(() => {
-    const mapa = timers.current
-    return () => {
-      mapa.forEach((t) => clearTimeout(t))
-      mapa.clear()
-    }
-  }, [])
-
+  /**
+   * Conclui, sem recarregar a pagina.
+   *
+   * ## O que mudou, e por que
+   *
+   * A versao anterior punha a tarefa numa janela de "riscada + Desfazer" e,
+   * 600ms depois, chamava `router.refresh()` para o contador da barra lateral
+   * acompanhar. Esse refresh era o "recarregamento" que aparecia na tela: ele
+   * repinta a arvore inteira do servidor, e num clique que a pessoa acabou de
+   * dar isso se le como a pagina piscando.
+   *
+   * Agora a confirmacao vem ANTES (`confirmarConclusao` em `TaskItem`), e o
+   * desfazer-depois deixa de ser necessario: quem confirmou nao precisa de uma
+   * janela para se arrepender. Sem a janela, nao ha o que sincronizar com o
+   * servidor, e sem sincronizar nao ha refresh.
+   *
+   * ## O padrao e o mesmo de `excluir`, logo abaixo
+   *
+   * Guarda a lista anterior, tira a linha na hora, e devolve tudo se o servidor
+   * recusar. Nao e implementacao nova: e o caminho que esta tela ja usa para a
+   * outra acao que remove uma linha.
+   *
+   * ## O contador da barra lateral
+   *
+   * Ele passa a ficar desatualizado ate a proxima navegacao. E a troca que o
+   * pedido implica: o refresh existia so para ele, e custava repintar a tela
+   * inteira a cada tarefa concluida. Numero de contador errado por alguns
+   * segundos incomoda menos que a tela piscando a cada clique.
+   */
   async function concluir(taskId: string) {
-    // Ja esta na janela. Sem esta linha, um segundo clique montaria um timer
-    // novo por cima do primeiro em `timers.current`, deixando o primeiro orfao
-    // e vivo — ele dispararia sozinho e apagaria a linha antes da hora.
-    if (saindo.has(taskId)) return
-
-    const indice = lista.findIndex((t) => t.id === taskId)
-    const alvo = indice >= 0 ? lista[indice] : undefined
-    if (!alvo) return
-
-    // A tarefa entra em `saindo` JA concluida, com a posicao de onde saiu.
-    // `tasks` nao e tocado de proposito: ele e espelho do servidor, e a
-    // revalidacao que vem daqui a pouco vai sobrescreve-lo de qualquer jeito.
-    //
-    // Era exatamente essa mistura que fazia a linha evaporar: o estado tentava
-    // ser espelho e rascunho ao mesmo tempo, e a revalidacao ganhava sempre.
-    setSaindo((atual) => {
-      const novo = new Map(atual)
-      novo.set(taskId, {
-        task: { ...alvo, done_at: new Date().toISOString() },
-        indice,
-      })
-      return novo
-    })
+    const anterior = tasks
+    setTasks((atual) => atual.filter((t) => t.id !== taskId))
 
     const resultado = await concluirTarefa(taskId)
 
     if ('error' in resultado) {
-      setSaindo((atual) => {
-        const novo = new Map(atual)
-        novo.delete(taskId)
-        return novo
-      })
+      // A linha VOLTA para onde estava: `anterior` e a lista inteira, entao a
+      // posicao dela dentro do grupo se preserva sozinha.
+      setTasks(anterior)
       toast.error(resultado.error)
-      return
     }
-
-    // ## O refresh continua, e a tarefa NAO sai da janela
-    //
-    // Ele existe para o contador da barra lateral e o resto da tela
-    // acompanharem. `saindo` nao e limpo junto: enquanto a entrada estiver la,
-    // `mesclarSaindo` faz a copia local vencer a do servidor, e a linha
-    // permanece riscada com o "Desfazer" ao lado.
-    //
-    // Meio segundo de espera porque `revalidatePath` no servidor termina
-    // depois que a Server Action retorna; pedir o refresh no mesmo instante
-    // traria a lista antiga e gastaria uma ida a toa.
-    timers.current.set(
-      taskId,
-      setTimeout(() => {
-        timers.current.delete(taskId)
-        router.refresh()
-      }, ATUALIZAR_CONTADOR_MS),
-    )
-  }
-
-  /**
-   * Troca o `done_at` de quem esta na janela, sem tirar da janela.
-   *
-   * E o que permite a linha desmarcar na hora do clique e continuar visivel no
-   * lugar dela ate a lista do servidor alcancar.
-   */
-  function marcarNaJanela(taskId: string, doneAt: string | null) {
-    setSaindo((atual) => {
-      const anterior = atual.get(taskId)
-      if (!anterior) return atual
-      const novo = new Map(atual)
-      novo.set(taskId, { ...anterior, task: { ...anterior.task, done_at: doneAt } })
-      return novo
-    })
-  }
-
-  /** Reabre a tarefa que ainda está na tela, antes de ela sair. */
-  async function desfazerConclusao(taskId: string) {
-    const timer = timers.current.get(taskId)
-    if (timer) {
-      clearTimeout(timer)
-      timers.current.delete(taskId)
-    }
-
-    // Desmarca AGORA, antes de falar com o servidor.
-    //
-    // Medido em producao: `reabrirTarefa` leva ~3s. Enquanto ela corria, a
-    // linha continuava riscada e o proprio botao "Desfazer" seguia na tela —
-    // tres segundos em que o clique parecia nao ter funcionado. A tarefa
-    // continua em `saindo` de proposito: tira-la aqui faria a linha sumir,
-    // porque a lista do servidor ainda nao tem a tarefa reaberta.
-    marcarNaJanela(taskId, null)
-
-    const resultado = await reabrirTarefa(taskId)
-    if ('error' in resultado) {
-      // Volta a riscar: no banco ela continua concluida.
-      marcarNaJanela(taskId, new Date().toISOString())
-      toast.error(resultado.error)
-      return
-    }
-
-    // NAO tira de `saindo` aqui: o efeito de sincronia faz isso quando a lista
-    // revalidada chegar trazendo a tarefa aberta. Ate la, a copia local com
-    // `done_at: null` e o que mantem a linha na tela, no lugar dela.
-    router.refresh()
   }
 
   async function excluir(taskId: string) {
@@ -339,7 +209,7 @@ export function HojeClient({
     router.refresh()
   }
 
-  const total = lista.length
+  const total = tasks.length
 
   return (
     <div className="flex flex-col gap-6">
@@ -462,15 +332,10 @@ export function HojeClient({
                           agora={agora}
                           atrasada={atrasado}
                           onConcluir={concluir}
-                          // Presenca na janela nao basta: depois de reaberta a tarefa
-                          // fica ali mais um instante, esperando o servidor, e
-                          // um "Desfazer" ao lado de uma tarefa ABERTA nao
-                          // desfaz coisa nenhuma.
-                          onDesfazer={
-                            saindo.get(task.id)?.task.done_at
-                              ? desfazerConclusao
-                              : undefined
-                          }
+                          // Pergunta antes de concluir, so aqui. Ver o prop em
+                          // `TaskItem`: no painel do lead e na agenda o clique
+                          // continua concluindo direto.
+                          confirmarConclusao
                           onEditar={(t) =>
                             setEmEdicao({
                               id: t.id,
@@ -500,8 +365,8 @@ export function HojeClient({
         onSubmit={salvarEdicao}
         members={members}
         currentUserId={currentUserId}
-        leadId={lista.find((t) => t.id === emEdicao?.id)?.lead_id ?? null}
-        dealId={lista.find((t) => t.id === emEdicao?.id)?.deal_id ?? null}
+        leadId={tasks.find((t) => t.id === emEdicao?.id)?.lead_id ?? null}
+        dealId={tasks.find((t) => t.id === emEdicao?.id)?.deal_id ?? null}
         tarefa={emEdicao}
       />
     </div>
