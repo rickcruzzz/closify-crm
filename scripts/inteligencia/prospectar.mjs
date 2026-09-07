@@ -239,6 +239,9 @@ async function detalhar(urls) {
  * **Pro vigente** mais antiga. `pro_vigente()` e não `plan`, porque a coluna é
  * o último valor gravado e não sabe que o tempo passou.
  */
+/** Quebra de linha nomeada: a nota é texto longo e legível na timeline. */
+const LINHA = String.fromCharCode(10)
+
 async function escolherWorkspace(cabecalho, quantos) {
   const r = await fetch(
     `${URL_SUPABASE}/rest/v1/workspaces?select=id,name,plan&order=created_at.asc`,
@@ -281,6 +284,66 @@ async function escolherWorkspace(cabecalho, quantos) {
   return alvo
 }
 
+/**
+ * A mensagem de abordagem, gravada na TIMELINE do contato.
+ *
+ * Sem isto, a abordagem existia só no terminal: a lista ia para o CRM e o texto
+ * ficava numa rolagem que ninguém guarda. A pessoa abre o contato para ligar —
+ * é ali que a primeira frase precisa estar.
+ *
+ * `author_id` fica NULO de propósito: a nota não foi escrita por ninguém da
+ * equipe, e assinar com o nome de uma pessoa seria atribuir a ela um texto que
+ * ela nunca leu. É também o que permite reconhecer, depois, o que veio da
+ * máquina.
+ *
+ * Chamada nos DOIS caminhos — lead novo e lead que já existia sem nota. O
+ * segundo é o que conserta as 237 linhas escritas antes desta função existir:
+ * elas foram gravadas e ficaram mudas, e uma lista sem a primeira frase é
+ * metade do trabalho.
+ */
+async function anotarAbordagem(cabecalho, ws, p, leadId) {
+  // Não duplica: rodar de novo não deve encher a timeline de cópias.
+  const jaTem = await fetch(
+    `${URL_SUPABASE}/rest/v1/activities?select=id&lead_id=eq.${leadId}&author_id=is.null&limit=1`,
+    { headers: cabecalho },
+  )
+  if ((await jaTem.json()).length > 0) return false
+
+  const texto = montarAbordagem({
+    dominio: p.dominio,
+    nome: p.titulo,
+    vertical: p.vertical,
+    motivos: p.motivos,
+    precoMensal: PRO_PLAN_PRICE,
+    limiteGratis: FREE_LEAD_LIMIT,
+    decisor: decisores.get(p.dominio)?.nome.split(' ')[0] ?? null,
+  })
+  const abrir = p.contato.whatsapp
+    ? `${LINHA}${LINHA}Abrir no WhatsApp com o texto pronto:${LINHA}https://wa.me/${p.contato.whatsapp}?text=${encodeURIComponent(texto)}`
+    : ''
+
+  const nota = await fetch(`${URL_SUPABASE}/rest/v1/activities`, {
+    method: 'POST',
+    headers: cabecalho,
+    body: JSON.stringify({
+      workspace_id: ws.id,
+      lead_id: leadId,
+      author_id: null,
+      type: 'nota',
+      description:
+        `Prospecção automática (${p.vertical}, ${p.pontos} pontos).${LINHA}` +
+        `Por quê: ${p.motivos.join(', ')}.${LINHA}${LINHA}` +
+        `Sugestão de primeira mensagem:${LINHA}${texto}${abrir}`,
+    }),
+  })
+  if (!nota.ok) {
+    // Falhar a nota não derruba nada: o lead já está gravado e é o que importa.
+    console.error(`  nota nao gravada em ${p.dominio}: ${(await nota.text()).slice(0, 90)}`)
+    return false
+  }
+  return true
+}
+
 async function gravarComoLeads(prospects) {
   if (!URL_SUPABASE || !SERVICE_ROLE) {
     console.error('\nFaltam credenciais do Supabase. Nada foi gravado.')
@@ -299,6 +362,7 @@ async function gravarComoLeads(prospects) {
   console.log(`\ngravando em "${ws.name}" (${ws.id.slice(0, 8)}...)`)
   let gravados = 0
   let jaExistiam = 0
+  let anotados = 0
 
   for (const p of prospects) {
     // Dedupe pelo que o CRM já tem: reimportar o mesmo prospect a cada rodada
@@ -308,8 +372,10 @@ async function gravarComoLeads(prospects) {
       `${URL_SUPABASE}/rest/v1/leads?select=id&workspace_id=eq.${ws.id}&company=eq.${encodeURIComponent(p.dominio)}&limit=1`,
       { headers: cabecalho },
     )
-    if ((await busca.json()).length > 0) {
+    const [existente] = await busca.json()
+    if (existente) {
       jaExistiam += 1
+      if (await anotarAbordagem(cabecalho, ws, p, existente.id)) anotados += 1
       continue
     }
 
@@ -330,6 +396,18 @@ async function gravarComoLeads(prospects) {
     })
     if (r.ok) {
       gravados += 1
+      // A mensagem entra na TIMELINE do contato, como nota.
+      //
+      // Sem isto, a abordagem existia só no terminal: a lista ia para o CRM e o
+      // texto ficava numa rolagem que ninguém guarda. A pessoa abre o contato
+      // para ligar — é ali que a primeira frase precisa estar, e não noutro
+      // lugar que exige lembrar de rodar um script de novo.
+      //
+      // `author_id` fica NULO de propósito: a nota não foi escrita por ninguém
+      // da equipe, e assinar com o nome de uma pessoa seria atribuir a ela um
+      // texto que ela nunca leu.
+      const [criado] = await r.json()
+      if (criado?.id) await anotarAbordagem(cabecalho, ws, p, criado.id)
       continue
     }
     const corpo = await r.text()
@@ -343,7 +421,10 @@ async function gravarComoLeads(prospects) {
     }
     console.error(`  falhou ${p.dominio}: ${corpo.slice(0, 120)}`)
   }
-  console.log(`gravados ${gravados} | ja existiam ou repetiram telefone ${jaExistiam}`)
+  console.log(
+    `gravados ${gravados} | ja existiam ou repetiram telefone ${jaExistiam}` +
+      (anotados > 0 ? ` | ${anotados} ganharam a nota de abordagem agora` : ''),
+  )
 }
 
 // ── execução ────────────────────────────────────────────────────────────────

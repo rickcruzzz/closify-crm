@@ -12,8 +12,8 @@ regra de `docs/estado-atual.md`).
 catálogo, 31 são da extensão `pg_trgm`), **31 foreign keys**, **15 triggers**,
 **8 enums**.
 
-<!-- contagem: migrations.arquivos=71 migrations.maior=0072 -->
-**71 arquivos de migration, e a maior é `0072`** (remedido em 06/09; o `0049`
+<!-- contagem: migrations.arquivos=72 migrations.maior=0073 -->
+**72 arquivos de migration, e a maior é `0073`** (remedido em 07/09; o `0049`
 não existe, removido em 22/08). Os dois números vêm sempre juntos: a contagem
 sozinha convida a inferir `0071`.
 
@@ -22,6 +22,12 @@ no diagrama: `enriquecimento_de_lead` e `sinal_de_mercado`, da inteligência de
 mercado (`lib/inteligencia-de-mercado/`). As duas com RLS ligada, `select` por
 `is_workspace_member` e **zero policy de escrita para `authenticated`** — quem
 grava é o `service_role`, pelo mesmo motivo de `notificacoes` e `error_logs`.
+
+**A 0073 não criou tabela nenhuma.** Ela só acrescentou `sinal_de_mercado` ao
+`check` de `notificacoes.tipo` — e existe como migration própria porque a 0066
+escreveu, em texto, que acrescentar um tipo passa a exigir migration: é o que
+transforma "entrou na lista" em decisão. As policies da 0066 seguem intactas,
+inclusive a ausência de `insert` para `authenticated`.
 
 **Quatro migrations entraram depois da última leitura do catálogo** e as colunas
 delas estão no diagrama abaixo, mas a estrutura acima ainda é a de 02/09:

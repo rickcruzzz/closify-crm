@@ -4,9 +4,9 @@ Documento de continuidade. É lido no começo de toda sessão (referenciado no
 [CLAUDE.md](../CLAUDE.md)) para que uma conversa nova, ou outra conta, comece
 sabendo o que já foi feito, o que foi decidido e onde estão as armadilhas.
 
-**Atualizado em:** 06/09/2026 (o instrumento que existia so para nomear o
-componente que quebra o /kanban nunca reportou uma vez, de 20/08 a 05/09; e a
-aba velha depois de uma promocao agora se recupera sozinha)
+**Atualizado em:** 07/09/2026 (o CRM tem 257 leads reais com a primeira
+mensagem na timeline; e o nicho foi escolhido por medicao de 27, que derrubou
+os dois que eu tinha acabado de manter)
 
 ## O histórico de agosto mora em outro arquivo
 
@@ -24,6 +24,102 @@ história:** o produto **não tem WhatsApp**. A ponte saiu em 28/08 (`c52a718`)
 porque a Evolution dava problema e a API oficial da Meta não foi aprovada. Hoje
 `FASE_DO_WHATSAPP = 'migrando'` em `lib/integrations/whatsapp-estado.ts`, e o
 que sobrou é o link `wa.me`. O porquê inteiro está no arquivo.
+
+---
+## 257 leads reais no CRM, e o nicho foi escolhido por medicao (07/09)
+
+Pedido do dono: *"encher o meu velo funil ao maximo de pagantes que a
+tecnologia as integracoes com exa conseguir"*, com a ressalva *"sempre com
+cautela, apenas nao tomar bloqueio"*.
+
+    257 leads em "Orne"   245 com telefone | 244 com a mensagem na timeline
+    cinco nichos          dedetizacao, comunicacao-visual, marcenaria,
+                          locacao-equipamentos, eventos-corporativos
+    custo do Exa          ~US$ 5 no total das rodadas de 06 e 07/09
+
+### O nicho saiu de 27 medidos, e a regra derrubou o que eu tinha decidido
+
+A regra foi escrita ANTES de olhar o resultado, e sai do que o produto faz:
+`ORCAMENTO >= 2`, `FORTE >= 4`, `CONTATO >= 6`. Pedir orcamento cria negocio com
+valor, prazo e decisao pendente — que e literalmente uma linha do Kanban.
+
+**`agencia` e `imobiliaria` reprovaram**, e eu tinha decidido manter as duas uma
+rodada antes. Agencia deu 3 FORTE e ZERO orcamento: ela vende por reuniao e
+proposta por e-mail, nao por formulario.
+
+**E `clinica` saiu por um defeito MEU.** Ela liderava a regua antiga, e liderava
+pelo motivo errado: todo site de clinica diz "agende sua avaliacao", e eu lia
+isso como "sente a dor de perder lead". Agendamento e a dor de uma AGENDA — que
+este produto nao tem e que Simples Dental resolve por R$ 100-200/mes. Zero
+pedidos de orcamento em dez sites. A regua lia "precisa de um concorrente meu"
+como "precisa de mim".
+
+A tabela inteira em [docs/mercado/nichos-medidos-2026-09-06.md](mercado/nichos-medidos-2026-09-06.md).
+
+### Tres defeitos que so a PRIMEIRA GRAVACAO mostrou
+
+Nenhum aparecia em ensaio. Todos existem so no caminho que escreve.
+
+**Gravava na empresa errada, e ela nem podia receber.** `created_at.asc&limit=1`
+apontava para "Agencia Nova Era": Free, `created_by` NULO. A trigger da 0026
+recusa acima de 50 leads e **vale para o `service_role` tambem** — a rodada
+morreria no meio com 42501, deixando parte gravada. `service_role` ignora RLS e
+nao ignora trigger, e esse e o desenho certo.
+
+**Tres tomaram 23514** (`leads_contato_minimo`): pontuados por dominio e
+Instagram, sem nenhum jeito de falar com eles.
+
+**Lixo que so aparece depois de gravado: 6 em 243.** Entraram `br.pinterest.com`,
+`misterwhat.com.br` e QUATRO sindicatos. Corte por sufixo (`.org.br`, `.gov.br`)
+e nao por lista — sindicato novo nasce toda semana. Os 6 foram apagados.
+
+### O que fecha o ciclo, e sem ele a mensagem seria mentira
+
+`scripts/inteligencia/nao-perturbe.txt` e lido a cada rodada. A promessa sai na
+PRIMEIRA mensagem — *"me avisa que nao te procuro de novo"* — e a segunda
+abordagem depois de um "nao" e o que vira denuncia de spam.
+
+**O modulo NAO envia nada**, de proposito: devolve texto e um link `wa.me`.
+Enviador automatico e o que bane numero, e o numero aqui e o do dono.
+
+**E nunca disparar e-mail frio de `velofunil.com.br`.** Esse dominio manda
+recuperacao de senha e convite pelo Resend: campanha fria com reclamacao alta
+joga o dominio em filtro de spam, e a partir dai o cliente que esqueceu a senha
+nao entra mais no produto. O estrago nao aparece como bloqueio — aparece como
+suporte, semanas depois. Regras inteiras em
+[docs/mercado/limites-e-bloqueios.md](mercado/limites-e-bloqueios.md).
+
+### O caminho de PRODUTO tambem fechou
+
+A fila da 0072 existia desde 06/09 e ficaria vazia para sempre: nada tinha como
+por um lead dentro dela pela tela. `lib/inteligencia-de-mercado/actions.ts`
+marca `pendente` e RETORNA — nao chama o Exa, porque chamada externa dentro do
+clique transforma indisponibilidade de terceiro em erro na cara do cliente.
+Gate por `pro_vigente()`, 20/hora por usuario, sem lote.
+
+A 0073 pos `sinal_de_mercado` no sino, com gravidade `media`: `alta` pinta o
+ponto vermelho e so pode querer dizer "vai custar dinheiro". E o Exa entrou na
+Politica de Privacidade JUNTO da acao que torna o caminho alcancavel — declarar
+depois de comecar a tratar e o erro que a Meta ja custou aqui.
+
+### O que foi construido, medido e RECUSADO — nao reconstruir
+
+    decisor por LinkedIn   0 de 6. A trava nao e culpada: o dado nao existe.
+                           Dono de PME nao mantem perfil com a empresa no
+                           titulo. `--decisores` fica em 0
+    espiao de dor          31 chamadas. NAO produz lead contatavel em pt-BR: a
+                           SERP de "CRM preco" e conteudo de concorrente. Vale
+                           como copy — a objecao real e "e se eu quiser sair?",
+                           nao preco
+    includeText do Exa     aceito pela API e nao muda nada (25 vs 25)
+    subpages do Exa        pedi "contato", veio /lentes-de-contato-dental
+
+**E "preco fixo, sem cobrar por usuario" JA ESTA TOMADO** por sete brasileiros
+(nexxou, dunahub, akiocrm, atennde, nttecnologia, unicocrm, crmsimples). O que
+sobra e um NUMERO: R$ 49 pela empresa toda contra R$ 97 do mais proximo. Com a
+ressalva que impede decisao errada: pagina publicada nao e empresa com cliente.
+
+1.201 testes.
 
 ---
 ## O instrumento do erro nunca reportou, e o motivo era a linha que o fazia "funcionar" (06/09)

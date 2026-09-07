@@ -99,6 +99,45 @@ plausível é o mais caro que existe.**
 | Fila do webhook do Asaas parada | `lib/dono/dinheiro-do-vigia.ts` | 04/09 |
 | O vigia do vigia, por `pg_cron`, fora da Vercel | `supabase/migrations/0063_vigilante_do_vigia.sql` | 02/09 |
 
+## Inteligência de mercado e prospecção (06 e 07/09)
+
+Duas coisas diferentes com o mesmo motor, e confundi-las já custou uma rodada:
+**enriquecimento** é recurso de produto, o cliente pede sobre um contato dele;
+**prospecção** é ferramenta interna, roda por script e alimenta a carteira do
+dono. A recusa de mostrar prospect minerado dentro do funil do cliente continua
+valendo inteira.
+
+| capacidade | onde | desde |
+|---|---|---|
+| Fila de enriquecimento + sinais (tabelas, RLS) | `supabase/migrations/0072_*.sql` | 06/09 |
+| O núcleo puro: consulta, sinal, dor, orçamento | `lib/inteligencia-de-mercado/dominio/` | 06/09 |
+| O único ponto que fala HTTP com o Exa | `lib/inteligencia-de-mercado/exa/cliente.ts` | 06/09 |
+| A passagem da fila, a cada 15 min | `app/api/cron/enriquecer-leads/route.ts` | 06/09 |
+| **Pedir pesquisa pela tela** (Server Action, gate Pro) | `lib/inteligencia-de-mercado/actions.ts` | 07/09 |
+| O sinal na página do contato, com link da fonte | `components/leads/sinais-de-mercado.tsx` | 07/09 |
+| `sinal_de_mercado` no sino | `supabase/migrations/0073_*.sql` | 07/09 |
+| Motor de prospecção (5 nichos, praças, pontuação) | `scripts/inteligencia/prospectar.mjs` | 06/09 |
+| Propensão a pagar, separada de alcançabilidade | `lib/inteligencia-de-mercado/dominio/prospeccao.ts` | 07/09 |
+| A primeira mensagem, pronta para o WhatsApp | `lib/inteligencia-de-mercado/dominio/abordagem.ts` | 07/09 |
+| Vocabulário do ICP e promessas do nicho | `lib/inteligencia-de-mercado/dominio/aprendizado.ts` | 07/09 |
+| Quem pediu para não ser procurado | `scripts/inteligencia/nao-perturbe.txt` | 07/09 |
+| Onde o bloqueio mora (WhatsApp, e-mail, LGPD) | [docs/mercado/limites-e-bloqueios.md](mercado/limites-e-bloqueios.md) | 07/09 |
+| Os 27 nichos medidos, e a regra que decidiu | [docs/mercado/nichos-medidos-2026-09-06.md](mercado/nichos-medidos-2026-09-06.md) | 06/09 |
+
+**O que foi construído, medido e RECUSADO — não reconstruir:**
+
+```
+decisor por LinkedIn      existe em dominio/decisor.ts e rende 0 de 6. O dado
+                          nao existe: dono de PME nao mantem perfil com a
+                          empresa no titulo. `--decisores` fica em 0
+espiao de dor declarada   rodado, 31 chamadas. NAO produz lead contatavel em
+                          pt-BR — a SERP e conteudo de concorrente. Vale como
+                          copy. Ver docs/mercado/espiao-de-dor-2026-09-06.md
+includeText do Exa        aceito pela API e nao muda o resultado (25 vs 25)
+subpages do Exa           alvo semantico fraco: pedi "contato", veio
+                          /lentes-de-contato-dental
+```
+
 ## O que NÃO existe, e é perguntado com frequência
 
 ```
