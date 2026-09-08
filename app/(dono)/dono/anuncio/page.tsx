@@ -1,10 +1,12 @@
 import { PainelDoAnuncio } from '@/components/dono/painel-do-anuncio'
+import { PainelDoGoogle } from '@/components/dono/painel-do-google'
 import { Card, CardContent } from '@/components/ui/card'
 import {
   cruzarCampanhasComClientes,
   resumirAtribuicao,
   type EmpresaAtribuivel,
 } from '@/lib/dono/atribuicao'
+import { lerDesempenhoDoGoogle } from '@/lib/dono/google-ads-queries'
 import { lerProntidao } from '@/lib/dono/meta-ads'
 import { lerBanco } from '@/lib/dono/queries'
 import { exigirAmbienteLocal } from '@/lib/dono/somente-local'
@@ -15,9 +17,19 @@ export const dynamic = 'force-dynamic'
 export default async function PaginaDoAnuncio() {
   await exigirAmbienteLocal()
 
-  // As duas leituras em paralelo: a Meta não depende do banco nem o contrário,
-  // e é o cruzamento delas que produz o número que importa.
-  const [prontidao, banco] = await Promise.all([lerProntidao(), lerBanco()])
+  // As três em paralelo: a Meta não depende do banco nem o contrário, e é o
+  // cruzamento das duas primeiras que produz o número que importa.
+  //
+  // O Google entra aqui e NÃO derruba a tela se falhar. Ele é a leitura mais
+  // nova e a mais frágil — depende de refresh token, que expira com seis meses
+  // sem uso ou com troca de senha. `Resultado<T>` já carrega o erro, e o bloco
+  // dele some sozinho: a mesma razão que fez `Parcial<T>` existir em 02/09,
+  // quando um endpoint fora do ar apagava a página inteira.
+  const [prontidao, banco, google] = await Promise.all([
+    lerProntidao(),
+    lerBanco(),
+    lerDesempenhoDoGoogle(),
+  ])
 
   if (!prontidao.ok) {
     return (
@@ -89,6 +101,19 @@ export default async function PaginaDoAnuncio() {
         </p>
       </header>
 
+
+      {/* Acima do painel da Meta porque é a campanha que está VEICULANDO. A
+          da Meta segue bloqueada desde 03/09 por restrição no perfil pessoal,
+          e a ordem da Central é sempre a da rotina: primeiro o que gasta hoje. */}
+      {google.ok ? (
+        <PainelDoGoogle dados={google.dados} />
+      ) : (
+        <Card size="sm">
+          <CardContent className="text-muted-foreground py-4 text-sm">
+            Google Ads não respondeu: {google.erro}
+          </CardContent>
+        </Card>
+      )}
 
       <PainelDoAnuncio
         prontidao={prontidao.dados}

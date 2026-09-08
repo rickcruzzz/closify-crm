@@ -75,6 +75,37 @@ ultimo aviso em 06/09. Se ele detectou hoje e calou por ja ter avisado antes, a
 memoria e que precisa expirar. E a diferenca entre "avisou uma vez" e "avisa
 toda vez que voltar a quebrar".
 
+### E o Google Ads entrou na Central, lido por API
+
+Com o token aprovado, `lib/dono/google-ads-queries.ts` virou o unico ponto que
+fala com a API, no molde de `meta-ads.ts`. `/dono/anuncio` mostra o Google ACIMA
+da Meta — a ordem da Central e a da rotina, e a campanha que gasta hoje e a do
+Google; a da Meta segue bloqueada desde 03/09.
+
+**Isso aposenta o procedimento de dirigir o navegador**, que custou uma sessao
+inteira, quebra a cada mudanca de layout do painel e deixa sessao viva do Google
+em pasta temporaria.
+
+Tres decisoes que ficam registradas no codigo:
+
+    puro separado do I/O    `server-only` IMPEDE o teste de importar o modulo, e
+                            micros e conversao offline sao justamente o que
+                            precisa de teste. Mesmo desenho de trial.ts
+    nao derruba a tela      o Google e a leitura mais fragil (refresh token
+                            expira). Falhou, o bloco some; a Meta e o banco
+                            continuam
+    palavra a palavra       o agregado esconde o unico dado acionavel: 38
+                            impressoes com CTR 5,26% mandaria manter as duas
+                            palavras, e uma delas tem CTR ZERO
+
+E um detalhe de formato que a tela expos: a mesma linha mostrava `R$ 2,39` com
+virgula e `5.26%` com ponto, porque dinheiro vinha de `Intl` e percentual de
+`toFixed`. Duas convencoes decimais lado a lado leem como defeito.
+
+**Um centavo de diferenca para o painel do Google e esperado**: R$ 4,77 em 2
+cliques da R$ 2,385, que arredonda para 2,39 aqui e aparece como 2,38 la. Esta
+escrito no codigo para ninguem "consertar" depois.
+
 ### O funil, em uma linha
 
 **A Meta mede do clique ao pagamento; o Google mede ate o cadastro e para ali.**

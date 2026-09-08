@@ -34,6 +34,9 @@ envelhecer em silêncio, que é o defeito de todo documento desse tipo.
 | Conversão do Google: a decisão de disparar | `lib/analytics/conversao-google.ts` | 04/09 |
 | Onde pode existir rastreador de anúncio | `lib/analytics/superficie-publica.ts` | 04/09 |
 | Levar a origem adiante nos CTAs públicos | `components/landing/usar-destino-com-origem.ts` | 04/09 |
+| **Ler a conta do Google Ads por API** | `lib/dono/google-ads-queries.ts` | 08/09 |
+| O nucleo puro: micros, CTR, conversao offline | `lib/dono/google-ads.ts` | 08/09 |
+| O Google Ads na Central, com palavra a palavra | `components/dono/painel-do-google.tsx` | 08/09 |
 | Custo por cliente, por campanha **e por peça** | `lib/dono/atribuicao.ts` | 04/09 |
 | Funil de ativação da base inteira | `lib/dono/ativacao.ts` | 31/08 |
 | Erro de produção gravado no banco | `app/api/log-erro/route.ts` | 18/08 |
