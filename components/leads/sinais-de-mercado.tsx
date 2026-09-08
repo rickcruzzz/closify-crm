@@ -23,6 +23,18 @@ import { tempoRelativo } from '@/lib/notificacoes/tipos'
  * Por isso o resumo nunca aparece sozinho: ou vem com a fonte clicável, ou não
  * aparece.
  *
+ * ## A frase descreve as QUATRO categorias, e isso foi corrigido
+ *
+ * Até 08/09 ela dizia "contratação, expansão, mudança". Conferido contra
+ * `dominio/sinais.ts`: **`expansão` e `mudança` não existem** — não há uma
+ * expressão sequer que case com elas. E as duas que o classificador mais
+ * encontra ficavam de fora da frase: `investimento` e `reclamacao`.
+ *
+ * O defeito é da família que este projeto mais persegue: a tela prometia três
+ * coisas, o produto entregava quatro, e nenhuma das listas continha a outra.
+ * Quem clicasse esperando "mudança" receberia uma reclamação do Reclame Aqui —
+ * que é útil, e não é o que foi prometido.
+ *
  * ## O vazio não afirma que está tudo certo
  *
  * Mesma regra do sino, de 02/09: "sino vazio é sino vazio, nunca 'tudo certo'".
@@ -105,8 +117,8 @@ export function SinaisDeMercado({
         {status === null && (
           <p className="text-muted-foreground">
             {ehPro
-              ? 'Procura o que esta empresa publicou na web: contratação, expansão, mudança. Sempre com link para a fonte.'
-              : 'No Pro, o sistema procura o que esta empresa publicou na web: contratação, expansão, mudança. E mostra com link para a fonte.'}
+              ? 'Procura o que foi publicado sobre esta empresa: contratação, investimento, reclamação e sinais de dificuldade. Sempre com link para a fonte.'
+              : 'No Pro, o sistema procura o que foi publicado sobre esta empresa: contratação, investimento, reclamação e sinais de dificuldade. E mostra com link para a fonte.'}
           </p>
         )}
 

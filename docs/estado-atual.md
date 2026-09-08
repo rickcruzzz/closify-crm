@@ -199,6 +199,36 @@ letras, entao a excecao de sigla os capturava antes da regra de conjuncao, e o
 nome saia `Sistemas E Solucoes` — que continua parecendo maquina, so que outra.
 A ordem das duas regras virou o conserto.
 
+### O card "Sinais de mercado" prometia tres coisas e entregava outras quatro (08/09)
+
+Pergunta do dono, olhando a tela: *"entrega isso mesmo?"*. Nao entregava.
+
+    a tela dizia     o classificador procura
+    contratacao      contratacao      OK
+    expansao         —                NAO EXISTE, nenhuma expressao casa
+    mudanca          —                NAO EXISTE
+                     investimento     acha, e a tela nao mencionava
+                     reclamacao       acha, e a tela nao mencionava
+                     dor              acha, e a tela nao mencionava
+
+Nenhuma das duas listas continha a outra. Quem clicasse esperando "mudanca"
+receberia uma reclamacao do Reclame Aqui — que e util, e nao e o que foi
+prometido. A frase passou a nomear as quatro.
+
+**E a maquina foi exercitada pela PRIMEIRA VEZ**, porque `enriquecimento_de_lead`
+e `sinal_de_mercado` tinham **zero linhas** desde que nasceram em 06/09: o
+recurso existia, o gate existia, o cron estava no `vercel.json`, e ninguem nunca
+tinha pedido uma pesquisa. Provado ponta a ponta, com lead descartavel numa
+empresa Pro real:
+
+    cron       {"ok":true,"processados":1,"comSinal":1,"custoCentavos":5}
+    fila       status "ok", sem erro
+    sinal      [reclamacao/alta] com fonte_url real
+    limpeza    lead, fila e sinal apagados
+
+Cinco centavos de dolar por consulta. **A cadeia funciona** — o que faltava era
+alguem usar, e a frase que descrevia o que ela faz.
+
 1.240 testes.
 
 **O teto honesto:** isto nao faz ninguem comprar. Tira o atrito de cinco passos
