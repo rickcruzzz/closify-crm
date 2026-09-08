@@ -102,9 +102,57 @@ const GANCHO_PADRAO =
  */
 export function nomeCurto(nome: string | null | undefined, dominio: string): string {
   if (!nome) return dominio
-  const limpo = nome.split(/[|—–\-:•]/)[0].replace(/\s+/g, ' ').trim()
+  // `»` e `›` sao separadores de trilha ("i9 Acrilicos » Porta Folhetos"), que
+  // o corte original nao previa — medido em 08/09 sobre as 882 mensagens.
+  const limpo = nome.split(/[|—–\-:•»«›‹]/)[0].replace(/\s+/g, ' ').trim()
   if (limpo.length < 3 || limpo.length > 40) return dominio
-  return limpo
+  return desgritar(limpo)
+}
+
+/**
+ * Nome escrito em CAIXA ALTA vira Caixa de Título.
+ *
+ * Medido em 08/09 sobre as 882 mensagens da prateleira: **44 nomes vinham todos
+ * em maiúscula**, porque é assim que muita PME escreve o `<title>` do site.
+ * A saudação virava *"Oi! Achei a SERRALHERIA EM PORTO ALEGRE procurando
+ * empresas do setor"* — que lê como grito e denuncia montagem por máquina, que
+ * é exatamente o que `nomeCurto` existe para evitar.
+ *
+ * **Só age quando o nome INTEIRO está em maiúscula.** Nome já misto é escolha
+ * de quem escreveu, e reescrevê-lo estragaria marcas como `iFood` ou `AGGIO`.
+ *
+ * Sigla curta continua gritando de propósito: `DGA SISTEMAS` vira
+ * `DGA Sistemas`, não `Dga Sistemas`. Três letras ou menos quase sempre é
+ * sigla, e sigla em caixa alta está certa.
+ *
+ * E as conjunções descem: `E`, `DE`, `DA` viram minúsculas, senão o resultado
+ * é `Grafica E Comunicacao`, que continua parecendo máquina — só que outra.
+ */
+const LIGACOES = new Set(['e', 'de', 'da', 'do', 'das', 'dos', 'em', 'para', 'com', 'a', 'o'])
+
+function desgritar(nome: string): string {
+  // `toLowerCase` diferente do original prova que há letra maiúscula ali; a
+  // igualdade com `toUpperCase` prova que NÃO há minúscula nenhuma.
+  if (nome !== nome.toUpperCase() || nome === nome.toLowerCase()) return nome
+
+  return nome
+    .split(' ')
+    .map((palavra, i) => {
+      // Sem `\p{L}` e a flag `u`: o `target` deste tsconfig nao aceita
+      // property escape, e o tsc reprova com TS1501.
+      const minusculo = palavra.toLowerCase()
+      // A conjuncao vem ANTES da regra de sigla, e a ordem importa: `E` e `EM`
+      // tem 1 e 2 letras, entao a excecao de sigla os pegava primeiro e o nome
+      // saia "Sistemas E Solucoes" — que continua parecendo maquina, so que
+      // outra. Pego no teste.
+      if (i > 0 && LIGACOES.has(minusculo)) return minusculo
+      // Sem `\p{L}` e a flag `u`: o `target` deste tsconfig nao aceita
+      // property escape, e o tsc reprova com TS1501.
+      const so = palavra.replace(/[^A-Za-zÀ-ÿ0-9]/g, '')
+      if (so.length <= 3 && so.length > 0) return palavra
+      return minusculo.charAt(0).toUpperCase() + minusculo.slice(1)
+    })
+    .join(' ')
 }
 
 /**

@@ -152,3 +152,34 @@ describe('o nome de quem decide', () => {
     expect(m.endsWith('me avisa que não te procuro de novo.')).toBe(true)
   })
 })
+
+describe('nomeCurto: o nome que a pessoa reconhece', () => {
+  it('CAIXA ALTA vira Caixa de Titulo: 44 das 882 gritavam', () => {
+    // Medido em 08/09 sobre a prateleira inteira. A saudacao virava
+    // "Oi! Achei a SERRALHERIA EM PORTO ALEGRE procurando empresas do setor",
+    // que le como grito e denuncia montagem por maquina — exatamente o que
+    // esta funcao existe para evitar.
+    expect(nomeCurto('SERRALHERIA EM PORTO ALEGRE', 'x.com.br')).toBe('Serralheria em Porto Alegre')
+  })
+
+  it('sigla curta CONTINUA gritando, porque sigla em caixa alta esta certa', () => {
+    expect(nomeCurto('DGA SISTEMAS E SOLUÇÕES', 'x.com.br')).toBe('DGA Sistemas e Soluções')
+  })
+
+  it('nome ja MISTO nao e tocado: reescrever estragaria a marca', () => {
+    // `iFood`, `AGGIO`, `SJColor` sao escolha de quem escreveu.
+    expect(nomeCurto('AGGIO Soluções em Comunicação', 'x.com.br')).toBe('AGGIO Soluções em Comunicação')
+    expect(nomeCurto('iFood Delivery', 'x.com.br')).toBe('iFood Delivery')
+  })
+
+  it('corta na trilha de navegacao, nao so no pipe', () => {
+    // "i9 Acrilicos » Porta Folhetos" era o unico caso na base, e o corte
+    // original nao previa `»`.
+    expect(nomeCurto('i9 Acrílicos » Porta Folhetos', 'x.com.br')).toBe('i9 Acrílicos')
+  })
+
+  it('sem nome, ou nome absurdo, devolve o dominio', () => {
+    expect(nomeCurto(null, 'x.com.br')).toBe('x.com.br')
+    expect(nomeCurto('a'.repeat(60), 'x.com.br')).toBe('x.com.br')
+  })
+})

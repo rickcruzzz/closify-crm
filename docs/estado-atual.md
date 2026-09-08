@@ -156,7 +156,50 @@ Agora ha legenda fixa e `motivosQueExplicam` poe propensao antes de alcance. A
 legenda e fixa e nao tooltip de proposito: tooltip so aparece para quem ja
 desconfiou que ha algo a descobrir.
 
-1.235 testes.
+### A tela Mensagens, e a pergunta que a criou (08/09)
+
+Pergunta do dono: *"a mensagem e a mesma pra todas as empresas ne?"*. Nao havia
+como responder olhando — o texto so aparecia DEPOIS do clique, dentro do
+`wa.me`, ou enterrado numa nota da timeline. 882 mensagens prontas e nenhuma
+superficie para revisa-las.
+
+**A resposta, medida:** quase. Das 790 do universo:
+
+    mensagens distintas      788 de 790
+    1a linha (o nome)        786 variantes
+    2a linha (o gancho)        5 variantes, uma por nicho
+    o resto (preco/saida)      2 variantes, com e sem a linha de equipe
+
+Tecnicamente unicas; na pratica **dez modelos**, personalizados so pelo nome. E
+isso nao e observacao estetica: `limites-e-bloqueios.md` lista "texto identico"
+entre o que faz o WhatsApp banir, e o numero em risco e o do dono.
+
+Por isso `/dono/mensagens` **agrupa** em vez de listar: uma lista de 882 textos
+esconderia justamente a repeticao, que e o achado. Conferido na tela: 10
+modelos, 5 ganchos, 2 corpos.
+
+### E a revisao achou um defeito de 10% que ninguem veria
+
+Medidas as 882 antes de construir a tela:
+
+    acima do teto de 560       0
+    sem a linha de descarte    0
+    nicho sem gancho proprio   0
+    nome todo em MAIUSCULA    44   "Achei a SERRALHERIA EM PORTO ALEGRE..."
+    nome com lixo de titulo    1   "i9 Acrilicos » Porta Folhetos"
+
+A estrutura estava sa; a SAUDACAO e que denunciava maquina em ~10% dos casos.
+`nomeCurto` passou a desfazer caixa alta e a cortar em `»`: **44 -> 1** e
+**1 -> 0**. Sigla curta continua gritando de proposito (`DGA Sistemas`, nao
+`Dga Sistemas`), e nome ja misto nao e tocado, senao `iFood` e `AGGIO`
+quebrariam.
+
+**O teste pegou um defeito meu na propria correcao:** `E` e `EM` tem uma e duas
+letras, entao a excecao de sigla os capturava antes da regra de conjuncao, e o
+nome saia `Sistemas E Solucoes` — que continua parecendo maquina, so que outra.
+A ordem das duas regras virou o conserto.
+
+1.240 testes.
 
 **O teto honesto:** isto nao faz ninguem comprar. Tira o atrito de cinco passos
 por empresa e transforma a lista num turno de trabalho. O numero que decide e

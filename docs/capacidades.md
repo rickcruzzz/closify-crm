@@ -132,6 +132,8 @@ valendo inteira.
 | Em que prateleira cada empresa está (arquivo) | `lib/dono/prateleira-estado.ts` | 08/09 |
 | Enviar num clique, e confirmar criando o contato | `lib/dono/prateleira-actions.ts` | 08/09 |
 | Favicon por empresa, com cache local (CSP intacta) | `app/(dono)/dono/prospeccao/icone/route.ts` | 08/09 |
+| **Ver o que vai sair, agrupado por modelo** | `app/(dono)/dono/mensagens/page.tsx` | 08/09 |
+| Agrupar mensagem pelo que repete (10 modelos) | `lib/dono/mensagens.ts` | 08/09 |
 
 **O que foi construído, medido e RECUSADO — não reconstruir:**
 

@@ -57,6 +57,10 @@ const SECOES = [
   // correndo; esta sao os que ainda nao ouviram falar dele. Nesta ordem porque
   // quem ja esta testando esta mais perto de pagar que quem nunca viu a tela.
   { href: '/dono/prospeccao', rotulo: 'Prospeccao', icone: Radar },
+  // Colada em Prospeccao porque responde a pergunta que a outra tela nao
+  // respondia: o que exatamente vai sair. O texto so aparecia dentro do
+  // `wa.me`, depois do clique — tarde demais para revisar.
+  { href: '/dono/mensagens', rotulo: 'Mensagens', icone: MessageSquareText },
   // Logo depois de Alertas e Decidindo, e pelo mesmo critério de rotina: as
   // três são acionáveis HOJE. Alertas é o que o sistema detectou sozinho; esta
   // é o que o cliente DISSE — e é a única fonte de "por quê" que este produto
