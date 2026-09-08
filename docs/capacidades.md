@@ -127,6 +127,10 @@ valendo inteira.
 | Universo em CSV, separado da fila de contato | `scripts/inteligencia/prospectar.mjs` (`--universo`) | 07/09 |
 | Rodada diária que rotaciona nicho e praça | `scripts/inteligencia/prospectar.mjs` (`--diario`) | 07/09 |
 | Os 27 nichos medidos, e a regra que decidiu | [docs/mercado/nichos-medidos-2026-09-06.md](mercado/nichos-medidos-2026-09-06.md) | 06/09 |
+| **A prateleira: as 882 empresas numa fila só** | `app/(dono)/dono/prospeccao/page.tsx` | 08/09 |
+| O merge das 3 fontes (CSV + banco), puro | `lib/dono/prateleira.ts` | 08/09 |
+| Em que prateleira cada empresa está (arquivo) | `lib/dono/prateleira-estado.ts` | 08/09 |
+| Enviar num clique, e confirmar criando o contato | `lib/dono/prateleira-actions.ts` | 08/09 |
 
 **O que foi construído, medido e RECUSADO — não reconstruir:**
 

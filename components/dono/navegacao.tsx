@@ -12,6 +12,7 @@ import {
   Loader2,
   Megaphone,
   MessageSquareText,
+  Radar,
 } from 'lucide-react'
 
 import { cn } from '@/lib/utils'
@@ -50,6 +51,12 @@ const SECOES = [
   // pessoa dentro dos sete dias de trial, com o WhatsApp a um clique. O funil
   // agregado da tela seguinte orienta o mês.
   { href: '/dono/trial', rotulo: 'Decidindo', icone: Handshake },
+  // Logo depois de Decidindo, e pelo mesmo criterio: as duas sao fila de
+  // trabalho de HOJE, com o WhatsApp a um clique. A diferenca e de onde vem a
+  // pessoa — Decidindo sao os que ja entraram no produto e tem sete dias
+  // correndo; esta sao os que ainda nao ouviram falar dele. Nesta ordem porque
+  // quem ja esta testando esta mais perto de pagar que quem nunca viu a tela.
+  { href: '/dono/prospeccao', rotulo: 'Prospeccao', icone: Radar },
   // Logo depois de Alertas e Decidindo, e pelo mesmo critério de rotina: as
   // três são acionáveis HOJE. Alertas é o que o sistema detectou sozinho; esta
   // é o que o cliente DISSE — e é a única fonte de "por quê" que este produto

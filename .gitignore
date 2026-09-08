@@ -67,6 +67,11 @@ graphify-out/
 # Preferência de uma pessoa numa máquina, não dado de produto.
 .dono-silenciados.json
 
+# Em que prateleira cada empresa da prospeccao esta (lib/dono/prateleira-estado.ts).
+# Carrega dominio de empresa real e o progresso de UMA maquina; o dado de origem
+# (docs/mercado/universo-*.csv) e que e versionado.
+.dono-prospeccao.json
+
 # Quando o dono falou com cada empresa em trial (lib/dono/contatos-do-trial.ts).
 # Mesma razão dos dois de cima, mais uma: carrega id de empresa real.
 .dono-contatos-do-trial.json

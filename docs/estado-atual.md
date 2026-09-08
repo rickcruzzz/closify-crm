@@ -4,9 +4,9 @@ Documento de continuidade. É lido no começo de toda sessão (referenciado no
 [CLAUDE.md](../CLAUDE.md)) para que uma conversa nova, ou outra conta, comece
 sabendo o que já foi feito, o que foi decidido e onde estão as armadilhas.
 
-**Atualizado em:** 07/09/2026 (o motor multiplica por praca E por variante de
-consulta; e a copy parou de esconder a porta de saida, que estava escrita em
-comentario de codigo e nunca na tela)
+**Atualizado em:** 08/09/2026 (a lista de 882 empresas virou fila de trabalho na
+Central, com envio em um clique; e o clique que nao disparava nao dava erro
+nenhum — duas causas empilhadas mais um defeito do proprio teste)
 
 ## O histórico de agosto mora em outro arquivo
 
@@ -26,6 +26,110 @@ porque a Evolution dava problema e a API oficial da Meta não foi aprovada. Hoje
 que sobrou é o link `wa.me`. O porquê inteiro está no arquivo.
 
 ---
+## A lista virou fila de trabalho, e o clique que nao disparava nao dava erro (08/09)
+
+Pedido do dono: *"crie mais uma pagina de prospeccao de leads, apareca todas que
+o Exa achou, filtra apenas os melhores, quando envia opcao de confirma e mover
+pra confirmados"* — com a regra que governa tudo: *"deixe o jeito extremamente
+mais rapido possivel de mandar, se nao precisa sair do sistema melhor ainda"*.
+
+### O gargalo tinha mudado de lugar
+
+510 mensagens prontas e **zero conversas**. Nao faltava lead; faltavam cinco
+passos por empresa: trocar de empresa no seletor, Contatos, abrir o contato,
+rolar a timeline, achar o link. Ninguem repete isso quinhentas vezes.
+
+### O dado estava partido em tres, e nenhuma fonte era completa
+
+    790  dominios no CSV do universo (docs/mercado/universo-*.csv, versionados)
+    432  leads cujo dominio ESTA no CSV
+     92  leads cujo dominio NAO esta em CSV nenhum   <- rodadas antes do --universo
+
+Os 92 vieram de 06/09, antes de `--universo` existir. Ler so o CSV os perderia;
+ler so o banco perderia 358. **O total distinto e 882, e ele so existe depois do
+merge** — conferido na tela.
+
+E a dedupe importa: o CSV tem **959 linhas para 790 dominios**. Noventa empresas
+aparecem em dois nichos e 79 se repetem dentro de marcenaria, porque
+`--universo` grava por praca e por variante sem deduplicar antes de escrever.
+Mantem o MAIOR pontos, nunca a soma — somar transformaria repeticao em
+evidencia, o erro que o corpus de vocabulario ja pagou em 07/09.
+
+### Nenhuma migration, e isso e decisao
+
+O primeiro instinto e criar tabela `prospect`. `lib/dono/silenciados.ts` ja
+respondeu isso por escrito: *"criar tabela e migration para guardar 'nao quero
+ver isso' acopla uma decisao pessoal ao schema que os clientes usam"*.
+
+O dado de ORIGEM ja e duravel (CSV no Git, leads no banco). O que
+`.dono-prospeccao.json` guarda e progresso de UMA maquina — e a prospecao deste
+projeto ja guarda estado em arquivo em dois outros lugares (`nao-perturbe.txt` e
+`.rodadas.json`).
+
+### O defeito que custou a rodada: clique que nao dispara e nao reclama
+
+`<Button render={<a href/>}>` com `onClick`. A aba abria, o link estava certo, e
+a linha **nunca saia da fila**. Zero erro no console, zero exception, nada no
+log do servidor.
+
+Duas causas empilhadas, e a segunda so apareceu depois de corrigir a primeira:
+
+    onClick no <a> de dentro     descartado no merge do Base UI
+    nativeButton ausente         ele assume <button> nativo e nao liga o handler
+
+O que provou onde estava: chamando `props.onClick` a mao pelo DOM, a acao
+rodava. **O handler existia; o clique e que nao chegava nele.** A saida foi
+ancora crua com `buttonVariants`, que `central-de-suporte.tsx` ja usava.
+
+### E um defeito do meu TESTE que valia mais que o do codigo
+
+Depois de corrigido, o teste continuava reprovando. `waitForSelector` volta com
+o HTML do **servidor** — clicar ali dispara a navegacao nativa da ancora sem
+passar por handler nenhum. A prova agora espera `__reactProps` aparecer no
+elemento, que e esperar a HIDRATACAO e nao a marcacao.
+
+**Duas medicoes falsas de causas diferentes produziram exatamente o mesmo
+sintoma**, e a segunda so ficou visivel depois de a primeira sair.
+
+### Dois dev servers na mesma pasta `.next`
+
+No meio da investigacao, `npm run dev` avisou *"Port 3000 is in use, trying
+3001"* e eu segui testando na 3000, que era outra instancia. O CLAUDE.md ja
+documenta que duas coisas escrevendo em `.next` corrompem o mapa de chunks — foi
+de la que veio um `SyntaxError` sem origem no codigo. Resolvido matando as duas,
+apagando `.next` e subindo uma so.
+
+### Provado no navegador, com controle em cada passo
+
+    gate           Host nao-local -> 404 (nao 403)
+    contagem       882 na tela = 790 do CSV + 92 so no banco
+    nao perturbe   dominio no arquivo SOME da tela, e o contador aparece
+    link           o `?text=` decodificado e IDENTICO ao da tela, 541 de 560,
+                   e a linha de descarte e a ULTIMA
+    um clique      abre aba, grava "enviado" com data, a linha sai de Novos
+    desfazer       apaga a marca
+    confirmar      cria o contato em "Prospeccao" com a nota na timeline,
+                   e confirmar de novo NAO duplica
+    teclado        J desce o foco, E envia sem tocar no mouse
+    controle       digitar "exe" na busca nao dispara E nem X
+
+A idempotencia de `confirmarEnvio` deixou de ser luxo no meio do caminho: o
+`reactStrictMode` do Next 14 e ligado por padrao e **invoca a acao duas vezes em
+desenvolvimento** — visto no toast duplicado. Sem a guarda, cada confirmacao
+criaria dois contatos.
+
+O contato de teste foi apagado num `finally`, e o `23505` que apareceu antes
+disso era a dedupe por telefone da 0025 funcionando — dois sites do mesmo dono
+compartilham numero.
+
+1.232 testes.
+
+**O teto honesto:** isto nao faz ninguem comprar. Tira o atrito de cinco passos
+por empresa e transforma a lista num turno de trabalho. O numero que decide e
+quantas conversas acontecem, e essa parte continua sendo do dono.
+
+---
+
 ## O motor multiplica por duas dimensoes, e a copy escondia a saida (07/09, noite)
 
 Pedido do dono: *"a quantidade de empresas espionadas esta sendo muito poucas,

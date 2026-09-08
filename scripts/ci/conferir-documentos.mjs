@@ -91,6 +91,13 @@ const EXTERNOS_CONHECIDOS = new Map([
   ['graphify-out/graph.json', 'gerado, e graphify-out/ esta no .gitignore — nao existe em clone novo'],
   ['graphify-out/GRAPH_REPORT.md', 'idem'],
   ['graphify-out/graph.html', 'idem'],
+  // Estado de trabalho de UMA maquina, sempre no .gitignore: nascem quando o
+  // dono usa a tela, e nao existem em clone novo. Citados pelos documentos
+  // porque decidir onde o estado mora e justamente a decisao registrada.
+  ['.dono-prospeccao.json', 'estado da prateleira (lib/dono/prateleira-estado.ts), no .gitignore'],
+  ['.dono-silenciados.json', 'alertas silenciados (lib/dono/silenciados.ts), no .gitignore'],
+  ['.dono-registro.jsonl', 'diario da Central (lib/dono/diario.ts), no .gitignore'],
+  ['.rodadas.json', 'checkpoint das rodadas de prospeccao (prospectar.mjs --diario), no .gitignore'],
 ])
 
 /** `docs/plan.md` é um plano ANTIGO, com caminhos relativos a pastas de então. */
