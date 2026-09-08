@@ -5,6 +5,7 @@ import {
   lerCsvDoUniverso,
   mensagemPara,
   mesclar,
+  motivosQueExplicam,
   ordenar,
   type EstadoNaPrateleira,
   type LeadJaGravado,
@@ -229,5 +230,35 @@ describe('mensagemPara', () => {
     // `+1 415 555 2671` tem o mesmo tamanho de um celular com DDD. O que separa
     // os dois é o dígito depois do DDD: celular brasileiro é sempre 9.
     expect(mensagemPara(prospect({ whatsapp: null, telefone: '14155552671' })).link).toBeNull()
+  })
+})
+
+describe('motivosQueExplicam', () => {
+  it('poe o que diz que ela PAGA antes do que diz que da para falar com ela', () => {
+    // `pontuar` empilha contato primeiro, entao mostrando os 3 primeiros a linha
+    // exibia sempre "WhatsApp direto · telefone · e-mail" — verdadeiro, e a
+    // informacao menos util, porque quase toda empresa qualificada tem contato.
+    // Achado quando o dono perguntou o que o numero verde significava.
+    expect(
+      motivosQueExplicam([
+        'WhatsApp direto',
+        'telefone na página',
+        'e-mail na página',
+        'domínio .com.br',
+        'tem equipe de vendas',
+        'pede orçamento no site',
+      ]).slice(0, 2),
+    ).toEqual(['tem equipe de vendas', 'pede orçamento no site'])
+  })
+
+  it('nao perde nenhum motivo, so troca a ordem', () => {
+    const entrada = ['Instagram', 'já paga por software', 'domínio .com.br']
+    const saida = motivosQueExplicam(entrada)
+    expect(saida).toHaveLength(entrada.length)
+    expect([...saida].sort()).toEqual([...entrada].sort())
+  })
+
+  it('lista vazia continua vazia: lead sem CSV nao tem motivo nenhum', () => {
+    expect(motivosQueExplicam([])).toEqual([])
   })
 })

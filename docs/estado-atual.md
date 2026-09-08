@@ -122,7 +122,41 @@ O contato de teste foi apagado num `finally`, e o `23505` que apareceu antes
 disso era a dedupe por telefone da 0025 funcionando — dois sites do mesmo dono
 compartilham numero.
 
-1.232 testes.
+### Tres acabamentos, e o terceiro veio de uma pergunta do dono (08/09)
+
+**Favicon por empresa.** Medido antes de escolher a fonte, sobre 24 dominios
+reais da propria lista:
+
+    google/s2/favicons     21 de 24   (88%), todos DISTINTOS entre si
+    o proprio site         10 de 24   (42%)
+    duckduckgo/ip3          8 de 24   (33%)
+
+O Google ganha porque le o `<link rel="icon">` do HTML. E a distincao importa:
+se ele estivesse devolvendo o globo padrao, a contagem pareceria alta e a tela
+mostraria vinte icones iguais — comparei por hash e nao ha duas imagens iguais.
+
+Servido por rota local com cache em disco, e nao `<img src="google.com/...">`
+direto: a CSP declara `img-src 'self' ...` e e header de PRODUCAO. Abrir para um
+host de terceiro no site inteiro por causa de uma tela que devolve 404 em
+producao e troca ruim. Pela rota, cai em `'self'` e **a CSP nao muda**.
+
+**Numeracao de 1 a N**, largura fixa e `tabular-nums`. Uma fila de 882 so vira
+turno de trabalho quando da para dizer "parei na 340"; e o rodape passou a dizer
+`1-160 de 385` em vez do total sozinho, que nao responde onde voce esta.
+
+**E o achado que so uma pergunta do dono produziria:** *"esses verdes queriam
+dizer o que?"*. A tela mostrava um numero colorido e nao explicava nenhum dos
+dois. Pior, `pontuar` empilha os motivos na ordem em que testa — contato
+primeiro —, entao a linha exibia sempre *"WhatsApp direto · telefone · e-mail"*,
+que e verdadeiro e e a informacao MENOS util, porque quase toda empresa
+qualificada tem contato. O que distingue uma linha da outra ("pede orcamento",
+"tem equipe de vendas") ficava cortado.
+
+Agora ha legenda fixa e `motivosQueExplicam` poe propensao antes de alcance. A
+legenda e fixa e nao tooltip de proposito: tooltip so aparece para quem ja
+desconfiou que ha algo a descobrir.
+
+1.235 testes.
 
 **O teto honesto:** isto nao faz ninguem comprar. Tira o atrito de cinco passos
 por empresa e transforma a lista num turno de trabalho. O numero que decide e

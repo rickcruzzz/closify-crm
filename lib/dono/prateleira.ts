@@ -239,6 +239,35 @@ export function mensagemPara(p: Prospect): { texto: string; link: string | null 
   }
 }
 
+/**
+ * Os motivos que dizem que ela PAGA vêm primeiro.
+ *
+ * `pontuar` empilha os motivos na ordem em que testa: contato primeiro
+ * (WhatsApp, telefone, e-mail), sinal de propensão depois. Mostrando os três
+ * primeiros, a linha exibia sempre "WhatsApp direto · telefone · e-mail" —
+ * verdadeiro, e a informação menos útil da lista, porque quase toda empresa
+ * qualificada tem contato. O que distingue uma linha da outra é "pede
+ * orçamento" e "tem equipe de vendas", e eram exatamente esses que ficavam
+ * cortados.
+ *
+ * Achado quando o dono perguntou o que o número verde significava: a legenda
+ * dizia "as parcelas estão escritas na linha", e as parcelas visíveis eram as
+ * que não explicavam a nota.
+ */
+const SO_ALCANCE = new Set([
+  'WhatsApp direto',
+  'telefone na página',
+  'e-mail na página',
+  'Instagram',
+  'domínio .com.br',
+])
+
+export function motivosQueExplicam(motivos: string[]): string[] {
+  const pagam = motivos.filter((m) => !SO_ALCANCE.has(m))
+  const alcance = motivos.filter((m) => SO_ALCANCE.has(m))
+  return [...pagam, ...alcance]
+}
+
 /** Quantos há em cada prateleira, para os rótulos das abas. */
 export function contarPorEstado(lista: Prospect[]): Record<EstadoNaPrateleira, number> {
   const contagem: Record<EstadoNaPrateleira, number> = {

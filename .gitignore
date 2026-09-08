@@ -67,6 +67,11 @@ graphify-out/
 # Preferência de uma pessoa numa máquina, não dado de produto.
 .dono-silenciados.json
 
+# Favicon de cada empresa da prateleira, em cache (a rota /dono/prospeccao/icone).
+# Bytes baixados de terceiro, uma vez por dominio; some com a maquina e volta a
+# ser buscado sozinho.
+.dono-favicons/
+
 # Em que prateleira cada empresa da prospeccao esta (lib/dono/prateleira-estado.ts).
 # Carrega dominio de empresa real e o progresso de UMA maquina; o dado de origem
 # (docs/mercado/universo-*.csv) e que e versionado.

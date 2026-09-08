@@ -131,6 +131,7 @@ valendo inteira.
 | O merge das 3 fontes (CSV + banco), puro | `lib/dono/prateleira.ts` | 08/09 |
 | Em que prateleira cada empresa está (arquivo) | `lib/dono/prateleira-estado.ts` | 08/09 |
 | Enviar num clique, e confirmar criando o contato | `lib/dono/prateleira-actions.ts` | 08/09 |
+| Favicon por empresa, com cache local (CSP intacta) | `app/(dono)/dono/prospeccao/icone/route.ts` | 08/09 |
 
 **O que foi construído, medido e RECUSADO — não reconstruir:**
 

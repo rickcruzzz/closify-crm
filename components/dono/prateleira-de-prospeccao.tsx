@@ -15,6 +15,7 @@ import {
 import {
   contarPorEstado,
   mensagemPara,
+  motivosQueExplicam,
   PISO_DOS_MELHORES,
   type EstadoNaPrateleira,
   type Prospect,
@@ -80,10 +81,62 @@ function Pontos({ valor }: { valor: number }) {
         'w-9 shrink-0 rounded-md px-1.5 py-0.5 text-center text-xs font-semibold tabular-nums',
         forte ? 'bg-emerald-500/15 text-emerald-500' : 'bg-muted text-muted-foreground',
       )}
-      title={`${valor} pontos de propensão`}
+      title={
+        `${valor} pontos de propensão a pagar. ` +
+        `A soma está escrita nos motivos, logo abaixo do nome. ` +
+        `${PISO_DOS_MELHORES}+ fica verde: vale ligar primeiro.`
+      }
     >
       {valor}
     </span>
+  )
+}
+
+/**
+ * O favicon da empresa, com a inicial como reserva.
+ *
+ * ## Por que vale a pena numa lista densa
+ *
+ * A tela existe para VARRER 882 linhas. Ler o nome de cada uma custa uma
+ * fixação dos olhos; reconhecer uma marca custa muito menos, e é o que permite
+ * pular a linha errada sem parar nela.
+ *
+ * ## A reserva não é enfeite
+ *
+ * Medido: o ícone existe em 88% dos domínios. Sem uma reserva do MESMO tamanho,
+ * os 12% restantes furariam a coluna e a lista perderia o alinhamento — que é
+ * justamente o que faz a varredura ser rápida. A inicial num quadrado ocupa o
+ * lugar e ainda dá um segundo sinal de reconhecimento.
+ */
+function Icone({ dominio, nome }: { dominio: string; nome: string | null }) {
+  const [falhou, setFalhou] = React.useState(false)
+  const inicial = (nome ?? dominio).trim().charAt(0).toUpperCase() || '?'
+
+  if (falhou) {
+    return (
+      <span
+        aria-hidden
+        className="bg-muted text-muted-foreground flex size-5 shrink-0 items-center justify-center rounded text-[10px] font-semibold"
+      >
+        {inicial}
+      </span>
+    )
+  }
+
+  return (
+    // `<img>` e nao `next/image`: a fonte e uma rota local que devolve bytes de
+    // cache, e o otimizador exigiria `remotePatterns` para um host de terceiro
+    // que a CSP de producao nao permite. Sao 20px, nao ha o que otimizar.
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      src={`/dono/prospeccao/icone?d=${encodeURIComponent(dominio)}`}
+      alt=""
+      width={20}
+      height={20}
+      loading="lazy"
+      onError={() => setFalhou(true)}
+      className="size-5 shrink-0 rounded object-contain"
+    />
   )
 }
 
@@ -278,10 +331,31 @@ export function PrateleiraDeProspeccao({ prospects }: { prospects: Prospect[] })
             Só os melhores ({PISO_DOS_MELHORES}+ pontos)
           </label>
         ) : null}
+        {/* "1-80 de 612" e nao so "612": o total sozinho nao diz onde voce
+            esta, e essa e a pergunta de quem volta para a fila amanha. */}
         <span className="text-muted-foreground ml-auto text-sm tabular-nums">
-          {filtrada.length} {filtrada.length === 1 ? 'empresa' : 'empresas'}
+          {filtrada.length === 0
+            ? 'nenhuma empresa'
+            : `1–${visiveis.length} de ${filtrada.length}`}
         </span>
       </div>
+
+      {/* A legenda existe porque o proprio dono perguntou "o que sao esses
+          verdes". Numero sem unidade e adivinhacao: quem le tenta inferir a
+          escala pelo maior valor da tela, e erra. Uma linha resolve, e ela
+          fica SEMPRE visivel em vez de virar tooltip, que so aparece para quem
+          ja desconfiou que ha algo a descobrir. */}
+      <p className="text-muted-foreground -mt-2 text-xs">
+        O número colorido é a <strong className="text-foreground">propensão a pagar</strong>,
+        somada do que o site revela: equipe de vendas <span className="tabular-nums">+4</span>,
+        pede orçamento <span className="tabular-nums">+3</span>, já paga software{' '}
+        <span className="tabular-nums">+3</span>, WhatsApp direto{' '}
+        <span className="tabular-nums">+3</span>, e já usa concorrente{' '}
+        <span className="tabular-nums">−3</span>. As parcelas de cada empresa estão
+        escritas na própria linha.{' '}
+        <span className="text-emerald-500">Verde</span> é {PISO_DOS_MELHORES} ou mais:
+        vale ligar primeiro.
+      </p>
 
       {visiveis.length === 0 ? (
         <p className="text-muted-foreground border-border/60 rounded-lg border border-dashed px-4 py-10 text-center text-sm">
@@ -302,10 +376,21 @@ export function PrateleiraDeProspeccao({ prospects }: { prospects: Prospect[] })
                   i === focada ? 'bg-muted/60' : 'hover:bg-muted/30',
                 )}
               >
+                {/* O numero de ordem, e ele nao e enfeite: uma fila de 882
+                    so vira turno de trabalho quando da para dizer "parei na
+                    340". Sem ele, voltar no dia seguinte significa procurar
+                    visualmente onde a lista ficou. Largura fixa e
+                    `tabular-nums` para as unidades ficarem na mesma coluna de
+                    1 ate 1.000 — numero que dança destroi a varredura. */}
+                <span className="text-muted-foreground w-10 shrink-0 text-right text-xs tabular-nums">
+                  {i + 1}
+                </span>
+
                 <Pontos valor={p.pontos} />
 
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2">
+                    <Icone dominio={p.dominio} nome={p.nome} />
                     <span className="truncate font-medium">{p.nome ?? p.dominio}</span>
                     {p.leadId ? (
                       <span
@@ -331,7 +416,7 @@ export function PrateleiraDeProspeccao({ prospects }: { prospects: Prospect[] })
                     {p.motivos.length > 0 ? (
                       <>
                         <span aria-hidden>·</span>
-                        <span className="truncate">{p.motivos.slice(0, 3).join(' · ')}</span>
+                        <span className="truncate">{motivosQueExplicam(p.motivos).slice(0, 4).join(' · ')}</span>
                       </>
                     ) : null}
                   </div>
