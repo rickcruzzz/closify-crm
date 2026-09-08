@@ -27,6 +27,62 @@ porque a Evolution dava problema e a API oficial da Meta não foi aprovada. Hoje
 que sobrou é o link `wa.me`. O porquê inteiro está no arquivo.
 
 ---
+## A campanha nao veiculava por LANCE, e eu tinha dito que era demanda (08/09)
+
+Auditoria do produto inteiro a pedido do dono. O achado que corrige uma
+conclusao repetida varias vezes nesta sessao:
+
+    parcela de impressoes OBTIDA        10,0%
+    perdida por ORCAMENTO               10,3%
+    perdida por CLASSIFICACAO (lance)   89,7%
+
+**Eu disse que o limite era demanda. Nao e.** Com o token aprovado, o
+Planejador de Palavras-Chave respondeu por API: os 7 termos somam 5.890
+buscas/mes no Brasil, e o lance de TOPO comeca acima de R$ 3,00 em SEIS deles —
+que e o teto da campanha. O orcamento prova junto: R$ 750/mes autorizados
+contra ~R$ 20 gastos, 97% parado.
+
+**A armadilha do mesmo dado:** `funil de vendas` tem 22.200 buscas com
+concorrencia LOW e `crm` tem 246.000. Volume alto com concorrencia baixa e
+intencao INFORMACIONAL — anunciante nao disputa porque nao converte. Em `crm`,
+22.200 sao `crm minas gerais`, o Conselho Regional de Medicina.
+
+O unico termo de volume com intencao comercial E dentro do teto e `sistema crm`:
+8.100 buscas/mes, mais que os sete atuais somados. Acrescentado, com 6 sitelinks
+e 8 frases de destaque, **sem tocar em lance nem orcamento** — os dois unicos
+que reiniciariam o aprendizado. Cada escrita validada com `validateOnly` antes.
+
+### E o teto aritmetico do canal pago, dito de uma vez
+
+    5.890 buscas/mes nos 7 termos
+    10% de parcela hoje -> ~1.650 impressoes/mes disponiveis no conjunto
+    a 100% de parcela   -> ~87 cliques/mes, o MAXIMO
+    a 5% de conversao   -> 2 a 4 cadastros/mes
+
+**O anuncio nao leva a dez clientes.** Ele descobre o CPC real e qual palavra
+atrai quem se cadastra. Volume, hoje, so vem das 882 da prateleira.
+
+### O achado de seguranca: a senha vai para a URL no /login
+
+`app/(auth)/(entrada)/login/page.tsx:160` tem `<form onSubmit={...}>` SEM
+`method`. Formulario sem metodo faz GET para a propria URL, entao antes da
+hidratacao a submissao serializa tudo:
+
+    /login     ?email=vitima%40exemplo.com&password=SenhaSecreta123%21   VAZOU
+    /cadastro  ?name=&email=vitima%40exemplo.com                         nao
+
+Reproduzido bloqueando o JavaScript — conexao ruim, aparelho lento, chunk
+demorando. **O /cadastro esta seguro por ACIDENTE**: o login usa
+`{...register('password')}`, que espalha `name` no input; o cadastro usa
+`Controller`, cujo input nao recebe `name`. Refatorar quebra.
+
+Correcao: `method="post"`. NAO aplicada ainda — a rodada era de diagnostico.
+
+Relatorio inteiro em
+[docs/auditoria-do-produto-2026-09-08.md](auditoria-do-produto-2026-09-08.md).
+
+---
+
 ## O developer token FOI aprovado, e o webhook do Asaas parou pela TERCEIRA vez (08/09)
 
 Auditoria do funil de rastreamento a pedido do dono: *"verificar os
