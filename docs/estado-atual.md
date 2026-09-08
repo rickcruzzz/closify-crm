@@ -27,6 +27,67 @@ porque a Evolution dava problema e a API oficial da Meta não foi aprovada. Hoje
 que sobrou é o link `wa.me`. O porquê inteiro está no arquivo.
 
 ---
+## O developer token FOI aprovado, e o webhook do Asaas parou pela TERCEIRA vez (08/09)
+
+Auditoria do funil de rastreamento a pedido do dono: *"verificar os
+rastreamentos do Google Ads, o pixel, a API de conversao em pagamentos, entender
+o funil inteiro"* e *"verificar se o Asaas esta no ar"*. Relatorio inteiro em
+[docs/mercado/funil-de-rastreamento-2026-09-08.md](mercado/funil-de-rastreamento-2026-09-08.md).
+
+### O token do Google Ads responde. O bloqueio de 06/09 acabou.
+
+    OAuth                      access_token obtido
+    listAccessibleCustomers    HTTP 200
+    consulta REAL a conta      HTTP 200 -> g_preco ENABLED, 38 impr, 2 cliq,
+                                           R$ 4,77 — bate com o painel
+
+Era `403 DEVELOPER_TOKEN_NOT_APPROVED`. **A importacao de conversao offline
+deixou de depender do Google e passou a depender de nos.**
+
+E o que o `estado-atual` previa em 06/09 esta provado: `login-customer-id` sem o
+cabecalho da 200; COM ele, 403. Ele esta preenchido no `.env.local` e quem
+escrever o cliente da API precisa OMITIR, nao ler a variavel.
+
+**Uma correcao do que eu disse ao dono ontem:** as impressoes nao vinham de uma
+palavra so. Sao duas, e a distribuicao diz mais que o total:
+
+    22 impr   0 cliq   "crm de vendas"          CTR 0%
+    16 impr   2 cliq   "quanto custa um crm"    CTR 12,5%
+
+O termo que MAIS aparece nao levou clique nenhum. `crm de vendas` e
+navegacional; `quanto custa um crm` e a pergunta que o nosso h1 responde. Com
+dois cliques e indicio, nao prova.
+
+### O webhook do Asaas estava parado DE NOVO
+
+    enabled=true   interrupted=TRUE   <- religado nesta rodada
+
+Terceira vez em cinco dias (04/09, 06/09, 08/09). O endpoint esta sao o tempo
+todo — 401 sem token, 200 com token e evento nao mapeado. E importava mais desta
+vez: existem duas cobrancas PENDING de R$ 49 e uma assinatura ACTIVE.
+
+**Nao e cliente**: `cus_000197424656` e "pedro eee" / henriquestn24@gmail.com,
+conta do proprio dono. Continua ZERO cliente externo pagante.
+
+**Fica em aberto, e e a raiz:** o vigia TEM a checagem de webhook interrompido
+desde 04/09, mas so avisa quando o estado MUDA — e a memoria dele mostra o
+ultimo aviso em 06/09. Se ele detectou hoje e calou por ja ter avisado antes, a
+memoria e que precisa expirar. E a diferenca entre "avisou uma vez" e "avisa
+toda vez que voltar a quebrar".
+
+### O funil, em uma linha
+
+**A Meta mede do clique ao pagamento; o Google mede ate o cadastro e para ali.**
+O `Purchase` sai de `lib/asaas/aplicar-evento.ts` — o webhook do pagamento — e
+so pela CAPI, nunca pelo pixel, porque ali nao existe navegador.
+
+E o buraco maior nao e o Google: **o `gclid` e gravado e NUNCA lido.** Capturado
+em `utm-capture.tsx`, gravado em `onboarding/actions.ts:231`, zero consumidores,
+0 de 44 workspaces com valor. Mesma familia do `utm_content` de 04/09, que
+tambem foi criado, capturado, gravado — e ninguem lia.
+
+---
+
 ## O Calendario era a UNICA tela onde um nome nao levava a lugar nenhum (08/09)
 
 Relato do dono com print: *"em calendario so tem a opcao de editar e nao tem a
