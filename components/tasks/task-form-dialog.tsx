@@ -1,9 +1,10 @@
 'use client'
 
 import * as React from 'react'
+import Link from 'next/link'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { Controller, useForm } from 'react-hook-form'
-import { Loader2 } from 'lucide-react'
+import { Loader2, User } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
 import {
@@ -62,6 +63,21 @@ export type TarefaEmEdicao = {
   type: ActivityType
   due_at: string
   assignee_id: string | null
+  /**
+   * De quem é a tarefa, quando ela pertence a um contato.
+   *
+   * Existe porque o Calendário era a ÚNICA tela do produto onde o nome de uma
+   * pessoa aparecia e não levava a lugar nenhum. O chip mostra
+   * `task.lead_name` (`task-chip.tsx:58`), mas o clique abria só o formulário
+   * de edição — e o nome virava texto num campo, sem caminho até o contato.
+   *
+   * `/hoje` já resolvia isso desde sempre (`task-item.tsx:157`, o nome é um
+   * `<Link>`), então não era recurso faltando: era a mesma informação tratada
+   * de dois jeitos em duas telas. Aqui, no diálogo, o conserto vale para as
+   * quatro que o usam.
+   */
+  lead_id?: string | null
+  lead_name?: string | null
 }
 
 export function TaskFormDialog({
@@ -167,6 +183,24 @@ export function TaskFormDialog({
             negócio.
           </DialogDescription>
         </DialogHeader>
+
+        {/* De quem é esta tarefa, e como chegar até a pessoa.
+
+            Fica ACIMA do formulário de propósito: a primeira pergunta de quem
+            abre uma tarefa que não criou é "quem é essa pessoa", e a resposta
+            estava a uma navegação que a tela não oferecia. */}
+        {tarefa?.lead_id && tarefa.lead_name ? (
+          <Link
+            href={`/leads/${tarefa.lead_id}`}
+            className="border-border/60 hover:bg-muted flex min-h-11 items-center justify-between gap-2 rounded-lg border px-3 text-sm transition-colors sm:min-h-10"
+          >
+            <span className="flex min-w-0 items-center gap-2">
+              <User className="text-muted-foreground size-4 shrink-0" aria-hidden />
+              <span className="truncate font-medium">{tarefa.lead_name}</span>
+            </span>
+            <span className="text-muted-foreground shrink-0 text-xs">Ver contato</span>
+          </Link>
+        ) : null}
 
         <form onSubmit={handleSubmit(submeter)} noValidate className="flex flex-col gap-4">
           <div className="flex flex-col gap-1.5">

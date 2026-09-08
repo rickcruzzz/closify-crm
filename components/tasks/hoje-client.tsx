@@ -343,6 +343,8 @@ export function HojeClient({
                               type: t.type,
                               due_at: t.due_at,
                               assignee_id: t.assignee_id,
+                              lead_id: t.lead_id,
+                              lead_name: t.lead_name,
                             })
                           }
                           onExcluir={excluir}

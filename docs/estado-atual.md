@@ -27,6 +27,48 @@ porque a Evolution dava problema e a API oficial da Meta não foi aprovada. Hoje
 que sobrou é o link `wa.me`. O porquê inteiro está no arquivo.
 
 ---
+## O Calendario era a UNICA tela onde um nome nao levava a lugar nenhum (08/09)
+
+Relato do dono com print: *"em calendario so tem a opcao de editar e nao tem a
+opcao de ver detalhes, da aonde e essa pessoa"*.
+
+**Nao era recurso faltando — era a mesma informacao tratada de dois jeitos em
+duas telas.**
+
+    /hoje         task-item.tsx:157   o nome do contato e um <Link> para /leads/[id]
+    /calendario   task-chip.tsx:58    mostra `task.lead_name` no chip
+                  calendario-client:148  `abrirEvento` copiava 5 campos e
+                                         DESCARTAVA lead_id, lead_name,
+                                         lead_phone e conversa_id
+
+O dado estava inteiro em `TaskRow` o tempo todo. A pessoa lia "Rafael Santos" no
+chip, clicava, e o nome virava texto num campo de formulario — sem caminho ate
+o contato.
+
+O conserto foi no `TaskFormDialog`, que serve as QUATRO telas: `TarefaEmEdicao`
+ganhou `lead_id` e `lead_name` opcionais, e o cabecalho do dialogo renderiza o
+contato com link quando eles existem. Acima do formulario de proposito: a
+primeira pergunta de quem abre uma tarefa que nao criou e "quem e essa pessoa".
+
+### Provado com conta descartavel, e o caminho custou tres erros meus
+
+    chip na grade     "09:00 | Rafael Santos"
+    o dialogo         "Rafael Santos   Ver contato"  ->  /leads/<id>
+    o clique          LEVA a pagina do contato
+    limpeza           conta e empresa apagadas no finally
+
+As credenciais de `TESTE_LOGIN_PRO_*` do `.env.local` **nao valem mais** — a
+migracao para Sao Paulo nao copiou hash de senha, e isso esta registrado desde
+12/08. Sobrou criar conta pela API admin.
+
+E ai vieram os tres: `onboarding_state` nao nasce por trigger (o `PATCH` casou
+zero linhas), o `insert` seguinte tomou `23514` porque mandei `tour_status:
+'done'` e o check da 0030 so aceita `not_started|skipped|completed`, e so entao
+a conta parou de cair em `/bem-vindo`. Nenhum deles aparecia sem exercitar o
+caminho de login de verdade.
+
+---
+
 ## A pesquisa de mercado do CLIENTE saiu, e o custo nao era o dinheiro (08/09)
 
 Pergunta do dono depois de ver o card funcionando: *"isso e pra clientes? vou

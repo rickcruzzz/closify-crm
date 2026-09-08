@@ -152,6 +152,12 @@ export function CalendarioClient({
       type: task.type,
       due_at: task.due_at,
       assignee_id: task.assignee_id,
+      // O chip mostra `lead_name` (`task-chip.tsx:58`), entao a pessoa ja leu o
+      // nome antes de clicar. Sem estes dois campos o dialogo abria sem
+      // caminho ate o contato, e o Calendario era a UNICA tela do produto onde
+      // um nome aparecia e nao levava a lugar nenhum — `/hoje` sempre linkou.
+      lead_id: task.lead_id,
+      lead_name: task.lead_name,
     })
   }
 
