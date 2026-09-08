@@ -8,8 +8,6 @@ import { ArrowLeft, Building2, Calendar, ListTodo, Mail, MessageCircle, Phone, P
 
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { SinaisDeMercado } from '@/components/leads/sinais-de-mercado'
-import type { EstadoDaPesquisa } from '@/lib/inteligencia-de-mercado/queries'
 import { PageHeader } from '@/components/layout/page-header'
 import { LeadStatusBadge } from '@/components/leads/lead-status-badge'
 import { LeadFormDialog } from '@/components/leads/lead-form-dialog'
@@ -66,8 +64,6 @@ export function LeadDetailClient({
   isAdmin,
   remetenteGmail,
   negociosAbertos,
-  pesquisa,
-  ehPro,
 }: {
   lead: LeadRow
   activities: ActivityRow[]
@@ -77,10 +73,6 @@ export function LeadDetailClient({
   isAdmin: boolean
   /** E-mail da conta Gmail conectada, mostrado como remetente no diálogo de envio. `null` se ninguém conectou. */
   remetenteGmail: string | null
-  /** O que a pesquisa de mercado já achou sobre este contato, e em que pé está a fila. */
-  pesquisa: EstadoDaPesquisa
-  /** Pro vigente. Decide se o botão de pesquisar convida ou explica. */
-  ehPro: boolean
   /**
    * Os negócios em andamento deste contato.
    *
@@ -444,18 +436,6 @@ export function LeadDetailClient({
             </CardContent>
           </Card>
 
-          {/* Card IRMÃO do histórico, não filho.
-              
-              Ele nasceu dentro do `CardContent` do histórico e virou caixa
-              dentro de caixa: dois títulos, duas bordas e dois níveis de
-              elevação disputando a mesma região da tela. A hierarquia dizia que
-              o sinal de mercado é parte do histórico, e ele não é — histórico é
-              o que já aconteceu, sinal é insumo para a próxima conversa.
-
-              A ordem continua a mesma regra do resto da página: o que falta
-              fazer (Tarefas), o que ajuda a decidir (Sinais), o que já foi
-              feito (Histórico). */}
-          <SinaisDeMercado leadId={lead.id} estado={pesquisa} ehPro={ehPro} />
 
           <Card>
             <CardHeader className="flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between">

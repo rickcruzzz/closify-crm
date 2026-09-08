@@ -41,16 +41,16 @@ describe('quem pode virar notificação', () => {
     // custar dinheiro ou acesso". Tudo que não custa fica em `media`.
     //
     // Este teste dizia "o único de gravidade média é a boa notícia" e travava
-    // a lista em `['pagamento_confirmado']`. Quebrou na 0073 — corretamente:
-    // `sinal_de_mercado` é oportunidade, não vencimento, e pintá-lo de
-    // vermelho junto com "seu pagamento falhou" dissolveria a distinção.
-    // Reescrito para afirmar a REGRA, e não o tamanho da lista de então.
+    // a lista em `['pagamento_confirmado']`. Quebrou na 0073 e foi reescrito
+    // para afirmar a REGRA em vez do tamanho da lista — e foi essa reescrita
+    // que o fez sobreviver à remoção de `sinal_de_mercado` em 08/09, quando a
+    // lista voltou a ter um item só. Teste que trava lista quebra em toda
+    // mudança; teste que trava regra sobrevive às duas direções.
     const altas = TIPOS_DE_NOTIFICACAO.filter((t) => gravidadeDe(t) === 'alta')
     expect(altas).toEqual(['pagamento_atrasado', 'plano_vencendo', 'trial_terminando'])
 
     const medias = TIPOS_DE_NOTIFICACAO.filter((t) => gravidadeDe(t) === 'media')
     expect(medias).toContain('pagamento_confirmado')
-    expect(medias).toContain('sinal_de_mercado')
   })
 
   it('um tipo fora da lista não passa pelo tipo do TypeScript', () => {

@@ -52,6 +52,34 @@ const RAIZ = resolve(join(dirname(fileURLToPath(import.meta.url)), '..', '..'))
  */
 const REMOVIDOS_COM_REGISTRO = new Map([
   [
+    'lib/inteligencia-de-mercado/actions.ts',
+    'pesquisa de mercado do lado do cliente, removida em 08/09 (0075) — nunca teve uma linha, e carregava suboperador fora do Brasil na politica',
+  ],
+  [
+    'lib/inteligencia-de-mercado/queries.ts',
+    'pesquisa de mercado do lado do cliente, removida em 08/09 (0075) — nunca teve uma linha, e carregava suboperador fora do Brasil na politica',
+  ],
+  [
+    'lib/inteligencia-de-mercado/servico.ts',
+    'pesquisa de mercado do lado do cliente, removida em 08/09 (0075) — nunca teve uma linha, e carregava suboperador fora do Brasil na politica',
+  ],
+  [
+    'lib/inteligencia-de-mercado/exa/cliente.ts',
+    'pesquisa de mercado do lado do cliente, removida em 08/09 (0075) — nunca teve uma linha, e carregava suboperador fora do Brasil na politica',
+  ],
+  [
+    'components/leads/sinais-de-mercado.tsx',
+    'pesquisa de mercado do lado do cliente, removida em 08/09 (0075) — nunca teve uma linha, e carregava suboperador fora do Brasil na politica',
+  ],
+  [
+    'app/api/cron/enriquecer-leads/route.ts',
+    'pesquisa de mercado do lado do cliente, removida em 08/09 (0075) — nunca teve uma linha, e carregava suboperador fora do Brasil na politica',
+  ],
+  [
+    'dominio/orcamento.ts',
+    'pesquisa de mercado do lado do cliente, removida em 08/09 (0075) — nunca teve uma linha, e carregava suboperador fora do Brasil na politica',
+  ],
+  [
     'components/settings/evolution-connect-dialog.tsx',
     'ponte do WhatsApp, removida em 28/08 (c52a718) — ver historico-agosto.md',
   ],

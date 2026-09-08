@@ -109,13 +109,6 @@ valendo inteira.
 
 | capacidade | onde | desde |
 |---|---|---|
-| Fila de enriquecimento + sinais (tabelas, RLS) | `supabase/migrations/0072_*.sql` | 06/09 |
-| O núcleo puro: consulta, sinal, dor, orçamento | `lib/inteligencia-de-mercado/dominio/` | 06/09 |
-| O único ponto que fala HTTP com o Exa | `lib/inteligencia-de-mercado/exa/cliente.ts` | 06/09 |
-| A passagem da fila, a cada 15 min | `app/api/cron/enriquecer-leads/route.ts` | 06/09 |
-| **Pedir pesquisa pela tela** (Server Action, gate Pro) | `lib/inteligencia-de-mercado/actions.ts` | 07/09 |
-| O sinal na página do contato, com link da fonte | `components/leads/sinais-de-mercado.tsx` | 07/09 |
-| `sinal_de_mercado` no sino | `supabase/migrations/0073_*.sql` | 07/09 |
 | Motor de prospecção (5 nichos, praças, pontuação) | `scripts/inteligencia/prospectar.mjs` | 06/09 |
 | Propensão a pagar, separada de alcançabilidade | `lib/inteligencia-de-mercado/dominio/prospeccao.ts` | 07/09 |
 | A primeira mensagem, pronta para o WhatsApp | `lib/inteligencia-de-mercado/dominio/abordagem.ts` | 07/09 |
@@ -134,6 +127,20 @@ valendo inteira.
 | Favicon por empresa, com cache local (CSP intacta) | `app/(dono)/dono/prospeccao/icone/route.ts` | 08/09 |
 | **Ver o que vai sair, agrupado por modelo** | `app/(dono)/dono/mensagens/page.tsx` | 08/09 |
 | Agrupar mensagem pelo que repete (10 modelos) | `lib/dono/mensagens.ts` | 08/09 |
+
+**REMOVIDO em 08/09, e o motivo importa mais que a remoção:** a pesquisa de
+mercado do lado do CLIENTE saiu inteira na `0075` — o card em `/leads`, a
+Server Action, o cron, as duas tabelas da 0072 e o tipo do sino da 0073.
+
+Não foi custo. Em 08/09 as duas tabelas tinham **zero linhas desde que nasceram
+em 06/09**: o recurso existia, o gate de Pro existia, o cron rodava a cada 15
+minutos, e ninguém nunca pediu uma pesquisa. O que pesou foi carregar o Exa
+como **suboperador fora do Brasil** na Política de Privacidade — transferência
+internacional de dado de titular — por um caminho que ninguém percorreu.
+
+A prospecção do dono não usava nada disso e continua inteira. Conferido por
+importação antes de apagar: os quatro arquivos do lado do dono não importam
+nada do lado do cliente, e o `prospectar.mjs` tem o próprio `fetch` ao Exa.
 
 **O que foi construído, medido e RECUSADO — não reconstruir:**
 

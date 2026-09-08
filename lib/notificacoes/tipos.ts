@@ -31,12 +31,10 @@ export const TIPOS_DE_NOTIFICACAO = [
   'pagamento_atrasado',
   'plano_vencendo',
   'trial_terminando',
-  // 0073. Passa no critério por dois lados: não é ação da pessoa (nasce de uma
-  // consulta no cron, sobre um lead cadastrado dias antes) e carrega fato de
-  // fora com link para a fonte — mesma natureza de `pagamento_confirmado`.
-  // E tem freio próprio: só sinal de confiança `alta` é gravado, e a reconsulta
-  // de um lead é limitada a uma a cada 30 dias.
-  'sinal_de_mercado',
+  // `sinal_de_mercado` esteve aqui entre 07 e 08/09, e saiu junto com a
+  // pesquisa de mercado do lado do cliente (0075). Fica registrado para
+  // ninguém recolocar sem o recurso: tipo sem chamador é código morto com
+  // aparência de recurso, a mesma razão que já recusou `whatsapp_caiu`.
 ] as const
 
 export type TipoDeNotificacao = (typeof TIPOS_DE_NOTIFICACAO)[number]
@@ -68,9 +66,9 @@ export function gravidadeDe(tipo: TipoDeNotificacao): Gravidade {
     case 'trial_terminando':
       return 'alta'
     // `media`, e isso é decisão: gravidade aqui é sobre DINHEIRO que se perde
-    // se ninguém agir, e sinal de mercado é oportunidade, não vencimento.
-    // Pintá-lo de vermelho junto com "seu pagamento falhou" dissolveria a
-    // distinção que faz o ponto vermelho significar alguma coisa.
+    // se ninguém agir. Tudo que a pessoa precisa saber mas que não trava nada
+    // fica aqui — pintar de vermelho o que não custa dissolveria a distinção
+    // que faz o ponto vermelho significar alguma coisa.
     default:
       return 'media'
   }

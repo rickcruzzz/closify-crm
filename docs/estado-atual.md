@@ -4,9 +4,10 @@ Documento de continuidade. É lido no começo de toda sessão (referenciado no
 [CLAUDE.md](../CLAUDE.md)) para que uma conversa nova, ou outra conta, comece
 sabendo o que já foi feito, o que foi decidido e onde estão as armadilhas.
 
-**Atualizado em:** 08/09/2026 (a lista de 882 empresas virou fila de trabalho na
-Central, com envio em um clique; e o clique que nao disparava nao dava erro
-nenhum — duas causas empilhadas mais um defeito do proprio teste)
+**Atualizado em:** 08/09/2026 (a lista de 882 virou fila de trabalho na Central,
+com envio em um clique; e a pesquisa de mercado do lado do CLIENTE saiu inteira
+— zero uso em dois dias, e um suboperador fora do Brasil na politica por um
+caminho que ninguem percorreu)
 
 ## O histórico de agosto mora em outro arquivo
 
@@ -26,6 +27,64 @@ porque a Evolution dava problema e a API oficial da Meta não foi aprovada. Hoje
 que sobrou é o link `wa.me`. O porquê inteiro está no arquivo.
 
 ---
+## A pesquisa de mercado do CLIENTE saiu, e o custo nao era o dinheiro (08/09)
+
+Pergunta do dono depois de ver o card funcionando: *"isso e pra clientes? vou
+ter mt gasto desse jeito ou nao?"*. Medido, a conta era ruim de duas formas.
+
+    teto por empresa    R$ 30,00/mes sobre um ticket de R$ 49,00  (61%)
+    caso realista       ~30 pesquisas/mes = R$ 1,50  (3%)
+    hoje                R$ 0,00 — zero cliente Pro externo
+    uso desde 06/09     ZERO linhas em `enriquecimento_de_lead` e
+                        `sinal_de_mercado`
+
+**E o dinheiro nao era o argumento maior.** O card obrigava a declarar o Exa
+como suboperador FORA DO BRASIL na Politica de Privacidade: transferencia
+internacional de dado de titular, com base legal, para um caminho que ninguem
+percorreu uma vez. Obrigacao sem contrapartida.
+
+### O que saiu, e a separacao que permitiu tirar limpo
+
+Conferido por IMPORTACAO antes de apagar, nao por suposicao:
+
+    lado do cliente   consulta.ts, dor.ts, sinais.ts, orcamento.ts, exa/,
+                      adapters/, ports/, servico.ts, actions.ts, queries.ts,
+                      o cron, o card, e as tabelas da 0072/0073
+    lado do dono      prospeccao.ts, abordagem.ts, aprendizado.ts, decisor.ts,
+                      prospectar.mjs, lib/dono/prateleira*.ts
+
+**Nenhum arquivo do lado do dono importa nada do lado do cliente**, e o
+`prospectar.mjs` tem o proprio `fetch` para `api.exa.ai` — nem o cliente do Exa
+era compartilhado. A prospecao continua inteira.
+
+### Antes de tirar, a maquina foi provada — e e por isso que a decisao vale
+
+Rodei o caminho real primeiro, com lead descartavel numa empresa Pro:
+`{"processados":1,"comSinal":1,"custoCentavos":5}`, sinal `[reclamacao/alta]`
+com fonte real. **O recurso funcionava.** A remocao nao e conserto de defeito;
+e decisao sobre um recurso que funciona e ninguem usa — que e uma decisao
+diferente, e mais dificil.
+
+E a mesma prova corrigiu a copy antes: o card prometia "contratacao, expansao,
+mudanca" e o classificador procurava "contratacao, investimento, reclamacao,
+dor". Nenhuma lista continha a outra.
+
+### Provado no banco, nos dois sentidos
+
+    as duas tabelas          HTTP 404 no PostgREST  <- fora
+    tipo antigo no sino      HTTP 400 pelo notificacoes_tipo_check
+    tipo valido              HTTP 201, e a notificacao de controle foi apagada
+
+O conferidor de documentos acusou **8 caminhos citados que deixaram de
+existir** — em `capacidades.md`, `estado-atual.md`, `prd.md` e dois de
+`docs/mercado/`. Cada um entrou em `REMOVIDOS_COM_REGISTRO` com o motivo
+escrito, que e a regra do proprio script: sem o porque, e so o alarme sendo
+calado.
+
+1.205 testes (eram 1.240; sairam 35 com os quatro arquivos de dominio).
+
+---
+
 ## A lista virou fila de trabalho, e o clique que nao disparava nao dava erro (08/09)
 
 Pedido do dono: *"crie mais uma pagina de prospeccao de leads, apareca todas que

@@ -15,10 +15,6 @@
     {
       "path": "/api/cron/vigia",
       "schedule": "0 * * * *"
-    },
-    {
-      "path": "/api/cron/enriquecer-leads",
-      "schedule": "*/15 * * * *"
     }
   ]
 }

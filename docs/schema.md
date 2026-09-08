@@ -12,16 +12,19 @@ regra de `docs/estado-atual.md`).
 catálogo, 31 são da extensão `pg_trgm`), **31 foreign keys**, **15 triggers**,
 **8 enums**.
 
-<!-- contagem: migrations.arquivos=73 migrations.maior=0074 -->
-**73 arquivos de migration, e a maior é `0074`** (remedido em 07/09; o `0049`
+<!-- contagem: migrations.arquivos=74 migrations.maior=0075 -->
+**74 arquivos de migration, e a maior é `0075`** (remedido em 08/09; o `0049`
 não existe, removido em 22/08). Os dois números vêm sempre juntos: a contagem
 sozinha convida a inferir `0071`.
 
-**A 0072 acrescentou DUAS tabelas** que ainda não estão na estrutura acima nem
-no diagrama: `enriquecimento_de_lead` e `sinal_de_mercado`, da inteligência de
-mercado (`lib/inteligencia-de-mercado/`). As duas com RLS ligada, `select` por
-`is_workspace_member` e **zero policy de escrita para `authenticated`** — quem
-grava é o `service_role`, pelo mesmo motivo de `notificacoes` e `error_logs`.
+**A 0072 acrescentou duas tabelas e a 0075 as REMOVEU**, em 08/09:
+`enriquecimento_de_lead` e `sinal_de_mercado` viveram dois dias e nunca
+receberam uma linha. A pesquisa de mercado do lado do cliente saiu inteira — o
+motivo não foi custo, e sim carregar um suboperador fora do Brasil na Política
+de Privacidade por um caminho que ninguém percorreu uma vez. **A contagem de
+tabelas volta ao que era.**
+
+A prospecção do dono não usava nenhuma das duas e continua inteira.
 
 **A 0074 acrescentou `notificacoes.dispensada_em`** e, mais importante,
 **fechou uma promessa que a 0066 escrevia em texto e não impunha**: o comentário
@@ -32,11 +35,15 @@ autenticado alcançava `titulo`, `corpo`, `href`, `tipo`, `user_id` e
 forjável é aviso de cobrança forjável", e o `update` aberto chegava quase lá por
 outra porta. Agora são duas colunas: `lida_em` e `dispensada_em`.
 
-**A 0073 não criou tabela nenhuma.** Ela só acrescentou `sinal_de_mercado` ao
-`check` de `notificacoes.tipo` — e existe como migration própria porque a 0066
-escreveu, em texto, que acrescentar um tipo passa a exigir migration: é o que
-transforma "entrou na lista" em decisão. As policies da 0066 seguem intactas,
-inclusive a ausência de `insert` para `authenticated`.
+**A 0073 acrescentou `sinal_de_mercado` ao `check` de `notificacoes.tipo`, e a
+0075 o tirou de volta.** A ida e a volta existem como migration própria porque a
+0066 escreveu, em texto, que mexer na lista de tipos passa a exigir migration —
+é o que transforma "entrou na lista" em decisão, nas duas direções. As policies
+da 0066 seguem intactas, inclusive a ausência de `insert` para `authenticated`.
+
+Conferido depois de aplicar, nos dois sentidos: `insert` com o tipo antigo toma
+`400` pelo `notificacoes_tipo_check`, e um tipo válido continua passando com
+`201`.
 
 **Quatro migrations entraram depois da última leitura do catálogo** e as colunas
 delas estão no diagrama abaixo, mas a estrutura acima ainda é a de 02/09:
