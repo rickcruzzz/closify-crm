@@ -18,10 +18,15 @@ describe('montarAbordagem', () => {
     // "Se nao fizer sentido, me avisa que…" — comendo exatamente a linha que
     // transforma "nao tenho interesse" em resposta em vez de denuncia de spam.
     // O teste antigo passava porque conferia TAMANHO, nao o que sobrou.
+    //
+    // O TEXTO da linha mudou em 08/09, de "me avisa" para "e so ignorar": o
+    // dono passou a enviar sem responder, e promessa que exige acao do
+    // remetente vira promessa quebrada. A funcao e a mesma, e este teste
+    // continua travando o que importa — que ela seja a ULTIMA coisa.
     for (const vertical of ['dedetizacao', 'comunicacao-visual', 'marcenaria', 'nicho-novo']) {
       for (const motivos of [['tem equipe de vendas'], ['WhatsApp direto']]) {
         const m = montarAbordagem({ ...base, vertical, motivos })
-        expect(m.endsWith('me avisa que não te procuro de novo.')).toBe(true)
+        expect(m.endsWith('é só ignorar: não te procuro de novo.')).toBe(true)
         expect(m).not.toContain('…')
       }
     }
@@ -140,7 +145,7 @@ describe('o nome de quem decide', () => {
     for (const d of [null, undefined]) {
       const m = montarAbordagem({ ...base, decisor: d })
       expect(m.startsWith('Oi! Achei a')).toBe(true)
-      expect(m.endsWith('me avisa que não te procuro de novo.')).toBe(true)
+      expect(m.endsWith('é só ignorar: não te procuro de novo.')).toBe(true)
     }
   })
 
@@ -149,7 +154,7 @@ describe('o nome de quem decide', () => {
       ...base, vertical: 'marcenaria', decisor: 'Ana Beatriz', motivos: ['tem equipe de vendas'],
     })
     expect(m.length).toBeLessThanOrEqual(TETO)
-    expect(m.endsWith('me avisa que não te procuro de novo.')).toBe(true)
+    expect(m.endsWith('é só ignorar: não te procuro de novo.')).toBe(true)
   })
 })
 
@@ -181,5 +186,60 @@ describe('nomeCurto: o nome que a pessoa reconhece', () => {
   it('sem nome, ou nome absurdo, devolve o dominio', () => {
     expect(nomeCurto(null, 'x.com.br')).toBe('x.com.br')
     expect(nomeCurto('a'.repeat(60), 'x.com.br')).toBe('x.com.br')
+  })
+})
+
+describe('o link, e o que a operacao de SO ENVIO exige dele', () => {
+  it('a mensagem diz ONDE fica: sem link nao ha para onde ir', () => {
+    // Ate 08/09 ela dizia "Montei um CRM pra isso" e nunca dizia onde. Quem se
+    // interessasse tinha que PERGUNTAR — e a operacao nao responde.
+    expect(montarAbordagem(base)).toContain('velofunil.com.br')
+  })
+
+  it('o link e MARCADO: sem isso nao ha retorno nenhum', () => {
+    // Enviar sem responder significa que o unico sinal de vida e quem visita o
+    // site. `utm-capture.tsx` grava `utm_source` no workspace de quem se
+    // cadastra, entao a marca faz a origem aparecer sem codigo novo.
+    expect(montarAbordagem(base)).toContain('utm_source=whatsapp')
+  })
+
+  it('a saida NAO exige resposta do remetente', () => {
+    // "me avisa que nao te procuro de novo" e promessa que exige acao de quem
+    // mandou. Numa operacao de so envio ela seria quebrada — e promessa
+    // quebrada e o que transforma desinteresse em denuncia.
+    const m = montarAbordagem(base)
+    expect(m).toContain('é só ignorar')
+    expect(m).not.toContain('me avisa')
+  })
+
+  it('cabe no teto em TODOS os nichos, com e sem a linha de equipe', () => {
+    // Medido em 08/09: com o link, o pior caso (marcenaria com equipe) fica em
+    // 559 de 560. UM caractere de folga — por isso este caso existe.
+    for (const vertical of ['dedetizacao', 'comunicacao-visual', 'marcenaria',
+      'locacao-equipamentos', 'eventos-corporativos', 'nicho-novo']) {
+      for (const motivos of [['tem equipe de vendas'], ['WhatsApp direto']]) {
+        const m = montarAbordagem({ ...base, vertical, motivos })
+        expect(m.length).toBeLessThanOrEqual(TETO)
+        expect(m.endsWith('é só ignorar: não te procuro de novo.')).toBe(true)
+      }
+    }
+  })
+})
+
+describe('titulo de pagina nao e nome de empresa', () => {
+  it('recusa o rotulo de menu e cai para o dominio', () => {
+    // Medido em 08/09: oito dos 589 contatos abriam com "Oi! Achei a Sobre a
+    // Empresa procurando empresas do setor". O site nao pos o nome no <title>.
+    for (const t of ['Home', 'Sobre a Empresa', 'Sobre NÓS', 'Empresa', 'Produtos s', 'Quem Somos'])
+      expect(nomeCurto(t, 'exemplo.com.br')).toBe('exemplo.com.br')
+  })
+
+  it('MANTEM nome real que comeca com palavra generica', () => {
+    // A primeira versao recusava "comeca com palavra generica" e derrubava tres
+    // nomes legitimos. Trocar nome real pelo dominio e PIOR que o defeito
+    // original: o dominio denuncia maquina, o nome nao.
+    expect(nomeCurto('Empresa Comunicação Visual SP', 'x.com.br')).toBe('Empresa Comunicação Visual SP')
+    expect(nomeCurto('Empresa Brasileira De Eventos', 'x.com.br')).toBe('Empresa Brasileira De Eventos')
+    expect(nomeCurto('Contato Digital Marketing', 'x.com.br')).toBe('Contato Digital Marketing')
   })
 })

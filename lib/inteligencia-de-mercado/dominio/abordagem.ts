@@ -20,6 +20,12 @@
  * custa nada e é a diferença entre "não tenho interesse" e uma denúncia de
  * spam — que no WhatsApp é o que derruba o número.
  *
+ * Em 08/09 ela mudou de *"me avisa que não te procuro de novo"* para *"é só
+ * ignorar"*, e o motivo é operacional: o dono decidiu **enviar sem responder**.
+ * A frase antiga era uma promessa que exigia ação dele — e promessa que o
+ * remetente não cumpre é exatamente o que transforma desinteresse em denúncia.
+ * "É só ignorar" tem a mesma função e se cumpre sozinha.
+ *
  * **Nada de número inventado.** Preço e limite saem de `lib/plans.ts`. Prova
  * social não entra: este produto não tem cliente externo, e a decisão travada
  * do projeto é não inventar nenhum.
@@ -33,6 +39,33 @@
 
 /** Acima disto o WhatsApp mostra "Ler mais" e a mensagem morre ali. */
 export const TETO = 560
+
+/**
+ * Para onde a pessoa vai, e por que ele é marcado.
+ *
+ * ## A mensagem não dizia ONDE
+ *
+ * Até 08/09 ela dizia *"Montei um CRM pra isso"*, dava o preço, prometia teste
+ * grátis — e nunca dizia onde ver. Quem se interessasse tinha que **perguntar**,
+ * e cada resposta exigida derruba conversão.
+ *
+ * ## O `utm_source` é o ÚNICO retorno que existe
+ *
+ * A operação é de envio, não de conversa: o dono manda e não responde. Sem a
+ * marca no link, seriam quinhentas mensagens sem saber se uma pessoa sequer
+ * abriu o site. `utm-capture.tsx` já grava `utm_source` no workspace de quem se
+ * cadastra, então quem vier daqui aparece marcado sem código novo.
+ *
+ * ## O domínio raiz, e não a página de preço
+ *
+ * A home tem a barra de números, a tabela de comparação e a FAQ; a página de
+ * preço tem um argumento só. E a prévia do link que o WhatsApp monta a partir
+ * dela diz, em letra grande, *"O WhatsApp guarda a conversa. Não guarda o
+ * cliente."* — que é a frase certa para ser lida dentro do WhatsApp. Medido em
+ * 08/09: 1200x630, 43 KB, muito abaixo do teto de ~600 KB que faz o WhatsApp
+ * desistir de renderizar.
+ */
+const LINK = 'velofunil.com.br/?utm_source=whatsapp'
 
 export type DadosDaAbordagem = {
   /** O domínio, que é como a pessoa reconhece a própria empresa. */
@@ -106,7 +139,46 @@ export function nomeCurto(nome: string | null | undefined, dominio: string): str
   // o corte original nao previa — medido em 08/09 sobre as 882 mensagens.
   const limpo = nome.split(/[|—–\-:•»«›‹]/)[0].replace(/\s+/g, ' ').trim()
   if (limpo.length < 3 || limpo.length > 40) return dominio
+  if (ehTituloDePagina(limpo)) return dominio
   return desgritar(limpo)
+}
+
+/**
+ * Título de página não é nome de empresa.
+ *
+ * Medido em 08/09 sobre os 589 contatos da prospecção: oito abriam com
+ * *"Oi! Achei a Sobre a Empresa procurando empresas do setor"* — `Home`,
+ * `Sobre NÓS`, `Empresa`, `Produtos`. O site não pôs o nome no `<title>`, e o
+ * extrator pegou o rótulo do menu.
+ *
+ * ## A regra é "TODAS as palavras são genéricas", não "começa com uma"
+ *
+ * A primeira versão recusava qualquer nome começando por palavra genérica, e
+ * derrubava três nomes REAIS: `Empresa Comunicação Visual SP`,
+ * `Empresa Brasileira De Eventos` e `Empresa de Eventos em Brasília`. Trocar
+ * um nome legítimo pelo domínio é pior que o defeito original — o domínio
+ * denuncia máquina, o nome não.
+ *
+ * Palavra de uma letra é ignorada: `Produtos s` é `Produtos` com sujeira de
+ * corte, e não um nome que por acaso tem duas palavras.
+ */
+const PALAVRAS_DE_MENU = new Set([
+  'sobre', 'nos', 'home', 'inicio', 'pagina', 'inicial', 'principal', 'contato',
+  'quem', 'somos', 'empresa', 'produtos', 'servicos', 'blog', 'bem', 'vindo',
+  'vinda', 'institucional', 'index',
+])
+
+function ehTituloDePagina(nome: string): boolean {
+  const palavras = nome
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '')
+    .replace(/[^a-z0-9\s]/g, ' ')
+    .split(/\s+/)
+    .filter((p) => p.length > 1 && !['a', 'o', 'as', 'os', 'de', 'da', 'do', 'e', 'em'].includes(p))
+
+  if (palavras.length === 0) return true
+  return palavras.every((p) => PALAVRAS_DE_MENU.has(p))
 }
 
 /**
@@ -181,9 +253,9 @@ export function montarAbordagem(d: DadosDaAbordagem): string {
       gancho,
       `Montei um CRM pra isso: cada orçamento vira um card, com a data do retorno. ` +
         `R$ ${d.precoMensal} pela empresa toda, sem cobrar por usuário.${equipe}`,
-      `Dá pra testar de graça até ${d.limiteGratis} contatos, sem cartão. Sem fidelidade: ` +
-        `cancela pela própria tela e leva seus dados em CSV.`,
-      `Se não fizer sentido, me avisa que não te procuro de novo.`,
+      `Testa de graça até ${d.limiteGratis} contatos, sem cartão: ${LINK}. ` +
+        `Sem fidelidade, e seus dados saem em CSV.`,
+      `Se não fizer sentido, é só ignorar: não te procuro de novo.`,
     ].join('\n\n')
 
   const completa = montar(linhaEquipe)
