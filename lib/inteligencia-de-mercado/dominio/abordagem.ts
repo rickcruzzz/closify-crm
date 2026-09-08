@@ -133,7 +133,7 @@ export function montarAbordagem(d: DadosDaAbordagem): string {
       gancho,
       `Montei um CRM pra isso: cada orçamento vira um card, com a data do retorno. ` +
         `R$ ${d.precoMensal} pela empresa toda, sem cobrar por usuário.${equipe}`,
-      `Dá pra testar de graça até ${d.limiteGratis} contatos, sem cartão. Sem fidelidade — ` +
+      `Dá pra testar de graça até ${d.limiteGratis} contatos, sem cartão. Sem fidelidade: ` +
         `cancela pela própria tela e leva seus dados em CSV.`,
       `Se não fizer sentido, me avisa que não te procuro de novo.`,
     ].join('\n\n')

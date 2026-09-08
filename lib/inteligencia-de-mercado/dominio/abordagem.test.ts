@@ -89,6 +89,14 @@ describe('montarAbordagem', () => {
     expect(m).toMatch(/CSV/)
   })
 
+  it('nao usa travessao: no WhatsApp ele vira caractere estranho em teclado antigo', () => {
+    // Pedido do dono em 07/09, junto com a mesma limpeza no sino e no card de
+    // sinais. O travessao tambem inflava o `wa.me`, onde ele vira `%E2%80%94` —
+    // tres bytes num link que ja carrega a mensagem inteira codificada.
+    const m = montarAbordagem(base)
+    expect(m).not.toMatch(/[—–]/)
+  })
+
   it('NAO inventa prova social', () => {
     // Decisao travada do projeto: este produto nao tem cliente externo.
     const m = montarAbordagem(base)

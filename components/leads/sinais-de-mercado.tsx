@@ -105,8 +105,8 @@ export function SinaisDeMercado({
         {status === null && (
           <p className="text-muted-foreground">
             {ehPro
-              ? 'Procura o que esta empresa publicou na web — contratação, expansão, mudança — com link para a fonte.'
-              : 'No Pro, o sistema procura o que esta empresa publicou na web — contratação, expansão, mudança — e mostra com link para a fonte.'}
+              ? 'Procura o que esta empresa publicou na web: contratação, expansão, mudança. Sempre com link para a fonte.'
+              : 'No Pro, o sistema procura o que esta empresa publicou na web: contratação, expansão, mudança. E mostra com link para a fonte.'}
           </p>
         )}
 
