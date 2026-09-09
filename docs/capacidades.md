@@ -50,6 +50,9 @@ envelhecer em silêncio, que é o defeito de todo documento desse tipo.
 | **Exportar** contatos para CSV | `lib/leads/exportar-csv.ts` | 03/09 |
 | Tarefas agrupadas por dia, no fuso certo | `lib/tasks/buckets.ts` | 12/08 |
 | Notificação dentro do produto | `lib/notificacoes/registrar.ts` | 02/09 |
+| **Orçamento com prazo** no negócio (valor, validade, o que foi proposto) | `lib/deals/orcamento.ts` | 08/09 |
+| A validade vira tarefa de cobrar retorno, 2 dias antes | `registrarOrcamento` em `lib/deals/actions.ts` | 08/09 |
+| **PDF do orçamento** — gerado no servidor, gateado por `pro_vigente()` | `app/api/negocios/[dealId]/orcamento/route.ts` | 08/09 |
 
 ## Dinheiro
 
@@ -183,7 +186,12 @@ desde que o cartão de preço nasceu, e a tela nunca disse.
 importar conversa exportada do WhatsApp (.txt)   proposto em docs/dor-de-mercado.md,
                                                  nenhuma linha escrita
 WhatsApp por API                                 a ponte saiu em 28/08 (c52a718)
-campos e etapas customizaveis                    deal_stage e enum, em 9 arquivos de codigo
+campos e etapas customizaveis                    deal_stage e enum, em 10 arquivos de codigo
+aprovacao online do orcamento pelo cliente       27% do mercado tem; o nosso e um
+                                                 RELOGIO (validade + cobranca), nao um
+                                                 fluxo de aprovacao — ver prd.md
+itens / catalogo de produtos no orcamento        23% do mercado; aqui e texto livre
+assinatura eletronica                            13% do mercado; nada escrito
 snapshot mensal de metricas                      nao ha tabela; por isso a landing
                                                  nao mostra "+18% vs mes anterior"
 fila ou SLA de suporte                           nao existe; por isso "suporte

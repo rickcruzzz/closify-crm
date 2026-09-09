@@ -7,15 +7,20 @@ Migrations novas mudam este arquivo com o tempo; ao suspeitar de
 desatualização, reconsulte o catálogo em vez de confiar cegamente nele (mesma
 regra de `docs/estado-atual.md`).
 
-**Estrutura reconferida em 02/09/2026, noite — e a fonte mudou.** Lida de
+**Estrutura reconferida em 08/09/2026, noite — e a fonte mudou.** Lida de
 `pg_catalog` e não do OpenAPI: **20 tabelas**, **34 RPCs do projeto** (65 no
-catálogo, 31 são da extensão `pg_trgm`), **31 foreign keys**, **15 triggers**,
-**8 enums**.
+catálogo, 31 são da extensão `pg_trgm`), **32 foreign keys**, **15 triggers**,
+**8 enums**, **39 check constraints**.
 
-<!-- contagem: migrations.arquivos=74 migrations.maior=0075 -->
-**74 arquivos de migration, e a maior é `0075`** (remedido em 08/09; o `0049`
+**A 32ª foreign key é a da 0076**, `deals.orcamento_tarefa_id → tasks`, e ela é
+a primeira deste schema a fechar um CICLO — ver a seção própria abaixo. As três
+`check` novas também são dela. **Triggers continuam 15**: a 0077 substitui a
+função `checar_referencia_de_negocio`, não cria trigger nova.
+
+<!-- contagem: migrations.arquivos=76 migrations.maior=0077 -->
+**76 arquivos de migration, e a maior é `0077`** (remedido em 08/09; o `0049`
 não existe, removido em 22/08). Os dois números vêm sempre juntos: a contagem
-sozinha convida a inferir `0071`.
+sozinha convida a inferir `0073`.
 
 **A 0072 acrescentou duas tabelas e a 0075 as REMOVEU**, em 08/09:
 `enriquecimento_de_lead` e `sinal_de_mercado` viveram dois dias e nunca
@@ -45,12 +50,48 @@ Conferido depois de aplicar, nos dois sentidos: `insert` com o tipo antigo toma
 `400` pelo `notificacoes_tipo_check`, e um tipo válido continua passando com
 `201`.
 
-**Quatro migrations entraram depois da última leitura do catálogo** e as colunas
-delas estão no diagrama abaixo, mas a estrutura acima ainda é a de 02/09:
-`workspaces.utm_content` (0069), `subscriptions.ciclo` (0070) e
-`workspaces.gclid` (0071). Nenhuma cria tabela, função ou chave — é o quinto
-caso da mesma classe já registrada aqui: a estrutura fica parada enquanto a
-regra de negócio anda.
+**Três migrations entraram depois da leitura de 02/09** e as colunas delas estão
+no diagrama abaixo: `workspaces.utm_content` (0069), `subscriptions.ciclo`
+(0070) e `workspaces.gclid` (0071). Nenhuma cria tabela, função ou chave — é o
+quinto caso da mesma classe já registrada aqui: a estrutura fica parada enquanto
+a regra de negócio anda. **A 0076 quebrou esse padrão**, e por isso a estrutura
+acima foi remedida.
+
+## A 0076 fechou o primeiro CICLO de foreign key deste schema
+
+`deals` e `tasks` passaram a se referenciar nos **dois sentidos**:
+
+```
+tasks.deal_id              -> deals    on delete CASCADE
+deals.orcamento_tarefa_id  -> tasks    on delete SET NULL
+```
+
+Ciclo de chave estrangeira é legal no Postgres desde que as duas pontas sejam
+`nullable`, e as duas são. Mas ele merece parágrafo próprio porque a pergunta
+que ele levanta — *"apagar um negócio trava?"* — não se responde lendo o
+diagrama. **Foi exercitada contra produção**: o `delete` do negócio que aponta
+para a tarefa que aponta para ele passa, sem travar.
+
+**Os dois `on delete` são opostos de propósito, e a assimetria é a decisão.**
+Apagar o negócio leva as tarefas dele junto (`cascade`), porque tarefa de
+negócio que não existe mais é fila com lixo dentro. Apagar o LEMBRETE não pode
+levar o orçamento: quem apaga a tarefa em `/hoje` está dizendo *"não me cobra
+disso"*, não *"apague meu orçamento"* — então o elo solta (`set null`) e o
+orçamento sobrevive. Provado nos dois sentidos.
+
+**Por que um elo direto, e não achar a tarefa pelo título.** A alternativa era
+procurar a tarefa chamada "Cobrar retorno do orçamento". Isso quebra no instante
+em que alguém a renomeia na tela, e aí registrar o orçamento de novo criaria uma
+SEGUNDA cobrança para o mesmo negócio — a classe de defeito que o
+`reactStrictMode` do Next 14 (que invoca a action duas vezes em desenvolvimento)
+revela em uma tarde e produção revela em silêncio.
+
+**E a 0077 fechou o buraco que a FK não cobre.** Chave estrangeira garante que a
+tarefa EXISTE, não que ela é da mesma empresa: medido antes de aplicar, um
+`update` pondo a tarefa da empresa B no negócio da empresa A era **aceito**.
+É a terceira aparição da mesma classe — a 0038 nasceu para fechá-la em
+`lead_id`, a auditoria de 18/08 a achou de novo em `tasks.assignee_id`. Depois
+da 0077 o mesmo `update` toma `42501`, e o `insert` equivalente também.
 
 As tabelas novas são `vigia_ultimo_aviso` (0062) e `notificacoes` (0066). A
 mudança de fonte está explicada no "Resumo do catálogo", no fim — em resumo, o
@@ -254,6 +295,9 @@ classDiagram
         +deal_stage stage
         +date due_date
         +timestamptz stage_changed_at
+        +date orcamento_validade "nullable, 0076"
+        +text orcamento_descricao "nullable, teto 2000"
+        +uuid orcamento_tarefa_id "FK tasks, nullable, 0076"
         +timestamptz created_at
         +timestamptz updated_at
     }
@@ -458,6 +502,7 @@ classDiagram
     leads "1" --> "0..many" tasks : CASCADE
 
     deals "1" --> "0..many" tasks : CASCADE
+    deals "0..1" --> "0..1" tasks : SET NULL orcamento_tarefa_id
 
     leads "1" --> "0..many" conversas : CASCADE
     conversas "1" --> "many" mensagens : CASCADE

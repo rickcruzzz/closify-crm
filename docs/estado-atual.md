@@ -4,10 +4,10 @@ Documento de continuidade. É lido no começo de toda sessão (referenciado no
 [CLAUDE.md](../CLAUDE.md)) para que uma conversa nova, ou outra conta, comece
 sabendo o que já foi feito, o que foi decidido e onde estão as armadilhas.
 
-**Atualizado em:** 08/09/2026 (a lista de 882 virou fila de trabalho na Central,
-com envio em um clique; e a pesquisa de mercado do lado do CLIENTE saiu inteira
-— zero uso em dois dias, e um suboperador fora do Brasil na politica por um
-caminho que ninguem percorreu)
+**Atualizado em:** 08/09/2026, noite (o objeto que o ICP manipula o dia inteiro
+passou a existir — orcamento com prazo, e a validade vira cobranca; o PDF virou
+a linha do Pro porque ninguem nunca experimentava o Pro; e a senha ia para a
+URL no /login)
 
 ## O histórico de agosto mora em outro arquivo
 
@@ -27,6 +27,189 @@ porque a Evolution dava problema e a API oficial da Meta não foi aprovada. Hoje
 que sobrou é o link `wa.me`. O porquê inteiro está no arquivo.
 
 ---
+## O orcamento passou a existir, e o Pro ganhou uma parede que se atravessa (08/09, noite)
+
+Pedido do dono: *"verifique a fundo o sistema como esta se ja esta vendavel se
+precisa adiciona mais algo no pro"*. A resposta tinha duas metades, e nenhuma
+era "faltava recurso".
+
+### O limite do Free bate com a comunicacao — meu alarme era falso
+
+As migrations definem `limite_free` de formas diferentes ao longo da historia
+(0023: 50, 0037: 25, 0040: **300**, 0052: 50), e isso parecia divergencia.
+Testado ao vivo com empresa Free descartavel, inserindo em lotes:
+
+    lote 1: ok, total 50
+    lote 2 RECUSADO apos 50 leads
+       "Plano Free permite no maximo 50 contatos."
+
+A 0052 substituiu a 0040. **Codigo, banco e landing dizem 50.** Fica registrado
+porque ler quatro migrations e concluir "divergencia" e o erro obvio aqui.
+
+### O achado real: NINGUEM nunca experimenta o Pro
+
+O Pro era *tirar tres limites + Google Calendar e Gmail*. Os dois unicos
+gatilhos de upgrade eram bater em 50 contatos — meses de uso — ou querer as
+integracoes do Google.
+
+**E nenhum dos cinco nichos prospectados usa Google Agenda.** Eles vendem por
+WhatsApp e por orcamento. Na pratica o Pro era so "tirar limite", e tirar limite
+so vende para quem ja usa muito, que e ninguem: 8 workspaces em `plan = 'pro'`,
+todos do dono, nenhum nascido de pagamento.
+
+A 0057 tirou o trial em 29/08, entao conta nova nasce Free sem prazo. Quem
+importa a planilha tem 20 contatos e nunca ve o Pro existir.
+
+### O objeto que o ICP manipula o dia inteiro nao existia
+
+Ate hoje o `docs/prd.md` **nao continha a palavra "orcamento" uma unica vez**, e
+`proposta` existia so como NOME DE ETAPA: `deal_stage` tem `proposta_enviada` e
+nenhuma funcao gerava uma.
+
+Duas medicoes independentes apontam para o mesmo objeto, e nenhuma foi feita
+procurando por ele:
+
+    36 de 61 concorrentes (59%)   anunciam proposta / orcamento
+    a regua dos cinco nichos      criterio principal ORCAMENTO >= 2
+
+E a mensagem de abordagem que sai para eles diz: *"quando voce manda um
+orcamento e o cliente nao responde, quem lembra de cobrar de volta?"*. **O
+produto cobrava por um recurso que nao tinha.**
+
+### O recorte: e um relogio, nao um gerador de documento
+
+Dos 56 dominios que anunciam proposta:
+
+    43%  PDF
+     4%  VALIDADE / vencimento
+     0%  AVISO de que o prazo esta acabando
+
+Os dois ultimos sao o motor que ja existe aqui — tarefa, prazo e `/hoje`. Ao
+salvar uma validade nasce a tarefa de cobrar retorno **dois dias antes**,
+atribuida ao dono do negocio.
+
+**A cobranca nunca nasce atrasada**, e essa e a regra que evita o defeito
+visivel: se `validade - 2 dias` ja passou, ela cai no FIM do dia de hoje em vez
+de anteontem. Tarefa que nasce atrasada ensina a pessoa a ignorar o aviso de
+atraso, que e o unico sinal que o produto tem.
+
+**NAO move a etapa do negocio**, de proposito: empurrar para `proposta_enviada`
+zeraria `stage_changed_at` (0033) para quem ja esta em `negociacao` — e e ele
+que alimenta o filtro "Parados".
+
+### O PDF e a linha do Pro, no SERVIDOR
+
+O orcamento com prazo e do Free e ilimitado: quem nunca sentiu o produto cobrar
+o retorno nao tem razao para pagar. O PDF e a parede, e ela e atravessada na
+primeira semana em vez do contato numero 50.
+
+`pro_vigente()` e checado ANTES de qualquer leitura de dado, em
+`app/api/negocios/[dealId]/orcamento/route.ts`. Gerar no navegador — como faz o
+"Exportar relatorio" do Dashboard, que fotografa a tela — deixaria o portao de
+ser portao, e entregaria imagem onde o cliente do cliente precisa de texto
+selecionavel.
+
+### A FK circular, e o achado que ela escondeu
+
+`deals.orcamento_tarefa_id -> tasks` e a primeira chave deste schema a fechar um
+ciclo (`tasks.deal_id -> deals` ja existia). Os dois `on delete` sao opostos de
+proposito: apagar o negocio leva as tarefas (`cascade`), apagar o LEMBRETE nao
+pode levar o orcamento (`set null`) — quem apaga a tarefa em `/hoje` diz "nao me
+cobra disso", nao "apague meu orcamento".
+
+**E a FK garante que a tarefa EXISTE, nao que ela e da mesma empresa.** Medido
+ANTES de corrigir, com duas empresas descartaveis:
+
+    antes da 0077   tarefa da empresa B no negocio da A   ACEITO
+    depois          tarefa de OUTRA empresa               RECUSADO 42501
+                    tarefa da PROPRIA empresa             ACEITO
+                    update sem tocar na coluna            ACEITO (guarda is-distinct)
+                    INSERT com tarefa de outra empresa    RECUSADO 42501
+
+**E a TERCEIRA aparicao da mesma classe.** A 0038 nasceu para fecha-la em
+`lead_id`; a auditoria de 18/08 a achou de novo em `tasks.assignee_id`. Toda vez
+a causa e igual: coluna de referencia nova nasce, a RLS olha so `workspace_id`
+da LINHA, e ninguem confere para onde a referencia aponta.
+
+A 0077 estende a funcao existente em vez de criar trigger nova — duas travas com
+nomes diferentes recusando o mesmo tipo de erro deixariam a proxima coluna sem
+saber em qual entrar. Catalogo conferido depois: **15 triggers e 32 FKs**, os
+mesmos de antes.
+
+### A senha ia para a URL no /login
+
+`app/(auth)/(entrada)/login/page.tsx` tinha `<form onSubmit={...}>` **sem
+`method`**. Formulario sem metodo faz GET para a propria URL: antes da
+hidratacao — conexao ruim, aparelho lento, chunk demorando — o navegador submete
+nativamente e `{...register('password')}` espalha `name` no input.
+
+    /login?email=vitima%40exemplo.com&password=SenhaSecreta123%21
+
+Corrigido com `method="post"`. **O /cadastro continua a salvo por ACIDENTE**: ele
+usa `Controller`, cujo input nao recebe `name`. Refatorar aquele formulario para
+`register` reabre isto la.
+
+### O gclid deixou de ser gravado-e-nunca-lido
+
+Criado na 0071 em 04/09, capturado, gravado, **zero consumidores**. Agora a
+Central le, e ganhou o alarme `comCliqueDoGoogleSemId`: contas cuja URL diz
+`utm_source=google` e que chegaram SEM `gclid`.
+
+Sem esse numero, "o anuncio nao trouxe pagante" e "trouxe e nao da para provar"
+sao a mesma tela — e o `gclid` e o unico elo entre o clique pago e o pagamento,
+que acontece dias depois no Asaas. Sai de `utmSource` e nao de `utmCampaign`, de
+proposito: a campanha se chama `g_preco` hoje e vai mudar de nome.
+
+### A auditoria da importacao: um defeito medido e NAO corrigido
+
+Exercitado o caminho real com planilhas sujas:
+
+    Google Sheets (virgula, "Silva, Jose" entre aspas)   2/2   ok
+    Excel pt-BR (; e "R$ 1.234,56")                      2/2   ok, virou 1234.56
+    Windows-1252 ("Jose")                                      ok
+    linhas vazias no meio e no fim                             ignoradas
+    cabecalho em INGLES de outro CRM                     6/6   mapeadas sozinhas
+    telefone repetido                                          pego, com aviso
+    sem e-mail e sem telefone                                  recusado
+    1000 linhas em CSV = 104 KB                                teto e 512 KB
+
+**O defeito:** `lerCsv` detecta o separador na PRIMEIRA linha do arquivo.
+Planilha exportada com titulo em cima (`RELATORIO DE CLIENTES`, `Gerado em...`)
+nao tem `;` nessa linha, cai no padrao `,` e **o arquivo inteiro vira uma coluna
+so**. Pular linhas nao salva: o estrago acontece na leitura. E o formato mais
+comum de relatorio exportado.
+
+**Google Sheets nao precisa de integracao** — ele exporta `.xlsx` e `.csv`, e os
+dois ja funcionam. API exigiria OAuth e verificacao do Google, e a decisao ja
+esta travada na tabela deste documento.
+
+**O caminho `.xlsx` binario nao foi exercitado**: o projeto nao tem escritor de
+xlsx, entao fabricar planilha complexa (abas, celulas mescladas, formulas) e
+trabalho proprio. Junto: `.xls` antigo e recusado, e o teto de 512 KB pode
+apertar num xlsx com formatacao.
+
+### Um defeito do meu proprio metodo, que vale mais que o resultado
+
+A primeira medicao da importacao devolveu **"0 linhas validas" em todos os oito
+casos**. Parecia produto quebrado; era o teste. O terceiro argumento de
+`interpretarPlanilha` e `limiteDeLinhas`, nao "pular linhas" — passei 0 e cortei
+tudo. Um resultado uniformemente ruim e suspeito pela propria uniformidade.
+
+### O tamanho do banco, medido porque foi perguntado
+
+    20 tabelas | 4,9 MB no total | banco inteiro 18 MB | teto do Free 500 MB
+
+`activities` lidera com 1,58 MB — 591 linhas com media de 1.153 caracteres, que
+sao as mensagens de abordagem gravadas na timeline. Em `leads` os indices
+(992 KB) sao maiores que os dados (432 KB), e `leads_name_trgm_idx` tem 216 KB
+com **zero usos**. **Isso nao prova que ele e inutil**: com 589 linhas o
+planejador escolhe varredura sequencial quase sempre. Fica anotado como nao
+explicado, nao como indice morto.
+
+1.245 testes.
+
+---
+
 ## A campanha nao veiculava por LANCE, e eu tinha dito que era demanda (08/09)
 
 Auditoria do produto inteiro a pedido do dono. O achado que corrige uma

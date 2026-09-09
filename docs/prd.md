@@ -3,13 +3,14 @@
 > Iniciativa de conversão Free→Pro (copy da landing, limites, checkout) tem
 > PRD próprio: [prd-conversao-pro.md](prd-conversao-pro.md).
 >
-> **Estrutura conferida contra o catálogo em 02/09/2026**, e as contagens de
-> arquivo remedidas em 04/09: **20 tabelas**, **34 RPCs do projeto**,
-> **31 foreign keys**, **15 triggers**, **8 enums**.
+> **Estrutura conferida contra o catálogo em 08/09/2026**: **20 tabelas**,
+> **34 RPCs do projeto**, **32 foreign keys**, **15 triggers**, **8 enums**.
+> A 32ª chave é `deals.orcamento_tarefa_id → tasks` (0076), a primeira deste
+> schema a fechar um ciclo — o porquê está em [schema.md](schema.md).
 >
-> <!-- contagem: migrations.arquivos=74 migrations.maior=0075 -->
-> **74 arquivos de migration, e a maior é `0075`.** Os dois juntos, sempre: o
-> número de arquivos sozinho convida a inferir `0069`, e o `0049` não existe —
+> <!-- contagem: migrations.arquivos=76 migrations.maior=0077 -->
+> **76 arquivos de migration, e a maior é `0077`.** Os dois juntos, sempre: o
+> número de arquivos sozinho convida a inferir `0071`, e o `0049` não existe —
 > foi provado desnecessário e removido em 22/08. `node scripts/ci/contagens.mjs`
 > imprime o invariante que reconcilia os dois.
 >
@@ -150,17 +151,29 @@ dado real; o que não está tem o motivo escrito ao lado.
       promessa "substitui a planilha em um dia" depende. Colunas reconhecidas
       sozinhas por dicionário de sinônimos, prévia com as 3 primeiras linhas
       interpretadas, e cada linha vira contato **e** negócio no funil
-- [ ] Exportar para Excel/CSV — **próximo da fila.** Tira a objeção "vou ficar
-      preso no sistema" na hora da venda
+- [x] Exportar para Excel/CSV — **entregue em 03/09**, na tela de Contatos ao
+      lado de Importar: as duas setas juntas são o argumento. Tira a objeção
+      "vou ficar preso no sistema" na hora da venda.
+      `lib/leads/exportar-csv.ts` (esta linha dizia "próximo da fila" até 08/09,
+      cinco dias depois de a exportação estar no ar)
+- [x] Orçamento com prazo — **entregue em 08/09**, ver a seção própria abaixo
 - [ ] Dashboard de receita — ganho no mês e ticket médio saem do que já existe;
       tempo médio de fechamento não, exige histórico de MUDANÇA de etapa
-<!-- contagem: deal_stage.arquivos_de_codigo=9 -->
+<!-- contagem: deal_stage.arquivos_de_codigo=10 -->
 - [ ] Campos e etapas customizáveis — `deal_stage` é enum do Postgres, citado em
-      9 arquivos de código; virar tabela é projeto próprio. Só com cliente
+      10 arquivos de código; virar tabela é projeto próprio. Só com cliente
       pagante pedindo. (Dizia 22 até 04/09, e `capacidades.md` dizia 19: não
       eram três erros de contagem, eram três definições — com documentos, com o
       `.svg` do diagrama, e só código. A métrica agora carrega a definição no
       nome.)
+
+      **Foi de 9 para 10 em 08/09 sem o acoplamento crescer**, e a distinção
+      importa: o décimo é a **0076**, que cita `deal_stage` em COMENTÁRIO ao
+      explicar que `proposta_enviada` era só o nome de uma etapa e que nenhuma
+      função gerava uma proposta. Nenhum código novo lê ou escreve o enum.
+      Trocar o número e deixar a frase intacta deixaria o texto numericamente
+      certo e semanticamente falso — que é pior do que estar velho, porque
+      parece conferido.
 
 ### Funcionalidades Principais
 
@@ -700,6 +713,82 @@ workspaces, 1 integração conectada): página de histórico/auditoria dedicada
 e rastreabilidade de sincronização/permissão. Mesmo volume que já reprovou
 IA/lead scoring e a Cloud API do WhatsApp neste projeto; a timeline por lead
 já cobre auditoria nesse volume.
+
+### Orçamento com prazo (08/09)
+
+**O objeto que o nosso ICP manipula o dia inteiro não existia no produto.** Até
+08/09 este PRD não continha a palavra "orçamento" uma única vez, e `proposta`
+existia só como NOME DE ETAPA: `deal_stage` tem `proposta_enviada`, e nenhuma
+função gerava uma.
+
+Duas medições independentes apontam para o mesmo objeto, e nenhuma delas foi
+feita procurando por ele:
+
+```
+36 de 61 concorrentes (59%)   anunciam proposta / orcamento
+a regua que escolheu os        criterio principal ORCAMENTO >= 2 — dedetizacao,
+cinco nichos da prospeccao     marcenaria, comunicacao visual, locacao e
+                               eventos entraram porque VENDEM POR ORCAMENTO
+```
+
+E a mensagem de abordagem que sai para esses cinco nichos diz, com estas
+palavras: *"quando você manda um orçamento e o cliente não responde, quem lembra
+de cobrar de volta?"*. **O produto cobrava por um recurso que não tinha.**
+
+#### O recorte: é um relógio, não um gerador de documento
+
+Dentro dos 56 domínios que anunciam proposta, o que cada um entrega:
+
+```
+43%  PDF
+27%  aprovacao online do cliente
+23%  itens / catalogo de produtos
+ 4%  VALIDADE / vencimento
+ 0%  AVISO de que o prazo esta acabando
+```
+
+Os dois últimos são quase inexistentes no mercado **e são exatamente o motor que
+já existe aqui**: tarefa, prazo e a tela `/hoje`. O h1 da landing diz isso desde
+sempre — *"A planilha organiza. Ela não avisa quem está esperando."*
+
+Por isso o recurso é **"o orçamento tem prazo, e o sistema cobra o retorno"**.
+Ao salvar uma validade, nasce a tarefa de cobrar retorno **dois dias antes** de
+vencer, atribuída ao dono do negócio, e ela aparece em `/hoje` sozinha.
+
+**Ressalva de método:** os 56 domínios não são todos ferramentas de proposta —
+há artigo e página institucional na amostra. Os 4% e os 0% são indício forte de
+ausência, não censo.
+
+#### O que fica registrado como decisão
+
+- **Não move a etapa do negócio.** Empurrar para `proposta_enviada` ao registrar
+  o orçamento zeraria `stage_changed_at` (0033) para quem já está em
+  `negociacao` — e é ele que alimenta o filtro "Parados". Um negócio em
+  negociação ativa passaria a parecer recém-proposto.
+- **Orçamento sem preço não é orçamento.** `deals_orcamento_tem_valor` recusa
+  validade com `value = 0`. Sem ela, o PDF sairia para o cliente do cliente
+  dizendo "R$ 0,00", e o erro só apareceria depois de enviado.
+- **A cobrança nunca nasce atrasada.** Se `validade - 2 dias` já passou, ela cai
+  no FIM do dia de hoje em vez de anteontem. Tarefa que nasce atrasada ensina a
+  pessoa a ignorar o aviso de atraso, que é o único sinal que o produto tem.
+
+#### O PDF é a linha do Pro, e foi ela que mudou
+
+Até 08/09 o Pro era **"tirar três limites + Google Calendar e Gmail"**, e o
+problema medido não era faltar recurso: era **ninguém nunca experimentar o Pro**.
+Os dois únicos gatilhos de upgrade eram bater em 50 contatos — meses de uso — ou
+querer as integrações Google, que **nenhum dos cinco nichos prospectados usa**:
+eles vendem por WhatsApp e orçamento.
+
+O orçamento com prazo é **do Free e ilimitado**, de propósito: quem nunca sentiu
+o produto cobrar o retorno de um orçamento não tem razão para pagar por ele. O
+PDF é a parede, e ela é atravessada na primeira semana.
+
+O portão é `pro_vigente()` no SERVIDOR, em
+`app/api/negocios/[dealId]/orcamento/route.ts`, antes de qualquer byte sair.
+Gerar no navegador — como faz o "Exportar relatório" do Dashboard, que fotografa
+a tela — deixaria o portão de ser portão, e ainda entregaria uma imagem onde o
+cliente do cliente precisa de texto selecionável.
 
 ### Importação de planilha
 
