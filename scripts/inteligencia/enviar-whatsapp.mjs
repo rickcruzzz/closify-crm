@@ -188,9 +188,42 @@ async function main() {
 
     // O pareamento é do dono, e acontece uma vez: enquanto o QR estiver na
     // tela, o script espera. Não há como (nem por que) automatizar isso.
+    //
+    // ## A sessão CAI, e o erro cru não dizia isso
+    //
+    // Em 09/09, às 19h, a rodada morreu com `TimeoutError: waitForSelector`
+    // depois de três minutos parada, e o rastro apontava para o código. Era o
+    // pareamento encerrado: a URL tinha virado `?post_logout=1` e o WhatsApp
+    // estava mostrando o QR de novo.
+    //
+    // Separar os dois casos importa porque a ação é diferente. Sessão caída se
+    // resolve lendo o QR e nada mais precisa mudar; um `TimeoutError` genérico
+    // manda procurar defeito onde não há.
     console.log('\n  Aguardando o WhatsApp Web ficar pronto…')
-    console.log('  (se aparecer o QR, leia com o celular — só na primeira vez)')
-    await p.waitForSelector('[data-testid="chat-list"], #pane-side', { timeout: 180_000 })
+    if (p.url().includes('post_logout')) {
+      console.log('  A SESSÃO CAIU — o WhatsApp encerrou o pareamento deste navegador.')
+      console.log('  Leia o QR: Configurações > Dispositivos conectados > Conectar dispositivo.')
+    } else {
+      console.log('  (se aparecer o QR, leia com o celular — só na primeira vez)')
+    }
+
+    const pronto = await p
+      .waitForSelector('[data-testid="chat-list"], #pane-side', { timeout: 180_000 })
+      .then(() => true)
+      .catch(() => false)
+
+    if (!pronto) {
+      // "NENHUMA saiu" dito em voz alta: o medo legítimo de quem vê a rodada
+      // falhar é ter mandado metade. Não mandou — o estado só grava depois do
+      // envio, e é a mesma ordem que o vigia aprendeu em 01/09.
+      return abortar(
+        (p.url().includes('post_logout')
+          ? 'a sessão do WhatsApp caiu e o QR não foi lido em 3 minutos. Rode de novo e ' +
+            'leia o QR: Configurações > Dispositivos conectados > Conectar dispositivo. '
+          : 'o WhatsApp Web não ficou pronto em 3 minutos. Pode ser rede, pode ser QR não lido. ') +
+          'NENHUMA mensagem saiu.',
+      )
+    }
     console.log('  Conectado.\n')
 
     let enviadas = 0
