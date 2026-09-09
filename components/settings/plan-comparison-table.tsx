@@ -7,6 +7,7 @@ import {
   FREE_MEMBER_LIMIT,
   FREE_PLAN_PRICE,
   FREE_WORKSPACE_LIMIT,
+  PRO_WORKSPACE_LIMIT,
   PRO_PLAN_PRICE,
 } from '@/lib/plans'
 
@@ -50,7 +51,7 @@ const PRO_FEATURES = [
   // Os três limites do Free, respondidos um a um. "Várias empresas no mesmo
   // login" não dizia ilimitado, e é — conferido na 0057: o teto de 1 empresa
   // só existe `if not tem_plano_pro`.
-  'Empresas ilimitadas',
+  `Até ${PRO_WORKSPACE_LIMIT} empresas, todas com os recursos Pro`,
   'Colaboradores ilimitados',
   'Contatos ilimitados',
   // Não há linha de suporte, e ela NÃO deve voltar como "prioritário": era

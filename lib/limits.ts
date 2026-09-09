@@ -3,6 +3,7 @@ import {
   FREE_LEAD_LIMIT,
   FREE_MEMBER_LIMIT,
   FREE_WORKSPACE_LIMIT,
+  PRO_WORKSPACE_LIMIT,
 } from '@/lib/plans'
 
 type LimitCheck = { allowed: boolean; reason?: string }
@@ -118,12 +119,19 @@ export async function canAddWorkspace(userId: string): Promise<LimitCheck> {
   )
 
   const temPro = validades.some(({ data }) => data === true)
-  if (temPro) return { allowed: true }
 
-  if (ids.length >= FREE_WORKSPACE_LIMIT) {
+  // O Pro deixou de ser passe livre em 09/09: ele cobre até
+  // `PRO_WORKSPACE_LIMIT` empresas, todas com os recursos Pro. Antes disso
+  // quem pagava criava quantas quisesse e cada nova nascia Free — teto de 50
+  // contatos dentro de um plano já comprado.
+  const teto = temPro ? PRO_WORKSPACE_LIMIT : FREE_WORKSPACE_LIMIT
+
+  if (ids.length >= teto) {
     return {
       allowed: false,
-      reason: `O plano Free inclui ${FREE_WORKSPACE_LIMIT} empresa. Faça upgrade para o Pro para gerenciar várias.`,
+      reason: temPro
+        ? `O plano Pro inclui ${PRO_WORKSPACE_LIMIT} empresas. Fale com a gente para ter mais.`
+        : `O plano Free inclui ${FREE_WORKSPACE_LIMIT} empresa. Faça upgrade para o Pro para gerenciar várias.`,
     }
   }
 

@@ -39,6 +39,26 @@ export const FREE_MEMBER_LIMIT = 2
  * certo para ficar atrás do pagamento.
  */
 export const FREE_WORKSPACE_LIMIT = 1
+
+/**
+ * Empresas que o Pro cobre, todas com os recursos Pro.
+ *
+ * ## O que este número conserta (09/09)
+ *
+ * O plano era do WORKSPACE: quem pagava criava a segunda empresa e ela nascia
+ * Free, com teto de 50 contatos — dentro de um plano já comprado. E a tela
+ * dizia "Empresas ilimitadas" em três lugares.
+ *
+ * Cinco saiu da base, não de gosto. Contados os admins em 09/09: 41 pessoas
+ * com uma empresa, 3 com duas, 1 com três, ninguém com quatro. Cinco cobre com
+ * folga o caso brasileiro comum — o dono da marcenaria que também tem a loja —
+ * e barra a agência com vinte clientes, que levaria vinte CRMs por R$ 49.
+ *
+ * O teto é aplicado na CRIAÇÃO (migration 0078), num lugar só. `pro_vigente()`
+ * não conta empresas de propósito: duas regras contando a mesma coisa acabam
+ * discordando, e é assim que um limite vira decorativo.
+ */
+export const PRO_WORKSPACE_LIMIT = 5
 export const PRO_PLAN_PRICE = 49
 
 /**

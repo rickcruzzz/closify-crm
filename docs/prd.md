@@ -8,8 +8,8 @@
 > A 32ª chave é `deals.orcamento_tarefa_id → tasks` (0076), a primeira deste
 > schema a fechar um ciclo — o porquê está em [schema.md](schema.md).
 >
-> <!-- contagem: migrations.arquivos=76 migrations.maior=0077 -->
-> **76 arquivos de migration, e a maior é `0077`.** Os dois juntos, sempre: o
+> <!-- contagem: migrations.arquivos=77 migrations.maior=0078 -->
+> **77 arquivos de migration, e a maior é `0078`.** Os dois juntos, sempre: o
 > número de arquivos sozinho convida a inferir `0071`, e o `0049` não existe —
 > foi provado desnecessário e removido em 22/08. `node scripts/ci/contagens.mjs`
 > imprime o invariante que reconcilia os dois.

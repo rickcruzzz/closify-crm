@@ -30,7 +30,7 @@
 
 import { montarAbordagem } from '@/lib/inteligencia-de-mercado/dominio/abordagem'
 import { normalizarTelefoneBrasileiro } from '@/lib/leads/whatsapp'
-import { FREE_LEAD_LIMIT, PRO_PLAN_PRICE } from '@/lib/plans'
+import { FREE_LEAD_LIMIT, PRO_PLAN_PRICE, PRO_WORKSPACE_LIMIT } from '@/lib/plans'
 
 /** O piso de pontos do `--topo` do script, repetido aqui como filtro da tela. */
 export const PISO_DOS_MELHORES = 10
@@ -230,6 +230,7 @@ export function mensagemPara(p: Prospect): { texto: string; link: string | null 
     motivos: p.motivos,
     precoMensal: PRO_PLAN_PRICE,
     limiteGratis: FREE_LEAD_LIMIT,
+    limiteDeEmpresas: PRO_WORKSPACE_LIMIT,
   })
 
   const numero = p.whatsapp ?? normalizarTelefoneBrasileiro(p.telefone)

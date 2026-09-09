@@ -24,6 +24,7 @@ import {
   FREE_WORKSPACE_LIMIT,
   PRECOS_CONFERIDOS_EM,
   PRECO_MEDIANA_POR_USUARIO,
+  PRO_WORKSPACE_LIMIT,
   PRO_PLAN_PRICE,
 } from '@/lib/plans'
 
@@ -202,7 +203,7 @@ const plans: Plan[] = [
        * cartao do Free — e o desenho, nao economia de import: as duas colunas
        * passam a rimar linha a linha, e o olho compara sem ler.
        *
-       *     [empresa] 1 empresa           [empresa] Empresas ilimitadas
+       *     [empresa] 1 empresa           [empresa] Ate 5 empresas
        *     [pessoas] Ate 2 colaboradores [pessoas] Colaboradores ilimitados
        *     [contato] Ate 50 contatos     [contato] Contatos ilimitados
        *
@@ -214,7 +215,16 @@ const plans: Plan[] = [
        * tela os icones apareciam em sequencia invertida: o olho tinha que
        * cruzar as colunas para parear. Segue a mesma ordem do Free.
        */
-      { texto: 'Empresas ilimitadas', icone: Building2 },
+      // ## "Ilimitadas" era falso duas vezes, e foi corrigido em 09/09
+      //
+      // O plano e do WORKSPACE: quem pagava criava a segunda empresa e ela
+      // nascia Free, com teto de 50 contatos dentro de um plano ja comprado.
+      // Nem eram ilimitadas, nem eram Pro.
+      //
+      // A 0078 fez o Pro cobrir cinco empresas do mesmo dono, todas com os
+      // recursos Pro — e o texto passou a dizer o numero, que e o que a
+      // pessoa consegue conferir.
+      { texto: `Ate ${PRO_WORKSPACE_LIMIT} empresas, todas com os recursos Pro`, icone: Building2 },
       { texto: 'Colaboradores ilimitados', icone: Users },
       { texto: 'Contatos ilimitados', icone: Contact },
     ],

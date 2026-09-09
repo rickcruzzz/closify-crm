@@ -110,6 +110,8 @@ export type DadosDaAbordagem = {
   /** Preço e limite vêm de `lib/plans.ts`, nunca escritos à mão aqui. */
   precoMensal: number
   limiteGratis: number
+  /** Empresas que o Pro cobre. Sai de `PRO_WORKSPACE_LIMIT`, nunca à mão. */
+  limiteDeEmpresas: number
   /**
    * O primeiro nome de quem decide, quando `dominio/decisor.ts` conseguiu casar
    * o perfil com ESTA empresa. `null` é o caso comum e é seguro.
@@ -223,6 +225,33 @@ const OFERTA = [
     `Construí um sistema pra isso: o orçamento entra com a data do retorno e o lembrete ` +
     `nasce junto. R$ ${preco} pela empresa toda.`,
 ] as const
+
+/**
+ * A linha do multi-empresa, e por que ela é OPCIONAL na mensagem.
+ *
+ * ## O mal-entendido que ela evita
+ *
+ * "R$ 49 pela empresa toda" é ambíguo para quem tem dois negócios — e no
+ * Brasil isso é comum: a marcenaria e a loja de material, a dedetizadora e a
+ * de limpeza. A pessoa lê "pela empresa toda" e não sabe se precisa pagar
+ * duas vezes.
+ *
+ * Dizer o número resolve, e o número agora existe: a migration 0078 fez o Pro
+ * cobrir cinco empresas do mesmo dono, todas com os recursos Pro. Antes disso
+ * a frase seria mentira — a segunda empresa nascia Free.
+ *
+ * ## Por que não entra em todas
+ *
+ * A mensagem tem teto de 560 caracteres e a linha de descarte é intocável.
+ * Quem tem duas empresas é minoria (3 de 45 na base medida em 09/09), então
+ * pagar ~55 caracteres em toda mensagem para falar com poucos sairia caro em
+ * "Ler mais" — que mata a mensagem inteira.
+ *
+ * Entra quando cabe, pelo mesmo mecanismo da linha de equipe: o que sai
+ * quando estoura é o opcional, nunca o fim.
+ */
+const LINHA_MULTI_EMPRESA = (limite: number) =>
+  ` Se você tem mais de um negócio, o mesmo preço cobre até ${limite}.`
 
 /** O convite para testar. As três dizem grátis, sem cartão e sem prisão. */
 const TESTE = [
@@ -406,8 +435,9 @@ export function montarAbordagem(d: DadosDaAbordagem): string {
   const linhaEquipe = temEquipe
     ? ' Vocês sendo mais de um no atendimento, entra todo mundo pelo mesmo preço.'
     : ''
+  const linhaEmpresas = LINHA_MULTI_EMPRESA(d.limiteDeEmpresas)
 
-  const montar = (equipe: string) =>
+  const montar = (equipe: string, empresas: string) =>
     [
       d.decisor ? `Oi, ${d.decisor}! ${saudacao}` : `Oi! ${saudacao}`,
       gancho,
@@ -426,7 +456,7 @@ export function montarAbordagem(d: DadosDaAbordagem): string {
       // O "sem cobrar por usuário" FICA: ali cobrar significa dinheiro, que é
       // o sentido correto da palavra.
       `${oferta}${equipe}`,
-      teste,
+      `${teste}${empresas}`,
       // ## O link em parágrafo PRÓPRIO, e não no meio da frase
       //
       // Visto numa conversa real em 09/09: com o endereço encaixado depois de
@@ -443,7 +473,19 @@ export function montarAbordagem(d: DadosDaAbordagem): string {
       `Se não fizer sentido, pode ignorar. Não volto a procurar.`,
     ].join('\n\n')
 
-  const completa = montar(linhaEquipe)
-  // O que sai quando não cabe é o OPCIONAL. O fim é intocável.
-  return completa.length <= TETO ? completa : montar('')
+  // Duas linhas opcionais agora, e a ordem de sacrifício é deliberada: a de
+  // EMPRESAS sai primeiro porque fala com poucos (3 de 45 na base), e a de
+  // EQUIPE sai depois porque só aparece quando o próprio site disse que existe
+  // equipe — ou seja, ela já é dirigida a quem se encaixa.
+  //
+  // O fim continua intocável. Um defeito real já comeu a linha de descarte por
+  // truncamento, e o teste de tamanho não pegava.
+  for (const tentativa of [
+    montar(linhaEquipe, linhaEmpresas),
+    montar(linhaEquipe, ''),
+    montar('', ''),
+  ]) {
+    if (tentativa.length <= TETO) return tentativa
+  }
+  return montar('', '')
 }

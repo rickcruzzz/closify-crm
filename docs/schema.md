@@ -17,8 +17,8 @@ a primeira deste schema a fechar um CICLO — ver a seção própria abaixo. As 
 `check` novas também são dela. **Triggers continuam 15**: a 0077 substitui a
 função `checar_referencia_de_negocio`, não cria trigger nova.
 
-<!-- contagem: migrations.arquivos=76 migrations.maior=0077 -->
-**76 arquivos de migration, e a maior é `0077`** (remedido em 08/09; o `0049`
+<!-- contagem: migrations.arquivos=77 migrations.maior=0078 -->
+**77 arquivos de migration, e a maior é `0078`** (remedido em 08/09; o `0049`
 não existe, removido em 22/08). Os dois números vêm sempre juntos: a contagem
 sozinha convida a inferir `0073`.
 
@@ -85,6 +85,29 @@ em que alguém a renomeia na tela, e aí registrar o orçamento de novo criaria 
 SEGUNDA cobrança para o mesmo negócio — a classe de defeito que o
 `reactStrictMode` do Next 14 (que invoca a action duas vezes em desenvolvimento)
 revela em uma tarde e produção revela em silêncio.
+
+## A 0078 fez o Pro cobrir cinco empresas do mesmo dono
+
+`pro_vigente()` consultava a assinatura DAQUELA empresa. Como toda empresa
+nova nasce Free (0057), quem pagava criava a segunda e batia num teto de 50
+contatos — dentro de um plano já comprado. E a tela dizia "Empresas
+ilimitadas" em três lugares.
+
+A função ganhou um terceiro caminho: a assinatura viva de **qualquer empresa
+do mesmo `created_by`**. Segue o DONO e não a associação de admin, senão
+aceitar um convite viraria upgrade das empresas de quem aceitou.
+
+O teto de cinco mora na CRIAÇÃO, em `criar_workspace_com_admin`, e não em
+`pro_vigente`: duas regras contando a mesma coisa acabam discordando, e é
+assim que um limite vira decorativo.
+
+E a mesma migration consertou um defeito antigo dessa função de criação: ela
+lia `w.plan = 'pro'`, a COLUNA, quando a regra escrita deste projeto é que
+plano se lê pela função. Um Pro vencido continuava liberando empresa nova.
+
+    antes   empresa do mesmo dono, sem assinatura propria   pro_vigente false
+    depois                                                  pro_vigente TRUE
+    controle  empresa cujo dono nao tem assinatura nenhuma  pro_vigente false
 
 **E a 0077 fechou o buraco que a FK não cobre.** Chave estrangeira garante que a
 tarefa EXISTE, não que ela é da mesma empresa: medido antes de aplicar, um

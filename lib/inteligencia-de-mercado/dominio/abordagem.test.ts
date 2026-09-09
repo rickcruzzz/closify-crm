@@ -9,6 +9,7 @@ const base = {
   motivos: ['WhatsApp direto', 'pede orçamento no site'],
   precoMensal: 49,
   limiteGratis: 50,
+  limiteDeEmpresas: 5,
 }
 
 describe('montarAbordagem', () => {
@@ -332,6 +333,48 @@ describe('a variação que quebra o padrão de texto idêntico', () => {
         motivos: ['tem equipe de vendas', 'pede orçamento no site'],
       })
       expect(m.length).toBeLessThanOrEqual(560)
+      expect(m.endsWith('Não volto a procurar.')).toBe(true)
+    }
+  })
+})
+
+describe('a linha de multi-empresa', () => {
+  // "R$ 49 pela empresa toda" é ambíguo para quem tem dois negócios — e no
+  // Brasil isso é comum: a marcenaria e a loja de material. A pessoa lê e não
+  // sabe se paga duas vezes.
+  //
+  // A frase só ficou honesta com a migration 0078: antes dela a segunda
+  // empresa nascia Free, com teto de 50 contatos.
+
+  it('diz o número, e o número vem de fora', () => {
+    const m = montarAbordagem({ ...base, limiteDeEmpresas: 7 })
+    expect(m).toContain('o mesmo preço cobre até 7')
+  })
+
+  it('sai antes da linha de equipe quando a mensagem estoura', () => {
+    // A ordem de sacrifício é deliberada: empresas fala com poucos (3 de 45
+    // na base), equipe só aparece quando o site disse que ela existe — ou
+    // seja, já é dirigida a quem se encaixa.
+    const m = montarAbordagem({
+      ...base,
+      nome: 'Comunicação Visual e Serralheria do Litoral Norte Paulista',
+      vertical: 'marcenaria',
+      motivos: ['tem equipe de vendas'],
+    })
+    expect(m.length).toBeLessThanOrEqual(TETO)
+    expect(m).toContain('mais de um no atendimento')
+    expect(m).not.toContain('mais de um negócio')
+  })
+
+  it('a linha de descarte continua sendo a última, em toda combinação', () => {
+    for (let i = 0; i < 120; i++) {
+      const m = montarAbordagem({
+        ...base,
+        dominio: `e${i}.com.br`,
+        nome: 'Empresa de Comunicação Visual e Sinalização Viária Ltda',
+        motivos: ['tem equipe de vendas'],
+      })
+      expect(m.length).toBeLessThanOrEqual(TETO)
       expect(m.endsWith('Não volto a procurar.')).toBe(true)
     }
   })

@@ -15,6 +15,7 @@ import {
   FREE_LEAD_LIMIT,
   FREE_MEMBER_LIMIT,
   FREE_WORKSPACE_LIMIT,
+  PRO_WORKSPACE_LIMIT,
   PRO_PLAN_PRICE,
 } from '@/lib/plans'
 
@@ -43,7 +44,7 @@ const GANHOS_DO_PRO = [
   'Tudo do Free',
   'Agenda ligada ao Google Calendar',
   'E-mail pelo Gmail, registrado no cliente',
-  'Empresas ilimitadas',
+  `Até ${PRO_WORKSPACE_LIMIT} empresas, todas com os recursos Pro`,
   'Colaboradores ilimitados',
   'Contatos ilimitados',
   // Não há linha de suporte, e ela NÃO deve voltar como "prioritário": era

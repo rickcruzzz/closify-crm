@@ -19,7 +19,7 @@ import { appUrl } from '@/lib/app-url'
 import { ipDaRequisicao } from '@/lib/request-ip'
 import { registrar } from '@/lib/onboarding/eventos'
 import { passoDoOnboardingSchema } from '@/lib/validations/onboarding'
-import { FREE_WORKSPACE_LIMIT } from '@/lib/plans'
+import { FREE_WORKSPACE_LIMIT, PRO_WORKSPACE_LIMIT } from '@/lib/plans'
 import type { OnboardingEtapa, OnboardingStatus, TourStatus } from '@/types/supabase'
 
 type Sessao = { supabase: Awaited<ReturnType<typeof createClient>>; userId: string }
@@ -191,6 +191,14 @@ export async function finalizarOnboarding(values: unknown) {
     if (error.message.includes('O plano Free inclui')) {
       return {
         error: `O plano Free inclui ${FREE_WORKSPACE_LIMIT} empresa. Faça upgrade para o Pro para gerenciar várias.`,
+      }
+    }
+    // A 0078 acrescentou o teto do Pro. Sem esta segunda allowlist a mensagem
+    // viraria "erro inesperado" — que é o que a pessoa NÃO pode ver depois de
+    // ter pago.
+    if (error.message.includes('O plano Pro inclui')) {
+      return {
+        error: `O plano Pro inclui ${PRO_WORKSPACE_LIMIT} empresas. Fale com a gente para ter mais.`,
       }
     }
     return { error: 'Não foi possível concluir a configuração. Tente novamente.' }
