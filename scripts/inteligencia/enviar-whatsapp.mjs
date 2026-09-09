@@ -194,6 +194,7 @@ async function main() {
     console.log('  Conectado.\n')
 
     let enviadas = 0
+    let semPrevia = 0
     for (const [i, alvo] of fila.entries()) {
       const rotulo = `[${i + 1}/${fila.length}] ${alvo.nome} (+${alvo.numero})`
 
@@ -232,6 +233,34 @@ async function main() {
         break
       }
 
+      // ## Esperar o CARTÃO antes de apertar Enter
+      //
+      // A primeira mensagem real saiu sem a prévia do link — só o endereço
+      // sublinhado. A causa não é o site: `og:image` responde 200 com PNG de
+      // 1200x630, e o cartão é montado pelo aparelho de QUEM ENVIA, enquanto o
+      // texto está no campo. Com o `?text=` o texto chega inteiro de uma vez e
+      // o Enter no instante seguinte manda a mensagem ANTES de a busca
+      // terminar. Ou seja: o robô fazia exatamente o erro que eu tinha
+      // avisado o dono para não cometer à mão.
+      //
+      // O sinal é o título do og aparecendo na tela. "o CRM que lembra" não
+      // existe no texto da mensagem — se está visível, é o cartão, e não o que
+      // foi digitado. Depender de `data-testid` do WhatsApp seria pior: eles
+      // mudam sem aviso e a falha voltaria a ser silenciosa.
+      const cartao = p.locator('text=/o CRM que lembra/i')
+      const veioCartao = await cartao
+        .first()
+        .waitFor({ state: 'visible', timeout: 25_000 })
+        .then(() => true)
+        .catch(() => false)
+
+      if (!veioCartao) {
+        // Sem prévia a mensagem continua válida, e reenviar depois seria pior
+        // que a falta do cartão. Fica CONTADO para a rodada poder ser julgada
+        // no fim, em vez de parecer que deu tudo certo.
+        semPrevia += 1
+      }
+
       await caixa.last().click()
       await p.keyboard.press('Enter')
 
@@ -244,7 +273,7 @@ async function main() {
 
       await marcarEnviado(alvo.dominio)
       enviadas += 1
-      console.log(`  ${rotulo}  ->  enviada`)
+      console.log(`  ${rotulo}  ->  enviada${veioCartao ? ' (com cartão)' : ' SEM CARTÃO'}`)
 
       if (i < fila.length - 1) {
         const espera = sortear(INTERVALO_MIN, INTERVALO_MAX)
