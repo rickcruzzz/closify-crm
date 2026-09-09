@@ -36,9 +36,9 @@ const features: Feature[] = [
     //
     // E o angulo que nenhum CRM ocupa: medido no Exa, 58% do que o ICP acha
     // quando procura software e categoria ORCAMENTO, contra 28% de CRM.
-    title: 'O orçamento tem prazo, e o sistema cobra',
+    title: 'O orçamento tem prazo, e o sistema avisa',
     description:
-      'Registre valor, validade e o que foi proposto. Dois dias antes de vencer, a cobrança do retorno aparece na sua lista do dia — sem você anotar nada.',
+      'Registre valor, validade e o que foi proposto. Dois dias antes de vencer, o lembrete do retorno aparece na sua lista do dia — sem você anotar nada.',
     icon: FileClock,
     delay: 0,
   },

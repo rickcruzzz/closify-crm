@@ -62,8 +62,28 @@ import { MobileStickyCta } from '@/components/landing/mobile-sticky-cta'
 // **E isto só ficou honesto em 08/09**, quando o orçamento passou a existir no
 // produto. Antes seria promessa falsa — que é o defeito que esta mudança
 // existe para consertar, não para repetir.
+//
+// ## O verbo mudou de "cobrar" para "lembrar" em 09/09, e foi medido
+//
+// O título dizia "o CRM que COBRA o retorno". Buscado no Exa o que responde
+// para *"como cobrar retorno de orçamento"*, os 8 primeiros resultados eram
+// **inadimplência** — cobrar quem não pagou, com modelo de mensagem e
+// advogado. No português do cliente, cobrar é receber dívida.
+//
+// A mensagem de prospecção foi corrigida primeiro, e isso abriu uma
+// contradição pior que a original: a `og:description` é o que aparece DENTRO
+// da conversa do WhatsApp, antes do clique. O prospect lia "dar o retorno" na
+// mensagem e "cobrar" no cartão logo abaixo, na mesma tela.
+//
+// "Lembrar" é o verbo que sobra: "follow-up" é o do mercado (10 de 10 títulos
+// do tema) e é jargão de vendedor, e nenhum dos 25 geradores de orçamento
+// lidos usa "lembrar" — então também não compete com ninguém.
+//
+// **"CRM" fica no título**, e a distinção é de canal: aqui quem chega veio da
+// busca, e parte procurou a categoria. Na mensagem fria, que chega sem
+// contexto, a palavra virou "sistema".
 export const metadata: Metadata = {
-  title: 'Velo Funil: o CRM que cobra o retorno do orçamento',
+  title: 'Velo Funil: o CRM que lembra de dar o retorno do orçamento',
   // ## O limite de ~160 caracteres é o que decide o que sobra
   //
   // A versão anterior tinha 213 e o Google corta em ~160 — o que ficava de
@@ -77,7 +97,7 @@ export const metadata: Metadata = {
   // O `openGraph` abaixo mantém a versão longa de propósito: WhatsApp e
   // LinkedIn mostram bem mais que 160, e ali cortar seria perder à toa.
   description:
-    'Cada orçamento vira um card com a data do retorno, e o sistema lembra de cobrar. R$ 49/mês pela empresa inteira, não por vendedor. Grátis até 50 contatos.',
+    'Cada orçamento vira um card com a data do retorno, e o sistema avisa dois dias antes de o prazo vencer. R$ 49/mês pela empresa inteira. Grátis até 50 contatos.',
   alternates: { canonical: '/' },
   // Sem repetir aqui, o preview de link herdaria o openGraph genérico do
   // layout raiz em vez do texto de conversão da landing.
@@ -91,9 +111,9 @@ export const metadata: Metadata = {
   // Até 09/09 a prévia respondia com "traga sua planilha e cada cliente vira um
   // contato" — perto, e não é a mesma frase. Agora é o eco literal.
   openGraph: {
-    title: 'Velo Funil: o CRM que cobra o retorno do orçamento',
+    title: 'Velo Funil: o CRM que lembra de dar o retorno do orçamento',
     description:
-      'Cada orçamento vira um card com a data do retorno, e o sistema lembra você de cobrar antes de o cliente esquecer. Grátis até 50 contatos, sem cartão. Pro por R$ 49 por mês pela empresa inteira, não por vendedor.',
+      'Cada orçamento vira um card com a data do retorno, e o sistema lembra você de dar o retorno antes de o prazo vencer. Grátis até 50 contatos, sem cartão. Pro por R$ 49 por mês pela empresa inteira, não por vendedor.',
     // Next.js não mescla `openGraph` entre layout e página, definir aqui
     // sobrescreve o do layout raiz por inteiro, e sem `siteName` a home
     // ficava sem `og:site_name`. É provavelmente o que o verificador de

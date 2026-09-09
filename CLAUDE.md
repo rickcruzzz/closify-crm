@@ -234,8 +234,8 @@ uma rodada antiga —, e nada na resposta de uma consulta avisava disso. Só
 instalado na pasta pessoal do usuário, fora daqui. O que foi retirado está
 inteiro em `graphify-out/arquivo/`, nada foi descartado.
 
-<!-- contagem: grafo.nos_sem_arquivo=107 -->
-**107 nós não têm arquivo de origem, e nenhum deles é fantasma.** A grande
+<!-- contagem: grafo.nos_sem_arquivo=108 -->
+**108 nós não têm arquivo de origem, e nenhum deles é fantasma.** A grande
 maioria são objetos do banco que o extrator representa sem arquivo —
 `public.workspaces`, `auth.users`, `public.checar_teto_de_mensagens` —, mais
 alguns símbolos importados pelos geradores em Python (`FreeTypeFont`, `Image`,
@@ -247,6 +247,13 @@ Eram 103 até 06/09 e 105 depois das duas tabelas da 0072
 banco é exatamente o que o parágrafo acima descreve, e por isso, ao contrário do
 caso 8→103, trocar só o número é a correção certa aqui: a explicação continua
 descrevendo o que os nós são.
+
+**108 desde 09/09, e este é o caso MAIS simples da lista.** O nó novo é
+`scripts_marketing_gerar_feed_py_image` — o `Image` do Pillow, que passou a ser
+usado diretamente quando `icone_de_confirmacao` nasceu. É exatamente a segunda
+metade do parágrafo acima ("símbolos importados pelos geradores em Python"), e
+por isso aqui trocar só o número é a correção certa: nenhuma tabela nasceu, a
+contagem continua **20**, e a explicação já descreve o que ele é.
 
 **107 desde 08/09, e este caso é diferente dos anteriores.** O nó novo é
 `public.deals`, que **já existia** — nenhuma tabela foi criada. A 0076 faz

@@ -162,7 +162,7 @@ export function HeroSection() {
               honesta em 08/09: até então o orçamento não existia no produto. */}
           <p className="text-muted-foreground animate-entrada fade-in slide-in-from-bottom-3 fill-mode-both ease-entrada duration-entrada delay-passo-3 max-w-xl text-lg text-balance">
             Cada orçamento vira um card com a data do retorno. Quando o prazo
-            está acabando, o sistema lembra você de cobrar.
+            está acabando, o sistema lembra você de dar o retorno.
           </p>
           {/* `items-stretch` é o padrão do flex, e é por ser padrão que
               ninguém percebe quando some. É ele que dá aos dois botões a mesma
