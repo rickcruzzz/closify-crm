@@ -157,7 +157,27 @@ export default function LoginPage() {
           </AuthAlerta>
         )}
 
-        <form onSubmit={handleSubmit(onSubmit)} noValidate className="flex flex-col gap-4">
+        {/* `method="post"` NÃO é decoração, e a ausência dele vazava a senha.
+            Formulário sem `method` faz GET para a própria URL. Antes da
+            hidratação — conexão ruim, aparelho lento, chunk demorando — o
+            React ainda não instalou o `onSubmit`, o navegador submete
+            nativamente, e `{...register('password')}` espalha `name` no input:
+
+                /login?email=vitima%40exemplo.com&password=SenhaSecreta123%21
+
+            A senha fica no histórico do navegador, no `Referer` da navegação
+            seguinte e em qualquer log de proxy. Reproduzido em 08/09/2026
+            bloqueando o JavaScript.
+
+            O /cadastro está a salvo por ACIDENTE: ele usa `Controller`, cujo
+            input não recebe `name`, então não há o que serializar. Refatorar
+            aquele formulário para `register` reabre isto lá. */}
+        <form
+          method="post"
+          onSubmit={handleSubmit(onSubmit)}
+          noValidate
+          className="flex flex-col gap-4"
+        >
           <div className={`${passo4} flex flex-col gap-4`}>
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="email">E-mail</Label>
