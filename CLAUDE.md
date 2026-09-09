@@ -234,8 +234,8 @@ uma rodada antiga —, e nada na resposta de uma consulta avisava disso. Só
 instalado na pasta pessoal do usuário, fora daqui. O que foi retirado está
 inteiro em `graphify-out/arquivo/`, nada foi descartado.
 
-<!-- contagem: grafo.nos_sem_arquivo=106 -->
-**106 nós não têm arquivo de origem, e nenhum deles é fantasma.** A grande
+<!-- contagem: grafo.nos_sem_arquivo=107 -->
+**107 nós não têm arquivo de origem, e nenhum deles é fantasma.** A grande
 maioria são objetos do banco que o extrator representa sem arquivo —
 `public.workspaces`, `auth.users`, `public.checar_teto_de_mensagens` —, mais
 alguns símbolos importados pelos geradores em Python (`FreeTypeFont`, `Image`,
@@ -247,6 +247,14 @@ Eram 103 até 06/09 e 105 depois das duas tabelas da 0072
 banco é exatamente o que o parágrafo acima descreve, e por isso, ao contrário do
 caso 8→103, trocar só o número é a correção certa aqui: a explicação continua
 descrevendo o que os nós são.
+
+**107 desde 08/09, e este caso é diferente dos anteriores.** O nó novo é
+`public.deals`, que **já existia** — nenhuma tabela foi criada. A 0076 faz
+`alter table public.deals`, e uma referência de `alter` não carrega o arquivo
+que definiu a tabela do jeito que um `create` carrega, então ela passou a ser
+representada sem arquivo. Fica escrito porque a leitura errada é fácil e cara:
+ver o número subir logo depois de uma migration convida a concluir que uma
+tabela nasceu, e a contagem de tabelas continua **20**.
 
 O número se move a cada migration que cria objeto, e é por isso que ele fica
 EXATO no carimbo em vez de virar piso — quando ele anda, o schema e o PRD devem
