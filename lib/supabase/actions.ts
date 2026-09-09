@@ -218,6 +218,63 @@ export async function signUp(values: unknown) {
   redirect('/onboarding')
 }
 
+/**
+ * Conclui a confirmação de e-mail — no SERVIDOR, e é aí que está o conserto.
+ *
+ * ## O cadastro estava quebrado em produção, e ninguém sabia
+ *
+ * Andando o caminho como estranho em 09/09: cadastro aceito, e-mail entregue
+ * pelo Resend, tela de confirmação abrindo. E o clique devolvia
+ *
+ *     POST /auth/v1/verify  ->  403
+ *     {"error_code":"otp_expired","msg":"Email link is invalid or has expired"}
+ *
+ * com o link recém-criado, nunca usado. **Ninguém conseguia criar conta.**
+ *
+ * ## A causa: os dois lados falavam fluxos diferentes
+ *
+ * `signUp` roda AQUI, numa Server Action, com o cliente de servidor. O
+ * `@supabase/ssr` usa PKCE por padrão, então o `code_verifier` foi gravado num
+ * cookie `httpOnly` — que o navegador não lê por definição. O token do e-mail
+ * sai com o prefixo `pkce_`.
+ *
+ * A página `/confirmar` chamava `verifyOtp` no CLIENTE. Ela procurava o
+ * verifier no `localStorage`, não achava, e o Supabase recusava. A mensagem
+ * "expirado" é enganosa e custou duas rodadas de investigação: o link estava
+ * novo, o problema era o lado que verificava.
+ *
+ * ## Por que a solução é mover a verificação, e não trocar o fluxo
+ *
+ * Trocar o cliente para `flowType: 'implicit'` também resolveria, e quebraria
+ * a entrada pelo Google: `app/auth/callback/route.ts` faz
+ * `exchangeCodeForSession`, que é PKCE. Um conserto que quebra o outro caminho
+ * de entrada não é conserto.
+ *
+ * Aqui o verifier está ao alcance, porque é o mesmo lado que o gravou.
+ *
+ * ## E o clique continua sendo obrigatório
+ *
+ * Esta função é chamada pelo botão, nunca por um GET. É a decisão que existe
+ * desde que `{{ .ConfirmationURL }}` saiu: scanner de link de provedor de
+ * e-mail faz prefetch e consumiria o token de uso único antes da pessoa
+ * clicar — o defeito que dava "link expirado" de verdade.
+ */
+export async function confirmarCadastro(tokenHash: string) {
+  if (!tokenHash || typeof tokenHash !== 'string') {
+    return { error: 'Link inválido.' }
+  }
+
+  const supabase = await createClient()
+  const { error } = await supabase.auth.verifyOtp({ type: 'signup', token_hash: tokenHash })
+
+  if (error) {
+    console.error('confirmarCadastro falhou', error.message)
+    return { error: 'Não foi possível confirmar. O link pode ter expirado.' }
+  }
+
+  return { ok: true as const }
+}
+
 export async function requestPasswordReset(values: unknown) {
   const parsed = forgotPasswordSchema.safeParse(values)
   if (!parsed.success) {

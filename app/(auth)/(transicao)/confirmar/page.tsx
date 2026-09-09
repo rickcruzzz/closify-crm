@@ -12,7 +12,7 @@ import { AuthCabecalho } from '@/components/auth/auth-cabecalho'
 import { AuthCarregando } from '@/components/auth/auth-carregando'
 import { passo4 } from '@/components/auth/animacao'
 import { createClient } from '@/lib/supabase/client'
-import { destinoDoConvite } from '@/lib/supabase/actions'
+import { confirmarCadastro, destinoDoConvite } from '@/lib/supabase/actions'
 
 type Estado = 'aguardando' | 'confirmando' | 'confirmado' | 'erro'
 
@@ -128,10 +128,13 @@ function ConfirmarPageInner() {
     if (!tokenHash) return
     setEstado('confirmando')
 
-    const supabase = createClient()
-    const { error } = await supabase.auth.verifyOtp({ type: 'signup', token_hash: tokenHash })
+    // No SERVIDOR, e não aqui: `signUp` roda numa Server Action, o
+    // `@supabase/ssr` usa PKCE, e o `code_verifier` fica num cookie `httpOnly`
+    // que este lado não lê. Verificando daqui, o Supabase devolvia 403
+    // `otp_expired` com o link recém-criado — e ninguém conseguia criar conta.
+    const retorno = await confirmarCadastro(tokenHash)
 
-    if (error) {
+    if ('error' in retorno) {
       setEstado('erro')
       return
     }
