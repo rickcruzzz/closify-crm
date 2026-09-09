@@ -32,6 +32,8 @@ function empresa(sobrescrever: Partial<EmpresaComEstado> = {}): EmpresaComEstado
     utmCampaign: null,
     utmContent: null,
     veioDeCliqueDeAnuncio: false,
+    utmSource: null,
+    veioDeCliqueDoGoogle: false,
     ...sobrescrever,
   }
 }

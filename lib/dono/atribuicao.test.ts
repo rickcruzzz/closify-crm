@@ -15,6 +15,8 @@ function empresa(sobrescrever: Partial<EmpresaAtribuivel> = {}): EmpresaAtribuiv
     utmCampaign: null,
     utmContent: null,
     veioDeCliqueDeAnuncio: false,
+    utmSource: null,
+    veioDeCliqueDoGoogle: false,
     ativou: false,
     pagando: false,
     criadoEm: '2026-08-20T00:00:00Z',
@@ -458,5 +460,58 @@ describe('resumirAtribuicao', () => {
     expect(r.mesesParaSePagar).toBeNull()
     expect(r.ativaram).toBe(0)
     expect(r.semPecaIdentificada).toBe(0)
+  })
+})
+
+describe('comCliqueDoGoogleSemId', () => {
+  // O alarme de atribuicao cega do lado do Google. O `gclid` e o UNICO elo
+  // entre o clique pago e o pagamento, que acontece dias depois no Asaas — sem
+  // ele a venda nunca volta ao Google como conversao, e o anuncio parece nao
+  // ter vendido.
+
+  it('conta quem diz ter vindo do Google e chegou sem gclid', () => {
+    const resumo = resumirAtribuicao(
+      [],
+      [
+        empresa({ id: 'a', utmSource: 'google', veioDeCliqueDoGoogle: false }),
+        empresa({ id: 'b', utmSource: 'google', veioDeCliqueDoGoogle: false }),
+      ],
+      MENSALIDADE,
+    )
+    expect(resumo.comCliqueDoGoogleSemId).toBe(2)
+  })
+
+  it('NAO conta quem trouxe o gclid: esse caminho esta sao', () => {
+    const resumo = resumirAtribuicao(
+      [],
+      [empresa({ utmSource: 'google', veioDeCliqueDoGoogle: true })],
+      MENSALIDADE,
+    )
+    expect(resumo.comCliqueDoGoogleSemId).toBe(0)
+  })
+
+  it('NAO conta conta ORGANICA — e este e o controle que separa os dois', () => {
+    // Toda conta organica tem `gclid` nulo. Sem este controle, o alarme
+    // acusaria um defeito de URL em quem nunca passou por anuncio nenhum —
+    // exatamente o erro que `semPecaIdentificada` evita ao sair do
+    // `desempenho` em vez de `empresas`.
+    const resumo = resumirAtribuicao(
+      [],
+      [
+        empresa({ id: 'a', utmSource: null, veioDeCliqueDoGoogle: false }),
+        empresa({ id: 'b', utmSource: 'instagram', veioDeCliqueDoGoogle: false }),
+      ],
+      MENSALIDADE,
+    )
+    expect(resumo.comCliqueDoGoogleSemId).toBe(0)
+  })
+
+  it('nao escapa por caixa alta: utm_source e digitado a mao na URL do anuncio', () => {
+    const resumo = resumirAtribuicao(
+      [],
+      [empresa({ utmSource: 'Google', veioDeCliqueDoGoogle: false })],
+      MENSALIDADE,
+    )
+    expect(resumo.comCliqueDoGoogleSemId).toBe(1)
   })
 })

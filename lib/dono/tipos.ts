@@ -60,6 +60,15 @@ export type EmpresaNaCentral = {
   utmContent: string | null
   /** Se chegou por um clique de anúncio do Meta (o `fbclid` da URL). */
   veioDeCliqueDeAnuncio: boolean
+  /** De onde a URL diz que a pessoa veio (`utm_source`). Ver `atribuicao.ts`. */
+  utmSource: string | null
+  /**
+   * Veio de um clique de anúncio do Google (o `gclid` da URL, migration 0071).
+   *
+   * Primeiro consumidor da coluna: até 08/09 ela era capturada, gravada e lida
+   * por ninguém — a mesma família do `utm_content` de 04/09.
+   */
+  veioDeCliqueDoGoogle: boolean
 }
 
 /** As famílias de problema que a Central sabe reconhecer. */

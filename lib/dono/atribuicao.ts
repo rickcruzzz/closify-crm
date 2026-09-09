@@ -41,6 +41,24 @@ export type EmpresaAtribuivel = {
   /** Se veio de um clique de anúncio do Meta (o `fbclid` da URL). */
   veioDeCliqueDeAnuncio: boolean
   /**
+   * De onde a URL DIZ que a pessoa veio (`utm_source`).
+   *
+   * É o que a nossa própria URL de anúncio escreve, então ele existe mesmo
+   * quando o identificador de clique se perde no caminho — e é essa diferença
+   * que `comCliqueDoGoogleSemId` mede.
+   */
+  utmSource: string | null
+  /**
+   * Se veio de um clique de anúncio do Google (o `gclid` da URL).
+   *
+   * O par do `veioDeCliqueDeAnuncio` para o outro canal. Existe desde a 0071
+   * (04/09) e **ninguém lia**: capturado em `utm-capture.tsx`, gravado em
+   * `lib/onboarding/actions.ts`, zero consumidores — a mesma família do
+   * `utm_content`, que foi criado, capturado, gravado, e colapsava os seis
+   * criativos num número só porque nenhuma tela o lia.
+   */
+  veioDeCliqueDoGoogle: boolean
+  /**
    * Cadastrou o primeiro contato, ou seja, chegou a USAR o produto.
    *
    * É o mesmo degrau que `montarFunilDeAtivacao` chama de `primeiro_contato` e
@@ -376,6 +394,25 @@ export type ResumoDaAtribuicao = {
    * subindo significa que o teste de argumento não vai concluir nada.
    */
   semPecaIdentificada: number
+  /**
+   * Contas cuja URL diz `utm_source=google` e que chegaram SEM `gclid`.
+   *
+   * O alarme de atribuição cega do lado do Google, irmão de
+   * `comCampanhaNaoReconhecida` — e ele mede uma perda que só aparece meses
+   * depois, quando já não dá para consertar.
+   *
+   * O `gclid` é o único elo entre o clique que foi pago e o pagamento que
+   * acontece dias depois no Asaas: a importação de conversão offline do Google
+   * exige exatamente ele. Uma conta que veio do anúncio e perdeu o `gclid`
+   * (bloqueador, redirect que come a query, navegação em duas etapas) entra
+   * como se fosse orgânica, e **essa venda nunca poderá ser reconciliada com o
+   * clique que a comprou**.
+   *
+   * Sem este número, "o anúncio não trouxe pagante" e "trouxe e não dá para
+   * provar" são a mesma tela — que é o erro que este projeto já pagou duas
+   * vezes, com o `utm_content` em 04/09 e com o nome da campanha da Meta.
+   */
+  comCliqueDoGoogleSemId: number
 }
 
 export function resumirAtribuicao(
@@ -416,5 +453,16 @@ export function resumirAtribuicao(
         total + c.pecas.filter((p) => !p.identificada).reduce((n, p) => n + p.cadastros, 0),
       0,
     ),
+    // Sai de `utmSource` e NÃO de `utmCampaign`: a campanha do Google se chama
+    // `g_preco` hoje e vai mudar de nome; `utm_source=google` é escrito pela
+    // nossa própria URL de anúncio e não depende de como a campanha é chamada
+    // no painel — que é exatamente o defeito que casar por igualdade de nome
+    // de campanha já causou na Meta em 04/09.
+    //
+    // Comparação em minúsculas porque `utm_source` é digitado à mão na URL do
+    // anúncio, e `Google` num anúncio novo não pode escapar do alarme.
+    comCliqueDoGoogleSemId: empresas.filter(
+      (e) => e.utmSource?.toLowerCase() === 'google' && !e.veioDeCliqueDoGoogle,
+    ).length,
   }
 }

@@ -76,6 +76,11 @@ export default async function PaginaDoAnuncio() {
     utmCampaign: e.utmCampaign,
     utmContent: e.utmContent,
     veioDeCliqueDeAnuncio: e.veioDeCliqueDeAnuncio,
+    // Os dois do Google. `utmSource` é o que a nossa URL escreve; o `gclid` é
+    // o que precisa CHEGAR — e a diferença entre os dois é o alarme de
+    // atribuição cega (`comCliqueDoGoogleSemId`).
+    utmSource: e.utmSource,
+    veioDeCliqueDoGoogle: e.veioDeCliqueDoGoogle,
     // Ativação é ter cadastrado o primeiro contato, e a contagem já vem do
     // banco na mesma leitura. Derivar daqui em vez de criar coluna nova mantém
     // uma definição só, igual à de `montarFunilDeAtivacao` e à do evento

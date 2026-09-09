@@ -473,6 +473,25 @@ function Resultado({
         </p>
       )}
 
+      {/* ## O mesmo alarme, do lado do Google — e este perde dinheiro DEPOIS
+          O `gclid` é o único elo entre o clique pago e o pagamento, que
+          acontece dias depois no Asaas: a importação de conversão offline do
+          Google exige exatamente ele. Conta que veio do anúncio e perdeu o
+          `gclid` entra como orgânica, e essa venda nunca poderá ser
+          reconciliada com o clique que a comprou — um prejuízo que só aparece
+          quando já não dá para consertar. */}
+      {resumo.comCliqueDoGoogleSemId > 0 && (
+        <p className="rounded-xl bg-amber-500/5 p-4 text-sm text-pretty ring-1 ring-amber-500/20">
+          <span className="font-medium">
+            {resumo.comCliqueDoGoogleSemId} conta(s) dizem ter vindo do Google e chegaram sem{' '}
+            <code>gclid</code>.
+          </span>{' '}
+          Sem ele, o pagamento dessas contas nunca poderá ser devolvido ao Google como conversão —
+          o anúncio vai parecer que não vendeu. Costuma ser bloqueador, redirect que come a query,
+          ou navegação em duas etapas antes do cadastro.
+        </p>
+      )}
+
       {resumo.semCampanhaIdentificada > 0 && (
         <p className="text-muted-foreground rounded-xl p-4 text-sm text-pretty ring-1 ring-white/10">
           {resumo.semCampanhaIdentificada} conta(s) vieram de clique de anúncio, mas sem dizer de

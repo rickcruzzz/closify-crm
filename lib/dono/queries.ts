@@ -29,9 +29,13 @@ type LinhaDeEmpresa = {
   telefone: string | null
   whatsapp: string | null
   utm_campaign: string | null
+  /** De onde a URL diz que veio. Escrito pela nossa própria URL de anúncio. */
+  utm_source: string | null
   /** Qual criativo trouxe (migration 0069). Ver `atribuicao.ts`. */
   utm_content: string | null
   fbc: string | null
+  /** O id do clique do Google (migration 0071). Ver `atribuicao.ts`. */
+  gclid: string | null
   /**
    * Fim do trial. É o que separa "tem Pro porque paga" de "tem Pro porque
    * ganhou sete dias" — e `pro_vigente()` devolve `true` para os dois, porque
@@ -103,7 +107,7 @@ export async function lerBanco(): Promise<LeituraDoBanco> {
       supabase
         .from('workspaces')
         .select(
-          'id, name, created_at, created_by, telefone, whatsapp, utm_campaign, utm_content, fbc, trial_ate',
+          'id, name, created_at, created_by, telefone, whatsapp, utm_campaign, utm_source, utm_content, fbc, gclid, trial_ate',
         )
         .order('created_at', { ascending: false })
         .limit(TETO),
@@ -197,10 +201,15 @@ export async function lerBanco(): Promise<LeituraDoBanco> {
       quantidadeDeContatos: contatosPorEmpresa.get(empresa.id) ?? 0,
       quantidadeDeNegocios: negociosPorEmpresa.get(empresa.id) ?? 0,
       utmCampaign: empresa.utm_campaign,
+      utmSource: empresa.utm_source,
       utmContent: empresa.utm_content,
       // `fbc` só existe quando a pessoa chegou por um clique de anúncio do
       // Meta (`fbclid` na URL), gravado por `components/landing/utm-capture.tsx`.
       veioDeCliqueDeAnuncio: Boolean(empresa.fbc),
+      // O par do de cima para o Google. A coluna existe desde a 0071 (04/09) e
+      // esta linha é o PRIMEIRO consumidor dela — até aqui o `gclid` era
+      // capturado, gravado e lido por ninguém.
+      veioDeCliqueDoGoogle: Boolean(empresa.gclid),
     }
   })
 
