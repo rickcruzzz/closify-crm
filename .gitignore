@@ -116,3 +116,6 @@ skills-lock.json
 # `--diario` da prospeccao. Versionar faria duas maquinas brigarem pelo mesmo
 # indice e colherem o mesmo recorte.
 scripts/inteligencia/.rodadas.json
+
+# Sessao do WhatsApp Web do enviador: e credencial, nunca vai para o Git.
+.whatsapp-perfil/
