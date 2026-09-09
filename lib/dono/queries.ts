@@ -129,10 +129,25 @@ export async function lerBanco(): Promise<LeituraDoBanco> {
       // `head: false` e uma linha: além da contagem, o alerta precisa do id do
       // erro mais NOVO para se identificar. Sem ele o alerta tem id fixo, e
       // silenciar apaga a categoria inteira para sempre — ver `pendencias.ts`.
+      // ## A janela de 7 dias, e por que ela não estava aqui
+      //
+      // A contagem era do HISTÓRICO INTEIRO. Em 09/09 o painel dizia "4 erros
+      // registrados" e os quatro eram de 27/08, 02/09 e 06/09 — as duas
+      // famílias já trabalhadas e fechadas naquelas rodadas. O alerta ia
+      // repetir os mesmos quatro para sempre.
+      //
+      // Alerta que não sai nunca é a definição de ruído, e a Central existe
+      // com a lição oposta escrita desde 20/08: fila com lixo dentro ensina a
+      // ignorar a fila inteira, e junto com o item chato vai embora o alerta
+      // de dinheiro.
+      //
+      // Sete dias, e não um: erro de terça que ninguém olhou na quarta ainda
+      // vale olhar na sexta. O que não vale é o de três semanas atrás.
       supabase
         .from('error_logs')
         .select('id', { count: 'exact' })
         .eq('interno', false)
+        .gte('created_at', new Date(Date.now() - 7 * 864e5).toISOString())
         .order('created_at', { ascending: false })
         .limit(1),
     ])

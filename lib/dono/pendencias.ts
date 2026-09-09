@@ -201,6 +201,17 @@ export function montarPendencias({
         !e.chegou &&
         e.ultimoEvento !== 'sent' &&
         e.ultimoEvento !== 'scheduled' &&
+        // ## Endereço do próprio domínio não é cliente travado
+        //
+        // Em 09/09 o painel acusou `demo.pro@velofunil.com.br` como e-mail
+        // que não chegou. E não chegou mesmo: `@velofunil.com.br` não tem
+        // caixa de entrada, é o domínio que o produto usa para ENVIAR. O
+        // endereço quicou e o Resend o pôs na lista de supressão.
+        //
+        // O alerta existe para dizer "uma pessoa está travada sem saber por
+        // quê". Conta de teste do próprio dono não é essa pessoa, e o alerta
+        // gasta a atenção que deveria ir para o cliente de verdade.
+        !e.para.toLowerCase().endsWith('@velofunil.com.br') &&
         emailsDeContasReais.has(e.para),
     )
 
@@ -306,7 +317,10 @@ export function montarPendencias({
       id: idDoErroMaisRecente ? `erros:${idDoErroMaisRecente}` : 'erros',
       gravidade: 'atencao',
       tipo: 'erros-no-produto',
-      titulo: errosRecentes === 1 ? '1 erro registrado' : `${errosRecentes} erros registrados`,
+      titulo:
+        errosRecentes === 1
+          ? '1 erro nos últimos 7 dias'
+          : `${errosRecentes} erros nos últimos 7 dias`,
       detalhe:
         'Alguém bateu numa tela de erro dentro do produto. Os detalhes ficam na tabela error_logs, que não tem tela própria.',
     })

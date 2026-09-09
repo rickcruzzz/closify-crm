@@ -46,6 +46,58 @@ export function CentralClient({ dados }: { dados: DadosDaCentral }) {
     })
   }
 
+  /**
+   * A Central se atualiza sozinha, e a regra é "quando você olha".
+   *
+   * ## Por que não bastava o botão
+   *
+   * Pedido do dono em 09/09: *"o painel sempre tem que estar atualizado
+   * instantâneo, quando atualiza algo e quando sai"*. Com só o botão, a tela
+   * fica parada em cima de um número velho — e um painel que mostra número
+   * velho é pior que um que não mostra nada, porque parece atual.
+   *
+   * ## Os três gatilhos, e por que estes
+   *
+   *     volta para a aba     `visibilitychange`. E o momento em que a pessoa
+   *                          de fato olha. Atualizar quando ninguem esta
+   *                          vendo gasta consulta ao banco a toa
+   *     volta para a janela  `focus`, para quem alterna com o VS Code sem
+   *                          nunca esconder a aba
+   *     a cada 60s           a rede de seguranca, para a tela deixada aberta
+   *
+   * ## Por que 60 segundos, e não 5
+   *
+   * `lib/dono/queries.ts` lê com `createAdminClient()` e faz uma dúzia de
+   * consultas por carga, mais Asaas e Meta por HTTP. A cada 5s isso seria uma
+   * rajada contra o banco de produção e contra APIs de terceiro que têm teto —
+   * e nada aqui muda de segundo em segundo: o vigia varre de hora em hora.
+   *
+   * ## E ele não atropela quem está no meio de uma ação
+   *
+   * `atualizando` já é verdadeiro durante o refresh manual e durante qualquer
+   * transição. Sem esse guarda, um ciclo automático podia disparar em cima de
+   * um clique em "Liberar Pro" e a tela pularia embaixo do dedo.
+   */
+  React.useEffect(() => {
+    const agora = () => {
+      if (document.visibilityState !== 'visible') return
+      startTransition(() => router.refresh())
+    }
+    const aoVoltar = () => {
+      if (document.visibilityState === 'visible') agora()
+    }
+
+    document.addEventListener('visibilitychange', aoVoltar)
+    window.addEventListener('focus', agora)
+    const relogio = window.setInterval(agora, 60_000)
+
+    return () => {
+      document.removeEventListener('visibilitychange', aoVoltar)
+      window.removeEventListener('focus', agora)
+      window.clearInterval(relogio)
+    }
+  }, [router, startTransition])
+
   return (
     <div className="flex flex-col gap-8">
       <header className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
