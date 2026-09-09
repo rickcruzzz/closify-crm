@@ -302,8 +302,21 @@ export function montarAbordagem(d: DadosDaAbordagem): string {
       // o sentido correto da palavra.
       `Montei um sistema pra isso: cada orçamento vira um card, com a data do retorno. ` +
         `R$ ${d.precoMensal} pela empresa toda, sem cobrar por usuário.${equipe}`,
-      `Testa de graça até ${d.limiteGratis} contatos, sem cartão: ${LINK}. ` +
+      `Testa de graça até ${d.limiteGratis} contatos, sem cartão. ` +
         `Sem fidelidade, e seus dados saem em CSV.`,
+      // ## O link em parágrafo PRÓPRIO, e não no meio da frase
+      //
+      // Visto numa conversa real em 09/09: com o endereço encaixado depois de
+      // "sem cartão:" e seguido de mais texto, o WhatsApp desenha a prévia
+      // COMPACTA — miniatura de ~70px à esquerda, com o título espremido em
+      // duas linhas. Sozinho no parágrafo, o link é o assunto daquele bloco, e
+      // é assim que o cartão grande aparece.
+      //
+      // Ele fica no PENÚLTIMO lugar, nunca no fim: a última linha continua
+      // sendo a de descarte, que é o que transforma um "não" em resposta em
+      // vez de denúncia de spam — e o corte, quando a mensagem estoura, já tem
+      // teste provando que não a alcança.
+      LINK,
       `Se não fizer sentido, é só ignorar: não te procuro de novo.`,
     ].join('\n\n')
 

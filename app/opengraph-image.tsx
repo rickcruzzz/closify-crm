@@ -9,7 +9,23 @@ export const runtime = 'edge'
 // "Kanban" e "PMEs" são três dos termos que ele proíbe por serem jargão para
 // quem tem agência, clínica ou imobiliária pequena. O texto abaixo passou a
 // ser o mesmo do hero.
-export const alt = 'Velo Funil: CRM para pequenos negócios pararem de perder venda por esquecimento'
+//
+// ## E em 09/09 ele ficou velho de novo, do jeito mais caro possível
+//
+// A frase era "O WhatsApp guarda a conversa. Não guarda o cliente." — a tese
+// de 24/08, aposentada em 02/09 quando a ponte do WhatsApp saiu de operação e
+// `FASE_DO_WHATSAPP` virou `migrando`. A landing, a mensagem de prospecção e o
+// carrossel foram todos reescritos para orçamento; **esta imagem não**, e ela
+// é a única superfície que o lead vê ANTES de clicar.
+//
+// O dono mandou a mensagem no WhatsApp e o cartão apareceu anunciando um
+// recurso que o produto não tem, logo acima de um texto falando de orçamento.
+// Foi visto na conversa, não em auditoria — nenhum portão olha o CONTEÚDO
+// desta imagem.
+//
+// A frase agora é o eco literal da mensagem de prospecção e do hero, que é o
+// que faz quem clica reconhecer que chegou no lugar certo.
+export const alt = 'Velo Funil: o cliente pediu orçamento e sumiu — o sistema lembra você de dar o retorno'
 export const size = { width: 1200, height: 630 }
 export const contentType = 'image/png'
 
@@ -71,11 +87,20 @@ export default function OpengraphImage() {
           maxWidth: 900,
         }}
       >
-        O WhatsApp guarda a conversa. Não guarda o cliente.
+        O cliente pediu orçamento e sumiu. Aqui ele não some.
       </div>
 
+      {/* Numa string só, e não quebrada em duas linhas do JSX. O navegador
+          colapsa a quebra num espaço; **não confirmei que o Satori faça o
+          mesmo**, e a primeira renderização saiu com o que parecia um espaço
+          duplo depois do ponto. Escrever a frase inteira remove a dúvida sem
+          custar nada.
+
+          Vale registrar o método: esta rota é renderizada e ABERTA antes de
+          subir. Nenhum teste olha o pixel dela, e ela é a única superfície que
+          o lead vê antes de clicar. */}
       <div style={{ marginTop: 28, fontSize: 30, color: '#a1a1a1', maxWidth: 860 }}>
-        Grátis até 50 contatos, sem cartão. Pro por R$ 49 pela empresa inteira.
+        {'O sistema lembra você de dar o retorno antes de o prazo vencer. Grátis até 50 contatos, sem cartão.'}
       </div>
     </div>,
     size,
