@@ -95,10 +95,28 @@ export type DadosDaAbordagem = {
  *
  * Cada um nomeia o momento em que o dinheiro escapa naquele negócio — e todos
  * são formulados como PERGUNTA, porque afirmar seria inventar.
+ *
+ * ## O verbo NÃO pode ser "cobrar", e isso foi medido (09/09)
+ *
+ * O gancho de dedetização e o padrão diziam "quem lembra de COBRAR de volta?".
+ * Buscado no Exa o que responde para *"como cobrar retorno de orçamento"*, os
+ * 8 primeiros resultados eram **inadimplência** — cobrar quem não pagou, com
+ * modelo de mensagem e advogado. No português do cliente, cobrar é receber
+ * dívida.
+ *
+ * Numa mensagem fria isso é pior do que numa página: ela chega de um número
+ * desconhecido, sem contexto nenhum para desambiguar, e a primeira associação
+ * de quem lê é cobrança ou golpe. Eram 101 dos 790 domínios do universo, mais
+ * todo nicho novo, que herda o padrão.
+ *
+ * O verbo que o mercado usa é "follow-up" (10 de 10 títulos do tema), e é
+ * jargão de vendedor. O que sobra é o mais simples da língua: **dar o
+ * retorno**. Zero dos 25 geradores de orçamento lidos usa, então também não
+ * compete com ninguém.
  */
 const GANCHO: Record<string, string> = {
   dedetizacao:
-    'Quando você manda um orçamento e o cliente não responde, quem lembra de cobrar de volta?',
+    'Quando você manda um orçamento e o cliente some, quem lembra de dar o retorno?',
   'comunicacao-visual':
     'Quando você manda um orçamento e o cliente some, o retorno fica na memória de quem?',
   marcenaria:
@@ -110,7 +128,7 @@ const GANCHO: Record<string, string> = {
 }
 
 const GANCHO_PADRAO =
-  'Quando você manda um orçamento e o cliente não responde, quem lembra de cobrar de volta?'
+  'Quando você manda um orçamento e o cliente some, quem lembra de dar o retorno?'
 
 /**
  * As duas linhas que NUNCA podem ser cortadas, e o defeito que provou isso.
@@ -251,7 +269,21 @@ export function montarAbordagem(d: DadosDaAbordagem): string {
         ? `Oi, ${d.decisor}! Achei a ${nome} procurando empresas do setor no Google.`
         : `Oi! Achei a ${nome} procurando empresas do setor no Google.`,
       gancho,
-      `Montei um CRM pra isso: cada orçamento vira um card, com a data do retorno. ` +
+      // ## "Sistema" e não "CRM", e a razão é a mesma da landing de 09/09
+      //
+      // Medido com o Exa: quando os cinco nichos desta lista procuram
+      // software, quem responde é orçamento (58%), ERP (44%) e só então CRM
+      // (28%). Em locação é 0 de 10 e em dedetização 1 de 10 — e esses dois
+      // nichos são 223 dos 790 domínios do universo.
+      //
+      // Anunciar a CATEGORIA antes do benefício obriga quem lê a reconhecer
+      // uma palavra que ele não procura. "Sistema" é o que a PME brasileira
+      // diz sozinha ("o sistema da loja"), não exige tradução e não compete
+      // com nada.
+      //
+      // O "sem cobrar por usuário" FICA: ali cobrar significa dinheiro, que é
+      // o sentido correto da palavra.
+      `Montei um sistema pra isso: cada orçamento vira um card, com a data do retorno. ` +
         `R$ ${d.precoMensal} pela empresa toda, sem cobrar por usuário.${equipe}`,
       `Testa de graça até ${d.limiteGratis} contatos, sem cartão: ${LINK}. ` +
         `Sem fidelidade, e seus dados saem em CSV.`,
