@@ -24,17 +24,6 @@ export type DealStage =
 export type ActivityType = 'ligacao' | 'email' | 'reuniao' | 'nota' | 'whatsapp'
 export type OnboardingStatus = 'not_started' | 'in_progress' | 'skipped' | 'completed'
 export type OnboardingEtapa = 'empresa' | 'segmento' | 'venda' | 'equipe' | 'processando'
-/**
- * Estado da consulta ao Exa para um lead (migration 0072).
- *
- * `sem_sinal` é resultado, não falha: a maioria das empresas não tem notícia
- * pública, e tratar isso como erro faria o cron reconsultar para sempre.
- */
-export type StatusDeEnriquecimento = 'pendente' | 'ok' | 'sem_sinal' | 'falhou'
-/** Natureza do sinal público encontrado (migration 0072). */
-export type TipoDeSinalDeMercado = 'dor' | 'contratacao' | 'investimento' | 'reclamacao'
-/** Força da classificação. Só `alta` é gravada hoje — ver `dominio/dor.ts`. */
-export type ConfiancaDoSinal = 'alta' | 'media' | 'baixa'
 export type TourStatus = 'not_started' | 'skipped' | 'completed'
 export type ModeloVenda = 'servicos' | 'produtos' | 'ambos'
 export type TamanhoEquipe = 'so_eu' | '2_5' | '6_20' | '21_mais'
@@ -51,16 +40,21 @@ export type StatusDeFeedback = 'aberto' | 'em_andamento' | 'resolvido' | 'descar
 // tres itens que nascem e morrem com o relato, e nenhuma pergunta deste
 // produto comeca com "quais relatos tem PDF".
 export type AnexoDeFeedback = { caminho: string; nome: string; tamanho: number }
-// Os avisos que o produto dá dentro da própria tela (0066, mais `sinal_de_mercado`
-// em 0073). A lista canônica, com o porquê de cada exclusão, vive em
-// `lib/notificacoes/tipos.ts` — aqui só o formato. Cada um tem um chamador
-// vivo: tipo sem chamador é código morto com aparência de recurso.
+// Os avisos que o produto dá dentro da própria tela (0066). A lista canônica,
+// com o porquê de cada exclusão, vive em `lib/notificacoes/tipos.ts` — aqui só
+// o formato. Cada um tem um chamador vivo: tipo sem chamador é código morto com
+// aparência de recurso.
+//
+// `sinal_de_mercado` entrou na 0073 e SAIU na 0075, junto com a pesquisa de
+// mercado do lado do cliente. Ficou aqui por três dias depois de o banco parar
+// de aceitá-lo — o `check` de `notificacoes.tipo` tem quatro valores, conferido
+// no catálogo. Tipo que permite o que o banco recusa não é folga: é um `400`
+// que só aparece em produção, e o compilador diz que está tudo certo.
 export type TipoDeNotificacao =
   | 'pagamento_confirmado'
   | 'pagamento_atrasado'
   | 'plano_vencendo'
   | 'trial_terminando'
-  | 'sinal_de_mercado'
 
 /**
  * Os campos de empresa acrescentados em 0030.
@@ -773,82 +767,6 @@ export type Database = {
           lida_em?: string | null
           dispensada_em?: string | null
         }
-        Relationships: []
-      }
-      // ── Inteligência de mercado (migration 0072) ────────────────────────
-      // As duas tabelas não têm policy de escrita para `authenticated`: quem
-      // grava é o `service_role`, pelo cron. Sinal forjável é aviso de venda
-      // forjável — mesmo desenho de `notificacoes` e `error_logs`.
-      enriquecimento_de_lead: {
-        Row: {
-          id: string
-          workspace_id: string
-          // `unique` no banco: um lead tem um estado. É o que transforma a
-          // tabela em cache e o que faz `on conflict (lead_id)` funcionar.
-          lead_id: string
-          status: StatusDeEnriquecimento
-          // Nulo enquanto nunca foi consultado. É o que `deveReenriquecer` lê
-          // para decidir a janela de 30 dias.
-          consultado_em: string | null
-          // Centavos de real, inteiro: dinheiro em ponto flutuante acumula
-          // erro, e este número é somado contra o teto mensal.
-          custo_centavos: number
-          ultimo_erro: string | null
-          criado_em: string
-          // Avançado por trigger, nunca pelo código: `default` só vale no
-          // insert, e coluna de data que mente é pior que coluna ausente.
-          atualizado_em: string
-        }
-        Insert: {
-          id?: string
-          workspace_id: string
-          lead_id: string
-          status?: StatusDeEnriquecimento
-          consultado_em?: string | null
-          custo_centavos?: number
-          ultimo_erro?: string | null
-          criado_em?: string
-          atualizado_em?: string
-        }
-        Update: {
-          status?: StatusDeEnriquecimento
-          consultado_em?: string | null
-          custo_centavos?: number
-          ultimo_erro?: string | null
-        }
-        Relationships: []
-      }
-      sinal_de_mercado: {
-        Row: {
-          id: string
-          workspace_id: string
-          lead_id: string
-          tipo: TipoDeSinalDeMercado
-          // RECORTE do trecho devolvido pelo Exa, nunca paráfrase: paráfrase
-          // introduziria uma afirmação que ninguém escreveu, sobre uma empresa
-          // real. Teto de 400 no `check`.
-          resumo: string
-          // `not null` e https obrigatório. Insight sem link é opinião da
-          // máquina; com link, a pessoa confere em um clique.
-          fonte_url: string
-          publicado_em: string | null
-          confianca: ConfiancaDoSinal
-          criado_em: string
-        }
-        Insert: {
-          id?: string
-          workspace_id: string
-          lead_id: string
-          tipo: TipoDeSinalDeMercado
-          resumo: string
-          fonte_url: string
-          publicado_em?: string | null
-          confianca: ConfiancaDoSinal
-          criado_em?: string
-        }
-        // Sem `Update`: o sinal é imutável depois de gravado. O que muda é o
-        // estado da consulta, que vive na outra tabela.
-        Update: Record<string, never>
         Relationships: []
       }
       subscriptions: {
