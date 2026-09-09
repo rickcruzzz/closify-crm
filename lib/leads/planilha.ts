@@ -143,6 +143,56 @@ export function apenasDigitos(bruto: string): string {
 }
 
 /**
+ * O contato é de verdade, ou é resto de célula?
+ *
+ * ## O defeito que estas duas funções fecham (09/09)
+ *
+ * Um cliente importou `Tabela_de_Precos_Pintura.xlsx` — 108 tintas com o preço
+ * de cada fornecedor — e o produto aceitou as 108 como contatos. Ficou assim
+ * na tela de Contatos:
+ *
+ *     BRANCO TAFFETA     55 | 52
+ *     VERNIZ 5500        56 | 58 | 67,12 | 57,87
+ *     DISCO 80           3 | 2,69 | 2,5 | 3,3 | 2,59
+ *
+ * Reproduzido com o arquivo real: **não havia nenhuma validação de formato**.
+ * `"75 | 104 | 82 | 99 | 145,25"` era aceito como e-mail — 4 de 4 linhas, zero
+ * erros. E como telefone passava também, porque a única regra era "8 dígitos
+ * ou mais", e cinco preços concatenados dão catorze.
+ *
+ * ## Por que as regras são frouxas de propósito
+ *
+ * `temFormaDeEmail` não valida RFC: exige arroba, um ponto depois dela e nada
+ * de espaço. E-mail exótico existe e recusar cliente de verdade é pior que
+ * deixar entrar um esquisito — o que se quer barrar aqui é a célula que
+ * claramente não é endereço nenhum.
+ *
+ * `temFormaDeTelefone` aceita 10 ou 11 dígitos (fixo e celular com DDD), ou 12
+ * e 13 com o `55` na frente. O que ela recusa é o caso real: número comprido
+ * demais, curto demais, ou com DDD que não existe no Brasil.
+ */
+export function temFormaDeEmail(valor: string): boolean {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(valor.trim())
+}
+
+/** DDDs que existem. Fora desta lista, o "telefone" é outra coisa. */
+const DDDS = new Set([
+  11, 12, 13, 14, 15, 16, 17, 18, 19, 21, 22, 24, 27, 28,
+  31, 32, 33, 34, 35, 37, 38, 41, 42, 43, 44, 45, 46, 47, 48, 49,
+  51, 53, 54, 55, 61, 62, 63, 64, 65, 66, 67, 68, 69,
+  71, 73, 74, 75, 77, 79, 81, 82, 83, 84, 85, 86, 87, 88, 89,
+  91, 92, 93, 94, 95, 96, 97, 98, 99,
+])
+
+export function temFormaDeTelefone(valor: string): boolean {
+  const digitos = apenasDigitos(valor)
+  // `apenasDigitos` já tira o `55` do país quando há mais de 11 dígitos, então
+  // o que sobra tem que ser DDD + número.
+  if (digitos.length !== 10 && digitos.length !== 11) return false
+  return DDDS.has(Number(digitos.slice(0, 2)))
+}
+
+/**
  * A chave que identifica o contato entre linhas e contra o banco. E-mail tem
  * prioridade por ser único de verdade; telefone é o plano B para a lista que
  * não tem e-mail nenhum.
@@ -269,14 +319,29 @@ export function interpretarPlanilha(
     }
 
     const name = celula('name')
-    const email = celula('email').toLowerCase()
-    const phone = celula('phone')
+    const emailBruto = celula('email').toLowerCase()
+    const phoneBruto = celula('phone')
+
+    // ## O formato é conferido ANTES de a célula virar contato
+    //
+    // Sem isto, `"75 | 104 | 82 | 99 | 145,25"` entrava como e-mail e como
+    // telefone — foi como 108 tintas viraram contatos em 09/09. A célula que
+    // não tem forma de contato é DESCARTADA em vez de derrubar a linha: uma
+    // planilha real tem célula suja no meio, e recusar a pessoa inteira por
+    // causa de um telefone mal digitado perderia o contato bom que veio junto.
+    //
+    // Quando as duas caem, aí a linha não tem como ser contatada e o erro
+    // abaixo explica isso — que é a mensagem certa.
+    const email = temFormaDeEmail(emailBruto) ? emailBruto : ''
+    const phone = temFormaDeTelefone(phoneBruto) ? phoneBruto : ''
     const company = celula('company')
     const valorBruto = celula('value')
     const etapaBruta = celula('status')
 
     // Linha totalmente vazia é resto de planilha, não erro de quem preencheu.
-    if (!name && !email && !phone) return
+    // Olha o BRUTO: a célula com lixo dentro foi preenchida por alguém, e
+    // tratá-la como vazia esconderia o erro em vez de explicá-lo.
+    if (!name && !emailBruto && !phoneBruto) return
 
     if (name.length < 2) {
       erros.push(`Linha ${numeroDaLinha}: nome ausente ou muito curto.`)
@@ -285,7 +350,15 @@ export function interpretarPlanilha(
 
     const chave = chaveDeContato(email || null, phone || null)
     if (!chave) {
-      erros.push(`Linha ${numeroDaLinha}: sem e-mail nem telefone, não há como contatar.`)
+      // A mensagem CITA o que veio na célula. "sem e-mail nem telefone" era
+      // verdadeiro e inútil quando a coluna estava preenchida — a pessoa olha
+      // a planilha, vê algo escrito ali, e conclui que o sistema está errado.
+      const oQueVeio = [emailBruto, phoneBruto].filter(Boolean).join(' / ')
+      erros.push(
+        oQueVeio
+          ? `Linha ${numeroDaLinha}: "${oQueVeio}" não é e-mail nem telefone.`
+          : `Linha ${numeroDaLinha}: sem e-mail nem telefone, não há como contatar.`,
+      )
       return
     }
 

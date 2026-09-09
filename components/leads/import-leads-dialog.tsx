@@ -36,6 +36,8 @@ import {
   amostraDaColuna,
   interpretarPlanilha,
   sugerirMapeamento,
+  temFormaDeEmail,
+  temFormaDeTelefone,
   type CampoDestino,
   type Mapeamento,
 } from '@/lib/leads/planilha'
@@ -275,6 +277,39 @@ export function ImportLeadsDialog({
 
   const mostrarSeletores = ajustando || !reconheceuOEssencial
 
+  /**
+   * A planilha tem alguma coluna que PARECE contato?
+   *
+   * ## O caso que motivou (09/09)
+   *
+   * Um cliente importou uma tabela de preços de tinta — `Produto` e
+   * `Preços / Observações`, 108 linhas — e o produto deixou. O reconhecimento
+   * automático sugeriu `{"value": 1}`, os seletores abriram, e ele mapeou
+   * Produto→Nome e Preços→E-mail à mão. As 108 tintas viraram contatos.
+   *
+   * As validações de formato (`temFormaDeEmail`, `temFormaDeTelefone`) agora
+   * recusam linha a linha, e isso é a rede embaixo. **Esta checagem é a que
+   * teria evitado o mapeamento errado**, porque acontece antes: uma planilha
+   * sem nenhuma coluna com cara de e-mail ou telefone quase nunca é lista de
+   * contatos.
+   *
+   * Olha o CONTEÚDO e não só o título. Cabeçalho pode estar em qualquer
+   * idioma ou não existir; o que não muda é que e-mail tem arroba e telefone
+   * tem DDD. Bastam duas células em dez para a coluna contar — planilha de
+   * verdade tem buraco, e exigir a coluna inteira preenchida barraria arquivo
+   * bom.
+   */
+  const semColunaDeContato = React.useMemo(() => {
+    if (corpo.length === 0) return false
+    const amostra = corpo.slice(0, 10)
+    const temAlguma = cabecalho.some((_, coluna) => {
+      const valores = amostra.map((linha) => (linha[coluna] ?? '').trim()).filter(Boolean)
+      const bons = valores.filter((v) => temFormaDeEmail(v) || temFormaDeTelefone(v)).length
+      return bons >= Math.min(2, valores.length) && bons > 0
+    })
+    return !temAlguma
+  }, [corpo, cabecalho])
+
   function ajustarPularLinhas(novo: number) {
     const limitado = Math.max(0, Math.min(novo, Math.max(0, matriz.length - 2)))
     setPularLinhas(limitado)
@@ -448,6 +483,17 @@ export function ImportLeadsDialog({
                 />
               </div>
 
+              {semColunaDeContato && (
+                <p className="border-destructive/40 bg-destructive/10 text-destructive mt-2 flex items-start gap-1.5 rounded-md border p-2 text-xs">
+                  <AlertTriangle aria-hidden className="mt-0.5 size-3.5 shrink-0" />
+                  <span>
+                    <strong>Não achei coluna de e-mail nem de telefone nesta planilha.</strong>{' '}
+                    Sem uma das duas não há como falar com o contato, e a importação vai recusar as
+                    linhas. Se este arquivo for uma tabela de produtos ou de preços, ele não é uma
+                    lista de contatos — escolha outro.
+                  </span>
+                </p>
+              )}
               {nadaReconhecido && (
                 <p className="mt-2 flex items-start gap-1.5 text-xs text-amber-600 dark:text-amber-400">
                   <AlertTriangle aria-hidden className="mt-0.5 size-3.5 shrink-0" />

@@ -8,6 +8,8 @@ import {
   interpretarPlanilha,
   normalizarEtapa,
   sugerirMapeamento,
+  temFormaDeEmail,
+  temFormaDeTelefone,
 } from './planilha'
 
 const SEM_LIMITE = 10_000
@@ -295,5 +297,96 @@ describe('amostraDaColuna', () => {
 
   it('devolve null quando o corpo está vazio', () => {
     expect(amostraDaColuna([], 0)).toBeNull()
+  })
+})
+
+describe('o formato do contato, e a tabela de preços que virou 108 contatos', () => {
+  // Em 09/09 um cliente importou `Tabela_de_Precos_Pintura.xlsx` — 108 tintas
+  // com o preço de cada fornecedor na segunda coluna — e o produto aceitou as
+  // 108 como contatos. Na tela de Contatos ficou "VERNIZ 5500 / 56 | 58 |
+  // 67,12 | 57,87".
+  //
+  // Reproduzido com o arquivo real: não havia validação de formato nenhuma.
+  const tinta = [
+    ['Produto', 'Preços / Observações'],
+    ['AZUL COBALTO 0,5L', '75 | 104 | 82 | 99 | 145,25'],
+    ['PRATA ETOILE', '45'],
+    ['BRANCO CRISTAL', '46 SKY | 45 FARBEN | 49 LAZZ'],
+  ]
+
+  it('recusa a tabela de preços mapeada como E-MAIL', () => {
+    const r = interpretarPlanilha(tinta, { name: 0, email: 1 }, 1000)
+    expect(r.linhas).toHaveLength(0)
+    expect(r.erros).toHaveLength(3)
+  })
+
+  it('recusa a mesma tabela mapeada como TELEFONE', () => {
+    // Este era o pior dos dois: a regra antiga só contava dígitos, e cinco
+    // preços concatenados dão catorze. Parte da planilha entrava e parte não,
+    // que é mais confuso que recusar tudo.
+    const r = interpretarPlanilha(tinta, { name: 0, phone: 1 }, 1000)
+    expect(r.linhas).toHaveLength(0)
+  })
+
+  it('o erro CITA o que veio na célula', () => {
+    // "sem e-mail nem telefone" era verdadeiro e inútil com a coluna
+    // preenchida: a pessoa olha a planilha, vê algo escrito, e conclui que o
+    // sistema está errado.
+    const r = interpretarPlanilha(tinta, { name: 0, email: 1 }, 1000)
+    expect(r.erros[0]).toContain('75 | 104 | 82 | 99 | 145,25')
+    expect(r.erros[0]).toContain('não é e-mail nem telefone')
+  })
+
+  it('descarta a CÉLULA suja, não a linha inteira', () => {
+    // Planilha real tem buraco. Recusar a pessoa por causa de um telefone mal
+    // digitado perderia o e-mail bom que veio junto.
+    const r = interpretarPlanilha(
+      [
+        ['Nome', 'E-mail', 'Telefone'],
+        ['Ana Lima', 'ana@x.com', 'ramal 42'],
+        ['Pedro Reis', 'nao-e-email', '(21) 3116-9545'],
+      ],
+      { name: 0, email: 1, phone: 2 },
+      1000,
+    )
+    expect(r.linhas).toHaveLength(2)
+    expect(r.linhas[0]).toMatchObject({ email: 'ana@x.com', phone: null })
+    expect(r.linhas[1]).toMatchObject({ email: null, phone: '(21) 3116-9545' })
+  })
+
+  it('a planilha de contatos de verdade continua passando inteira', () => {
+    // O controle que separa "apertei a regra" de "quebrei a importação".
+    const r = interpretarPlanilha(
+      [
+        ['Nome', 'E-mail', 'Telefone'],
+        ['Maria Silva', 'maria@empresa.com.br', '(11) 98765-4321'],
+        ['Joao Souza', '', '11987654321'],
+      ],
+      { name: 0, email: 1, phone: 2 },
+      1000,
+    )
+    expect(r.linhas).toHaveLength(2)
+    expect(r.erros).toHaveLength(0)
+  })
+
+  it('e-mail: exige arroba e ponto, sem inventar RFC', () => {
+    // Frouxa de propósito: e-mail exótico existe, e recusar cliente de verdade
+    // é pior que deixar entrar um esquisito.
+    expect(temFormaDeEmail('a@b.co')).toBe(true)
+    expect(temFormaDeEmail('maria@empresa.com.br')).toBe(true)
+    expect(temFormaDeEmail('nao-e-email')).toBe(false)
+    expect(temFormaDeEmail('75 | 104 | 82')).toBe(false)
+    expect(temFormaDeEmail('a@b')).toBe(false)
+  })
+
+  it('telefone: DDD que existe, e o 55 do país não conta como dígito', () => {
+    expect(temFormaDeTelefone('(11) 98765-4321')).toBe(true)
+    expect(temFormaDeTelefone('11987654321')).toBe(true)
+    expect(temFormaDeTelefone('5511987654321')).toBe(true)
+    // O caso real: cinco preços concatenados.
+    expect(temFormaDeTelefone('751048299145')).toBe(false)
+    expect(temFormaDeTelefone('45')).toBe(false)
+    // DDD 00 não existe, e é o que separa "onze dígitos" de "telefone".
+    expect(temFormaDeTelefone('(00) 99999-9999')).toBe(false)
   })
 })
