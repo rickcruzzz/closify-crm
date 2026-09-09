@@ -43,10 +43,11 @@ avaliação estão fora, e continuariam fora mesmo que rendessem mais.
 """
 
 import importlib.util
+import time
 import sys
 from pathlib import Path
 
-from PIL import Image, ImageDraw
+from PIL import Image, ImageDraw, ImageFilter
 
 # O gerador de Stories tem hífen no nome, que não é identificador Python — daí
 # o carregamento por caminho. Importar em vez de copiar: fundo, halo, marca
@@ -105,11 +106,36 @@ SAIDA = g.RAIZ / "marketing" / "instagram" / "feed"
 RECORTE_DA_GRADE = int(g.H_FINAL * 3 / 4)
 
 
+def _salvar_com_paciencia(img, caminho, tentativas=6):
+    """
+    Grava insistindo, porque a pasta mora dentro do OneDrive.
+
+    O OneDrive trava o arquivo enquanto sincroniza, e o Windows devolve
+    `OSError: [Errno 22] Invalid argument` — mensagem que não diz nada sobre
+    trava e manda procurar caractere ilegal no nome. Medido em 09/09: o erro
+    caiu num arquivo DIFERENTE a cada rodada (`feed-4`, depois
+    `carrossel-3-...-5`), e é essa aleatoriedade que identifica a causa. Se
+    fosse o nome, falharia sempre no mesmo.
+
+    Sem isto, uma rodada de 45 artes morre no meio e deixa metade gravada —
+    pior que falhar inteiro, porque a pasta fica num estado que parece
+    completo.
+    """
+    for tentativa in range(1, tentativas + 1):
+        try:
+            img.save(caminho)
+            return
+        except OSError:
+            if tentativa == tentativas:
+                raise
+            time.sleep(0.6 * tentativa)
+
+
 def salvar(img, nome):
     """Publicação em 1080x1350 e uma reserva @4k, o mesmo par dos Stories."""
     final = img.resize((g.W_FINAL, g.H_FINAL), Image.LANCZOS)
-    final.save(SAIDA / f"{nome}.png")
-    img.save(SAIDA / f"{nome}@4k.png")
+    _salvar_com_paciencia(final, SAIDA / f"{nome}.png")
+    _salvar_com_paciencia(img, SAIDA / f"{nome}@4k.png")
     print(f"  {nome}.png  ({final.width}x{final.height})  +  @4k")
 
 
@@ -469,6 +495,395 @@ def _peca(luz, escuro_extra, bloco, passo=None):
     return img
 
 
+def _peca_clara(bloco, passo=None, luz=0.30):
+    """
+    O par claro de `_peca`: mesmo esqueleto, registro invertido.
+
+    `_TEMA_CLARO` é global de módulo — as funções de cor (`cor_titulo`,
+    `cor_destaque`, `cor_fonte_dado`) consultam ele em tempo de chamada, e é
+    isso que faz a peça inteira mudar de registro sem passar tema por
+    parâmetro em quinze assinaturas.
+
+    O `try/finally` não é zelo: sem ele, uma exceção no meio do bloco deixaria
+    o módulo em claro e o PRÓXIMO card sairia com as cores erradas — texto
+    quase preto sobre fundo quase preto. Falha silenciosa, e só a arte
+    denunciaria.
+    """
+    g._TEMA_CLARO = True
+    g._LUZ_ATUAL = luz
+    try:
+        img = g.fundo_do_tema(escuro_extra=0.0)
+        draw = ImageDraw.Draw(img)
+        topo, _ = g.faixa_livre()
+        if passo:
+            marcador_de_passo(draw, *passo)
+        # A imagem vai junto porque o bloco precisa COLAR o selo da marca, e
+        # `ImageDraw` não cola — só desenha. Sem `try/except` de assinatura de
+        # propósito: um `TypeError` levantado lá dentro seria engolido e o
+        # bloco rodaria duas vezes, o que é pior que a falha original.
+        bloco(draw, topo, img)
+        g.assinar_discreto(img, draw)
+        return img
+    finally:
+        g._TEMA_CLARO = False
+
+
+def _print_no_claro(img, nome_print, topo, altura_alvo, recorte=None):
+    """
+    O print sobre fundo claro: card com SOMBRA, não com brilho.
+
+    `card_com_print` desenha uma elipse teal desfocada atrás da tela, e isso só
+    funciona sobre escuro — sobre off-white, luz atrás de objeto claro não
+    aparece. É a mesma regra que o produto já carrega: o modo claro do CRM
+    ganhou sombra no cartão e o escuro teve a regra anulada.
+
+    A sombra é desenhada em camada própria e desfocada antes de compor, porque
+    borda dura sobre fundo claro lê como recorte mal feito, não como
+    profundidade.
+    """
+    origem = Image.open(g.PRINTS / nome_print).convert("RGB")
+    pad = 12 * g.ESCALA
+    # ## O print tem gutter PROPRIO, e menor que o da coluna de texto
+    #
+    # Alinhado a `MARGEM_ESQ` (9% de cada lado), sobravam 862px no arquivo de
+    # 1080 para uma tela cuja regiao util tem ~1100px de CSS: 0,78x, e o texto
+    # do app em 11px. Com 40px de margem sobram 1000px e a escala vai a 0,89x.
+    #
+    # 40 e nao menos: a grade do perfil recorta em 3:4 e come 34px de cada
+    # lado. Abaixo disso o proprio card perderia a borda arredondada na tela
+    # onde alguem decide se segue o perfil.
+    #
+    # A quebra de alinhamento e deliberada e e a mesma da referencia: o bloco
+    # de prova respira mais que o bloco de leitura, e a diferenca de recuo e o
+    # que separa os dois visualmente sem precisar de linha divisoria.
+    margem = 40 * g.ESCALA
+    larg = g.W - margem * 2
+    larg_util = larg - pad * 2
+
+    # ## O print ESTAVA DISTORCIDO, e o `min()` era a causa
+    #
+    # A versão anterior calculava a altura proporcional, tomava o `min()` com
+    # a altura disponível e depois redimensionava a origem para essa altura
+    # menor — ou seja, **espremia a tela verticalmente**. Medido em 09/09 com
+    # `hoje-light.png` (2880x1800): a altura proporcional é 562px na peça de
+    # 1080, e o espaço disponível era ~205px. A tela do produto aparecia
+    # achatada em 2,7x.
+    #
+    # Não era só feiúra: as linhas de texto do app viravam faixas de 1px, o
+    # que destrói a nitidez e é exatamente o "borrado ao dar zoom" relatado.
+    # Reduzir 1800px de altura para 362 é jogar fora quatro quintos da
+    # informação vertical antes de qualquer LANCZOS ajudar.
+    #
+    # ## A saída já existia neste projeto, em `card_com_print`
+    #
+    # O gerador de Stories resolve o mesmo problema há semanas: escala pela
+    # LARGURA, mantém a proporção e **corta pela base** quando sobra altura,
+    # com um esmaecimento nos últimos pixels. O comentário de lá registra o
+    # porquê do fade — borda dura afirma que a tela acaba ali, borda que some
+    # diz que ela continua fora do quadro.
+    #
+    # Cortar é honesto e espremer não é: no corte, o pedaço que aparece está
+    # em proporção real; no esmagamento, nada na peça está.
+    # ## O print inteiro nao cabe legivel em 1080, e essa e a conta
+    #
+    # A tela do produto tem 1440px de largura em CSS. A coluna da arte tem
+    # 862px no arquivo publicado, entao a tela inteira entra a 0,60x: um texto
+    # de 14px vira 8,4px. Nao e desfoque de compressao — e tipografia pequena
+    # demais para existir, e nenhum tratamento de imagem recupera isso.
+    #
+    # `recorte` resolve amostrando uma REGIAO da origem em vez da tela toda.
+    # Em `(x, y, largura_na_origem)`, com a largura escolhida para a escala
+    # ficar perto de 1:1 — a 0,93x o mesmo texto de 14px chega a 13px, que se
+    # le. Foi assim que o print deixou de ser enfeite e virou prova.
+    #
+    # A barra lateral fica de fora nos dois cortes de proposito: ela ocupa 35%
+    # da largura e nao diz nada sobre orcamento. Quem identifica o produto e a
+    # marca no topo da peca, que existe justamente para isso.
+    if recorte is not None:
+        x_fonte, y_fonte, larg_fonte = recorte
+        escala = larg_util / larg_fonte
+        if escala < 0.80:
+            raise ValueError(
+                f"{nome_print}: recorte de {larg_fonte}px cai para {escala:.2f}x "
+                "na peca. Abaixo de 0,80x o texto do app nao se le."
+            )
+        alt_util = int(altura_alvo) - pad * 2
+        alt_fonte = min(int(alt_util / escala), origem.height - y_fonte)
+        alt_util = int(alt_fonte * escala)
+        origem = origem.crop((x_fonte, y_fonte,
+                              x_fonte + larg_fonte, y_fonte + alt_fonte))
+        alt_util_cheia = alt_util
+        continua_abaixo = (y_fonte + alt_fonte) < 1800
+    else:
+        alt_util_cheia = int(origem.height * larg_util / origem.width)
+        alt_util = min(alt_util_cheia, int(altura_alvo) - pad * 2)
+        continua_abaixo = alt_util < alt_util_cheia
+    # Menos de um terço da tela vira faixa sem contexto — some o cabeçalho, e
+    # o que resta pode ser qualquer software. Falhar aqui obriga a encurtar o
+    # texto acima, que é a correção certa; o silêncio é que produziu a versão
+    # espremida.
+    if alt_util < alt_util_cheia * 0.30:
+        raise ValueError(
+            f"{nome_print}: sobrou {alt_util}px para um print de "
+            f"{alt_util_cheia}px ({alt_util / alt_util_cheia:.0%}). "
+            "Encurte a manchete ou o apoio."
+        )
+    alt = alt_util + pad * 2
+    x0, y0 = margem, int(topo)
+
+    # ## A sombra entra por MÁSCARA, e a primeira versão não entrava
+    #
+    # Ela fazia `img.paste(Image.blend(img, sombra, 0.55))` — e `Image.blend`
+    # opera na imagem INTEIRA. A camada da sombra é branca fora do retângulo,
+    # então o blend clareava a peça toda em 55%, por cima do texto que já
+    # estava desenhado: o título quase preto virou cinza médio e o teal
+    # desbotou. Aberta a arte, era o que se via.
+    #
+    # É a mesma família do defeito que `card_com_print` documenta ter pago no
+    # escuro — composição fora de ordem passando por cima da headline. Lá a
+    # correção foi recortar a faixa; aqui é a máscara, que limita o efeito ao
+    # que ela desenha e torna impossível alcançar o resto.
+    mascara = Image.new("L", img.size, 0)
+    ImageDraw.Draw(mascara).rounded_rectangle(
+        [x0 + 6 * g.ESCALA, y0 + 16 * g.ESCALA,
+         x0 + larg + 6 * g.ESCALA, y0 + alt + 16 * g.ESCALA],
+        radius=26 * g.ESCALA, fill=150,
+    )
+    mascara = mascara.filter(ImageFilter.GaussianBlur(24 * g.ESCALA))
+    img.paste(Image.new("RGB", img.size, (168, 184, 186)), (0, 0), mascara)
+
+    moldura = Image.new("RGB", (larg, alt), (255, 255, 255))
+    d = ImageDraw.Draw(moldura)
+    d.rounded_rectangle([0, 0, larg - 1, alt - 1], radius=24 * g.ESCALA,
+                        outline=g.BORDA_NO_CLARO, width=max(1, 2 * g.ESCALA // 2))
+    tela = origem.resize((larg_util, alt_util_cheia), Image.LANCZOS)
+    if continua_abaixo:
+        tela = tela.crop((0, 0, larg_util, alt_util))
+        # O corte cai no meio de uma linha da tabela, e meia linha de texto
+        # não lê como "continua", lê como render quebrado. A rampa desce até o
+        # BRANCO da moldura, que é o fundo do card no registro claro.
+        fade = min(90 * g.ESCALA, alt_util // 3)
+        rampa = Image.new("L", (1, fade))
+        rampa.putdata([int(255 * (i / max(fade - 1, 1)) ** 1.5) for i in range(fade)])
+        rampa = rampa.resize((larg_util, fade))
+        faixa = tela.crop((0, alt_util - fade, larg_util, alt_util))
+        tela.paste(
+            Image.composite(Image.new("RGB", (larg_util, fade), (255, 255, 255)),
+                            faixa, rampa),
+            (0, alt_util - fade),
+        )
+    moldura.paste(tela, (pad, pad))
+    img.paste(moldura, (x0, y0))
+    return y0 + alt
+
+
+def marca_no_topo(img, draw, y):
+    """
+    O lockup da marca no ALTO da peça: selo do funil e a palavra, lado a lado.
+
+    ## Por que ela sobe, tendo assinatura no rodapé
+
+    A referência que o dono mandou (@agendorcrm) põe a marca no topo em todos
+    os quatro posts, e não é enfeite: no carrossel o dedo entra pelo primeiro
+    card e sai no último, e a única coisa garantidamente vista é a faixa
+    superior. Marca só no rodapé depende de a pessoa chegar ao fim.
+
+    ## Não substitui a assinatura, e a diferença é de função
+
+    A do rodapé carrega o ENDEREÇO — `velofunil.com.br` —, que é a única forma
+    de alguém chegar ao produto: post de Instagram não tem link clicável. Ela é
+    o caminho.
+
+    Esta é o reconhecimento: quem desliza sabe de quem é a peça antes de ler a
+    manchete. Duas funções distintas, e por isso as duas ficam.
+
+    O selo volta aqui depois de ter saído do rodapé em 31/08. Lá ele competia
+    com o texto num espaço apertado de 66px; no topo há folga, e é justamente o
+    contraste do quadrado teal que faz a marca ser reconhecida de relance.
+    """
+    tam = 62 * g.ESCALA
+    img.paste(g.desenhar_selo(tam), (g.MARGEM_ESQ, int(y)), g.desenhar_selo(tam))
+
+    fnt_b = g.fonte(g.FORTE, 44)
+    fnt_r = g.fonte(g.CORPO, 44)
+    x = g.MARGEM_ESQ + tam + 22 * g.ESCALA
+    meio = y + tam / 2
+    draw.text((x, meio), "Velo ", font=fnt_b, fill=g.cor_titulo(), anchor="lm")
+    draw.text((x + draw.textlength("Velo ", font=fnt_b), meio), "Funil",
+              font=fnt_r, fill=g.cor_corpo(), anchor="lm")
+    return y + tam + 46 * g.ESCALA
+
+
+def card_produto(selo, partes, apoio, print_nome, passo=None, recorte=None):
+    """
+    O card claro com prova: selo, manchete com palavra em teal, print grande.
+
+    ## Por que esta forma, e de onde ela veio
+
+    O dono mandou o @agendorcrm como referência e recusou a direção anterior.
+    Lidos os quatro posts, a fórmula deles é `dado + produto + palavra colorida
+    + marca` — e não há uma fotografia em nenhum. O Exa concorda: em 20 guias
+    de criativo B2B SaaS, print de produto aparece em 7 e foto/lifestyle em 2,
+    o menos recomendado de todos.
+
+    A peça anterior (fundo escuro, só tipografia) não estava errada — estava
+    incompleta. Faltava a prova. Um CRM que fala de orçamento e não mostra a
+    tela do orçamento pede fé.
+
+    ## O que NÃO copiamos do Agendor
+
+    Prova social. Eles usam; 30% dos guias recomendam; e nós não temos cliente
+    externo. `docs/estado-atual.md` trava isso — "sem prova social inventada".
+    O substituto honesto é o dado de mercado com a fonte declarada, que é o
+    card escuro da sequência.
+    """
+    def bloco(d, y, img_alvo=None):
+        if img_alvo is not None:
+            y = marca_no_topo(img_alvo, d, y)
+        if selo:
+            y = g.pill(d, selo, y) + 40 * g.ESCALA
+        y = g.escrever_com_realce(
+            d, partes, g.fonte(g.TITULO, 78), g.fonte(g.TITULO, 78),
+            y, g.cor_titulo(), g.cor_destaque(), entrelinha=1.16,
+        )
+        if apoio:
+            y += 26 * g.ESCALA
+            y = g.escrever_esq(d, apoio, g.fonte(g.CORPO, 42), y, g.cor_corpo(),
+                               entrelinha=1.34)
+        return y
+
+    # O print precisa da IMAGEM e o texto precisa do `draw`, então a
+    # composição é sequencial aqui em vez de passar por `_peca_clara`: o texto
+    # primeiro (para saber onde ele termina), o print no que sobrar.
+    g._TEMA_CLARO = True
+    g._LUZ_ATUAL = 0.30
+    try:
+        img = g.fundo_do_tema(escuro_extra=0.0)
+        draw = ImageDraw.Draw(img)
+        topo, base = g.faixa_livre()
+        if passo:
+            marcador_de_passo(draw, *passo)
+        fim = bloco(draw, topo, img)
+        _print_no_claro(img, print_nome, fim + 40 * g.ESCALA,
+                        base - fim - 40 * g.ESCALA, recorte=recorte)
+        g.assinar_discreto(img, draw)
+        return img
+    finally:
+        g._TEMA_CLARO = False
+
+
+def icone_de_confirmacao(tamanho: int) -> Image.Image:
+    """
+    Disco teal com o visto branco dentro — o marcador da recapitulação.
+
+    ## Por que desenhado, e não um glifo de fonte
+
+    A primeira versão usava um travessão de texto. O travessão é pontuação:
+    ele diz "aparte", não "pronto". Um visto diz que aquilo está entregue, que
+    é exatamente a afirmação das três linhas do último card.
+
+    E o glifo de fonte não serve como substituto: `✓` não existe na Geist, e
+    quando falta o Pillow desenha o retângulo vazio em silêncio, sem erro. O
+    traçado aqui é geometria, então ele existe sempre e escala junto com a
+    peça.
+
+    ## Por que disco cheio, e não contorno
+
+    A 38px o contorno de 2px some na redução para 1080. O disco chapado no
+    teal do modo claro mantém peso na miniatura da grade, que é onde o
+    carrossel é visto antes de ser aberto.
+
+    Supersample 4x e LANCZOS, como o selo e o funil da marca: o círculo e a
+    diagonal do visto são as duas formas que mais denunciam serrilhado.
+    """
+    s = 4
+    t = tamanho * s
+    ico = Image.new("RGBA", (t, t), (0, 0, 0, 0))
+    d = ImageDraw.Draw(ico)
+    d.ellipse([0, 0, t - 1, t - 1], fill=g.TEAL_NO_CLARO)
+    # O visto em duas retas com ponta arredondada, nas proporções do ícone de
+    # `check` do produto (lucide): perna curta descendo até 62% da altura,
+    # perna longa subindo até 34%.
+    grosso = max(2, int(t * 0.11))
+    d.line([(t * 0.28, t * 0.52), (t * 0.44, t * 0.68)],
+           fill=(255, 255, 255), width=grosso, joint="curve")
+    d.line([(t * 0.44, t * 0.68), (t * 0.73, t * 0.34)],
+           fill=(255, 255, 255), width=grosso, joint="curve")
+    for ponta in ((t * 0.28, t * 0.52), (t * 0.44, t * 0.68), (t * 0.73, t * 0.34)):
+        r = grosso / 2
+        d.ellipse([ponta[0] - r, ponta[1] - r, ponta[0] + r, ponta[1] + r],
+                  fill=(255, 255, 255))
+    return ico.resize((tamanho, tamanho), Image.LANCZOS)
+
+
+def card_cta_claro(chamada, apoio, recapitulacao=(), passo=None):
+    """
+    O fechamento no registro claro, para a sequência terminar como começou.
+
+    ## A recapitulação existe porque o último card é lido fora de ordem
+
+    Quem chega ao quinto slide arrastou quatro vezes e já não tem os três
+    argumentos na cabeça — e parte de quem vê este card nem passou pelos
+    outros, porque o Instagram mostra o carrossel a partir do slide que a
+    pessoa tocou na grade. Repetir em três linhas curtas custa nada e é a
+    única superfície onde a peça pode ser lida sozinha.
+
+    E resolve um defeito visível: sem elas o card terminava aos 60% da altura
+    e o terço de baixo ficava vazio, o que num carrossel lê como slide
+    inacabado — visto ao abrir o PNG, não pelo conferidor.
+    """
+    def bloco(d, y, img_alvo=None):
+        if img_alvo is not None:
+            y = marca_no_topo(img_alvo, d, y)
+        y = g.escrever_esq(d, chamada, g.fonte(g.TITULO, 80), y, g.cor_titulo(),
+                           entrelinha=1.14)
+        y += 34 * g.ESCALA
+        y = g.escrever_esq(d, apoio, g.fonte(g.CORPO, 44), y, g.cor_corpo(),
+                           entrelinha=1.36)
+        y += 46 * g.ESCALA
+        for linha in recapitulacao:
+            fnt = g.fonte(g.CORPO, 40)
+            recuo = 64 * g.ESCALA
+            # `d.text` não quebra linha, então uma frase comprida sai PELA
+            # BORDA sem erro nenhum — foi o que aconteceu na primeira versão,
+            # com duas das três linhas vazando à direita. A guarda transforma
+            # isso em falha de geração, que é o único jeito de não repetir.
+            largura = d.textlength(linha, font=fnt)
+            if largura > g.LARGURA_TEXTO - recuo:
+                raise ValueError(
+                    f"recapitulação não cabe na coluna: {linha!r} "
+                    f"({int(largura)} > {g.LARGURA_TEXTO - recuo})"
+                )
+            marca = icone_de_confirmacao(38 * g.ESCALA)
+            alto = fnt.getbbox("Ag")[3]
+            img_alvo.paste(
+                marca,
+                (g.MARGEM_ESQ, int(y + (alto - marca.height) / 2)),
+                marca,
+            )
+            d.text((g.MARGEM_ESQ + recuo, y), linha, font=fnt, fill=g.cor_corpo())
+            y += 72 * g.ESCALA
+        if recapitulacao:
+            y += 30 * g.ESCALA
+        else:
+            y += 6 * g.ESCALA
+        # O botão desenhado, e não escrito: "Comece grátis" como texto solto
+        # lê como mais uma linha do corpo. Em forma de botão, o olho reconhece
+        # a ação antes de ler a palavra.
+        fnt = g.fonte(g.TITULO, 46)
+        larg = int(d.textlength("Comece grátis", font=fnt)) + 76 * g.ESCALA
+        alt = 104 * g.ESCALA
+        d.rounded_rectangle([g.MARGEM_ESQ, y, g.MARGEM_ESQ + larg, y + alt],
+                            radius=alt // 2, fill=g.TEAL_NO_CLARO)
+        d.text((g.MARGEM_ESQ + 38 * g.ESCALA, y + alt // 2), "Comece grátis",
+               font=fnt, fill=(255, 255, 255), anchor="lm")
+        y += alt + 26 * g.ESCALA
+        return g.escrever_esq(d, "Link na bio", g.fonte(g.CORPO, 36), y,
+                              g.cor_destaque())
+
+    return _peca_clara(bloco, passo)
+
+
 def card_gancho(partes, apoio, luz, passo=None):
     """
     O primeiro card: uma pergunta, com a palavra que dói em itálico serifado.
@@ -504,7 +919,24 @@ def card_dado(numero, unidade, explicacao, fonte_dado, categoria, luz, passo=Non
     # 258 quando o número é o protagonista; 176 quando existe grade, porque
     # aí quem prova é o desenho e o algarismo vira legenda dele. Dois
     # elementos disputando o mesmo papel deixam o card confuso.
-    fnt_num = g.fonte(g.DISPLAY, 176 if (proporcao and proporcao[1] == 100) else 258)
+    corpo_num = 176 if (proporcao and proporcao[1] == 100) else 258
+    # ## O número encolhe até caber, e a primeira versão não encolhia
+    #
+    # 258 foi escolhido para "4%" e "R$ 49", de dois a cinco glifos. "0 de 25"
+    # tem sete e **vazou pela borda direita** — visto ao abrir o PNG, sem erro
+    # nenhum: `draw.text` não quebra linha nem reclama, o mesmo silêncio que a
+    # recapitulação do card 5 já pagou nesta mesma rodada.
+    #
+    # Escolher o corpo à mão por peça resolveria hoje e voltaria a quebrar na
+    # próxima frase. Medir e descer de 6 em 6 resolve para qualquer número, e
+    # o piso de 120 existe para o card falhar em vez de imprimir um algarismo
+    # do tamanho do texto de apoio, que não seria mais o protagonista.
+    while corpo_num > 120:
+        fnt_teste = g.fonte(g.DISPLAY, corpo_num)
+        if g.medir(lambda d, _y: d.textlength(numero, font=fnt_teste)) <= g.LARGURA_TEXTO:
+            break
+        corpo_num -= 6
+    fnt_num = g.fonte(g.DISPLAY, corpo_num)
 
     def bloco(d, y):
         y = capsula_vazia(d, categoria, y) + 50 * g.ESCALA
@@ -819,6 +1251,122 @@ def main():
             f"R$ {g.PRO_PLAN_PRICE} por mês pela empresa inteira, "
             "não por vendedor.",
             luz=0.46, passo=(5, 5),
+        ),
+    ])
+
+    # ------------------------------------------ o carrossel do eixo ORÇAMENTO
+    #
+    # ## Por que ele existe, e por que só agora
+    #
+    # O produto ganhou o orçamento com prazo em 08/09, e a landing passou a
+    # dizer isso em 09/09. Antes disto, uma peça sobre orçamento seria promessa
+    # falsa — a mesma razão pela qual o perfil não podia falar disso até ontem.
+    #
+    # ## Este carrossel NÃO é para alcance, e isso muda o que ele precisa fazer
+    #
+    # Medido em 09/09: 12.194 seguidores e 4,0 curtidas de média — 0,033% de
+    # engajamento, contra 1% a 3% normais. Os seguidores foram comprados, e num
+    # feed que entrega por engajamento eles não são público parado: são o que
+    # SUPRIME a entrega, inclusive para os reais. `docs/estado-atual.md` registra
+    # isso como decisão travada, e ela continua valendo.
+    #
+    # O que mudou é quem chega aqui. ~510 mensagens de prospecção estão saindo,
+    # e parte de quem recebe vai procurar o perfil antes de clicar em qualquer
+    # coisa — é o reflexo de quem recebe mensagem de empresa que não conhece.
+    # Então a função desta peça é **confirmar que a empresa é real e que ela faz
+    # o que a mensagem disse**, não conquistar seguidor.
+    #
+    # Por isso o roteiro é o mesmo eco da mensagem e da landing, palavra por
+    # palavra: quem sai da conversa e cai no perfil precisa reconhecer a frase.
+    print()
+    # ## O posicionamento mudou em 09/09, e saiu de medicao com o Exa
+    #
+    # A versao anterior dizia "o sistema COBRA o retorno". Buscado no Exa o que
+    # responde quando alguem procura *"como cobrar retorno de orcamento"*, os
+    # 8 primeiros resultados eram **inadimplencia** — cobranca de quem nao
+    # pagou, com modelo de mensagem e advogado. No portugues do cliente,
+    # "cobrar" quer dizer receber divida, e o produto estaria prometendo outra
+    # coisa para quem le rapido.
+    #
+    # O verbo do mercado e outro, medido nas mesmas buscas: **follow-up**
+    # aparece em 10 de 10 titulos do tema. Mas follow-up e jargao de vendedor,
+    # e o pedido aqui foi um posicionamento que quase todo mundo entenda.
+    #
+    # A frase que o proprio cliente digita esta nos titulos que o Exa devolveu:
+    # *"cliente pediu orcamento e sumiu"*, *"cliente nao respondeu o
+    # orcamento"* — 6 de 10. E o verbo que ninguem disputa e o mais simples da
+    # lingua: **lembrar**. Zero dos 25 geradores de orcamento lidos usam.
+    carrossel("carrossel-3-orcamento", [
+        card_produto(
+            "O R Ç A M E N T O   C O M   P R A Z O",
+            [("O cliente pediu orçamento e ", False), ("sumiu.", True),
+             ("Aqui ele não some.", False)],
+            "Você guarda até quando o preço vale, e o Velo Funil lembra você "
+            "de dar o retorno dois dias antes.",
+            "hoje-light.png", passo=(1, 5),
+            # A barra lateral fica fora: o que prova a promessa é a tarefa
+            # vencida com hora e nome, não o menu.
+            recorte=(530, 285, 2200),
+        ),
+        card_dado(
+            "0 de 25", "lembram você de dar o retorno",
+            "Lemos 25 sistemas de orçamento brasileiros. 88% geram o PDF e "
+            "60% mandam pelo WhatsApp. Quase metade até guarda a validade. "
+            "Avisar antes de o prazo acabar: nenhum.",
+            "25 geradores de orçamento, lidos em 09/09/2026.",
+            "O   Q U E   O   M E R C A D O   F A Z", luz=0.30, passo=(2, 5),
+            # ## A grade INTEIRA apagada é o argumento, e por isso ela fica
+            #
+            # O carrossel do pedágio registra que `proporcao` foi recusada lá:
+            # 3,4h em 40h desenha uma barra quase vazia e o olho conclui "é
+            # pouco", o oposto da frase. Aqui a frase É "nenhum", então a
+            # grade sem nenhum quadrado aceso diz exatamente o texto.
+            #
+            # O número mudou de "4%" para "0 de 25" depois da medição com o
+            # Exa. Os 4% vinham de CRMs que anunciam proposta; os 25 são
+            # geradores de ORÇAMENTO, que é a categoria que este cliente de
+            # fato procura. E o dado ficou mais forte: entre eles, 48% já
+            # guardam a validade — guardar não diferencia, avisar sim.
+            # ## Sem `proporcao` aqui, e a tentativa fica registrada
+            #
+            # `card_dado` só desenha a GRADE quando o todo é 100; com 25 ele
+            # cai na barra, e uma barra com zero preenchido é indistinguível
+            # de um esqueleto de carregamento. Visto ao abrir o PNG.
+            #
+            # Trocar o 25 por "0 em cada 100" resolveria o desenho e mentiria
+            # sobre a amostra. O número "0 de 25" já é o gráfico.
+        ),
+        card_produto(
+            "N O   F U N I L",
+            [("Valor, validade e o retorno, ", False),
+             ("no mesmo card.", True)],
+            "Sem planilha paralela. O prazo vive junto do negócio que já está "
+            "no funil.",
+            "kanban-light.png", passo=(3, 5),
+            recorte=(530, 230, 2200),
+        ),
+        card_dado(
+            f"R$ {g.PRO_PLAN_PRICE}", "por mês, pela empresa inteira",
+            # O número sai de `PRECO_POR_USUARIO`, não da mão: escrevi
+            # "R$ 300" nesta rodada e o teste `oferta-nas-artes` reprovou, com
+            # razão. A mediana de tabela pública é R$ 53, então cinco pessoas
+            # dão R$ 265 — "passam de R$ 300" era arredondamento para cima de
+            # um número que a arte tem como conferir sozinha.
+            "Com 1 ou com 20 pessoas. A maioria dos CRMs cobra por usuário, e "
+            f"cinco pessoas custam R$ {g.PRECO_POR_USUARIO * 5} por mês.",
+            "Preço de tabela pública dos concorrentes, lido em 09/09/2026.",
+            "O   P R E Ç O", luz=0.38, passo=(4, 5),
+        ),
+        card_cta_claro(
+            "Comece hoje, com o que você já tem.",
+            f"Grátis até {g.FREE_LEAD_LIMIT} contatos, sem cartão. Traga sua "
+            "planilha e o funil monta sozinho.",
+            recapitulacao=(
+                "O sistema lembra do retorno, você não",
+                "Valor e prazo dentro do negócio",
+                f"R$ {g.PRO_PLAN_PRICE} pela empresa, não por pessoa",
+            ),
+            passo=(5, 5),
         ),
     ])
 

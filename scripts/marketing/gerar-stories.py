@@ -554,7 +554,7 @@ def cor_filete():
     return BORDA_NO_CLARO if _TEMA_CLARO else (0, 110, 112)
 
 
-def marca_dagua_do_funil(img, forca=0.055):
+def marca_dagua_do_funil(img, forca=0.07):
     """
     O símbolo da marca em escala gigante, sangrando pelo canto direito.
 
@@ -581,20 +581,26 @@ def marca_dagua_do_funil(img, forca=0.055):
     destas telas começa em `MARGEM_ESQ`, e a forma cruzando essa coluna
     disputaria com a primeira palavra de cada linha.
     """
-    ## Por que ENORME e cortado, e não inteiro num canto
+    ## O símbolo INTEIRO, e por que ele deixou de sangrar pelos dois lados
 
-    # A primeira tentativa colocou o símbolo inteiro, em tamanho pouco maior
-    # que a largura da tela. Não leu como marca-d'água: leu como mancha. Um
-    # símbolo inteiro e reconhecível num canto é adesivo, e a boca do funil —
-    # o trapézio mais largo — virava uma faixa diagonal solta no fundo, que o
-    # olho classifica como artefato de render.
+    # Durante três semanas a escala foi 2,6x a largura do quadro, sangrando
+    # pelos dois lados. O raciocínio era que nenhuma camada inteira aparecendo
+    # dá textura sem se anunciar como logotipo, e a alternativa medida na
+    # época — o símbolo inteiro num canto, pouco maior que a tela — tinha lido
+    # como adesivo.
     #
-    # Em escala muito maior, sangrando pelos dois lados, nenhuma das três
-    # camadas cabe no quadro por inteiro: o que sobra são arestas que dão
-    # direção e textura ao fundo sem se anunciarem como logotipo. É a mesma
-    # lógica do card do print sangrando — forma cortada sugere continuação,
-    # forma inteira e pequena vira selo.
-    lado = int(W * 2.6)
+    # **Aberto o PNG em 09/09, o resultado era o defeito que a escolha queria
+    # evitar, do outro lado.** O que sobrava no quadro era UMA aresta
+    # diagonal, e uma aresta diagonal não é a marca: é exatamente o "artefato
+    # de render" que o comentário antigo temia. O dono viu a peça e pediu o
+    # símbolo do funil nítido — e estava certo, porque marca-d'água que ninguém
+    # reconhece não é marca-d'água, é sujeira com opacidade baixa.
+    #
+    # A saída não era escolher entre os dois extremos. 0,85x da largura põe as
+    # TRÊS camadas dentro do quadro, com só o canto direito da boca do funil
+    # cortado: a forma é reconhecível e continua sugerindo continuação, que é
+    # o que separava selo de marca-d'água no argumento original.
+    lado = int(W * 0.85)
     camada = Image.new("RGBA", (lado, lado), (0, 0, 0, 0))
     d = ImageDraw.Draw(camada)
 
@@ -612,12 +618,31 @@ def marca_dagua_do_funil(img, forca=0.055):
     d.polygon([P(6.9, 10.6), P(17.1, 10.6), P(14.98, 14.9), P(9.02, 14.9)], fill=tinta)
     d.polygon([P(10.9, 16.6), P(13.1, 16.6), P(12.0, 19.5)], fill=tinta)
 
-    # Desfoque leve: aresta perfeitamente nítida a 5% de opacidade é o que
-    # denuncia a forma como elemento colado. Com a borda suave ela se comporta
-    # como luz na superfície, que é o que o fundo já faz nos halos.
-    camada = camada.filter(ImageFilter.GaussianBlur(6 * ESCALA))
+    # ## O desfoque caiu de 6 para 1,5, e é isso que o "mais nítido" significa
+    #
+    # Com o símbolo cortado em UMA aresta, borrar era o que impedia essa
+    # aresta de ser lida como falha de render. Com o funil inteiro no quadro,
+    # o desfoque passou a trabalhar contra: a 6px de raio os chanfros das três
+    # camadas se fundem e a forma vira nuvem.
+    #
+    # Não faz falta como antisserrilhado, e isso é medido, não suposto: a peça
+    # é desenhada em `ESCALA`x e reduzida com LANCZOS no `salvar()`, então a
+    # própria redução já é o supersample. O 1,5 que sobra tira só a escada de
+    # pixel da diagonal na versão @4k, que é a única lida em tamanho real.
+    camada = camada.filter(ImageFilter.GaussianBlur(1.5 * ESCALA))
 
-    img.paste(camada, (int(-W * 0.30), int(-H * 0.16)), camada)
+    # ## Onde ele fica, e por que não no canto
+    #
+    # A coluna de leitura começa em `MARGEM_ESQ` e todo texto nasce nela, então
+    # o símbolo ocupa a METADE DIREITA e sangra ~6% pela borda: só o canto
+    # direito da boca do funil sai do quadro. Centrado na vertical em 46% da
+    # altura, ele fica atrás do parágrafo e acima da assinatura nos dois
+    # formatos — o cálculo sai de `H`, então 4:5 e 9:16 se resolvem sozinhos
+    # em vez de precisarem de dois números escritos à mão.
+    alt_funil = 0.629 * lado              # do topo da boca (4,4) à ponta (19,5)
+    y0 = int(H * 0.46 - alt_funil / 2 - 0.1833 * lado)
+    x0 = int(W * 1.06 - 0.8917 * lado)    # a aresta direita 6% fora do quadro
+    img.paste(camada, (x0, y0), camada)
     return img
 
 
@@ -706,7 +731,7 @@ def fundo_claro(escuro_extra=0.0):
     # A marca-d'água precisa CLAREAR aqui, não escurecer: o funil a 5,5% de
     # branco sobre off-white some, e a 5,5% de preto vira sujeira. O valor
     # dobra porque contraste percebido cai muito em superfície clara.
-    img = marca_dagua_do_funil(img, forca=0.075)
+    img = marca_dagua_do_funil(img, forca=0.08)
 
     if escuro_extra:
         cinza = Image.new("RGB", (W, H), (214, 220, 222))

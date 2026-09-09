@@ -4,9 +4,81 @@ Documento de continuidade. É lido no começo de toda sessão (referenciado no
 [CLAUDE.md](../CLAUDE.md)) para que uma conversa nova, ou outra conta, comece
 sabendo o que já foi feito, o que foi decidido e onde estão as armadilhas.
 
-**Atualizado em:** 09/09/2026, madrugada (o alarme do dinheiro estava MUDO havia
-tres dias e ninguem sabia; o orcamento foi provado no navegador e o PDF por HTTP;
-e o ICP nao procura "CRM" — procura ORCAMENTO)
+**Atualizado em:** 09/09/2026, manha (o verbo do posicionamento remetia a
+cobranca de DIVIDA, medido no Exa; e o print do produto entrava espremido em
+2,7x — era o "borrado ao dar zoom")
+
+## O verbo do posicionamento estava errado, e o print estava ESPREMIDO (09/09)
+
+Carrossel de orcamento para o Instagram, pedido do dono, com a referencia
+`@agendorcrm`. Duas correcoes que valem mais que a arte.
+
+### "Cobrar" quer dizer receber divida, e o produto prometia outra coisa
+
+A landing e o primeiro carrossel diziam *"o sistema COBRA o retorno"*. Buscado
+no Exa o que responde para *"como cobrar retorno de orcamento"*:
+
+    8 dos 8 primeiros    INADIMPLENCIA — cobrar quem nao pagou, com
+                         modelo de mensagem e advogado
+
+O verbo do mercado e outro, e tambem medido: **follow-up** em 10 de 10 titulos
+do tema. Mas e jargao de vendedor. A frase que o proprio cliente digita apareceu
+nos titulos: *"cliente pediu orcamento e sumiu"*, *"cliente nao respondeu o
+orcamento"* — **6 de 10**. E o verbo que ninguem disputa e o mais simples da
+lingua: **lembrar**.
+
+### E o dado antigo media a categoria errada
+
+Os 4% vinham de CRMs que anunciam proposta. Medidos os 25 GERADORES DE
+ORCAMENTO, que e a categoria que este cliente de fato procura:
+
+    22/25   88%   geram o PDF                -> e commodity
+    15/25   60%   mandam pelo WhatsApp       -> e o canal, nao o produto
+    12/25   48%   guardam a validade         -> guardar NAO diferencia
+     0/25    0%   avisam antes de vencer     -> e aqui que o produto entra
+
+**Isso corrige o que este documento afirmava em 08/09.** "Guardar a validade"
+era vendido como diferencial e quase metade da categoria ja guarda. O que
+ninguem faz e AVISAR.
+
+### O print do produto entrava achatado em 2,7x
+
+`_print_no_claro` calculava a altura proporcional, tomava o `min()` com o espaco
+disponivel e redimensionava a origem para essa altura MENOR. Medido:
+
+    hoje-light.png          2880x1800
+    altura PROPORCIONAL     562px na peca de 1080
+    altura que o card tinha 195px          -> 2,7x de esmagamento
+
+Nao era so feiura: reduzir 1800px de altura para 360 joga fora quatro quintos da
+informacao vertical antes de qualquer LANCZOS ajudar. Era o "borrado ao dar
+zoom" relatado pelo dono.
+
+**A correcao ja existia no projeto**, em `card_com_print` do gerador de Stories:
+escala pela LARGURA, mantem a proporcao e corta pela base com esmaecimento.
+Cortar e honesto e espremer nao e — no corte, o pedaco que aparece esta em
+proporcao real.
+
+Faltava a outra metade: a tela inteira nao cabe legivel. Regiao util de ~1100px
+de CSS numa coluna de 862px da 0,60x, e texto de 14px vira 8,4px. O card do
+print ganhou gutter proprio de 40px (contra 97 da coluna de texto) e passou a
+amostrar uma REGIAO da origem, sem a barra lateral. **0,60x -> 0,89x.**
+
+Guardas novas, porque todos estes defeitos eram silenciosos: escala abaixo de
+0,80x falha a geracao; recapitulacao que nao cabe na coluna falha; numero grande
+encolhe ate caber; e uma varredura recusa trecho de realce que seja so
+pontuacao (`"do negocio ."` apareceu tres vezes).
+
+### O que foi publicado
+
+    06:33   /p/DdDoGn7itMM/   versao com "cobra o retorno" e o print espremido
+    06:49   /p/DdDp50-IC0S/   a versao corrigida
+
+**A Content Publishing API publica e NAO apaga** — nao existe endpoint, e da
+plataforma. Apagar o primeiro e do dono, pelo app.
+
+**A bio do Instagram continua com o posicionamento de agosto** (*"O WhatsApp
+guarda a conversa"*), e as duas legendas mandam para o link na bio.
 
 ## O alarme do dinheiro calou por tres dias (09/09)
 
