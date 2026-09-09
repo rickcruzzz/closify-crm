@@ -26,7 +26,7 @@ describe('montarAbordagem', () => {
     for (const vertical of ['dedetizacao', 'comunicacao-visual', 'marcenaria', 'nicho-novo']) {
       for (const motivos of [['tem equipe de vendas'], ['WhatsApp direto']]) {
         const m = montarAbordagem({ ...base, vertical, motivos })
-        expect(m.endsWith('é só ignorar: não te procuro de novo.')).toBe(true)
+        expect(m.endsWith('Não volto a procurar.')).toBe(true)
         expect(m).not.toContain('…')
       }
     }
@@ -37,7 +37,7 @@ describe('montarAbordagem', () => {
       ...base, vertical: 'marcenaria', motivos: ['tem equipe de vendas'],
     })
     // O gancho de marcenaria e o mais longo: a linha da equipe e sacrificada.
-    expect(comEquipe).toMatch(/n[ãa]o te procuro de novo\.$/)
+    expect(comEquipe).toMatch(/n[ãa]o volto a procurar\.$/i)
     expect(comEquipe.length).toBeLessThanOrEqual(TETO)
   })
 
@@ -65,7 +65,7 @@ describe('montarAbordagem', () => {
   it('oferece a saida na PRIMEIRA mensagem', () => {
     // Uma linha de descarte custa nada e e a diferenca entre "nao tenho
     // interesse" e uma denuncia de spam — que no WhatsApp derruba o numero.
-    expect(montarAbordagem(base)).toMatch(/n[ãa]o te procuro de novo/)
+    expect(montarAbordagem(base)).toMatch(/n[ãa]o volto a procurar/i)
   })
 
   it('NUNCA afirma dor que ninguem mediu', () => {
@@ -184,7 +184,7 @@ describe('o nome de quem decide', () => {
       const m = montarAbordagem({ ...base, decisor: d })
       expect(m.startsWith('Oi! ')).toBe(true)
       expect(m.split('\n\n')[0]).toContain('Gráfica Quatrocor')
-      expect(m.endsWith('é só ignorar: não te procuro de novo.')).toBe(true)
+      expect(m.endsWith('Não volto a procurar.')).toBe(true)
     }
   })
 
@@ -193,7 +193,7 @@ describe('o nome de quem decide', () => {
       ...base, vertical: 'marcenaria', decisor: 'Ana Beatriz', motivos: ['tem equipe de vendas'],
     })
     expect(m.length).toBeLessThanOrEqual(TETO)
-    expect(m.endsWith('é só ignorar: não te procuro de novo.')).toBe(true)
+    expect(m.endsWith('Não volto a procurar.')).toBe(true)
   })
 })
 
@@ -247,7 +247,7 @@ describe('o link, e o que a operacao de SO ENVIO exige dele', () => {
     // mandou. Numa operacao de so envio ela seria quebrada — e promessa
     // quebrada e o que transforma desinteresse em denuncia.
     const m = montarAbordagem(base)
-    expect(m).toContain('é só ignorar')
+    expect(m).toContain('pode ignorar')
     expect(m).not.toContain('me avisa')
   })
 
@@ -259,7 +259,7 @@ describe('o link, e o que a operacao de SO ENVIO exige dele', () => {
       for (const motivos of [['tem equipe de vendas'], ['WhatsApp direto']]) {
         const m = montarAbordagem({ ...base, vertical, motivos })
         expect(m.length).toBeLessThanOrEqual(TETO)
-        expect(m.endsWith('é só ignorar: não te procuro de novo.')).toBe(true)
+        expect(m.endsWith('Não volto a procurar.')).toBe(true)
       }
     }
   })
@@ -332,7 +332,7 @@ describe('a variação que quebra o padrão de texto idêntico', () => {
         motivos: ['tem equipe de vendas', 'pede orçamento no site'],
       })
       expect(m.length).toBeLessThanOrEqual(560)
-      expect(m.endsWith('é só ignorar: não te procuro de novo.')).toBe(true)
+      expect(m.endsWith('Não volto a procurar.')).toBe(true)
     }
   })
 })

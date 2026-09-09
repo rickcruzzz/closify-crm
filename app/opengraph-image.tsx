@@ -77,30 +77,69 @@ export default function OpengraphImage() {
         </div>
       </div>
 
+      {/* ## A manchete usa o acento da marca em UMA palavra, e é a palavra certa
+          A peça era branca do começo ao fim, com o teal só no selo. "Sumiu" é
+          o verbo da dor e a única palavra que o leitor precisa reconhecer se
+          ler nada mais — no tamanho de miniatura do WhatsApp, é a única que
+          ele vai ler mesmo. */}
       <div
         style={{
-          marginTop: 48,
-          fontSize: 66,
+          marginTop: 44,
+          fontSize: 64,
           fontWeight: 700,
-          lineHeight: 1.15,
+          lineHeight: 1.14,
           letterSpacing: -1.5,
-          maxWidth: 900,
+          maxWidth: 940,
+          display: 'flex',
+          flexWrap: 'wrap',
         }}
       >
-        O cliente pediu orçamento e sumiu. Aqui ele não some.
+        {/* ## O espaço entre os trechos é MARGEM, e não caractere
+            Três renderizações para chegar aqui, todas saindo "sumiu.Aqui ele
+            não some.". `&nbsp;` sai literal, porque o Satori trata o texto do
+            JSX como está; e ` ` some, porque num container flex o espaço
+            nas pontas do item é descartado no layout.
+
+            Margem não depende de como o texto é tratado: ela é geometria. É a
+            mesma razão pela qual o `gap` do selo funciona e o espaço não. */}
+        <span style={{ marginRight: 20 }}>{'O cliente pediu orçamento e'}</span>
+        <span style={{ color: '#00bfc0', marginRight: 20 }}>{'sumiu.'}</span>
+        <span>{'Aqui ele não some.'}</span>
       </div>
 
-      {/* Numa string só, e não quebrada em duas linhas do JSX. O navegador
-          colapsa a quebra num espaço; **não confirmei que o Satori faça o
-          mesmo**, e a primeira renderização saiu com o que parecia um espaço
-          duplo depois do ponto. Escrever a frase inteira remove a dúvida sem
-          custar nada.
+      {/* ## O dado entrou no lugar da frase genérica, e ele foi MEDIDO
+          A versão anterior dizia "o sistema lembra você de dar o retorno" —
+          verdadeiro e sem prova. Com o Exa foram lidos 25 geradores de
+          orçamento brasileiros, que é a categoria que este público de fato
+          procura: 88% geram o PDF, 60% mandam pelo WhatsApp, 48% já guardam a
+          validade. **Nenhum avisa antes de o prazo vencer.**
 
-          Vale registrar o método: esta rota é renderizada e ABERTA antes de
-          subir. Nenhum teste olha o pixel dela, e ela é a única superfície que
-          o lead vê antes de clicar. */}
-      <div style={{ marginTop: 28, fontSize: 30, color: '#a1a1a1', maxWidth: 860 }}>
-        {'O sistema lembra você de dar o retorno antes de o prazo vencer. Grátis até 50 contatos, sem cartão.'}
+          Guardar não diferencia; avisar sim. É o único número não óbvio que
+          este produto tem, e ele cabe numa linha. */}
+      <div
+        style={{
+          marginTop: 34,
+          paddingTop: 30,
+          borderTop: '2px solid #2a2a2a',
+          display: 'flex',
+          alignItems: 'baseline',
+          gap: 18,
+          maxWidth: 940,
+        }}
+      >
+        {/* `flexShrink: 0` porque o número quebrou em duas linhas na primeira
+            renderização ("0 de" / "25"), e um número partido deixa de ser
+            número. Ele é o dado; quem cede espaço é a frase ao lado. */}
+        <span style={{ fontSize: 46, fontWeight: 700, color: '#00bfc0', flexShrink: 0 }}>
+          {'0 de 25'}
+        </span>
+        <span style={{ fontSize: 30, color: '#a1a1a1' }}>
+          {'sistemas de orçamento avisam antes de o prazo vencer. O Velo Funil avisa.'}
+        </span>
+      </div>
+
+      <div style={{ marginTop: 30, fontSize: 26, color: '#6f6f6f' }}>
+        {'Grátis até 50 contatos, sem cartão  ·  velofunil.com.br'}
       </div>
     </div>,
     size,

@@ -20,6 +20,20 @@
  * custa nada e é a diferença entre "não tenho interesse" e uma denúncia de
  * spam — que no WhatsApp é o que derruba o número.
  *
+ * ## Em 09/09 ela ficou mais profissional, sem perder a promessa
+ *
+ * O dono leu a mensagem pronta e disse que *"não te procuro de novo"* soava
+ * mal. Trocada por *"pode ignorar. Não volto a procurar."* — mesma promessa,
+ * registro de quem escreve para uma empresa e não para um conhecido.
+ *
+ * O que NÃO podia mudar é o compromisso ser explícito e verificável: ele é o
+ * que transforma "não tenho interesse" em resposta em vez de denúncia, e é
+ * `nao-perturbe.txt` que o cumpre na rodada seguinte. Uma linha educada que
+ * não promete nada seria pior que a anterior.
+ *
+ * Sem travessão, pela decisão de 07/09: no WhatsApp ele vira caractere
+ * estranho em teclado antigo, e no `wa.me` custa três bytes como `%E2%80%94`.
+ *
  * Em 08/09 ela mudou de *"me avisa que não te procuro de novo"* para *"é só
  * ignorar"*, e o motivo é operacional: o dono decidiu **enviar sem responder**.
  * A frase antiga era uma promessa que exigia ação dele — e promessa que o
@@ -426,7 +440,7 @@ export function montarAbordagem(d: DadosDaAbordagem): string {
       // vez de denúncia de spam — e o corte, quando a mensagem estoura, já tem
       // teste provando que não a alcança.
       LINK,
-      `Se não fizer sentido, é só ignorar: não te procuro de novo.`,
+      `Se não fizer sentido, pode ignorar. Não volto a procurar.`,
     ].join('\n\n')
 
   const completa = montar(linhaEquipe)
