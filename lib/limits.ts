@@ -88,9 +88,21 @@ export async function canAddMember(workspaceId: string): Promise<LimitCheck> {
  * se está contendo é justamente a criação de workspaces novos para escapar do
  * teto de colaboradores.
  *
- * A conta é feita sobre workspaces onde a pessoa é ADMIN, participar de uma
- * empresa a convite de outro não deve consumir a vaga dela, senão quem aceita
- * dois convites fica impedido de ter a própria empresa.
+ * A conta é feita sobre quem CRIOU a empresa, não sobre quem é admin dela.
+ * Participar a convite de outro não consome a vaga de ninguém, e ser promovido
+ * a admin lá também não.
+ *
+ * ## As duas contagens tinham que ser a MESMA (09/09)
+ *
+ * Até a 0078 esta função contava associação de admin e a RPC contava a mesma
+ * coisa, então batiam. A 0078 mudou a RPC para `created_by` — porque seguir a
+ * associação faria **aceitar um convite virar upgrade** — e por um momento as
+ * duas discordaram: quem fosse admin de cinco empresas, tendo criado duas,
+ * levava "O plano Pro inclui 5 empresas" desta função enquanto o banco
+ * deixaria criar.
+ *
+ * É o defeito que a própria 0078 documenta para justificar concentrar o teto
+ * num lugar só, cometido no lugar de fora. Agora as duas contam `created_by`.
  *
  * Quem já passou do limite antes desta regra existir mantém o que criou: a
  * checagem só barra criações novas.
@@ -98,17 +110,15 @@ export async function canAddMember(workspaceId: string): Promise<LimitCheck> {
 export async function canAddWorkspace(userId: string): Promise<LimitCheck> {
   const supabase = await createClient()
 
-  const { data: vinculos } = await supabase
-    .from('workspace_members')
-    .select('workspace_id, role')
-    .eq('user_id', userId)
-    .eq('role', 'admin')
+  const { data: proprias } = await supabase
+    .from('workspaces')
+    .select('id')
+    .eq('created_by', userId)
 
-  const ids = (vinculos ?? []).map((v) => v.workspace_id)
+  const ids = (proprias ?? []).map((w) => w.id)
   if (ids.length === 0) return { allowed: true }
 
-  // Uma empresa Pro libera a criação: o plano é do workspace, e quem paga por
-  // qualquer um deles tem direito a multi-empresa.
+  // Uma empresa Pro libera a criação, e o Pro cobre as cinco.
   //
   // Pergunta por workspace em vez de ler a coluna `plan` em lote: a coluna é o
   // último valor gravado e não sabe que o período pago venceu. `pro_vigente`

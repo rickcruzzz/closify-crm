@@ -317,7 +317,15 @@ describe('a variação que quebra o padrão de texto idêntico', () => {
     // insistindo.
     const a = montarAbordagem({ ...base, nome: 'Gráfica Quatrocor' })
     const b = montarAbordagem({ ...base, nome: 'Quatrocor Impressão Digital' })
-    expect(a.split('\n\n').slice(1).join('|')).toBe(b.split('\n\n').slice(1).join('|'))
+    // Compara os trechos SORTEADOS, não a mensagem inteira: nome mais longo
+    // deixa menos espaço, e a linha opcional de multi-empresa pode não caber
+    // numa das duas. Isso é o teto de 560 funcionando, não a semente mudando.
+    // A primeira versão deste caso comparava o corpo todo e reprovou quando a
+    // linha de empresas nasceu.
+    const gancho = (m: string) => m.split('\n\n')[1]
+    const oferta = (m: string) => m.split('\n\n')[2]
+    expect(gancho(a)).toBe(gancho(b))
+    expect(oferta(a)).toBe(oferta(b))
   })
 
   it('NENHUMA combinação passa do teto do WhatsApp', () => {

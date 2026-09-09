@@ -253,14 +253,27 @@ const OFERTA = [
 const LINHA_MULTI_EMPRESA = (limite: number) =>
   ` Se você tem mais de um negócio, o mesmo preço cobre até ${limite}.`
 
-/** O convite para testar. As três dizem grátis, sem cartão e sem prisão. */
+/**
+ * O convite para testar. As três dizem sem cartão, sem prisão e com o número.
+ *
+ * ## O limite fica dito, e não anunciado (09/09)
+ *
+ * As versões anteriores abriam com ele — *"Grátis até 50 contatos"* — e o dono
+ * apontou: a primeira coisa que a frase comunicava era o teto, não o convite.
+ * Numa mensagem fria, liderar pela restrição é dar motivo para parar de ler.
+ *
+ * O número CONTINUA, e isso não é negociável: quem se cadastra esperando
+ * ilimitado e bate em 50 vive a mesma promessa quebrada que a landing acabou
+ * de consertar em "Empresas ilimitadas". A mudança é de ênfase, não de
+ * conteúdo — o convite vem primeiro e o teto vem junto, sem holofote.
+ */
 const TESTE = [
   (limite: number) =>
-    `Testa de graça até ${limite} contatos, sem cartão. Sem fidelidade, e seus dados saem em CSV.`,
+    `Testa sem pagar e sem cartão, com até ${limite} contatos. Sem fidelidade, e seus dados saem em CSV.`,
   (limite: number) =>
-    `Grátis até ${limite} contatos, sem cartão. Cancela quando quiser e leva tudo em CSV.`,
+    `Dá pra usar de graça, sem cartão, com até ${limite} contatos. Cancela quando quiser e leva tudo em CSV.`,
   (limite: number) =>
-    `Dá pra testar até ${limite} contatos sem pagar e sem cartão. Seus dados saem em CSV.`,
+    `Pode testar à vontade: sem cartão, até ${limite} contatos, e seus dados saem em CSV quando quiser.`,
 ] as const
 
 const GANCHO: Record<string, readonly string[]> = {
