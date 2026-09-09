@@ -180,6 +180,51 @@ describe('alertasNaoAvisados', () => {
   it('lê a quantidade do próprio título, sem campo paralelo', () => {
     expect(quantidadeDoAlerta(trintaErros[0])).toBe(30)
   })
+
+  /**
+   * ## O alerta que VOLTA, e o silêncio de três dias que ele causou
+   *
+   * Medido em 09/09, na memória de produção: três chaves presas desde 06/09,
+   * com o cron passando 72 vezes no meio. O webhook do Asaas quebrou de novo
+   * em 08/09 e o vigia **não avisou** — a chave velha ainda dizia `1`, o
+   * alerta novo também vale `1`, e só PIOROU dispara.
+   *
+   * A causa não era `alertasNaoAvisados`, que compara certo. Era a rota: a
+   * memória só era escrita depois de um envio, e a saída "nada novo" pulava a
+   * escrita. Alerta que se resolvia enquanto OUTROS seguiam vivos deixava a
+   * chave para trás — a purga da rota só roda quando a fila esvazia inteira.
+   *
+   * O contrato que estes dois casos travam é o que a rota agora cumpre nas
+   * duas saídas: a memória descreve os alertas VIVOS, e nada além deles.
+   */
+  it('o que saiu da fila SAI da memória', () => {
+    const webhook = montarAlertas({ ...LIMPO, webhooksParados: ['Velo Funil - assinaturas'] })
+    const memoriaComWebhook = memoriaAtualizada(webhook)
+    expect(Object.keys(memoriaComWebhook)).toHaveLength(1)
+
+    // O webhook foi religado, mas OUTRO alerta continua vivo. É o caso real:
+    // a fila não esvaziou, então a purga de "nada a relatar" não roda.
+    const memoriaDepois = memoriaAtualizada(doisErros)
+    expect(Object.keys(memoriaDepois)).toEqual(
+      Object.keys(memoriaAtualizada(doisErros)),
+    )
+    for (const chave of Object.keys(memoriaComWebhook)) {
+      expect(memoriaDepois[chave]).toBeUndefined()
+    }
+  })
+
+  it('e por isso o mesmo problema VOLTANDO conta como novidade', () => {
+    // Sem a linha acima, este caso é o silêncio de 08/09: mesma chave, mesma
+    // quantidade, `1 > 1` falso, nenhum e-mail.
+    const webhook = montarAlertas({ ...LIMPO, webhooksParados: ['Velo Funil - assinaturas'] })
+    const memoriaSemEle = memoriaAtualizada(doisErros)
+    expect(alertasNaoAvisados(webhook, memoriaSemEle)).toHaveLength(1)
+
+    // E o controle: se a chave TIVESSE ficado presa, ele calaria — que é
+    // exatamente o defeito, reproduzido aqui para não voltar em silêncio.
+    const memoriaPresa = memoriaAtualizada(webhook)
+    expect(alertasNaoAvisados(webhook, memoriaPresa)).toHaveLength(0)
+  })
 })
 
 /**

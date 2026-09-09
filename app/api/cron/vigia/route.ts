@@ -12,6 +12,7 @@ import {
   montarAlertas,
   DIAS_DE_ANTECEDENCIA_DO_TRIAL,
   HORAS_ATE_SUPORTE_VIRAR_ALERTA,
+  type Alerta,
   type LeituraDoVigia,
 } from '@/lib/dono/vigia'
 import {
@@ -120,6 +121,68 @@ async function carimbarVarredura(admin: ReturnType<typeof createAdminClient>) {
       { onConflict: 'chave' },
     )
   if (error) console.error('vigia: falhou ao carimbar a varredura', error)
+}
+
+/**
+ * Põe a memória em dia com os alertas VIVOS agora.
+ *
+ * ## Por que é função, e chamada de dois lugares
+ *
+ * Este bloco morava solto no fim do handler, depois do envio — e por isso só
+ * rodava quando um e-mail saía. As duas saídas antecipadas ("nada a relatar" e
+ * "nada novo desde o último aviso") pulavam a escrita, e a segunda é a saída
+ * mais comum do vigia.
+ *
+ * O efeito, medido em 09/09: três chaves presas desde 06/09, com o cron
+ * passando 72 vezes no meio. O webhook do Asaas quebrou de novo em 08/09 e o
+ * alarme calou, porque a chave velha ainda dizia `1` e o alerta novo também
+ * vale `1` — e `alertasNaoAvisados` só considera novidade o que PIOROU.
+ *
+ * ## A ordem é `delete` e depois `insert`, e as duas são conferidas
+ *
+ * O `delete` vem primeiro, então um `insert` que falhe deixa a memória VAZIA —
+ * e memória vazia faz tudo parecer novidade, gerando o e-mail de hora em hora
+ * que este arquivo existe para evitar. O `supabase-js` não lança em falha de
+ * escrita, devolve `{ error }`: sem conferir, nem o log saberia.
+ *
+ * O carimbo de varredura sobrevive à limpeza de propósito — ele não é alerta,
+ * é prova de vida, e é o que permite a alguém de fora vigiar o vigia.
+ */
+async function sincronizarMemoria(
+  admin: ReturnType<typeof createAdminClient>,
+  alertas: Alerta[],
+  naoConferido: string[],
+) {
+  const nova = memoriaAtualizada(alertas)
+  for (const n of naoConferido) nova[`falha-${n}`] = 1
+
+  const { error: erroAoLimpar } = await admin
+    .from('vigia_ultimo_aviso')
+    .delete()
+    .neq('chave', CARIMBO_DE_VARREDURA)
+
+  if (erroAoLimpar) {
+    // Não grava por cima de uma limpeza que falhou: as linhas velhas ainda
+    // estão lá, e o `insert` bateria em chave duplicada.
+    console.error('[vigia] memoria NAO foi limpa; o proximo aviso pode repetir', erroAoLimpar)
+    return
+  }
+
+  if (Object.keys(nova).length === 0) return
+
+  const { error: erroAoGravar } = await admin
+    .from('vigia_ultimo_aviso')
+    .insert(Object.entries(nova).map(([chave, quantidade]) => ({ chave, quantidade })))
+
+  if (erroAoGravar) {
+    // A memória acabou de ser apagada e não foi reescrita: a próxima passagem
+    // vai reenviar tudo. Registrar alto é o único jeito de isso não virar
+    // "por que estou recebendo o mesmo e-mail toda hora?".
+    console.error(
+      '[vigia] memoria apagada mas NAO reescrita: o proximo aviso vai repetir',
+      erroAoGravar,
+    )
+  }
 }
 
 export async function GET(request: Request) {
@@ -303,6 +366,31 @@ export async function GET(request: Request) {
   const jaAvisouDasFalhas = naoConferido.every((n) => memoria[`falha-${n}`] === 1)
 
   if (novidades.length === 0 && jaAvisouDasFalhas) {
+    // ## A memória é sincronizada AQUI, e não só quando tudo se resolve
+    //
+    // Este `return` era a saída mais comum do vigia — e ele pulava a escrita da
+    // memória, que ficava lá embaixo, depois do envio. A purga da linha ~275 só
+    // roda quando NENHUM alerta sobrevive; com um alerta resolvido e outros
+    // vivos, a chave do resolvido ficava presa para sempre.
+    //
+    // Medido em 09/09, e não é hipótese de leitura de código:
+    //
+    //     webhook-do-asaas-parado-...   qtd=1   avisado_em 06/09 11:00
+    //     assinatura-s-ativa-sem-pro    qtd=1   avisado_em 06/09 11:00
+    //     erro-s-novo-s-em-producao     qtd=1   avisado_em 06/09 11:00
+    //
+    // Três dias presas, com o cron passando 72 vezes. O webhook do Asaas quebrou
+    // de novo em 08/09 e o vigia NÃO avisou: a chave ainda dizia 1, o alerta novo
+    // também vale 1, e `1 > 1` é falso.
+    //
+    // O comentário de `alertasNaoAvisados` promete que "o que não está mais na
+    // fila sai da memória, e é isso que faz um problema que voltou ser tratado
+    // como novo". A promessa estava escrita e não era cumprida. Agora é.
+    //
+    // Sincronizar aqui é seguro justamente porque NADA está sendo enviado: a
+    // regra de "só gravar depois do envio confirmado" existe para não enterrar
+    // um alerta que ninguém recebeu, e aqui não há alerta a receber.
+    await sincronizarMemoria(admin, alertas, naoConferido)
     return NextResponse.json({ enviado: false, motivo: 'nada novo desde o ultimo aviso' })
   }
 
@@ -356,42 +444,7 @@ export async function GET(request: Request) {
   // A memória só é gravada DEPOIS do envio confirmado. Gravar antes e falhar
   // no envio faria o vigia achar que já avisou de algo que ninguém recebeu —
   // o alerta ficaria enterrado até piorar de número.
-  const nova = memoriaAtualizada(alertas)
-  for (const n of naoConferido) nova[`falha-${n}`] = 1
-
-  // ## As duas escritas passaram a ser CONFERIDAS, e a ordem importa
-  //
-  // Elas nao eram, e a consequencia e a pior possivel para este mecanismo: o
-  // `delete` roda primeiro, entao se o `insert` falhar a memoria fica VAZIA.
-  // Memoria vazia faz tudo parecer novidade, e na proxima passagem o mesmo
-  // alerta sai de novo — de hora em hora, o que e exatamente o defeito dos
-  // "24 e-mails identicos" que este arquivo existe para evitar.
-  //
-  // E era silencioso duas vezes: o supabase-js nao lanca em falha de escrita,
-  // devolve `{ error }`. Sem checar, nem o log saberia.
-  const { error: erroAoLimpar } = await admin
-    .from('vigia_ultimo_aviso')
-    .delete()
-    .neq('chave', CARIMBO_DE_VARREDURA)
-
-  if (erroAoLimpar) {
-    // Nao grava por cima de uma limpeza que falhou: as linhas velhas ainda
-    // estao la, e o `insert` bateria em chave duplicada.
-    console.error('[vigia] memoria NAO foi limpa; o proximo aviso pode repetir', erroAoLimpar)
-  } else if (Object.keys(nova).length > 0) {
-    const { error: erroAoGravar } = await admin.from('vigia_ultimo_aviso').insert(
-      Object.entries(nova).map(([chave, quantidade]) => ({ chave, quantidade })),
-    )
-    if (erroAoGravar) {
-      // A memoria acabou de ser apagada e nao foi reescrita: a proxima
-      // passagem vai reenviar tudo. Registrar alto e o unico jeito de isso
-      // nao virar "por que estou recebendo o mesmo e-mail toda hora?".
-      console.error(
-        '[vigia] memoria apagada mas NAO reescrita: o proximo aviso vai repetir',
-        erroAoGravar,
-      )
-    }
-  }
+  await sincronizarMemoria(admin, alertas, naoConferido)
 
   return NextResponse.json({
     enviado: true,
