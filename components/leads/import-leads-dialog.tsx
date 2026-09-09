@@ -126,6 +126,29 @@ export function ImportLeadsDialog({
       return
     }
 
+    // ## O `.xls` antigo, e por que ele merece mensagem própria
+    //
+    // Excel 97-2003 é OLE2, um formato binário sem nenhuma relação com o
+    // `.xlsx` (que é ZIP com XML dentro). `read-excel-file` não lê OLE2, e
+    // acrescentar um parser dele seria uma dependência inteira por um formato
+    // que a Microsoft aposentou em 2007.
+    //
+    // Ele JÁ era recusado — medido em 08/09: os bytes caem no caminho do CSV,
+    // `lerCsv` devolve uma linha só de lixo binário, e o `lida.length < 2`
+    // abaixo barra. **O problema era a mensagem**: a pessoa escolhia a planilha
+    // certa e lia "a planilha não tem nenhuma linha além do cabeçalho", que
+    // manda ela conferir o conteúdo em vez de salvar de novo no formato certo.
+    //
+    // `.xls` e não `.xlsx` no teste: o `$` do primeiro depois do `xlsx` já ter
+    // sido descartado seria frágil, então a ordem importa — este `if` roda
+    // antes, e só casa quando NÃO termina em `xlsx`.
+    if (/\.xls$/i.test(arquivo.name)) {
+      toast.error(
+        'Este é um arquivo do Excel antigo (.xls). Abra no Excel e use "Salvar como" → "Pasta de Trabalho do Excel (.xlsx)".',
+      )
+      return
+    }
+
     setLendo(true)
     try {
       const bytes = await arquivo.arrayBuffer()
@@ -315,7 +338,7 @@ export function ImportLeadsDialog({
               <Input
                 id="arquivo-planilha"
                 type="file"
-                accept=".xlsx,.csv,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                accept=".xlsx,.xls,.csv,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
                 disabled={lendo}
                 onChange={(e) => {
                   const arquivo = e.target.files?.[0]

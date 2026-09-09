@@ -47,13 +47,22 @@ export function decodificarPlanilha(dados: ArrayBuffer | Uint8Array): string {
  * de fixar evita o modo de falha mais comum: o arquivo inteiro virar uma
  * coluna só e nenhuma linha ser importada.
  */
+const CANDIDATOS: string[] = [';', ',', '\t']
+
+/**
+ * O separador de UMA linha, pelo número de ocorrências.
+ *
+ * Continua exportado e testado, mas **não é mais quem decide a leitura do
+ * arquivo** — quem decide é `escolherSeparador`, que julga o conteúdo inteiro.
+ * Esta função sozinha era o defeito de 08/09: aplicada à primeira linha, uma
+ * planilha com título acima do cabeçalho virava uma coluna só.
+ */
 export function detectarSeparador(cabecalho: string): string {
   const foraDeAspas = cabecalho.replace(/"[^"]*"/g, '')
-  const candidatos: string[] = [';', ',', '\t']
 
   let escolhido = ','
   let maior = 0
-  for (const candidato of candidatos) {
+  for (const candidato of CANDIDATOS) {
     const total = foraDeAspas.split(candidato).length - 1
     if (total > maior) {
       maior = total
@@ -121,12 +130,93 @@ export function tokenizar(texto: string, separador: string): string[][] {
  * lê os bytes, mas esta função também aceita texto pronto (teste, colagem), e
  * aí ele pode ter sobrado.
  */
+/**
+ * O separador do arquivo INTEIRO, escolhido por consistência entre linhas.
+ *
+ * ## O defeito que isto conserta, medido em 08/09/2026
+ *
+ * `lerCsv` decidia o separador olhando a PRIMEIRA LINHA DO ARQUIVO. Relatório
+ * exportado quase sempre traz título antes do cabeçalho:
+ *
+ *     RELATORIO DE CLIENTES
+ *     Gerado em 08/09/2026
+ *     Nome;Telefone;Empresa
+ *     Joao;11988887777;Joao ME
+ *
+ * A primeira linha não tem `;` nenhum, então caía no padrão `,` e **o arquivo
+ * inteiro virava uma coluna só**. Pular linhas na tela não salvava: o estrago
+ * acontece na leitura, antes de a pessoa escolher qualquer coisa. E o modo de
+ * falha é silencioso — nenhum erro, só uma prévia com uma coluna que ninguém
+ * consegue mapear.
+ *
+ * ## Por que consistência, e não "a linha com mais separadores"
+ *
+ * Contar separadores numa linha só erra dos dois lados. Um endereço com
+ * ponto-e-vírgula numa única linha de dados venceria o `,` de um arquivo do
+ * Google Sheets; um título com vírgulas venceria o `;` de um arquivo do Excel.
+ *
+ * Aqui cada candidato é julgado por **em quantas linhas ele produz o MESMO
+ * número de colunas** — que é o que um separador de verdade faz e um caractere
+ * que aparece dentro do texto não faz. Linha sem o candidato não vota, e é
+ * assim que a linha de título deixa de decidir a leitura do arquivo.
+ *
+ * As aspas saem antes de contar, sobre o conteúdo inteiro e não linha a linha:
+ * um campo entre aspas pode conter quebra de linha, e ali a quebra não é fim de
+ * registro.
+ */
+export function escolherSeparador(conteudo: string): string {
+  const semAspas = conteudo.replace(/"[^"]*"/g, '')
+  const linhas = semAspas
+    .split(/\r?\n/)
+    .filter((l) => l.trim())
+    // Vinte linhas bastam para decidir e mantêm o custo constante numa
+    // planilha de mil: o padrão de um CSV aparece nas primeiras.
+    .slice(0, 20)
+
+  if (linhas.length === 0) return ','
+
+  let escolhido = ','
+  let melhorNota = 0
+
+  for (const candidato of CANDIDATOS) {
+    const votos = new Map<number, number>()
+    for (const linha of linhas) {
+      const colunas = linha.split(candidato).length
+      // `1` significa "o candidato não aparece nesta linha". Não é voto contra
+      // nem a favor — é a linha de título se abstendo.
+      if (colunas > 1) votos.set(colunas, (votos.get(colunas) ?? 0) + 1)
+    }
+
+    let modal = 0
+    let apoio = 0
+    // `Array.from` e não `for...of` direto no `Map`: o `target` deste projeto
+    // recusa iterar Map sem `downlevelIteration`, e o `vitest` (que usa esbuild)
+    // NÃO reclama — os testes passavam com o `tsc` reprovando.
+    for (const [colunas, quantas] of Array.from(votos.entries())) {
+      // Empate em apoio vai para quem produz MAIS colunas: um separador que
+      // reparte o texto em cinco campos explica melhor a linha que um que
+      // reparte em dois por acidente.
+      if (quantas > apoio || (quantas === apoio && colunas > modal)) {
+        modal = colunas
+        apoio = quantas
+      }
+    }
+
+    const nota = apoio * 1000 + modal
+    if (nota > melhorNota) {
+      melhorNota = nota
+      escolhido = candidato
+    }
+  }
+
+  return escolhido
+}
+
 export function lerCsv(texto: string): string[][] {
   const conteudo = texto.charCodeAt(0) === 0xfeff ? texto.slice(1) : texto
   if (!conteudo.trim()) return []
 
-  const primeiraLinha = conteudo.split('\n', 1)[0] ?? ''
-  return tokenizar(conteudo, detectarSeparador(primeiraLinha))
+  return tokenizar(conteudo, escolherSeparador(conteudo))
 }
 
 /**

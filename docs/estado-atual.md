@@ -173,20 +173,87 @@ Exercitado o caminho real com planilhas sujas:
     sem e-mail e sem telefone                                  recusado
     1000 linhas em CSV = 104 KB                                teto e 512 KB
 
-**O defeito:** `lerCsv` detecta o separador na PRIMEIRA linha do arquivo.
-Planilha exportada com titulo em cima (`RELATORIO DE CLIENTES`, `Gerado em...`)
-nao tem `;` nessa linha, cai no padrao `,` e **o arquivo inteiro vira uma coluna
-so**. Pular linhas nao salva: o estrago acontece na leitura. E o formato mais
-comum de relatorio exportado.
+**O defeito, CORRIGIDO na mesma noite:** `lerCsv` detectava o separador na
+PRIMEIRA linha do arquivo. Planilha exportada com titulo em cima (`RELATORIO DE
+CLIENTES`, `Gerado em...`) nao tem `;` nessa linha, caia no padrao `,` e **o
+arquivo inteiro virava uma coluna so**, sem erro nenhum. Pular linhas na tela
+nao salvava: o estrago acontece na leitura, antes de a pessoa escolher qualquer
+coisa.
+
+`escolherSeparador` julga o conteudo INTEIRO por **consistencia**: cada
+candidato vale por em quantas linhas produz o MESMO numero de colunas, e linha
+sem o separador **nao vota** — e assim que a linha de titulo deixa de decidir.
+
+Contar ocorrencias numa linha so erraria dos dois lados, e o teste trava os
+dois: um endereco com `;` no meio de um arquivo de virgula nao rouba a escolha,
+e a tabulacao continua reconhecida. Sete casos novos, 23 no arquivo.
+
+### O caminho `.xlsx` foi exercitado pela PRIMEIRA VEZ, e esta sao
+
+O projeto nao tem escritor de xlsx, entao o arquivo foi **fabricado a mao** —
+ZIP com entradas STORED, XML de duas abas, estilos com formato de data. Passado
+pelo `readSheet` real do produto:
+
+    aba 2 vazou?           nao — so a primeira e lida
+    acento                 "Jose Antonio" preservado
+    formula                virou o valor do cache (2469.12)
+    celula mesclada A1:E1  so A1 tem conteudo, o resto nulo
+    linha vazia no meio    mantida como linha de vazios
+    data com formato       vira Date do JavaScript
+
+**E isso confirma que o defeito do separador era so do CSV**: o `.xlsx` devolve
+matriz pronta, sem passar por deteccao nenhuma.
+
+Uma observacao latente, que NAO e defeito hoje: `String(Date)` na tela produz
+`"Thu Dec 31 2026 21:00:00 GMT-0300"`, e em Sao Paulo isso e o dia ANTERIOR ao
+que o Excel guardou. Nao afeta nada porque nenhum campo de destino e data
+(nome, e-mail, telefone, empresa, valor, etapa). Fica escrito para o dia em que
+um campo de data existir.
+
+### `.xls` e o teto de 512 KB — as duas decididas com numero
+
+**O `.xls` ja era recusado**, medido: os bytes OLE2 caem no caminho do CSV,
+`lerCsv` devolve uma linha so de lixo binario, e o `lida.length < 2` barra. **O
+problema era a MENSAGEM** — a pessoa escolhia a planilha certa e lia *"a
+planilha nao tem nenhuma linha alem do cabecalho"*, que manda conferir o
+conteudo em vez de salvar de novo no formato certo. Agora diz para usar "Salvar
+como -> .xlsx", e o `accept` passou a aceitar `.xls` justamente para a mensagem
+poder aparecer.
+
+Nao vale ler OLE2: e formato binario sem relacao com o `.xlsx`, aposentado pela
+Microsoft em 2007, e leria uma dependencia inteira.
+
+**O teto de 512 KB NAO aperta, e eu tinha suposto que sim.** Medido:
+
+    XML da planilha, 1000 linhas, cru    320 KB
+    o mesmo XML em DEFLATE                23 KB   <- e assim que o xlsx guarda
+    mais estilos e overhead              ~29 KB
+    teto atual                           512 KB   ->  17,9x de folga
+
+O limite que morde e `CSV_MAX_LINHAS` (1000), que e o honesto: ele fala de
+linhas, que e o que a pessoa entende, e nao de bytes.
 
 **Google Sheets nao precisa de integracao** — ele exporta `.xlsx` e `.csv`, e os
 dois ja funcionam. API exigiria OAuth e verificacao do Google, e a decisao ja
 esta travada na tabela deste documento.
 
-**O caminho `.xlsx` binario nao foi exercitado**: o projeto nao tem escritor de
-xlsx, entao fabricar planilha complexa (abas, celulas mescladas, formulas) e
-trabalho proprio. Junto: `.xls` antigo e recusado, e o teto de 512 KB pode
-apertar num xlsx com formatacao.
+### Os tipos declaravam duas tabelas que nao existem
+
+`types/supabase.ts` ainda trazia `enriquecimento_de_lead` e `sinal_de_mercado`
+INTEIRAS — Row, Insert, Update —, alem dos tres aliases. As duas foram
+derrubadas pela 0075: `to_regclass` devolve `null` para ambas.
+
+Nao era sujeira cosmetica. `supabase.from('sinal_de_mercado')` **compilava** e
+quebraria em producao com 404 do PostgREST.
+
+E junto saiu um quinto orfao, do mesmo dia: `TipoDeNotificacao` ainda listava
+`'sinal_de_mercado'`, enquanto o `check` de `notificacoes.tipo` tem quatro
+valores — conferido no catalogo. `lib/notificacoes/tipos.ts`, que e a lista
+canonica, ja tinha tirado. **Tipo que permite o que o banco recusa nao e folga:
+e um 400 que so aparece em producao, com o compilador dizendo que esta tudo
+certo.**
+
+87 linhas fora.
 
 ### Um defeito do meu proprio metodo, que vale mais que o resultado
 

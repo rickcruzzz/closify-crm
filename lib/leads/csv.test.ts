@@ -1,6 +1,12 @@
 import { describe, expect, it } from 'vitest'
 
-import { decodificarPlanilha, detectarSeparador, lerCsv, parseValorBRL } from './csv'
+import {
+  decodificarPlanilha,
+  detectarSeparador,
+  escolherSeparador,
+  lerCsv,
+  parseValorBRL,
+} from './csv'
 
 /** Windows-1252 e Unicode coincidem byte a byte para o texto destes testes. */
 function bytesWindows1252(texto: string): Uint8Array {
@@ -109,5 +115,62 @@ describe('parseValorBRL', () => {
   it('recusa texto sem dígito em vez de virar zero', () => {
     expect(parseValorBRL('abc')).toBeNull()
     expect(parseValorBRL('a combinar')).toBeNull()
+  })
+})
+
+describe('escolherSeparador — planilha com titulo acima do cabecalho', () => {
+  // ## O defeito de 08/09, e ele so aparece com o arquivo INTEIRO
+  //
+  // `lerCsv` decidia o separador pela PRIMEIRA linha do arquivo. Relatorio
+  // exportado quase sempre traz titulo antes do cabecalho, e essa linha nao tem
+  // separador nenhum — entao caia no padrao `,` e o arquivo virava uma coluna
+  // so, sem erro nenhum na tela.
+  const COM_TITULO =
+    'RELATORIO DE CLIENTES\n' +
+    'Gerado em 08/09/2026\n' +
+    'Nome;Telefone;Empresa\n' +
+    'Joao;11988887777;Joao ME\n' +
+    'Maria;11977776666;Maria Ltda\n'
+
+  it('acha o `;` mesmo com duas linhas de titulo em cima', () => {
+    expect(escolherSeparador(COM_TITULO)).toBe(';')
+  })
+
+  it('e a matriz sai com TRES colunas, nao uma', () => {
+    const matriz = lerCsv(COM_TITULO)
+    expect(matriz[2]).toEqual(['Nome', 'Telefone', 'Empresa'])
+    expect(matriz[3]).toEqual(['Joao', '11988887777', 'Joao ME'])
+  })
+
+  it('a versao antiga falharia: a 1a linha sozinha devolve virgula', () => {
+    // O controle que prova que o defeito era este, e nao outro.
+    expect(detectarSeparador('RELATORIO DE CLIENTES')).toBe(',')
+  })
+
+  it('um ponto-e-virgula solto no meio NAO rouba um arquivo de virgula', () => {
+    // Contar ocorrencias numa linha so erraria aqui: a linha do endereco tem
+    // dois `;` e venceria o `,` que reparte todas as outras.
+    const texto =
+      'Nome,Telefone,Endereco\n' +
+      'Ana,11999990000,Rua A 10\n' +
+      'Bruno,11988880000,Rua B; sala 2; fundos\n' +
+      'Carla,11977770000,Rua C 30\n'
+    expect(escolherSeparador(texto)).toBe(',')
+  })
+
+  it('tabulacao continua sendo reconhecida', () => {
+    expect(escolherSeparador('Nome\tTelefone\nAna\t11999990000\n')).toBe('\t')
+  })
+
+  it('arquivo de uma coluna nao inventa separador', () => {
+    expect(escolherSeparador('Nome\nAna\nBruno\n')).toBe(',')
+  })
+
+  it('campo com quebra de linha entre aspas nao conta como registro', () => {
+    // As aspas saem antes de contar, sobre o conteudo INTEIRO: dentro delas a
+    // quebra de linha nao e fim de registro.
+    const texto = 'Nome;Obs\nAna;"linha 1\nlinha 2"\nBruno;ok\n'
+    expect(escolherSeparador(texto)).toBe(';')
+    expect(lerCsv(texto)[1]).toEqual(['Ana', 'linha 1\nlinha 2'])
   })
 })
