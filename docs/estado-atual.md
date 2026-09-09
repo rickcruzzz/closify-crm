@@ -4,10 +4,114 @@ Documento de continuidade. É lido no começo de toda sessão (referenciado no
 [CLAUDE.md](../CLAUDE.md)) para que uma conversa nova, ou outra conta, comece
 sabendo o que já foi feito, o que foi decidido e onde estão as armadilhas.
 
-**Atualizado em:** 08/09/2026, noite (o objeto que o ICP manipula o dia inteiro
-passou a existir — orcamento com prazo, e a validade vira cobranca; o PDF virou
-a linha do Pro porque ninguem nunca experimentava o Pro; e a senha ia para a
-URL no /login)
+**Atualizado em:** 09/09/2026, madrugada (o alarme do dinheiro estava MUDO havia
+tres dias e ninguem sabia; o orcamento foi provado no navegador e o PDF por HTTP;
+e o ICP nao procura "CRM" — procura ORCAMENTO)
+
+## O alarme do dinheiro calou por tres dias (09/09)
+
+O webhook do Asaas parou tres vezes em cinco dias (04, 06 e 08/09). O vigia
+detectou em 06/09 e mandou o e-mail. **Quebrou de novo em 08/09 e nao mandou
+nada.** Medido na memoria de producao — nao e leitura de codigo, e o defeito
+acontecendo:
+
+    webhook-do-asaas-parado-...     qtd=1   avisado_em 06/09 11:00
+    assinatura-s-ativa-sem-pro      qtd=1   avisado_em 06/09 11:00
+    erro-s-novo-s-em-producao       qtd=1   avisado_em 06/09 11:00
+    __ultima_varredura                      09/09 02:00  <- rodando de hora em hora
+
+Tres dias presas, com o cron passando 72 vezes.
+
+**A causa e uma promessa escrita que o codigo nao cumpria.** `lib/dono/vigia.ts`
+diz que "o que nao esta mais na fila sai da memoria, e e isso que faz um problema
+que voltou ser tratado como novo". A rota apagava em dois dos tres caminhos: a
+purga so roda quando a fila esvazia INTEIRA, e a escrita ficava depois do envio.
+A saida "nada novo desde o ultimo aviso" — **a mais comum do vigia** — pulava as
+duas. Alerta que se resolvia enquanto outros seguiam vivos deixava a chave presa,
+e ao voltar chegava com quantidade 1 contra memoria 1: `1 > 1` e falso.
+
+`alertasNaoAvisados` estava certo o tempo todo. A escrita virou
+`sincronizarMemoria`, chamada nos DOIS caminhos. Provado contra a memoria real:
+3 chaves de 06/09 antes, ZERO depois.
+
+## O orcamento foi provado no NAVEGADOR, e o PDF por HTTP
+
+As duas provas que faltavam, e que as mensagens de commit se gabavam de ter
+fechado em outros lugares:
+
+    salvou validade 25/09     1 tarefa, vence 23/09 09:00 SP (validade - 2 dias)
+    editou para 10/10         1 tarefa, o prazo MOVEU, MESMO id
+    salvou igual, de novo     1 tarefa (a prova do reactStrictMode)
+    removeu                   0 tarefas, orcamento e cobranca foram juntos
+
+    sem sessao                401
+    empresa FREE              402 com a mensagem de upgrade
+    empresa PRO               200, PDF de 4.625 bytes
+    negocio de OUTRA empresa  404 (a RLS, nao so o .eq())
+
+**O jsPDF rodou no runtime real do Next**, nao so no vitest — o risco de
+"compilar nao e executar" esta fechado. Conta descartavel apagada, 44 workspaces
+antes e depois.
+
+E o login caiu na armadilha ja documentada: cliquei antes da hidratacao e o
+formulario submeteu nativamente. A saida e a mesma da prateleira em 08/09 —
+esperar `__reactProps` no botao. **Junto veio a prova de que o `method="post"`
+nao tem efeito colateral:** um POST antes da hidratacao devolve 200 e so
+re-renderiza a pagina.
+
+## O ICP nao procura "CRM". Procura ORCAMENTO. (medido com o Exa)
+
+Classificada a CATEGORIA de quem responde quando cada nicho procura software:
+
+    29/50   58%   orcamento
+    22/50   44%   erp
+    14/50   28%   crm          <- a categoria em que nos posicionamos
+
+E por nicho e mais duro: **locacao 0/10 CRM e dedetizacao 1/10** — dois dos cinco
+nichos para quem as 510 mensagens estao prontas. E a TERCEIRA medicao
+independente a apontar para o orcamento; as outras foram a regua de nicho
+(`ORCAMENTO >= 2`) e os 59% dos 61 concorrentes.
+
+**A outra ponta confirma:** o titulo da landing e "o CRM que nao cobra por
+vendedor", "orcamento" aparece 1 vez no site inteiro, e as 8 palavras da campanha
+sao todas CRM.
+
+### E o anuncio esta PRECIFICADO PARA FORA — corrigindo o que eu disse antes
+
+Eu disse que o teto do Google Ads era aritmetico (5.890 buscas, ~87 cliques/mes).
+Medido no planejador, e de PRECO:
+
+    software crm o que e    1.900 buscas   topo R$  5,74   teto e R$ 3
+    sistema crm             8.100 buscas   topo R$ 24,01
+    crm de vendas           1.300 buscas   topo R$ 72,12
+    sistema de orcamento      260 buscas   topo R$ 32,49
+
+**Zero termos cabem no teto, nas duas categorias.** E trocar para orcamento no
+PAGO seria pior: leilao menor (260 contra 8.100) e mais caro. Orcamento e jogada
+de SEO e nome, nao de anuncio.
+
+**O ARPU e o que separa:** agendor R$ 59-156 POR USUARIO, ploomes R$ 85 POR
+USUARIO, contra R$ 49 pela empresa inteira aqui. Uma equipe de quatro paga
+R$ 332 la e R$ 49 aqui. E o diferencial da landing — e e o que impede comprar
+trafego, porque com LTV de ~R$ 1.000 o termo mais barato da LTV/CAC de 1,6 e o
+comercial da 0,4, contra a regua de 3 do setor.
+
+### O texto do anuncio: acentos, e um angulo repetido tres vezes
+
+Lido pela API pela primeira vez. **Os titulos e descricoes estao SEM ACENTO**
+("Comece gratis, sem cartao"), enquanto as frases de destaque tem — mesma
+resposta, mesma codificacao. E tres dos oito titulos dizem preco fixo, num
+anuncio que mostra tres por vez.
+
+RSA nao se edita no lugar, e a campanha usa **TARGET_SPEND** (lance
+automatizado), entao substituir zeraria o historico daquele anuncio. Decisao do
+dono: **criar um SEGUNDO anuncio** com acento e com "Funil pronto em 2 minutos"
+no lugar do terceiro titulo de preco, **sem remover o antigo**. Os dois ficam
+ENABLED e o Google rotaciona. Validado com `validateOnly` antes de gravar.
+
+1.254 testes.
+
+---
 
 ## O histórico de agosto mora em outro arquivo
 
