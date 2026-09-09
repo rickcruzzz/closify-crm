@@ -131,21 +131,128 @@ export type DadosDaAbordagem = {
  * retorno**. Zero dos 25 geradores de orçamento lidos usa, então também não
  * compete com ninguém.
  */
-const GANCHO: Record<string, string> = {
-  dedetizacao:
-    'Quando você manda um orçamento e o cliente some, quem lembra de dar o retorno?',
-  'comunicacao-visual':
-    'Quando você manda um orçamento e o cliente some, o retorno fica na memória de quem?',
-  marcenaria:
-    'Projeto de planejados demora semanas para fechar. Como você acompanha quem ainda está decidindo?',
-  'locacao-equipamentos':
-    'Quando uma locação está terminando, quem lembra de oferecer a renovação?',
-  'eventos-corporativos':
-    'Depois que a proposta do evento sai, quem acompanha o cliente até a assinatura?',
+/**
+ * O sorteio que quebra o padrão de texto idêntico, sem virar loteria.
+ *
+ * ## Por que variar
+ *
+ * `docs/mercado/limites-e-bloqueios.md` lista "texto idêntico" como o terceiro
+ * padrão que faz o WhatsApp banir um número — *"a mesma string para centenas
+ * de destinos e o padrão mais fácil de detectar"*. Medido em 08/09 sobre as
+ * 882 mensagens da prateleira: eram **10 modelos**, personalizados só pelo
+ * nome da empresa. Tecnicamente 788 textos distintos; na prática, dez.
+ *
+ * Com quatro pontos de variação a conta muda de dez para **algumas centenas**
+ * de formas por nicho, e duas empresas do mesmo setor deixam de receber a
+ * mesma frase.
+ *
+ * ## Por que DETERMINÍSTICO, e não sorteio de verdade
+ *
+ * `Math.random` faria a mesma empresa receber um texto diferente a cada vez
+ * que a tela é aberta. Isso quebra três coisas: a prévia que o dono lê antes
+ * de enviar deixa de ser o que será enviado; a mensagem gravada na timeline do
+ * lead deixa de bater com a que saiu; e reabrir a fila depois de um Ctrl+C
+ * mudaria o texto de quem ainda não recebeu.
+ *
+ * O domínio é a semente. A mesma empresa recebe sempre a mesma mensagem, e
+ * empresas diferentes recebem mensagens diferentes.
+ *
+ * ## Por que uma semente por FATIA
+ *
+ * Com uma semente só, o domínio que caísse no índice 0 pegaria a variante 0 de
+ * todas as fatias — e o número de mensagens distintas voltaria a ser o número
+ * de variantes, não o produto delas. Misturar o nome da fatia na semente faz
+ * as escolhas serem independentes entre si.
+ */
+function escolher<T>(opcoes: readonly T[], semente: string, fatia: string): T {
+  // FNV-1a de 32 bits: determinístico, sem dependência, e espalha o suficiente
+  // para 3 ou 4 posições. Não é hash criptográfico e não precisa ser — o que
+  // se protege aqui é de repetição, não de adivinhação.
+  let h = 0x811c9dc5
+  for (const ch of `${fatia}:${semente}`) {
+    h ^= ch.charCodeAt(0)
+    h = Math.imul(h, 0x01000193) >>> 0
+  }
+  return opcoes[h % opcoes.length]
 }
 
-const GANCHO_PADRAO =
-  'Quando você manda um orçamento e o cliente some, quem lembra de dar o retorno?'
+/**
+ * As aberturas. Todas dizem a MESMA coisa: achei você procurando, não comprei
+ * sua lista.
+ *
+ * A honestidade da origem não é enfeite — é o que separa esta mensagem de
+ * spam, e é ela que sustenta a linha de descarte no fim.
+ */
+const SAUDACAO = [
+  (nome: string) => `Achei a ${nome} procurando empresas do setor no Google.`,
+  (nome: string) => `Cheguei na ${nome} pesquisando empresas do setor aqui no Google.`,
+  (nome: string) => `Encontrei a ${nome} enquanto procurava empresas do setor no Google.`,
+  (nome: string) => `Vi a ${nome} numa busca por empresas do setor no Google.`,
+] as const
+
+/**
+ * A oferta, em três formulações.
+ *
+ * As três carregam as mesmas duas coisas obrigatórias: o mecanismo ("cada
+ * orçamento vira um card, com a data do retorno") e o preço pela empresa. A
+ * primeira é o eco literal do `og:description` da landing, e por isso continua
+ * na lista.
+ */
+const OFERTA = [
+  (preco: number) =>
+    `Montei um sistema pra isso: cada orçamento vira um card, com a data do retorno. ` +
+    `R$ ${preco} pela empresa toda, sem cobrar por usuário.`,
+  (preco: number) =>
+    `Fiz um sistema pra isso: você guarda a validade e o card avisa na data do retorno. ` +
+    `R$ ${preco} pela empresa toda, não por pessoa.`,
+  (preco: number) =>
+    `Construí um sistema pra isso: o orçamento entra com a data do retorno e o lembrete ` +
+    `nasce junto. R$ ${preco} pela empresa toda.`,
+] as const
+
+/** O convite para testar. As três dizem grátis, sem cartão e sem prisão. */
+const TESTE = [
+  (limite: number) =>
+    `Testa de graça até ${limite} contatos, sem cartão. Sem fidelidade, e seus dados saem em CSV.`,
+  (limite: number) =>
+    `Grátis até ${limite} contatos, sem cartão. Cancela quando quiser e leva tudo em CSV.`,
+  (limite: number) =>
+    `Dá pra testar até ${limite} contatos sem pagar e sem cartão. Seus dados saem em CSV.`,
+] as const
+
+const GANCHO: Record<string, readonly string[]> = {
+  dedetizacao: [
+    'Quando você manda um orçamento e o cliente some, quem lembra de dar o retorno?',
+    'Quantos orçamentos você mandou esse mês e nunca teve resposta?',
+    'Depois que o orçamento sai, o retorno fica na sua cabeça ou anotado em algum lugar?',
+  ],
+  'comunicacao-visual': [
+    'Quando você manda um orçamento e o cliente some, o retorno fica na memória de quem?',
+    'Orçamento de fachada demora pra decidir. Como você acompanha quem ficou de ver?',
+    'Quantos orçamentos você mandou essa semana e não sabe dizer em que pé estão?',
+  ],
+  marcenaria: [
+    'Planejados demoram semanas pra fechar. Como você acompanha quem ainda decide?',
+    'Depois que o projeto e o valor saem, quem lembra de voltar antes do cliente esfriar?',
+    'Quantos projetos de planejados estão parados esperando um retorno seu?',
+  ],
+  'locacao-equipamentos': [
+    'Quando uma locação está terminando, quem lembra de oferecer a renovação?',
+    'Orçamento de locação tem prazo curto. Como você acompanha quem pediu e não fechou?',
+    'Quantas locações venceram esse mês sem ninguém oferecer a renovação?',
+  ],
+  'eventos-corporativos': [
+    'Depois que a proposta do evento sai, quem acompanha o cliente até a assinatura?',
+    'Proposta de evento leva semanas. Como você sabe quem ainda está decidindo?',
+    'Quantas propostas de evento estão paradas esperando um retorno seu?',
+  ],
+}
+
+const GANCHO_PADRAO = [
+  'Quando você manda um orçamento e o cliente some, quem lembra de dar o retorno?',
+  'Depois que o orçamento sai, o retorno fica na sua cabeça ou anotado em algum lugar?',
+  'Quantos orçamentos você mandou esse mês e não sabe dizer em que pé estão?',
+] as const
 
 /**
  * As duas linhas que NUNCA podem ser cortadas, e o defeito que provou isso.
@@ -271,20 +378,24 @@ function desgritar(nome: string): string {
  */
 export function montarAbordagem(d: DadosDaAbordagem): string {
   const nome = nomeCurto(d.nome, d.dominio)
-  const gancho = GANCHO[d.vertical] ?? GANCHO_PADRAO
+  // A semente é o DOMÍNIO, não o nome: nome muda quando o título do site
+  // muda, e aí a mesma empresa receberia outro texto na rodada seguinte.
+  const semente = d.dominio
+  const gancho = escolher(GANCHO[d.vertical] ?? GANCHO_PADRAO, semente, 'gancho')
+  const saudacao = escolher(SAUDACAO, semente, 'saudacao')(nome)
+  const oferta = escolher(OFERTA, semente, 'oferta')(d.precoMensal)
+  const teste = escolher(TESTE, semente, 'teste')(d.limiteGratis)
 
   // Só cita equipe quando o próprio site disse que ela existe. Sem isso, a
   // frase vira suposição sobre o negócio de outra pessoa.
   const temEquipe = d.motivos.includes('tem equipe de vendas')
   const linhaEquipe = temEquipe
-    ? ' Como vocês são mais de um no atendimento, entra todo mundo pelo mesmo preço.'
+    ? ' Vocês sendo mais de um no atendimento, entra todo mundo pelo mesmo preço.'
     : ''
 
   const montar = (equipe: string) =>
     [
-      d.decisor
-        ? `Oi, ${d.decisor}! Achei a ${nome} procurando empresas do setor no Google.`
-        : `Oi! Achei a ${nome} procurando empresas do setor no Google.`,
+      d.decisor ? `Oi, ${d.decisor}! ${saudacao}` : `Oi! ${saudacao}`,
       gancho,
       // ## "Sistema" e não "CRM", e a razão é a mesma da landing de 09/09
       //
@@ -300,10 +411,8 @@ export function montarAbordagem(d: DadosDaAbordagem): string {
       //
       // O "sem cobrar por usuário" FICA: ali cobrar significa dinheiro, que é
       // o sentido correto da palavra.
-      `Montei um sistema pra isso: cada orçamento vira um card, com a data do retorno. ` +
-        `R$ ${d.precoMensal} pela empresa toda, sem cobrar por usuário.${equipe}`,
-      `Testa de graça até ${d.limiteGratis} contatos, sem cartão. ` +
-        `Sem fidelidade, e seus dados saem em CSV.`,
+      `${oferta}${equipe}`,
+      teste,
       // ## O link em parágrafo PRÓPRIO, e não no meio da frase
       //
       // Visto numa conversa real em 09/09: com o endereço encaixado depois de
