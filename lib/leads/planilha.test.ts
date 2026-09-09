@@ -390,3 +390,57 @@ describe('o formato do contato, e a tabela de preços que virou 108 contatos', (
     expect(temFormaDeTelefone('(00) 99999-9999')).toBe(false)
   })
 })
+
+describe('compatibilidade com a exportação dos outros CRMs', () => {
+  // Medido em 09/09 contra os cabeçalhos que essas ferramentas exportam de
+  // verdade. O que estava faltando era inglês: `organization` (Pipedrive),
+  // `amount` e `account` (Salesforce), `mobile`, `full name`.
+  const campos = (cabecalho: string[]) => {
+    const m = sugerirMapeamento(cabecalho)
+    return Object.fromEntries(
+      (['name', 'email', 'phone', 'company', 'value', 'status'] as const)
+        .filter((c) => m[c] !== undefined)
+        .map((c) => [c, cabecalho[m[c]!]]),
+    )
+  }
+
+  it('Pipedrive: `Organization` vira empresa', () => {
+    // Antes de 09/09 só existia `organizacao`, em português. A empresa vinha
+    // VAZIA e a importação dizia que tinha dado certo — número plausível com
+    // conclusão errada, a classe de erro mais cara deste projeto.
+    expect(campos(['Person - Name', 'Person - Email', 'Organization'])).toMatchObject({
+      name: 'Person - Name',
+      email: 'Person - Email',
+      company: 'Organization',
+    })
+  })
+
+  it('Salesforce: full name, mobile, account e amount', () => {
+    expect(campos(['Full Name', 'Email', 'Mobile', 'Account Name', 'Amount', 'Stage'])).toMatchObject({
+      name: 'Full Name',
+      phone: 'Mobile',
+      company: 'Account Name',
+      value: 'Amount',
+      status: 'Stage',
+    })
+  })
+
+  it('HubSpot: pega First Name e NÃO inventa o sobrenome', () => {
+    // `Last Name` fica de fora, e isso é sabido: juntar duas colunas num campo
+    // é outro recurso. O que a tela faz é AVISAR que ela não entra, em vez de
+    // a pessoa descobrir depois com metade dos contatos pela metade.
+    const m = sugerirMapeamento(['First Name', 'Last Name', 'Email'])
+    expect(m.name).toBe(0)
+    expect(Object.values(m)).not.toContain(1)
+  })
+
+  it('"Nome da empresa" não rouba o campo Nome', () => {
+    // O motivo de casar por igualdade antes de casar por conter: "nome" está
+    // dentro de "nome da empresa", e o palpite errado é pior que palpite
+    // nenhum — a pessoa confia na tela e importa o campo trocado.
+    expect(campos(['Nome da empresa', 'Nome do contato', 'E-mail'])).toMatchObject({
+      name: 'Nome do contato',
+      company: 'Nome da empresa',
+    })
+  })
+})

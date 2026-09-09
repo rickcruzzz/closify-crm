@@ -319,6 +319,36 @@ export function ImportLeadsDialog({
     setMapeamento(sugerirMapeamento(matriz.slice(limitado)[0] ?? []))
   }
 
+  /**
+   * As colunas que a planilha tem e que NÃO vão entrar.
+   *
+   * ## Por que avisar em vez de construir o recurso
+   *
+   * O HubSpot exporta `First Name` e `Last Name` separados. O reconhecimento
+   * pega o primeiro e descarta o segundo — "Maria Silva" entra como "Maria".
+   * Juntar duas colunas num campo é meio dia de trabalho; **dizer que o
+   * sobrenome vai ficar de fora custa uma linha e resolve o problema de quem
+   * está importando**, que é não descobrir depois.
+   *
+   * Generalizado de propósito: em vez de tratar sobrenome como caso especial,
+   * lista TODA coluna sem destino. Serve para `Lead Source`, `Última
+   * interação`, `CNPJ` e qualquer outra que a pessoa esperava ver do lado de
+   * cá — e não exige adivinhar quais delas doem.
+   *
+   * Só conta coluna com CONTEÚDO: cabeçalho vazio no fim da planilha é comum e
+   * avisar sobre ele seria ruído.
+   */
+  const colunasIgnoradas = React.useMemo(() => {
+    const usadas = new Set(Object.values(mapeamento))
+    return cabecalho
+      .map((titulo, i) => ({ titulo: titulo.trim(), i }))
+      .filter(({ titulo, i }) => {
+        if (!titulo || usadas.has(i)) return false
+        return corpo.slice(0, 20).some((linha) => (linha[i] ?? '').trim() !== '')
+      })
+      .map(({ titulo }) => titulo)
+  }, [cabecalho, corpo, mapeamento])
+
   // A mesma função que o servidor roda, só que aqui para mostrar a prévia. O
   // servidor NÃO confia nisto, ele reinterpreta a matriz do zero.
   const previa = React.useMemo(
@@ -483,6 +513,17 @@ export function ImportLeadsDialog({
                 />
               </div>
 
+              {colunasIgnoradas.length > 0 && !semColunaDeContato && (
+                <p className="text-muted-foreground mt-2 flex items-start gap-1.5 text-xs">
+                  <AlertTriangle aria-hidden className="mt-0.5 size-3.5 shrink-0" />
+                  <span>
+                    Estas colunas não vão ser importadas:{' '}
+                    <strong>{colunasIgnoradas.join(', ')}</strong>. O Velo Funil guarda nome,
+                    e-mail, telefone, empresa, valor e etapa. Se alguma delas era importante,
+                    junte na coluna certa antes de importar.
+                  </span>
+                </p>
+              )}
               {semColunaDeContato && (
                 <p className="border-destructive/40 bg-destructive/10 text-destructive mt-2 flex items-start gap-1.5 rounded-md border p-2 text-xs">
                   <AlertTriangle aria-hidden className="mt-0.5 size-3.5 shrink-0" />

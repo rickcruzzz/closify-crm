@@ -39,12 +39,16 @@ export type Mapeamento = Partial<Record<CampoDestino, number>>
  * não de suposição.
  */
 const APELIDOS: Record<CampoDestino, string[]> = {
-  name: ['nome', 'name', 'nome completo', 'contato', 'lead', 'cliente', 'nome do cliente', 'nome do contato', 'responsavel'],
-  phone: ['telefone', 'phone', 'celular', 'whatsapp', 'zap', 'fone', 'tel', 'contato telefonico', 'numero'],
+  name: ['nome', 'name', 'nome completo', 'contato', 'lead', 'cliente', 'nome do cliente', 'nome do contato', 'responsavel', 'full name'],
+  phone: ['telefone', 'phone', 'celular', 'whatsapp', 'zap', 'fone', 'tel', 'contato telefonico', 'numero', 'mobile'],
   email: ['e-mail', 'email', 'mail', 'e mail', 'correio eletronico'],
-  company: ['empresa', 'company', 'razao social', 'organizacao', 'negocio', 'estabelecimento', 'cliente empresa'],
-  value: ['valor', 'value', 'ticket', 'valor do negocio', 'valor estimado', 'valor proposta', 'preco', 'orcamento'],
-  status: ['etapa', 'status', 'situacao', 'fase', 'estagio', 'stage', 'funil'],
+  // `organization` entrou em 09/09: o Pipedrive exporta assim, em inglês, e
+  // `organizacao` não casa com ele. A empresa vinha VAZIA e a importação dizia
+  // que tinha dado certo — a classe de erro mais cara deste projeto, porque o
+  // número parece plausível e ninguém confere.
+  company: ['empresa', 'company', 'razao social', 'organizacao', 'organization', 'negocio', 'estabelecimento', 'cliente empresa', 'account'],
+  value: ['valor', 'value', 'ticket', 'valor do negocio', 'valor estimado', 'valor proposta', 'preco', 'orcamento', 'amount'],
+  status: ['etapa', 'status', 'situacao', 'fase', 'estagio', 'stage', 'funil', 'pipeline'],
 }
 
 /** Tira acento e caixa para o cabeçalho casar com "E-mail", "EMAIL", "e mail". */
