@@ -25,7 +25,8 @@ import { fileURLToPath } from 'node:url'
 
 const RAIZ = join(dirname(fileURLToPath(import.meta.url)), '..', '..')
 const PASTA = join(RAIZ, 'criativos', 'anuncio')
-const CONTA = '1316925630418162'
+// Conta nova, sem a restricao de Meta Pay que travava a antiga (09/09).
+const CONTA = '924551593583617'
 const GRAPH = 'https://graph.facebook.com/v23.0'
 
 const TOKEN = (process.env.META_ADS_TOKEN ?? '').trim()

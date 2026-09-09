@@ -6,26 +6,36 @@ import type { Resultado } from './tipos'
 /**
  * A conta de anúncio do Velo Funil.
  *
- * ## Por que ESTA conta, e não a que o histórico do projeto registrava
+ * ## A conta antiga saiu inteira em 09/09, e o motivo não era técnico
  *
- * Havia duas contas acessíveis, e `docs/estado-atual.md` apontava para a
- * errada (`27108979755418323`, "Orlando Henrique"). Verificado contra a API da
- * Meta em 20/08/2026:
+ * Até aqui isto apontava para `1316925630418162` ("Rickdaskin Ads"), com o
+ * pixel `1566349361566072` ("h-systens"). Essa conta **não podia veicular
+ * anúncio nenhum**: o suporte da Meta confirmou uma restrição de Fraude e
+ * Decepção no PERFIL PESSOAL, aplicada em 06/07/2026, que desativa o Meta Pay.
+ * Sem Meta Pay, nenhum meio de pagamento funciona — nem cartão, nem Pix, nem
+ * boleto, em conta nenhuma daquele usuário.
  *
- * - O pixel que o site de fato alimenta é `1566349361566072` ("h-systens"), o
- *   mesmo valor de `NEXT_PUBLIC_META_PIXEL_ID`. Ele pertence ao business
- *   Rickdaskin e está atribuído a ESTA conta.
- * - A conta "Orlando Henrique" tem outro pixel (`987545847222328`), com 11
- *   PageViews no total e parado desde 13/08, além de uma campanha de cliente
- *   de terceiro — o que reforça que não é a conta do produto.
+ * O diagnóstico custou uma sessão inteira em 03/09 porque a API culpa
+ * "pagamento" (`code 100`, `subcode 1815010`), o que manda mexer no cartão. As
+ * hipóteses descartadas estão em `docs/campanha-meta.md`, para ninguém refazer
+ * a ronda.
  *
- * Campanha rodando na conta errada não enxerga as conversões do site: ela
- * otimizaria às cegas, gastando para aprender com um pixel vazio.
+ * A conta nova vem de outro perfil, sem restrição. **Nada do histórico
+ * migra**: o pixel novo nasce zerado, e os ~21 `CompleteRegistration` e 6
+ * `Purchase` do antigo ficam para trás. Não é perda relevante, porque aquele
+ * pixel alimentava uma conta que nunca pôde gastar um real.
+ *
+ * ## O que continua valendo
+ *
+ * `PIXEL_DO_SITE` tem que ser o MESMO valor de `NEXT_PUBLIC_META_PIXEL_ID`, e
+ * o token da Conversions API tem que ser gerado dentro DESTE dataset. Token de
+ * um pixel com id de outro devolve **200 e não grava nada** — o pior tipo de
+ * falha, porque parece sucesso.
  */
-export const CONTA_DE_ANUNCIO = { id: '1316925630418162', nome: 'Rickdaskin Ads' } as const
+export const CONTA_DE_ANUNCIO = { id: '924551593583617', nome: 'Velo Funil' } as const
 
 /** O pixel que o site alimenta, o mesmo de `NEXT_PUBLIC_META_PIXEL_ID`. */
-export const PIXEL_DO_SITE = '1566349361566072'
+export const PIXEL_DO_SITE = '947005175128975'
 
 const VERSAO_DA_API = 'v21.0'
 

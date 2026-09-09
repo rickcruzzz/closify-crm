@@ -34,7 +34,8 @@ import { parseArgs } from 'node:util'
 const RAIZ = join(dirname(fileURLToPath(import.meta.url)), '..', '..')
 const GRAPH = 'https://graph.facebook.com/v23.0'
 
-const CONTA = '1316925630418162'
+// Conta nova, sem a restricao de Meta Pay que travava a antiga (09/09).
+const CONTA = '924551593583617'
 const PAGINA = '1105982245941400'
 const INSTAGRAM = '17841439552855914'
 const CONJUNTO = '120253684403670580'

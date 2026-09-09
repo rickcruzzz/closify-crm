@@ -7,7 +7,7 @@
  * de linha no fim**. Como o ID é interpolado dentro de um script inline, o
  * que chegava ao navegador era:
  *
- *     fbq('init', '1566349361566072
+ *     fbq('init', '947005175128975
  *     ');
  *
  * String literal partida em duas linhas é `SyntaxError: Invalid or unexpected

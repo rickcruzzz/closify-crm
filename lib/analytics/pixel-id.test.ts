@@ -10,31 +10,31 @@ import { pixelIdSeguro } from './pixel-id'
  */
 describe('pixelIdSeguro', () => {
   it('aceita o ID real, intacto', () => {
-    expect(pixelIdSeguro('1566349361566072')).toBe('1566349361566072')
+    expect(pixelIdSeguro('947005175128975')).toBe('947005175128975')
   })
 
   it('remove a quebra de linha que derrubou a produção', () => {
     // O valor exato que estava na Vercel. Sem o `trim`, este `\n` fecha a
     // string no meio e o script inteiro deixa de ser JavaScript válido.
-    expect(pixelIdSeguro('1566349361566072\n')).toBe('1566349361566072')
+    expect(pixelIdSeguro('947005175128975\n')).toBe('947005175128975')
   })
 
   it('remove espaço em volta, que o copiar-e-colar arrasta junto', () => {
-    expect(pixelIdSeguro('  1566349361566072  ')).toBe('1566349361566072')
-    expect(pixelIdSeguro('\r\n1566349361566072\r\n')).toBe('1566349361566072')
+    expect(pixelIdSeguro('  947005175128975  ')).toBe('947005175128975')
+    expect(pixelIdSeguro('\r\n947005175128975\r\n')).toBe('947005175128975')
   })
 
   it('remove aspas coladas junto do valor', () => {
     // Acontece quando alguém copia `"123"` de um arquivo .env ou de um JSON.
-    expect(pixelIdSeguro('"1566349361566072"')).toBe('1566349361566072')
-    expect(pixelIdSeguro("'1566349361566072'")).toBe('1566349361566072')
+    expect(pixelIdSeguro('"947005175128975"')).toBe('947005175128975')
+    expect(pixelIdSeguro("'947005175128975'")).toBe('947005175128975')
   })
 
   it('remove espaço de largura zero, invisível em qualquer inspeção', () => {
     // Entra em cópia de painel web e não aparece nem olhando o campo. Era o
     // único jeito de esse defeito voltar depois de corrigido "a olho".
-    expect(pixelIdSeguro('1566349361566072​')).toBe('1566349361566072')
-    expect(pixelIdSeguro('﻿1566349361566072')).toBe('1566349361566072')
+    expect(pixelIdSeguro('947005175128975​')).toBe('947005175128975')
+    expect(pixelIdSeguro('﻿947005175128975')).toBe('947005175128975')
   })
 
   it('recusa qualquer coisa que não seja só dígitos', () => {

@@ -1402,8 +1402,15 @@ poder ser consultado pela condição exata do defeito — não leitura de códig
       `calendar.events.owned` e `gmail.send`. Conferido que os escopos batem
       com `lib/integrations/google.ts` e que o `client_id` é o do projeto
       aprovado.
-- [ ] Conta de anúncio: rodar campanha na conta que enxerga o pixel do site
-      (`Rickdaskin Ads`), ou compartilhar o pixel com a outra.
+- [x] **Conta de anúncio TROCADA em 09/09.** A antiga (`Rickdaskin Ads`, com o
+      pixel `h-systens`) não podia veicular: restrição de Fraude e Decepção no
+      perfil pessoal, aplicada em 06/07/2026, que desativa o Meta Pay — e sem
+      Meta Pay nenhum meio de pagamento funciona, em conta nenhuma daquele
+      usuário. A conta nova (`924551593583617`) vem de outro perfil, sem
+      restrição, com o pixel `947005175128975`. Nada do histórico migra: o
+      pixel novo nasce zerado, e os ~21 `CompleteRegistration` e 6 `Purchase`
+      do antigo ficam para trás — perda irrelevante, porque alimentavam uma
+      conta que nunca pôde gastar um real.
 - [ ] Sandbox do Asaas nos testes de checkout — hoje o checkout é exercitado
       contra produção, e foi isso que deixou 2 cobranças em aberto no nome de
       uma usuária real.
