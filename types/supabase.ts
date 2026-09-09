@@ -305,6 +305,19 @@ export type Database = {
           updated_at: string
           /** Só muda quando a ETAPA muda. É a base de "parado". */
           stage_changed_at: string
+          /**
+           * Até quando o preço proposto vale (0076). `null` é o normal: negócio
+           * sem orçamento registrado.
+           *
+           * Separada de `due_date` de propósito — aquela é a previsão de
+           * fechamento que alimenta "Próximos prazos" no Dashboard, e as duas
+           * respondem perguntas diferentes.
+           */
+          orcamento_validade: string | null
+          /** O que foi proposto, texto livre. Teto de 2.000 no banco. */
+          orcamento_descricao: string | null
+          /** A tarefa de cobrar o retorno. Elo direto: torna o registro idempotente. */
+          orcamento_tarefa_id: string | null
         }
         Insert: {
           id?: string
@@ -316,6 +329,9 @@ export type Database = {
           stage?: DealStage
           due_date?: string | null
           created_at?: string
+          orcamento_validade?: string | null
+          orcamento_descricao?: string | null
+          orcamento_tarefa_id?: string | null
         }
         Update: {
           id?: string
@@ -327,6 +343,9 @@ export type Database = {
           stage?: DealStage
           due_date?: string | null
           created_at?: string
+          orcamento_validade?: string | null
+          orcamento_descricao?: string | null
+          orcamento_tarefa_id?: string | null
         }
         Relationships: []
       }

@@ -6,6 +6,7 @@ import { AlarmClock, CalendarPlus, Loader2, Plus, Trash2 } from 'lucide-react'
 
 import { dealStageLabels, dealStages, type DealStage } from '@/lib/deals/types'
 import type { DealRow, DealLeadRow } from '@/lib/deals/queries'
+import { OrcamentoDoNegocio } from '@/components/kanban/orcamento-do-negocio'
 import type { WorkspaceMember } from '@/lib/leads/queries'
 import type { ProximaAcaoRow } from '@/lib/tasks/types'
 import type { TaskFormValues } from '@/lib/validations/task'
@@ -253,6 +254,12 @@ export function DealDetailSheet({
                   </SelectContent>
                 </Select>
               </div>
+
+              {/* Acima do contato e do prazo de propósito: para quem vende por
+                  orçamento — que é o ICP inteiro da prospecção deste projeto —
+                  a pergunta "quanto eu propus e até quando vale" vem antes de
+                  qualquer outra coisa do negócio. */}
+              <OrcamentoDoNegocio dealId={deal.id} valorDoNegocio={deal.value} />
 
               {lead && (
                 <div>
