@@ -44,8 +44,26 @@ import { MobileStickyCta } from '@/components/landing/mobile-sticky-cta'
 // não diferencia nada, e "não cobra por pessoa" diferencia tudo.
 //
 // Quando o WhatsApp voltar a entregar, ele volta para cá. Não antes.
+// ## Por que o título passou a falar de ORÇAMENTO em 09/09
+//
+// Medido com o Exa: quando os cinco nichos da prospecção procuram software,
+// quem responde é orçamento (58%), ERP (44%) e só então CRM (28%). Em locação
+// o CRM é 0 de 10; em dedetização, 1 de 10. Nos posicionávamos na categoria
+// que eles menos procuram.
+//
+// E o ângulo de PREÇO, que este título carregava sozinho, diferencia mas tem
+// dono: só 15% dos concorrentes lideram por preço — e "preço fixo, sem cobrar
+// por usuário" já está tomado por SETE brasileiros, incluindo o `nexxou`, cujo
+// título é quase este palavra por palavra.
+//
+// O ângulo que nenhum CRM ocupa é orçamento. O preço não some: ele desce para
+// a descrição e continua inteiro no hero, no cartão de preço e no anúncio.
+//
+// **E isto só ficou honesto em 08/09**, quando o orçamento passou a existir no
+// produto. Antes seria promessa falsa — que é o defeito que esta mudança
+// existe para consertar, não para repetir.
 export const metadata: Metadata = {
-  title: 'Velo Funil: o CRM que não cobra por vendedor',
+  title: 'Velo Funil: o CRM que cobra o retorno do orçamento',
   // ## O limite de ~160 caracteres é o que decide o que sobra
   //
   // A versão anterior tinha 213 e o Google corta em ~160 — o que ficava de
@@ -59,14 +77,23 @@ export const metadata: Metadata = {
   // O `openGraph` abaixo mantém a versão longa de propósito: WhatsApp e
   // LinkedIn mostram bem mais que 160, e ali cortar seria perder à toa.
   description:
-    'CRM que não cobra por vendedor: R$ 49 por mês pela empresa inteira, com 1 ou com 20 pessoas. Traga sua planilha. Grátis até 50 contatos, sem cartão.',
+    'Cada orçamento vira um card com a data do retorno, e o sistema lembra de cobrar. R$ 49/mês pela empresa inteira, não por vendedor. Grátis até 50 contatos.',
   alternates: { canonical: '/' },
   // Sem repetir aqui, o preview de link herdaria o openGraph genérico do
   // layout raiz em vez do texto de conversão da landing.
+  // ## Este bloco é o que o WHATSAPP mostra, e por isso ele importa mais aqui
+  //
+  // O link da mensagem de prospecção é colado no WhatsApp, e o que aparece na
+  // prévia é o `openGraph` — não a `description` acima. Ou seja: é a PRIMEIRA
+  // confirmação da promessa, e ela acontece antes do clique, dentro da conversa.
+  //
+  // A mensagem promete "cada orçamento vira um card, com a data do retorno".
+  // Até 09/09 a prévia respondia com "traga sua planilha e cada cliente vira um
+  // contato" — perto, e não é a mesma frase. Agora é o eco literal.
   openGraph: {
-    title: 'Velo Funil: o CRM que não cobra por vendedor',
+    title: 'Velo Funil: o CRM que cobra o retorno do orçamento',
     description:
-      'CRM para pequenos negócios brasileiros. Traga sua planilha e cada cliente vira um contato com prazo para responder. Grátis até 50 contatos, sem cartão. Pro por R$ 49 por mês pela empresa inteira, não por vendedor.',
+      'Cada orçamento vira um card com a data do retorno, e o sistema lembra você de cobrar antes de o cliente esquecer. Grátis até 50 contatos, sem cartão. Pro por R$ 49 por mês pela empresa inteira, não por vendedor.',
     // Next.js não mescla `openGraph` entre layout e página, definir aqui
     // sobrescreve o do layout raiz por inteiro, e sem `siteName` a home
     // ficava sem `og:site_name`. É provavelmente o que o verificador de

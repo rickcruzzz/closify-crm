@@ -72,9 +72,32 @@ nichos para quem as 510 mensagens estao prontas. E a TERCEIRA medicao
 independente a apontar para o orcamento; as outras foram a regua de nicho
 (`ORCAMENTO >= 2`) e os 59% dos 61 concorrentes.
 
-**A outra ponta confirma:** o titulo da landing e "o CRM que nao cobra por
-vendedor", "orcamento" aparece 1 vez no site inteiro, e as 8 palavras da campanha
-sao todas CRM.
+**A outra ponta confirma:** o titulo da landing era "o CRM que nao cobra por
+vendedor" e as 8 palavras da campanha sao todas CRM.
+
+**Uma correcao do meu proprio numero:** eu disse que "orcamento" aparecia UMA vez
+no site inteiro. Eram DUAS, e o metodo estava errado — `grep -c` conta LINHAS, e
+o `-o` e ignorado quando ha `-c`. Pior: uma das duas ja era um bom cabecalho de
+secao ("Do 'me manda o orcamento' ate o dinheiro na conta"). O achado continua de
+pe pelo que importa — nem o titulo, nem a descricao, nem a previa do WhatsApp,
+nem a dobra diziam a palavra —, mas a landing nao estava tao muda quanto afirmei.
+
+### O conserto: a porta passou a confirmar a promessa (09/09)
+
+    ocorrencias de "orcamento"    2  ->  15
+    titulo         "o CRM que cobra o retorno do orcamento"
+    og (WhatsApp)  eco LITERAL da mensagem, e e o que aparece ANTES do clique
+    sub-hero       "Cada orcamento vira um card com a data do retorno..."
+    funcionalidade primeiro card da lista, no lugar do funil visual
+
+O `openGraph` importa mais que a `description` neste canal: o link e colado no
+WhatsApp, e a previa e a PRIMEIRA confirmacao da promessa — acontece dentro da
+conversa, antes do clique.
+
+E o preco nao sumiu: desceu para a descricao e continua inteiro no hero, no
+cartao de plano e no anuncio. O que mudou foi qual dos dois lidera, e a razao
+esta medida — so 15% dos concorrentes lideram por preco, mas o angulo ja tem
+SETE donos brasileiros; orcamento nao tem nenhum entre os CRMs.
 
 ### E o anuncio esta PRECIFICADO PARA FORA — corrigindo o que eu disse antes
 

@@ -142,11 +142,27 @@ export function HeroSection() {
           </h1>
           {/* Era de 47 palavras e terminava em três negações. Referência de
               conversão põe a sub do hero entre 15 e 25 — acima disso ela deixa
-              de ser lida e passa a ser pulada. */}
+              de ser lida e passa a ser pulada.
+
+              ## Por que ela fala de ORÇAMENTO desde 09/09
+
+              Esta linha é a primeira coisa que confirma — ou desmente — o que a
+              pessoa acabou de ler antes de clicar. A mensagem de prospecção que
+              sai para os cinco nichos diz, com estas palavras: *"cada orçamento
+              vira um card, com a data do retorno"*. Medido em 09/09, a landing
+              que o link abre mencionava "orçamento" UMA vez em 191 KB de HTML.
+
+              É o mesmo defeito que a auditoria de 04/09 achou nos seis criativos
+              da Meta: seis promessas apontando para uma porta que não repetia
+              nenhuma. E aqui custa mais caro, porque a lista é de um tiro só —
+              a própria mensagem promete "não te procuro de novo", então prospect
+              que chega e não reconhece a promessa está perdido para sempre.
+
+              A frase é o eco literal da mensagem, de propósito. E ela só ficou
+              honesta em 08/09: até então o orçamento não existia no produto. */}
           <p className="text-muted-foreground animate-entrada fade-in slide-in-from-bottom-3 fill-mode-both ease-entrada duration-entrada delay-passo-3 max-w-xl text-lg text-balance">
-            Traga sua planilha em um minuto. Cada cliente vira um contato com
-            prazo para responder, e você abre o sistema já sabendo com quem
-            falar hoje.
+            Cada orçamento vira um card com a data do retorno. Quando o prazo
+            está acabando, o sistema lembra você de cobrar.
           </p>
           {/* `items-stretch` é o padrão do flex, e é por ser padrão que
               ninguém percebe quando some. É ele que dá aos dois botões a mesma

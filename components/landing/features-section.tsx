@@ -6,6 +6,7 @@ import {
   ListChecks,
   Building2,
   Bell,
+  FileClock,
   FileSpreadsheet,
   ShieldCheck,
   type LucideIcon,
@@ -26,11 +27,27 @@ type Feature = {
 
 const features: Feature[] = [
   {
+    // ## Primeiro da lista desde 09/09, e a ordem e a decisao
+    //
+    // E o que a mensagem de prospecao promete com estas palavras: "cada
+    // orcamento vira um card, com a data do retorno". Ate 09/09 a landing
+    // mencionava "orcamento" UMA vez em 191 KB de HTML, e quem chegava pelo
+    // WhatsApp nao encontrava a frase que tinha acabado de ler.
+    //
+    // E o angulo que nenhum CRM ocupa: medido no Exa, 58% do que o ICP acha
+    // quando procura software e categoria ORCAMENTO, contra 28% de CRM.
+    title: 'O orçamento tem prazo, e o sistema cobra',
+    description:
+      'Registre valor, validade e o que foi proposto. Dois dias antes de vencer, a cobrança do retorno aparece na sua lista do dia — sem você anotar nada.',
+    icon: FileClock,
+    delay: 0,
+  },
+  {
     title: 'Funil visual, arrasta e solta',
     description:
       'Veja cada cliente em potencial numa etapa da venda e arraste o card conforme a conversa avança, sem montar tabela, sem fórmula.',
     icon: KanbanSquare,
-    delay: 0,
+    delay: 65,
   },
   {
     title: 'O histórico fica com a empresa',
