@@ -64,8 +64,25 @@ export const TETO = 560
  * cliente."* — que é a frase certa para ser lida dentro do WhatsApp. Medido em
  * 08/09: 1200x630, 43 KB, muito abaixo do teto de ~600 KB que faz o WhatsApp
  * desistir de renderizar.
+ *
+ * ## O `https://` é obrigatório, e a falta dele apareceu numa conversa real
+ *
+ * Em 09/09 o dono mandou a primeira mensagem e o cartão de prévia **não
+ * apareceu** — só o link sublinhado. Medido contra produção, o lado do site
+ * está são: `og:image` responde 200, PNG de 44 KB em 1200x630, e o mesmo HTML
+ * chega quando a requisição usa o User-Agent do WhatsApp.
+ *
+ * O que faltava era o esquema. Sem `https://`, o WhatsApp reconhece o texto
+ * como link e o deixa clicável — foi o que a conversa mostrou —, mas o
+ * caminho que dispara a busca da prévia é o do endereço COMPLETO. Oito
+ * caracteres a mais, e a mensagem mais longa (eventos) vai a 554 dos 560.
+ *
+ * **E há uma parte que não é código:** a prévia é montada pelo aparelho de
+ * QUEM ENVIA, no momento em que o texto entra no campo. Com o `wa.me?text=` o
+ * texto chega inteiro de uma vez, e apertar enviar no mesmo instante manda a
+ * mensagem antes de a busca terminar. Esperar o cartão aparecer é do dono.
  */
-const LINK = 'velofunil.com.br/?utm_source=whatsapp'
+const LINK = 'https://velofunil.com.br/?utm_source=whatsapp'
 
 export type DadosDaAbordagem = {
   /** O domínio, que é como a pessoa reconhece a própria empresa. */
