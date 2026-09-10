@@ -79,6 +79,7 @@ export function ImportLeadsDialog({
   const [mapeamento, setMapeamento] = React.useState<Mapeamento>({})
   const [duplicados, setDuplicados] = React.useState<'ignorar' | 'atualizar'>('ignorar')
   const [lendo, setLendo] = React.useState(false)
+  const [arrastando, setArrastando] = React.useState(false)
   const [enviando, setEnviando] = React.useState(false)
   const [resultado, setResultado] = React.useState<ResultadoImportacao | null>(null)
   // Quantas linhas do topo do arquivo NÃO são dado nem cabeçalho, planilha
@@ -396,32 +397,86 @@ export function ImportLeadsDialog({
           </DialogDescription>
         </DialogHeader>
 
+        {/* ## A porta de entrada era um `<input type="file">` cru
+            O primeiro passo mostrava o controle NATIVO do navegador —
+            "Escolher arquivo | Nenhum arquivo escolhido" —, com a tipografia
+            do sistema operacional no meio de um diálogo desenhado. Além de
+            destoar, ele não diz o que aceita, não recebe arrasto e tem alvo de
+            toque menor que os 24px que a WCAG 2.2 pede.
+
+            A área abaixo é a mesma coisa por dentro: o input continua lá,
+            visualmente escondido mas alcançável por teclado e por leitor de
+            tela através do `<label>`, que é o que preserva o acesso.
+            `onDrop` é acréscimo, não substituto — quem não arrasta clica. */}
         {passo === 'arquivo' && (
           <div className="flex flex-col gap-4">
             <div className="flex flex-col gap-1.5">
-              <Label htmlFor="arquivo-planilha">Arquivo</Label>
-              <Input
-                id="arquivo-planilha"
-                type="file"
-                accept=".xlsx,.xls,.csv,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-                disabled={lendo}
-                onChange={(e) => {
-                  const arquivo = e.target.files?.[0]
-                  if (arquivo) void escolherArquivo(arquivo)
+              <label
+                htmlFor="arquivo-planilha"
+                onDragOver={(e) => {
+                  e.preventDefault()
+                  setArrastando(true)
                 }}
-              />
+                onDragLeave={() => setArrastando(false)}
+                onDrop={(e) => {
+                  e.preventDefault()
+                  setArrastando(false)
+                  const arquivo = e.dataTransfer.files?.[0]
+                  if (arquivo && !lendo) void escolherArquivo(arquivo)
+                }}
+                className={cn(
+                  'flex cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed px-6 py-10 text-center transition-colors',
+                  // `has-[:focus-visible]` e nao `focus-within`: o Radix
+                  // Dialog poe o foco no primeiro elemento focavel ao abrir, e
+                  // esse elemento agora e o input do arquivo. Com
+                  // `focus-within` o anel aparecia SEMPRE que a caixa abria,
+                  // mesmo por clique de mouse, e lia como area destacada em vez
+                  // de foco. `:focus-visible` so pinta quando o navegador julga
+                  // que a navegacao e por teclado, que e a regra da WCAG 2.4.11.
+                  'has-[:focus-visible]:ring-ring has-[:focus-visible]:border-ring has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-offset-2',
+                  arrastando
+                    ? 'border-primary bg-primary/5'
+                    : 'border-border hover:border-primary/50 hover:bg-muted/40',
+                  lendo && 'pointer-events-none opacity-60',
+                )}
+              >
+                {lendo ? (
+                  <>
+                    <Loader2 aria-hidden className="text-primary size-7 animate-spin" />
+                    <span className="text-sm font-medium">Lendo a planilha…</span>
+                  </>
+                ) : (
+                  <>
+                    <div className="bg-primary/10 text-primary rounded-full p-3">
+                      <FileSpreadsheet aria-hidden className="size-6" />
+                    </div>
+                    <span className="text-sm font-medium">
+                      Arraste a planilha aqui ou{' '}
+                      <span className="text-primary underline underline-offset-2">
+                        escolha do computador
+                      </span>
+                    </span>
+                    <span className="text-muted-foreground text-xs">
+                      Excel (.xlsx) ou .csv · até {CSV_MAX_LINHAS.toLocaleString('pt-BR')} linhas
+                    </span>
+                  </>
+                )}
+                <input
+                  id="arquivo-planilha"
+                  type="file"
+                  className="sr-only"
+                  accept=".xlsx,.xls,.csv,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                  disabled={lendo}
+                  onChange={(e) => {
+                    const arquivo = e.target.files?.[0]
+                    if (arquivo) void escolherArquivo(arquivo)
+                  }}
+                />
+              </label>
               <p className="text-muted-foreground text-xs">
-                Até {CSV_MAX_LINHAS.toLocaleString('pt-BR')} linhas e 512 KB. Contatos repetidos ou
-                já cadastrados são ignorados.
+                Contatos repetidos ou já cadastrados são ignorados.
               </p>
             </div>
-
-            {lendo && (
-              <p className="text-muted-foreground flex items-center gap-2 text-sm">
-                <Loader2 aria-hidden className="size-4 animate-spin" />
-                Lendo a planilha…
-              </p>
-            )}
 
             <DialogFooter className="sm:justify-start">
               <Button type="button" variant="ghost" onClick={baixarModelo}>
