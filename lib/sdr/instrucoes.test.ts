@@ -109,7 +109,7 @@ describe('comportamento', () => {
 
 describe('a marca de passagem', () => {
   it('reconhece o pedido de passagem', () => {
-    expect(pediuPassagem(`Vou chamar o Orlando. ${MARCA_DE_PASSAGEM}`)).toBe(true)
+    expect(pediuPassagem(`Vou chamar um atendente. ${MARCA_DE_PASSAGEM}`)).toBe(true)
     expect(pediuPassagem('Claro, o plano Pro custa isso.')).toBe(false)
   })
 
@@ -119,9 +119,9 @@ describe('a marca de passagem', () => {
    * integração pega, porque a resposta continua "certa".
    */
   it('a marca nunca chega ao cliente', () => {
-    const limpo = limparResposta(`O Orlando te responde já.\n${MARCA_DE_PASSAGEM}`)
+    const limpo = limparResposta(`Um atendente te responde já.\n${MARCA_DE_PASSAGEM}`)
     expect(limpo).not.toContain(MARCA_DE_PASSAGEM)
-    expect(limpo).toBe('O Orlando te responde já.')
+    expect(limpo).toBe('Um atendente te responde já.')
   })
 
   it('limpa a marca no meio do texto também', () => {
@@ -160,5 +160,29 @@ describe('a pesquisa entra no prompt', () => {
   it('vem depois dos fatos do produto', () => {
     const i = instrucoesDoAgente({ pesquisa: bloco })
     expect(i.indexOf('NÃO tem WhatsApp integrado')).toBeLessThan(i.indexOf('faz solar'))
+  })
+})
+
+describe('o agente nunca cita o nome do dono', () => {
+  /**
+   * Ele fala pela EMPRESA, não por uma pessoa. Citar o nome cria duas
+   * expectativas erradas: que existe um time com aquela pessoa esperando, e
+   * que quem responder depois é obrigatoriamente ela.
+   *
+   * E dá ao interlocutor um nome para cobrar — num produto de uma pessoa só,
+   * "cadê o Fulano?" na terceira mensagem é pergunta sem boa resposta.
+   */
+  it('nenhum nome próprio nas instruções', () => {
+    const i = instrucoesDoAgente({ empresa: 'SolarOn' })
+    for (const nome of ['Orlando', 'Henrique', 'Bastos', 'Cruz']) {
+      expect(i).not.toContain(nome)
+    }
+  })
+
+  it('diz "um atendente" nos três lugares que pedem', () => {
+    const i = instrucoesDoAgente()
+    expect(i).toContain('um atendente entra na conversa')
+    expect(i).toContain('confirmar com um atendente')
+    expect(i).toContain('um atendente responde em seguida')
   })
 })

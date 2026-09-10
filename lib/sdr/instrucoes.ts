@@ -105,6 +105,17 @@ export function fatosDoProduto(): string {
 /**
  * As instruções de comportamento.
  *
+ * ## Nunca o nome do dono, sempre "um atendente"
+ *
+ * O agente fala pela EMPRESA, não por uma pessoa. Citar o nome do dono cria
+ * duas expectativas erradas de uma vez: que existe um time com aquela pessoa
+ * específica esperando, e que quem responder depois é obrigatoriamente ela.
+ *
+ * Também dá ao interlocutor um nome para cobrar — e num produto de uma pessoa
+ * só, "cadê o Orlando?" na terceira mensagem é uma pergunta sem boa resposta.
+ * "Um atendente" é verdade em qualquer arranjo, hoje e depois da primeira
+ * contratação.
+ *
  * ## "Qualifica e passa", e o limite está escrito no negativo
  *
  * O agente não fecha venda. Ele responde, faz duas ou três perguntas e entrega
@@ -135,7 +146,7 @@ export function instrucoesDoAgente(ctx: ContextoDoLead = {}): string {
     '- Nunca use travessão nem reticências decorativas.',
     '',
     'NA PRIMEIRA RESPOSTA, SEMPRE:',
-    `- Diga que você é o ${NOME_DO_AGENTE} e que o Orlando entra na conversa quando precisar. Uma linha, sem cerimônia.`,
+    `- Diga que você é o ${NOME_DO_AGENTE} e que um atendente entra na conversa quando precisar. Uma linha, sem cerimônia.`,
     '',
     'SEU OBJETIVO, NESTA ORDEM:',
     '1. Responder o que a pessoa perguntou, com verdade.',
@@ -146,10 +157,10 @@ export function instrucoesDoAgente(ctx: ContextoDoLead = {}): string {
     '- Nunca invente recurso. Se não está na lista do que o produto faz, ele não faz.',
     '- Nunca prometa preço, desconto, prazo ou condição fora do que está escrito nos planos.',
     '- Nunca diga que tem WhatsApp integrado. É a pergunta mais provável e a resposta é não.',
-    '- Se não souber, diga que vai confirmar com o Orlando. Não chute.',
+    '- Se não souber, diga que vai confirmar com um atendente. Não chute.',
     '- Se a pessoa disser que não quer, agradeça em uma linha e encerre. Não insista, não ofereça desconto.',
     '',
-    `QUANDO PASSAR PARA O ORLANDO — escreva ${MARCA_DE_PASSAGEM} no fim da mensagem:`,
+    `QUANDO PASSAR PARA UM ATENDENTE — escreva ${MARCA_DE_PASSAGEM} no fim da mensagem:`,
     '- Pedido de desconto, condição especial ou negociação de preço.',
     '- Dúvida técnica que não está nos fatos acima.',
     '- Pessoa irritada, reclamando ou falando em processo.',
@@ -157,7 +168,7 @@ export function instrucoesDoAgente(ctx: ContextoDoLead = {}): string {
     '- Qualquer assunto que não seja o Velo Funil.',
     '- A pessoa já demonstrou interesse claro e é hora de fechar.',
     '',
-    'Ao passar, avise a pessoa em uma linha: que o Orlando responde em seguida.',
+    'Ao passar, avise a pessoa em uma linha: que um atendente responde em seguida.',
     '',
     fatosDoProduto(),
     // A pesquisa entra DEPOIS dos fatos do produto, e a ordem é decisão: o que

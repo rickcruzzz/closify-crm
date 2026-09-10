@@ -94,7 +94,7 @@
         "options": {}
       },
       "id": "precisa-do-dono",
-      "name": "Precisa do Orlando?",
+      "name": "Precisa de um atendente?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
       "position": [460, 200]
@@ -137,7 +137,7 @@
         "options": {}
       },
       "id": "avisar-dono",
-      "name": "Chama o Orlando",
+      "name": "Chama o atendente",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [700, 100],
@@ -169,15 +169,15 @@
       ]
     },
     "Agente decide o que dizer": {
-      "main": [[{ "node": "Precisa do Orlando?", "type": "main", "index": 0 }]]
+      "main": [[{ "node": "Precisa de um atendente?", "type": "main", "index": 0 }]]
     },
-    "Precisa do Orlando?": {
+    "Precisa de um atendente?": {
       "main": [
-        [{ "node": "Chama o Orlando", "type": "main", "index": 0 }],
+        [{ "node": "Chama o atendente", "type": "main", "index": 0 }],
         [{ "node": "Responde no WhatsApp", "type": "main", "index": 0 }]
       ]
     },
-    "Chama o Orlando": {
+    "Chama o atendente": {
       "main": [[{ "node": "Responde no WhatsApp", "type": "main", "index": 0 }]]
     }
   },
