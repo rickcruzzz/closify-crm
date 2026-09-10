@@ -234,45 +234,81 @@ async function main() {
       const url =
         `https://web.whatsapp.com/send?phone=${alvo.numero}` +
         `&text=${encodeURIComponent(alvo.texto)}`
-      await p.goto(url, { waitUntil: 'domcontentloaded' })
+      // ## Queda de rede vira PARADA limpa, e nao pilha de erro
+      //
+      // Em 09/09, as 21h41, a rodada morreu no 7 de 10 com
+      // `net::ERR_INTERNET_DISCONNECTED` e um stack trace de 40 linhas com a
+      // mensagem inteira codificada em percent-encoding dentro. Parecia
+      // defeito grave; era a internet caindo.
+      //
+      // E a queda explica o que veio ANTES dela: das cinco enviadas, quatro
+      // sairam SEM CARTAO. O cartao depende de o WhatsApp buscar a previa pela
+      // rede — com a conexao morrendo, ele nao busca e manda assim mesmo.
+      // "SEM CARTAO" repetido nao e defeito do og:image; e sintoma de rede.
+      const chegou = await p
+        .goto(url, { waitUntil: 'domcontentloaded' })
+        .then(() => true)
+        .catch(() => false)
+
+      if (!chegou) {
+        return abortar(
+          `${rotulo}: nao consegui abrir a conversa. A internet caiu ou o ` +
+            'WhatsApp Web ficou fora do ar. As anteriores foram enviadas e ' +
+            'estao marcadas; esta e as seguintes continuam na fila.',
+        )
+      }
 
       // Número que o WhatsApp não reconhece abre um diálogo em vez do chat.
       // Não é falha da rodada: é uma empresa que trocou de número.
-      // ## Numero que nao esta no WhatsApp abre um DIALOGO, e o texto varia
+      // ## O dialogo diz DUAS coisas diferentes, e a primeira versao confundiu
       //
-      // Em 09/09 a rodada morreu no 6 de 10, em `+55 11 3926-0073`. Aquilo e
-      // um FIXO de Sao Paulo — o `3` depois do DDD diz isso —, e fixo quase
-      // nunca tem WhatsApp. O aviso apareceu, mas a frase nao casou com a
-      // expressao daqui, entao caiu no galho de "tempo" e a rodada inteira
-      // parou com 4 empresas ainda na fila.
+      // Em 09/09 a rodada parou no 6 de 10 num FIXO de Sao Paulo, porque a
+      // deteccao procurava a FRASE "numero de telefone invalido" e o WhatsApp
+      // escreveu outra. Troquei para detectar a FORMA — um dialogo modal — e a
+      // rodada seguinte pulou as DEZ empresas sem mandar nada:
       //
-      // Casar por FRASE e frágil por construcao: a mensagem muda com o idioma
-      // do aparelho, com a versao do WhatsApp Web e com o humor do produto.
-      // O que nao muda e a FORMA: um dialogo modal no meio da tela.
+      //     "O numero +55 11 3926-0073 nao esta no WhatsApp. OK"   <- de fato
+      //     "Iniciando conversa  Cancelar"                          <- CARREGANDO
       //
-      // ## Mas continua havendo dois desfechos diferentes, e a distincao vale
+      // O segundo tambem e um dialogo modal, e aparece em TODA abertura de
+      // conversa. Detectar pela forma sozinha transformou "esta carregando" em
+      // "numero invalido" e a rodada inteira virou zero.
       //
-      //     dialogo apareceu    numero de uma empresa que trocou de telefone.
-      //                         PULA e segue: uma linha ruim nao pode custar
-      //                         as outras da fila
-      //     NADA apareceu       ambiguidade real — pode ser lentidao, pode ser
-      //                         bloqueio. PARA, porque insistir contra um
-      //                         bloqueio e como se perde a conta
+      // A licao, que ja aparece duas vezes neste arquivo: nem a frase nem a
+      // forma bastam sozinhas. O que separa os dois e o dialogo ser TRANSITORIO
+      // — o de carregamento some quando a conversa abre, o de numero invalido
+      // fica ate alguem clicar em OK.
+      //
+      // Entao o laco espera: enquanto o dialogo for o de carregamento, ele
+      // continua olhando. So conclui quando a caixa aparece (pronto) ou quando
+      // um dialogo que NAO e de carregamento fica na tela (invalido).
+      const CARREGANDO = /iniciando conversa|starting chat|carregando|loading/i
       const dialogo = p.locator('[role="dialog"], [data-animate-modal-popup="true"]')
-      const caixa = p.locator('[data-testid="conversation-compose-box-input"], div[contenteditable="true"][data-tab]')
+      const caixa = p.locator(
+        '[data-testid="conversation-compose-box-input"], div[contenteditable="true"][data-tab]',
+      )
 
-      const resultado = await Promise.race([
-        dialogo.first().waitFor({ state: 'visible', timeout: 45_000 }).then(() => 'invalido'),
-        caixa.last().waitFor({ timeout: 45_000 }).then(() => 'pronto'),
-      ]).catch(() => 'tempo')
+      let resultado = 'tempo'
+      let avisoDoDialogo = ''
+      const limite = Date.now() + 45_000
+      while (Date.now() < limite) {
+        if (await caixa.last().isVisible().catch(() => false)) {
+          resultado = 'pronto'
+          break
+        }
+        if (await dialogo.first().isVisible().catch(() => false)) {
+          const texto = await dialogo.first().innerText().catch(() => '')
+          if (!CARREGANDO.test(texto)) {
+            resultado = 'invalido'
+            avisoDoDialogo = texto.replace(/\s+/g, ' ').slice(0, 70)
+            break
+          }
+        }
+        await dormir(700)
+      }
 
       if (resultado === 'invalido') {
-        const aviso = await dialogo
-          .first()
-          .innerText()
-          .then((t) => t.replace(/\s+/g, ' ').slice(0, 60))
-          .catch(() => '')
-        console.log(`  ${rotulo}  ->  pulando${aviso ? `: "${aviso}"` : ' (diálogo do WhatsApp)'}`)
+        console.log(`  ${rotulo}  ->  pulando: "${avisoDoDialogo}"`)
         await p.keyboard.press('Escape')
         continue
       }
