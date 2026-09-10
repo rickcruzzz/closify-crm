@@ -18,7 +18,8 @@
     "test:suporte": "node --env-file=.env.local node_modules/@playwright/test/cli.js test --project=suporte",
     "publicar:instagram": "node --env-file=.env.local scripts/marketing/publicar-instagram.mjs",
     "renovar:token-meta": "node --env-file=.env.local scripts/marketing/renovar-token-meta.mjs",
-    "promover": "node --env-file=.env.local scripts/deploy/link-para-promover.mjs"
+    "promover": "node --env-file=.env.local scripts/deploy/link-para-promover.mjs",
+    "n8n:baixar": "node scripts/n8n/baixar-workflow.mjs"
   },
   "dependencies": {
     "@base-ui/react": "^1.6.0",
