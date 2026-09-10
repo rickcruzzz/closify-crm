@@ -8,7 +8,7 @@ desatualização, reconsulte o catálogo em vez de confiar cegamente nele (mesma
 regra de `docs/estado-atual.md`).
 
 **Estrutura reconferida em 08/09/2026, noite — e a fonte mudou.** Lida de
-`pg_catalog` e não do OpenAPI: **20 tabelas**, **34 RPCs do projeto** (65 no
+`pg_catalog` e não do OpenAPI: **21 tabelas**, **34 RPCs do projeto** (65 no
 catálogo, 31 são da extensão `pg_trgm`), **32 foreign keys**, **16 triggers**,
 **8 enums**, **39 check constraints**.
 
@@ -34,8 +34,8 @@ de custo: paywall no momento em que a pessoa sente o valor converte 8-12%,
 contra 3-4% de limite arbitrário — e as outras três são todas arbitrárias no
 sentido técnico do termo.
 
-<!-- contagem: migrations.arquivos=78 migrations.maior=0079 -->
-**78 arquivos de migration, e a maior é `0079`** (remedido em 08/09; o `0049`
+<!-- contagem: migrations.arquivos=79 migrations.maior=0080 -->
+**79 arquivos de migration, e a maior é `0080`** (remedido em 08/09; o `0049`
 não existe, removido em 22/08). Os dois números vêm sempre juntos: a contagem
 sozinha convida a inferir `0073`.
 
@@ -715,11 +715,23 @@ roda. Enum se paga quando o conjunto está estável, que é o caso de
 OpenAPI.** A troca de fonte é a correção mais importante desta revisão, e está
 explicada no fim desta seção.
 
-**20 tabelas** no schema `public`, todas com Row Level Security ligada
-(conferido em `pg_class.relrowsecurity`, 20 de 20). O número já disse 12 (até
-23/08), 14 (até 25/08), 17 (26/08) e 18 (01/09). Entraram desde então:
-`vigia_ultimo_aviso` (0062, a memória do vigilante) e `notificacoes` (0066, o
-sino de avisos dentro do produto).
+**21 tabelas** no schema `public`, todas com Row Level Security ligada
+(conferido em `pg_class.relrowsecurity`, 21 de 21). O número já disse 12 (até
+23/08), 14 (até 25/08), 17 (26/08), 18 (01/09) e 20 (até 09/09). Entraram desde
+então: `vigia_ultimo_aviso` (0062, a memória do vigilante), `notificacoes`
+(0066, o sino de avisos dentro do produto) e `descadastro_de_prospeccao`
+(0080).
+
+A 0080 é a terceira tabela de SISTEMA — RLS ligada e zero policy, como
+`error_logs` e `asaas_webhook_events`. Ela guarda quem pediu para não receber
+e-mail de prospecção, e existe como tabela, e não como o arquivo
+`nao-perturbe.txt`, por dois motivos que o arquivo não atende: quem escreve é
+um estranho clicando num link em produção, onde não há disco; e é obrigação
+legal (Art. 18, § 2º), que precisa sobreviver a deploy e a auditoria.
+
+**O e-mail é guardado em hash, nunca em texto.** Uma lista de descadastro
+legível seria uma lista de endereços válidos — o ativo mais valioso para quem
+a obtivesse, criado justamente para atender à LGPD.
 
 **34 RPCs do projeto**, e aqui mora uma armadilha nova. O catálogo devolve
 **65** funções, e **31 delas são da extensão `pg_trgm`** — `gin_*`, `gtrgm_*`,

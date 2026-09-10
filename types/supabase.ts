@@ -285,6 +285,30 @@ export type Database = {
       // `updated_at` e `stage_changed_at` (0033) são escritos por trigger, e a
       // trigger sobrescreve o que vier do app, por isso ficam fora de `Insert`
       // e de `Update`. Mandá-los pelo PostgREST não adianta.
+      descadastro_de_prospeccao: {
+        Row: {
+          created_at: string
+          dominio: string | null
+          email_hash: string
+          id: string
+          origem: string
+        }
+        Insert: {
+          created_at?: string
+          dominio?: string | null
+          email_hash: string
+          id?: string
+          origem?: string
+        }
+        Update: {
+          created_at?: string
+          dominio?: string | null
+          email_hash?: string
+          id?: string
+          origem?: string
+        }
+        Relationships: []
+      }
       deals: {
         Row: {
           id: string
