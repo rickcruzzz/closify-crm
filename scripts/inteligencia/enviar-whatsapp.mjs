@@ -355,8 +355,53 @@ async function main() {
         semPrevia += 1
       }
 
-      await caixa.last().click()
-      await p.keyboard.press('Enter')
+      // ## O painel do PERFIL cobre a caixa, e o clique nunca chega
+      //
+      // Em 09/09, as 22h, a rodada morreu no 3 de 10 com `locator.click:
+      // Timeout` depois de 60 tentativas. O log dizia o que estava no caminho:
+      //
+      //     <span>Autorizada pela Anvisa.</span> from <div
+      //     data-testid="drawer-right"> subtree intercepts pointer events
+      //
+      // Aquilo e a descricao do perfil COMERCIAL da empresa. Ao abrir conversa
+      // com uma conta Business, o WhatsApp as vezes abre a gaveta da direita, e
+      // ela cobre a caixa de mensagem. O elemento estava "visivel, habilitado e
+      // estavel" — so inalcancavel para o ponteiro.
+      //
+      // ## Tres tentativas, da mais parecida com gente para a menos
+      //
+      //     Escape          fecha a gaveta. Resolve a causa, e o que uma
+      //                     pessoa faria
+      //     botao Enviar    nao depende da caixa estar descoberta
+      //     foco por JS     ultimo recurso: poe o cursor sem clique nenhum
+      //
+      // E se as tres falharem, PULA em vez de derrubar a rodada. A mensagem nao
+      // saiu e a empresa nao e marcada, entao ela volta na proxima.
+      await p.keyboard.press('Escape').catch(() => {})
+      await dormir(400)
+
+      const enviou = await (async () => {
+        if (await caixa.last().click({ timeout: 8000 }).then(() => true).catch(() => false)) {
+          await p.keyboard.press('Enter')
+          return true
+        }
+        const botao = p.locator('[data-testid="send"], button[aria-label*="Enviar"], button[aria-label*="Send"]')
+        if (await botao.last().click({ timeout: 8000 }).then(() => true).catch(() => false)) return true
+        const focou = await caixa
+          .last()
+          .evaluate((el) => { el.focus(); return document.activeElement === el })
+          .catch(() => false)
+        if (focou) {
+          await p.keyboard.press('Enter')
+          return true
+        }
+        return false
+      })()
+
+      if (!enviou) {
+        console.log(`  ${rotulo}  ->  nao consegui enviar (algo cobre a caixa), pulando`)
+        continue
+      }
 
       // Só conta como enviada quando a bolha aparece do lado de saída.
       await p
