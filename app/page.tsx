@@ -1,5 +1,7 @@
 import type { Metadata } from 'next'
 
+import { FREE_LEAD_LIMIT, PRO_PLAN_PRICE } from '@/lib/plans'
+
 import { PublicNavbar } from '@/components/layout/public-navbar'
 import { HeroSection } from '@/components/landing/hero-section'
 import { StatsSection } from '@/components/landing/stats-section'
@@ -97,7 +99,7 @@ export const metadata: Metadata = {
   // O `openGraph` abaixo mantém a versão longa de propósito: WhatsApp e
   // LinkedIn mostram bem mais que 160, e ali cortar seria perder à toa.
   description:
-    'Cada orçamento vira um card com a data do retorno, e o sistema avisa dois dias antes de o prazo vencer. R$ 49/mês pela empresa inteira. Grátis até 50 contatos.',
+    `Cada orçamento vira um card com a data do retorno, e o sistema avisa dois dias antes de o prazo vencer. R$ ${PRO_PLAN_PRICE}/mês pela empresa inteira. Grátis até ${FREE_LEAD_LIMIT} contatos.`,
   alternates: { canonical: '/' },
   // Sem repetir aqui, o preview de link herdaria o openGraph genérico do
   // layout raiz em vez do texto de conversão da landing.
@@ -113,7 +115,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: 'Velo Funil: o CRM que lembra de dar o retorno do orçamento',
     description:
-      'Cada orçamento vira um card com a data do retorno, e o sistema lembra você de dar o retorno antes de o prazo vencer. Grátis até 50 contatos, sem cartão. Pro por R$ 49 por mês pela empresa inteira, não por vendedor.',
+      `Cada orçamento vira um card com a data do retorno, e o sistema lembra você de dar o retorno antes de o prazo vencer. Grátis até ${FREE_LEAD_LIMIT} contatos, sem cartão. Pro por R$ ${PRO_PLAN_PRICE} por mês pela empresa inteira, não por vendedor.`,
     // Next.js não mescla `openGraph` entre layout e página, definir aqui
     // sobrescreve o do layout raiz por inteiro, e sem `siteName` a home
     // ficava sem `og:site_name`. É provavelmente o que o verificador de

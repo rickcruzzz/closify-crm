@@ -1,6 +1,6 @@
 import { RevealOnScroll } from '@/components/landing/reveal-on-scroll'
 import { cn } from '@/lib/utils'
-import { FREE_LEAD_LIMIT } from '@/lib/plans'
+import { FREE_LEAD_LIMIT, PRO_PLAN_PRICE } from '@/lib/plans'
 
 // NÃO coloque métrica de resultado aqui ("+47% de conversão", "1.200+ times",
 // "3.2x mais leads"). Esta seção já teve exatamente esses números, copiados de
@@ -62,7 +62,10 @@ const stats = [
     delay: 130,
   },
   {
-    value: 'R$ 49',
+    // Derivado desde 10/09. Escrito a mao, este numero sobreviveu a troca de
+    // preco e ficou dizendo 49 na barra de numeros da landing enquanto o
+    // cartao de plano logo abaixo ja dizia 97 — na mesma pagina.
+    value: `R$ ${PRO_PLAN_PRICE}`,
     label: 'por mês, pela empresa toda',
     delay: 260,
   },

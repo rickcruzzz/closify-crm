@@ -3,8 +3,6 @@ import { join } from 'node:path'
 
 import { describe, expect, it } from 'vitest'
 
-import { PRO_PLAN_PRICE } from '@/lib/plans'
-
 /**
  * ## O preço na TELA vem da constante, nunca escrito à mão
  *
@@ -27,6 +25,20 @@ import { PRO_PLAN_PRICE } from '@/lib/plans'
  * continuaria verde — é a mesma família do trial aposentado que ficou nas
  * artes e da bio do Instagram que anunciava 300 contatos.
  *
+ * ## A primeira versão deste teste era fraca, e produção provou isso
+ *
+ * Ela proibia só o preço VIGENTE escrito à mão — `R$ 97`. Passou verde, e o
+ * site foi para produção com **R$ 49 em três lugares**: a `description`, o
+ * `openGraph` (que é o que o WhatsApp mostra, antes do clique, no link que a
+ * prospecção manda) e a barra de números da landing, logo acima de um cartão
+ * de plano que já dizia 97.
+ *
+ * O erro era de direção. Proibir o número novo protege contra alguém digitar
+ * o preço de hoje; o perigo real é o preço de ONTEM já digitado. A regra certa
+ * não tem valor nenhum dentro dela — **nenhum preço em real literal** — e por
+ * isso não precisa ser atualizada quando o preço muda, que é exatamente a
+ * propriedade que faltava.
+ *
  * ## Por que proibir o LITERAL e não conferir o valor
  *
  * Conferir "a tela mostra 97" exigiria renderizar, e passaria a falhar em toda
@@ -37,8 +49,13 @@ import { PRO_PLAN_PRICE } from '@/lib/plans'
  *
  * Preço de CONCORRENTE é literal e deve ser: `R$ 53 POR USUÁRIO` do Agendor
  * não é derivável de constante nossa, e a data de conferência
- * (`PRECOS_CONFERIDOS_EM`) é a trava dele. Por isso a varredura só recusa o
- * número que é o NOSSO preço — o literal perigoso é o que finge ser derivado.
+ * (`PRECOS_CONFERIDOS_EM`) é a trava dele.
+ *
+ * Como a regra não olha o valor, ela não consegue distinguir o nosso preço do
+ * deles — então a exceção é por ARQUIVO, em `COM_PRECO_DE_CONCORRENTE`, com o
+ * motivo escrito em cada entrada. É mais chato e é a troca certa: uma lista de
+ * três arquivos que alguém precisa justificar para crescer, contra uma regra
+ * esperta que erra em silêncio.
  */
 const RAIZES = ['components/landing', 'components/settings', 'app']
 
@@ -60,7 +77,19 @@ const RAIZES = ['components/landing', 'components/settings', 'app']
  * os dois preços se encontraram, e foi reescrita para o que continua
  * conferível — somos o único da faixa sem teto de pessoas.
  */
-const COM_PRECO_DE_CONCORRENTE = ['alternativa-ao-crm-que-cobra-por-usuario']
+const COM_PRECO_DE_CONCORRENTE = [
+  'alternativa-ao-crm-que-cobra-por-usuario',
+  // As duas paginas de conteudo de 03/09. Existem para responder "quanto custa
+  // um CRM" a quem ainda nao conhece o produto, entao a faixa do mercado
+  // (R$ 50 a R$ 75 por usuario) e o assunto delas, nao um detalhe.
+  //
+  // `PRECO_MEDIANA_POR_USUARIO` cobre a mediana, nao a faixa — e faixa com
+  // minimo e maximo derivados de uma constante so nao existe. A trava destes
+  // numeros e a mesma de sempre: `PRECOS_CONFERIDOS_EM`, na tela, com a data em
+  // que a tabela publica deles foi lida.
+  'crm-que-nao-cobra-por-usuario',
+  'quanto-custa-um-crm',
+]
 
 function arquivosTsx(dir: string, achados: string[] = []): string[] {
   let entradas: string[]
@@ -110,11 +139,8 @@ describe('o preço do Pro na tela vem de lib/plans.ts', () => {
   it.each(arquivos)('%s não escreve o nosso preço à mão', (caminho) => {
     if (COM_PRECO_DE_CONCORRENTE.some((f) => caminho.includes(f))) return
     const codigo = semComentarios(readFileSync(caminho, 'utf-8'))
-    // `R$97`, `R$ 97`, `R$&nbsp;97` — e o anual, que é derivado do mensal.
-    const nosso = new RegExp(
-      `R\\$\\s*(?:&nbsp;)?(?:${PRO_PLAN_PRICE}|${PRO_PLAN_PRICE * 10})\\b`,
-      'g',
-    )
-    expect(codigo.match(nosso) ?? []).toEqual([])
+    // Nenhum preço em real literal. Sem valor dentro da regra de propósito:
+    // ver a seção sobre a primeira versão, acima.
+    expect(codigo.match(/R\$\s*(?:&nbsp;)?\d/g) ?? []).toEqual([])
   })
 })

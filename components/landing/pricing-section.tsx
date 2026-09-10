@@ -22,6 +22,7 @@ import { EventoAoVer } from '@/components/analytics/evento-ao-ver'
 import {
   FREE_LEAD_LIMIT,
   FREE_MEMBER_LIMIT,
+  FREE_PLAN_PRICE,
   FREE_ORCAMENTO_LIMIT,
   FREE_WORKSPACE_LIMIT,
   PRECOS_CONFERIDOS_EM,
@@ -77,7 +78,7 @@ type Plan = {
 const plans: Plan[] = [
   {
     name: 'Free',
-    price: 'R$0',
+    price: `R$${FREE_PLAN_PRICE}`,
     description: 'Pra sempre, sem cartão e sem prazo pra decidir.',
     // Números vêm das constantes, não escritos à mão: a landing anunciava "Até
     // 2 colaboradores" sem citar o limite de empresa, e um texto fixo aqui
@@ -165,7 +166,17 @@ const plans: Plan[] = [
     period: '/mês',
     precoLegenda: 'Da empresa inteira, nunca por vendedor a mais.',
     description:
-      'Menos de R$2 por dia. Um cliente perdido por esquecimento custa mais que isso no ano inteiro.',
+      // ## O "por dia" e DERIVADO, e ele estava errado ate 10/09
+      //
+      // Dizia "Menos de R$2 por dia", escrito a mao quando o plano custava
+      // R$ 49 (R$ 1,63/dia). Com R$ 97 sao R$ 3,23 — a frase virou falsa por
+      // aritmetica, sem ninguem toca-la, e ficaria mentindo dentro do proprio
+      // cartao que anuncia o preco certo logo acima.
+      //
+      // `Math.ceil` e nao `toFixed`: "Menos de R$4 por dia" continua verdade
+      // no arredondamento para cima, enquanto "R$ 3,23 por dia" seria preciso
+      // e pior de ler. A palavra "menos" so e honesta com o teto.
+      `Menos de R$${Math.ceil(PRO_PLAN_PRICE / 30)} por dia. Um cliente perdido por esquecimento custa mais que isso no ano inteiro.`,
     /**
      * Ordenada pelo que o Free NAO FAZ, e nao pelo que ele faz menos.
      *
