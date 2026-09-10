@@ -647,13 +647,13 @@ export function ImportLeadsDialog({
                           <SelectValue>
                             {(valor) =>
                               valor === NAO_IMPORTAR
-                                ? 'Não importar'
+                                ? 'Nenhuma coluna'
                                 : (cabecalho[Number(valor)] || `Coluna ${Number(valor) + 1}`)
                             }
                           </SelectValue>
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value={NAO_IMPORTAR}>Não importar</SelectItem>
+                          <SelectItem value={NAO_IMPORTAR}>Nenhuma coluna</SelectItem>
                           {cabecalho.map((titulo, indice) => (
                             <SelectItem key={indice} value={String(indice)}>
                               {titulo || `Coluna ${indice + 1}`}
@@ -756,7 +756,9 @@ export function ImportLeadsDialog({
             {previa.linhas.length > 0 && (
               <div className="border-border rounded-lg border p-3">
                 <p className="mb-2 text-xs font-medium">
-                  Prévia, {previa.linhas.length} linha(s) prontas
+                  {previa.linhas.length === 1
+                    ? 'Vai entrar 1 contato, este:'
+                    : `Vão entrar ${previa.linhas.length} contatos, começando por estes:`}
                 </p>
                 <ul className="text-muted-foreground flex flex-col gap-1 text-xs">
                   {previa.linhas.slice(0, 3).map((linha) => (
@@ -770,14 +772,31 @@ export function ImportLeadsDialog({
               </div>
             )}
 
-            {previa.erros.length > 0 && (
+            {/* ## Só quando algo ENTRA, e a razão é semântica
+                Esta caixa conta "linhas que ficaram de fora", e isso só é
+                verdade quando o resto entrou. Quando nada entra, o que existe é
+                UM erro sobre a planilha inteira — "Escolha qual coluna é o
+                Nome" — e chamá-lo de "1 linha ficou de fora" é errado duas
+                vezes: não é linha, e não é uma.
+
+                Visto na tela em 09/09: a frase aparecia aqui E na caixa
+                vermelha logo abaixo, dizendo a mesma coisa duas vezes. */}
+            {previa.erros.length > 0 && previa.linhas.length > 0 && (
               <div className="border-border max-h-40 overflow-y-auto rounded-lg border p-3">
                 <p className="mb-2 flex items-center gap-1.5 text-xs font-medium">
                   <AlertTriangle
                     aria-hidden
                     className="size-3.5 text-amber-500 dark:text-amber-400"
                   />
-                  {previa.erros.length} aviso(s)
+                  {previa.erros.length === 1
+                    ? '1 linha ficou de fora'
+                    : `${previa.erros.length} linhas ficaram de fora`}
+                  {previa.linhas.length > 0 && (
+                    <span className="text-muted-foreground font-normal">
+                      {' '}
+                      · o resto entra normalmente
+                    </span>
+                  )}
                 </p>
                 <ul className="text-muted-foreground flex flex-col gap-1 text-xs">
                   {previa.erros.slice(0, 20).map((erro) => (
@@ -785,6 +804,23 @@ export function ImportLeadsDialog({
                   ))}
                 </ul>
               </div>
+            )}
+
+            {/* ## O que falta fica ao lado do botao, nao no fim da lista
+                O dialogo dizia "1 aviso(s)" numa caixa la embaixo e desabilitava
+                o botao sem explicar. Quem importou a tabela de tinta em 09/09 viu
+                um botao morto e nenhuma instrucao perto dele.
+
+                `interpretarPlanilha` ja devolve a frase certa — "Escolha qual
+                coluna da planilha e o Nome" — e ela e a UNICA que importa quando
+                nada pode entrar. Trazer para junto do botao e mover texto de
+                lugar; e a diferenca entre a pessoa saber o proximo passo ou
+                fechar a tela. */}
+            {previa.linhas.length === 0 && previa.erros.length > 0 && (
+              <p className="border-destructive/40 bg-destructive/10 text-destructive flex items-start gap-1.5 rounded-md border p-2 text-xs">
+                <AlertTriangle aria-hidden className="mt-0.5 size-3.5 shrink-0" />
+                <span>{previa.erros[0]}</span>
+              </p>
             )}
 
             <DialogFooter className="sm:justify-between">
@@ -802,7 +838,14 @@ export function ImportLeadsDialog({
                 ) : (
                   <Upload className="size-4" />
                 )}
-                Importar {previa.linhas.length || ''}
+                {/* O botao diz o RESULTADO, nao a acao. "Importar" sozinho nao
+                    responde "quantos?", e essa e a pergunta de quem esta prestes
+                    a mexer na propria base de contatos. */}
+                {previa.linhas.length === 0
+                  ? 'Importar'
+                  : previa.linhas.length === 1
+                    ? 'Importar 1 contato'
+                    : `Importar ${previa.linhas.length} contatos`}
               </Button>
             </DialogFooter>
           </div>
