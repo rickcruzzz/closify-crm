@@ -1,3 +1,4 @@
+import { CONTROLADOR } from '@/lib/legal'
 import {
   FREE_LEAD_LIMIT,
   FREE_MEMBER_LIMIT,
@@ -103,6 +104,75 @@ export function fatosDoProduto(): string {
 }
 
 /**
+ * Quem é a empresa. As perguntas que vêm antes de "quanto custa".
+ *
+ * Toda pergunta aqui é a de quem está decidindo se confia: onde vocês ficam,
+ * têm CNPJ, é brasileira, meus dados ficam seguros. Sem estas linhas o agente
+ * respondia "vou confirmar com um atendente" para coisas que estão no rodapé
+ * do site — e transferir uma pergunta de confiança é o pior momento para
+ * transferir.
+ *
+ * Tudo sai de `lib/legal.ts`, que é a fonte do rodapé, das páginas legais e
+ * dos e-mails. Escrever à mão aqui criaria a quarta cópia do CNPJ, e este
+ * projeto já teve um CNPJ **baixado** exibido por 17 dias porque a cópia não
+ * acompanhou a mudança.
+ */
+export function fatosDaEmpresa(): string {
+  return [
+    'SOBRE A EMPRESA (responda com naturalidade, sem recitar):',
+    `- ${CONTROLADOR.nomeFantasia} é um produto brasileiro, feito no Brasil para empresa brasileira.`,
+    `- Empresa: ${CONTROLADOR.razaoSocial}, CNPJ ${CONTROLADOR.cnpj}.`,
+    CONTROLADOR.endereco ? `- Ficamos em ${CONTROLADOR.endereco}.` : '',
+    `- Site: ${CONTROLADOR.site}. Suporte: ${CONTROLADOR.email}.`,
+    '- Os dados ficam em servidor no Brasil, em São Paulo. Não saem do país.',
+    '- Seguimos a LGPD. Cada empresa só enxerga os próprios dados, e a separação é feita no banco, não só na tela.',
+    '- Dá pra cancelar quando quiser, sem multa, e levar os contatos em CSV.',
+    '- Atendimento por e-mail e por aqui.',
+  ]
+    .filter(Boolean)
+    .join('\n')
+}
+
+/**
+ * O que o agente nunca comenta, e o porquê de cada linha.
+ *
+ * ## Esta lista existe porque um LLM é honesto demais
+ *
+ * Perguntado "quantos clientes vocês têm?", ele responde com o que sabe. Se o
+ * número estiver no contexto, ele diz — e a resposta verdadeira hoje é
+ * **zero cliente externo pagante**. Dita numa conversa de venda, ela encerra a
+ * conversa.
+ *
+ * A saída NÃO é mentir. É o número não estar no contexto e a instrução dizer
+ * para levar ao atendente. O agente não pode revelar o que não sabe, e o dono
+ * responde do jeito que quiser — que é dele, não da máquina.
+ *
+ * ## E ele não descreve a própria máquina
+ *
+ * Como a empresa foi encontrada, que ferramenta varreu a web, que existe uma
+ * fila de 700 domínios: isso é bastidor da prospecção. Quem recebe uma
+ * abordagem e ouve "você saiu de uma varredura automatizada" sente-se numa
+ * lista, não numa conversa — mesmo sendo verdade.
+ *
+ * A mensagem que abriu a conversa já disse o que é honesto dizer: *"achei sua
+ * empresa procurando empresas do setor no Google"*.
+ */
+export function assuntosProibidos(): string {
+  return [
+    'NUNCA COMENTE, NEM SE PERGUNTAREM DIRETO:',
+    '- Quantos clientes temos, quantas empresas usam, faturamento, ou qualquer número de tamanho do negócio.',
+    '- Quantas pessoas trabalham aqui, quem é o dono, ou como a equipe é organizada.',
+    '- Como encontramos o contato desta pessoa, que ferramenta usamos para prospectar, ou que existe uma lista.',
+    '- Nomes de concorrentes que não tenham sido citados pela própria pessoa.',
+    '- Recurso que ainda não existe, mesmo que esteja sendo estudado. Se não está na lista do que o produto faz, ele não faz.',
+    '- Prazo de entrega de qualquer coisa nova.',
+    '',
+    `Nesses casos, diga em UMA linha que um atendente responde isso, e escreva ${MARCA_DE_PASSAGEM}.`,
+    'Não invente, não desconverse com evasiva longa, não peça desculpa.',
+  ].join('\n')
+}
+
+/**
  * As instruções de comportamento.
  *
  * ## Nunca o nome do dono, sempre "um atendente"
@@ -171,6 +241,12 @@ export function instrucoesDoAgente(ctx: ContextoDoLead = {}): string {
     'Ao passar, avise a pessoa em uma linha: que um atendente responde em seguida.',
     '',
     fatosDoProduto(),
+    '',
+    fatosDaEmpresa(),
+    '',
+    // Os proibidos ficam DEPOIS dos fatos, e a ordem e decisao: o que vem por
+    // ultimo pesa mais, e a instrucao que nao pode falhar e a de nao falar.
+    assuntosProibidos(),
     // A pesquisa entra DEPOIS dos fatos do produto, e a ordem é decisão: o que
     // vem por último pesa mais na atenção do modelo, e o que ele não pode
     // errar é o PRODUTO. Se a pesquisa viesse antes, um site que menciona

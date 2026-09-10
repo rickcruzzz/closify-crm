@@ -1,7 +1,10 @@
 import { describe, expect, it } from 'vitest'
 
+import { CONTROLADOR } from '@/lib/legal'
 import {
   MARCA_DE_PASSAGEM,
+  assuntosProibidos,
+  fatosDaEmpresa,
   fatosDoProduto,
   instrucoesDoAgente,
   limparResposta,
@@ -184,5 +187,89 @@ describe('o agente nunca cita o nome do dono', () => {
     expect(i).toContain('um atendente entra na conversa')
     expect(i).toContain('confirmar com um atendente')
     expect(i).toContain('um atendente responde em seguida')
+  })
+})
+
+describe('o agente sabe quem é a empresa', () => {
+  /**
+   * Toda pergunta aqui é de quem está decidindo se confia. Antes destas
+   * linhas o agente respondia "vou confirmar com um atendente" para coisas
+   * que estão no rodapé do site — e transferir uma pergunta de confiança é o
+   * pior momento para transferir.
+   */
+  it.each([
+    ['onde ficam', /Salvador/i],
+    ['CNPJ', /68\.877\.105/],
+    ['é brasileira', /brasileiro|Brasil/i],
+    ['dados seguros', /LGPD/i],
+    ['onde ficam os dados', /São Paulo/i],
+    ['suporte', /suporte@/i],
+    ['cancelamento', /cancelar/i],
+  ])('responde: %s', (_, re) => {
+    expect(fatosDaEmpresa()).toMatch(re)
+  })
+
+  /**
+   * Vem de `lib/legal.ts`, que é a fonte do rodapé e das páginas legais.
+   * Escrever à mão criaria a quarta cópia do CNPJ — e este projeto já exibiu
+   * um CNPJ BAIXADO por 17 dias porque a cópia não acompanhou a mudança.
+   */
+  it('deriva do controlador, não escreve à mão', () => {
+    expect(fatosDaEmpresa()).toContain(CONTROLADOR.cnpj)
+    expect(fatosDaEmpresa()).toContain(CONTROLADOR.razaoSocial)
+  })
+})
+
+describe('o que ele nunca comenta', () => {
+  /**
+   * Um LLM é honesto demais. Perguntado "quantos clientes vocês têm?", ele
+   * responde com o que sabe — e a resposta verdadeira hoje é zero cliente
+   * externo pagante. Dita numa conversa de venda, encerra a conversa.
+   *
+   * A saída não é mentir: é o número não estar no contexto.
+   */
+  /**
+   * A primeira versão deste caso proibia a PALAVRA "faturamento" — e reprovou,
+   * porque ela aparece na linha que manda não falar de faturamento. Proibir o
+   * vocabulário proíbe a própria instrução.
+   *
+   * O que não pode vazar é o NÚMERO. A asserção passou a procurar afirmações
+   * de tamanho, não termos.
+   */
+  it('nenhum número de clientes ou receita vaza para o prompt', () => {
+    const i = instrucoesDoAgente()
+    for (const afirmacao of [
+      /zero clientes?/i,
+      /nenhum cliente/i,
+      /ainda n[ãa]o (temos|tivemos)/i,
+      /primeiro cliente/i,
+      /R\$ ?0[,.]00/,
+      /\d+ (clientes|empresas) (usam|pagam|ativos)/i,
+    ]) {
+      expect(i).not.toMatch(afirmacao)
+    }
+  })
+
+  it('manda calar sobre tamanho, equipe e prospecção', () => {
+    const p = assuntosProibidos()
+    expect(p).toMatch(/Quantos clientes temos/i)
+    expect(p).toMatch(/Quantas pessoas trabalham/i)
+    expect(p).toMatch(/como encontramos o contato/i)
+    expect(p).toMatch(/ferramenta usamos para prospectar/i)
+  })
+
+  /** Recusar é passar, nunca desconversar. */
+  it('a saída do proibido é o handoff', () => {
+    expect(assuntosProibidos()).toContain(MARCA_DE_PASSAGEM)
+    expect(assuntosProibidos()).toMatch(/Não invente/i)
+  })
+
+  /**
+   * A ordem é decisão: o que vem por último pesa mais, e a instrução que não
+   * pode falhar é a de não falar.
+   */
+  it('os proibidos vêm depois dos fatos', () => {
+    const i = instrucoesDoAgente()
+    expect(i.indexOf('SOBRE A EMPRESA')).toBeLessThan(i.indexOf('NUNCA COMENTE'))
   })
 })
