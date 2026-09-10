@@ -12,7 +12,10 @@
       "name": "Evolution manda a mensagem",
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 2,
-      "position": [-680, 300],
+      "position": [
+        -680,
+        300
+      ],
       "webhookId": "sdr-whatsapp"
     },
     {
@@ -25,28 +28,41 @@
       "name": "Responde 200 na hora",
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1,
-      "position": [-460, 300]
+      "position": [
+        -460,
+        300
+      ]
     },
     {
       "parameters": {
-        "jsCode": "// Normaliza o payload da Evolution e decide se vale processar.\n//\n// A Evolution manda TODO evento para o webhook, inclusive as mensagens que o\n// proprio numero envia (`fromMe: true`). Sem este corte, o agente responderia\n// a si mesmo — laco infinito que so para quando o numero e banido.\n//\n// Grupo tambem fica de fora: `@g.us` no remoteJid. Responder em grupo expoe a\n// conversa comercial para gente que nunca pediu nada.\nconst e = $input.first().json;\nconst d = e.data || {};\nconst k = d.key || {};\n\nconst texto =\n  d.message?.conversation ??\n  d.message?.extendedTextMessage?.text ??\n  '';\n\nconst jid = k.remoteJid || '';\nconst numero = jid.split('@')[0];\n\nconst processar =\n  e.event === 'messages.upsert' &&\n  k.fromMe !== true &&\n  !jid.endsWith('@g.us') &&\n  texto.trim().length > 0;\n\nreturn [{ json: {\n  processar,\n  numero,\n  nome: d.pushName || null,\n  texto: texto.trim(),\n  instancia: e.instance || null,\n} }];"
+        "jsCode": "// Normaliza o payload da Evolution e decide se vale processar.\n//\n// ## O `.body` nao e detalhe: sem ele, TUDO e descartado\n//\n// O no de webhook do n8n nao entrega o corpo cru. Ele embrulha:\n// `{ headers, params, query, body, webhookUrl }`. Ler a raiz devolve\n// `undefined` em cada campo, `texto` vira '' e `processar` vira false — a\n// execucao aparece como SUCESSO, some pelo ramo do Ignora, e nao ha erro\n// nenhum para investigar.\n//\n// Foi exatamente o que aconteceu na primeira prova: execucao 1, status\n// success, mensagem descartada em silencio.\n//\n// O `?? j` no fim cobre o caso de a Evolution ser apontada para um proxy que\n// entregue o corpo cru.\n//\n// ## Dois cortes que evitam desastre\n//\n// A Evolution manda TODO evento, inclusive o que o proprio numero envia\n// (`fromMe: true`). Sem o corte, o agente responde a si mesmo — laco infinito\n// que so para quando o numero e banido.\n//\n// Grupo fica de fora (`@g.us`): responder em grupo expoe a conversa comercial\n// para gente que nunca pediu nada.\nconst j = $input.first().json;\nconst e = j.body ?? j;\nconst d = e.data || {};\nconst k = d.key || {};\n\nconst texto =\n  d.message?.conversation ??\n  d.message?.extendedTextMessage?.text ??\n  '';\n\nconst jid = k.remoteJid || '';\nconst numero = jid.split('@')[0];\n\nconst processar =\n  e.event === 'messages.upsert' &&\n  k.fromMe !== true &&\n  !jid.endsWith('@g.us') &&\n  texto.trim().length > 0;\n\nreturn [{ json: {\n  processar,\n  numero,\n  nome: d.pushName || null,\n  texto: texto.trim(),\n  instancia: e.instance || null,\n} }];"
       },
       "id": "normalizar",
       "name": "Normaliza e filtra",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [-240, 300]
+      "position": [
+        -240,
+        300
+      ]
     },
     {
       "parameters": {
         "conditions": {
-          "options": { "caseSensitive": true, "version": 2 },
+          "options": {
+            "caseSensitive": true,
+            "version": 2
+          },
           "conditions": [
             {
               "id": "vale-processar",
               "leftValue": "={{ $json.processar }}",
               "rightValue": true,
-              "operator": { "type": "boolean", "operation": "true", "singleValue": true }
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
             }
           ],
           "combinator": "and"
@@ -57,7 +73,10 @@
       "name": "Vale responder?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
-      "position": [-20, 300]
+      "position": [
+        -20,
+        300
+      ]
     },
     {
       "parameters": {
@@ -68,25 +87,37 @@
         "sendBody": true,
         "specifyBody": "json",
         "jsonBody": "={{ JSON.stringify({ mensagem: $json.texto, empresa: $json.nome }) }}",
-        "options": { "timeout": 45000 }
+        "options": {
+          "timeout": 45000
+        }
       },
       "id": "chamar-agente",
       "name": "Agente decide o que dizer",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [220, 200],
+      "position": [
+        220,
+        200
+      ],
       "notes": "O CEREBRO NAO MORA AQUI, DE PROPOSITO.\n\nEsta rota monta o prompt a partir de lib/plans.ts, entao preco, limites e a lista do que o produto NAO faz vem do codigo em tempo de chamada.\n\nSe o prompt fosse colado num no de AI Agent do n8n, existiriam duas copias do preco — e ninguem revisa JSON de workflow ao trocar preco. O agente erraria numa conversa de venda, com o cliente lendo.\n\nCredencial: Header Auth, nome 'Authorization', valor 'Bearer <SDR_WEBHOOK_SECRET>'."
     },
     {
       "parameters": {
         "conditions": {
-          "options": { "caseSensitive": true, "version": 2 },
+          "options": {
+            "caseSensitive": true,
+            "version": 2
+          },
           "conditions": [
             {
               "id": "pediu-passagem",
               "leftValue": "={{ $json.passar }}",
               "rightValue": true,
-              "operator": { "type": "boolean", "operation": "true", "singleValue": true }
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
             }
           ],
           "combinator": "and"
@@ -97,7 +128,10 @@
       "name": "Precisa de um atendente?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
-      "position": [460, 200]
+      "position": [
+        460,
+        200
+      ]
     },
     {
       "parameters": {
@@ -106,7 +140,10 @@
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
-            { "name": "apikey", "value": "={{ $env.EVOLUTION_API_KEY }}" }
+            {
+              "name": "apikey",
+              "value": "={{ $env.EVOLUTION_API_KEY }}"
+            }
           ]
         },
         "sendBody": true,
@@ -118,7 +155,10 @@
       "name": "Responde no WhatsApp",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [700, 300],
+      "position": [
+        700,
+        300
+      ],
       "notes": "A Evolution roda na MESMA VPS que o n8n, entao localhost:8080 nao passa pela internet.\n\nA conversa foi INICIADA pelo cliente: no WhatsApp isso e service window, gratuita e ilimitada, sem template aprovado e sem opt-in. Todo o risco de politica esta no disparo frio, nenhum aqui."
     },
     {
@@ -128,7 +168,10 @@
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
-            { "name": "apikey", "value": "={{ $env.EVOLUTION_API_KEY }}" }
+            {
+              "name": "apikey",
+              "value": "={{ $env.EVOLUTION_API_KEY }}"
+            }
           ]
         },
         "sendBody": true,
@@ -140,7 +183,10 @@
       "name": "Chama o atendente",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [700, 100],
+      "position": [
+        700,
+        100
+      ],
       "notes": "O aviso vai para o SEU numero, com o que a pessoa disse e o que o agente respondeu.\n\nO agente ja avisou a pessoa que voce entra em seguida — se este aviso falhar, ela fica esperando alguem que nunca chega. Por isso ele dispara ANTES de a resposta ir, e nao depois."
     },
     {
@@ -149,39 +195,108 @@
       "name": "Ignora (eu mesmo, grupo ou vazio)",
       "type": "n8n-nodes-base.noOp",
       "typeVersion": 1,
-      "position": [220, 420]
+      "position": [
+        220,
+        420
+      ]
     }
   ],
   "connections": {
     "Evolution manda a mensagem": {
-      "main": [[{ "node": "Responde 200 na hora", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Responde 200 na hora",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Responde 200 na hora": {
-      "main": [[{ "node": "Normaliza e filtra", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Normaliza e filtra",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Normaliza e filtra": {
-      "main": [[{ "node": "Vale responder?", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Vale responder?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Vale responder?": {
       "main": [
-        [{ "node": "Agente decide o que dizer", "type": "main", "index": 0 }],
-        [{ "node": "Ignora (eu mesmo, grupo ou vazio)", "type": "main", "index": 0 }]
+        [
+          {
+            "node": "Agente decide o que dizer",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Ignora (eu mesmo, grupo ou vazio)",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "Agente decide o que dizer": {
-      "main": [[{ "node": "Precisa de um atendente?", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Precisa de um atendente?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Precisa de um atendente?": {
       "main": [
-        [{ "node": "Chama o atendente", "type": "main", "index": 0 }],
-        [{ "node": "Responde no WhatsApp", "type": "main", "index": 0 }]
+        [
+          {
+            "node": "Chama o atendente",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Responde no WhatsApp",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "Chama o atendente": {
-      "main": [[{ "node": "Responde no WhatsApp", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Responde no WhatsApp",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
-  "settings": { "executionOrder": "v1" },
+  "settings": {
+    "executionOrder": "v1"
+  },
   "pinData": {},
   "meta": {
     "instanceId": "velo-funil-sdr"
