@@ -53,6 +53,12 @@ export type ContextoDoLead = {
   vertical?: string | null
   /** O que já foi dito nesta conversa, do mais antigo ao mais novo. */
   historico?: { de: 'cliente' | 'agente'; texto: string }[]
+  /**
+   * O que a busca no Exa achou sobre a empresa, já reduzido por
+   * `lib/sdr/enriquecer.ts`. Vazio é o caso comum e é seguro — sem o bloco, o
+   * agente apenas não cita o negócio da pessoa.
+   */
+  pesquisa?: string | null
 }
 
 /**
@@ -154,6 +160,12 @@ export function instrucoesDoAgente(ctx: ContextoDoLead = {}): string {
     'Ao passar, avise a pessoa em uma linha: que o Orlando responde em seguida.',
     '',
     fatosDoProduto(),
+    // A pesquisa entra DEPOIS dos fatos do produto, e a ordem é decisão: o que
+    // vem por último pesa mais na atenção do modelo, e o que ele não pode
+    // errar é o PRODUTO. Se a pesquisa viesse antes, um site que menciona
+    // "CRM com WhatsApp" competiria com a linha que diz que o nosso não tem.
+    ctx.pesquisa?.trim() ? `
+${ctx.pesquisa.trim()}` : '',
   ]
     .filter(Boolean)
     .join('\n')

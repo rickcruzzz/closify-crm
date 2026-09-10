@@ -132,3 +132,33 @@ describe('a marca de passagem', () => {
     expect(limparResposta('  resposta normal  ')).toBe('resposta normal')
   })
 })
+
+describe('a pesquisa entra no prompt', () => {
+  const bloco = 'O QUE ENCONTREI SOBRE A EMPRESA (use para responder com especificidade):\n- X: faz solar'
+
+  it('aparece quando existe', () => {
+    expect(instrucoesDoAgente({ pesquisa: bloco })).toContain('faz solar')
+  })
+
+  /**
+   * Sem pesquisa o prompt não ganha nenhum buraco: o agente simplesmente não
+   * cita o negócio da pessoa. Um bloco vazio dizendo "não encontrei" convidaria
+   * o modelo a comentar a ausência, que é pior que o silêncio.
+   */
+  it('não deixa rastro quando não existe', () => {
+    for (const vazio of [undefined, null, '', '   ']) {
+      expect(instrucoesDoAgente({ pesquisa: vazio })).not.toContain('ENCONTREI SOBRE A EMPRESA')
+    }
+  })
+
+  /**
+   * A ordem é decisão: o que vem por último pesa mais na atenção do modelo, e
+   * o que ele não pode errar é o PRODUTO — não a empresa do outro lado. Se a
+   * pesquisa viesse antes dos fatos, um site que menciona "CRM com WhatsApp"
+   * competiria com a linha que diz que o nosso não tem.
+   */
+  it('vem depois dos fatos do produto', () => {
+    const i = instrucoesDoAgente({ pesquisa: bloco })
+    expect(i.indexOf('NÃO tem WhatsApp integrado')).toBeLessThan(i.indexOf('faz solar'))
+  })
+})
