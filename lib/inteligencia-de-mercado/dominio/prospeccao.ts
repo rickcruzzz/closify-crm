@@ -257,6 +257,55 @@ export function ehDominioExcluido(url: string): boolean {
   return DOMINIOS_EXCLUIDOS.some((d) => host === d || host.endsWith(`.${d}`))
 }
 
+/**
+ * A entidade institucional que se hospeda num `.com.br` — a porta dos fundos
+ * do corte por sufixo.
+ *
+ * ## O caso que abriu isto (09/09)
+ *
+ * O *Sindicato dos Trabalhadores em Empresas Ferroviárias de Belo Horizonte*
+ * entrou na fila de disparo e recebeu uma abordagem de venda. O domínio dele é
+ * `adeli.com.br` — nada no host denuncia o que ele é, e `SUFIXOS_INSTITUCIONAIS`
+ * passou reto.
+ *
+ * É a mesma família que a primeira gravação real pagou em 07/09, quando quatro
+ * sindicatos entraram entre 243 leads. Lá o sufixo resolveu; aqui não resolve,
+ * porque a informação não está no endereço, está no NOME.
+ *
+ * ## Por que palavra e não lista de domínios
+ *
+ * O comentário do corte por sufixo já responde: sindicato novo nasce toda
+ * semana, e lista escrita à mão envelhece em silêncio. Estas seis palavras
+ * cobrem a classe inteira e não precisam de manutenção.
+ *
+ * ## E por que são só estas seis
+ *
+ * Cada uma nomeia uma entidade que **não vende por orçamento**, que é o
+ * critério do produto. `Instituto` e `Fundação` ficaram DE FORA de propósito:
+ * existe consultoria chamada "Instituto" que vende serviço e é cliente
+ * legítimo. Errar para o lado de manter é barato — uma mensagem a mais;
+ * errar para o lado de cortar tira um pagante da fila sem ninguém ver.
+ */
+const PALAVRAS_INSTITUCIONAIS = [
+  'sindicato',
+  'associacao',
+  'conselho regional',
+  'federacao',
+  'cooperativa',
+  'camara de dirigentes',
+]
+
+export function ehNomeInstitucional(nome: string | null | undefined): boolean {
+  if (!nome) return false
+  // Sem acento e em minúsculas antes de comparar: o nome vem do título do
+  // site, e "Associação"/"ASSOCIACAO"/"Associacao" são a mesma coisa.
+  const limpo = nome
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '')
+    .toLowerCase()
+  return PALAVRAS_INSTITUCIONAIS.some((palavra) => limpo.includes(palavra))
+}
+
 export type Contato = {
   whatsapp: string | null
   telefone: string | null

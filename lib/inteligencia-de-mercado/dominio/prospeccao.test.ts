@@ -4,6 +4,7 @@ import {
   PRACAS,
   deduplicarPorDominio,
   ehDominioExcluido,
+  ehNomeInstitucional,
   extrairContato,
   ordenarProspects,
   pontuarProspect,
@@ -355,6 +356,55 @@ describe('variantes de consulta e pracas: as duas alavancas de volume', () => {
     for (const p of PRACAS) {
       expect(p.trim()).toBe(p)
       expect(p.length).toBeGreaterThan(2)
+    }
+  })
+})
+
+describe('a entidade institucional que mora num .com.br', () => {
+  // O corte por sufixo pega `sindeturh.org.br`. Não pega o *Sindicato dos
+  // Trabalhadores em Empresas Ferroviárias de Belo Horizonte*, que mora em
+  // `adeli.com.br` — e por isso ele entrou na fila e recebeu uma abordagem de
+  // venda em 09/09. A informação não está no endereço, está no nome.
+
+  it('pega o caso real que abriu isto', () => {
+    expect(ehDominioExcluido('https://adeli.com.br')).toBe(false)
+    expect(
+      ehNomeInstitucional('Sindicato Dos Trabalhadores Em Empresas Ferroviarias De Belo Horizonte'),
+    ).toBe(true)
+  })
+
+  it('não depende de acento nem de caixa', () => {
+    // O nome vem do título do site, e ele chega de todo jeito.
+    for (const n of ['Associação Comercial', 'ASSOCIACAO COMERCIAL', 'associacao comercial']) {
+      expect(ehNomeInstitucional(n)).toBe(true)
+    }
+  })
+
+  it('cobre a classe, não uma lista de nomes', () => {
+    for (const n of [
+      'Conselho Regional de Odontologia',
+      'Federação das Indústrias',
+      'Cooperativa de Crédito Central',
+      'Câmara de Dirigentes Lojistas de Caxias',
+    ]) {
+      expect(ehNomeInstitucional(n)).toBe(true)
+    }
+  })
+
+  it('NÃO corta empresa de verdade, e é aqui que a régua importa', () => {
+    // Errar para o lado de manter custa uma mensagem. Errar para o lado de
+    // cortar tira um pagante da fila sem ninguém ver — e por isso `Instituto`
+    // e `Fundação` ficaram fora da lista: existe consultoria com esse nome.
+    for (const n of [
+      'Instituto Alfa Consultoria',
+      'Fundação Design Estúdio',
+      'Marcenaria Central',
+      'Dedetizadora São Jorge',
+      'Sindico Profissional Ltda',
+      null,
+      '',
+    ]) {
+      expect(ehNomeInstitucional(n)).toBe(false)
     }
   })
 })

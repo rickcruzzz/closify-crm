@@ -4,7 +4,10 @@ import { readFile, readdir } from 'node:fs/promises'
 import { join } from 'node:path'
 
 import { createAdminClient } from '@/lib/supabase/admin'
-import { ehDominioExcluido } from '@/lib/inteligencia-de-mercado/dominio/prospeccao'
+import {
+  ehDominioExcluido,
+  ehNomeInstitucional,
+} from '@/lib/inteligencia-de-mercado/dominio/prospeccao'
 
 import { lerEstados } from './prateleira-estado'
 import { exigirAmbienteLocal } from './somente-local'
@@ -154,6 +157,12 @@ export async function carregarPrateleira(): Promise<PrateleiraCarregada> {
     // `true` para o que não consegue parsear. Passar o domínio nu já excluiu
     // 100% de uma rodada inteira em silêncio, em 07/09.
     if (ehDominioExcluido(`https://${p.dominio}`)) {
+      removidosPorRegra += 1
+      continue
+    }
+    // O sufixo nao pega quem se hospeda num `.com.br`: o sindicato ferroviario
+    // de BH mora em `adeli.com.br` e recebeu abordagem de venda em 09/09.
+    if (ehNomeInstitucional(p.nome)) {
       removidosPorRegra += 1
       continue
     }
