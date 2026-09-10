@@ -137,19 +137,12 @@
       "parameters": {
         "method": "POST",
         "url": "=http://localhost:8080/message/sendText/{{ $('Normaliza e filtra').item.json.instancia }}",
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "apikey",
-              "value": "={{ $env.EVOLUTION_API_KEY }}"
-            }
-          ]
-        },
         "sendBody": true,
         "specifyBody": "json",
         "jsonBody": "={{ JSON.stringify({ number: $('Normaliza e filtra').item.json.numero, text: $json.texto }) }}",
-        "options": {}
+        "options": {},
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth"
       },
       "id": "enviar-resposta",
       "name": "Responde no WhatsApp",
@@ -159,25 +152,18 @@
         700,
         300
       ],
-      "notes": "A Evolution roda na MESMA VPS que o n8n, entao localhost:8080 nao passa pela internet.\n\nA conversa foi INICIADA pelo cliente: no WhatsApp isso e service window, gratuita e ilimitada, sem template aprovado e sem opt-in. Todo o risco de politica esta no disparo frio, nenhum aqui."
+      "notes": "A Evolution roda na MESMA VPS que o n8n, entao localhost:8080 nao passa pela internet.\n\nA conversa foi INICIADA pelo cliente: no WhatsApp isso e service window, gratuita e ilimitada, sem template aprovado e sem opt-in. Todo o risco de politica esta no disparo frio, nenhum aqui.\n\nSEM $env, DE PROPOSITO. O n8n bloqueia `$env` por padrao, e liberar (N8N_BLOCK_ENV_ACCESS_IN_NODE=false) abriria TODAS as variaveis do container para qualquer workflow da instancia — inclusive a senha do Postgres do proprio n8n.\n\nA apikey da Evolution vem de credencial Header Auth (nome `apikey`). O numero do dono e literal: nao e segredo."
     },
     {
       "parameters": {
         "method": "POST",
         "url": "=http://localhost:8080/message/sendText/{{ $('Normaliza e filtra').item.json.instancia }}",
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "apikey",
-              "value": "={{ $env.EVOLUTION_API_KEY }}"
-            }
-          ]
-        },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ number: $env.NUMERO_DO_DONO, text: '🔔 ASSUMA A CONVERSA\\n\\n' + ($('Normaliza e filtra').item.json.nome || 'sem nome') + ' (' + $('Normaliza e filtra').item.json.numero + ')\\n\\nDisse: ' + $('Normaliza e filtra').item.json.texto + '\\n\\nO agente respondeu: ' + $json.texto }) }}",
-        "options": {}
+        "jsonBody": "={{ JSON.stringify({ number: \"5571993309404\", text: '🔔 ASSUMA A CONVERSA\\n\\n' + ($('Normaliza e filtra').item.json.nome || 'sem nome') + ' (' + $('Normaliza e filtra').item.json.numero + ')\\n\\nDisse: ' + $('Normaliza e filtra').item.json.texto + '\\n\\nO agente respondeu: ' + $json.texto }) }}",
+        "options": {},
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth"
       },
       "id": "avisar-dono",
       "name": "Chama o atendente",
@@ -187,7 +173,7 @@
         700,
         100
       ],
-      "notes": "O aviso vai para o SEU numero, com o que a pessoa disse e o que o agente respondeu.\n\nO agente ja avisou a pessoa que voce entra em seguida — se este aviso falhar, ela fica esperando alguem que nunca chega. Por isso ele dispara ANTES de a resposta ir, e nao depois."
+      "notes": "O aviso vai para o SEU numero, com o que a pessoa disse e o que o agente respondeu.\n\nO agente ja avisou a pessoa que voce entra em seguida — se este aviso falhar, ela fica esperando alguem que nunca chega. Por isso ele dispara ANTES de a resposta ir, e nao depois.\n\nSEM $env, DE PROPOSITO. O n8n bloqueia `$env` por padrao, e liberar (N8N_BLOCK_ENV_ACCESS_IN_NODE=false) abriria TODAS as variaveis do container para qualquer workflow da instancia — inclusive a senha do Postgres do proprio n8n.\n\nA apikey da Evolution vem de credencial Header Auth (nome `apikey`). O numero do dono e literal: nao e segredo."
     },
     {
       "parameters": {},

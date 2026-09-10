@@ -2,6 +2,11 @@ import { NextResponse } from 'next/server'
 import { z } from 'zod'
 
 import {
+  detectarInjecao,
+  enveloparMensagem,
+  validarResposta,
+} from '@/lib/sdr/blindagem'
+import {
   instrucoesDoAgente,
   limparResposta,
   pediuPassagem,
@@ -103,8 +108,13 @@ export async function POST(req: Request) {
       role: h.de === 'cliente' ? ('user' as const) : ('assistant' as const),
       content: h.texto,
     })),
-    { role: 'user' as const, content: mensagem },
+    // Envelopada: o que o cliente escreveu e DADO, nunca instrucao.
+    { role: 'user' as const, content: enveloparMensagem(mensagem) },
   ]
+
+  // A deteccao nao BARRA — ela marca. Quem tenta injecao merece um humano,
+  // nao uma negativa automatica, e o dono precisa saber que aconteceu.
+  const injecao = detectarInjecao(mensagem)
 
   let resposta: Response
   try {
@@ -144,9 +154,24 @@ export async function POST(req: Request) {
     return NextResponse.json({ texto: '', passar: true, motivo: 'resposta vazia' })
   }
 
+  // A ultima porta. Nao importa como a pessoa formulou o ataque: se a resposta
+  // promete desconto, cita preco que nao e o nosso ou repete o prompt, ela nao
+  // sai — vira passagem para o atendente.
+  const veredito = validarResposta(limparResposta(bruta))
+
+  if (!veredito.ok) {
+    return NextResponse.json({
+      texto: 'Vou chamar um atendente pra te responder isso.',
+      passar: true,
+      motivo: veredito.motivo,
+      modelo: MODELO,
+    })
+  }
+
   return NextResponse.json({
-    texto: limparResposta(bruta),
-    passar: pediuPassagem(bruta),
+    texto: veredito.texto,
+    passar: pediuPassagem(bruta) || injecao.suspeito,
+    ...(injecao.suspeito ? { motivo: `entrada suspeita: ${injecao.motivos.join(', ')}` } : {}),
     modelo: MODELO,
   })
 }
