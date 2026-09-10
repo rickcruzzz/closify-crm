@@ -168,6 +168,34 @@ export const PRO_PLAN_PRICE = 97
  */
 export const PRECO_MEDIANA_POR_USUARIO = 60
 
+/**
+ * A partir de quantas pessoas o preço fixo daqui fica mais barato.
+ *
+ * ## O número que a landing precisava dizer e não dizia
+ *
+ * A R$ 49 ele era 1: a primeira linha da tabela de comparação já mostrava
+ * R$ 60 contra R$ 49, e o argumento vencia de saída. **A R$ 97 ele é 2** — e a
+ * mesma tabela, sem ninguém tocá-la, passou a abrir mostrando o concorrente
+ * ganhando: R$ 60 por uma pessoa contra R$ 97 aqui.
+ *
+ * É a segunda vez em dois dias que a troca de preço vira uma afirmação de
+ * marketing pelo avesso sem nenhum código mudar — a primeira foi o
+ * "Menos de R$ 2 por dia", que virou falso por aritmética.
+ *
+ * ## Por que ele fica na tela em vez de a linha sumir
+ *
+ * O reflexo é começar a tabela em duas pessoas e nunca mostrar o caso perdido.
+ * Isto aqui não faz isso: `/alternativa-ao-crm-que-cobra-por-usuario` já
+ * responde, por escrito, que *"para quem vende sozinho, um plano por usuário
+ * sai mais em conta"*, e esconder na landing o que a página de comparação
+ * admite seria falar duas línguas para a mesma pessoa.
+ *
+ * Dizer o ponto de virada é mais forte que escondê-lo: quem tem uma pessoa só
+ * descobre sozinho na primeira conta, e aí a descoberta vem junto da suspeita
+ * de que o resto também estava maquiado.
+ */
+export const PESSOAS_PARA_COMPENSAR = Math.ceil(PRO_PLAN_PRICE / PRECO_MEDIANA_POR_USUARIO)
+
 /** Quando os preços acima foram conferidos. Aparece na landing. */
 export const PRECOS_CONFERIDOS_EM = '31/08/2026'
 export const FREE_PLAN_PRICE = 0

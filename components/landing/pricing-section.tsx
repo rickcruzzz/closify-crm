@@ -26,6 +26,7 @@ import {
   FREE_ORCAMENTO_LIMIT,
   FREE_WORKSPACE_LIMIT,
   PRECOS_CONFERIDOS_EM,
+  PESSOAS_PARA_COMPENSAR,
   PRECO_MEDIANA_POR_USUARIO,
   PRO_WORKSPACE_LIMIT,
   PRO_PLAN_PRICE,
@@ -585,7 +586,28 @@ export function PricingSection() {
                     <td className="text-muted-foreground text-right">
                       R$ {PRECO_MEDIANA_POR_USUARIO * pessoas}
                     </td>
-                    <td className="text-foreground text-right font-semibold">
+                    {/* A linha em que o CONCORRENTE ganha não é escondida, e
+                        não é destacada: ela perde o negrito e fica na cor de
+                        texto secundário, como o número dele.
+
+                        O reflexo seria começar a tabela em duas pessoas e
+                        nunca mostrar o caso perdido. A página
+                        `/alternativa-ao-crm-que-cobra-por-usuario` já admite
+                        por escrito que "para quem vende sozinho, um plano por
+                        usuário sai mais em conta" — esconder aqui o que ela
+                        assume seria falar duas línguas para a mesma pessoa.
+
+                        A R$ 49 esta condição nunca era verdadeira e a coluna
+                        inteira vinha em negrito. Ela passou a existir sozinha
+                        quando o preço subiu, sem ninguém tocar neste arquivo. */}
+                    <td
+                      className={cn(
+                        'text-right',
+                        PRECO_MEDIANA_POR_USUARIO * pessoas < PRO_PLAN_PRICE
+                          ? 'text-muted-foreground'
+                          : 'text-foreground font-semibold',
+                      )}
+                    >
                       R$ {PRO_PLAN_PRICE}
                     </td>
                   </tr>
@@ -595,7 +617,10 @@ export function PricingSection() {
 
             <p className="text-muted-foreground mt-4 text-xs text-balance">
               Preço de tabela pública dos CRMs que cobram por usuário, conferido em{' '}
-              {PRECOS_CONFERIDOS_EM}. Aqui a equipe inteira cabe na mesma mensalidade.
+              {PRECOS_CONFERIDOS_EM}. A partir de {PESSOAS_PARA_COMPENSAR} pessoas o preço
+              fixo sai na frente, e a diferença cresce a cada contratação. Com uma pessoa
+              só, cobrar por usuário custa menos — e a gente prefere dizer isso aqui do
+              que você descobrir na primeira fatura.
             </p>
           </div>
         </RevealOnScroll>
