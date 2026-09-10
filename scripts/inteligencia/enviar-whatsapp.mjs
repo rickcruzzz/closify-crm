@@ -238,16 +238,41 @@ async function main() {
 
       // Número que o WhatsApp não reconhece abre um diálogo em vez do chat.
       // Não é falha da rodada: é uma empresa que trocou de número.
-      const invalido = p.locator('text=/número de telefone.*inválido|phone number.*invalid/i')
+      // ## Numero que nao esta no WhatsApp abre um DIALOGO, e o texto varia
+      //
+      // Em 09/09 a rodada morreu no 6 de 10, em `+55 11 3926-0073`. Aquilo e
+      // um FIXO de Sao Paulo — o `3` depois do DDD diz isso —, e fixo quase
+      // nunca tem WhatsApp. O aviso apareceu, mas a frase nao casou com a
+      // expressao daqui, entao caiu no galho de "tempo" e a rodada inteira
+      // parou com 4 empresas ainda na fila.
+      //
+      // Casar por FRASE e frágil por construcao: a mensagem muda com o idioma
+      // do aparelho, com a versao do WhatsApp Web e com o humor do produto.
+      // O que nao muda e a FORMA: um dialogo modal no meio da tela.
+      //
+      // ## Mas continua havendo dois desfechos diferentes, e a distincao vale
+      //
+      //     dialogo apareceu    numero de uma empresa que trocou de telefone.
+      //                         PULA e segue: uma linha ruim nao pode custar
+      //                         as outras da fila
+      //     NADA apareceu       ambiguidade real — pode ser lentidao, pode ser
+      //                         bloqueio. PARA, porque insistir contra um
+      //                         bloqueio e como se perde a conta
+      const dialogo = p.locator('[role="dialog"], [data-animate-modal-popup="true"]')
       const caixa = p.locator('[data-testid="conversation-compose-box-input"], div[contenteditable="true"][data-tab]')
 
       const resultado = await Promise.race([
-        invalido.first().waitFor({ timeout: 45_000 }).then(() => 'invalido'),
+        dialogo.first().waitFor({ state: 'visible', timeout: 45_000 }).then(() => 'invalido'),
         caixa.last().waitFor({ timeout: 45_000 }).then(() => 'pronto'),
       ]).catch(() => 'tempo')
 
       if (resultado === 'invalido') {
-        console.log(`  ${rotulo}  ->  número inválido, pulando`)
+        const aviso = await dialogo
+          .first()
+          .innerText()
+          .then((t) => t.replace(/\s+/g, ' ').slice(0, 60))
+          .catch(() => '')
+        console.log(`  ${rotulo}  ->  pulando${aviso ? `: "${aviso}"` : ' (diálogo do WhatsApp)'}`)
         await p.keyboard.press('Escape')
         continue
       }
