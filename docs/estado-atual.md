@@ -4,9 +4,132 @@ Documento de continuidade. É lido no começo de toda sessão (referenciado no
 [CLAUDE.md](../CLAUDE.md)) para que uma conversa nova, ou outra conta, comece
 sabendo o que já foi feito, o que foi decidido e onde estão as armadilhas.
 
-**Atualizado em:** 09/09/2026, manha (o verbo do posicionamento remetia a
-cobranca de DIVIDA, medido no Exa; e o print do produto entrava espremido em
-2,7x — era o "borrado ao dar zoom")
+**Atualizado em:** 10/09/2026, madrugada (o Pro foi a R$ 97 e a parede saiu do
+contato 50 para o orcamento; e o lado do COMPRADOR desmentiu tres numeros que
+eu tinha medido no lado do vendedor)
+
+## O preco subiu e a parede mudou de lugar (10/09)
+
+Pergunta do dono, repetida ate ficar clara: *"VOCE ENTENDEU QUE PRECISAMOS
+LUCRAR TER MUITOS PAGANTES?"*. A resposta honesta era que "muitos pagantes" e
+"preco baixo" brigam entre si, e que o produto tinha zero dos dois.
+
+### O achado que inverte tres conclusoes minhas: eu media o lado errado
+
+Medi 25 CRMs pela PAGINA DE PRODUTO e escrevi que IA era 84% do mercado. Refeito
+sobre review, reclamacao e *"por que troquei de CRM"*:
+
+    recurso            vendedor anuncia   comprador pede
+    IA                       84%               31%
+    relatorio / BI           84%               54%
+    automacao                80%               62%
+    WhatsApp                 76%               50%
+    integracao                —                71%
+
+**Pagina de produto mede marketing, nao demanda.** E os dois primeiros do lado
+do comprador abrem para uma coisa so cada:
+
+    "INTEGRAR" quer dizer          "AUTOMATIZAR" quer dizer
+      89%  WhatsApp                  88%  lembrete / follow-up
+      57%  pagamento  (tem)          40%  sequencia de e-mail
+      54%  ERP / NF                  18%  chatbot
+
+**Isso corrige o que eu afirmei no dia 09/09.** Registrei automacao como um
+buraco de 80% no produto. Nao e: a automacao que 88% pedem e o orcamento com
+prazo que vira tarefa em `/hoje`, entregue em 08/09. O buraco nao e o recurso,
+e o nome — a landing nunca usava a palavra *automatico*.
+
+### A parede estava onde ninguem encosta
+
+    paywall no momento em que a pessoa SENTE o valor    8-12% convertem
+    paywall em limite arbitrario                        3-4% convertem
+
+As tres paredes (50 contatos, 2 colaboradores, PDF) eram arbitrarias. A de 50
+era a pior: quem importa planilha chega com 20 e leva meses, ou nunca chega. E
+o resultado ja estava escrito aqui desde 08/09 — **ninguem nunca experimentava
+o Pro**, e os 8 workspaces `pro` eram concessao manual.
+
+A 0079 poe o teto em **3 orcamentos com lembrete ABERTOS**. Calendly gateia em
+1 agenda, HubSpot em 1 assento, Loom em 5 minutos: depois de a pessoa sentir
+funcionar, nao antes.
+
+**O lembrete nunca e o que se corta.** O Free continua avisando. O Pro compra
+QUANTIDADE, nao a existencia do aviso — vender uma coisa que o avaliador nunca
+viu funcionar era o defeito que existia.
+
+### R$ 49 -> R$ 97, e o argumento antigo estava invertido
+
+    Agendor 2025    R$ 18,5 mi / 6.000 pagantes  =  ARPU R$ 257/mes
+    micro-SaaS      o corte entre viver e morrer esta em US$ 79/mes
+                    (estudo com 1.000 produtos) — R$ 49 era US$ 9
+    26 CRMs         entrada de R$ 10 a R$ 597, e o fundo cobra R$ 11
+
+O terceiro derruba a tese de preco. *"R$ 49 pela empresa toda"* so vira vantagem
+a partir de 4 ou 5 pessoas; para a marcenaria de duas, o Bitrix24 sai por R$ 22.
+**Na faixa que a prospeccao de fato aborda, eramos o mais caro dos baratos** —
+pagando o custo de parecer barato (comprador B2B le preco como sinal de
+qualidade) sem ter a vantagem.
+
+97 e nao 149 porque 98 empresas ja receberam a mensagem dizendo R$ 49.
+
+    LTV a 4% de churn      R$ 1.225  ->  R$ 2.425
+    CAC maximo (regua 3:1) R$   408  ->  R$   808
+    clientes p/ R$ 10 mil       204  ->       103
+
+### A primeira prova da 0079 estava ERRADA, e o sintoma acusava o codigo
+
+Deu *"4o orcamento ACEITO"* e eu quase registrei defeito. Nao era: eu criava a
+empresa Free e a Pro com o MESMO `created_by`, e a 0078 da a `pro_vigente()` um
+terceiro caminho — assinatura viva de qualquer workspace do mesmo dono cobre ate
+5 empresas. A empresa "Free" da prova estava legitimamente coberta pelo Pro ao
+lado. Com donos diferentes:
+
+    controle       pro_vigente(free)=false  pro_vigente(pro)=true
+    3 orcamentos   ACEITO
+    o 4o           RECUSADO 42501
+    LOTE de 2      RECUSADO 42501   <- o caminho da importacao
+    sem validade   ACEITO
+    editar data    ACEITO
+    apos fechar    ACEITO
+    6 no Pro       ACEITO
+
+### Dois literais de preco que sobreviveram a duas auditorias
+
+`pricing-section.tsx` tinha `price: 'R$49'` escrito a mao **enquanto a linha 571
+do mesmo arquivo ja lia `PRO_PLAN_PRICE`**. Mostravam o mesmo numero por
+coincidencia, nao por construcao: na troca teriam discordado dentro da mesma
+secao, o cartao dizendo 49 e a comparacao logo abaixo usando 97. O
+`hero-section.tsx` tinha o mesmo literal, na dobra.
+
+`preco-na-tela.test.ts` fecha a classe, com allowlist de uma entrada e o motivo
+escrito.
+
+### E a coincidencia quebrou uma afirmacao publicada
+
+`/alternativa-ao-crm-que-cobra-por-usuario` dizia *"o Velo Funil e o mais
+barato"*. **O Nexxou cobra exatamente R$ 97**, e a tabela que desmente esta na
+mesma tela. Reescrita para o que continua conferivel, e e mais forte:
+
+    Velo Funil     R$  97   sem teto de pessoas
+    Nexxou         R$  97   trava em 3 usuarios
+    UnicoCRM       R$  99   trava em 3
+    NT Tecnologia  R$ 100   trava em 1
+
+### O caminho para os primeiros pagantes, medido
+
+    Origami   0 -> US$ 10k MRR em 30 dias, canal UNICO: cold email,
+              50-75 mensagens/dia, gasto abaixo de US$ 100
+    SaaS      cold outreach: resposta 3,8-7,2%, POSITIVA 2,4-4,8%
+
+    719 na fila x 4% = ~29 conversas x 15% = 4 a 6 pagantes
+
+E o dossie de mercado inteiro, com fonte por numero, esta publicado como
+artifact (dossie-mercado-crm).
+
+18 artes regeradas, 98 dominios registrados em
+`scripts/inteligencia/abordados-com-preco-antigo.txt` com o procedimento de
+honrar os R$ 49. 1.408 testes.
+
 
 ## O verbo do posicionamento estava errado, e o print estava ESPREMIDO (09/09)
 

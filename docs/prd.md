@@ -4,12 +4,12 @@
 > PRD próprio: [prd-conversao-pro.md](prd-conversao-pro.md).
 >
 > **Estrutura conferida contra o catálogo em 08/09/2026**: **20 tabelas**,
-> **34 RPCs do projeto**, **32 foreign keys**, **15 triggers**, **8 enums**.
+> **34 RPCs do projeto**, **32 foreign keys**, **16 triggers**, **8 enums**.
 > A 32ª chave é `deals.orcamento_tarefa_id → tasks` (0076), a primeira deste
 > schema a fechar um ciclo — o porquê está em [schema.md](schema.md).
 >
-> <!-- contagem: migrations.arquivos=77 migrations.maior=0078 -->
-> **77 arquivos de migration, e a maior é `0078`.** Os dois juntos, sempre: o
+> <!-- contagem: migrations.arquivos=78 migrations.maior=0079 -->
+> **78 arquivos de migration, e a maior é `0079`.** Os dois juntos, sempre: o
 > número de arquivos sozinho convida a inferir `0071`, e o `0049` não existe —
 > foi provado desnecessário e removido em 22/08. `node scripts/ci/contagens.mjs`
 > imprime o invariante que reconcilia os dois.
@@ -273,11 +273,22 @@ com o WhatsApp, o complementa, porque "mas eu já uso WhatsApp" é a objeção n
 do público. "Como funciona" segue a mesma troca: passo 1 deixou de exigir
 planilha ("Traga sua planilha" → "Traga quem já é seu cliente").
 
-*A promessa do hero é a vantagem que nenhum concorrente tem:* **R$ 49 por mês
+*A promessa do hero é a vantagem que nenhum concorrente tem:* **R$ 97 por mês
 pela empresa inteira, não por vendedor.** A comparação de preço, na seção de
 planos, torna isso concreto: Agendor cobra a partir de R$ 53 **por usuário**,
-cinco pessoas dão R$ 265/mês contra os R$ 49 daqui — preço de tabela pública
-deles, não prova social inventada. Até 22/08 o hero prometia "contatos
+cinco pessoas dão R$ 265/mês contra os R$ 97 daqui — preço de tabela pública
+deles, não prova social inventada.
+
+**O preço era R$ 49 até 10/09**, e a troca saiu de três medições
+independentes: o ARPU do Agendor (R$ 18,5 mi por 6.000 pagantes = R$ 257/mês),
+o corte de US$ 79/mês que separa micro-SaaS que vive de micro-SaaS que morre,
+e a escada de 26 CRMs brasileiros — onde o fundo do mercado cobra R$ 11 por
+usuário. Para a empresa de duas pessoas que a prospecção aborda, R$ 49 fixo
+era **mais caro** que o concorrente barato: éramos o mais caro dos baratos,
+pagando o custo de parecer barato sem ter a vantagem.
+
+A âncora ficou mais curta e isso é o preço de cobrar o que o produto vale:
+R$ 265 contra R$ 97 é 2,7x, onde contra R$ 49 era 5,4x. Até 22/08 o hero prometia "contatos
 ilimitados" no plano grátis — falso, prometer no topo o que a página nega
 embaixo é o primeiro dado que o visitante descobre que não bate.
 
@@ -904,10 +915,11 @@ host de fora (unsplash) continua bloqueado. O controle negativo é o que separa
 
 ### Monetização (Asaas)
 
-**Dois planos pagos desde 04/09: R$ 49/mês e R$ 490/ano.** O anual nasceu para a
+**Dois planos pagos desde 04/09: R$ 97/mês e R$ 970/ano** (eram R$ 49 e
+R$ 490 até 10/09; o anual é derivado, `PRO_PLAN_PRICE * 10`). O anual nasceu para a
 venda presencial — uma visita custa cerca de uma hora entre deslocamento,
 demonstração e retorno e fecha em 10% a 20%, então cinco a dez horas por
-cliente. A R$ 49 isso não se paga; a R$ 490 à vista, sim. E trava 12 meses de
+cliente. A R$ 97 isso ainda não se paga; a R$ 970 à vista, sim. E trava 12 meses de
 retenção, número que este produto nunca teve porque nunca teve cliente externo.
 
 O preço é **derivado da oferta**, em `lib/plans.ts`:
@@ -964,8 +976,22 @@ exigir `pro_vigente() and not em_trial()` — Pro pago libera estoque
 permanente, trial libera só o uso temporário das funcionalidades.
 
 **O Free é apertado desde o primeiro minuto (migration 0052):** 1 empresa,
-até `FREE_MEMBER_LIMIT` = **2** colaboradores e `FREE_LEAD_LIMIT` = **50**
-contatos (`lib/plans.ts`). Até 29/08 esse teto só passava a valer depois do
+até `FREE_MEMBER_LIMIT` = **2** colaboradores, `FREE_LEAD_LIMIT` = **50**
+contatos e, desde a **0079**, `FREE_ORCAMENTO_LIMIT` = **3** orçamentos com
+lembrete abertos ao mesmo tempo (`lib/plans.ts`).
+
+**O de orçamentos é o único que a pessoa alcança, e é por isso que ele existe.**
+Os outros três são limite arbitrário: quem importa a planilha chega com 20
+contatos e leva meses para encostar em 50, ou nunca encosta — o resultado
+medido é que ninguém nunca experimentava o Pro. Paywall no momento em que a
+pessoa sente o valor converte 8-12%; em limite arbitrário, 3-4%. O momento
+"ahá" deste produto é nomeável (*o sistema me lembrou do orçamento e eu fechei
+a venda*), e é ali que a parede passou a ficar — 3 a 7 dias dentro do uso
+ativo, como Calendly (1 agenda), HubSpot (1 assento) e Loom (5 minutos).
+
+O lembrete **nunca** é o que se corta: o Free continua avisando sempre. O Pro
+compra quantidade, não a existência do aviso. Fechar um negócio libera a vaga,
+senão o limite viraria contador vitalício — que é de novo o defeito dos 50. Até 29/08 esse teto só passava a valer depois do
 trial; agora ele vale desde a criação da conta, e isso foi provado com empresa
 descartável — o 51º contato toma `42501` no primeiro instante de vida. O número passou por 300 numa correção
 anterior e voltou a 50 nesta rodada — a landing vende "grátis pra sempre" como
@@ -974,8 +1000,8 @@ o teto rápido e assina.
 
 Multi-empresa é recurso do Pro (e do trial que ainda corre), sem esse limite o teto de
 colaboradores não segura nada — bastava criar uma empresa nova para cada
-dupla. Plano Pro: colaboradores e leads ilimitados por R$49/mês, pela empresa
-inteira, não por vendedor.
+dupla. Plano Pro: colaboradores, leads e orçamentos ilimitados por R$97/mês,
+pela empresa inteira, não por vendedor, cobrindo até 5 empresas do mesmo dono.
 
 Cliente e assinatura criados via API do Asaas, com cobrança recorrente e
 webhook para ativação automática.

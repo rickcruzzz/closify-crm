@@ -9,16 +9,33 @@ regra de `docs/estado-atual.md`).
 
 **Estrutura reconferida em 08/09/2026, noite — e a fonte mudou.** Lida de
 `pg_catalog` e não do OpenAPI: **20 tabelas**, **34 RPCs do projeto** (65 no
-catálogo, 31 são da extensão `pg_trgm`), **32 foreign keys**, **15 triggers**,
+catálogo, 31 são da extensão `pg_trgm`), **32 foreign keys**, **16 triggers**,
 **8 enums**, **39 check constraints**.
 
 **A 32ª foreign key é a da 0076**, `deals.orcamento_tarefa_id → tasks`, e ela é
 a primeira deste schema a fechar um CICLO — ver a seção própria abaixo. As três
-`check` novas também são dela. **Triggers continuam 15**: a 0077 substitui a
-função `checar_referencia_de_negocio`, não cria trigger nova.
+`check` novas também são dela. A 0077 substitui a função
+`checar_referencia_de_negocio` e **não** cria trigger nova.
 
-<!-- contagem: migrations.arquivos=77 migrations.maior=0078 -->
-**77 arquivos de migration, e a maior é `0078`** (remedido em 08/09; o `0049`
+**A 16ª trigger é `checar_limite_de_orcamentos`, da 0079** (10/09), em `deals`.
+É a quarta trava de limite de plano do schema e segue as duas propriedades das
+outras três — lê `pro_vigente()` e nunca `workspaces.plan`, e serializa por
+workspace com `for update` na linha da empresa, pela mesma razão da 0026.
+
+O que ela tem de próprio é **quando** morde. As três anteriores contam linhas de
+um tipo e recusam a partir do teto; esta só conta orçamento **aberto**
+(`stage not in ('fechado_ganho','fechado_perdido')`) e só dispara quando
+`orcamento_validade` **nasce** — editar a data de um orçamento existente não
+consome vaga. Sem a primeira condição o limite viraria contador vitalício; sem a
+segunda, empresa que passasse do teto ficaria impedida de corrigir o que já tem.
+
+Ela é a primeira trava deste schema que existe por razão de **conversão** e não
+de custo: paywall no momento em que a pessoa sente o valor converte 8-12%,
+contra 3-4% de limite arbitrário — e as outras três são todas arbitrárias no
+sentido técnico do termo.
+
+<!-- contagem: migrations.arquivos=78 migrations.maior=0079 -->
+**78 arquivos de migration, e a maior é `0079`** (remedido em 08/09; o `0049`
 não existe, removido em 22/08). Os dois números vêm sempre juntos: a contagem
 sozinha convida a inferir `0073`.
 
@@ -591,7 +608,8 @@ A variação da lição, que vale registrar: a regra não estava numa Server Act
 — estava numa **RPC**, que já é melhor. Só que uma RPC protege *um* caminho até
 a tabela. Trigger protege todos.
 
-Duas propriedades das três triggers, iguais por decisão e não por acaso:
+Duas propriedades das quatro triggers de limite (a quarta é a
+`checar_limite_de_orcamentos`, da 0079), iguais por decisão e não por acaso:
 lêem `pro_vigente()` e nunca a coluna `workspaces.plan` (doutrina travada desde
 a 0027 — a coluna é o último valor gravado e não sabe que o período pago
 venceu), e liberam quando `auth.uid()` é nulo, que é o caminho da service role:
@@ -721,7 +739,7 @@ que só enxerga o que está exposto na API; esta vem de `pg_constraint`, que
 conta o que o banco de fato tem. É o mesmo erro que o cabeçalho do PRD cometeu
 em 01/09 e que está registrado lá.
 
-**15 triggers** e **8 enums**, os dois números medidos pela primeira vez neste
+**16 triggers** e **8 enums**, os dois números medidos pela primeira vez neste
 documento — antes as triggers só apareciam descritas em prosa, o que as tornava
 impossíveis de conferir por contagem.
 
