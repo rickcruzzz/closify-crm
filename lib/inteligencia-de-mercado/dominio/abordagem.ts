@@ -297,6 +297,24 @@ const GANCHO: Record<string, readonly string[]> = {
     'Orçamento de locação tem prazo curto. Como você acompanha quem pediu e não fechou?',
     'Quantas locações venceram esse mês sem ninguém oferecer a renovação?',
   ],
+  /**
+   * O gancho de solar fala a MÉDIA do setor, não a dor genérica.
+   *
+   * Os outros cinco perguntam "quem lembra de dar o retorno?" porque o dono
+   * ainda não nomeou o problema. O integrador solar já nomeou: o conteúdo do
+   * próprio setor diz que a conversão é de 3-5% e que "corrigir a cadência de
+   * follow-up e fechar 25% das propostas que você já envia produz o mesmo
+   * resultado que dobrar seus leads".
+   *
+   * Falar a linguagem dele — proposta, cadência, conversão — é o que separa
+   * "mais um CRM" de "alguém que conhece meu negócio". E o número entra sem
+   * ser acusação: é a média do setor, não um palpite sobre a empresa dele.
+   */
+  'energia-solar': [
+    'A média do setor fecha 3 a 5% das propostas. Você sabe quantas das suas ainda estão vivas?',
+    'Depois que a proposta sai, o follow-up fica na sua cabeça ou tem data marcada?',
+    'Quantas propostas de solar você mandou esse mês e não sabe em que pé estão?',
+  ],
   'eventos-corporativos': [
     'Depois que a proposta do evento sai, quem acompanha o cliente até a assinatura?',
     'Proposta de evento leva semanas. Como você sabe quem ainda está decidindo?',

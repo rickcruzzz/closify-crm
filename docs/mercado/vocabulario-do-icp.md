@@ -1,6 +1,6 @@
 # O vocabulário do ICP, acumulado
 
-Atualizado em 2026-09-07. Nichos no corpus: comunicacao-visual, dedetizacao, eventos-corporativos, locacao-equipamentos, marcenaria.
+Atualizado em 2026-09-10. Nichos no corpus: comunicacao-visual, dedetizacao, energia-solar, eventos-corporativos, locacao-equipamentos, marcenaria.
 
 Gerado por `scripts/inteligencia/prospectar.mjs` a cada rodada, **somando em
 vez de sobrescrever**. Nada aqui foi escrito por mim: cada termo é contado em
@@ -20,79 +20,79 @@ clique paga por um público que nunca assinaria.
 
 | termo | nichos | sites | onde |
 | --- | ---: | ---: | --- |
-| anos de experiencia | 5 | 154 | comunicacao-visual, dedetizacao, eventos-corporativos, locacao-equipamentos, marcenaria |
-| alta qualidade | 4 | 170 | comunicacao-visual, eventos-corporativos, locacao-equipamentos, marcenaria |
+| anos de experiencia | 6 | 187 | comunicacao-visual, dedetizacao, energia-solar, eventos-corporativos, locacao-equipamentos, marcenaria |
+| alta qualidade | 5 | 197 | comunicacao-visual, energia-solar, eventos-corporativos, locacao-equipamentos, marcenaria |
+| solucoes completas | 3 | 86 | comunicacao-visual, energia-solar, locacao-equipamentos |
 | atendimento personalizado | 3 | 77 | comunicacao-visual, eventos-corporativos, locacao-equipamentos |
+| endereco rua | 3 | 63 | comunicacao-visual, energia-solar, eventos-corporativos |
+| meio ambiente | 2 | 87 | dedetizacao, energia-solar |
 | alto padrao | 2 | 70 | comunicacao-visual, marcenaria |
 | bem estar | 2 | 65 | dedetizacao, marcenaria |
-| solucoes completas | 2 | 54 | comunicacao-visual, locacao-equipamentos |
+| pos venda | 2 | 54 | energia-solar, marcenaria |
+| suporte tecnico | 2 | 53 | energia-solar, locacao-equipamentos |
 | custo beneficio | 2 | 50 | locacao-equipamentos, marcenaria |
 | dia a dia | 2 | 45 | locacao-equipamentos, marcenaria |
 | solucoes personalizadas | 2 | 44 | comunicacao-visual, dedetizacao |
-| endereco rua | 2 | 41 | comunicacao-visual, eventos-corporativos |
 | segunda a sexta | 2 | 40 | locacao-equipamentos, marcenaria |
+| conta de luz | 1 | 71 | energia-solar |
 | impressao digital | 1 | 56 | comunicacao-visual |
-| meio ambiente | 1 | 46 | dedetizacao |
+| paineis solares | 1 | 56 | energia-solar |
+| sistema fotovoltaico | 1 | 55 | energia-solar |
+| sistemas fotovoltaicos | 1 | 47 | energia-solar |
 | caixa d agua | 1 | 42 | dedetizacao |
+| rede eletrica | 1 | 36 | energia-solar |
+| vida util | 1 | 36 | energia-solar |
 | caixas d agua | 1 | 35 | dedetizacao |
+| eficiencia energetica | 1 | 33 | energia-solar |
 | produtos e servicos | 1 | 31 | comunicacao-visual |
-| suporte tecnico | 1 | 31 | locacao-equipamentos |
 | limpeza de caixa | 1 | 29 | dedetizacao |
 | assistencia tecnica | 1 | 28 | locacao-equipamentos |
 | experiencia unica | 1 | 28 | eventos-corporativos |
+| limpa e renovavel | 1 | 28 | energia-solar |
 | tipo de evento | 1 | 28 | eventos-corporativos |
 | plataformas elevatorias | 1 | 27 | locacao-equipamentos |
 | evento seja | 1 | 26 | eventos-corporativos |
+| geracao distribuida | 1 | 26 | energia-solar |
+| valorizacao do imovel | 1 | 26 | energia-solar |
 | criar experiencias | 1 | 25 | eventos-corporativos |
 | experiencias memoraveis | 1 | 25 | eventos-corporativos |
 | experiencias unicas | 1 | 24 | eventos-corporativos |
+| placas solares | 1 | 24 | energia-solar |
 | baratas formigas | 1 | 23 | dedetizacao |
 | design grafico | 1 | 23 | comunicacao-visual |
-| fachadas em acm | 1 | 23 | comunicacao-visual |
-| grande porte | 1 | 23 | eventos-corporativos |
-| ultima geracao | 1 | 23 | eventos-corporativos |
-| alta pressao | 1 | 22 | locacao-equipamentos |
-| painel de led | 1 | 22 | eventos-corporativos |
-| vigilancia sanitaria | 1 | 22 | dedetizacao |
-| andaime tubular | 1 | 21 | locacao-equipamentos |
-| bem vindo | 1 | 21 | eventos-corporativos |
-| pos venda | 1 | 21 | marcenaria |
-| primeiro contato | 1 | 21 | marcenaria |
-| produtos quimicos | 1 | 21 | dedetizacao |
-| data do evento | 1 | 20 | eventos-corporativos |
 
 ## O que o nicho promete, na rodada mais recente
 
 Cada linha é uma objeção: se o visitante ouviu isto em dez sites antes do
 nosso, a frase não diferencia nada. Recorte literal, nunca paráfrase.
 
-- "Há mais de 30 anos realizamos casamentos, festas de 15 anos, aniversário, bodas e eventos corporativos em São Paulo — com alta gastronomia, decoração e serviço completo, em um espaço privilegiado Alto da Mooca." — `buffettulipas.com.br`
-- "Desde a escolha dos fornecedores até a curadoria da decoração e do menu, oferecemos um serviço completo e personalizado, alinhado ao seu estilo e às suas expectativas." — `buffettulipas.com.br`
-- "Sociais e Corporativos | Serviço completo de Buffet | Atendimento personalizado" — `athor.com.br`
-- "Nosso compromisso é tornar este momento inesquecível e nada melhor que uma festa para celebrar a união entre duas pessoas." — `arteventos.com.br`
-- "Cada evento é único, por isso realizamos apenas 1 por dia e oferecemos todo conforto com camarim feminino com spa e camarim masculino com sinuca e churrasqueira." — `buffetfernandes.com.br`
-- "Há mais de 20 anos criando experiências únicas." — `cozinhacriativa.com.br`
-- "O Buffet Prince, com mais de 30 anos de experiência, é uma referência na área de eventos, realizando cada evento com qualidade e dedicação no atendimento." — `buffetprince.com.br`
-- "São mais de 10 anos de tradição, e mais de 3.000 eventos realizados com sucesso!" — `appetitbuffet.com.br`
-- "Oferecemos cardápios completos para o seu evento com entradas, saladas, crepes salgados e doces e bebidas." — `appetitbuffet.com.br`
-- "Nosso compromisso é oferecer não apenas espaços," — `palatiumbuffet.com.br`
-- "Oferecemos serviços, produtos e soluções para os mais diversos e seletos segmentos e eventos." — `m3feventos.com.br`
-- "Oferecemos, de forma seria e eficaz, pessoal, produtos e serviços de alta qualidade, visando à satisfação dos clientes e contribuindo com excelência para o desenvolvimento do seu evento." — `m3feventos.com.br`
-- "Oferecemos uma ampla gama de soluções em vídeo, incluindo painéis de LED de alta definição, projetores de última geração e monitores smart." — `barrellaeventos.com.br`
-- "Oferecemos desde um simples microfone até um sofisticado sistema de sonorização, garantindo uma experiência sonora de alta qualidade para o seu evento." — `barrellaeventos.com.br`
-- "Temos mais de 30 anos no experiência no mercado de eventos" — `bkcproducoes.com.br`
-- "Com décadas de experiência no mercado, oferecemos equipamentos de som, iluminação, painéis de LED e tecnologia audiovisual de ponta, garantindo experiências únicas e inesquecíveis para o público e para os organizadores." — `bkcproducoes.com.br`
-- "Oferecemos uma estrutura completa de audiovisual para eventos empresariais, institucionais e sociais." — `dyopeventos.com.br`
-- "Oferecemos locação de som, iluminação, painel de LED, TVs, palco e estrutura completa de audiovisual para eventos corporativos, feiras, congressos, palestras e treinamentos." — `dyopeventos.com.br`
-- "Há mais de 20 anos no mercado, a Projetos Especiais é especializada em produções de eventos." — `projetosespeciais.com`
-- "Oferecemos locação de praticáveis, estrutura para som, iluminação, painéis de led, locação de banheiro trailer e vendas de equipamentos para eventos." — `projetosespeciais.com`
-- "Estamos presente em sete capitais brasileiras, com estruturas preparadas para oferecer agilidade, suporte técnico e atendimento personalizado em cada região." — `grupoplenolocacoes.com.br`
-- "POR QUE OFERECEMOS A MELHOR SOLUÇÃO PARA O SEU EVENTO?" — `dmixeventos.com.br`
-- "​Garantimos que cada nota e cada detalhe do ambiente fossem realçados com nossa expertise." — `esperanzaproducoes.com.br`
-- "Garantimos a produção técnica para o sucesso desse grande evento." — `esperanzaproducoes.com.br`
-- "Oferecemos soluções completas, desde a instalação inicial até a manutenção contínua, garantindo que sua comunicação visual seja sempre eficaz e atraente." — `ekipa.com.br`
-- "Oferecemos soluções completas para transformar qualquer espaço em um cenário único e envolvente, adequado às suas necessidades e objetivos específicos." — `ekipa.com.br`
-- "Com instalação profissional, suporte técnico durante o evento e personalização conforme as necessidades do cliente, garantimos que seu evento seja um sucesso." — `maximasolucoes.com.br`
-- "Com expertise em captação, documentários, motion graphics e animações, desenvolvimento de identidade visual, videoclipes, vídeos institucionais e vinhetas, garantimos qualidade e impacto em todas as etapas." — `maximasolucoes.com.br`
-- "Garantimos que cada detalhe seja impecável." — `arenav.com.br`
-- "Além disso, oferecemos serviços completos, incluindo sonorização, iluminação, estruturas de palco, projeção em painéis de LED e um casting diversificado de atrações artísticas." — `arenav.com.br`
+- "Oferecemos todo o suporte técnico, capacitação de equipe, know-how consolidado e portfólio completo de soluções em energia renovável para residências, empresas, indústrias e agronegócio." — `sfxsolar.com.br`
+- "Oferecemos um modelo de franquia consolidado com todo o suporte que você precisa para alcançar o sucesso." — `sfxsolar.com.br`
+- "Consumidores que passam a ser produtores de energia são cada vez mais uma realidade e nós oferecemos soluções para que você também se torne um deles." — `integracaosolar.com.br`
+- "Nossa missão é gerar a maior economia possível para nossos clientes." — `solaruno.com.br`
+- "O nosso compromisso pós-venda assegura que os padrões mais elevados sejam mantidos, resultando em soluções duradouras e confiáveis." — `dlsolar.com.br`
+- "Somos uma empresa formada por engenheiros eletricistas com mais de 20 anos de experiência em empresas de renome nacional e internacional." — `dlsolar.com.br`
+- "Oferecemos uma linha completa de serviços para sua Usina Solar" — `zenitenergia.com.br`
+- "Entregamos a sua usina pronta para operações, seja na sua casa, comércio ou indústria" — `zenitenergia.com.br`
+- "Há uma década, iniciamos nossa missão de levar soluções em energia solar para residências, empresas e propriedades rurais, sempre com foco em qualidade, segurança e economia." — `llmsolar.com.br`
+- "Nosso compromisso é entregar economia real, segurança e atendimento impecável." — `ldsolar.com.br`
+- "Oferecemos soluções completas em Elétrica, Automação Industrial, Instrumentação e Eficiência Energética, integrando tecnologia e qualidade para impulsionar produtividade, sustentabilidade e crescimento." — `energeticasolar.com.br`
+- "Oferecemos soluções completas em automação industrial, com equipamentos e sistemas desenvolvidos de forma estratégica para otimizar processos, aumentar a produtividade e garantir resultados consistentes." — `energeticasolar.com.br`
+- "Com financiamento baixo e parcelas fixas, entregamos projeto, instalação e regularização da sua rede com garantia de 12 anos em nossos equipamentos e uma economia de até 95% no gasto com energia." — `energiasolarsolucao.com.br`
+- "Projetos personalizados de energia solar para residências, comércios e indústrias — tecnologia de ponta, instalação rápida e atendimento humanizado." — `jherengenharia.com.br`
+- "Atendimento humanizado e consultivo." — `jherengenharia.com.br`
+- "Oferecemos para você e todos os nossos clientes a solução quando a dúvida é gerenciar o quanto de energia seu Kit tem gerado." — `linktr.ee`
+- "E somos referência no mercado por nosso compromisso com a qualidade!" — `linktr.ee`
+- "Equipe técnica diferenciada com experiência de mais de 20 anos em energia solar." — `neosolar.com.br`
+- "Nossa missão é gerar energia elétrica onde quer que o Sol esteja." — `solarbrasil.com.br`
+- "Na Solar Brasil, acreditamos que a energia solar transforma casas, comunidades e vidas — por isso, não oferecemos apenas equipamentos de qualidade, mas também conhecimento acessível." — `solarbrasil.com.br`
+- "Somos a maior distribuidora de energia solar do Brasil há mais de 40 anos." — `aldo.com.br`
+- "Oferecemos suporte técnico especializado para auxiliar em todas as fases do seu projeto, desde o dimensionamento até o pós-venda, garantindo a melhor solução para o cliente final." — `aldo.com.br`
+- "Economize até 90% na sua conta de luz com geração de energia fotovoltaica por mais de 25 anos." — `solarhousebsb.com.br`
+- "Oferecemos produtos, soluções e serviços em toda a cadeia de valor de energia." — `solarhousebsb.com.br`
+- "Ofrecemos hasta 25 años de garantía en nuestras instalaciones y proporcionamos acceso a una aplicación móvil donde podrás monitorear y gestionar tus consumos energéticos." — `tuvatio.es`
+- "Después de la instalación, proporcionamos un seguimiento continuo para asegurar el óptimo funcionamiento de tu sistema de autoconsumo residencial." — `tuvatio.es`
+- "Com redução de até 90% na conta de luz, o sistema gera economia por mais de 25 anos."}}," — `implasolar.com.br`
+- "Oferecemos um seguro para sua energia solar, como um escudo de proteção." — `solatitude.com.br`
+- "Oferecemos serviços de qualidade, desde a análise técnica de viabilidade de instalação, até o pós-venda." — `solareste.com.br`
+- "Oferecemos soluções sob medida." — `solareste.com.br`

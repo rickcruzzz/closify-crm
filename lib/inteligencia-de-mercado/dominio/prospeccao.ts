@@ -86,6 +86,56 @@
  */
 export const VERTICAIS = [
   {
+    /**
+     * O nicho de maior ticket medido, e a régua aqui não é a mesma dos outros
+     * cinco.
+     *
+     * ## O valor do lembrete é o tamanho do orçamento que ele salva
+     *
+     *     nicho                 ticket do orçamento    empresas no Brasil
+     *     energia solar             R$  7.700          23.000 a 26.640
+     *     marcenaria                R$ 10.000             444 a 732
+     *     comunicacao visual        R$  5.500          15.691 a 21.394
+     *     dedetizacao               R$    500          33.782
+     *
+     * Marcenaria tem ticket maior e mercado pequeno demais para virar negócio.
+     * Solar tem ticket alto **e** escala. Para o integrador, um orçamento
+     * salvo por ano paga seis anos de assinatura — a conta se faz sozinha na
+     * cabeça dele, e para a dedetizadora não.
+     *
+     * ## E o setor já nomeia a dor, o que nenhum dos outros faz
+     *
+     * Medido em conteúdo do próprio setor:
+     *
+     *     "Dobrar seus leads mantendo 10% de fechamento produz o MESMO
+     *      resultado que corrigir sua CADÊNCIA DE FOLLOW-UP e fechar 25% das
+     *      propostas que você já envia."
+     *     "conversão em vendas solares: 3-5% na média"
+     *
+     * Não é preciso convencer da dor. É preciso dizer que resolve.
+     *
+     * ## A ressalva, escrita para não ser esquecida
+     *
+     * Seis concorrentes verticais vivos (solarproposta R$ 97, solaryum R$ 49,
+     * solarideal R$ 49-459, vendasolar R$ 166, sopec R$ 200-1000, solarfy
+     * R$ 597). Eles fazem dimensionamento e proposta 3D, que este produto não
+     * faz — e proposta 3D fecha 3-4x mais que orçamento em texto, medido.
+     *
+     * A entrada é "o que avisa", nunca "um solarfy mais barato". Posição
+     * estreita e defensável; a outra é briga perdida.
+     *
+     * Que eles existam e cobrem R$ 49 a R$ 997 é **evidência a favor**: prova
+     * que integrador solar paga por software de proposta, que é justamente o
+     * que nenhum dos cinco nichos atuais provou.
+     */
+    nome: 'energia-solar',
+    consultas: [
+      'site de integrador de energia solar fotovoltaica no Brasil que faz projeto e instalação',
+      'site de empresa de instalação de painel solar residencial e comercial no Brasil',
+      'site de empresa de energia solar que faz orçamento e dimensionamento para empresas no Brasil',
+    ],
+  },
+  {
     // 6 FORTE, 5 pedidos de orçamento, 7 com contato: o melhor de 27 em todas
     // as três colunas. Contrato recorrente B2B, orçamento por visita, e nenhum
     // software vertical dominante.
