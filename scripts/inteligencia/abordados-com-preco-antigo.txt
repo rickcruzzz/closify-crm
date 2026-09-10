@@ -1,0 +1,128 @@
+# Quem recebeu a mensagem com R$ 49, antes do preco subir para R$ 97
+#
+# Sao 98 dominios, abordados entre 09/09 e 10/09/2026. A mensagem dizia, com
+# estas palavras: "R$ 49 pela empresa toda, sem cobrar por usuario".
+#
+# Isso e uma promessa feita. A lista existe para ela ser cumprida se alguem
+# responder, nao para ser consultada por curiosidade.
+#
+# ## O que fazer quando um destes responder
+#
+# Criar a assinatura no Asaas com valor 49, a mao, em vez de mandar o checkout
+# da tela (que cobra o preco vigente). O produto entregue e exatamente o mesmo:
+# pro_vigente() le a assinatura, nunca o valor pago.
+#
+# ## Por que arquivo, e nao tabela
+#
+# Mesma razao de nao-perturbe.txt e de .dono-prospeccao.json, ja escrita em
+# lib/dono/silenciados.ts: isto e progresso de UMA campanha do dono, nao
+# conceito do produto. Criar migration para guardar "estes 98 tem desconto"
+# acopla uma decisao de marketing ao schema que os clientes usam.
+#
+# ## Prazo
+#
+# Vale enquanto a mensagem for recente o bastante para a pessoa lembrar dela.
+# Depois disso, quem chega pela landing ve R$ 97 e essa e a oferta. Nao ha data
+# automatica aqui de proposito: e julgamento, e cada linha guarda a data da
+# abordagem para ele ser possivel.
+#
+# Gerado de .dono-prospeccao.json em 10/09/2026.
+
+orkinsp.com.br                             2026-09-09
+bhestruturas.com.br                        2026-09-09
+biodoca.com.br                             2026-09-09
+desinsecta.com.br                          2026-09-09
+fbequipamentos.com.br                      2026-09-09
+forca1locacoes.com.br                      2026-09-09
+gigaav.com.br                              2026-09-09
+imprimeadesivos.com.br                     2026-09-09
+k3locacoes.com.br                          2026-09-09
+locmaq.com.br                              2026-09-09
+quatropontos.com.br                        2026-09-09
+rosamirandabuffet.com.br                   2026-09-09
+sul10.com.br                               2026-09-09
+toldosmatias.com.br                        2026-09-09
+unirental.com.br                           2026-09-09
+vipgraficalimeira.com.br                   2026-09-09
+vivaroeventos.com.br                       2026-09-09
+znprint.com.br                             2026-09-09
+brasprag.com.br                            2026-09-09
+carmak.com.br                              2026-09-09
+curitibamarcenaria.com.br                  2026-09-09
+dedetizarj.com.br                          2026-09-09
+efeitovisual.com.br                        2026-09-09
+gpcomunicacaovisual.com.br                 2026-09-09
+higienbras.com.br                          2026-09-09
+inovegessobh.com.br                        2026-09-09
+noprag.com.br                              2026-09-09
+profixbh.com.br                            2026-09-09
+soluguel.com.br                            2026-09-09
+trevisan-cv.com.br                         2026-09-09
+bouncecomunicacaovisual.com.br             2026-09-09
+buffettulipas.com.br                       2026-09-09
+dedetizacaomanaus.com                      2026-09-09
+desentupidorabetel.com.br                  2026-09-09
+elevacaoequipamentos.com.br                2026-09-09
+exclusivapragas.com.br                     2026-09-09
+graficam9.com.br                           2026-09-09
+imunizacaoecia.com                         2026-09-09
+inovaplanejados.com.br                     2026-09-09
+locaqui.com.br                             2026-09-09
+momessomoveisplanejados.com.br             2026-09-09
+obrasaopaulo.com.br                        2026-09-09
+r1grupo.com.br                             2026-09-09
+serralheriaindustriaco.com.br              2026-09-09
+sosgastronomia.com.br                      2026-09-09
+woodzplanejados.com.br                     2026-09-09
+a3dplanejados.com.br                       2026-09-09
+anproducaodeeventos.com.br                 2026-09-09
+armazemag.com.br                           2026-09-09
+artesynal.com.br                           2026-09-09
+awaequipamentos.com.br                     2026-09-09
+blasterproducoes.com.br                    2026-09-09
+cactuscvisual.com.br                       2026-09-09
+camarerobh.com.br                          2026-09-09
+ceqlocadora.com.br                         2026-09-09
+clinicarj.com.br                           2026-09-09
+clubedoarquiteto.com.br                    2026-09-09
+concettoarq.com.br                         2026-09-09
+crealle.com.br                             2026-09-09
+dedetizacaoinsetan.com.br                  2026-09-09
+dhlequipamentos.com.br                     2026-09-09
+dsilva.com.br                              2026-09-09
+duranmoveis.com.br                         2026-09-09
+ebeeventos.com.br                          2026-09-09
+edgran.com.br                              2026-09-09
+elementosproducaodeeventos.com.br          2026-09-09
+eruseventos.com.br                         2026-09-09
+fabbroserralheria.com.br                   2026-09-09
+fepmoveis.com.br                           2026-09-09
+fierroemarchese.com.br                     2026-09-09
+gofuneventos.com.br                        2026-09-09
+grupobeeeventos.com.br                     2026-09-09
+haixrental.com.br                          2026-09-09
+inventaevento.com.br                       2026-09-09
+lidercomunicacaovisual.com.br              2026-09-09
+locar.com.br                               2026-09-09
+lomec.com.br                               2026-09-09
+madeirasamazonas.com.br                    2026-09-09
+movmix.com.br                              2026-09-10
+muranorio.com.br                           2026-09-10
+netoeventos.com.br                         2026-09-10
+oxiinteriores.com.br                       2026-09-10
+petrabr.com.br                             2026-09-10
+portosabor.com.br                          2026-09-10
+pragcontrol.com.br                         2026-09-10
+pressullocacoes.com.br                     2026-09-10
+priorigrupo.com.br                         2026-09-10
+projetosign.com.br                         2026-09-10
+silmaquinas.com.br                         2026-09-10
+somosecobio.com.br                         2026-09-10
+suporteequipamentos.com.br                 2026-09-10
+tag.rio.br                                 2026-09-10
+texturaearte.com.br                        2026-09-10
+versatium.com.br                           2026-09-10
+22mkt.com.br                               2026-09-10
+mgprojetos.com.br                          2026-09-10
+anayadesign.com.br                         2026-09-10
+anmarcenaria.com.br                        2026-09-10
