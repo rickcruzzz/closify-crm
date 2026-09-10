@@ -69,12 +69,33 @@ const CONCORRENTES = [
 
 const PERGUNTAS = [
   {
+    /**
+     * ## Esta resposta dizia "é o mais barato", e deixou de ser verdade em 10/09
+     *
+     * Com R$ 49 a afirmação era literal e conferível. Com R$ 97 ela é falsa: o
+     * Nexxou cobra exatamente R$ 97 e o UnicoCRM R$ 99 — a mesma faixa.
+     *
+     * O que NÃO mudou, e é conferível na tabela logo acima nesta mesma página:
+     * os três concorrentes de preço fixo travam a quantidade de pessoas no
+     * plano de entrada (Nexxou 3, UnicoCRM 3, NT Tecnologia **1**). Aqui não há
+     * teto de pessoas em nenhum plano pago.
+     *
+     * Trocar só o número e manter "mais barato" deixaria a frase gramaticalmente
+     * intacta e factualmente mentirosa, ao lado de uma tabela que a desmente na
+     * mesma tela. É a classe de defeito que esta página inteira existe para não
+     * ter — ela se chama honesta porque admite quando o concorrente é melhor, e
+     * a pergunta seguinte já concede que por-usuário sai na frente para quem
+     * vende sozinho.
+     */
     q: 'Qual é a alternativa mais barata a um CRM que cobra por usuário?',
     a:
-      `Entre os CRMs brasileiros com preço fixo lidos em ${LIDO_EM}, o Velo Funil ` +
-      `é o mais barato: R$ ${PRO_PLAN_PRICE} por mês pela empresa inteira, sem ` +
-      `limite de pessoas. O mais próximo em posicionamento começa em R$ 97. ` +
-      `Há também um plano gratuito para até ${FREE_LEAD_LIMIT} contatos, sem cartão.`,
+      `Depende do tamanho da equipe, e vale dizer com números. Entre os CRMs ` +
+      `brasileiros de preço fixo lidos em ${LIDO_EM}, o Velo Funil custa ` +
+      `R$ ${PRO_PLAN_PRICE} por mês e é o único sem limite de pessoas: os da ` +
+      `mesma faixa travam em 3 usuários (Nexxou, R$ 97; UnicoCRM, R$ 99) ou em ` +
+      `1 (NT Tecnologia, R$ 100). Para quem vende sozinho, um plano por usuário ` +
+      `sai mais em conta. Há também um plano gratuito para até ` +
+      `${FREE_LEAD_LIMIT} contatos, sem cartão.`,
   },
   {
     q: 'Preço fixo é sempre mais barato que cobrança por usuário?',

@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache'
 
 import { createClient } from '@/lib/supabase/server'
+import { canAddOrcamento } from '@/lib/limits'
 import { resolverWorkspaceAtivo } from '@/lib/workspace/ativo'
 import { dealSchema } from '@/lib/validations/deal'
 import { orcamentoSchema } from '@/lib/validations/orcamento'
@@ -257,7 +258,7 @@ export async function registrarOrcamento(values: unknown) {
   // que a escrita caia no workspace ATIVO de quem participa de mais de um.
   const { data: negocio } = await supabase
     .from('deals')
-    .select('id, title, lead_id, owner_id, orcamento_tarefa_id')
+    .select('id, title, lead_id, owner_id, orcamento_tarefa_id, orcamento_validade')
     .eq('id', parsed.data.dealId)
     .eq('workspace_id', workspaceId)
     .maybeSingle()
@@ -266,6 +267,19 @@ export async function registrarOrcamento(values: unknown) {
 
   const validade = parsed.data.validade || null
   const descricao = parsed.data.descricao?.trim() || null
+
+  // O teto do Free só morde quando a validade NASCE, exatamente como a trigger
+  // da 0079 — negócio que já era orçamento pode ter a data corrigida sem
+  // consumir vaga nova. As duas condições precisam casar: se a tela recusasse
+  // onde o banco aceita, a pessoa veria uma parede que não existe.
+  //
+  // A trigger é quem de fato recusa. Esta checagem existe para a mensagem
+  // chegar antes da tentativa, e para não criar a tarefa de lembrete logo
+  // abaixo e depois ter que desfazê-la quando o insert do negócio falhasse.
+  if (validade && !negocio.orcamento_validade) {
+    const cabe = await canAddOrcamento(workspaceId)
+    if (!cabe.allowed) return { error: cabe.reason }
+  }
 
   let tarefaId: string | null = negocio.orcamento_tarefa_id
   let tarefaCriadaAgora: string | null = null

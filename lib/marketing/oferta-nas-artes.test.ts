@@ -121,7 +121,12 @@ describe('geradores de arte derivam a oferta do código', () => {
    */
   it('os valores vigentes são os que a arte vai usar', () => {
     expect(FREE_LEAD_LIMIT).toBe(50)
-    expect(PRO_PLAN_PRICE).toBe(49)
+    // Era 49 até 10/09. Este caso reprovou na troca, que é exatamente o
+    // trabalho dele: preço novo significa que TODA arte publicada — carrossel,
+    // stories, anúncio, vídeo — ainda mostra o preço velho até ser regerada.
+    // Trocar o número aqui sem regerar deixa o teste verde e a peça mentirosa,
+    // então a atualização deste valor é o gatilho da regeração, não o fim dela.
+    expect(PRO_PLAN_PRICE).toBe(97)
   })
 })
 

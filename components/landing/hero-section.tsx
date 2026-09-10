@@ -2,7 +2,7 @@ import Link from 'next/link'
 import { ArrowRight } from 'lucide-react'
 
 import { buttonVariants } from '@/components/ui/button'
-import { FREE_LEAD_LIMIT } from '@/lib/plans'
+import { FREE_LEAD_LIMIT, PRO_PLAN_PRICE } from '@/lib/plans'
 import { cn } from '@/lib/utils'
 import { PipelinePreviewCard } from '@/components/landing/pipeline-preview-card'
 import { SegmentBadge } from '@/components/landing/segment-badge'
@@ -275,7 +275,7 @@ export function HeroSection() {
               265) vive na seção de planos, onde há espaço para ela. */}
           <p className="text-muted-foreground animate-entrada fade-in slide-in-from-bottom-3 fill-mode-both ease-entrada duration-entrada delay-passo-4 text-sm text-balance">
             Grátis até {FREE_LEAD_LIMIT} contatos, sem cartão. Pro por{' '}
-            <span className="text-foreground font-semibold">R$ 49/mês</span>{' '}
+            <span className="text-foreground font-semibold">R$ {PRO_PLAN_PRICE}/mês</span>{' '}
             <span className="text-primary font-medium">pela empresa inteira</span>.
           </p>
 

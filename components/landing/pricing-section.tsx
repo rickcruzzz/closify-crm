@@ -1,5 +1,6 @@
 import {
   ArrowLeftRight,
+  BellRing,
   Building2,
   CalendarDays,
   Check,
@@ -21,6 +22,7 @@ import { EventoAoVer } from '@/components/analytics/evento-ao-ver'
 import {
   FREE_LEAD_LIMIT,
   FREE_MEMBER_LIMIT,
+  FREE_ORCAMENTO_LIMIT,
   FREE_WORKSPACE_LIMIT,
   PRECOS_CONFERIDOS_EM,
   PRECO_MEDIANA_POR_USUARIO,
@@ -81,6 +83,23 @@ const plans: Plan[] = [
     // 2 colaboradores" sem citar o limite de empresa, e um texto fixo aqui
     // volta a divergir do produto na primeira mudança de plano.
     features: [
+      /**
+       * Este item lidera o cartão de propósito, e a ordem é a decisão.
+       *
+       * Ele é o único da lista que descreve o que NENHUM concorrente faz —
+       * medido em 09/09 sobre 25 geradores de orçamento: 88% geram o PDF, 60%
+       * mandam pelo WhatsApp, 48% guardam a validade e **0% avisam antes de
+       * vencer**. Os outros itens (funil, painel, contatos) são a categoria
+       * inteira; este é a razão de existir.
+       *
+       * E ele é a parede do Pro desde a 0079. Item que a pessoa vai encostar é
+       * o que precisa estar visível ANTES de ela criar a conta: encontrar o
+       * limite depois de importar a base é o que faz parecer armadilha.
+       */
+      {
+        texto: `Até ${FREE_ORCAMENTO_LIMIT} orçamentos com lembrete automático`,
+        icone: BellRing,
+      },
       { texto: `${FREE_WORKSPACE_LIMIT} empresa`, icone: Building2 },
       { texto: `Até ${FREE_MEMBER_LIMIT} colaboradores`, icone: Users },
       { texto: `Até ${FREE_LEAD_LIMIT} contatos`, icone: Contact },
@@ -135,7 +154,14 @@ const plans: Plan[] = [
   },
   {
     name: 'Pro',
-    price: 'R$49',
+    // Derivado, e nao 'R$49' escrito a mao como esteve ate 10/09.
+    //
+    // O literal sobreviveu a duas auditorias porque a linha 571 do mesmo
+    // arquivo JA lia `PRO_PLAN_PRICE` — o cartao e a comparacao mostravam o
+    // mesmo numero por coincidencia, nao por construcao. Na troca de 49 para
+    // 97 os dois teriam discordado DENTRO DA MESMA SECAO, com o cartao
+    // dizendo 49 e a frase logo abaixo comparando 97 com a mediana.
+    price: `R$${PRO_PLAN_PRICE}`,
     period: '/mês',
     precoLegenda: 'Da empresa inteira, nunca por vendedor a mais.',
     description:
@@ -227,6 +253,10 @@ const plans: Plan[] = [
       { texto: `Ate ${PRO_WORKSPACE_LIMIT} empresas, todas com os recursos Pro`, icone: Building2 },
       { texto: 'Colaboradores ilimitados', icone: Users },
       { texto: 'Contatos ilimitados', icone: Contact },
+      // Espelha o primeiro item do Free, e por isso usa o MESMO ícone: os dois
+      // cartões ficam lado a lado, e o par é o que faz a diferença ser lida
+      // sem comparar palavra por palavra.
+      { texto: 'Orçamentos com lembrete, sem limite', icone: BellRing },
     ],
     // Dizia "Voce ja esta usando tudo isso nos seus 7 dias", verdade enquanto
     // a empresa nascia com trial. Com a 0057 deixou de ser, e frase que

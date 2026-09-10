@@ -29,6 +29,46 @@ export const FREE_LEAD_LIMIT = 50
 export const FREE_MEMBER_LIMIT = 2
 
 /**
+ * Orçamentos com lembrete que uma empresa Free mantém ativos ao mesmo tempo.
+ *
+ * ## A parede estava no lugar errado, e isso é medição de conversão
+ *
+ * Até 10/09 as únicas paredes do Pro eram 50 contatos, 2 colaboradores e o PDF.
+ * As três são **limite arbitrário** no sentido técnico do termo, e o efeito é
+ * medido:
+ *
+ *     paywall no momento em que a pessoa SENTE o valor    8-12% convertem
+ *     paywall em limite arbitrario                        3-4% convertem
+ *
+ * O de 50 contatos era o pior dos três: quem importa a planilha chega com 20 e
+ * leva meses para encostar nele — ou nunca encosta. **Ninguém nunca
+ * experimentava o Pro**, e isso está registrado desde 08/09, quando 8 dos 8
+ * workspaces em `plan = 'pro'` eram concessão manual do dono.
+ *
+ * ## Por que o orçamento é o lugar certo
+ *
+ * O momento "ahá" deste produto é único e nomeável: *o sistema me lembrou do
+ * orçamento e eu fechei a venda*. É o que 88% do mercado chama de automação e
+ * o que 0 de 25 geradores de orçamento fazem.
+ *
+ * Gatear ali põe a parede **3 a 7 dias** dentro do uso ativo, que é onde
+ * Calendly (1 agenda), HubSpot (1 assento) e Loom (5 minutos) põem as delas —
+ * depois de a pessoa sentir funcionar, não antes.
+ *
+ * ## Três, e o lembrete NUNCA é o que se corta
+ *
+ * O Free continua avisando, sempre. Cortar o lembrete deixaria o produto sem o
+ * seu único diferencial justamente para quem ainda está decidindo, e venderia
+ * uma coisa que o avaliador nunca viu funcionar. O que o Pro compra é
+ * **quantidade**, não a existência do aviso.
+ *
+ * Três porque dois se confunde com amostra e cinco leva de volta ao problema
+ * de 50: prestador de serviço manda 3 orçamentos numa semana boa, então o
+ * quarto chega enquanto o produto está aberto na tela.
+ */
+export const FREE_ORCAMENTO_LIMIT = 3
+
+/**
  * Empresas (workspaces) que uma conta Free pode criar.
  *
  * Sem este limite, o teto de 2 colaboradores não segurava nada: bastava criar
@@ -59,7 +99,44 @@ export const FREE_WORKSPACE_LIMIT = 1
  * discordando, e é assim que um limite vira decorativo.
  */
 export const PRO_WORKSPACE_LIMIT = 5
-export const PRO_PLAN_PRICE = 49
+
+/**
+ * O preço do Pro, por mês, pela empresa inteira.
+ *
+ * ## Era 49 até 10/09, e a troca saiu de medição
+ *
+ * Três números independentes apontaram para o mesmo lugar, e nenhum deles foi
+ * procurado querendo este resultado:
+ *
+ *     Agendor 2025    R$ 18,5 mi / 6.000 pagantes  =  ARPU R$ 257/mes
+ *     micro-SaaS      o corte entre viver e morrer esta em US$ 79/mes
+ *                     (estudo com 1.000 produtos) — R$ 49 e US$ 9
+ *     26 CRMs         entrada de R$ 10 a R$ 597, e o fundo cobra R$ 11
+ *
+ * O terceiro é o que derruba o argumento antigo. "R$ 49 pela empresa toda" só
+ * vira vantagem a partir de 4 ou 5 pessoas; para a marcenaria de duas, o
+ * Bitrix24 sai por R$ 22 e nós saíamos por 49. **Na faixa que a prospecção de
+ * fato aborda, éramos o mais caro dos baratos** — pagando o preço de barato
+ * (comprador B2B lê preço como sinal de qualidade) sem a vantagem dele.
+ *
+ * ## Por que 97 e não 149
+ *
+ * 149 cabe melhor na aritmética — abre o Google Ads, que a R$ 97 ainda não
+ * fecha. Mas 95 empresas já receberam a mensagem dizendo R$ 49, e o salto de
+ * 3x transformaria a próxima conversa numa correção. 97 fica logo abaixo do
+ * nexxou (R$ 97 POR USUÁRIO) e mantém a frase inteira: uma equipe de quatro
+ * paga R$ 340 no Agendor e R$ 97 aqui.
+ *
+ * ## O que ele move, e é por isso que é a alavanca mais barata do produto
+ *
+ *     LTV a 4% de churn      R$ 1.225  ->  R$ 2.425
+ *     CAC maximo (regua 3:1) R$   408  ->  R$   808
+ *     clientes p/ R$ 10 mil       204  ->       103
+ *
+ * Nenhuma linha de recurso muda. **Subir o preço move cinco linhas de uma vez;
+ * construir recurso novo não move nenhuma.**
+ */
+export const PRO_PLAN_PRICE = 97
 
 /**
  * A mediana do que os concorrentes cobram POR USUÁRIO, em reais.

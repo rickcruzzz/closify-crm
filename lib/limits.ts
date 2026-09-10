@@ -2,11 +2,48 @@ import { createClient } from '@/lib/supabase/server'
 import {
   FREE_LEAD_LIMIT,
   FREE_MEMBER_LIMIT,
+  FREE_ORCAMENTO_LIMIT,
   FREE_WORKSPACE_LIMIT,
   PRO_WORKSPACE_LIMIT,
 } from '@/lib/plans'
 
 type LimitCheck = { allowed: boolean; reason?: string }
+
+/**
+ * Quantos orçamentos com lembrete ainda cabem no Free desta empresa.
+ *
+ * Espelha a trigger da 0079, que é quem de fato recusa — esta existe para a
+ * mensagem chegar ANTES da tentativa, como `canAddLead`. As duas contam a
+ * mesma coisa e por isso precisam contar do mesmo jeito: **só orçamento
+ * ABERTO**, porque negócio ganho ou perdido libera a vaga.
+ *
+ * Sem o `stage` aqui, a tela diria "você tem 3 de 3" para quem fechou dois — e
+ * o banco deixaria criar. Limite que a tela e o banco contam diferente é pior
+ * que limite nenhum: ele ensina a pessoa a não acreditar no aviso.
+ */
+export async function canAddOrcamento(workspaceId: string): Promise<LimitCheck> {
+  const supabase = await createClient()
+
+  const { data: pro } = await supabase.rpc('pro_vigente', { target_workspace_id: workspaceId })
+
+  if (pro) return { allowed: true }
+
+  const { count } = await supabase
+    .from('deals')
+    .select('id', { count: 'exact', head: true })
+    .eq('workspace_id', workspaceId)
+    .not('orcamento_validade', 'is', null)
+    .not('stage', 'in', '(fechado_ganho,fechado_perdido)')
+
+  if ((count ?? 0) >= FREE_ORCAMENTO_LIMIT) {
+    return {
+      allowed: false,
+      reason: `O plano Free acompanha ${FREE_ORCAMENTO_LIMIT} orçamentos ao mesmo tempo. Feche um negócio ou faça upgrade para o Pro para acompanhar quantos quiser.`,
+    }
+  }
+
+  return { allowed: true }
+}
 
 export async function canAddLead(workspaceId: string): Promise<LimitCheck> {
   const supabase = await createClient()
