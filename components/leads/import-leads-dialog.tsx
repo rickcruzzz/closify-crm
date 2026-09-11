@@ -123,6 +123,81 @@ export function ImportLeadsDialog({
     URL.revokeObjectURL(url)
   }
 
+  /**
+   * O caminho comum de arquivo e de texto colado: valida, acha o cabeçalho e
+   * avança para a conferência de colunas.
+   *
+   * Existe porque colar e escolher arquivo produzem a MESMA matriz e divergiam
+   * em silêncio quando eram dois trechos: a detecção de cabeçalho valeria só
+   * para um dos dois, e a diferença só apareceria com a planilha de título.
+   *
+   * Devolve `false` quando recusou, para o chamador parar sem repetir o toast.
+   */
+  function aceitarMatriz(lida: string[][], origem: string): boolean {
+    if (lida.length < 2) {
+      toast.error('A planilha não tem nenhuma linha além do cabeçalho.')
+      return false
+    }
+
+    setNomeDoArquivo(origem)
+    setMatriz(lida)
+
+    // ## A linha do cabeçalho é achada sozinha
+    //
+    // Era fixo em 0, e planilha exportada de outro sistema traz título e data
+    // antes do cabeçalho. O resultado, reproduzido pela tela em 11/09: todas as
+    // colunas em "Nenhuma coluna" e o botão de confirmar nascendo DESABILITADO
+    // — a pessoa concluía que a importação não funciona.
+    //
+    // Dos cinco formatos testados, só esse falhava. A sugestão continua
+    // editável logo abaixo: a detecção propõe, a pessoa decide.
+    const linhaDoCabecalho = detectarLinhaDoCabecalho(lida, sugerirMapeamento)
+    setPularLinhas(linhaDoCabecalho)
+    setMapeamento(sugerirMapeamento(lida[linhaDoCabecalho] ?? []))
+    setPasso('colunas')
+    return true
+  }
+
+  /**
+   * Colar as linhas direto do Excel ou do Google Sheets.
+   *
+   * ## Por que isto existe, e por que é o caminho mais curto que existe
+   *
+   * O caminho de arquivo tem cinco passos fora do produto: abrir a planilha,
+   * "Salvar como", escolher a pasta, escolher o formato, achar o arquivo no
+   * seletor. Cada um é um lugar de desistir, e o `.xls` prova que pelo menos um
+   * deles a pessoa erra — foi preciso escrever uma mensagem só para ele.
+   *
+   * Colar tem dois: Ctrl+C na planilha, Ctrl+V aqui. E funciona onde o arquivo
+   * não funciona: quem trabalha no Google Sheets não tem arquivo nenhum no
+   * computador para arrastar, e exportar um é outro desvio inteiro.
+   *
+   * ## Nenhuma peça nova
+   *
+   * O que Excel e Sheets põem na área de transferência é texto separado por
+   * TABULAÇÃO — e `escolherSeparador` já julga o arquivo inteiro por
+   * consistência, com a tabulação entre os candidatos desde 08/09. A detecção
+   * de cabeçalho e o mapeamento são os mesmos. Nada aqui é caminho paralelo.
+   */
+  function colarLinhas(texto: string) {
+    const limpo = texto.replace(/\r\n?/g, '\n').trim()
+    if (!limpo) return
+
+    // Mesmo teto do arquivo, medido sobre o texto: colar dez mil linhas
+    // travaria a aba antes de qualquer validação nossa aparecer.
+    if (limpo.length > CSV_MAX_BYTES) {
+      toast.error('Texto grande demais. O limite é o mesmo do arquivo, 512 KB.')
+      return
+    }
+
+    try {
+      aceitarMatriz(lerCsv(limpo), 'Colado da planilha')
+    } catch (err) {
+      console.error('falha ao ler o texto colado', err)
+      toast.error('Não foi possível ler o que foi colado. Copie as linhas inteiras da planilha.')
+    }
+  }
+
   async function escolherArquivo(arquivo: File) {
     if (arquivo.size > CSV_MAX_BYTES) {
       toast.error('Arquivo grande demais. O limite é 512 KB por importação.')
@@ -182,27 +257,7 @@ export function ImportLeadsDialog({
         lida = lerCsv(decodificarPlanilha(bytes))
       }
 
-      if (lida.length < 2) {
-        toast.error('A planilha não tem nenhuma linha além do cabeçalho.')
-        return
-      }
-
-      setNomeDoArquivo(arquivo.name)
-      setMatriz(lida)
-
-      // ## A linha do cabeçalho é achada sozinha
-      //
-      // Era fixo em 0, e planilha exportada de outro sistema traz título e
-      // data antes do cabeçalho. O resultado, reproduzido pela tela em 11/09:
-      // todas as colunas em "Nenhuma coluna" e o botão de confirmar nascendo
-      // DESABILITADO — a pessoa concluía que a importação não funciona.
-      //
-      // Dos cinco formatos testados, só esse falhava. A sugestão continua
-      // editável logo abaixo: a detecção propõe, a pessoa decide.
-      const linhaDoCabecalho = detectarLinhaDoCabecalho(lida, sugerirMapeamento)
-      setPularLinhas(linhaDoCabecalho)
-      setMapeamento(sugerirMapeamento(lida[linhaDoCabecalho] ?? []))
-      setPasso('colunas')
+      if (!aceitarMatriz(lida, arquivo.name)) return
     } catch (err) {
       console.error('falha ao ler a planilha', err)
       toast.error('Não foi possível ler o arquivo. Confira se é um .xlsx ou .csv válido.')
@@ -489,6 +544,43 @@ export function ImportLeadsDialog({
               <p className="text-muted-foreground text-xs">
                 Contatos repetidos ou já cadastrados são ignorados.
               </p>
+            </div>
+
+            {/* ## Colar, que é o caminho mais curto que existe
+
+                O arquivo tem cinco passos fora do produto: abrir a planilha,
+                "Salvar como", escolher pasta, escolher formato, achar o arquivo
+                no seletor. Colar tem dois, e funciona para quem trabalha no
+                Google Sheets e não tem arquivo nenhum no computador.
+
+                Visível e não só um `onPaste` escondido: atalho que ninguém
+                descobre não encurta caminho de ninguém. A área é um campo de
+                verdade, alcançável por teclado, com rótulo próprio. */}
+            <div className="flex flex-col gap-1.5">
+              <div className="flex items-center gap-3">
+                <span className="bg-border h-px flex-1" />
+                <span className="text-muted-foreground text-xs font-medium">ou cole as linhas</span>
+                <span className="bg-border h-px flex-1" />
+              </div>
+              <Label htmlFor="colar-planilha" className="sr-only">
+                Cole aqui as linhas copiadas da planilha
+              </Label>
+              <textarea
+                id="colar-planilha"
+                rows={3}
+                disabled={lendo}
+                placeholder="Selecione as linhas no Excel ou no Google Sheets, copie (Ctrl+C) e cole aqui (Ctrl+V)."
+                className="border-input focus-visible:ring-ring min-h-11 w-full resize-none rounded-lg border bg-transparent px-3 py-2 text-sm focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none disabled:opacity-60"
+                // No `onPaste` e não no `onChange`: digitar contato a contato
+                // aqui abriria a conferência de colunas a cada tecla. O gesto
+                // que este campo existe para atender é colar.
+                onPaste={(e) => {
+                  const texto = e.clipboardData.getData('text/plain')
+                  if (!texto.trim()) return
+                  e.preventDefault()
+                  colarLinhas(texto)
+                }}
+              />
             </div>
 
             <DialogFooter className="sm:justify-start">
@@ -894,7 +986,7 @@ export function ImportLeadsDialog({
             <DialogFooter className="sm:justify-between">
               <Button type="button" variant="ghost" onClick={() => setPasso('arquivo')}>
                 <ArrowLeft className="size-4" />
-                Trocar arquivo
+                Trocar planilha
               </Button>
               <Button
                 type="button"
