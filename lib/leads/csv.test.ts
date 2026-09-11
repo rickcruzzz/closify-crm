@@ -5,6 +5,7 @@ import {
   decodificarPlanilha,
   detectarSeparador,
   escolherSeparador,
+  formaDoArquivo,
   lerCsv,
   detectarLinhaDoCabecalho,
   parseValorBRL,
@@ -226,5 +227,91 @@ describe('detectarLinhaDoCabecalho', () => {
 
   it('aceita matriz vazia sem estourar', () => {
     expect(detectarLinhaDoCabecalho([], sugerirMapeamento)).toBe(0)
+  })
+})
+
+describe('formaDoArquivo', () => {
+  /**
+   * O arquivo que o dono mandou em 11/09. A tela lia tudo como uma coluna só e
+   * dizia que não achou e-mail nem telefone — com os dois ali, visíveis.
+   */
+  it('separa o título do dado no arquivo do relato', () => {
+    const bruto = [
+      'EMPRESA',
+      'Alfa Soluções Empresariais LTDA',
+      '',
+      'CONTATOS:',
+      'Mariana Oliveira | mariana@alfasolucoes.com.br | (71) 99111-1001',
+      'Rafael Santos | rafael@alfasolucoes.com.br | (71) 99222-1002',
+    ].join('\n')
+
+    expect(escolherSeparador(bruto)).toBe('|')
+
+    const m = lerCsv(bruto)
+    const forma = formaDoArquivo(m)
+    expect(forma.colunas).toBe(3)
+    expect(forma.primeiraLinhaDeDados).toBe(3)
+    expect(forma.descartadas).toEqual([
+      'EMPRESA',
+      'Alfa Soluções Empresariais LTDA',
+      'CONTATOS:',
+    ])
+  })
+
+  it('não descarta nada quando o arquivo já começa nos dados', () => {
+    const m = lerCsv('Nome;Email\nAna;ana@x.com.br\nBia;bia@x.com.br')
+    const forma = formaDoArquivo(m)
+    expect(forma.primeiraLinhaDeDados).toBe(0)
+    expect(forma.descartadas).toEqual([])
+  })
+
+  /**
+   * Linha curta NO MEIO pode ser dado sujo — alguém apagou um campo — e jogá-la
+   * fora perderia um contato. O corte para na primeira linha na forma certa.
+   */
+  it('só corta ruído do começo, nunca do meio', () => {
+    const m = lerCsv('RELATORIO\nNome;Email\nAna;ana@x.com.br\nSemEmail\nBia;bia@x.com.br')
+    const forma = formaDoArquivo(m)
+    expect(forma.primeiraLinhaDeDados).toBe(1)
+    expect(forma.descartadas).toEqual(['RELATORIO'])
+  })
+
+  /** Arquivo legítimo de coluna única não vira ruído inteiro. */
+  it('deixa em paz um arquivo de uma coluna só', () => {
+    const m = lerCsv('Nome\nAna\nBia\nCarla')
+    const forma = formaDoArquivo(m)
+    expect(forma.colunas).toBe(1)
+    expect(forma.primeiraLinhaDeDados).toBe(0)
+    expect(forma.descartadas).toEqual([])
+  })
+
+  it('aceita matriz vazia', () => {
+    expect(formaDoArquivo([])).toEqual({ colunas: 0, primeiraLinhaDeDados: 0, descartadas: [] })
+  })
+})
+
+describe('o pipe como separador', () => {
+  it('reconhece uma lista escrita à mão', () => {
+    expect(escolherSeparador('Ana | ana@x.com.br | 11999998888\nBia | bia@x.com.br | 11988887777')).toBe('|')
+  })
+
+  /**
+   * O CONTROLE que impede o pipe de estragar arquivo bom: um endereço com `|`
+   * no meio de um CSV de vírgula não pode roubar a escolha. O piso de apoio é
+   * quem resolve — uma linha só com pipe é coincidência, não padrão.
+   */
+  it('não rouba a escolha de um CSV de vírgula', () => {
+    const bruto = [
+      'Nome,Email,Endereco',
+      'Ana,ana@x.com.br,Rua A 100',
+      'Bia,bia@x.com.br,Av B | fundos',
+      'Caio,caio@x.com.br,Rua C 300',
+    ].join('\n')
+    expect(escolherSeparador(bruto)).toBe(',')
+  })
+
+  /** Sem duas linhas concordando, não há padrão — e o padrão antigo vale. */
+  it('uma vírgula solta em texto livre não decide o arquivo', () => {
+    expect(escolherSeparador('titulo do documento\numa frase, com virgula\noutra frase sem nada')).toBe(',')
   })
 })

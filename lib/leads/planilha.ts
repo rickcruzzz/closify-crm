@@ -440,3 +440,111 @@ export function amostraDaColuna(corpo: string[][], indice: number): string | nul
   }
   return null
 }
+
+/**
+ * Descobre o papel de cada coluna pelo CONTEÚDO, quando o título não resolve.
+ *
+ * ## Por que precisa existir
+ *
+ * `sugerirMapeamento` lê o cabeçalho, e há dois casos comuns em que não há
+ * cabeçalho nenhum para ler:
+ *
+ *     lista escrita a mao    "Mariana | mariana@… | (71) 99111-1001"
+ *     exportacao de sistema  cabecalho em idioma ou jargao que ninguem previu
+ *
+ * O primeiro é o arquivo que o dono mandou em 11/09. Sem esta função, ele
+ * ficava bloqueado em "não achei e-mail nem telefone" — com o e-mail e o
+ * telefone ali, na tela, visíveis para qualquer pessoa que olhasse.
+ *
+ * ## Reusa o que já existe
+ *
+ * `temFormaDeEmail` exige arroba e ponto depois dela. `temFormaDeTelefone`
+ * exige 10 ou 11 dígitos **com DDD que existe de verdade** — é a lista que
+ * impediu "75 | 104 | 82" de virar telefone quando 108 tintas foram importadas
+ * como contatos em 09/09. Nenhum detector novo nasce aqui.
+ *
+ * ## A maioria decide, não a primeira célula
+ *
+ * Uma coluna de telefone tem célula vazia e célula mal digitada. Exigir todas
+ * barraria arquivo bom; aceitar uma bastaria para um CEP virar telefone. A
+ * metade das células preenchidas, com mínimo de duas, é o corte — o mesmo que
+ * `semColunaDeContato` já usa no diálogo.
+ *
+ * ## E o nome é o que SOBRA
+ *
+ * Não existe formato de nome. O que dá para afirmar é o negativo: a coluna que
+ * não é e-mail, não é telefone, não é dinheiro e tem texto com letra é a
+ * candidata. Entre duas candidatas, a mais à esquerda — em toda lista escrita
+ * por gente, o nome vem primeiro.
+ */
+/**
+ * Tem alguma letra?
+ *
+ * Construida com `new RegExp` e nao como literal `/\p{L}/u`: o `target` deste
+ * tsconfig e anterior a es6 e o compilador recusa a flag `u` num literal, ainda
+ * que o runtime a suporte. Mesma saida que `lib/sdr/blindagem.ts` usa nas
+ * guardas de palavra com acento.
+ */
+const TEM_LETRA = new RegExp('\\p{L}', 'u')
+
+export function inferirPorConteudo(
+  matriz: readonly (readonly string[])[],
+  primeiraLinhaDeDados = 0,
+  amostra = 12,
+): Mapeamento {
+  const linhas = matriz.slice(primeiraLinhaDeDados, primeiraLinhaDeDados + amostra)
+  if (linhas.length === 0) return {}
+
+  const largura = Math.max(0, ...linhas.map((l) => l.length))
+  const mapeamento: Mapeamento = {}
+  const usadas = new Set<number>()
+
+  const celulasDe = (coluna: number) =>
+    linhas.map((l) => (l[coluna] ?? '').trim()).filter(Boolean)
+
+  const maioria = (quantos: number, total: number) => total >= 2 && quantos * 2 >= total
+
+  // E-mail e telefone primeiro: são os únicos com forma conferível, e acertar
+  // um deles remove a coluna da disputa pelos outros campos.
+  for (const [campo, detecta] of [
+    ['email', temFormaDeEmail],
+    ['phone', temFormaDeTelefone],
+  ] as const) {
+    for (let c = 0; c < largura; c++) {
+      if (usadas.has(c) || mapeamento[campo] !== undefined) continue
+      const celulas = celulasDe(c)
+      if (maioria(celulas.filter(detecta).length, celulas.length)) {
+        mapeamento[campo] = c
+        usadas.add(c)
+      }
+    }
+  }
+
+  // Valor: célula que vira número depois de tirar "R$" e separador de milhar.
+  for (let c = 0; c < largura; c++) {
+    if (usadas.has(c) || mapeamento.value !== undefined) continue
+    const celulas = celulasDe(c)
+    const numericas = celulas.filter((v) => {
+      const n = parseValorBRL(v)
+      return n !== null && n > 0
+    }).length
+    if (maioria(numericas, celulas.length)) {
+      mapeamento.value = c
+      usadas.add(c)
+    }
+  }
+
+  // Nome: o que sobra com texto. A mais à esquerda ganha — em lista escrita por
+  // gente, o nome vem primeiro.
+  for (let c = 0; c < largura; c++) {
+    if (usadas.has(c) || mapeamento.name !== undefined) continue
+    const celulas = celulasDe(c)
+    const comLetra = celulas.filter((v) => TEM_LETRA.test(v)).length
+    if (maioria(comLetra, celulas.length)) {
+      mapeamento.name = c
+      usadas.add(c)
+    }
+  }
+
+  return mapeamento
+}

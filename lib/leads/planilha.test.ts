@@ -10,6 +10,7 @@ import {
   sugerirMapeamento,
   temFormaDeEmail,
   temFormaDeTelefone,
+  inferirPorConteudo,
 } from './planilha'
 
 const SEM_LIMITE = 10_000
@@ -442,5 +443,85 @@ describe('compatibilidade com a exportação dos outros CRMs', () => {
       name: 'Nome do contato',
       company: 'Nome da empresa',
     })
+  })
+})
+
+describe('inferirPorConteudo', () => {
+  /** O arquivo do relato de 11/09, já lido: três colunas, zero cabeçalho. */
+  const SEM_CABECALHO = [
+    ['Mariana Oliveira', 'mariana@alfasolucoes.com.br', '(71) 99111-1001'],
+    ['Rafael Santos', 'rafael@alfasolucoes.com.br', '(71) 99222-1002'],
+  ]
+
+  it('acha nome, e-mail e telefone sem nenhum cabeçalho', () => {
+    expect(inferirPorConteudo(SEM_CABECALHO)).toEqual({ name: 0, email: 1, phone: 2 })
+  })
+
+  it('funciona com as colunas em ordem trocada', () => {
+    expect(
+      inferirPorConteudo([
+        ['11999998888', 'ana@x.com.br', 'Ana Souza'],
+        ['11988887777', 'bia@x.com.br', 'Bia Lima'],
+      ]),
+    ).toEqual({ phone: 0, email: 1, name: 2 })
+  })
+
+  /**
+   * O caso que o pedido descreve: a coluna se chama "Contato" mas contém
+   * telefones. Aqui a inferência olha só o conteúdo, e o conteúdo é telefone.
+   */
+  it('reconhece telefone mesmo quando o título diria outra coisa', () => {
+    expect(
+      inferirPorConteudo([
+        ['Ana Souza', '(71) 99111-1001'],
+        ['Bia Lima', '71988887777'],
+      ]),
+    ).toEqual({ name: 0, phone: 1 })
+  })
+
+  it('reconhece valor em reais', () => {
+    expect(
+      inferirPorConteudo([
+        ['Ana', 'ana@x.com.br', 'R$ 1.500,00'],
+        ['Bia', 'bia@x.com.br', 'R$ 2.300,50'],
+      ]),
+    ).toEqual({ name: 0, email: 1, value: 2 })
+  })
+
+  /**
+   * O CONTROLE que impede o caso das 108 tintas de 09/09: planilha de produto
+   * não tem coluna com forma de contato, e a inferência não pode inventar uma.
+   */
+  it('NÃO inventa e-mail nem telefone numa planilha de produto', () => {
+    const m = inferirPorConteudo([
+      ['Tinta Acrílica Branca', '75'],
+      ['Tinta Esmalte Azul', '104'],
+      ['Verniz Fosco', '82'],
+    ])
+    expect(m.email).toBeUndefined()
+    expect(m.phone).toBeUndefined()
+  })
+
+  /** Uma célula só é coincidência: o corte exige duas. */
+  it('não decide com uma linha só', () => {
+    expect(inferirPorConteudo([['Ana', 'ana@x.com.br']])).toEqual({})
+  })
+
+  it('aceita matriz vazia', () => {
+    expect(inferirPorConteudo([])).toEqual({})
+  })
+
+  it('respeita o início dos dados, pulando o ruído', () => {
+    expect(
+      inferirPorConteudo(
+        [
+          ['EMPRESA'],
+          ['CONTATOS:'],
+          ['Ana Souza', 'ana@x.com.br'],
+          ['Bia Lima', 'bia@x.com.br'],
+        ],
+        2,
+      ),
+    ).toEqual({ name: 0, email: 1 })
   })
 })

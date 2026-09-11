@@ -46,8 +46,29 @@ export function decodificarPlanilha(dados: ArrayBuffer | Uint8Array): string {
  * Excel em português exporta com `;`, Google Sheets com `,`. Detectar em vez
  * de fixar evita o modo de falha mais comum: o arquivo inteiro virar uma
  * coluna só e nenhuma linha ser importada.
+ * ## O pipe entrou em 11/09, e a falta dele era um defeito de verdade
+ *
+ * Relato do dono, com o arquivo: uma lista escrita como
+ * `Mariana Oliveira | mariana@... | (71) 99111-1001` virava **uma coluna so**,
+ * e a tela dizia que nao achou e-mail nem telefone. Reproduzido contra as
+ * funcoes reais antes de mexer em nada.
+ *
+ * O pipe nao e exportacao de planilha — e como se escreve lista a mao, em
+ * bloco de notas, em documento colado no Excel. E exatamente o arquivo que um
+ * cliente monta quando ninguem explicou o que e CSV, que e o publico daqui.
  */
-const CANDIDATOS: string[] = [';', ',', '\t']
+const CANDIDATOS: string[] = [';', ',', '\t', '|']
+
+/**
+ * Quantas linhas precisam concordar para um separador ser aceito.
+ *
+ * Sem piso, **uma** linha bastava: num texto livre onde so uma frase tem
+ * virgula, a virgula ganhava e o arquivo era repartido por acidente. Duas
+ * linhas concordando e o minimo que distingue padrao de coincidencia — e um
+ * arquivo de coluna unica legitimo simplesmente nao atinge o piso, que e o
+ * resultado certo para ele.
+ */
+const APOIO_MINIMO = 2
 
 /**
  * O separador de UMA linha, pelo número de ocorrências.
@@ -202,6 +223,9 @@ export function escolherSeparador(conteudo: string): string {
       }
     }
 
+    // Abaixo do piso nao concorre: um apoio so e coincidencia, nao padrao.
+    if (apoio < APOIO_MINIMO) continue
+
     const nota = apoio * 1000 + modal
     if (nota > melhorNota) {
       melhorNota = nota
@@ -329,4 +353,116 @@ export function detectarLinhaDoCabecalho(
   // Nenhuma linha reconhecida: fica em 0 e a pessoa escolhe, que é o
   // comportamento anterior. Melhor não mexer do que pular um contato.
   return melhorPontos >= 2 ? melhor : 0
+}
+
+/**
+ * A forma do arquivo: quantas colunas ele de fato tem, e onde os dados começam.
+ *
+ * ## O defeito que isto fecha, reproduzido em 11/09
+ *
+ * O dono mandou um arquivo que a tela lia como uma coluna só:
+ *
+ *     EMPRESA                                       1 coluna
+ *     Alfa Soluções Empresariais LTDA               1 coluna
+ *     CONTATOS:                                     1 coluna
+ *     Mariana Oliveira | mariana@… | (71) 99111…    3 colunas   <- o dado
+ *     Rafael Santos    | rafael@…  | (71) 99222…    3 colunas   <- o dado
+ *
+ * Três defeitos empilhados: o pipe não era candidato a separador, o arquivo
+ * não tem cabeçalho, e **as linhas de título contavam como dados**. Esta
+ * função resolve a terceira.
+ *
+ * ## A forma é a MODA, não a primeira linha
+ *
+ * Título e cabeçalho de seção são linhas curtas — quase sempre uma célula só —
+ * no meio de um arquivo cujas linhas de verdade têm três, quatro, seis. A
+ * largura que mais se repete é a forma do arquivo; quem está fora dela é
+ * moldura, não conteúdo.
+ *
+ * Ler a primeira linha, que foi o que o produto fez até 08/09, faz o título
+ * decidir o arquivo inteiro.
+ *
+ * ## Só descarta ruído do COMEÇO
+ *
+ * Linha fora de forma no meio do arquivo pode ser dado sujo — uma célula a
+ * menos porque alguém apagou um campo —, e jogá-la fora perderia um contato.
+ * No começo, antes de qualquer linha na forma certa, ela é título com
+ * segurança. O corte para na primeira linha que tem a largura da moda.
+ *
+ * ## E o resultado é MOSTRADO, nunca silencioso
+ *
+ * `descartadas` existe para a tela poder dizer "3 linhas de título foram
+ * ignoradas". Descarte invisível é a classe de defeito que este projeto já
+ * pagou: a pessoa importa 244 de 247 e nunca sabe quais três sumiram.
+ */
+export function formaDoArquivo(matriz: readonly (readonly string[])[]): {
+  /** A largura que mais se repete. */
+  colunas: number
+  /** Índice da primeira linha que tem essa largura. */
+  primeiraLinhaDeDados: number
+  /** As linhas de título que ficaram para trás, na ordem. */
+  descartadas: string[]
+} {
+  if (matriz.length === 0) return { colunas: 0, primeiraLinhaDeDados: 0, descartadas: [] }
+
+  const largura = (linha: readonly string[]) => {
+    // Conta até a última célula preenchida: o CSV costuma trazer separadores
+    // sobrando no fim da linha, e contá-los faria a mesma linha parecer de
+    // larguras diferentes conforme o quanto a pessoa apagou.
+    let fim = -1
+    for (let i = 0; i < linha.length; i++) if ((linha[i] ?? '').trim() !== '') fim = i
+    return fim + 1
+  }
+
+  const votos = new Map<number, number>()
+  for (const linha of matriz) {
+    const l = largura(linha)
+    if (l > 0) votos.set(l, (votos.get(l) ?? 0) + 1)
+  }
+
+  /**
+   * A moda SIMPLES erra neste arquivo, e a prova é o caso do relato:
+   *
+   *     EMPRESA / Alfa Soluções… / CONTATOS:   3 linhas de 1 coluna
+   *     Mariana | … / Rafael | …               2 linhas de 3 colunas
+   *
+   * O ruído é MAIS frequente que o dado, então a moda pura devolvia 1 — o
+   * defeito que esta função existe para corrigir, reproduzido dentro dela.
+   *
+   * Uma linha de uma célula só nunca é forma de tabela: é título. Então a forma
+   * sai da moda das larguras de 2 ou mais, e a largura 1 só vence quando não há
+   * nenhuma largura maior com apoio — que é o arquivo de coluna única de
+   * verdade, e aí ela está certa.
+   */
+  const escolherModa = (minimo: number) => {
+    let l = 0
+    let a = 0
+    for (const [largura_, quantas] of Array.from(votos.entries())) {
+      if (largura_ < minimo) continue
+      // Empate vai para a largura MAIOR: um arquivo de 3 colunas com uma linha
+      // incompleta não deve ser lido como de 2.
+      if (quantas > a || (quantas === a && largura_ > l)) {
+        l = largura_
+        a = quantas
+      }
+    }
+    return { colunas: l, apoio: a }
+  }
+
+  const tabular = escolherModa(2)
+  const { colunas, apoio } = tabular.apoio >= 2 ? tabular : escolherModa(1)
+
+  // Uma linha só na forma é fraco demais para justificar descarte: pode ser o
+  // arquivo inteiro sendo de coluna única. Nesse caso, nada é ruído.
+  if (apoio < 2) return { colunas, primeiraLinhaDeDados: 0, descartadas: [] }
+
+  let inicio = 0
+  const descartadas: string[] = []
+  while (inicio < matriz.length && largura(matriz[inicio] ?? []) !== colunas) {
+    const texto = (matriz[inicio] ?? []).join(' ').trim()
+    if (texto) descartadas.push(texto)
+    inicio++
+  }
+
+  return { colunas, primeiraLinhaDeDados: inicio, descartadas }
 }
