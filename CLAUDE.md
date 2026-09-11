@@ -292,8 +292,8 @@ uma rodada antiga —, e nada na resposta de uma consulta avisava disso. Só
 instalado na pasta pessoal do usuário, fora daqui. O que foi retirado está
 inteiro em `graphify-out/arquivo/`, nada foi descartado.
 
-<!-- contagem: grafo.nos_sem_arquivo=108 -->
-**108 nós não têm arquivo de origem, e nenhum deles é fantasma.** A grande
+<!-- contagem: grafo.nos_sem_arquivo=119 -->
+**119 nós não têm arquivo de origem, e nenhum deles é fantasma.** A grande
 maioria são objetos do banco que o extrator representa sem arquivo —
 `public.workspaces`, `auth.users`, `public.checar_teto_de_mensagens` —, mais
 alguns símbolos importados pelos geradores em Python (`FreeTypeFont`, `Image`,
@@ -315,11 +315,22 @@ Como ele andou, em ordem:
                   tabela do jeito que um `create` carrega
     108   09/09   `Image` do Pillow, usado direto quando `icone_de_confirmacao`
                   nasceu — a segunda metade da explicacao acima
+    119   11/09   ONZE de uma vez, e todos do mesmo caso do 107: objetos de
+                  banco citados por `alter table` em migrations antigas
+                  (0069-0075, 0078, 0081, 0082). Um `--update` reextraiu as
+                  migrations inteiras, e cada `alter` mintou o objeto sem
+                  arquivo. NENHUMA tabela nasceu — a contagem do catalogo
+                  continua 21, medida por `banco.tabelas`
 
 **A leitura errada aqui é fácil e cara:** ver o número subir logo depois de uma
-migration convida a concluir que uma tabela nasceu. Nos dois últimos casos não
-nasceu nenhuma — a contagem de tabelas era **20** o tempo todo, e virou 21 só
-com a 0080.
+migration convida a concluir que uma tabela nasceu. Em nenhum dos três últimos
+casos nasceu — inclusive no salto de onze em 11/09, que veio de `alter table` e
+não de `create`.
+
+**E desde 11/09 há como conferir sem adivinhar:** `banco.tabelas` mede o
+catálogo de verdade, e é carimbado no `prd.md` e no `schema.md`. O número de nós
+sem arquivo e o número de tabelas passaram a ser perguntas separadas, com
+respostas separadas.
 
 Estes cinco parágrafos estavam em cinco blocos separados, **fora de ordem
 cronológica** (09/09 antes de 08/09), cada um correto quando escrito e o
