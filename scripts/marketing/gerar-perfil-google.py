@@ -56,6 +56,24 @@ g = importlib.util.module_from_spec(_spec)
 sys.modules["gerar_stories"] = g
 _spec.loader.exec_module(g)
 
+# ## O gerador de feed entra só por `_print_no_claro`
+#
+# Ele resolve uma coisa que `card_com_print` do módulo base não resolve:
+# amostrar uma REGIÃO do print em vez da tela inteira. Sem isso, a tela de
+# 1440px de CSS cabe numa coluna de ~1000px a 0,60x, e texto de 14px vira
+# 8,4px — ilegível, e é o "borrado ao dar zoom" que o dono já relatou em 09/09.
+#
+# Importar tem um efeito colateral conhecido: o módulo do feed reconfigura as
+# dimensões globais (1080x1350) no import. Fica inofensivo porque toda peça
+# daqui chama `_formato()` antes de desenhar — mas é a razão de o import ficar
+# AQUI, depois do módulo base e antes de qualquer uso.
+_spec_feed = importlib.util.spec_from_file_location(
+    "gerar_feed", Path(__file__).resolve().parent / "gerar-feed.py"
+)
+feed = importlib.util.module_from_spec(_spec_feed)
+sys.modules["gerar_feed"] = feed
+_spec_feed.loader.exec_module(feed)
+
 
 SAIDA = g.RAIZ / "marketing" / "google-perfil"
 
@@ -238,10 +256,27 @@ def produto():
         g.cor_corpo(),
     )
 
-    # O print come a faixa que sobra até a assinatura, com respiro de 6%.
-    # `card_com_print` escala pela LARGURA e corta pela base com esmaecimento —
-    # a correção de 09/09, quando o print entrava espremido em 2,7x.
-    g.card_com_print(img, "hoje-light.png", y + int(g.H * 0.05), base - y - int(g.H * 0.11))
+    # ## O print mostra a TAREFA, não o menu
+    #
+    # `card_com_print` do módulo base encaixa a tela inteira: numa coluna de
+    # ~1000px, os 1440px de CSS caem para 0,60x e o texto de 14px do app vira
+    # 8,4px. O resultado é a tela do produto ilegível na peça que existe para
+    # mostrar a tela do produto.
+    #
+    # `_print_no_claro` amostra uma REGIÃO da origem — `(x, y, largura)` — e o
+    # recorte abaixo é o mesmo já usado no carrossel de orçamento: começa depois
+    # da barra lateral, que ocupa um sexto da largura e não diz nada sobre
+    # orçamento. O que prova a promessa é a tarefa vencida com hora e nome.
+    #
+    # A escala sobe de 0,60x para ~0,89x, e `_print_no_claro` FALHA a geração
+    # se cair abaixo de 0,80x — a guarda que nasceu junto com a correção.
+    feed._print_no_claro(
+        img,
+        "hoje-light.png",
+        y + int(g.H * 0.05),
+        base - y - int(g.H * 0.11),
+        recorte=(530, 285, 2200),
+    )
     g.assinar_discreto(img, draw)
 
     # O tema volta ao escuro: as peças seguintes leem a MESMA global, e deixá-la
