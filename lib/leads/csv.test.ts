@@ -1,10 +1,12 @@
 import { describe, expect, it } from 'vitest'
+import { sugerirMapeamento } from '@/lib/leads/planilha'
 
 import {
   decodificarPlanilha,
   detectarSeparador,
   escolherSeparador,
   lerCsv,
+  detectarLinhaDoCabecalho,
   parseValorBRL,
 } from './csv'
 
@@ -172,5 +174,57 @@ describe('escolherSeparador — planilha com titulo acima do cabecalho', () => {
     const texto = 'Nome;Obs\nAna;"linha 1\nlinha 2"\nBruno;ok\n'
     expect(escolherSeparador(texto)).toBe(';')
     expect(lerCsv(texto)[1]).toEqual(['Ana', 'linha 1\nlinha 2'])
+  })
+})
+
+describe('detectarLinhaDoCabecalho', () => {
+  /**
+   * O caso que motivou a função, reproduzido pela TELA em 11/09: o botão de
+   * confirmar nascia desabilitado e a pessoa concluía que a importação não
+   * funciona. Era o único dos cinco formatos testados que falhava.
+   */
+  it('pula título e data antes do cabeçalho', () => {
+    const matriz = [
+      ['RELATORIO DE CLIENTES'],
+      ['Gerado em 10/09/2026'],
+      [],
+      ['Nome', 'Telefone', 'Empresa'],
+      ['Carlos Lima', '11955554444', 'Lima Vidros'],
+    ]
+    expect(detectarLinhaDoCabecalho(matriz, sugerirMapeamento)).toBe(3)
+  })
+
+  it('fica em 0 quando o cabeçalho já é a primeira linha', () => {
+    const matriz = [
+      ['Nome', 'E-mail', 'Telefone'],
+      ['João', 'joao@teste.com', '11999998888'],
+    ]
+    expect(detectarLinhaDoCabecalho(matriz, sugerirMapeamento)).toBe(0)
+  })
+
+  /**
+   * O controle que importa mais que os outros: sem cabeçalho reconhecível,
+   * NÃO inventa um desvio. Errar para baixo apagaria o primeiro contato da
+   * importação, e ninguém notaria — a planilha entraria com uma pessoa a menos.
+   */
+  it('não pula nada quando não há cabeçalho reconhecível', () => {
+    const matriz = [
+      ['Pedro Alves', '11944443333'],
+      ['Lucia Ramos', '11933332222'],
+    ]
+    expect(detectarLinhaDoCabecalho(matriz, sugerirMapeamento)).toBe(0)
+  })
+
+  it('ignora linha de uma célula só, que é título e não cabeçalho', () => {
+    const matriz = [
+      ['Contatos'],
+      ['Nome', 'Telefone'],
+      ['Ana', '11922221111'],
+    ]
+    expect(detectarLinhaDoCabecalho(matriz, sugerirMapeamento)).toBe(1)
+  })
+
+  it('aceita matriz vazia sem estourar', () => {
+    expect(detectarLinhaDoCabecalho([], sugerirMapeamento)).toBe(0)
   })
 })

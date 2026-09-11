@@ -262,3 +262,71 @@ export function parseValorBRL(bruto: string): number | null {
   const numero = Number(normalizado)
   return Number.isFinite(numero) ? numero : null
 }
+
+/**
+ * Em qual linha está o cabeçalho?
+ *
+ * ## O defeito que isto fecha, reproduzido pela TELA em 11/09
+ *
+ * Planilha exportada de outro sistema vem com título e data antes do
+ * cabeçalho:
+ *
+ *     1  RELATORIO DE CLIENTES
+ *     2  Gerado em 10/09/2026
+ *     3  Nome;Telefone;Empresa      <- a linha que importa
+ *
+ * O diálogo mapeava a linha 0, achava "RELATORIO DE CLIENTES" como único
+ * título, todas as colunas ficavam em "Nenhuma coluna" e o botão de confirmar
+ * nascia **desabilitado**. Quem não descobrisse sozinho que precisa mover o
+ * seletor de linha concluía que a importação não funciona — e foi exatamente
+ * o relato do dono: *"até agora não consegui importar nenhuma planilha"*.
+ *
+ * Medido: dos cinco formatos testados pela interface, quatro passavam
+ * (Google Sheets, Excel pt-BR, só-telefone, `.xlsx`) e **só o de título
+ * falhava**. Não era a leitura — era qual linha ela lia.
+ *
+ * ## Como decide, e por que não é só "a primeira linha cheia"
+ *
+ * Pontua cada uma das primeiras linhas por quantas células casam com um
+ * campo conhecido (`sugerirMapeamento` é a mesma função que o diálogo usa
+ * depois, então a detecção e o mapeamento nunca discordam).
+ *
+ * Linha de título tem uma célula só e não casa com campo nenhum: pontua 0.
+ * O cabeçalho de verdade casa com duas ou mais.
+ *
+ * ## O empate é resolvido para CIMA, e isso é decisão
+ *
+ * Sem nenhuma linha pontuando 2 ou mais, devolve 0 — o comportamento de hoje.
+ * Errar para baixo custaria pular dados: numa planilha SEM cabeçalho, a
+ * primeira linha já é contato, e "detectar" um cabeçalho ali apagaria uma
+ * pessoa da importação sem ninguém notar.
+ *
+ * Só olha as primeiras linhas: cabeçalho no meio do arquivo não é planilha de
+ * contatos, é relatório com seções, e adivinhar ali erraria mais que acertaria.
+ */
+export function detectarLinhaDoCabecalho(
+  matriz: readonly (readonly string[])[],
+  sugerir: (cabecalho: string[]) => Record<string, unknown>,
+  limite = 8,
+): number {
+  let melhor = 0
+  let melhorPontos = 0
+
+  for (let i = 0; i < Math.min(limite, matriz.length); i++) {
+    const linha = matriz[i] ?? []
+    const preenchidas = linha.filter((c) => c.trim() !== '')
+    // Uma célula só é título, não cabeçalho: "RELATORIO DE CLIENTES" numa
+    // linha sozinha é o caso que motivou esta função.
+    if (preenchidas.length < 2) continue
+
+    const pontos = Object.keys(sugerir([...linha])).length
+    if (pontos > melhorPontos) {
+      melhorPontos = pontos
+      melhor = i
+    }
+  }
+
+  // Nenhuma linha reconhecida: fica em 0 e a pessoa escolhe, que é o
+  // comportamento anterior. Melhor não mexer do que pular um contato.
+  return melhorPontos >= 2 ? melhor : 0
+}

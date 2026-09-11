@@ -30,7 +30,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { CSV_MAX_BYTES, CSV_MAX_LINHAS, decodificarPlanilha, lerCsv } from '@/lib/leads/csv'
+import { CSV_MAX_BYTES, CSV_MAX_LINHAS, decodificarPlanilha, lerCsv, detectarLinhaDoCabecalho } from '@/lib/leads/csv'
 import {
   CAMPOS,
   amostraDaColuna,
@@ -189,8 +189,19 @@ export function ImportLeadsDialog({
 
       setNomeDoArquivo(arquivo.name)
       setMatriz(lida)
-      setPularLinhas(0)
-      setMapeamento(sugerirMapeamento(lida[0] ?? []))
+
+      // ## A linha do cabeçalho é achada sozinha
+      //
+      // Era fixo em 0, e planilha exportada de outro sistema traz título e
+      // data antes do cabeçalho. O resultado, reproduzido pela tela em 11/09:
+      // todas as colunas em "Nenhuma coluna" e o botão de confirmar nascendo
+      // DESABILITADO — a pessoa concluía que a importação não funciona.
+      //
+      // Dos cinco formatos testados, só esse falhava. A sugestão continua
+      // editável logo abaixo: a detecção propõe, a pessoa decide.
+      const linhaDoCabecalho = detectarLinhaDoCabecalho(lida, sugerirMapeamento)
+      setPularLinhas(linhaDoCabecalho)
+      setMapeamento(sugerirMapeamento(lida[linhaDoCabecalho] ?? []))
       setPasso('colunas')
     } catch (err) {
       console.error('falha ao ler a planilha', err)
@@ -392,7 +403,9 @@ export function ImportLeadsDialog({
             {passo === 'arquivo' &&
               'Arquivo do Excel (.xlsx) ou .csv. As colunas são reconhecidas sozinhas, você só confere. Cada linha vira um contato e um negócio no funil.'}
             {passo === 'colunas' &&
-              `${nomeDoArquivo} · ${matriz.length - 1} linha(s). Confira antes de importar.`}
+              // Desconta o que foi pulado: sem isso a planilha com título dizia
+              // "3 linha(s)" e importava 1, e a divergência lia como perda de dados.
+              `${nomeDoArquivo} · ${Math.max(0, matriz.length - 1 - pularLinhas)} linha(s). Confira antes de importar.`}
             {passo === 'resultado' && 'O que entrou e o que precisa da sua atenção.'}
           </DialogDescription>
         </DialogHeader>
