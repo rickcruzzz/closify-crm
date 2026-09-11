@@ -180,3 +180,32 @@ export function mensagensPendentes(mensagens: readonly MensagemCrua[]): string {
     .filter((t): t is string => t !== null)
     .join('\n\n')
 }
+
+/**
+ * A conversa trazida contém alguma mensagem DO CLIENTE?
+ *
+ * ## O defeito que isto fecha, medido em produção em 11/09
+ *
+ * A Evolution desta instalação **não persiste mensagens recebidas** — guarda só
+ * as que ela mesma envia. `findMessages` devolveu 1 registro para uma conversa
+ * com vários áudios, e o único registro era a resposta do agente.
+ *
+ * Isso matava o fluxo em dois lugares ao mesmo tempo, pelo mesmo motivo:
+ *
+ *     mensagensPendentes()      devolvia vazio, e a rota calava "nada novo"
+ *     "Ainda sou a mais nova?"  nunca achava a mensagem atual, e ia para Ignora
+ *
+ * Três áudios chegaram, as três execuções deram `success`, e o dono não recebeu
+ * nada. Duas travas corretas, aplicadas sobre um histórico que não existe.
+ *
+ * Com esta checagem o comportamento **degrada** em vez de parar: sem histórico
+ * persistido o agente responde como respondia antes de 11/09 — sem memória e
+ * sem buffer, mas respondendo, que é melhor que o silêncio.
+ *
+ * **Para destravar de verdade:** `DATABASE_SAVE_DATA_NEW_MESSAGE=true` nas
+ * variáveis do serviço da Evolution no EasyPanel. É configuração do container,
+ * não coisa que a API mude.
+ */
+export function temMensagemDoCliente(mensagens: readonly MensagemCrua[]): boolean {
+  return mensagens.some((m) => m.key?.fromMe !== true)
+}

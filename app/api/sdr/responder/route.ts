@@ -24,6 +24,7 @@ import {
   humanoAssumiu,
   mensagensPendentes,
   montarHistorico,
+  temMensagemDoCliente,
   type MensagemCrua,
 } from '@/lib/sdr/conversa'
 
@@ -164,7 +165,16 @@ export async function POST(req: Request) {
   // por duas evidências combinadas, tem 17 testes, e um `if` de workflow não
   // tem nenhum.
   const cruas = (conversa ?? []) as MensagemCrua[]
-  if (cruas.length > 0 && humanoAssumiu(cruas)) {
+  // ## A conversa só vale quando ela de fato contém a conversa
+  //
+  // A Evolution desta instalação não persiste mensagem RECEBIDA: `findMessages`
+  // devolve só o que ela enviou. Medido em produção em 11/09 — três áudios
+  // chegaram, três execuções deram `success`, e nada foi respondido.
+  //
+  // Sem isto, o histórico vazio fazia o buffer parecer vazio e a rota calava.
+  // Com isto, o agente cai no caminho antigo: sem memória, mas respondendo.
+  const historicoUtil = temMensagemDoCliente(cruas)
+  if (historicoUtil && humanoAssumiu(cruas)) {
     return NextResponse.json({
       texto: '',
       calar: true,
@@ -175,13 +185,13 @@ export async function POST(req: Request) {
   // Tudo que chegou depois da última resposta nossa, junto. Sem isto, quem
   // escreve "oi" / "quanto custa?" / "pra 3 pessoas" recebe TRÊS respostas, e
   // a primeira sai sem saber que existiam as outras duas.
-  const doBuffer = cruas.length > 0 ? mensagensPendentes(cruas) : ''
+  const doBuffer = historicoUtil ? mensagensPendentes(cruas) : ''
 
   // Buffer vazio com conversa presente quer dizer que a ÚLTIMA palavra já foi
   // nossa: outra execução respondeu enquanto esta esperava. Calar aqui é a
   // segunda metade da trava contra resposta dobrada — a primeira é o fluxo
   // conferir se a última mensagem do cliente mudou durante a espera.
-  if (cruas.length > 0 && !doBuffer) {
+  if (historicoUtil && !doBuffer) {
     return NextResponse.json({ texto: '', calar: true, motivo: 'nada novo para responder' })
   }
 
@@ -226,7 +236,7 @@ export async function POST(req: Request) {
   // O histórico derivado da conversa vence o que veio pronto: ele é o que de
   // fato aconteceu no WhatsApp, e não o que o fluxo achou que aconteceu.
   const turnos =
-    cruas.length > 0
+    historicoUtil
       ? // A última rodada do cliente já vai em `paraResponder`; repeti-la no
         // histórico faria o modelo ler a mesma pergunta duas vezes.
         montarHistorico(cruas).filter((t) => !(t.de === 'cliente' && paraResponder.includes(t.texto)))

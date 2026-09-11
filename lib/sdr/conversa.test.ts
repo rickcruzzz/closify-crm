@@ -5,6 +5,7 @@ import {
   mensagensPendentes,
   montarHistorico,
   saiuPelaApi,
+  temMensagemDoCliente,
   textoDa,
   ultimaDoCliente,
   type MensagemCrua,
@@ -170,5 +171,27 @@ describe('mensagensPendentes', () => {
 
   it('devolve vazio quando a última palavra foi nossa', () => {
     expect(mensagensPendentes([doCliente('oi', 1), doAgente('olá', 2)])).toBe('')
+  })
+})
+
+describe('temMensagemDoCliente', () => {
+  /**
+   * Medido em produção em 11/09: a Evolution desta instalação não persiste
+   * mensagem RECEBIDA. `findMessages` devolveu 1 registro para uma conversa com
+   * três áudios, e o único registro era a resposta do agente.
+   *
+   * Isso matava o fluxo em dois lugares ao mesmo tempo — a rota calava "nada
+   * novo" e o n8n ia para `Ignora`. Três execuções `success`, zero respostas.
+   */
+  it('é falso quando só há mensagem nossa — o caso real', () => {
+    expect(temMensagemDoCliente([doAgente('olá!', 1)])).toBe(false)
+  })
+
+  it('é verdadeiro quando o cliente aparece', () => {
+    expect(temMensagemDoCliente([doAgente('olá!', 1), doCliente('oi', 2)])).toBe(true)
+  })
+
+  it('conversa vazia não tem histórico útil', () => {
+    expect(temMensagemDoCliente([])).toBe(false)
   })
 })
