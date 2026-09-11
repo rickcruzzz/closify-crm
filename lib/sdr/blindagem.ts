@@ -130,11 +130,45 @@ const GRATIS = '(?:gr[áa]tis|de gra[çc]a|sem custo)'
 const PERIODO = `${ANTES}(?:m[êe]s(?:es)?|anos?|semanas?|dias?)${DEPOIS}`
 
 /** Frases que a empresa teria de cumprir se saíssem daqui. */
-const PROMESSA_PROIBIDA: { nome: string; padrao: RegExp }[] = [
+const PROMESSA_PROIBIDA: {
+  nome: string
+  padrao: RegExp
+  /**
+   * O que a regra NÃO deve barrar, mesmo casando com `padrao`.
+   *
+   * Existe porque uma das regras estava barrando um fato verdadeiro do
+   * produto — ver a nota em `grátis por período`. Opcional de propósito: a
+   * maioria das promessas proibidas não tem caso legítimo nenhum, e uma
+   * exceção vazia convidaria a inventar um.
+   */
+  excecao?: RegExp
+}[] = [
   {
     nome: 'desconto',
     padrao:
       /(descont\w+|abatiment\w+|\d{1,3}\s?%\s?(off|de desconto)|metade do pre[çc]o|pre[çc]o especial|condi[çc][ãa]o especial)/i,
+    /**
+     * Falar do anual E falar de desconto, e o anual e publico.
+     *
+     * Segundo falso positivo da mesma familia, achado na mesma bateria: a
+     * pergunta mais natural sobre o anual e literalmente *"tem desconto no
+     * anual?"*, e a resposta honesta usa a palavra. Medido em 3 chamadas
+     * seguidas: 2 barradas.
+     *
+     * A excecao e ESTREITA de proposito e exige as tres coisas juntas:
+     *
+     *     cita o anual        senao libera desconto em qualquer contexto
+     *     cita o preco anual  o numero vem da constante, nao do modelo
+     *     SEM percentual      "30% de desconto no anual" continua barrado,
+     *                         e e exatamente o ataque que a regra existe
+     *                         para pegar
+     *
+     * A terceira condicao e a que faz a excecao ser uma porta e nao um buraco.
+     */
+    excecao: new RegExp(
+      `^(?!.*\\d{1,3}\\s?%)(?=[\\s\\S]*anual)(?=[\\s\\S]*R\\$\\s*${PRO_ANUAL_PRICE})`,
+      'iu',
+    ),
   },
   {
     // As DUAS ordens. "3 meses grátis" é a formulação mais natural em
@@ -149,6 +183,24 @@ const PROMESSA_PROIBIDA: { nome: string; padrao: RegExp }[] = [
     nome: 'grátis por período',
     padrao: new RegExp(
       `(?:${GRATIS}[\\s\\S]{0,20}${PERIODO}|${PERIODO}[\\s\\S]{0,14}${GRATIS})`,
+      'iu',
+    ),
+    /**
+     * O plano anual E "dois meses de graca", e isso e fato do produto.
+     *
+     * Medido em 11/09, numa bateria adversarial: *"quanto fica se eu pagar o
+     * ano inteiro de uma vez?"* caia em `promessa proibida: gratis por
+     * periodo` e virava passagem para humano — **toda vez**. O agente nunca
+     * fechava a venda de maior ticket (R$ 970 a vista), e o motivo era a
+     * propria defesa barrando a verdade.
+     *
+     * A regra continua valendo para o que ela nasceu para pegar: "seu primeiro
+     * mes e gratis", "te dou 3 meses sem pagar". O que a excecao libera e a
+     * frase que `fatosDoProduto()` ja autoriza, com o numero lido da MESMA
+     * constante — nao uma lista de palavras soltas.
+     */
+    excecao: new RegExp(
+      `(?:dois|2) meses (?:de gra[\u00e7c]a|gr[\u00e1a]tis)|R\$\s*${PRO_ANUAL_PRICE}`,
       'iu',
     ),
   },
@@ -202,8 +254,13 @@ export function validarResposta(resposta: string): Veredito {
     if (p.test(texto)) return { ok: false, motivo: 'a resposta repetia o prompt', passar: true }
   }
 
-  for (const { nome, padrao } of PROMESSA_PROIBIDA) {
-    if (padrao.test(texto)) return { ok: false, motivo: `promessa proibida: ${nome}`, passar: true }
+  for (const { nome, padrao, excecao } of PROMESSA_PROIBIDA) {
+    // A excecao existe para o caso em que a regra barra um FATO do produto.
+    // Sem ela, a defesa vira o defeito: o anual — que e a venda de maior
+    // ticket — nunca saia do agente.
+    if (padrao.test(texto) && !excecao?.test(texto)) {
+      return { ok: false, motivo: `promessa proibida: ${nome}`, passar: true }
+    }
   }
 
   // `Array.from` e não espalhar o iterador: o `tsc` deste projeto recusa

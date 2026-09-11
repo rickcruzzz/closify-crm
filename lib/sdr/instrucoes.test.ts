@@ -86,7 +86,9 @@ describe('comportamento', () => {
   it('proíbe fechar venda e negociar preço', () => {
     const i = instrucoesDoAgente()
     expect(i).toMatch(/Nunca prometa preço, desconto/)
-    expect(i).toMatch(/Pedido de desconto/)
+    // Em 11/09 virou `PEDIDO de desconto` em caixa alta, para separar o pedido da PERGUNTA
+    // sobre o desconto do anual — que é fato público e estava virando passagem em 6 de 6.
+    expect(i).toMatch(/PEDIDO de desconto/i)
   })
 
   /**
@@ -184,7 +186,7 @@ describe('o agente nunca cita o nome do dono', () => {
 
   it('diz "um atendente" nos três lugares que pedem', () => {
     const i = instrucoesDoAgente()
-    expect(i).toContain('um atendente entra na conversa')
+    expect(i).toContain('um atendente entra quando precisar')
     expect(i).toContain('confirmar com um atendente')
     expect(i).toContain('um atendente responde em seguida')
   })

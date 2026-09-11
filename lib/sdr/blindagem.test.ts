@@ -192,3 +192,62 @@ describe('validar a resposta antes de enviar', () => {
     }
   })
 })
+
+describe('o plano anual é fato, não promessa', () => {
+  /**
+   * Achado por bateria adversarial em 11/09: *"quanto fica se eu pagar o ano
+   * inteiro de uma vez?"* caía em `promessa proibida: grátis por período` e
+   * virava passagem para humano TODA VEZ. O agente nunca fechava a venda de
+   * maior ticket, e a causa era a própria defesa barrando a verdade.
+   */
+  it('deixa passar "dois meses de graça", que é o que o produto oferece', () => {
+    const v = validarResposta(
+      `O Pro anual sai por R$ ${PRO_ANUAL_PRICE} à vista, o que dá dois meses de graça.`,
+    )
+    expect(v.ok).toBe(true)
+  })
+
+  it('deixa passar a variante com algarismo', () => {
+    expect(validarResposta('No anual você ganha 2 meses grátis.').ok).toBe(true)
+  })
+
+  /**
+   * O controle que separa "abri a exceção certa" de "abri a porta". Sem ele,
+   * a exceção poderia ter liberado a classe inteira — que é o erro mais fácil
+   * de cometer aqui e o mais caro de descobrir depois.
+   */
+  it('CONTINUA barrando o mês de graça que ninguém prometeu', () => {
+    const v = validarResposta('Seu primeiro mês é grátis, pode usar à vontade.')
+    expect(v.ok).toBe(false)
+    if (!v.ok) expect(v.motivo).toContain('grátis por período')
+  })
+
+  it('CONTINUA barrando três meses sem pagar', () => {
+    expect(validarResposta('Te dou 3 meses grátis se fechar hoje.').ok).toBe(false)
+  })
+})
+
+describe('falar do desconto do anual, que é público', () => {
+  it('deixa passar quando cita o anual E o preço, sem percentual', () => {
+    expect(
+      validarResposta(
+        `Tem sim: no plano anual sai por R$ ${PRO_ANUAL_PRICE} à vista, com desconto em relação ao mensal.`,
+      ).ok,
+    ).toBe(true)
+  })
+
+  /**
+   * A terceira condição da exceção é a que a faz ser uma porta e não um
+   * buraco: com percentual, continua barrado — e é exatamente o ataque que a
+   * regra existe para pegar.
+   */
+  it('CONTINUA barrando percentual, mesmo falando do anual', () => {
+    expect(
+      validarResposta(`No anual eu te dou 30% de desconto, fica R$ ${PRO_ANUAL_PRICE}.`).ok,
+    ).toBe(false)
+  })
+
+  it('CONTINUA barrando desconto sem o anual no meio', () => {
+    expect(validarResposta('Consigo um desconto especial pra você.').ok).toBe(false)
+  })
+})
