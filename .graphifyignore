@@ -62,3 +62,25 @@ marketing/claude-designer/briefing/*.dc.html
 # `--update` pagava extracao com visao por 8 arquivos que nao mudam o mapa.
 # Os GERADORES continuam dentro — eles sao codigo.
 marketing/marca/
+
+# Artes do perfil do Google, pela MESMA regra do binario de marketing acima.
+# Sao as pecas publicadas na ficha da empresa; o gerador
+# (`scripts/marketing/gerar-perfil-google.py`) continua dentro do grafo, porque
+# e ele que carrega a decisao de cada peca. Sem esta linha, cada `--update`
+# paga extracao com visao por quatro PNGs que nao respondem "quem chama X".
+marketing/google-perfil/*.png
+
+# ## Scripts de prova descartáveis
+#
+# Mesma classe de `.claude/skills/`: moram fisicamente aqui e não são o
+# produto. Nascem para provar uma rodada contra produção e morrem com ela.
+#
+# Medido em 11/09, antes de entrarem: 13 arquivos numa detecção de 301. Cada
+# um cita `workspace_id`, `leads`, `deals` e `importarPlanilha` — exatamente
+# os termos que uma consulta real usa —, então eles não seriam ruído neutro:
+# competiriam com o código de verdade na resposta de "onde o limite é
+# aplicado", com o peso de um arquivo que ninguém mantém.
+.prova-*.mjs
+.repro-*.mjs
+.avaliar-*.mjs
+.planilhas-prova/

@@ -119,3 +119,17 @@ scripts/inteligencia/.rodadas.json
 
 # Sessao do WhatsApp Web do enviador: e credencial, nunca vai para o Git.
 .whatsapp-perfil/
+
+# Scripts de prova descartáveis, e o que eles alimentam.
+#
+# O padrão deste projeto é provar contra produção com script em Node que
+# exercita o caminho real e limpa o que criou num `finally` — está escrito no
+# CLAUDE.md. Eles nascem para uma rodada e o valor deles vai para a mensagem
+# de commit, não para o repositório.
+#
+# Ficam fora do Git porque `git status` com quinze `??` treina a pessoa a
+# ignorar a lista inteira — e é nela que um arquivo esquecido apareceria.
+.prova-*.mjs
+.repro-*.mjs
+.avaliar-*.mjs
+.planilhas-prova/
