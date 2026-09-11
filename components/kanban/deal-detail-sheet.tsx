@@ -213,12 +213,23 @@ export function DealDetailSheet({
       <SheetContent>
         {deal && (
           <>
-            <SheetHeader>
+            {/* `shrink-0` no cabeçalho e no rodapé, rolagem só no miolo.
+                Sem isso o painel inteiro cresce com o conteúdo e o rodapé sai
+                da tela: `SheetContent` é `flex flex-col h-full` e não declara
+                `overflow`, então o que não cabe vaza em vez de rolar.
+                Acontecia em qualquer negócio com orçamento — o bloco do PDF e
+                o da próxima ação somam ~200px, e em janela de notebook (800px
+                ou menos) "Excluir negócio" e "Fechar" ficavam inalcançáveis. */}
+            <SheetHeader className="shrink-0">
               <SheetTitle>{deal.title}</SheetTitle>
               {lead && <SheetDescription>{lead.company}</SheetDescription>}
             </SheetHeader>
 
-            <div className="flex flex-col gap-4 px-4">
+            {/* `min-h-0` junto do `flex-1` não é redundância: item de flex tem
+                `min-height: auto` por padrão, o que o impede de encolher abaixo
+                do conteúdo — e aí `overflow-y-auto` nunca chega a rolar, porque
+                a caixa cresce em vez de cortar. */}
+            <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto px-4">
               <div>
                 <span className="text-muted-foreground text-xs">Valor do negócio</span>
                 {/* Aqui o valor vai CHEIO, sem abreviar: o painel tem largura
@@ -371,8 +382,24 @@ export function DealDetailSheet({
                       <span className="text-muted-foreground text-sm">
                         Nada marcado para este negócio.
                       </span>
+                      {/* ## O botão ganha destaque quando o negócio está parado
+
+                          `outline` em todo caso tratava dois estados muito
+                          diferentes do mesmo jeito: um negócio que mudou de
+                          etapa hoje e não precisa de nada, e um parado há
+                          semanas sem ninguém marcado para voltar nele.
+
+                          O segundo é o caso que este produto existe para
+                          resolver, e era onde a tela dizia "parado há 2
+                          semanas" em vermelho e oferecia a saída em cinza
+                          apagado — o alarme e o remédio com pesos invertidos.
+
+                          Só muda de variante, não de posição nem de tamanho:
+                          o botão não pula de lugar quando o negócio envelhece,
+                          e quem já conhece a tela continua achando no mesmo
+                          ponto. */}
                       <Button
-                        variant="outline"
+                        variant={movimento?.parado ? 'default' : 'outline'}
                         size="sm"
                         onClick={() => setAgendando(true)}
                       >
@@ -398,7 +425,10 @@ export function DealDetailSheet({
             {/* A exclusão vive aqui, e não no card do Kanban: no card ela
                 ficaria a um clique de distância do arrastar, e apagar negócio
                 por engano não tem desfazer. */}
-            <SheetFooter className="sm:justify-between">
+            {/* `shrink-0` e borda: o rodapé fica ancorado na base e ganha um
+                fio que o separa do conteúdo que rola por trás. Sem a borda, o
+                texto passando por baixo dos botões lê como sobreposição. */}
+            <SheetFooter className="border-border/60 shrink-0 border-t sm:justify-between">
               <Button
                 variant="ghost"
                 className="text-muted-foreground hover:text-destructive"
