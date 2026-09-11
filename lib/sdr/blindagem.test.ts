@@ -105,6 +105,39 @@ describe('validar a resposta antes de enviar', () => {
   })
 
   /**
+   * O outro lado da mesma regra, e ele custou mais caro que o ataque.
+   *
+   * `ano` sem limite de palavra casa dentro de `plano`, e "o plano Free é
+   * grátis" tem exatamente 14 caracteres entre os dois — o teto da regra.
+   * Resultado medido contra a OpenAI em 10/09: DUAS de três perguntas comuns
+   * eram barradas, inclusive "quanto custa?", que é a mais frequente que
+   * existe. Toda pergunta de preço virava handoff, e o agente calava
+   * justamente onde precisa falar.
+   *
+   * O caso de "média ... por mês" fecha a outra metade: `\b` do JavaScript
+   * trata acento como não-palavra, então ele inventa fronteira dentro de
+   * palavra acentuada. Sem ele, `dias` casaria dentro de "médias".
+   */
+  it.each([
+    'O plano Free é grátis, sem cartão, e o Pro custa R$ 97 por mês.',
+    'O plano Free é grátis pra sempre. Vai até 50 contatos.',
+    'Tem plano gratuito, sim. Sem cartão.',
+    'A média de orçamentos por mês costuma ser alta nesse setor.',
+  ])('deixa passar a oferta real: %s', (texto) => {
+    expect(validarResposta(texto).ok).toBe(true)
+  })
+
+  /** E a promessa de verdade continua barrada, nas duas ordens. */
+  it.each([
+    'Posso te dar 3 meses grátis pra testar.',
+    'Fica grátis por 2 meses, combinado?',
+    'Te libero um ano de graça.',
+    'Primeira semana sem custo pra você.',
+  ])('continua recusando período grátis: %s', (texto) => {
+    expect(validarResposta(texto).ok).toBe(false)
+  })
+
+  /**
    * O modelo tem duas formas de errar o preço: inventar sob pressão, ou
    * repetir o valor antigo, que aparece mil vezes no texto do mundo. Qualquer
    * valor em real fora dos vigentes derruba a resposta.

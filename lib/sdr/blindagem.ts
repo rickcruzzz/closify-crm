@@ -115,6 +115,20 @@ export function enveloparMensagem(texto: string): string {
   ].join('\n')
 }
 
+/**
+ * Limite de palavra que respeita acento.
+ *
+ * O `\b` do JavaScript trata letra acentuada como NÃO-palavra, então ele
+ * inventa fronteira onde não existe (`\bdias\b` casa dentro de "médias") e
+ * deixa de proteger onde precisa. Estas duas guardas olham para letra de
+ * qualquer alfabeto, então valem em português.
+ */
+const ANTES = '(?<![\\p{L}\\p{N}_])'
+const DEPOIS = '(?![\\p{L}\\p{N}_])'
+
+const GRATIS = '(?:gr[áa]tis|de gra[çc]a|sem custo)'
+const PERIODO = `${ANTES}(?:m[êe]s(?:es)?|anos?|semanas?|dias?)${DEPOIS}`
+
 /** Frases que a empresa teria de cumprir se saíssem daqui. */
 const PROMESSA_PROIBIDA: { nome: string; padrao: RegExp }[] = [
   {
@@ -125,9 +139,18 @@ const PROMESSA_PROIBIDA: { nome: string; padrao: RegExp }[] = [
   {
     // As DUAS ordens. "3 meses grátis" é a formulação mais natural em
     // português, e a primeira versão só pegava "grátis por 3 meses".
+    //
+    // **E o limite de palavra é obrigatório aqui.** Sem ele `ano` casa dentro
+    // de `plano`, e "o plano Free é grátis" — a frase que abre toda conversa
+    // de entrada — virava promessa proibida. Medido contra a OpenAI em 10/09:
+    // DUAS de três perguntas comuns eram barradas, inclusive "quanto custa?",
+    // que é a mais frequente que existe. A blindagem estava calando o agente
+    // justamente onde ele precisa falar.
     nome: 'grátis por período',
-    padrao:
-      /((gr[áa]tis|de gra[çc]a|sem custo)[\s\S]{0,20}(m[êe]s|meses|ano|semana|dias)|(m[êe]s|meses|ano|semana|dias)[\s\S]{0,14}(gr[áa]tis|de gra[çc]a|sem custo))/i,
+    padrao: new RegExp(
+      `(?:${GRATIS}[\\s\\S]{0,20}${PERIODO}|${PERIODO}[\\s\\S]{0,14}${GRATIS})`,
+      'iu',
+    ),
   },
   {
     nome: 'promessa de recurso futuro',
