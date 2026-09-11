@@ -422,9 +422,14 @@ export function PricingSection() {
                     {plan.highlighted && <Badge>Recomendado</Badge>}
                   </div>
                   <div className="flex items-baseline gap-1">
-                    <span className="text-3xl font-semibold tracking-tight">
-                      {plan.price}
-                    </span>
+                    {/* `text-numero-md`, o mesmo token da barra de números do
+                        hero. Era `text-3xl tracking-tight` aqui e
+                        `text-3xl md:text-4xl tracking-tighter` lá — dois
+                        tratamentos para o mesmo papel, ancorar a decisão de
+                        preço. Aqui fica no `md` e não sobe para `lg`: dentro de
+                        um cartão de largura fixa, o número maior encosta no
+                        período ("/mês") em telas estreitas. */}
+                    <span className="text-numero-md">{plan.price}</span>
                     {plan.period && (
                       <span className="text-muted-foreground text-sm">{plan.period}</span>
                     )}

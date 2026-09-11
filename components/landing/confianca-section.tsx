@@ -88,7 +88,11 @@ export function ConfiancaSection() {
   return (
     <section
       id="confianca"
-      className="bg-muted/30 border-border/60 border-y px-4 py-20 md:px-6 md:py-24"
+      /* `md:py-28` e não `md:py-24`: era a única das sete seções fora do ritmo,
+         e a diferença de 16px entre ela e as vizinhas não lê como escolha —
+         lê como descuido. As demais (how-it-works, features, pricing, faq,
+         cta) já usavam `py-20 md:py-28`. */
+      className="bg-muted/30 border-border/60 border-y px-4 py-20 md:px-6 md:py-28"
     >
       <div className="mx-auto max-w-6xl">
         <RevealOnScroll className="mx-auto mb-12 flex max-w-2xl flex-col items-center gap-3 text-center">

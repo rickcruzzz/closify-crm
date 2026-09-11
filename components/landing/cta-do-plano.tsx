@@ -58,6 +58,16 @@ export function CtaDoPlano({
   hrefLogado?: string
   textoLogado?: string
   variant?: 'default' | 'outline'
+  /* O `size` NÃO é prop, e isso é decisão.
+   *
+   * Este é o botão de comprar, e antes ele era o único CTA da landing que não
+   * pedia tamanho: os cinco outros (`hero`, `cta-section`, `cta-no-meio`,
+   * `mobile-sticky-cta` e o secundário do hero) passam `size: 'lg'`, e este
+   * caía no `default`. Medido na tela: 44px de altura e fonte de 14px contra
+   * 52px e 16px dos demais — o botão mais importante da página era o menor.
+   *
+   * Deixá-lo como prop convidaria a mesma divergência de volta pela porta do
+   * chamador. O papel é fixo, então o tamanho é fixo. */
   /**
    * As classes vêm do pai, e não são recalculadas aqui.
    *
@@ -74,7 +84,7 @@ export function CtaDoPlano({
   return (
     <Link
       href={mudaComSessao ? hrefLogado : hrefDeslogado}
-      className={cn(buttonVariants({ variant }), className)}
+      className={cn(buttonVariants({ variant, size: 'lg' }), className)}
     >
       {mudaComSessao ? textoLogado : textoDeslogado}
     </Link>

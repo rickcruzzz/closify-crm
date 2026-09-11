@@ -484,6 +484,34 @@
   --text-titulo-sm--line-height: 1.3;
   --text-titulo-sm--font-weight: 600;
   --text-titulo-sm--letter-spacing: -0.01em;
+
+  /* ## Número de destaque, que é papel diferente de título
+
+     A escala acima resolve título. Número grande não é título: ele ancora uma
+     decisão ("50 contatos", "R$ 97") e é lido como valor, não como frase.
+     Faltava token para ele, e o resultado, medido na página em 11/09, foi cada
+     seção escolher sozinha:
+
+         barra de numeros   text-3xl md:text-4xl   tracking-TIGHTER   30->36px
+         cartao de plano    text-3xl               tracking-TIGHT     30px fixo
+
+     Os dois ancoram a MESMA decisão de compra — quanto custa e o que cabe —, e
+     saíam com tamanho e tracking diferentes. Ninguém aponta isso olhando; o
+     olho registra como acabamento inconsistente.
+
+     O tracking segue a mesma curva da escala de título (mais negativo quanto
+     maior), pelo mesmo motivo óptico descrito lá em cima. E `tabular-nums` não
+     entra aqui: estes números não se alinham em coluna, e a figura tabular
+     deixa o "1" com vão lateral que salta num número isolado. */
+  --text-numero-lg: 2.25rem;
+  --text-numero-lg--line-height: 1.1;
+  --text-numero-lg--font-weight: 600;
+  --text-numero-lg--letter-spacing: -0.02em;
+
+  --text-numero-md: 1.875rem;
+  --text-numero-md--line-height: 1.15;
+  --text-numero-md--font-weight: 600;
+  --text-numero-md--letter-spacing: -0.015em;
 }
 
 /* ## `animate-entrada`: o `animate-in` do pacote, sem o `filter`

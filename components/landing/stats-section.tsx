@@ -88,7 +88,12 @@ export function StatsSection() {
           >
             <span
               className={cn(
-                'text-3xl font-semibold tracking-tighter md:text-4xl',
+                // `text-numero-md sm:text-numero-lg` no lugar de
+                // `text-3xl md:text-4xl tracking-tighter`: o token carrega
+                // tamanho, altura, peso e tracking casados, e é o MESMO que o
+                // preço do cartão de plano usa. Antes os dois divergiam no
+                // tracking sem que nada justificasse.
+                'text-numero-md sm:text-numero-lg',
                 // Um acento so, o da marca. Quatro matizes diferentes aqui
                 // nao codificavam nada — "2 min", "R$ 49" e "Brasil" nao sao
                 // categorias — e no claro leem como grafico de template.
