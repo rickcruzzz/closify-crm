@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { MessageCircle } from 'lucide-react'
 
 import { Logo } from '@/components/branding/logo'
+import { SelosDeSeguranca } from '@/components/landing/selos-de-seguranca'
 import { SuporteEmailMenu } from '@/components/landing/suporte-email-menu'
 import { assinaturaPublica, CONTROLADOR } from '@/lib/legal'
 
@@ -181,6 +182,10 @@ export function PublicFooter() {
             arranjo comum e não deve reprovar, mas é diferente do que a decisão
             de 31/08 montou. Se a verificação reprovar por dado não encontrado,
             este é o primeiro lugar a olhar. */}
+        {/* Acima do CNPJ, e não abaixo: a linha de CNPJ é a assinatura que
+            fecha o rodapé, e nada deve vir depois dela. */}
+        <SelosDeSeguranca />
+
         {CONTROLADOR.cnpj ? (
           <p className="text-muted-foreground text-center text-[11px] text-balance">
             {CONTROLADOR.nomeFantasia}
