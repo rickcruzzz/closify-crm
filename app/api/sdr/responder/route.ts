@@ -11,6 +11,12 @@ import {
   limparResposta,
   pediuPassagem,
 } from '@/lib/sdr/instrucoes'
+import {
+  humanoAssumiu,
+  mensagensPendentes,
+  montarHistorico,
+  type MensagemCrua,
+} from '@/lib/sdr/conversa'
 
 export const runtime = 'nodejs'
 
@@ -64,6 +70,18 @@ const entrada = z.object({
     .array(z.object({ de: z.enum(['cliente', 'agente']), texto: z.string().max(4000) }))
     .max(20)
     .optional(),
+  /**
+   * A conversa CRUA, como a Evolution devolve em `/chat/findMessages`.
+   *
+   * Quando vem, ela substitui `historico` e `mensagem`: o servidor monta os
+   * dois a partir daqui, e decide sozinho se um humano assumiu. É a diferença
+   * entre o n8n orquestrar e o n8n decidir — e decidir em JSON de workflow é
+   * o que nenhum teste alcança.
+   *
+   * Continua opcional: o caminho antigo (só `mensagem`) segue valendo, e é o
+   * que roda enquanto o fluxo novo não é publicado.
+   */
+  conversa: z.array(z.unknown()).max(200).optional(),
 })
 
 const MODELO = 'gpt-4.1'
@@ -100,21 +118,63 @@ export async function POST(req: Request) {
     )
   }
 
-  const { mensagem, empresa, vertical, pesquisa, historico } = lido.data
+  const { mensagem, empresa, vertical, pesquisa, historico, conversa } = lido.data
+
+  // ## A pausa quando o atendente entra
+  //
+  // O fluxo avisava o dono E respondia ao cliente na mesma passagem, e na
+  // mensagem seguinte respondia de novo — nada guardava que um humano tinha
+  // entrado. O cliente ficava conversando com duas pessoas ao mesmo tempo.
+  //
+  // Decidido AQUI e não no n8n: `saiuPelaApi` distingue o agente do atendente
+  // por duas evidências combinadas, tem 17 testes, e um `if` de workflow não
+  // tem nenhum.
+  const cruas = (conversa ?? []) as MensagemCrua[]
+  if (cruas.length > 0 && humanoAssumiu(cruas)) {
+    return NextResponse.json({
+      texto: '',
+      calar: true,
+      motivo: 'um atendente humano já está nesta conversa',
+    })
+  }
+
+  // Tudo que chegou depois da última resposta nossa, junto. Sem isto, quem
+  // escreve "oi" / "quanto custa?" / "pra 3 pessoas" recebe TRÊS respostas, e
+  // a primeira sai sem saber que existiam as outras duas.
+  const doBuffer = cruas.length > 0 ? mensagensPendentes(cruas) : ''
+
+  // Buffer vazio com conversa presente quer dizer que a ÚLTIMA palavra já foi
+  // nossa: outra execução respondeu enquanto esta esperava. Calar aqui é a
+  // segunda metade da trava contra resposta dobrada — a primeira é o fluxo
+  // conferir se a última mensagem do cliente mudou durante a espera.
+  if (cruas.length > 0 && !doBuffer) {
+    return NextResponse.json({ texto: '', calar: true, motivo: 'nada novo para responder' })
+  }
+
+  const paraResponder = doBuffer || mensagem
+
+  // O histórico derivado da conversa vence o que veio pronto: ele é o que de
+  // fato aconteceu no WhatsApp, e não o que o fluxo achou que aconteceu.
+  const turnos =
+    cruas.length > 0
+      ? // A última rodada do cliente já vai em `paraResponder`; repeti-la no
+        // histórico faria o modelo ler a mesma pergunta duas vezes.
+        montarHistorico(cruas).filter((t) => !(t.de === 'cliente' && paraResponder.includes(t.texto)))
+      : (historico ?? [])
 
   const mensagens = [
     { role: 'system' as const, content: instrucoesDoAgente({ empresa, vertical, pesquisa }) },
-    ...(historico ?? []).map((h) => ({
+    ...turnos.map((h) => ({
       role: h.de === 'cliente' ? ('user' as const) : ('assistant' as const),
       content: h.texto,
     })),
     // Envelopada: o que o cliente escreveu e DADO, nunca instrucao.
-    { role: 'user' as const, content: enveloparMensagem(mensagem) },
+    { role: 'user' as const, content: enveloparMensagem(paraResponder) },
   ]
 
   // A deteccao nao BARRA — ela marca. Quem tenta injecao merece um humano,
   // nao uma negativa automatica, e o dono precisa saber que aconteceu.
-  const injecao = detectarInjecao(mensagem)
+  const injecao = detectarInjecao(paraResponder)
 
   let resposta: Response
   try {
