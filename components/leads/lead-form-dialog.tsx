@@ -151,17 +151,19 @@ export function LeadFormDialog({
               Empilha até `sm` (640px), onde cada campo já cabe inteiro. */}
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div className="flex flex-col gap-1.5">
-              {/* "ou telefone" no rótulo em vez de um asterisco de
-                  obrigatório: a regra real é ter ALGUMA forma de falar com a
-                  pessoa (constraint `leads_contato_minimo`, migration 0025), e
-                  dizer isso aqui evita que alguém invente um e-mail só para
-                  conseguir salvar um contato que chegou pelo WhatsApp. */}
-              <Label htmlFor="email">
-                E-mail
-                <span className="text-muted-foreground ml-1 text-xs font-normal">
-                  · ou telefone
-                </span>
-              </Label>
+              {/* ## O "· ou telefone" saiu do rótulo, e a regra desceu
+                  para uma linha só
+
+                  A intenção estava certa e a execução confundia: cada rótulo
+                  apontava para o outro campo, então "E-mail · ou telefone" ao
+                  lado de "Telefone · ou e-mail" obrigava a ler os dois e
+                  deduzir a regra — que é "um dos dois basta".
+
+                  Relatado pelo dono olhando a tela. A regra continua sendo a
+                  mesma (`leads_contato_minimo`, migration 0025) e continua
+                  dita, uma vez, abaixo dos dois campos, onde ela descreve o
+                  PAR em vez de cada metade. */}
+              <Label htmlFor="email">E-mail</Label>
               <Input
                 id="email"
                 type="email"
@@ -178,12 +180,7 @@ export function LeadFormDialog({
             </div>
 
             <div className="flex flex-col gap-1.5">
-              <Label htmlFor="phone">
-                Telefone
-                <span className="text-muted-foreground ml-1 text-xs font-normal">
-                  · ou e-mail
-                </span>
-              </Label>
+              <Label htmlFor="phone">Telefone</Label>
               {/* Formata enquanto digita: sem isso o campo aceitava
                   "71993309404" cru e cada lead ficava num formato diferente. */}
               <Controller
@@ -208,6 +205,16 @@ export function LeadFormDialog({
               )}
             </div>
           </div>
+
+          {/* A regra dita uma vez, sobre o PAR — em vez de cada rótulo
+              apontando para o outro campo.
+
+              `-mt-1` porque a grade acima já tem `gap-3`: sem isso a linha
+              flutuaria longe demais dos campos que ela descreve e leria como
+              observação de outra coisa. */}
+          <p className="text-muted-foreground -mt-1 text-xs">
+            Preencha o e-mail ou o telefone — um dos dois basta.
+          </p>
 
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="company">Empresa</Label>
