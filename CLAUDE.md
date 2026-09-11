@@ -277,12 +277,17 @@ continuam versionadas, mas um PNG não responde "onde o preço é lido"; os
 geradores, que são código, continuam dentro. Medido em 01/09: 249 dos 3.966 nós
 vinham de `.claude/`, e a poda tirou 235 de 53 arquivos.
 
-<!-- contagem: grafo.nos_de_claude=34 -->
-**Hoje sobram 34**, em SEIS arquivos de `.claude/agents/`. Eram 28 em cinco ate
-11/09, quando `.claude/agents/hermes.md` nasceu — o auditor adversarial que tenta DERRUBAR
-afirmacoes em vez de confirma-las. Não é regressão: o
-`.graphifyignore` corta `.claude/skills/`, e os agentes nunca estiveram na
-regra. Fica registrado para a próxima leitura não concluir que a poda falhou.
+<!-- contagem: grafo.nos_de_claude=38 -->
+**Hoje sobram 38**, em SEIS arquivos de `.claude/agents/`. Eram 28 em cinco até
+11/09, quando `.claude/agents/hermes.md` nasceu — o auditor adversarial que
+tenta DERRUBAR afirmações em vez de confirmá-las. Ele contribuiu 4 nós de AST e
+4 semânticos: os agentes são lidos pelos dois extratores, e é por isso que o
+número subiu 10 e não 4.
+
+**Não é regressão**, e a distinção fica escrita porque a leitura errada é fácil:
+o `.graphifyignore` corta `.claude/skills/`, e os **agentes** nunca estiveram na
+regra. Skill é ferramenta instalada, que se atualiza por fora do Git; agente é
+arquivo deste repositório, versionado, que descreve como trabalhar aqui.
 
 **A regra de corte, aprendida caro em 27/08:** só entra no grafo o nó cujo
 arquivo existe no disco **e mora dentro deste repositório**. O grafo chegou a
