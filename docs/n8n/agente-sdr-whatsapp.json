@@ -136,7 +136,7 @@
     {
       "parameters": {
         "method": "POST",
-        "url": "=http://8_evolution-api:8080/message/sendText/{{ $('Normaliza e filtra').item.json.instancia }}",
+        "url": "=http://8_evolution-api:8080/message/sendText/{{ encodeURIComponent($('Normaliza e filtra').item.json.instancia) }}",
         "sendBody": true,
         "specifyBody": "json",
         "jsonBody": "={{ JSON.stringify({ number: $('Normaliza e filtra').item.json.numero, text: $('Agente decide o que dizer').item.json.texto }) }}",
@@ -157,10 +157,10 @@
     {
       "parameters": {
         "method": "POST",
-        "url": "=http://8_evolution-api:8080/message/sendText/{{ $('Normaliza e filtra').item.json.instancia }}",
+        "url": "=http://8_evolution-api:8080/message/sendText/{{ encodeURIComponent($('Normaliza e filtra').item.json.instancia) }}",
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ number: \"5571993309404\", text: '🔔 ASSUMA A CONVERSA\\n\\n' + ($('Normaliza e filtra').item.json.nome || 'sem nome') + ' (' + $('Normaliza e filtra').item.json.numero + ')\\n\\nDisse: ' + $('Normaliza e filtra').item.json.texto + '\\n\\nO agente respondeu: ' + $('Agente decide o que dizer').item.json.texto }) }}",
+        "jsonBody": "={{ JSON.stringify({ number: \"557185040900\", text: '🔔 ASSUMA A CONVERSA\\n\\n' + ($('Normaliza e filtra').item.json.nome || 'sem nome') + ' (' + $('Normaliza e filtra').item.json.numero + ')\\n\\nDisse: ' + $('Normaliza e filtra').item.json.texto + '\\n\\nO agente respondeu: ' + $('Agente decide o que dizer').item.json.texto }) }}",
         "options": {},
         "authentication": "genericCredentialType",
         "genericAuthType": "httpHeaderAuth"
