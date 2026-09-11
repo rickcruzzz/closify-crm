@@ -11,11 +11,16 @@ import { MonthView } from '@/components/calendario/month-view'
 import { WeekView } from '@/components/calendario/week-view'
 import { AgendaView } from '@/components/calendario/agenda-view'
 import { TaskFormDialog, type TarefaEmEdicao } from '@/components/tasks/task-form-dialog'
+import { DetalheDaTarefaDialog } from '@/components/calendario/detalhe-da-tarefa'
 import { agruparTarefasPorDia } from '@/lib/calendario/agrupar-por-dia'
 import { rotuloDaSemana, rotuloDoMes } from '@/lib/calendario/grade-do-mes'
 import { diasDaSemana } from '@/lib/calendario/semana'
 import { diaEmSaoPaulo } from '@/lib/tasks/buckets'
-import { atualizarTarefa, buscarTarefasNoIntervalo, concluirTarefa } from '@/lib/tasks/actions'
+import {
+  atualizarTarefa,
+  buscarTarefasNoIntervalo,
+  concluirTarefa,
+} from '@/lib/tasks/actions'
 import { avisarTarefaConcluida } from '@/lib/tasks/avisar-concluida'
 import type { TaskRow } from '@/lib/tasks/types'
 import type { WorkspaceMember } from '@/lib/leads/queries'
@@ -66,9 +71,21 @@ export function CalendarioClient({
 
   const [ano, setAno] = React.useState(anoInicial)
   const [mes, setMes] = React.useState(mesInicial)
-  const [diaAncoraSemana, setDiaAncoraSemana] = React.useState(() => diaEmSaoPaulo(new Date()))
+  const [diaAncoraSemana, setDiaAncoraSemana] = React.useState(() =>
+    diaEmSaoPaulo(new Date()),
+  )
   const [tasks, setTasks] = React.useState(tasksIniciais)
   const [emEdicao, setEmEdicao] = React.useState<TarefaEmEdicao | null>(null)
+  /**
+   * A tarefa aberta para LEITURA.
+   *
+   * Clicar num chip chamava `setEmEdicao` direto e abria o formulario. A grade
+   * do mes e tela de consulta: um clique acidental punha campos editaveis sobre
+   * um compromisso que a pessoa so queria conferir. E era a unica tela do
+   * produto que fazia isso — em `/hoje` o clique abre um menu.
+   */
+  const [emLeitura, setEmLeitura] = React.useState<TaskRow | null>(null)
+  const [concluindoDoDetalhe, setConcluindoDoDetalhe] = React.useState(false)
   const [buscandoSemana, setBuscandoSemana] = React.useState(false)
 
   React.useEffect(() => {
@@ -93,31 +110,32 @@ export function CalendarioClient({
     let cancelado = false
     setBuscandoSemana(true)
 
-    buscarTarefasNoIntervalo(primeiroDia, ultimoDia).then((resultado) => {
-      if (cancelado) return
-      setBuscandoSemana(false)
+    buscarTarefasNoIntervalo(primeiroDia, ultimoDia)
+      .then((resultado) => {
+        if (cancelado) return
+        setBuscandoSemana(false)
 
-      if ('error' in resultado) {
-        toast.error(resultado.error)
-        return
-      }
+        if ('error' in resultado) {
+          toast.error(resultado.error)
+          return
+        }
 
-      setTasks((atual) => {
-        const porId = new Map(atual.map((t) => [t.id, t]))
-        for (const task of resultado.tasks) porId.set(task.id, task)
-        return Array.from(porId.values())
+        setTasks((atual) => {
+          const porId = new Map(atual.map((t) => [t.id, t]))
+          for (const task of resultado.tasks) porId.set(task.id, task)
+          return Array.from(porId.values())
+        })
       })
-    })
-    // Sem este `catch`, a promessa rejeitada nunca chegava ao
-    // `setBuscandoSemana(false)` — e a Semana girava SEM FIM. Server Action
-    // rejeita por queda de rede, que e o caminho comum de quem usa CRM no
-    // celular, nao hipotese remota.
-    .catch((err) => {
-      if (cancelado) return
-      console.error('buscarTarefasNoIntervalo falhou', err)
-      setBuscandoSemana(false)
-      toast.error('Sem conexão para carregar esta semana. Tente de novo.')
-    })
+      // Sem este `catch`, a promessa rejeitada nunca chegava ao
+      // `setBuscandoSemana(false)` — e a Semana girava SEM FIM. Server Action
+      // rejeita por queda de rede, que e o caminho comum de quem usa CRM no
+      // celular, nao hipotese remota.
+      .catch((err) => {
+        if (cancelado) return
+        console.error('buscarTarefasNoIntervalo falhou', err)
+        setBuscandoSemana(false)
+        toast.error('Sem conexão para carregar esta semana. Tente de novo.')
+      })
 
     return () => {
       cancelado = true
@@ -145,7 +163,13 @@ export function CalendarioClient({
     router.push(`/calendario?ano=${novoAno}&mes=${novoMes}`)
   }
 
+  /** Um clique abre a leitura. A edicao passou a ser um botao dentro dela. */
   function abrirEvento(task: TaskRow) {
+    setEmLeitura(task)
+  }
+
+  function editarTarefa(task: TaskRow) {
+    setEmLeitura(null)
     setEmEdicao({
       id: task.id,
       title: task.title,
@@ -175,7 +199,9 @@ export function CalendarioClient({
   async function concluir(taskId: string) {
     const anterior = tasks
     setTasks((atual) =>
-      atual.map((t) => (t.id === taskId ? { ...t, done_at: new Date().toISOString() } : t)),
+      atual.map((t) =>
+        t.id === taskId ? { ...t, done_at: new Date().toISOString() } : t,
+      ),
     )
 
     const resultado = await concluirTarefa(taskId)
@@ -191,7 +217,9 @@ export function CalendarioClient({
     // tela. Desfazer aqui limpa o `done_at` local antes de revalidar, senão o
     // chip continuaria cinza e riscado até o RSC chegar.
     avisarTarefaConcluida(taskId, () => {
-      setTasks((atual) => atual.map((t) => (t.id === taskId ? { ...t, done_at: null } : t)))
+      setTasks((atual) =>
+        atual.map((t) => (t.id === taskId ? { ...t, done_at: null } : t)),
+      )
       router.refresh()
     })
     router.refresh()
@@ -246,7 +274,11 @@ export function CalendarioClient({
               modo === 'mes'
                 ? navegarMes(-1)
                 : setDiaAncoraSemana((d) => {
-                    const [a, m, dd] = d.split('-').map(Number) as [number, number, number]
+                    const [a, m, dd] = d.split('-').map(Number) as [
+                      number,
+                      number,
+                      number,
+                    ]
                     const nova = new Date(Date.UTC(a, m - 1, dd - 7))
                     return nova.toISOString().slice(0, 10)
                   })
@@ -256,7 +288,9 @@ export function CalendarioClient({
           </Button>
           <span className="text-sm font-medium">
             {modo === 'mes' ? rotuloDoMes(ano, mes) : rotuloDaSemana(diaAncoraSemana)}
-            {buscandoSemana && <span className="text-muted-foreground"> · carregando…</span>}
+            {buscandoSemana && (
+              <span className="text-muted-foreground"> · carregando…</span>
+            )}
           </span>
           <Button
             type="button"
@@ -267,7 +301,11 @@ export function CalendarioClient({
               modo === 'mes'
                 ? navegarMes(1)
                 : setDiaAncoraSemana((d) => {
-                    const [a, m, dd] = d.split('-').map(Number) as [number, number, number]
+                    const [a, m, dd] = d.split('-').map(Number) as [
+                      number,
+                      number,
+                      number,
+                    ]
                     const nova = new Date(Date.UTC(a, m - 1, dd + 7))
                     return nova.toISOString().slice(0, 10)
                   })
@@ -309,6 +347,26 @@ export function CalendarioClient({
           )}
         </>
       )}
+
+      {/* Leitura primeiro: editar e concluir viraram botoes DENTRO dela. */}
+      <DetalheDaTarefaDialog
+        tarefa={emLeitura}
+        onOpenChange={(aberto) => {
+          if (!aberto) setEmLeitura(null)
+        }}
+        onEditar={() => emLeitura && editarTarefa(emLeitura)}
+        concluindo={concluindoDoDetalhe}
+        onConcluir={async () => {
+          if (!emLeitura) return
+          setConcluindoDoDetalhe(true)
+          try {
+            await concluir(emLeitura.id)
+          } finally {
+            setConcluindoDoDetalhe(false)
+            setEmLeitura(null)
+          }
+        }}
+      />
 
       <TaskFormDialog
         open={emEdicao !== null}

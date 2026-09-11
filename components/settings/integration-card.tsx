@@ -45,6 +45,22 @@ const META: Record<
      * toma pelo problema que some, não pelo nome da funcionalidade.
      */
     ganhoNoPro: string
+    /**
+     * O que a integracao NAO faz, dito antes de alguem descobrir sozinho.
+     *
+     * Medido em 11/09: o Calendar so ESCREVE no Google. A tela `/calendario`
+     * le apenas `getTasksNoIntervalo()`, do proprio banco — quem marca uma
+     * reuniao pelo celular nao ve nada no Velo Funil, e o cartao nao dizia.
+     *
+     * Limite nao dito e promessa implicita: quem conecta esperando mao dupla
+     * conclui que o produto esta quebrado, e o suporte chega semanas depois
+     * como "a agenda nao sincroniza". A frase custa uma linha; a expectativa
+     * errada custa o cliente.
+     *
+     * O do Gmail nao e um limite, e informacao que a pessoa nao tem: o envio
+     * JA fica registrado, e quem nao sabe disso guarda uma copia por fora.
+     */
+    limite: string | null
   }
 > = {
   google_calendar: {
@@ -56,6 +72,8 @@ const META: Record<
     usoPlural: 'reuniões agendadas',
     ganhoNoPro:
       'No Pro, a reunião que você marca aqui já aparece na sua agenda do Google, com convite pro cliente.',
+    limite:
+      'Os eventos criados aqui vão para a sua agenda. O Velo Funil não lê os compromissos que você marca por fora.',
   },
   gmail: {
     titulo: 'Gmail',
@@ -66,6 +84,7 @@ const META: Record<
     usoPlural: 'e-mails enviados',
     ganhoNoPro:
       'No Pro, você responde o cliente sem trocar de aba, e o e-mail fica registrado no histórico dele.',
+    limite: 'O e-mail sai da sua conta e fica no histórico do contato.',
   },
   whatsapp: {
     titulo: 'WhatsApp',
@@ -84,6 +103,9 @@ const META: Record<
     usoPlural: 'conversas registradas',
     ganhoNoPro:
       'No Pro, quando o cliente responde no WhatsApp vira histórico e tarefa aqui, e continua sendo da empresa mesmo se o vendedor sair.',
+    // Sem linha de limite: durante a migracao o selo "Em breve" ja diz o que
+    // acontece, e uma segunda frase competiria com ele.
+    limite: null,
   },
 }
 
@@ -178,6 +200,12 @@ export function IntegrationCard({
           <div>
             <CardTitle className="text-base">{info.titulo}</CardTitle>
             <CardDescription>{info.descricao}</CardDescription>
+            {/* Abaixo da descricao e nao num tooltip: tooltip so aparece para
+                quem ja desconfiou que ha algo a descobrir, e aqui a pessoa nao
+                tem motivo para desconfiar. */}
+            {info.limite && (
+              <p className="text-muted-foreground mt-1 text-xs text-pretty">{info.limite}</p>
+            )}
           </div>
         </div>
         {/* Durante a migracao o WhatsApp nao funciona para NINGUEM, nem no

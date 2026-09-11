@@ -4,7 +4,17 @@ import * as React from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
-import { ArrowLeft, Building2, Calendar, ListTodo, Mail, MessageCircle, Phone, Plus, User } from 'lucide-react'
+import {
+  ArrowLeft,
+  Building2,
+  Calendar,
+  ListTodo,
+  Mail,
+  MessageCircle,
+  Phone,
+  Plus,
+  User,
+} from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -137,7 +147,13 @@ export function LeadDetailClient({
       toast.error(result.error)
       return
     }
-    toast.success('E-mail enviado.')
+    // Diz ONDE ficou: `workflow-actions.ts` grava uma `activity` do tipo
+    // `email` com assunto e corpo, e ninguem contava isso. Quem nao sabe que o
+    // envio fica registrado guarda uma copia por fora, que e o habito que o
+    // produto existe para tirar.
+    toast.success('E-mail enviado.', {
+      description: 'Ficou no histórico deste contato.',
+    })
     // Sem router.refresh(): enviarEmailViaGmail já revalida '/leads/${lead.id}'.
   }
 
@@ -334,12 +350,18 @@ export function LeadDetailClient({
 
             <div className="flex items-start gap-2 text-sm">
               <Mail className="text-muted-foreground mt-0.5 size-4 shrink-0" />
-              <span className={lead.email ? "break-all" : "break-all text-muted-foreground"}>{lead.email ?? "Sem e-mail"}</span>
+              <span
+                className={lead.email ? 'break-all' : 'text-muted-foreground break-all'}
+              >
+                {lead.email ?? 'Sem e-mail'}
+              </span>
             </div>
 
             <div className="flex items-start gap-2 text-sm">
               <Phone className="text-muted-foreground mt-0.5 size-4 shrink-0" />
-              <span className={lead.phone ? undefined : "text-muted-foreground"}>{lead.phone ?? "Sem telefone"}</span>
+              <span className={lead.phone ? undefined : 'text-muted-foreground'}>
+                {lead.phone ?? 'Sem telefone'}
+              </span>
             </div>
 
             <div className="flex items-start gap-2 text-sm">
@@ -436,7 +458,6 @@ export function LeadDetailClient({
             </CardContent>
           </Card>
 
-
           <Card>
             <CardHeader className="flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between">
               <CardTitle>Histórico de atividades</CardTitle>
@@ -487,6 +508,7 @@ export function LeadDetailClient({
           onOpenChange={setEmailFormOpen}
           remetente={remetenteGmail}
           destinatario={lead.email}
+          nomeDoContato={lead.name}
           onSend={handleSendEmail}
         />
       )}

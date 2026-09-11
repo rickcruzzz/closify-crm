@@ -1,8 +1,16 @@
 'use client'
 
 import * as React from 'react'
+import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
-import { AlarmClock, CalendarPlus, Loader2, Plus, Trash2 } from 'lucide-react'
+import {
+  AlarmClock,
+  CalendarPlus,
+  Loader2,
+  Plus,
+  Trash2,
+  ExternalLink,
+} from 'lucide-react'
 
 import { dealStageLabels, dealStages, type DealStage } from '@/lib/deals/types'
 import type { DealRow, DealLeadRow } from '@/lib/deals/queries'
@@ -42,13 +50,17 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
-import { Button } from '@/components/ui/button'
+import { Button, buttonVariants } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
 import { iniciais } from '@/lib/leads/iniciais'
 
 function formatDate(date: string | null) {
   if (!date) return 'Sem data'
-  return new Date(date).toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' })
+  return new Date(date).toLocaleDateString('pt-BR', {
+    day: '2-digit',
+    month: 'long',
+    year: 'numeric',
+  })
 }
 
 export function DealDetailSheet({
@@ -103,6 +115,21 @@ export function DealDetailSheet({
   }, [open, abrirAgendamento, onAgendamentoAberto])
   const [agendandoNoCalendario, setAgendandoNoCalendario] = React.useState(false)
   /**
+   * O link do evento no Google, para quem acabou de cria-lo.
+   *
+   * `agendarReuniaoNoGoogleCalendar` ja devolvia `htmlLink` — o Google o manda
+   * na resposta — e a tela DESCARTAVA: ele so aparecia dentro do texto da
+   * atividade na timeline do contato. Quem clicava em "Google Calendar" via um
+   * toast e nao tinha como abrir o que criou.
+   *
+   * **Limite conhecido, e nao e defeito:** nada em `tasks` guarda o id do
+   * evento, entao o link vive so nesta sessao do painel. Fechar e reabrir traz
+   * o botao de criar de volta. Guardar o id exige migration e tratar
+   * `PATCH`/`DELETE` no Google, que e rodada propria — e sem ela mudar o prazo
+   * da tarefa TAMBEM nao move o evento la, que e o problema maior dos dois.
+   */
+  const [linkDoEvento, setLinkDoEvento] = React.useState<string | null>(null)
+  /**
    * A tarefa QUE ESTÁ SENDO concluída, não um "está concluindo".
    *
    * Um booleano só sabe que algo está em voo, e nada pode invalidá-lo — nem o
@@ -147,7 +174,17 @@ export function DealDetailSheet({
       return
     }
 
-    toast.success('Evento criado no Google Calendar.')
+    setLinkDoEvento(resultado.htmlLink ?? null)
+    toast.success('Evento criado no Google Calendar.', {
+      // A acao no toast e o caminho de quem quer conferir AGORA; o botao que
+      // troca de papel logo abaixo atende quem so percebe depois.
+      action: resultado.htmlLink
+        ? {
+            label: 'Abrir',
+            onClick: () => window.open(resultado.htmlLink, '_blank', 'noopener'),
+          }
+        : undefined,
+    })
     // Idem: a action já revalida '/kanban'.
   }
 
@@ -266,70 +303,7 @@ export function DealDetailSheet({
                 </Select>
               </div>
 
-              {/* Acima do contato e do prazo de propósito: para quem vende por
-                  orçamento — que é o ICP inteiro da prospecção deste projeto —
-                  a pergunta "quanto eu propus e até quando vale" vem antes de
-                  qualquer outra coisa do negócio. */}
-              <OrcamentoDoNegocio dealId={deal.id} valorDoNegocio={deal.value} />
-
-              {lead && (
-                <div>
-                  <span className="text-muted-foreground text-xs">Contato vinculado</span>
-                  <p className="text-sm font-medium">{lead.name}</p>
-                  <p className="text-muted-foreground text-xs">{lead.email}</p>
-                  <p className="text-muted-foreground text-xs">{lead.phone}</p>
-                </div>
-              )}
-
               <div>
-                <span className="text-muted-foreground text-xs">Responsável</span>
-                <div className="mt-1 flex items-center gap-2">
-                  <Avatar size="sm">
-                    <AvatarFallback>{iniciais(deal.owner_name ?? '?')}</AvatarFallback>
-                  </Avatar>
-                  <span className="text-sm">{deal.owner_name ?? 'Sem responsável'}</span>
-                </div>
-              </div>
-
-              <div className="flex justify-between">
-                <div>
-                  {/* O prazo saiu do card do Kanban e mora aqui: ele é
-                      previsão de fechamento, não ordem do dia. O card mostra a
-                      próxima ação, que é o que dá para cumprir hoje. */}
-                  <span className="text-muted-foreground text-xs">Prazo</span>
-                  <p className="text-sm">{formatDate(deal.due_date)}</p>
-                </div>
-                <div>
-                  <span className="text-muted-foreground text-xs">Criado em</span>
-                  <p className="text-sm">{formatDate(deal.created_at)}</p>
-                </div>
-              </div>
-
-              {/* Há quanto tempo o negócio não muda de etapa. Fica aqui e não
-                  no card: lá já mora a próxima ação, e duas datas competindo
-                  fazem a pessoa não saber qual obedecer, a mesma razão pela
-                  qual o prazo saiu de lá. */}
-              <div>
-                <span className="text-muted-foreground text-xs">Movimento</span>
-                {movimento === null ? (
-                  <p className="text-muted-foreground text-sm">Calculando…</p>
-                ) : movimento.parado ? (
-                  <p className="text-destructive flex items-center gap-1.5 text-sm font-medium">
-                    <AlarmClock aria-hidden className="size-4 shrink-0" />
-                    {rotuloDeParado(movimento.dias)}
-                  </p>
-                ) : (
-                  <p className="text-sm">
-                    {movimento.dias === 0
-                      ? 'Mudou de etapa hoje'
-                      : movimento.dias === 1
-                        ? 'Mudou de etapa ontem'
-                        : `Na mesma etapa há ${movimento.dias} dias`}
-                  </p>
-                )}
-              </div>
-
-              <div className="border-t pt-4">
                 <span className="text-muted-foreground text-xs">Próxima ação</span>
 
                 {proximaAcao ? (
@@ -345,20 +319,42 @@ export function DealDetailSheet({
                           pra alguém entender o que o botão faz, igual ao
                           Gmail (`lead-detail-client.tsx`) já é ícone + texto,
                           este passa a ser também. */}
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="flex-1 sm:flex-initial"
-                        disabled={agendandoNoCalendario}
-                        onClick={adicionarAoCalendario}
-                      >
-                        {agendandoNoCalendario ? (
-                          <Loader2 className="size-4 animate-spin" />
-                        ) : (
-                          <CalendarPlus className="size-4" />
-                        )}
-                        Google Calendar
-                      </Button>
+                      {/* ## Um botao, dois papeis
+
+                          Antes de agendar ele cria; depois de agendar ele abre
+                          o que foi criado. Dois botoes lado a lado fariam
+                          alguem criar o MESMO evento duas vezes, que e o erro
+                          que nao tem desfazer aqui — o evento duplicado vai
+                          para a agenda de quem foi convidado. */}
+                      {linkDoEvento ? (
+                        <a
+                          href={linkDoEvento}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className={cn(
+                            buttonVariants({ variant: 'outline', size: 'sm' }),
+                            'flex-1 sm:flex-initial',
+                          )}
+                        >
+                          <ExternalLink className="size-4" />
+                          Abrir no Google Calendar
+                        </a>
+                      ) : (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="flex-1 sm:flex-initial"
+                          disabled={agendandoNoCalendario}
+                          onClick={adicionarAoCalendario}
+                        >
+                          {agendandoNoCalendario ? (
+                            <Loader2 className="size-4 animate-spin" />
+                          ) : (
+                            <CalendarPlus className="size-4" />
+                          )}
+                          Google Calendar
+                        </Button>
+                      )}
                       <Button
                         variant="outline"
                         size="sm"
@@ -419,6 +415,83 @@ export function DealDetailSheet({
                     )}
                   </div>
                 )}
+              </div>
+
+              {/* Há quanto tempo o negócio não muda de etapa. Fica aqui e não
+                  no card: lá já mora a próxima ação, e duas datas competindo
+                  fazem a pessoa não saber qual obedecer, a mesma razão pela
+                  qual o prazo saiu de lá. */}
+              <div>
+                <span className="text-muted-foreground text-xs">Movimento</span>
+                {movimento === null ? (
+                  <p className="text-muted-foreground text-sm">Calculando…</p>
+                ) : movimento.parado ? (
+                  <p className="text-destructive flex items-center gap-1.5 text-sm font-medium">
+                    <AlarmClock aria-hidden className="size-4 shrink-0" />
+                    {rotuloDeParado(movimento.dias)}
+                  </p>
+                ) : (
+                  <p className="text-sm">
+                    {movimento.dias === 0
+                      ? 'Mudou de etapa hoje'
+                      : movimento.dias === 1
+                        ? 'Mudou de etapa ontem'
+                        : `Na mesma etapa há ${movimento.dias} dias`}
+                  </p>
+                )}
+              </div>
+
+              {/* Acima do contato e do prazo de propósito: para quem vende por
+                  orçamento — que é o ICP inteiro da prospecção deste projeto —
+                  a pergunta "quanto eu propus e até quando vale" vem antes de
+                  qualquer outra coisa do negócio. */}
+              <OrcamentoDoNegocio dealId={deal.id} valorDoNegocio={deal.value} />
+
+              {/* ## O cadastro desce, e a acao sobe
+
+                  A ordem era: valor, etapa, orcamento, contato, responsavel,
+                  prazo, criado em, movimento, proxima acao — com "Proxima
+                  acao" em PENULTIMO, depois de sete blocos de cadastro.
+
+                  Quem abre um negocio quer saber, nesta ordem: o que e isto,
+                  o que eu faco agora, esta parado. A proxima acao e o motivo
+                  de o produto existir, e era a ultima coisa a aparecer.
+
+                  O que e cadastro fica abaixo do filete, junto, e continua
+                  inteiro: nada saiu da tela, so mudou de vizinhanca. */}
+              <Separator />
+
+              {lead && (
+                <div>
+                  <span className="text-muted-foreground text-xs">Contato vinculado</span>
+                  <p className="text-sm font-medium">{lead.name}</p>
+                  <p className="text-muted-foreground text-xs">{lead.email}</p>
+                  <p className="text-muted-foreground text-xs">{lead.phone}</p>
+                </div>
+              )}
+
+              <div>
+                <span className="text-muted-foreground text-xs">Responsável</span>
+                <div className="mt-1 flex items-center gap-2">
+                  <Avatar size="sm">
+                    <AvatarFallback>{iniciais(deal.owner_name ?? '?')}</AvatarFallback>
+                  </Avatar>
+                  <span className="text-sm">{deal.owner_name ?? 'Sem responsável'}</span>
+                </div>
+              </div>
+
+              <div className="flex justify-between">
+                <div>
+                  {/* O prazo saiu do card do Kanban e mora aqui: ele é
+                      previsão de fechamento, não ordem do dia. O card mostra a
+                      próxima ação, que é o que dá para cumprir hoje. */}
+                  <span className="text-muted-foreground text-xs">Prazo</span>
+                  <p className="text-sm">{formatDate(deal.due_date)}</p>
+                </div>
+                <div>
+                  <span className="text-muted-foreground text-xs">Criado em</span>
+                  <p className="text-sm">{formatDate(deal.created_at)}</p>
+                </div>
               </div>
             </div>
 
