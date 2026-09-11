@@ -45,6 +45,24 @@ export function podeConectarWhatsapp(): boolean {
 }
 
 /**
+ * Dá para ENVIAR mensagem agora?
+ *
+ * Hoje devolve o mesmo que `podeConectarWhatsapp`, e mesmo assim é função
+ * separada: as duas perguntas são diferentes e podem divergir. Numa fase de
+ * volta gradual, por exemplo, quem já tem número conectado envia enquanto
+ * ninguém novo conecta — e aí a diferença passa a existir sem ninguém precisar
+ * caçar os chamadores.
+ *
+ * Nasceu porque `lib/conversas/actions.ts` checava o PLANO antes da migração e
+ * mandava fazer upgrade: quem pagasse por causa da frase receberia "Limite de
+ * 0 mensagens por hora atingido", porque `escolherRemetente` devolve sempre
+ * `emMigracao` enquanto a fase for esta.
+ */
+export function podeEnviarWhatsapp(): boolean {
+  return FASE_DO_WHATSAPP !== 'migrando'
+}
+
+/**
  * O que a tela diz enquanto não dá para conectar.
  *
  * Diz o que está acontecendo, por que é melhor no fim, e o que a pessoa perde

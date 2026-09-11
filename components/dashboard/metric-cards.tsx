@@ -85,12 +85,35 @@ const cards: MetricCardConfig[] = [
   },
 ]
 
-export function MetricCards({ metrics }: { metrics: DashboardMetrics }) {
+export function MetricCards({
+  metrics,
+  temFiltroDePeriodo = false,
+}: {
+  metrics: DashboardMetrics
+  /**
+   * Há um período escolhido? `false` significa "todo o histórico".
+   *
+   * ## O defeito que isto fecha, e ele saía no PDF do cliente
+   *
+   * A condição era só `totalLeads === 0 && openDeals === 0`, e as métricas são
+   * recortadas por `created_at` dentro do período (migration 0036). Uma empresa
+   * com 200 contatos que clicasse em "Hoje" recebia a tela de conta nova
+   * mandando "cadastrar o primeiro contato".
+   *
+   * E o pior não era a tela: estes cartões ficam DENTRO de `<ReportArea>`, então
+   * a frase entrava no PDF que a pessoa manda ao cliente dela. É exatamente o
+   * que a decisão de tirar o checklist do relatório existia para evitar.
+   */
+  temFiltroDePeriodo?: boolean
+}) {
   // Workspace sem nenhum lead: quatro zeros não informam nada e ainda dão a
   // impressão de sistema quebrado. Um convite à ação ocupa o mesmo espaço e
   // diz o que fazer. Basta o primeiro lead para os cartões voltarem, e eles
   // voltam com número de verdade, não com zero.
-  if (metrics.totalLeads === 0 && metrics.openDeals === 0) {
+  //
+  // Só vale para a empresa REALMENTE vazia: com filtro de período, zero quer
+  // dizer "nada neste intervalo", que é outra frase e outro botão.
+  if (metrics.totalLeads === 0 && metrics.openDeals === 0 && !temFiltroDePeriodo) {
     return (
       <Card>
         <CardContent>
@@ -102,6 +125,24 @@ export function MetricCards({ metrics }: { metrics: DashboardMetrics }) {
             <Button render={<Link href={CONTATOS}>Adicionar primeiro contato</Link>} />
             <Button variant="outline" render={<Link href={FUNIL}>Ver o funil</Link>} />
           </EmptyState>
+        </CardContent>
+      </Card>
+    )
+  }
+
+  // Com período escolhido e nada dentro dele, a resposta é sobre o RECORTE, não
+  // sobre a conta. Quatro zeros sem frase deixam a pessoa concluir que o
+  // sistema perdeu os dados dela — e o botão certo aqui é trocar o filtro, não
+  // cadastrar contato.
+  if (metrics.totalLeads === 0 && metrics.openDeals === 0) {
+    return (
+      <Card>
+        <CardContent>
+          <EmptyState
+            icon={Target}
+            title="Nada neste período"
+            description="Nenhum contato ou negócio foi criado no intervalo escolhido. Seus dados continuam aqui — escolha outro período para vê-los."
+          />
         </CardContent>
       </Card>
     )

@@ -74,8 +74,19 @@ export function PlanCard({
           <CardTitle>Plano</CardTitle>
           <CardDescription>
             {plan === 'pro'
-              ? 'Empresas, colaboradores e leads ilimitados.'
-              : `Plano Free: ${FREE_WORKSPACE_LIMIT} empresa, até ${FREE_MEMBER_LIMIT} colaboradores e ${FREE_LEAD_LIMIT} leads.`}
+              ? /* "Empresas ilimitadas" era FALSO e contradizia a lista 30 linhas
+                   acima, no mesmo arquivo, que sempre disse "Até 5 empresas".
+                   `PRO_WORKSPACE_LIMIT` é 5 e a migration 0078 o aplica na
+                   criação — quem lesse esta linha tentaria criar a sexta.
+
+                   O comentário do topo deste arquivo já registra que
+                   "empresas ilimitadas" foi caçado uma vez; sobreviveu aqui.
+
+                   E "leads" virou "contatos" nas duas frases: é o jargão que a
+                   renomeação de 19/08 tirou do produto, e a tela do menu se
+                   chama Contatos. */
+                `Até ${PRO_WORKSPACE_LIMIT} empresas, colaboradores e contatos ilimitados.`
+              : `Plano Free: ${FREE_WORKSPACE_LIMIT} empresa, até ${FREE_MEMBER_LIMIT} colaboradores e ${FREE_LEAD_LIMIT} contatos.`}
           </CardDescription>
         </div>
         <Badge variant={plan === 'pro' ? 'default' : 'secondary'}>

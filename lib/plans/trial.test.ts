@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { FREE_ORCAMENTO_LIMIT } from '@/lib/plans'
 
 import { diasRestantesDoTrial, estadoDoTrial, textoDoAviso } from './trial'
 
@@ -104,8 +105,25 @@ describe('texto do aviso', () => {
     for (const dias of [1, 2, 3, -1]) {
       const texto = textoDoAviso(estadoDoTrial(daquiA(dias), false, AGORA))
       expect(texto).not.toBeNull()
-      expect(texto!.detalhe.toLowerCase()).toContain('whatsapp')
+      // A perda que o texto cita mudou em 11/09: era WhatsApp, e o WhatsApp
+      // não funciona para ninguém desde 28/08 (`FASE_DO_WHATSAPP` = 'migrando').
+      // Hoje é o teto de orçamento com lembrete, que o Free de fato aplica.
+      expect(texto!.detalhe).toContain(String(FREE_ORCAMENTO_LIMIT))
       expect(texto!.titulo.toLowerCase()).not.toContain('expira')
+    }
+  })
+
+  /**
+   * O controle do caso acima: o que saiu não pode voltar sozinho.
+   *
+   * Esta tarja aparece em TODA tela logada, com o botão de assinar ao lado.
+   * Enquanto a Cloud API não voltar, prometer WhatsApp aqui é cobrar por uma
+   * coisa que o produto não faz.
+   */
+  it('não promete WhatsApp enquanto a integração está em migração', () => {
+    for (const dias of [1, 2, 3, -1]) {
+      const texto = textoDoAviso(estadoDoTrial(daquiA(dias), false, AGORA))
+      expect(texto!.detalhe.toLowerCase()).not.toContain('whatsapp')
     }
   })
 

@@ -80,7 +80,11 @@ export default async function BillingPage({
             <CardTitle>Plano atual</CardTitle>
             <CardDescription>
               {plan === 'pro'
-                ? 'Colaboradores e leads ilimitados.'
+                ? /* "leads" e o jargao que a renomeacao de 19/08 tirou do
+                     produto — a tela do menu se chama Contatos. Mesma troca
+                     feita em `plan-card.tsx`, onde a frase vizinha ainda
+                     prometia "empresas ilimitadas" contra o teto de 5. */
+                  'Colaboradores e contatos ilimitados.'
                 : 'Ideal para começar a organizar seu funil.'}
             </CardDescription>
           </div>

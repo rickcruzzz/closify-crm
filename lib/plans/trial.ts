@@ -8,6 +8,8 @@
  */
 
 /** Quantos dias o trial dura. Espelha `dias_de_trial` da migration 0051. */
+import { FREE_LEAD_LIMIT, FREE_ORCAMENTO_LIMIT } from '@/lib/plans'
+
 export const DIAS_DE_TRIAL = 7
 
 /**
@@ -91,10 +93,25 @@ export function estadoDoTrial(
  *
  * ## Por que fala do que PARA de funcionar, e não do que "expira"
  *
- * "Seu teste expira em 2 dias" é sobre o nosso processo. "Em 2 dias o WhatsApp
- * para de trazer as mensagens para cá" é sobre o dia da pessoa. A segunda
- * versão descreve uma perda concreta que ela já sentiu o valor de ter — e é a
- * perda, não o prazo, que faz decidir.
+ * "Seu teste expira em 2 dias" é sobre o nosso processo. "Em 2 dias o lembrete
+ * do orçamento trava em 3" é sobre o dia da pessoa. A segunda versão descreve
+ * uma perda concreta que ela já sentiu o valor de ter — e é a perda, não o
+ * prazo, que faz decidir.
+ *
+ * ## O WhatsApp saiu destes textos, e o motivo é sério
+ *
+ * As três mensagens diziam que "o WhatsApp para de trazer as mensagens dos
+ * seus clientes para cá". **Ele não traz para ninguém, em plano nenhum**:
+ * `FASE_DO_WHATSAPP` é 'migrando' desde 28/08, e a própria `integration-card`
+ * diz isso a quem está no Free.
+ *
+ * Esta tarja aparece em TODA tela logada (`app/(dashboard)/layout.tsx`), com o
+ * botão de assinar colado nela — ou seja, o produto anunciava como perda do
+ * fim do trial uma coisa que já não funcionava, ao lado de um botão de pagar.
+ *
+ * O que entrou no lugar é o que o Pro de fato entrega e o Free de fato limita:
+ * orçamento com lembrete (3 no Free) e contatos (50). Os números saem das
+ * constantes — escritos à mão, passariam a mentir na primeira troca de limite.
  */
 export function textoDoAviso(estado: EstadoDoTrial): { titulo: string; detalhe: string } | null {
   if (estado.tipo === 'sem_trial') return null
@@ -103,8 +120,9 @@ export function textoDoAviso(estado: EstadoDoTrial): { titulo: string; detalhe: 
     return {
       titulo: 'Seu teste do Pro terminou',
       detalhe:
-        'Seus contatos e negócios continuam aqui, inteiros. O que parou foi o WhatsApp trazendo ' +
-        'as mensagens e o cadastro de contatos acima de 50.',
+        `Seus contatos e negócios continuam aqui, inteiros. O que parou foi o orçamento com ` +
+        `lembrete acima de ${FREE_ORCAMENTO_LIMIT} ao mesmo tempo, e o cadastro de contatos ` +
+        `acima de ${FREE_LEAD_LIMIT}.`,
     }
   }
 
@@ -116,15 +134,15 @@ export function textoDoAviso(estado: EstadoDoTrial): { titulo: string; detalhe: 
     return {
       titulo: 'Último dia do seu teste',
       detalhe:
-        'Amanhã o WhatsApp para de trazer as mensagens dos seus clientes para cá, e o cadastro ' +
-        'de contatos trava em 50. Nada é apagado.',
+        `Amanhã o orçamento com lembrete trava em ${FREE_ORCAMENTO_LIMIT} ao mesmo tempo e o ` +
+        `cadastro de contatos trava em ${FREE_LEAD_LIMIT}. Nada é apagado.`,
     }
   }
 
   return {
     titulo: `Faltam ${diasRestantes} dias do seu teste`,
     detalhe:
-      'Depois disso o WhatsApp para de trazer as mensagens para cá e o cadastro de contatos ' +
-      'trava em 50. O que você já cadastrou continua aqui.',
+      `Depois disso o orçamento com lembrete trava em ${FREE_ORCAMENTO_LIMIT} ao mesmo tempo e ` +
+      `o cadastro de contatos trava em ${FREE_LEAD_LIMIT}. O que você já cadastrou continua aqui.`,
   }
 }

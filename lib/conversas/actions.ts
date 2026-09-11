@@ -7,6 +7,7 @@ import { createClient } from '@/lib/supabase/server'
 import { resolverWorkspaceAtivo } from '@/lib/workspace/ativo'
 import { escolherRemetente } from '@/lib/conversas/remetente'
 import { normalizarTelefoneBrasileiro } from '@/lib/leads/whatsapp'
+import { podeEnviarWhatsapp } from '@/lib/integrations/whatsapp-estado'
 
 /**
  * Responder, assumir e arquivar conversa.
@@ -172,6 +173,27 @@ export async function enviarMensagem(
 
   if (!alvo.telefone) {
     return { error: 'Este contato não tem telefone cadastrado.' }
+  }
+
+  // ## A migração é checada ANTES do plano, e a ordem é a correção
+  //
+  // Enquanto `FASE_DO_WHATSAPP` é 'migrando', ninguém envia por aqui — nem
+  // Free, nem Pro. `escolherRemetente` devolve sempre `emMigracao`, cujo
+  // `tetoPorHora()` é 0.
+  //
+  // O gate do plano vinha primeiro e mandava fazer upgrade: quem pagasse os
+  // R$ 97 por causa dessa frase tentaria enviar e receberia "Limite de 0
+  // mensagens por hora atingido". Cobrar por uma coisa que o produto não faz
+  // é pior do que não ter a coisa.
+  //
+  // Quando a Cloud API voltar, esta guarda deixa de disparar sozinha — é o
+  // que `FASE_DO_WHATSAPP` promete no próprio comentário — e o gate do Pro
+  // abaixo volta a ser a única regra, sem nada para desfazer aqui.
+  if (!podeEnviarWhatsapp()) {
+    return {
+      error:
+        'O envio pelo WhatsApp está fora do ar enquanto trocamos de provedor. Use o botão de abrir o WhatsApp no contato.',
+    }
   }
 
   // Mesmo gate do webhook: WhatsApp é recurso do Pro, e a regra vive no banco.

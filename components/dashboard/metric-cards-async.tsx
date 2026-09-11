@@ -19,5 +19,8 @@ export async function MetricCardsAsync({
   periodo?: PeriodoDoDashboard
 }) {
   const metrics = await getDashboardMetrics(workspaceId, periodo)
-  return <MetricCards metrics={metrics} />
+  // `periodo` ausente significa "todo o histórico", que é o padrão da tela.
+  // `MetricCards` precisa dessa distinção para não mandar uma empresa com 200
+  // contatos "cadastrar o primeiro" só porque ela filtrou por Hoje.
+  return <MetricCards metrics={metrics} temFiltroDePeriodo={periodo !== undefined} />
 }

@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { FREE_LEAD_LIMIT, FREE_ORCAMENTO_LIMIT } from '@/lib/plans'
 
 import { corpoDoTrial, renderTrialTerminandoEmail } from './trial-terminando'
 import { CONTROLADOR } from '@/lib/legal'
@@ -61,13 +62,16 @@ describe('corpoDoTrial, a escada de quatro dias', () => {
   })
 
   // A régua de `textoDoAviso`: é a PERDA que decide, não a data. "Seu teste
-  // expira" é sobre o nosso processo; "o WhatsApp para de trazer as mensagens"
-  // é sobre o dia da pessoa.
+  // expira" é sobre o nosso processo; "o orçamento com lembrete trava em 3" é
+  // sobre o dia da pessoa.
+  //
+  // Citava WhatsApp até 11/09, e a perda tinha que mudar junto com a verdade:
+  // ele não funciona para ninguém desde 28/08.
   it('do penúltimo dia em diante diz o que para de funcionar', () => {
     for (const dias of [2, 1]) {
       const { bodyHtml } = corpoDoTrial({ ...args, diasRestantes: dias })
-      expect(bodyHtml, `dia ${dias}`).toContain('WhatsApp')
-      expect(bodyHtml, `dia ${dias}`).toContain('50')
+      expect(bodyHtml, `dia ${dias}`).toContain(String(FREE_ORCAMENTO_LIMIT))
+      expect(bodyHtml, `dia ${dias}`).toContain(String(FREE_LEAD_LIMIT))
     }
   })
 
@@ -141,14 +145,37 @@ describe('e-mail e tarja do produto contam a mesma história', () => {
     diasRestantes: 1,
   }).bodyHtml
 
-  it('os dois citam WhatsApp e o teto de 50 contatos', () => {
+  /**
+   * O caso mudou de conteúdo em 11/09, e o motivo vale mais que a asserção.
+   *
+   * Ele travava a presença de "WhatsApp" nos dois textos. E o WhatsApp **não
+   * funciona para ninguém** desde 28/08: `FASE_DO_WHATSAPP` é 'migrando', e
+   * `escolherRemetente` devolve sempre `emMigracao`, com teto de 0 mensagens
+   * por hora. Os dois textos anunciavam como perda do fim do trial uma coisa
+   * que já não existia — a tarja em toda tela logada, com botão de assinar ao
+   * lado, e o e-mail junto de um pedido de pagamento.
+   *
+   * O teste continua fazendo o mesmo trabalho: garante que tarja e e-mail
+   * contam a MESMA história. Só mudou qual história é verdadeira.
+   *
+   * Os números saem das constantes de propósito: escritos à mão, o teste
+   * passaria a exigir um teto que o produto não aplica mais.
+   */
+  it('os dois citam o teto de orçamento e o de contatos', () => {
     const daTela = textoDoAviso(estadoDoTrial(VESPERA, false, AGORA))
     expect(daTela).not.toBeNull()
 
-    for (const fato of ['WhatsApp', '50']) {
+    for (const fato of [String(FREE_ORCAMENTO_LIMIT), String(FREE_LEAD_LIMIT)]) {
       expect(daTela!.detalhe, `tarja, ${fato}`).toContain(fato)
       expect(doEmail, `e-mail, ${fato}`).toContain(fato)
     }
+  })
+
+  /** E o que saiu não pode voltar: WhatsApp fora dos dois, enquanto migra. */
+  it('nenhum dos dois promete WhatsApp', () => {
+    const daTela = textoDoAviso(estadoDoTrial(VESPERA, false, AGORA))
+    expect(daTela!.detalhe.toLowerCase()).not.toContain('whatsapp')
+    expect(doEmail.toLowerCase()).not.toContain('whatsapp')
   })
 
   /**

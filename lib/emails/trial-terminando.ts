@@ -1,4 +1,5 @@
 import { escapeHtml, paragraph, rawParagraph, renderEmail } from '@/lib/emails/layout'
+import { FREE_LEAD_LIMIT, FREE_ORCAMENTO_LIMIT } from '@/lib/plans'
 
 /**
  * E-mail de "seu teste está acabando".
@@ -19,6 +20,12 @@ import { escapeHtml, paragraph, rawParagraph, renderEmail } from '@/lib/emails/l
  * trial para pagante nunca aconteceu uma vez com cliente externo.
  *
  * ## Por que o texto fala de perda concreta, e não de prazo
+ *
+ * O WhatsApp saiu deste texto junto com os outros três lugares que o citavam:
+ * `FASE_DO_WHATSAPP` é 'migrando' desde 28/08 e ele não traz mensagem para
+ * ninguém, em plano nenhum. Anunciar como perda do fim do trial uma coisa que
+ * já não funciona é pior do que não anunciar nada — e este e-mail chega junto
+ * de um pedido de pagamento.
  *
  * "Seu teste expira em 3 dias" é sobre o nosso processo. "Em 3 dias o WhatsApp
  * para de trazer as mensagens para cá" é sobre o dia da pessoa. É a perda que
@@ -54,7 +61,7 @@ export function corpoDoTrial(params: {
   // duas precisam continuar batendo: ler uma coisa no e-mail e outra na tela é
   // como se perde a confiança de quem está decidindo pagar.
   const oQuePara = paragraph(
-    'Depois disso o WhatsApp para de trazer as mensagens dos seus clientes para cá, e o cadastro de contatos trava em 50.',
+    `Depois disso o orçamento com lembrete trava em ${FREE_ORCAMENTO_LIMIT} ao mesmo tempo, e o cadastro de contatos trava em ${FREE_LEAD_LIMIT}.`,
   )
 
   const oQueFica = paragraph(

@@ -1,6 +1,7 @@
 'use client'
 
 import * as React from 'react'
+import { FREE_LEAD_LIMIT, FREE_ORCAMENTO_LIMIT } from '@/lib/plans'
 import { Clock } from 'lucide-react'
 
 import { estadoDoVencimento, textoDeQuantoFalta } from '@/lib/plans/vencimento'
@@ -63,8 +64,8 @@ export function AvisoDeTesteNaCobranca({ trialAte }: { trialAte: string | null }
           concreta que faz decidir, não a data. Os três textos precisam
           continuar dizendo a mesma coisa. */}
       <p className="text-muted-foreground text-sm">
-        Depois disso o WhatsApp para de trazer as mensagens dos seus clientes para cá e o
-        cadastro de contatos trava em 50. Nada é apagado.
+        Depois disso o orçamento com lembrete trava em {FREE_ORCAMENTO_LIMIT} ao mesmo tempo e o
+        cadastro de contatos trava em {FREE_LEAD_LIMIT}. Nada é apagado.
       </p>
     </div>
   )
