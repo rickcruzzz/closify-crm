@@ -34,7 +34,20 @@ import { homedir } from 'node:os'
 import { chromium } from '@playwright/test'
 
 const ORIGEM = 'docs/n8n/agente-sdr-whatsapp.json'
-const NOME = 'agente-sdr-whatsapp.json'
+/**
+ * O prefixo `0-NOVO-` existe por causa da pasta de destino, não por estética.
+ *
+ * A pasta Downloads desta máquina tem mais de vinte `.json` de workflow do
+ * n8n — `amigo-n8n-workflow (2).json`, `My workflow 2.json`, versões antigas
+ * deste mesmo agente. O seletor do n8n abre ali e ordena por nome, então o
+ * arquivo certo nascia no meio da lista, ao lado de homônimos parecidos.
+ *
+ * Escolher o errado não dá erro: o n8n importa qualquer workflow válido, e o
+ * que se descobre depois é que o agente responde com a configuração de outro
+ * projeto. `0` ordena antes de letra no Windows, então o arquivo recém-baixado
+ * fica no topo por nome — e, por ser o mais recente, também por data.
+ */
+const NOME = '0-NOVO-agente-sdr-whatsapp.json'
 
 if (!existsSync(ORIGEM)) {
   console.error(`\n  não achei ${ORIGEM}. Rode a partir da raiz do projeto.\n`)
