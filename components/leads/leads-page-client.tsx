@@ -84,7 +84,26 @@ export function LeadsPageClient({
   const [deleteOpen, setDeleteOpen] = React.useState(false)
   const [deletingLead, setDeletingLead] = React.useState<LeadRow | undefined>()
   const [excluindoLeadId, setExcluindoLeadId] = React.useState<string | null>(null)
-  const [importOpen, setImportOpen] = React.useState(false)
+  /**
+   * A importação abre por URL, e não só por clique no botão.
+   *
+   * `/leads?importar=1` chega pronto para receber o arquivo. Existe porque o
+   * recurso passa batido: o primeiro usuário externo do produto cadastrou 19
+   * contatos à mão, um por minuto, com a importação disponível desde 11/08 —
+   * ele fez o tour inteiro em 33 segundos e o botão ficou onde estava.
+   *
+   * Sem isso, uma notificação ou um e-mail dizendo "dá para importar" só
+   * consegue levar até `/leads`, e a pessoa tem que achar o botão sozinha —
+   * que é exatamente o passo que já falhou uma vez.
+   *
+   * O parâmetro é lido UMA vez, no estado inicial, e some do endereço quando
+   * o diálogo fecha (abaixo). Deixá-lo faria o diálogo reabrir a cada
+   * `router.refresh()` — e a importação chama `refresh()` quando termina, o
+   * que criaria um laço de reabrir sozinho depois de importar.
+   */
+  const [importOpen, setImportOpen] = React.useState(
+    () => searchParams.get('importar') === '1',
+  )
 
   const updateFilters = React.useCallback(
     (
@@ -473,7 +492,20 @@ export function LeadsPageClient({
 
       <ImportLeadsDialog
         open={importOpen}
-        onOpenChange={setImportOpen}
+        onOpenChange={(aberto) => {
+          setImportOpen(aberto)
+          // Ao fechar, o `?importar=1` sai do endereço. `replace` e não
+          // `push`: a pessoa não deve ter que apertar Voltar duas vezes para
+          // sair da tela, e reabrir o diálogo pelo histórico não é o que ela
+          // espera. Só mexe na URL se o parâmetro estiver lá — fechar o
+          // diálogo aberto pelo botão não deve disparar navegação nenhuma.
+          if (!aberto && searchParams.get('importar')) {
+            const params = new URLSearchParams(searchParams)
+            params.delete('importar')
+            const busca = params.toString()
+            router.replace(busca ? `${pathname}?${busca}` : pathname)
+          }
+        }}
         onImported={() => router.refresh()}
         vagasNoPlano={vagasNoPlano}
       />

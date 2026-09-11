@@ -60,6 +60,7 @@ export type TipoDeNotificacao =
   | 'plano_vencendo'
   | 'trial_terminando'
   | 'convite_instagram'
+  | 'dica_de_uso'
 
 /**
  * Os campos de empresa acrescentados em 0030.

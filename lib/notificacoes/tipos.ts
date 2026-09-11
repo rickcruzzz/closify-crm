@@ -43,6 +43,16 @@ export const TIPOS_DE_NOTIFICACAO = [
    * produção. É o caso logo abaixo.
    */
   'convite_instagram',
+  /**
+   * Orientacao de uso: o produto mostrando um recurso que a pessoa nao achou.
+   *
+   * Diferente do `convite_instagram` logo acima, que PEDE algo (siga um
+   * perfil). Este ENTREGA algo, e passa na regra do sino pelo motivo certo —
+   * a mesma dica sai por e-mail, e o e-mail e o formato longo dela.
+   *
+   * O caso que o motivou esta na migration 0082.
+   */
+  'dica_de_uso',
   // `sinal_de_mercado` esteve aqui entre 07 e 08/09, e saiu junto com a
   // pesquisa de mercado do lado do cliente (0075). Fica registrado para
   // ninguém recolocar sem o recurso: tipo sem chamador é código morto com
