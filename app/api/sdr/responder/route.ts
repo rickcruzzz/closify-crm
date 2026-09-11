@@ -12,6 +12,15 @@ import {
   pediuPassagem,
 } from '@/lib/sdr/instrucoes'
 import {
+  cabeNoTeto,
+  descreverImagem,
+  ehAudioLongoDemais,
+  FALHA_DE_MIDIA,
+  montarPromptDeAudio,
+  montarPromptDeImagem,
+  transcreverAudio,
+} from '@/lib/sdr/midia'
+import {
   humanoAssumiu,
   mensagensPendentes,
   montarHistorico,
@@ -52,7 +61,14 @@ export const runtime = 'nodejs'
 
 const entrada = z.object({
   /** O que a pessoa escreveu agora. */
-  mensagem: z.string().trim().min(1).max(4000),
+  /**
+   * O que a pessoa escreveu agora.
+   *
+   * Aceita vazio porque áudio e imagem chegam SEM texto: o WhatsApp não manda
+   * legenda em áudio, e imagem sem legenda é comum. O conteúdo, nesse caso,
+   * nasce de `midia` logo abaixo.
+   */
+  mensagem: z.string().trim().max(4000),
   /** Nome da empresa, quando a prospecção sabe. */
   empresa: z.string().trim().max(120).optional().nullable(),
   /** Nicho, para o agente falar a língua certa. */
@@ -82,6 +98,24 @@ const entrada = z.object({
    * que roda enquanto o fluxo novo não é publicado.
    */
   conversa: z.array(z.unknown()).max(200).optional(),
+  /**
+   * Áudio ou imagem que a pessoa mandou, em base64.
+   *
+   * O n8n baixa da Evolution (`getBase64FromMediaMessage`) e repassa. Fica
+   * assim, e não com `webhookBase64: true` na instância, porque aquilo embutiria
+   * o base64 de TODA mídia em TODO webhook — um áudio de um minuto vira ~1 MB
+   * de JSON mesmo quando o agente vai ignorar a mensagem.
+   */
+  midia: z
+    .object({
+      tipo: z.enum(['audio', 'imagem']),
+      base64: z.string().min(1),
+      /** Duração do áudio, quando o WhatsApp informa. */
+      segundos: z.number().int().nonnegative().optional().nullable(),
+      /** Legenda da imagem — quase sempre é a pergunta de verdade. */
+      legenda: z.string().max(1000).optional().nullable(),
+    })
+    .optional(),
 })
 
 const MODELO = 'gpt-4.1'
@@ -118,7 +152,7 @@ export async function POST(req: Request) {
     )
   }
 
-  const { mensagem, empresa, vertical, pesquisa, historico, conversa } = lido.data
+  const { mensagem, empresa, vertical, pesquisa, historico, conversa, midia } = lido.data
 
   // ## A pausa quando o atendente entra
   //
@@ -151,7 +185,43 @@ export async function POST(req: Request) {
     return NextResponse.json({ texto: '', calar: true, motivo: 'nada novo para responder' })
   }
 
-  const paraResponder = doBuffer || mensagem
+  let paraResponder = doBuffer || mensagem
+
+  // ## Áudio e imagem viram TEXTO aqui, antes de o agente ver
+  //
+  // Até 11/09 os dois caíam no ramo `Ignora` do fluxo e o agente não respondia
+  // nada. Silêncio, para quem mandou, lê como "não funciona" — pior que uma
+  // resposta ruim. E não é caso raro: marcenaria, vidraçaria e dedetizadora
+  // mandam áudio o tempo todo, porque é como se escreve na obra.
+  //
+  // O resultado entra em `paraResponder`, ou seja, passa pelo MESMO envelope e
+  // pela MESMA blindagem da mensagem de texto. Sem isso a imagem seria um canal
+  // que contorna a trava: bastaria escrever a injeção num print.
+  if (midia) {
+    if (!cabeNoTeto(midia.base64)) {
+      return NextResponse.json({ texto: FALHA_DE_MIDIA[midia.tipo], passar: true, motivo: 'mídia grande demais' })
+    }
+
+    if (midia.tipo === 'audio') {
+      // Áudio longo não é pergunta, é desabafo ou briefing — e a resposta
+      // honesta para os dois é um humano. O custo por minuto do Whisper é o
+      // segundo motivo, não o primeiro.
+      if (ehAudioLongoDemais(midia.segundos)) {
+        return NextResponse.json({ texto: FALHA_DE_MIDIA.audioLongo, passar: true, motivo: 'áudio longo' })
+      }
+      const t = await transcreverAudio(midia.base64, chave)
+      if ('erro' in t) {
+        return NextResponse.json({ texto: FALHA_DE_MIDIA.audio, passar: true, motivo: t.erro })
+      }
+      paraResponder = montarPromptDeAudio(t.texto)
+    } else {
+      const d = await descreverImagem(midia.base64, chave)
+      if ('erro' in d) {
+        return NextResponse.json({ texto: FALHA_DE_MIDIA.imagem, passar: true, motivo: d.erro })
+      }
+      paraResponder = montarPromptDeImagem(d.texto, midia.legenda)
+    }
+  }
 
   // O histórico derivado da conversa vence o que veio pronto: ele é o que de
   // fato aconteceu no WhatsApp, e não o que o fluxo achou que aconteceu.
@@ -161,6 +231,14 @@ export async function POST(req: Request) {
         // histórico faria o modelo ler a mesma pergunta duas vezes.
         montarHistorico(cruas).filter((t) => !(t.de === 'cliente' && paraResponder.includes(t.texto)))
       : (historico ?? [])
+
+  // `mensagem` deixou de ser obrigatória para caber áudio e imagem, então o
+  // vazio precisa ser barrado AQUI em vez de no schema. Sem esta guarda um
+  // corpo `{ mensagem: "" }` chegaria ao modelo como envelope vazio, e ele
+  // responderia a nada — que é o tipo de resposta que some com a conversa.
+  if (!paraResponder.trim()) {
+    return NextResponse.json({ error: 'nada para responder' }, { status: 400 })
+  }
 
   const mensagens = [
     { role: 'system' as const, content: instrucoesDoAgente({ empresa, vertical, pesquisa }) },
