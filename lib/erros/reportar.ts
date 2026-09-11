@@ -57,7 +57,18 @@ export function cortarParaCaber(texto: string | undefined, teto: number) {
  */
 export function reportarErro(
   error: Error & { digest?: string },
-  origem: 'dashboard' | 'global' | 'publico',
+  /**
+   * De onde veio.
+   *
+   * `funil` nasceu em 11/09 com `FunilResiliente`: separa a falha de INTERAÇÃO
+   * dentro do Kanban da falha de CARGA da rota, que reporta como `dashboard`.
+   * Sem a distinção as duas viram a mesma linha no banco, e a investigação
+   * começa sem saber qual das duas foi.
+   *
+   * A coluna `error_logs.origem` é texto livre — conferido com insert real
+   * contra produção antes de acrescentar, então não houve migration.
+   */
+  origem: 'dashboard' | 'funil' | 'global' | 'publico',
   /**
    * A árvore de componentes React, por NOME.
    *

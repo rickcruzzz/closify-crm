@@ -21,7 +21,7 @@ const payloadSchema = z.object({
   // importa, que costuma estar no topo.
   componentStack: z.string().trim().max(8000).optional(),
   url: z.string().trim().max(2000).optional(),
-  origem: z.enum(['dashboard', 'global', 'publico']),
+  origem: z.enum(['dashboard', 'funil', 'global', 'publico']),
 })
 
 /**

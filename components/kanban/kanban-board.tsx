@@ -281,6 +281,60 @@ export function KanbanBoard({
     if (startStage) moverPara(String(event.active.id), startStage)
   }
 
+  /**
+   * Grava a etapa, e garante que uma falha NÃO apague o Kanban.
+   *
+   * ## O defeito, relatado com vídeo em 11/09
+   *
+   * Mover um card mostrava o toast de sucesso e, logo depois, a tela virava
+   * *"Não foi possível carregar esta tela"*. `error_logs` de produção confirma
+   * React #185 em `/kanban` — inclusive hoje, 17:26.
+   *
+   * ## Por que `try/catch` e não só o `if (result?.error)`
+   *
+   * Erro DEVOLVIDO já era tratado. O LANÇADO não passa por nenhum `if`: rede
+   * caindo, falha de transporte, qualquer `throw` na travessia da Server
+   * Action. Sem captura, a rejeição sobe — e o card fica numa etapa que o banco
+   * não conhece, com a UI mentindo sobre o que está gravado.
+   *
+   * **É a mesma classe que este projeto pagou hoje em seis lugares** (commit
+   * `6074929`, o spinner que girava para sempre). Aqui o custo é maior porque o
+   * dado visível fica errado.
+   *
+   * ## Desfazer é obrigatório, e o retry é oferecido
+   *
+   * Quem arrasta cinco cards não pode ser parado por um diálogo; quem perdeu um
+   * movimento precisa de um caminho de volta que não seja arrastar de novo.
+   * Toast com ação resolve os dois.
+   */
+  async function gravarEtapa(dealId: string, destino: DealStage, origem: DealStage | undefined) {
+    const desfazer = () => {
+      if (origem) moverPara(dealId, origem)
+    }
+
+    let result: Awaited<ReturnType<typeof updateDealStage>>
+    try {
+      result = await updateDealStage(dealId, destino)
+    } catch (err) {
+      console.error('updateDealStage rejeitou', err)
+      desfazer()
+      toast.error('Não foi possível mover o negócio. A alteração foi desfeita.', {
+        action: { label: 'Tentar de novo', onClick: () => void gravarEtapa(dealId, destino, origem) },
+      })
+      return
+    }
+
+    if (result?.error) {
+      desfazer()
+      toast.error(result.error, {
+        action: { label: 'Tentar de novo', onClick: () => void gravarEtapa(dealId, destino, origem) },
+      })
+      return
+    }
+
+    avisarMovido(dealId, destino)
+  }
+
   async function handleDragEnd(event: DragEndEvent) {
     const { active, over } = event
     setActiveId(null)
@@ -307,14 +361,7 @@ export function KanbanBoard({
     // UI mentir sobre o que está persistido no banco.
     moverPara(dealId, finalStage)
 
-    const result = await updateDealStage(dealId, finalStage)
-    if (result?.error) {
-      toast.error(result.error)
-      if (startStage) moverPara(dealId, startStage)
-      return
-    }
-
-    avisarMovido(dealId, finalStage)
+    await gravarEtapa(dealId, finalStage, startStage ?? undefined)
   }
 
   /**
@@ -353,20 +400,7 @@ export function KanbanBoard({
       prev.map((deal) => (deal.id === dealId ? { ...deal, stage } : deal)),
     )
 
-    const result = await updateDealStage(dealId, stage)
-    if (result?.error) {
-      toast.error(result.error)
-      if (previousStage) {
-        setDeals((prev) =>
-          prev.map((deal) =>
-            deal.id === dealId ? { ...deal, stage: previousStage } : deal,
-          ),
-        )
-      }
-      return
-    }
-
-    avisarMovido(dealId, stage)
+    await gravarEtapa(dealId, stage, previousStage)
   }
 
   async function handleCreateDeal(values: DealFormValues) {

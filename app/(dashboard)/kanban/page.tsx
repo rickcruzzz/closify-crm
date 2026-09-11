@@ -1,5 +1,9 @@
 import type { Metadata } from 'next'
-import { getBoardDeals, getDealAvulso, getWorkspaceLeadsForSelect } from '@/lib/deals/queries'
+import {
+  getBoardDeals,
+  getDealAvulso,
+  getWorkspaceLeadsForSelect,
+} from '@/lib/deals/queries'
 import { dealStages, type DealStage } from '@/lib/deals/types'
 import { getWorkspaceMembers } from '@/lib/leads/queries'
 import { getProximaAcaoPorNegocio } from '@/lib/tasks/queries'
@@ -9,6 +13,7 @@ import { PageHeader } from '@/components/layout/page-header'
 import { KanbanBoard } from '@/components/kanban/kanban-board'
 import { GettingStartedCard } from '@/components/kanban/getting-started-card'
 import { CapturaDeComponente } from '@/components/erros/captura-de-componente'
+import { FunilResiliente } from '@/components/kanban/funil-resiliente'
 import { CABECALHOS } from '@/lib/telas/cabecalhos'
 
 export const metadata: Metadata = { title: 'Funil' }
@@ -105,19 +110,40 @@ export default async function KanbanPage({
           Dentro da página, ela captura antes do `error.tsx` e o nome do
           componente chega. O `error.tsx` continua como rede: se este boundary
           falhar, a tela de erro ainda aparece. */}
+      {/* ## Dois boundaries, e a ordem importa
+          
+          `CapturaDeComponente` fica POR FORA e continua fazendo o que sempre
+          fez: capturar a árvore de componentes e relançar, para o `error.tsx`
+          da rota mostrar a tela de erro. É o caminho certo para a falha que
+          impede a página de existir.
+          
+          `FunilResiliente` fica POR DENTRO e captura PRIMEIRO — boundary do
+          React pega para baixo, e o mais interno vence. Ele troca só o board
+          por um aviso com botão de recarregar, e **não relança**: cabeçalho,
+          filtros, busca e navegação continuam na tela.
+          
+          A distinção que isto cria é a que faltava, e é o relato de 11/09:
+          
+              falha de CARGA da rota   -> error.tsx, tela inteira
+              falha DENTRO do funil    -> so o funil e substituido
+          
+          Mover um card não podia apagar a sessão de trabalho de quem estava no
+          meio dela. */}
       <CapturaDeComponente origem="dashboard">
-        <KanbanBoard
-          initialDeals={deals}
-          totalPorEtapa={board.totalPorEtapa}
-          leads={leads}
-          members={members}
-          currentUserId={user.id}
-          // `Map` não sobrevive à serialização servidor→cliente; vai como pares.
-          proximasAcoes={Array.from(proximasAcoes)}
-          calendarConectado={calendarConectado}
-          negocioInicial={negocioParaAbrir}
-          etapaEmFoco={etapaEmFoco}
-        />
+        <FunilResiliente>
+          <KanbanBoard
+            initialDeals={deals}
+            totalPorEtapa={board.totalPorEtapa}
+            leads={leads}
+            members={members}
+            currentUserId={user.id}
+            // `Map` não sobrevive à serialização servidor→cliente; vai como pares.
+            proximasAcoes={Array.from(proximasAcoes)}
+            calendarConectado={calendarConectado}
+            negocioInicial={negocioParaAbrir}
+            etapaEmFoco={etapaEmFoco}
+          />
+        </FunilResiliente>
       </CapturaDeComponente>
     </div>
   )
