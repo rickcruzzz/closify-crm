@@ -180,6 +180,124 @@ async function grafo() {
  * Lendo o config, se o padrão mudar de forma a métrica **se recusa a
  * responder** em vez de mentir com confiança.
  */
+/**
+ * As cinco contagens de ESTRUTURA do banco.
+ *
+ * ## Por que elas faltavam, e o que isso custou
+ *
+ * O topo do `prd.md` declara tabelas, RPCs, foreign keys, triggers e enums, e
+ * diz por escrito que **"as cinco expiram quando uma migration nova entra"**.
+ * Nenhuma delas era produzida aqui — e `conferir-documentos.mjs` só valida o
+ * que este arquivo produz.
+ *
+ * Resultado medido em 11/09: o PRD dizia **20 tabelas** e o catálogo tinha
+ * **21** desde a 0080. O `schema.md` tinha sido atualizado, o PRD não, e nada
+ * acusou por três dias. A sentinela tinha um buraco exatamente onde o
+ * documento mais afirma.
+ *
+ * ## `pg_catalog`, e não o OpenAPI
+ *
+ * Decisão já registrada em `schema.md` e respeitada aqui: o OpenAPI expõe só o
+ * que tem permissão de execução. Contado por ele, o projeto aparenta ter **38**
+ * RPCs contra as 34 reais — mede a permissão, não o schema.
+ *
+ * ## Degrada sem credencial, como o grafo já faz
+ *
+ * Este script roda no CI, onde não há `.env.local`. Um gate que quebra por
+ * falta de credencial vira gate desligado, então a ausência devolve
+ * `INDISPONIVEL` e o conferidor pula a métrica — o mesmo contrato que
+ * `graph.json` ausente já tem.
+ */
+async function banco() {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const token = process.env.SUPABASE_ACCESS_TOKEN
+  const vazio = {
+    'banco.tabelas': INDISPONIVEL,
+    'banco.rpcs_do_projeto': INDISPONIVEL,
+    'banco.funcoes_de_trigger': INDISPONIVEL,
+    'banco.foreign_keys': INDISPONIVEL,
+    'banco.triggers': INDISPONIVEL,
+    'banco.enums': INDISPONIVEL,
+  }
+  const ref = String(url ?? '').match(/https:\/\/([a-z0-9]+)\./)?.[1]
+  if (!ref || !token) return vazio
+
+  /**
+   * Uma consulta só, pela Management API.
+   *
+   * ## Por que não pelo PostgREST
+   *
+   * Ele expõe tabelas e enums, e **não expõe** foreign key, trigger nem função
+   * sem permissão de execução — que são três das cinco. Medido: as RPCs do
+   * projeto aparecem como 38 por ali contra as 34 reais, porque o que se conta
+   * é a permissão, não o schema.
+   *
+   * ## Por que não uma RPC `exec_sql`
+   *
+   * Criar uma função que executa SQL arbitrário para conferir documentação
+   * seria abrir um caminho de escrita irrestrita no banco de produção. O token
+   * de management já existe no `.env.local`, é de leitura administrativa e
+   * **não vai para a Vercel** — mesmo contrato do `META_ADS_TOKEN`.
+   */
+  /**
+   * O que NÃO é do projeto: tudo que uma extensão instalou.
+   *
+   * Filtrar por PREFIXO DE NOME (`gin_`, `gtrgm_`…) foi a primeira tentativa e
+   * errou: devolveu 53 contra as 31 de extensão que o `schema.md` registra.
+   * `pg_depend` com `deptype = 'e'` é a pergunta certa — "este objeto pertence
+   * a uma extensão?" — e não depende de adivinhar nomes.
+   */
+  const SEM_EXTENSAO =
+    "not exists (select 1 from pg_depend d where d.objid = p.oid and d.deptype = 'e')"
+
+  const sql = `
+    select
+      (select count(*)::int from pg_class c
+        join pg_namespace n on n.oid = c.relnamespace
+        where n.nspname = 'public' and c.relkind = 'r') as tabelas,
+      (select count(*)::int from pg_proc p
+        join pg_namespace n on n.oid = p.pronamespace
+        where n.nspname = 'public' and ${SEM_EXTENSAO}
+          and p.prorettype <> 'trigger'::regtype) as rpcs,
+      (select count(*)::int from pg_proc p
+        join pg_namespace n on n.oid = p.pronamespace
+        where n.nspname = 'public' and ${SEM_EXTENSAO}
+          and p.prorettype = 'trigger'::regtype) as funcoes_de_trigger,
+      (select count(*)::int from pg_constraint c
+        join pg_namespace n on n.oid = c.connamespace
+        where n.nspname = 'public' and c.contype = 'f') as fks,
+      (select count(*)::int from pg_trigger t
+        join pg_class c on c.oid = t.tgrelid
+        join pg_namespace n on n.oid = c.relnamespace
+        where n.nspname = 'public' and not t.tgisinternal) as triggers,
+      (select count(*)::int from pg_type t
+        join pg_namespace n on n.oid = t.typnamespace
+        where n.nspname = 'public' and t.typtype = 'e') as enums
+  `
+
+  try {
+    const r = await fetch(`https://api.supabase.com/v1/projects/${ref}/database/query`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}`, 'content-type': 'application/json' },
+      body: JSON.stringify({ query: sql }),
+    })
+    if (!r.ok) return vazio
+    const linhas = await r.json()
+    const l = Array.isArray(linhas) ? linhas[0] : linhas?.result?.[0]
+    if (!l) return vazio
+    return {
+      'banco.tabelas': Number(l.tabelas),
+      'banco.rpcs_do_projeto': Number(l.rpcs),
+      'banco.funcoes_de_trigger': Number(l.funcoes_de_trigger),
+      'banco.foreign_keys': Number(l.fks),
+      'banco.triggers': Number(l.triggers),
+      'banco.enums': Number(l.enums),
+    }
+  } catch {
+    return vazio
+  }
+}
+
 async function testes(todosOsArquivos) {
   let config
   try {
@@ -271,6 +389,7 @@ export async function medirTudo() {
   return {
     ...(await migrations()),
     ...(await grafo()),
+    ...(await banco()),
     ...(await testes(todosOsArquivos)),
     'e2e.specs': e2e.length,
     'deal_stage.arquivos_de_codigo': comDealStage.length,
@@ -295,6 +414,13 @@ export const DEFINICOES = {
   'e2e.specs': 'tests/e2e/*.spec.ts',
   'deal_stage.arquivos_de_codigo': 'arquivos de código (não-docs) que citam deal_stage',
   'docs.arquivos': 'docs/**/*.md mais CLAUDE.md',
+  'banco.tabelas': "tabelas do schema public (pg_class.relkind = 'r')",
+  'banco.rpcs_do_projeto':
+    'funções de public CHAMÁVEIS — sem as de extensão e sem as que retornam trigger',
+  'banco.funcoes_de_trigger': 'funções de public que retornam trigger (não são RPC)',
+  'banco.foreign_keys': "pg_constraint.contype = 'f' em public",
+  'banco.triggers': 'pg_trigger não-interno em public',
+  'banco.enums': "pg_type.typtype = 'e' em public",
 }
 
 const chamadoDiretamente =

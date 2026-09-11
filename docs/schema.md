@@ -7,10 +7,23 @@ Migrations novas mudam este arquivo com o tempo; ao suspeitar de
 desatualização, reconsulte o catálogo em vez de confiar cegamente nele (mesma
 regra de `docs/estado-atual.md`).
 
-**Estrutura reconferida em 08/09/2026, noite — e a fonte mudou.** Lida de
-`pg_catalog` e não do OpenAPI: **21 tabelas**, **34 RPCs do projeto** (65 no
-catálogo, 31 são da extensão `pg_trgm`), **32 foreign keys**, **16 triggers**,
-**8 enums**, **39 check constraints**.
+<!-- contagem: banco.tabelas=21 banco.rpcs_do_projeto=37 banco.foreign_keys=32 banco.triggers=16 banco.enums=8 -->
+**Estrutura reconferida em 11/09/2026.** Lida de `pg_catalog` e não do OpenAPI:
+**21 tabelas**, **37 RPCs do projeto**, **32 foreign keys**, **16 triggers**,
+**8 enums**, **39 check constraints** — mais **15 funções de trigger**, que não
+são RPC e por isso contam à parte.
+
+**O recorte de "RPC" ficou explícito em 11/09, e o número mudou por isso.** O
+documento dizia 34 e o método era "65 no catálogo menos 31 do `pg_trgm`".
+Medido de novo: o catálogo tem **83** funções em `public`, **31** pertencem a
+extensões (conferido por `pg_depend`, não por prefixo de nome), sobram **52** do
+projeto — das quais **15 retornam `trigger`** e não são chamáveis. As 37 são as
+chamáveis.
+
+**Desde 11/09 estas contagens são conferidas por máquina.** O carimbo acima é
+lido por `scripts/ci/conferir-documentos.mjs`, que as compara com
+`scripts/ci/contagens.mjs`. Antes disso nada as conferia — e o `prd.md` passou
+três dias afirmando 20 tabelas depois que a 0080 criou a 21ª.
 
 **A 32ª foreign key é a da 0076**, `deals.orcamento_tarefa_id → tasks`, e ela é
 a primeira deste schema a fechar um CICLO — ver a seção própria abaixo. As três
@@ -451,12 +464,20 @@ classDiagram
         +uuid id PK
         +uuid workspace_id FK "→ workspaces, CASCADE"
         +uuid user_id FK "→ auth.users, CASCADE, nullable = toda a empresa"
-        +text tipo "check: pagamento_confirmado|pagamento_atrasado|plano_vencendo|trial_terminando"
+        +text tipo "check: pagamento_confirmado|pagamento_atrasado|plano_vencendo|trial_terminando|convite_instagram|dica_de_uso"
         +text titulo "1..120"
         +text corpo "nullable, ate 400"
         +text href "nullable, check: comeca com /"
         +timestamptz criada_em
         +timestamptz lida_em "nullable"
+    }
+
+    class descadastro_de_prospeccao {
+        +uuid id PK
+        +text email_hash UNIQUE "sha256 — o e-mail NAO e guardado"
+        +text dominio "nullable"
+        +text origem "nullable"
+        +timestamptz created_at
     }
 
     class vigia_ultimo_aviso {
