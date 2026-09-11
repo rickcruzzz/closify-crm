@@ -520,13 +520,26 @@ export function inferirPorConteudo(
     }
   }
 
-  // Valor: célula que vira número depois de tirar "R$" e separador de milhar.
+  /**
+   * Valor: a celula tem que ser **so** dinheiro, nao conter um numero.
+   *
+   * A primeira versao usava `parseValorBRL` sozinho, e ele devolve `100` para
+   * `"Rua A 100"`. Medido pela TELA em 11/09: uma planilha com coluna
+   * `Endereco` teve o endereco mapeado como valor, e a importacao recusou a
+   * linha com *"valor 'Av B | fundos' nao e um numero"* — dois de tres.
+   *
+   * O corte e o negativo: tirando `R$`, espaco, ponto e virgula, o que sobra
+   * precisa ser **so digito**. `"R$ 1.234,56"` passa; `"Rua A 100"` nao.
+   */
+  const ehSoDinheiro = (v: string) =>
+    /^[0-9]+$/.test(v.replace(/R\$/gi, '').replace(/[\s.,]/g, ''))
+
   for (let c = 0; c < largura; c++) {
     if (usadas.has(c) || mapeamento.value !== undefined) continue
     const celulas = celulasDe(c)
     const numericas = celulas.filter((v) => {
       const n = parseValorBRL(v)
-      return n !== null && n > 0
+      return n !== null && n > 0 && ehSoDinheiro(v)
     }).length
     if (maioria(numericas, celulas.length)) {
       mapeamento.value = c

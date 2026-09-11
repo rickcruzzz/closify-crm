@@ -525,3 +525,28 @@ describe('inferirPorConteudo', () => {
     ).toEqual({ name: 0, email: 1 })
   })
 })
+
+describe('valor só é valor quando é só dinheiro', () => {
+  /**
+   * Achado pela TELA em 11/09: `parseValorBRL('Rua A 100')` devolve 100, então
+   * a coluna `Endereco` virava `value` e a importação recusava a linha com
+   * *"valor 'Av B | fundos' não é um número"*. Dois contatos de três.
+   */
+  it('NÃO trata endereço com número como valor', () => {
+    const m = inferirPorConteudo([
+      ['Igor Pena', 'igor@x.com.br', 'Rua A 100'],
+      ['Joana Vaz', 'joana@x.com.br', 'Av B | fundos'],
+      ['Kiko Sa', 'kiko@x.com.br', 'Rua C 300'],
+    ])
+    expect(m.value).toBeUndefined()
+    expect(m).toMatchObject({ name: 0, email: 1 })
+  })
+
+  it('continua reconhecendo dinheiro de verdade', () => {
+    const m = inferirPorConteudo([
+      ['Ana', 'ana@x.com.br', 'R$ 1.234,56'],
+      ['Bia', 'bia@x.com.br', '890,00'],
+    ])
+    expect(m.value).toBe(2)
+  })
+})

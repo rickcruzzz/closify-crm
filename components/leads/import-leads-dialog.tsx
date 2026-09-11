@@ -30,7 +30,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { CSV_MAX_BYTES, CSV_MAX_LINHAS, decodificarPlanilha, lerCsv, detectarLinhaDoCabecalho } from '@/lib/leads/csv'
+import {
+  CSV_MAX_BYTES,
+  CSV_MAX_LINHAS,
+  decodificarPlanilha,
+  detectarLinhaDoCabecalho,
+  formaDoArquivo,
+  lerCsv,
+} from '@/lib/leads/csv'
 import {
   CAMPOS,
   amostraDaColuna,
@@ -40,6 +47,7 @@ import {
   temFormaDeTelefone,
   type CampoDestino,
   type Mapeamento,
+  inferirPorConteudo,
 } from '@/lib/leads/planilha'
 import { importarPlanilha, type ResultadoImportacao } from '@/lib/leads/actions'
 import { FREE_LEAD_LIMIT, PRO_PLAN_PRICE } from '@/lib/plans'
@@ -75,6 +83,14 @@ export function ImportLeadsDialog({
 }) {
   const [passo, setPasso] = React.useState<Passo>('arquivo')
   const [nomeDoArquivo, setNomeDoArquivo] = React.useState('')
+  /**
+   * As linhas de título que ficaram de fora.
+   *
+   * Existe para a tela MOSTRAR. Descarte invisível é a classe de defeito que
+   * faz a pessoa importar 244 de 247 e nunca saber quais três sumiram — e aqui
+   * o que some é justamente o que ela escreveu à mão no topo do arquivo.
+   */
+  const [ruidoDescartado, setRuidoDescartado] = React.useState<string[]>([])
   const [matriz, setMatriz] = React.useState<string[][]>([])
   const [mapeamento, setMapeamento] = React.useState<Mapeamento>({})
   const [duplicados, setDuplicados] = React.useState<'ignorar' | 'atualizar'>('ignorar')
@@ -140,20 +156,54 @@ export function ImportLeadsDialog({
     }
 
     setNomeDoArquivo(origem)
-    setMatriz(lida)
 
-    // ## A linha do cabeçalho é achada sozinha
+    // ## 1. A FORMA do arquivo, antes de qualquer outra coisa
     //
-    // Era fixo em 0, e planilha exportada de outro sistema traz título e data
-    // antes do cabeçalho. O resultado, reproduzido pela tela em 11/09: todas as
-    // colunas em "Nenhuma coluna" e o botão de confirmar nascendo DESABILITADO
-    // — a pessoa concluía que a importação não funciona.
+    // Título e cabeçalho de seção são linhas de uma célula no meio de um
+    // arquivo cujas linhas de verdade têm três, quatro, seis. `formaDoArquivo`
+    // diz qual é a largura de verdade e onde os dados começam — e devolve o
+    // que ficou para trás, para esta tela poder mostrar.
+    const forma = formaDoArquivo(lida)
+    const doInicio = lida.slice(forma.primeiraLinhaDeDados)
+
+    // ## 2. Existe cabeçalho?
     //
-    // Dos cinco formatos testados, só esse falhava. A sugestão continua
-    // editável logo abaixo: a detecção propõe, a pessoa decide.
-    const linhaDoCabecalho = detectarLinhaDoCabecalho(lida, sugerirMapeamento)
-    setPularLinhas(linhaDoCabecalho)
-    setMapeamento(sugerirMapeamento(lida[linhaDoCabecalho] ?? []))
+    // A pergunta não é retórica: lista escrita à mão não tem nenhum. Duas
+    // colunas reconhecidas é o corte — uma só pode ser coincidência, e tratar
+    // uma linha de DADOS como cabeçalho apaga um contato da importação.
+    const relativo = detectarLinhaDoCabecalho(doInicio, sugerirMapeamento)
+    const peloTitulo = sugerirMapeamento(doInicio[relativo] ?? [])
+    const temCabecalho = Object.keys(peloTitulo).length >= 2
+
+    if (temCabecalho) {
+      const linhaDoCabecalho = forma.primeiraLinhaDeDados + relativo
+      setMatriz(lida)
+      setPularLinhas(linhaDoCabecalho)
+      // O conteúdo só preenche o que o título deixou vago — `peloTitulo` vem
+      // por último no espalhamento e vence. Cabeçalho correto nunca é
+      // sobrescrito por palpite.
+      setMapeamento({
+        ...inferirPorConteudo(lida, linhaDoCabecalho + 1),
+        ...peloTitulo,
+      })
+    } else {
+      // ## 3. Sem cabeçalho, a tela FABRICA um
+      //
+      // "Coluna 1 / Coluna 2 / Coluna 3" com a inferência já aplicada. A
+      // pessoa confere e corrige, em vez de ficar bloqueada num "não achei
+      // e-mail nem telefone" com o e-mail visível na tela.
+      //
+      // Fabricar em vez de ensinar a maquinaria a viver sem cabeçalho:
+      // `interpretarPlanilha` faz `matriz.slice(1)` e o servidor conta a
+      // primeira linha como título. Sintetizar mantém UM contrato, em vez de
+      // dois caminhos que divergem na próxima mudança.
+      const rotulos = Array.from({ length: forma.colunas }, (_, i) => `Coluna ${i + 1}`)
+      setMatriz([rotulos, ...doInicio])
+      setPularLinhas(0)
+      setMapeamento(inferirPorConteudo(doInicio, 0))
+    }
+
+    setRuidoDescartado(forma.descartadas)
     setPasso('colunas')
     return true
   }
@@ -194,7 +244,9 @@ export function ImportLeadsDialog({
       aceitarMatriz(lerCsv(limpo), 'Colado da planilha')
     } catch (err) {
       console.error('falha ao ler o texto colado', err)
-      toast.error('Não foi possível ler o que foi colado. Copie as linhas inteiras da planilha.')
+      toast.error(
+        'Não foi possível ler o que foi colado. Copie as linhas inteiras da planilha.',
+      )
     }
   }
 
@@ -251,7 +303,9 @@ export function ImportLeadsDialog({
         // previsível, a pessoa sabe qual aba deixou na frente.
         const linhas = await readSheet(new Blob([bytes]), 1)
         lida = linhas.map((linha) =>
-          linha.map((celula) => (celula === null || celula === undefined ? '' : String(celula))),
+          linha.map((celula) =>
+            celula === null || celula === undefined ? '' : String(celula),
+          ),
         )
       } else {
         lida = lerCsv(decodificarPlanilha(bytes))
@@ -371,7 +425,9 @@ export function ImportLeadsDialog({
     const amostra = corpo.slice(0, 10)
     const temAlguma = cabecalho.some((_, coluna) => {
       const valores = amostra.map((linha) => (linha[coluna] ?? '').trim()).filter(Boolean)
-      const bons = valores.filter((v) => temFormaDeEmail(v) || temFormaDeTelefone(v)).length
+      const bons = valores.filter(
+        (v) => temFormaDeEmail(v) || temFormaDeTelefone(v),
+      ).length
       return bons >= Math.min(2, valores.length) && bons > 0
     })
     return !temAlguma
@@ -426,7 +482,11 @@ export function ImportLeadsDialog({
   async function enviar() {
     setEnviando(true)
     try {
-      const retorno = await importarPlanilha({ matriz: matrizEfetiva, mapeamento, duplicados })
+      const retorno = await importarPlanilha({
+        matriz: matrizEfetiva,
+        mapeamento,
+        duplicados,
+      })
       if ('error' in retorno) {
         toast.error(retorno.error)
         return
@@ -525,7 +585,8 @@ export function ImportLeadsDialog({
                       </span>
                     </span>
                     <span className="text-muted-foreground text-xs">
-                      Excel (.xlsx) ou .csv · até {CSV_MAX_LINHAS.toLocaleString('pt-BR')} linhas
+                      Excel (.xlsx) ou .csv · até {CSV_MAX_LINHAS.toLocaleString('pt-BR')}{' '}
+                      linhas
                     </span>
                   </>
                 )}
@@ -559,7 +620,9 @@ export function ImportLeadsDialog({
             <div className="flex flex-col gap-1.5">
               <div className="flex items-center gap-3">
                 <span className="bg-border h-px flex-1" />
-                <span className="text-muted-foreground text-xs font-medium">ou cole as linhas</span>
+                <span className="text-muted-foreground text-xs font-medium">
+                  ou cole as linhas
+                </span>
                 <span className="bg-border h-px flex-1" />
               </div>
               <Label htmlFor="colar-planilha" className="sr-only">
@@ -602,48 +665,72 @@ export function ImportLeadsDialog({
             promete: rolar só ela, não a caixa inteira. */}
         {passo === 'colunas' && (
           <div className="flex min-w-0 flex-col gap-4">
+            {/* ## O que foi cortado do topo, dito em voz alta
+                  
+                  `formaDoArquivo` descarta as linhas de título antes dos dados
+                  — "EMPRESA", "CONTATOS:", "Gerado em 10/09". Sem esta caixa o
+                  corte seria invisível, e descarte invisível é o que faz a
+                  pessoa importar 244 de 247 sem saber quais três sumiram.
+                  
+                  Aqui o dado ainda está na tela: ela lê o que ficou de fora e
+                  julga se estava certo. */}
+            {ruidoDescartado.length > 0 && (
+              <p className="text-muted-foreground mt-2 flex items-start gap-1.5 text-xs">
+                <AlertTriangle aria-hidden className="mt-0.5 size-3.5 shrink-0" />
+                <span>
+                  {ruidoDescartado.length === 1
+                    ? 'Esta linha do topo parece título e ficou de fora: '
+                    : `Estas ${ruidoDescartado.length} linhas do topo parecem título e ficaram de fora: `}
+                  <strong>
+                    {ruidoDescartado.map((l) => l.slice(0, 40)).join(' · ')}
+                  </strong>
+                  .
+                </span>
+              </p>
+            )}
+
             {/* A tabela de amostra e o ajuste da linha de cabeçalho só
                 interessam a quem está corrigindo alguma coisa. Para quem tem
                 planilha comum eram duas caixas de conteúdo técnico logo na
                 abertura, antes de qualquer coisa útil. */}
             {mostrarSeletores && (
-            <div className="border-border min-w-0 rounded-lg border p-3">
-              <p className="mb-2 text-xs font-medium">Primeiras linhas do arquivo</p>
-              <div className="overflow-x-auto">
-                <table className="text-xs">
-                  <tbody>
-                    {/* Mostra ATÉ a linha escolhida, nunca menos que três: com
+              <div className="border-border min-w-0 rounded-lg border p-3">
+                <p className="mb-2 text-xs font-medium">Primeiras linhas do arquivo</p>
+                <div className="overflow-x-auto">
+                  <table className="text-xs">
+                    <tbody>
+                      {/* Mostra ATÉ a linha escolhida, nunca menos que três: com
                         `slice(0, 3)` fixo, quem apontava a linha 4 como a dos
                         títulos escolhia às cegas, porque o destaque caía fora
                         da janela visível e a tabela parecia não reagir. */}
-                    {matriz.slice(0, Math.max(3, pularLinhas + 2)).map((linha, i) => (
-                      <tr key={i}>
-                        <td
-                          className={cn(
-                            'text-muted-foreground pr-2 align-top tabular-nums',
-                            i === pularLinhas && 'text-primary font-medium',
-                          )}
-                        >
-                          {i + 1}
-                        </td>
-                        {linha.slice(0, 6).map((celula, j) => (
+                      {matriz.slice(0, Math.max(3, pularLinhas + 2)).map((linha, i) => (
+                        <tr key={i}>
                           <td
-                            key={j}
                             className={cn(
-                              'text-muted-foreground max-w-28 truncate pr-3 align-top',
-                              i === pularLinhas && 'text-foreground font-medium',
+                              'text-muted-foreground pr-2 align-top tabular-nums',
+                              i === pularLinhas && 'text-primary font-medium',
                             )}
                           >
-                            {celula || '-'}
+                            {i + 1}
                           </td>
-                        ))}
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                          {linha.slice(0, 6).map((celula, j) => (
+                            <td
+                              key={j}
+                              className={cn(
+                                'text-muted-foreground max-w-28 truncate pr-3 align-top',
+                                i === pularLinhas && 'text-foreground font-medium',
+                              )}
+                            >
+                              {celula || '-'}
+                            </td>
+                          ))}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
 
-              {/* A frase antiga ("A linha em destaque é o cabeçalho? Se não,
+                {/* A frase antiga ("A linha em destaque é o cabeçalho? Se não,
                   pule N linha(s) antes dele") falava de "cabeçalho" e pedia um
                   número sem dizer para quê. Agora diz o que a linha destacada
                   significa e o que fazer se estiver errada.
@@ -655,55 +742,59 @@ export function ImportLeadsDialog({
                   "número da linha do Excel" seria mentira em quem mais precisa
                   desse campo. Os botões evitam que a pessoa precise raciocinar
                   sobre índice. */}
-              <div className="mt-3 flex flex-wrap items-center gap-2">
-                <Label htmlFor="pular-linhas" className="text-xs">
-                  A linha destacada acima é a dos títulos das colunas. Se não for, mude
-                  aqui:
-                </Label>
-                <Input
-                  id="pular-linhas"
-                  type="number"
-                  min={1}
-                  max={Math.max(1, matriz.length - 1)}
-                  // Campo em base 1 para casar com a coluna de números da
-                  // tabela ao lado; o estado por trás continua em base 0.
-                  value={pularLinhas + 1}
-                  className="h-8 w-16"
-                  onChange={(e) => ajustarPularLinhas((Number(e.target.value) || 1) - 1)}
-                />
-              </div>
+                <div className="mt-3 flex flex-wrap items-center gap-2">
+                  <Label htmlFor="pular-linhas" className="text-xs">
+                    A linha destacada acima é a dos títulos das colunas. Se não for, mude
+                    aqui:
+                  </Label>
+                  <Input
+                    id="pular-linhas"
+                    type="number"
+                    min={1}
+                    max={Math.max(1, matriz.length - 1)}
+                    // Campo em base 1 para casar com a coluna de números da
+                    // tabela ao lado; o estado por trás continua em base 0.
+                    value={pularLinhas + 1}
+                    className="h-8 w-16"
+                    onChange={(e) =>
+                      ajustarPularLinhas((Number(e.target.value) || 1) - 1)
+                    }
+                  />
+                </div>
 
-              {colunasIgnoradas.length > 0 && !semColunaDeContato && (
-                <p className="text-muted-foreground mt-2 flex items-start gap-1.5 text-xs">
-                  <AlertTriangle aria-hidden className="mt-0.5 size-3.5 shrink-0" />
-                  <span>
-                    Estas colunas não vão ser importadas:{' '}
-                    <strong>{colunasIgnoradas.join(', ')}</strong>. O Velo Funil guarda nome,
-                    e-mail, telefone, empresa, valor e etapa. Se alguma delas era importante,
-                    junte na coluna certa antes de importar.
-                  </span>
-                </p>
-              )}
-              {semColunaDeContato && (
-                <p className="border-destructive/40 bg-destructive/10 text-destructive mt-2 flex items-start gap-1.5 rounded-md border p-2 text-xs">
-                  <AlertTriangle aria-hidden className="mt-0.5 size-3.5 shrink-0" />
-                  <span>
-                    <strong>Não achei coluna de e-mail nem de telefone nesta planilha.</strong>{' '}
-                    Sem uma das duas não há como falar com o contato, e a importação vai recusar as
-                    linhas. Se este arquivo for uma tabela de produtos ou de preços, ele não é uma
-                    lista de contatos — escolha outro.
-                  </span>
-                </p>
-              )}
-              {nadaReconhecido && (
-                <p className="mt-2 flex items-start gap-1.5 text-xs text-amber-600 dark:text-amber-400">
-                  <AlertTriangle aria-hidden className="mt-0.5 size-3.5 shrink-0" />
-                  Nenhum título conhecido (Nome, Telefone, E-mail…) foi encontrado na linha
-                  destacada. Se a sua planilha tem título ou linha em branco no começo, mude o
-                  número acima até a linha dos títulos ficar destacada.
-                </p>
-              )}
-            </div>
+                {colunasIgnoradas.length > 0 && !semColunaDeContato && (
+                  <p className="text-muted-foreground mt-2 flex items-start gap-1.5 text-xs">
+                    <AlertTriangle aria-hidden className="mt-0.5 size-3.5 shrink-0" />
+                    <span>
+                      Estas colunas não vão ser importadas:{' '}
+                      <strong>{colunasIgnoradas.join(', ')}</strong>. O Velo Funil guarda
+                      nome, e-mail, telefone, empresa, valor e etapa. Se alguma delas era
+                      importante, junte na coluna certa antes de importar.
+                    </span>
+                  </p>
+                )}
+                {semColunaDeContato && (
+                  <p className="border-destructive/40 bg-destructive/10 text-destructive mt-2 flex items-start gap-1.5 rounded-md border p-2 text-xs">
+                    <AlertTriangle aria-hidden className="mt-0.5 size-3.5 shrink-0" />
+                    <span>
+                      <strong>
+                        Não achei coluna de e-mail nem de telefone nesta planilha.
+                      </strong>{' '}
+                      Sem uma das duas não há como falar com o contato, e a importação vai
+                      recusar as linhas. Se este arquivo for uma tabela de produtos ou de
+                      preços, ele não é uma lista de contatos — escolha outro.
+                    </span>
+                  </p>
+                )}
+                {nadaReconhecido && (
+                  <p className="mt-2 flex items-start gap-1.5 text-xs text-amber-600 dark:text-amber-400">
+                    <AlertTriangle aria-hidden className="mt-0.5 size-3.5 shrink-0" />
+                    Nenhum título conhecido (Nome, Telefone, E-mail…) foi encontrado na
+                    linha destacada. Se a sua planilha tem título ou linha em branco no
+                    começo, mude o número acima até a linha dos títulos ficar destacada.
+                  </p>
+                )}
+              </div>
             )}
 
             {/* O caso comum: o reconhecimento automático deu conta, então a
@@ -735,7 +826,10 @@ export function ImportLeadsDialog({
                               {cabecalho[indice] || `Coluna ${indice + 1}`}
                             </span>
                             {amostra && (
-                              <span className="text-muted-foreground"> · ex: {amostra}</span>
+                              <span className="text-muted-foreground">
+                                {' '}
+                                · ex: {amostra}
+                              </span>
                             )}
                           </span>
                         </li>
@@ -779,60 +873,63 @@ export function ImportLeadsDialog({
             <div className="flex flex-col gap-3">
               {mostrarSeletores &&
                 CAMPOS.map(({ campo, rotulo }) => {
-                const indiceSelecionado = mapeamento[campo]
-                const amostra =
-                  indiceSelecionado !== undefined
-                    ? amostraDaColuna(corpo, indiceSelecionado)
-                    : null
+                  const indiceSelecionado = mapeamento[campo]
+                  const amostra =
+                    indiceSelecionado !== undefined
+                      ? amostraDaColuna(corpo, indiceSelecionado)
+                      : null
 
-                return (
-                  <div
-                    key={campo}
-                    className="grid grid-cols-[5.5rem_minmax(0,1fr)] items-center gap-x-3 gap-y-1"
-                  >
-                    {/* `items-center` na grade em vez de `pt-2` no rótulo: o
+                  return (
+                    <div
+                      key={campo}
+                      className="grid grid-cols-[5.5rem_minmax(0,1fr)] items-center gap-x-3 gap-y-1"
+                    >
+                      {/* `items-center` na grade em vez de `pt-2` no rótulo: o
                         padding era número mágico para fingir alinhamento com o
                         select e errava por uns 2px. A dica "ex:" saiu da coluna
                         do select e virou uma segunda linha da grade, então ela
                         não empurra mais o rótulo para fora do centro. */}
-                    <Label htmlFor={`col-${campo}`} className="text-sm">
-                      {rotulo}
-                    </Label>
-                    <div className="flex min-w-0 flex-col gap-1">
-                      <Select
-                        value={String(mapeamento[campo] ?? NAO_IMPORTAR)}
-                        onValueChange={(valor) => trocarColuna(campo, String(valor))}
-                      >
-                        <SelectTrigger id={`col-${campo}`} className="w-full">
-                          <SelectValue>
-                            {(valor) =>
-                              valor === NAO_IMPORTAR
-                                ? 'Nenhuma coluna'
-                                : (cabecalho[Number(valor)] || `Coluna ${Number(valor) + 1}`)
-                            }
-                          </SelectValue>
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value={NAO_IMPORTAR}>Nenhuma coluna</SelectItem>
-                          {cabecalho.map((titulo, indice) => (
-                            <SelectItem key={indice} value={String(indice)}>
-                              {titulo || `Coluna ${indice + 1}`}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      {/* Amostra do dado real por trás da coluna escolhida, é o
+                      <Label htmlFor={`col-${campo}`} className="text-sm">
+                        {rotulo}
+                      </Label>
+                      <div className="flex min-w-0 flex-col gap-1">
+                        <Select
+                          value={String(mapeamento[campo] ?? NAO_IMPORTAR)}
+                          onValueChange={(valor) => trocarColuna(campo, String(valor))}
+                        >
+                          <SelectTrigger id={`col-${campo}`} className="w-full">
+                            <SelectValue>
+                              {(valor) =>
+                                valor === NAO_IMPORTAR
+                                  ? 'Nenhuma coluna'
+                                  : cabecalho[Number(valor)] ||
+                                    `Coluna ${Number(valor) + 1}`
+                              }
+                            </SelectValue>
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value={NAO_IMPORTAR}>Nenhuma coluna</SelectItem>
+                            {cabecalho.map((titulo, indice) => (
+                              <SelectItem key={indice} value={String(indice)}>
+                                {titulo || `Coluna ${indice + 1}`}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        {/* Amostra do dado real por trás da coluna escolhida, é o
                           que transforma "escolher por número e torcer" em
                           "escolher e confirmar visualmente" antes de importar. */}
-                      {indiceSelecionado !== undefined && (
-                        <span className="text-muted-foreground truncate text-xs">
-                          {amostra ? `ex: ${amostra}` : 'coluna vazia nas linhas de dado'}
-                        </span>
-                      )}
+                        {indiceSelecionado !== undefined && (
+                          <span className="text-muted-foreground truncate text-xs">
+                            {amostra
+                              ? `ex: ${amostra}`
+                              : 'coluna vazia nas linhas de dado'}
+                          </span>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                )
-              })}
+                  )
+                })}
 
               {/* Mesma grade dos seis acima, e por isso alinhado com eles.
                   "Contatos que já estão no CRM" não cabe numa coluna de
@@ -850,7 +947,9 @@ export function ImportLeadsDialog({
                 <div className="flex min-w-0 flex-col gap-1">
                   <Select
                     value={duplicados}
-                    onValueChange={(valor) => setDuplicados(valor as 'ignorar' | 'atualizar')}
+                    onValueChange={(valor) =>
+                      setDuplicados(valor as 'ignorar' | 'atualizar')
+                    }
                   >
                     <SelectTrigger id="duplicados" className="w-full">
                       <SelectValue>
@@ -885,7 +984,7 @@ export function ImportLeadsDialog({
                 So aparece quando ha teto (Free) E ele de fato corta algo. Pro
                 e trial tem `vagasNoPlano === null` e nao veem nada. */}
             {vagasNoPlano !== null && previa.linhas.length > vagasNoPlano && (
-              <div className="bg-amber-500/5 ring-amber-500/25 flex flex-col gap-3 rounded-lg p-3 ring-1">
+              <div className="flex flex-col gap-3 rounded-lg bg-amber-500/5 p-3 ring-1 ring-amber-500/25">
                 <div className="flex flex-col gap-1">
                   <p className="text-sm font-medium">
                     {vagasNoPlano === 0
@@ -1014,7 +1113,10 @@ export function ImportLeadsDialog({
         {passo === 'resultado' && resultado && (
           <div className="flex flex-col gap-4">
             <p className="flex items-center gap-2 text-sm font-medium">
-              <CheckCircle2 aria-hidden className="size-4 text-emerald-500 dark:text-emerald-400" />
+              <CheckCircle2
+                aria-hidden
+                className="size-4 text-emerald-500 dark:text-emerald-400"
+              />
               {resultado.importados === 0
                 ? `${resultado.atualizados} contato(s) atualizados.`
                 : resultado.importados === 1
@@ -1031,7 +1133,9 @@ export function ImportLeadsDialog({
                   <li>{resultado.atualizados} já existiam e foram atualizados.</li>
                 )}
                 {resultado.duplicados > 0 && (
-                  <li>{resultado.duplicados} já estavam cadastrados e foram ignorados.</li>
+                  <li>
+                    {resultado.duplicados} já estavam cadastrados e foram ignorados.
+                  </li>
                 )}
                 {resultado.ignorados > 0 && (
                   <li>{resultado.ignorados} linha(s) com erro, veja a lista abaixo.</li>
