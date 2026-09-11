@@ -34,8 +34,8 @@ de custo: paywall no momento em que a pessoa sente o valor converte 8-12%,
 contra 3-4% de limite arbitrário — e as outras três são todas arbitrárias no
 sentido técnico do termo.
 
-<!-- contagem: migrations.arquivos=79 migrations.maior=0080 -->
-**79 arquivos de migration, e a maior é `0080`** (remedido em 08/09; o `0049`
+<!-- contagem: migrations.arquivos=81 migrations.maior=0082 -->
+**81 arquivos de migration, e a maior é `0082`** (remedido em 08/09; o `0049`
 não existe, removido em 22/08). Os dois números vêm sempre juntos: a contagem
 sozinha convida a inferir `0073`.
 
@@ -720,9 +720,9 @@ explicada no fim desta seção.
 23/08), 14 (até 25/08), 17 (26/08), 18 (01/09) e 20 (até 09/09). Entraram desde
 então: `vigia_ultimo_aviso` (0062, a memória do vigilante), `notificacoes`
 (0066, o sino de avisos dentro do produto) e `descadastro_de_prospeccao`
-(0080).
+(0082).
 
-A 0080 é a terceira tabela de SISTEMA — RLS ligada e zero policy, como
+A 0082 é a terceira tabela de SISTEMA — RLS ligada e zero policy, como
 `error_logs` e `asaas_webhook_events`. Ela guarda quem pediu para não receber
 e-mail de prospecção, e existe como tabela, e não como o arquivo
 `nao-perturbe.txt`, por dois motivos que o arquivo não atende: quem escreve é

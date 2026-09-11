@@ -221,8 +221,10 @@ continuam versionadas, mas um PNG não responde "onde o preço é lido"; os
 geradores, que são código, continuam dentro. Medido em 01/09: 249 dos 3.966 nós
 vinham de `.claude/`, e a poda tirou 235 de 53 arquivos.
 
-<!-- contagem: grafo.nos_de_claude=28 -->
-**Hoje sobram 28**, em cinco arquivos de `.claude/agents/`. Não é regressão: o
+<!-- contagem: grafo.nos_de_claude=34 -->
+**Hoje sobram 34**, em SEIS arquivos de `.claude/agents/`. Eram 28 em cinco ate
+11/09, quando `.claude/agents/hermes.md` nasceu — o auditor adversarial que tenta DERRUBAR
+afirmacoes em vez de confirma-las. Não é regressão: o
 `.graphifyignore` corta `.claude/skills/`, e os agentes nunca estiveram na
 regra. Fica registrado para a próxima leitura não concluir que a poda falhou.
 

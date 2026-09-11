@@ -4,9 +4,9 @@ Documento de continuidade. É lido no começo de toda sessão (referenciado no
 [CLAUDE.md](../CLAUDE.md)) para que uma conversa nova, ou outra conta, comece
 sabendo o que já foi feito, o que foi decidido e onde estão as armadilhas.
 
-**Atualizado em:** 10/09/2026, madrugada (o Pro foi a R$ 97 e a parede saiu do
-contato 50 para o orcamento; e o lado do COMPRADOR desmentiu tres numeros que
-eu tinha medido no lado do vendedor)
+**Atualizado em:** 11/09/2026, noite (o importador so lia planilha feita PARA
+ele; o Kanban derrubava a tela ao mover um card; e cinco vezes no dia a falha
+que eu ia reportar era do meu proprio avaliador)
 
 ## O preco subiu e a parede mudou de lugar (10/09)
 
