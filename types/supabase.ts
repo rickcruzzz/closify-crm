@@ -50,11 +50,16 @@ export type AnexoDeFeedback = { caminho: string; nome: string; tamanho: number }
 // de aceitá-lo — o `check` de `notificacoes.tipo` tem quatro valores, conferido
 // no catálogo. Tipo que permite o que o banco recusa não é folga: é um `400`
 // que só aparece em produção, e o compilador diz que está tudo certo.
+// `convite_instagram` entrou na 0081, e foi o `tsc` que cobrou: o valor estava
+// em `lib/notificacoes/tipos.ts` e no `check` do banco, e faltava aqui — o
+// inverso exato do caso do `sinal_de_mercado` acima. Vale o mesmo princípio
+// pelo outro lado: as três listas concordam, ou uma delas mente.
 export type TipoDeNotificacao =
   | 'pagamento_confirmado'
   | 'pagamento_atrasado'
   | 'plano_vencendo'
   | 'trial_terminando'
+  | 'convite_instagram'
 
 /**
  * Os campos de empresa acrescentados em 0030.

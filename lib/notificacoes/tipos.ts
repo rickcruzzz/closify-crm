@@ -31,6 +31,18 @@ export const TIPOS_DE_NOTIFICACAO = [
   'pagamento_atrasado',
   'plano_vencendo',
   'trial_terminando',
+  /**
+   * O único tipo que não é dinheiro nem prazo.
+   *
+   * Entrou a pedido do dono, contra a regra escrita em `sino.tsx` ("só entra o
+   * que já provou valer um e-mail"). A ressalva inteira está na migration 0081,
+   * que é também onde o `check` do banco passou a aceitar este valor.
+   *
+   * **As duas listas precisam concordar, e já divergiram.** Em 08/09 este
+   * arquivo trazia `sinal_de_mercado` e o banco não: compilava, e dava 400 em
+   * produção. É o caso logo abaixo.
+   */
+  'convite_instagram',
   // `sinal_de_mercado` esteve aqui entre 07 e 08/09, e saiu junto com a
   // pesquisa de mercado do lado do cliente (0075). Fica registrado para
   // ninguém recolocar sem o recurso: tipo sem chamador é código morto com
