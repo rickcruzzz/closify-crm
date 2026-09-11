@@ -251,7 +251,18 @@ export async function POST(req: Request) {
   }
 
   const mensagens = [
-    { role: 'system' as const, content: instrucoesDoAgente({ empresa, vertical, pesquisa }) },
+    {
+      role: 'system' as const,
+      // `primeiraMensagem` é o que o modelo não consegue inferir: histórico
+      // vazio é ambíguo entre "primeira mensagem" e "não temos o histórico", e
+      // os dois pedem o oposto. Aqui sabemos qual é.
+      content: instrucoesDoAgente({
+        empresa,
+        vertical,
+        pesquisa,
+        primeiraMensagem: turnos.length === 0,
+      }),
+    },
     ...turnos.map((h) => ({
       role: h.de === 'cliente' ? ('user' as const) : ('assistant' as const),
       content: h.texto,

@@ -44,12 +44,46 @@ import {
  * cliente no primeiro dia de uso.
  */
 
-export const NOME_DO_AGENTE = 'assistente do Velo Funil'
+/**
+ * O nome do agente.
+ *
+ * ## Por que ele tem nome próprio, e não só cargo
+ *
+ * Era `assistente do Velo Funil`, e toda resposta abria com *"Sou o assistente
+ * do Velo Funil, um atendente entra quando precisar."* — a mesma frase, na
+ * mesma posição, inclusive respondendo a um "olá, tudo bem?".
+ *
+ * Cargo sem nome não é como gente se apresenta no WhatsApp. "Aqui é o Gabriel,
+ * do Velo Funil" é; "Sou o assistente do Velo Funil" é aviso de sistema — e
+ * quem lê sabe na primeira linha que está falando com uma máquina, antes de o
+ * conteúdo ter chance.
+ *
+ * O nome **não esconde que é um assistente**: a apresentação continua dizendo
+ * que é assistente e que um atendente entra quando precisar. O que muda é que
+ * isso vira uma frase de gente em vez de um carimbo.
+ */
+export const NOME_DO_AGENTE = 'Gabriel'
+
+/** Como ele se apresenta por extenso, na primeira mensagem. */
+export const APRESENTACAO = `Aqui é o ${NOME_DO_AGENTE}, assistente do Velo Funil`
 
 /** Sinal, no texto do agente, de que a conversa deve ir para o dono. */
 export const MARCA_DE_PASSAGEM = '[[PASSAR]]'
 
 export type ContextoDoLead = {
+  /**
+   * Esta é a primeira mensagem desta conversa?
+   *
+   * Medido em 11/09: sem esta informação, o agente se apresentava em apenas
+   * 1 de 4 primeiras mensagens quando a pessoa ia direto ao ponto ("quanto
+   * custa?"). Ele não tinha como saber — o histórico vem vazio tanto na
+   * primeira mensagem quanto quando a Evolution não persiste o que recebeu, e
+   * os dois casos pedem comportamentos OPOSTOS.
+   *
+   * Dizer no prompt resolve o que o modelo não consegue inferir. `undefined`
+   * mantém o comportamento antigo: ele decide sozinho.
+   */
+  primeiraMensagem?: boolean
   empresa?: string | null
   vertical?: string | null
   /** O que já foi dito nesta conversa, do mais antigo ao mais novo. */
@@ -204,7 +238,7 @@ export function instrucoesDoAgente(ctx: ContextoDoLead = {}): string {
   const empresa = ctx.empresa?.trim()
 
   return [
-    `Você é o ${NOME_DO_AGENTE}, respondendo no WhatsApp quem reagiu a uma mensagem nossa de prospecção.`,
+    `Você é o ${NOME_DO_AGENTE}, assistente do Velo Funil, respondendo no WhatsApp quem reagiu a uma mensagem nossa de prospecção.`,
     empresa ? `A pessoa é da empresa: ${empresa}.` : '',
     ctx.vertical ? `Setor dela: ${ctx.vertical}.` : '',
     '',
@@ -215,7 +249,7 @@ export function instrucoesDoAgente(ctx: ContextoDoLead = {}): string {
     '- Sem emoji. Sem "espero que esteja bem". Sem "fico à disposição".',
     '- Nunca use travessão nem reticências decorativas.',
     '',
-    'NA PRIMEIRA RESPOSTA, SEMPRE:',
+    'COMO ABRIR A CONVERSA:',
     // ## Só na PRIMEIRA mensagem
     //
     // Medido em 11/09, numa bateria de 17 casos: **12 respostas abriam com
@@ -227,8 +261,31 @@ export function instrucoesDoAgente(ctx: ContextoDoLead = {}): string {
     // Só dá para exigir isto porque a memória passou a funcionar no mesmo dia:
     // sem histórico, o agente não tinha como saber se já havia se apresentado,
     // e repetir era o comportamento seguro.
-    `- Na PRIMEIRA mensagem da conversa, diga que você é o ${NOME_DO_AGENTE} e que um atendente entra quando precisar. Uma linha, sem cerimônia.`,
+    // ## Responda o cumprimento ANTES de se apresentar
+    //
+    // Pedido do dono em 11/09, depois de ouvir os próprios áudios de teste:
+    // *"em todos aparece 'sou o assistente do Velo Funil, um atendente entra
+    // quando precisa'. O usuário falou 'olá tudo bem' e a gente cumprimenta
+    // certinho"*.
+    //
+    // Abrir com a apresentação por cima de um "olá, tudo bem?" é o que denuncia
+    // roteiro: gente responde ao que ouviu primeiro, e só então diz quem é.
+    '- Se a pessoa cumprimentou ("oi", "olá, tudo bem?", "bom dia"), RESPONDA o cumprimento primeiro, com a mesma moeda e na mesma medida. Só depois diga quem você é.',
+    `- Na PRIMEIRA mensagem da conversa, apresente-se assim: "${APRESENTACAO}". Diga também, na mesma frase ou na seguinte, que um atendente entra quando precisar.`,
+    '- Junte tudo numa abertura só, natural. Exemplo: "Olá, tudo bem? Aqui é o Gabriel, assistente do Velo Funil, e um atendente entra na conversa quando precisar."',
     '- Se já existe conversa anterior, NÃO se apresente de novo: vá direto ao ponto. Repetir a apresentação a cada mensagem é o que denuncia robô.',
+    // A linha que o modelo não consegue inferir sozinho: histórico vazio é
+    // ambíguo entre "primeira mensagem" e "não temos o histórico", e os dois
+    // pedem o oposto. Quem sabe é a rota.
+    ctx.primeiraMensagem === true
+      ? '- ESTA É A PRIMEIRA MENSAGEM desta conversa: apresente-se, sem falta, mesmo que a pessoa já tenha ido direto a uma pergunta.'
+      : ctx.primeiraMensagem === false
+        ? '- Vocês JÁ CONVERSARAM antes: não se apresente, responda direto.'
+        : '',
+    // Áudio chega SEM texto, e o agente não vê "oi" escrito — vê a transcrição.
+    // Sem esta linha ele tratava todo áudio como mensagem sem saudação e
+    // abria com o carimbo, que foi exatamente o relato do dono.
+    '- Vale igual para áudio: se a pessoa falou "oi, tudo bem?" no áudio, responda ao cumprimento do mesmo jeito que responderia a um texto.',
     '',
     'SEU OBJETIVO, NESTA ORDEM:',
     '1. Responder o que a pessoa perguntou, com verdade.',

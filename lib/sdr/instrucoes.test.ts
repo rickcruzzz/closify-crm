@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest'
 import { CONTROLADOR } from '@/lib/legal'
 import {
   MARCA_DE_PASSAGEM,
+  NOME_DO_AGENTE,
   assuntosProibidos,
   fatosDaEmpresa,
   fatosDoProduto,
@@ -78,9 +79,27 @@ describe('o que o produto NÃO faz está escrito', () => {
 })
 
 describe('comportamento', () => {
-  it('manda se identificar como IA na primeira resposta', () => {
-    expect(instrucoesDoAgente()).toMatch(/assistente do Velo Funil/)
-    expect(instrucoesDoAgente()).toMatch(/PRIMEIRA RESPOSTA/)
+  /**
+   * A identificação continua obrigatória — o que mudou em 11/09 foi a FORMA:
+   * "Aqui é o Gabriel, assistente do Velo Funil" no lugar do carimbo "Sou o
+   * assistente do Velo Funil". O cargo não some, ele passa a vir junto de um
+   * nome, que é como gente se apresenta no WhatsApp.
+   */
+  it('manda se identificar como assistente, com nome, na primeira resposta', () => {
+    const i = instrucoesDoAgente()
+    expect(i).toMatch(/assistente do Velo Funil/)
+    expect(i).toContain(NOME_DO_AGENTE)
+    expect(i).toMatch(/PRIMEIRA mensagem da conversa/)
+  })
+
+  /**
+   * O pedido do dono, depois de ouvir os próprios áudios: a apresentação
+   * entrava por cima de um "olá, tudo bem?" em toda mensagem.
+   */
+  it('manda responder o cumprimento ANTES de se apresentar', () => {
+    const i = instrucoesDoAgente()
+    expect(i).toMatch(/RESPONDA o cumprimento primeiro/)
+    expect(i).toMatch(/Vale igual para áudio/)
   })
 
   it('proíbe fechar venda e negociar preço', () => {
@@ -273,5 +292,30 @@ describe('o que ele nunca comenta', () => {
   it('os proibidos vêm depois dos fatos', () => {
     const i = instrucoesDoAgente()
     expect(i.indexOf('SOBRE A EMPRESA')).toBeLessThan(i.indexOf('NUNCA COMENTE'))
+  })
+})
+
+describe('quem se apresenta, e quando', () => {
+  /**
+   * Medido em 11/09: sem esta informação o agente se apresentava em apenas
+   * 1 de 4 primeiras mensagens quando a pessoa ia direto ao ponto. Ele não
+   * tinha como saber — histórico vazio é ambíguo entre "primeira mensagem" e
+   * "não temos o histórico", e os dois casos pedem o oposto.
+   */
+  it('manda se apresentar sem falta quando é a primeira', () => {
+    expect(instrucoesDoAgente({ primeiraMensagem: true })).toMatch(/PRIMEIRA MENSAGEM desta conversa/)
+  })
+
+  it('manda NÃO se apresentar quando já conversaram', () => {
+    const i = instrucoesDoAgente({ primeiraMensagem: false })
+    expect(i).toMatch(/JÁ CONVERSARAM antes/)
+    expect(i).not.toMatch(/PRIMEIRA MENSAGEM desta conversa/)
+  })
+
+  /** Sem a informação, o comportamento antigo: ele decide sozinho. */
+  it('não afirma nem uma coisa nem outra quando não se sabe', () => {
+    const i = instrucoesDoAgente()
+    expect(i).not.toMatch(/PRIMEIRA MENSAGEM desta conversa/)
+    expect(i).not.toMatch(/JÁ CONVERSARAM antes/)
   })
 })
