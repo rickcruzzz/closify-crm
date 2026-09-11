@@ -112,7 +112,18 @@ export function WorkspaceSwitcher({
     if (id === activeId || trocando) return
     setIdEmTroca(id)
     setEnviando(true)
-    const resultado = await trocarEmpresa(id)
+    // Rejeicao deixaria a linha girando para sempre, e o seletor de empresa e
+    // a porta de todas as telas. Mesma classe fechada em 02/09 no cadastro.
+    let resultado: Awaited<ReturnType<typeof trocarEmpresa>>
+    try {
+      resultado = await trocarEmpresa(id)
+    } catch (err) {
+      console.error('trocarEmpresa rejeitou', err)
+      setEnviando(false)
+      setIdEmTroca(null)
+      toast.error('Nao foi possivel trocar de empresa. Confira sua conexao e tente de novo.')
+      return
+    }
     setEnviando(false)
     // Limpo nos DOIS caminhos. Antes so o erro zerava, e o sucesso deixava o
     // spinner ligado — mascarado porque `activeId` muda no refresh e a linha

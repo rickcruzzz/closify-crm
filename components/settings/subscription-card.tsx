@@ -79,7 +79,18 @@ export function SubscriptionCard({
   async function handleCancelar() {
     if (!podeCancelar) return
     setCancelando(true)
-    const resultado = await cancelSubscription({ confirmacao: 'CANCELAR' })
+    // Rejeição não passa pelo `if` de erro, e o botão ficaria girando para
+    // sempre numa tela de cobrança — a pessoa conclui que cancelou e não
+    // cancelou. Mesma classe fechada em 02/09 no cadastro.
+    let resultado: Awaited<ReturnType<typeof cancelSubscription>>
+    try {
+      resultado = await cancelSubscription({ confirmacao: 'CANCELAR' })
+    } catch (err) {
+      console.error('cancelSubscription rejeitou', err)
+      setCancelando(false)
+      toast.error('Não foi possível cancelar agora. Confira sua conexão e tente de novo.')
+      return
+    }
     if (resultado?.error) {
       toast.error(resultado.error)
       setCancelando(false)

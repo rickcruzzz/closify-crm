@@ -35,7 +35,24 @@ export default function LoginPage() {
   async function onSubmit(values: LoginValues) {
     setFormError(null)
     setIsSubmitting(true)
-    const result = await signIn(values)
+
+    // Erro DEVOLVIDO ja era tratado. Falta o LANCADO — rede caindo, falha de
+    // transporte —, que nao passa por nenhum `if`: `isSubmitting` ficava em
+    // `true` para sempre, sem mensagem, e a pessoa nao consegue nem tentar de
+    // novo nem entender por que. Mesma classe fechada em 02/09 no cadastro.
+    //
+    // `catch` e nao `finally`: no sucesso a `signIn` navega, e desligar ali
+    // faria o botao acordar no meio da navegacao.
+    let result: Awaited<ReturnType<typeof signIn>>
+    try {
+      result = await signIn(values)
+    } catch (err) {
+      console.error('signIn rejeitou', err)
+      setIsSubmitting(false)
+      setFormError('Nao foi possivel entrar agora. Confira sua conexao e tente de novo.')
+      return
+    }
+
     if (result?.error) {
       setFormError(result.error)
       setIsSubmitting(false)

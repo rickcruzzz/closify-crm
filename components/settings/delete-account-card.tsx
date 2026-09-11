@@ -62,7 +62,18 @@ export function DeleteAccountCard() {
     if (!podeExcluir) return
 
     setExcluindo(true)
-    const result = await deleteAccount(senha)
+    // Rejeicao nao passa pelo `if` de erro: o botao de excluir a conta giraria
+    // para sempre, e a pessoa nao saberia se a conta foi embora ou nao. Mesma
+    // classe fechada em 02/09 no cadastro.
+    let result: Awaited<ReturnType<typeof deleteAccount>>
+    try {
+      result = await deleteAccount(senha)
+    } catch (err) {
+      console.error('deleteAccount rejeitou', err)
+      setExcluindo(false)
+      toast.error('Nao foi possivel concluir. Confira sua conexao e tente de novo.')
+      return
+    }
 
     if (result?.error) {
       toast.error(result.error)

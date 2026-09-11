@@ -98,7 +98,18 @@ export function SubscribeButton({
   async function onSubmit(values: CheckoutValues) {
     setIsSubmitting(true)
 
-    const result = await createCheckout(values)
+    // Server Action que REJEITA não passa por nenhum `if` abaixo, e aqui isso
+    // custa a venda: o botão de assinar gira para sempre, sem mensagem e sem
+    // caminho. Mesma classe do `onSubmit` do cadastro, fechada em 02/09.
+    let result: Awaited<ReturnType<typeof createCheckout>>
+    try {
+      result = await createCheckout(values)
+    } catch (err) {
+      console.error('createCheckout rejeitou', err)
+      setIsSubmitting(false)
+      toast.error('Não foi possível abrir o pagamento. Confira sua conexão e tente de novo.')
+      return
+    }
 
     if (result?.error) {
       toast.error(result.error)

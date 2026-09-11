@@ -44,7 +44,30 @@ export function ExcluirEmpresaCard({ nomeDaEmpresa, workspaceId }: {
 
   async function excluir() {
     setExcluindo(true)
-    const r = await excluirEmpresa(workspaceId, nomeDigitado)
+    let r: Awaited<ReturnType<typeof excluirEmpresa>>
+    try {
+      r = await excluirEmpresa(workspaceId, nomeDigitado)
+    } catch (err) {
+      // ## O spinner que gira para sempre
+      //
+      // Erro DEVOLVIDO já era tratado logo abaixo. Falta o LANÇADO — rede
+      // caindo, falha de transporte, qualquer `throw` na travessia —, que não
+      // passa por nenhum `if`: `excluindo` ficava em `true`, sem toast e sem
+      // botão, e recarregar era a única saída.
+      //
+      // **Este projeto já pagou exatamente isto em 02/09**, no `onSubmit` do
+      // cadastro. É a mesma classe, no mesmo lugar do fluxo.
+      //
+      // `catch` e não `finally` de propósito: no caminho de sucesso o diálogo
+      // fecha e a tela revalida, e desligar ali faria o botão piscar de volta
+      // para "Excluir empresa" no instante em que a empresa já sumiu.
+      console.error('excluirEmpresa rejeitou', err)
+      setExcluindo(false)
+      toast.error('Não foi possível concluir. Confira sua conexão e tente de novo.', {
+        duration: 8000,
+      })
+      return
+    }
     setExcluindo(false)
 
     if (r?.error) {
