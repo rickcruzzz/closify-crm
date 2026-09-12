@@ -297,8 +297,8 @@ uma rodada antiga —, e nada na resposta de uma consulta avisava disso. Só
 instalado na pasta pessoal do usuário, fora daqui. O que foi retirado está
 inteiro em `graphify-out/arquivo/`, nada foi descartado.
 
-<!-- contagem: grafo.nos_sem_arquivo=120 -->
-**120 nós não têm arquivo de origem, e nenhum deles é fantasma.** A grande
+<!-- contagem: grafo.nos_sem_arquivo=123 -->
+**123 nós não têm arquivo de origem, e nenhum deles é fantasma.** A grande
 maioria são objetos do banco que o extrator representa sem arquivo —
 `public.workspaces`, `auth.users`, `public.checar_teto_de_mensagens` —, mais
 alguns símbolos importados pelos geradores em Python (`FreeTypeFont`, `Image`,
@@ -329,6 +329,10 @@ Como ele andou, em ordem:
     120   12/09   `public_descadastro_de_prospeccao`, mintado pelo `alter
                   table` da 0083. Mesmo caso do 107 e do 119 — a tabela ja
                   existia desde a 0080
+    123   12/09   TRES da 0086: `public_prospeccao_prospect` (alter numa
+                  tabela que a 0084 tinha CRIADO horas antes) mais
+                  `public_conversas` e `public_mensagens`, citadas nas
+                  foreign keys. Mesmo caso de novo
 
 **A leitura errada aqui é fácil e cara:** ver o número subir logo depois de uma
 migration convida a concluir que uma tabela nasceu. Em nenhum dos três últimos
