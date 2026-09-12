@@ -413,6 +413,40 @@ async function main() {
   let fila = dados.fila.filter((p) => !jaMarcados[p.dominio])
   if (SO) fila = fila.filter((p) => p.dominio === SO || p.numero === SO)
   if (SO_APROVADOS) fila = fila.filter((p) => NICHOS_APROVADOS.has(p.vertical))
+
+  /**
+   * ## Um NÚMERO só recebe uma vez, mesmo com dois domínios — 12/09
+   *
+   * Achado conferindo os 100 da primeira rodada grande: `i9 Acrílicos` e
+   * `Fachadas Curitiba » i9 Comunicação Visual` são domínios diferentes com o
+   * MESMO telefone. É a mesma empresa, com dois sites.
+   *
+   * Sem esta passada, a mesma pessoa receberia duas mensagens na mesma
+   * rodada, cada uma a saudando por um nome de empresa diferente. Isso não é
+   * só redundante: é a prova mais direta possível de que do outro lado tem um
+   * robô, e "texto idêntico para centenas de destinos" é o terceiro padrão da
+   * lista do que derruba número.
+   *
+   * A dedupe é por NÚMERO e não por domínio porque quem recebe é o número. O
+   * estado em `.dono-prospeccao.json` continua sendo por domínio, e está
+   * certo: ele responde "este site já foi abordado?", que é outra pergunta.
+   *
+   * Fica a PRIMEIRA, que é a de maior pontuação — a fila chega ordenada, e o
+   * domínio descartado volta a aparecer numa rodada futura se o número sair
+   * do `nao-perturbe`. Na fila inteira de nicho aprovado, 4 números de 628
+   * caem aqui.
+   */
+  const vistos = new Set()
+  const duplicados = []
+  fila = fila.filter((p) => {
+    if (vistos.has(p.numero)) {
+      duplicados.push(p)
+      return false
+    }
+    vistos.add(p.numero)
+    return true
+  })
+
   fila = fila.slice(0, MAX)
 
   // Conta sobre a fila QUE VAI SAIR, não sobre a fila inteira: o que importa
@@ -454,6 +488,12 @@ async function main() {
   console.log(`  vão nesta rodada  ${fila.length}  (teto --max=${MAX})`)
   console.log(`  intervalo         ${INTERVALO_MIN / 1000}s a ${INTERVALO_MAX / 1000}s, sorteado`)
   console.log(`  imagem            ${imagemInfo}`)
+  if (duplicados.length > 0) {
+    console.log(
+      `  numero repetido   ${duplicados.length} empresa(s) fora: ` +
+        duplicados.map((p) => p.nome.slice(0, 22)).join(', '),
+    )
+  }
 
   // Conferido sobre a PRIMEIRA mensagem da fila, e uma vez so: as 837
   // carregam o mesmo link, entao 837 requisicoes provariam o mesmo fato.
