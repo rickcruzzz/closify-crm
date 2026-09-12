@@ -67,6 +67,28 @@ export function enderecoEmLinha(endereco: Endereco): string {
 export type Controlador = {
   nomeFantasia: string
   razaoSocial: string
+  /**
+   * O nome que aparece no extrato de QUEM PAGA.
+   *
+   * Terceira pergunta, e não sinônimo das duas acima:
+   *
+   *     nomeFantasia      a marca. "Velo Funil"
+   *     razaoSocial       o que a Receita registrou. Nome civil do socio
+   *     nomeNoRecebedor   o que o Asaas manda para o banco do cliente
+   *
+   * Medido na API do Asaas em 12/09: `company`, `companyName` e `name` todos
+   * em `VELO FUNIL`, com `status: APPROVED`. O `availableCompanyNames` traz as
+   * duas opções e a escolhida é esta.
+   *
+   * **Ele existe porque a tela de pagamento estava afirmando o contrário.** O
+   * diálogo avisava que o recebedor apareceria com o nome civil do sócio — o
+   * que era verdade no MEI e deixou de ser quando a LTDA entrou em 28/08. O
+   * comentário de lá ainda citava a regra do MEI de 15/11/2023.
+   *
+   * Avisar algo pior do que a realidade não é conservador: é perder venda
+   * explicando um problema que não existe mais, na tela do CPF.
+   */
+  nomeNoRecebedor: string
   /** `null` enquanto não houver inscrição ativa. Ver a nota abaixo. */
   cnpj: string | null
   /**
@@ -132,6 +154,10 @@ export const CONTROLADOR: Controlador = {
    * lá, a fatura sai com o nome antigo enquanto a tela mostra o novo.
    */
   razaoSocial: 'ORLANDO HENRIQUE BASTOS DA CRUZ LTDA',
+  // Exatamente como o Asaas tem — sem "LTDA", que ele não usa. Escrever aqui
+  // algo diferente do que o gateway manda faria a tela prometer um extrato
+  // que o cliente não vai ver, e a surpresa no banco é pior que o aviso.
+  nomeNoRecebedor: 'VELO FUNIL',
   /**
    * **CNPJ ativo desde 28/08/2026.**
    *

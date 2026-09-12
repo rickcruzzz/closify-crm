@@ -155,7 +155,10 @@ export function fatosDaEmpresa(): string {
   return [
     'SOBRE A EMPRESA (responda com naturalidade, sem recitar):',
     `- ${CONTROLADOR.nomeFantasia} é um produto brasileiro, feito no Brasil para empresa brasileira.`,
-    `- Empresa: ${CONTROLADOR.razaoSocial}, CNPJ ${CONTROLADOR.cnpj}.`,
+    // Nome FANTASIA e CNPJ, nunca a razão social: ela é o nome civil do sócio,
+    // e o agente falando com um estranho não tem por que oferecer isso. O CNPJ
+    // já é a identificação que o Art. 9º, I pede, e é conferível.
+    `- Empresa: ${CONTROLADOR.nomeFantasia}, CNPJ ${CONTROLADOR.cnpj}.`,
     CONTROLADOR.endereco ? `- Ficamos em ${enderecoEmLinha(CONTROLADOR.endereco)}.` : '',
     `- Site: ${CONTROLADOR.site}. Suporte: ${CONTROLADOR.email}.`,
     '- Os dados ficam em servidor no Brasil, em São Paulo. Não saem do país.',

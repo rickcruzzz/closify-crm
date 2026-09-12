@@ -237,7 +237,28 @@ describe('o agente sabe quem é a empresa', () => {
    */
   it('deriva do controlador, não escreve à mão', () => {
     expect(fatosDaEmpresa()).toContain(CONTROLADOR.cnpj)
-    expect(fatosDaEmpresa()).toContain(CONTROLADOR.razaoSocial)
+    expect(fatosDaEmpresa()).toContain(CONTROLADOR.nomeFantasia)
+  })
+
+  /**
+   * ## Este caso travava o CONTRÁRIO até 12/09
+   *
+   * Ele exigia que o prompt contivesse `razaoSocial` — e `razaoSocial` é
+   * `ORLANDO HENRIQUE BASTOS DA CRUZ LTDA`, o nome civil do sócio. O agente
+   * conversando com um estranho não tem por que oferecer isso.
+   *
+   * A decisão de 24/08 já tinha tirado o nome civil de toda superfície de
+   * marca — o rodapé e a seção de confiança têm o comentário escrito. O prompt
+   * do agente e o diálogo de pagamento foram os dois que escaparam, e o
+   * segundo é o pior: ele aparecia na tela do CPF.
+   *
+   * O CNPJ continua, e é ele que o Art. 9º, I pede: identificação conferível
+   * do controlador. A razão social segue nos Termos e na Privacidade, que é
+   * onde ela tem função legal.
+   */
+  it('NÃO oferece o nome civil do sócio', () => {
+    expect(fatosDaEmpresa()).not.toContain(CONTROLADOR.razaoSocial)
+    expect(fatosDaEmpresa()).not.toMatch(/ORLANDO|BASTOS DA CRUZ/i)
   })
 })
 

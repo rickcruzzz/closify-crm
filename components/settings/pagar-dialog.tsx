@@ -324,13 +324,21 @@ export function PagarDialog({
               </div>
             )}
 
-            {/* Avisar antes transforma surpresa em detalhe. O nome do titular
-                aparece no app do banco e não há como trocá-lo: para MEI, o nome
-                fantasia saiu da base do CNPJ em 15/11/2023. */}
+            {/* ## Esta linha dizia o NOME CIVIL do sócio, até 12/09
+
+                Avisar antes transforma surpresa em detalhe, e isso continua
+                valendo. O que mudou é o fato: o comentário antigo afirmava que
+                "não há como trocá-lo, para MEI o nome fantasia saiu da base do
+                CNPJ em 15/11/2023" — verdade no MEI, falsa desde que a LTDA
+                entrou em 28/08.
+
+                Medido na API do Asaas em 12/09: `company`, `companyName` e
+                `name` todos em `VELO FUNIL`, `status: APPROVED`. A tela estava
+                avisando de um problema que não existe mais — e o fazia na tela
+                do CPF, que é onde a pessoa decide. */}
             <p className="text-muted-foreground border-t pt-3 text-xs">
               No seu banco, o recebedor aparece como{' '}
-              <strong>{CONTROLADOR.razaoSocial}</strong>, a empresa por trás do Velo
-              Funil.
+              <strong>{CONTROLADOR.nomeNoRecebedor}</strong>.
             </p>
           </div>
         )}
