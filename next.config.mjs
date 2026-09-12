@@ -368,10 +368,23 @@ const nextConfig = {
    *     hoje-dark     w3840  89.948 -> w2048  60.458
    *                        259,0 KB -> 176,4 KB   (-32%)
    *
-   * Cortar acima de 2048 não perde nada aqui porque **`produto-print.tsx` é o
-   * único consumidor de `next/image` do projeto** (conferido), e a fonte tem
-   * 2880px de largura: o degrau de 3840 nunca entregou 3840 pixels, entregou
-   * os mesmos 2880 recodificados mais caro.
+   * Cortar acima de 2048 não perde nada aqui porque nenhuma fonte do projeto
+   * passa disso na largura em que é exibida: o degrau de 3840 nunca entregou
+   * 3840 pixels, entregou a mesma origem recodificada mais caro.
+   *
+   * **Esta frase dizia "`produto-print.tsx` é o único consumidor de
+   * `next/image` do projeto" até 12/09**, e era verdade quando foi escrita.
+   * Deixou de ser quando `onde-ficamos-section.tsx` entrou com a foto da
+   * fachada. O corte continua correto pela mesma aritmética — a foto é
+   * exibida em 420px de coluna, muito abaixo do teto —, mas a JUSTIFICATIVA
+   * estava apoiada num fato vencido, que é a classe de erro que a sentinela
+   * de documentos existe para caçar e que este arquivo não é conferido por
+   * ela.
+   *
+   * Consumidores de `next/image` hoje:
+   *
+   *     components/landing/produto-print.tsx        2880x1800, quality 92
+   *     components/landing/onde-ficamos-section.tsx foto, quality 78
    */
   images: {
     formats: ['image/avif', 'image/webp'],

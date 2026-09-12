@@ -11,13 +11,91 @@
  * cada item corresponde a uma integração que de fato recebe dado pessoal.
  */
 
+/**
+ * O endereço da sede, decomposto.
+ *
+ * Os nomes seguem o que a Receita usa no cadastro, não o que o `PostalAddress`
+ * do schema.org chama — a fonte é o cartão do CNPJ, e traduzir na entrada
+ * faria a conferência contra a Receita exigir um mapa mental a cada leitura.
+ * A tradução acontece uma vez, em `dados-estruturados.ts`.
+ */
+export type Endereco = {
+  logradouro: string
+  numero: string
+  /** Sala, andar, bloco. `null` quando o cadastro não tem complemento. */
+  complemento: string | null
+  /**
+   * O nome do edifício, e ele NÃO vem da Receita.
+   *
+   * O cartão do CNPJ traz logradouro, número e complemento; "CEO Salvador
+   * Shopping · Torre Londres" é como o lugar se identifica na fachada — é o
+   * que está escrito na placa que a foto da landing mostra, e é o que alguém
+   * procura ao chegar de carro.
+   *
+   * Fica fora de `enderecoEmLinha()` de propósito: a linha corrida serve a
+   * documento legal e a prompt, onde o nome comercial do prédio é ruído. Ele
+   * existe para a seção que mostra a foto, onde é justamente o que liga a
+   * imagem ao texto.
+   */
+  edificio: string | null
+  bairro: string
+  cidade: string
+  /** Sigla de duas letras, maiúscula. */
+  uf: string
+  /** Com a máscara, como a Receita imprime: `41.820-021`. */
+  cep: string
+}
+
+/**
+ * As partes de volta numa linha, que é o formato que documento legal usa.
+ *
+ * Existe para os quatro consumidores anteriores à decomposição de 12/09 —
+ * rodapé, Privacidade, Termos e o prompt do SDR — continuarem lendo uma frase.
+ * Sem ela, decompor o endereço teria obrigado quatro arquivos a montar a
+ * mesma string à mão, e quatro cópias divergem.
+ */
+export function enderecoEmLinha(endereco: Endereco): string {
+  const inicio = [
+    `${endereco.logradouro}, ${endereco.numero}`,
+    endereco.complemento,
+  ]
+    .filter(Boolean)
+    .join(', ')
+  return `${inicio} — ${endereco.bairro}, ${endereco.cidade}/${endereco.uf}, CEP ${endereco.cep}`
+}
+
 export type Controlador = {
   nomeFantasia: string
   razaoSocial: string
   /** `null` enquanto não houver inscrição ativa. Ver a nota abaixo. */
   cnpj: string | null
-  /** Endereço da sede, como consta na Receita. `null` junto com o CNPJ. */
-  endereco: string | null
+  /**
+   * Endereço da sede, em PARTES. `null` junto com o CNPJ.
+   *
+   * ## Por que partes, e não a linha pronta que existia antes
+   *
+   * Até 12/09 isto era uma string só. Ela servia aos quatro consumidores que
+   * precisam de uma linha corrida — rodapé, Privacidade, Termos e o prompt do
+   * SDR — e não servia a mais ninguém, porque não dá para extrair a cidade de
+   * uma frase sem adivinhar onde ela começa.
+   *
+   * Dois lugares precisavam disso, e os dois estavam mal servidos:
+   *
+   *     dados-estruturados.ts   despejava a linha INTEIRA em `streetAddress` e
+   *                             declarava so `addressCountry`. O Google le
+   *                             `addressLocality`, `addressRegion` e
+   *                             `postalCode` para busca local, e nenhum
+   *                             existia
+   *     onde-ficamos-section    quebrava a string num `split('—')` para ter
+   *                             duas linhas. Hierarquia tipografica sobre
+   *                             texto corrido e adivinhacao com outro nome
+   *
+   * `enderecoEmLinha()` monta a frase de volta, então nenhum dos quatro
+   * consumidores antigos precisou mudar. **A linha passou a ser derivada, e
+   * as partes passaram a ser a fonte** — que é a ordem certa: de partes se
+   * monta a frase, de frase não se recuperam as partes.
+   */
+  endereco: Endereco | null
   email: string
   site: string
   whatsapp: { numero: string; exibicao: string }
@@ -84,8 +162,16 @@ export const CONTROLADOR: Controlador = {
    * campo era nulo — expor a casa do titular — não se aplica: o cadastro saiu
    * em escritório no Salvador Shopping.
    */
-  endereco:
-    'Av. Tancredo Neves, 2539, sala 2609 — Caminho das Árvores, Salvador/BA, CEP 41.820-021',
+  endereco: {
+    logradouro: 'Av. Tancredo Neves',
+    numero: '2539',
+    complemento: 'Sala 2609',
+    edificio: 'CEO Salvador Shopping · Torre Londres',
+    bairro: 'Caminho das Árvores',
+    cidade: 'Salvador',
+    uf: 'BA',
+    cep: '41.820-021',
+  },
   /** Canal do titular e do encarregado (LGPD, Art. 41, §2º, I e Art. 18). */
   email: 'suporte@velofunil.com.br',
   site: 'https://www.velofunil.com.br',

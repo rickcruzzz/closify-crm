@@ -1,7 +1,10 @@
+import { existsSync } from 'node:fs'
+import { join } from 'node:path'
+
 import Image from 'next/image'
 import { MapPin, ExternalLink } from 'lucide-react'
 
-import { CONTROLADOR } from '@/lib/legal'
+import { CONTROLADOR, enderecoEmLinha, type Endereco } from '@/lib/legal'
 import { RevealOnScroll } from '@/components/landing/reveal-on-scroll'
 
 /**
@@ -59,32 +62,59 @@ import { RevealOnScroll } from '@/components/landing/reveal-on-scroll'
  * mudar de sala, o texto diria um lugar e o link levaria a outro — e ninguém
  * perceberia, porque as duas coisas continuariam funcionando.
  */
-function linkDoMapa(endereco: string) {
-  return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(endereco)}`
+function linkDoMapa(endereco: Endereco) {
+  return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
+    enderecoEmLinha(endereco),
+  )}`
 }
 
 /**
- * A foto do prédio, se ela existir.
+ * A foto do prédio.
  *
- * `null` é um estado legítimo e não um defeito: o endereço é preenchido a
- * partir do cadastro da Receita, e a foto depende de alguém ir até lá tirar.
- * Sem ela a seção continua de pé, mostrando o endereço e o link — que já é
- * mais do que o rodapé entrega.
+ * ## A ausência é segura POR CONSTRUÇÃO, e não por disciplina
  *
- * O oposto seria pior de duas formas: um `<img>` apontando para arquivo
- * inexistente desenha o ícone de imagem quebrada, que diz "site mal feito" na
- * seção que existe para dizer o contrário; e uma foto de banco de imagens
- * diria "prédio genérico", que é prova social inventada com outro nome.
+ * `existsSync` roda no build, porque isto é Server Component. Se o arquivo
+ * não estiver em `public/`, a constante vira `null` e a seção fica de pé só
+ * com o endereço e o link — que já é mais do que o rodapé entrega.
+ *
+ * A alternativa seria confiar em alguém lembrar de sincronizar o caminho com
+ * o disco, e o modo de falhar desse acordo é o pior possível: `next/image`
+ * com `src` inexistente renderiza o ícone de imagem quebrada, em produção, na
+ * seção que existe justamente para dizer que o site é sério. Nada falha no
+ * build, nenhum teste reprova, e o defeito só aparece para quem rolar a
+ * página até o fim.
+ *
+ * Vale para os dois sentidos: o dia em que a foto for trocada de nome, ou em
+ * que alguém podar `public/` achando que é sobra, a página degrada em vez de
+ * quebrar.
+ *
+ * **Foto de banco de imagens está fora**, e por outra razão: ela diria
+ * "prédio genérico" em vez de "este prédio", que é prova social inventada com
+ * outro nome — a decisão travada do projeto desde que a `StatsSection` teve
+ * métrica falsa copiada de concorrente.
  */
-const FOTO: { src: string; alt: string; largura: number; altura: number } | null = null
+const ARQUIVO_DA_FOTO = '/local/fachada.jpg'
+
+const FOTO = existsSync(join(process.cwd(), 'public', ARQUIVO_DA_FOTO))
+  ? {
+      src: ARQUIVO_DA_FOTO,
+      /**
+       * O `alt` descreve o que a foto PROVA, não o que ela mostra.
+       *
+       * "Fachada de um prédio comercial" seria a descrição literal e não
+       * diria nada a quem usa leitor de tela — a pessoa perderia exatamente a
+       * informação que a seção existe para dar. O número da placa entra no
+       * texto porque é ele que casa com o endereço escrito ao lado.
+       */
+      alt: 'Entrada do CEO Salvador Shopping, com a placa do número 2539 na calçada',
+      largura: 1536,
+      altura: 2048,
+    }
+  : null
 
 export function OndeFicamosSection() {
-  if (!CONTROLADOR.endereco) return null
-
-  // O endereço vem numa linha só, do formato do cadastro. Aqui ele é quebrado
-  // para ler como endereço e não como campo de formulário — a primeira parte
-  // é o que a pessoa digita no Maps, o resto é contexto.
-  const [logradouro, ...resto] = CONTROLADOR.endereco.split('—')
+  const endereco = CONTROLADOR.endereco
+  if (!endereco) return null
 
   return (
     <section
@@ -114,35 +144,93 @@ export function OndeFicamosSection() {
           className="bg-card border-border superficie-elevada mx-auto flex max-w-3xl flex-col gap-6 rounded-xl border p-5 sm:p-6 lg:flex-row lg:items-center lg:gap-8"
         >
           {FOTO ? (
-            <Image
-              src={FOTO.src}
-              alt={FOTO.alt}
-              width={FOTO.largura}
-              height={FOTO.altura}
-              /* 60vw e não 100vw: dentro do card a imagem nunca ocupa a janela
-                 inteira, e um `sizes` que mente faz o navegador baixar o
-                 degrau maior do que precisa — o defeito medido em 03/09, que
-                 fazia o telefone baixar 3840px para desenhar 1025. */
-              sizes="(min-width: 1024px) 420px, 60vw"
-              className="border-border h-auto w-full rounded-lg border object-cover lg:w-[420px]"
-            />
+            /* ## A proporção mora no CONTAINER, não no arquivo
+               A foto é retrato, e deixar a altura do card seguir a proporção
+               dela produziria 560px de imagem ao lado de 180px de texto, com
+               o endereço flutuando no topo e vazio embaixo. `aspect-[4/3]`
+               fixa a caixa e `object-cover` recorta dentro dela — e recortar
+               é honesto, porque o pedaço que aparece está em proporção real.
+               É a mesma regra que o gerador de criativos aprendeu em 09/09,
+               quando espremia o print em 2,7x.
+
+               `object-[50%_38%]` e não `center`: o centro geométrico desta
+               foto é palmeira, e o que precisa sobreviver ao corte é a placa
+               com o 2539 — ela é o que casa com o número escrito ao lado, e é
+               o que transforma a imagem de ilustração em prova. Calibrado no
+               navegador, não estimado. */
+            <div className="relative aspect-[4/3] w-full shrink-0 overflow-hidden rounded-lg lg:w-[420px]">
+              <Image
+                src={FOTO.src}
+                alt={FOTO.alt}
+                width={FOTO.largura}
+                height={FOTO.altura}
+                /* ## `quality: 78`, e o 92 do print NÃO se aplica aqui
+                   `produto-print.tsx` usa 92 e explica por quê: print de
+                   interface é o pior caso possível para compressão com
+                   perda, porque texto pequeno sobre fundo chapado expõe cada
+                   artefato. O mesmo comentário diz que o padrão do Next
+                   serve bem FOTO — ruído fotográfico esconde artefato.
+                   Copiar o 92 seria repetir um número sem o motivo dele, e
+                   custaria ~40 KB por nada. */
+                quality={78}
+                /* Abaixo da dobra, a ~9.000px do topo: não disputa banda com
+                   o LCP em nenhum cenário. */
+                loading="lazy"
+                /* Medido no navegador antes de escrever, pela lição de 03/09
+                   (`vw` é a JANELA, não o container):
+
+                       390px   card com 326px de largura util  ->  84vw
+                       700px   card com 636px                  ->  91vw
+                       1024px+ coluna fixa de 420px
+
+                   Declarar `100vw` faria o navegador orçar para uma caixa
+                   maior do que existe e atravessar um degrau inteiro. */
+                sizes="(min-width: 1024px) 420px, (min-width: 640px) 91vw, 84vw"
+                className="size-full object-cover object-[50%_38%]"
+              />
+              {/* A borda vai por dentro, sobre a imagem: `border` no
+                  container seria coberto pelo `object-cover` do filho nos
+                  cantos arredondados, e sobra um fio da foto por fora do
+                  raio. `inset-0` com `ring` resolve sem somar ao layout. */}
+              <div
+                aria-hidden
+                className="ring-border pointer-events-none absolute inset-0 rounded-lg ring-1 ring-inset"
+              />
+            </div>
           ) : null}
 
-          <div className="flex flex-1 flex-col gap-4">
+          <div className="flex flex-1 flex-col gap-5">
             <div className="flex gap-3">
-              <MapPin aria-hidden className="text-primary mt-0.5 size-5 shrink-0" />
-              <address className="flex flex-col gap-1 not-italic">
-                <span className="font-medium">{logradouro.trim()}</span>
-                {resto.length > 0 ? (
+              <MapPin aria-hidden className="text-primary mt-1 size-5 shrink-0" />
+              {/* ## A hierarquia é o que faz "endereço claro"
+                  Antes isto era a linha do cadastro quebrada num `split('—')`:
+                  duas faixas de texto do mesmo peso, em que nada dizia o que
+                  ler primeiro. Agora cada parte tem o papel dela — o que se
+                  digita no aplicativo de mapa vem em destaque, o prédio e o
+                  bairro dão contexto, e o CEP fecha em mono porque é código,
+                  não frase (o mesmo uso que a seção de confiança já faz do
+                  `font-mono` nos rótulos). */}
+              <address className="flex flex-col gap-1.5 not-italic">
+                <span className="text-lg leading-snug font-semibold">
+                  {endereco.logradouro}, {endereco.numero}
+                  {endereco.complemento ? ` — ${endereco.complemento}` : ''}
+                </span>
+                {endereco.edificio ? (
                   <span className="text-muted-foreground text-sm leading-relaxed">
-                    {resto.join('—').trim()}
+                    {endereco.edificio}
                   </span>
                 ) : null}
+                <span className="text-muted-foreground text-sm leading-relaxed">
+                  {endereco.bairro} · {endereco.cidade}/{endereco.uf}
+                </span>
+                <span className="text-muted-foreground font-mono text-xs tracking-wide">
+                  CEP {endereco.cep}
+                </span>
               </address>
             </div>
 
             <a
-              href={linkDoMapa(CONTROLADOR.endereco)}
+              href={linkDoMapa(endereco)}
               target="_blank"
               rel="noopener noreferrer"
               /* `min-h-11`: 44px é a régua de alvo de toque do projeto, e um

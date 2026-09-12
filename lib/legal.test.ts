@@ -1,7 +1,12 @@
 import { describe, expect, it } from 'vitest'
 
 import { validarCnpj } from './documento-br'
-import { assinaturaPublica, CONTROLADOR, identificacaoDoControlador } from './legal'
+import {
+  assinaturaPublica,
+  CONTROLADOR,
+  enderecoEmLinha,
+  identificacaoDoControlador,
+} from './legal'
 
 /**
  * O defeito que motivou estes testes, achado em 25/08.
@@ -94,6 +99,63 @@ describe('CONTROLADOR', () => {
     // compara os dois. Publicar endereço sozinho exporia a casa do titular sem
     // entregar nada em troca.
     expect(Boolean(CONTROLADOR.endereco)).toBe(Boolean(CONTROLADOR.cnpj))
+  })
+
+  /**
+   * ## O endereço virou objeto em 12/09, e a linha passou a ser derivada
+   *
+   * Os quatro consumidores anteriores — rodapé, Privacidade, Termos e o
+   * prompt do SDR — continuam precisando de uma frase corrida. Se
+   * `enderecoEmLinha` perder uma parte, nada quebra: a página renderiza, o
+   * documento legal continua válido em aparência, e a sede passa a ser
+   * identificada de forma incompleta num texto que existe justamente para
+   * identificá-la.
+   *
+   * Por isso o caso confere que TODA parte preenchida aparece, em vez de
+   * comparar com uma string escrita à mão — que seria a mesma frase digitada
+   * duas vezes, e provaria apenas que eu sei copiar.
+   */
+  it('a linha derivada não perde nenhuma parte do endereço', () => {
+    const endereco = CONTROLADOR.endereco
+    expect(endereco).not.toBeNull()
+    if (!endereco) return
+
+    const linha = enderecoEmLinha(endereco)
+    for (const parte of [
+      endereco.logradouro,
+      endereco.numero,
+      endereco.complemento,
+      endereco.bairro,
+      endereco.cidade,
+      endereco.uf,
+      endereco.cep,
+    ]) {
+      if (parte) expect(linha).toContain(parte)
+    }
+  })
+
+  /**
+   * O nome do edifício é o único campo que NÃO entra na linha.
+   *
+   * Ele não vem da Receita: é como o lugar se identifica na fachada. Numa
+   * cláusula de Termos ou num prompt, "CEO Salvador Shopping · Torre Londres"
+   * é ruído entre o número e o bairro. Ele existe para a seção que mostra a
+   * foto, onde é o que liga a imagem ao texto.
+   *
+   * Este caso existe porque a tentação de "completar" a linha é óbvia para
+   * quem ler `enderecoEmLinha` sem o contexto.
+   */
+  it('o nome do edifício fica FORA da linha corrida', () => {
+    const endereco = CONTROLADOR.endereco
+    if (!endereco?.edificio) return
+    expect(enderecoEmLinha(endereco)).not.toContain(endereco.edificio)
+  })
+
+  it('a UF é sigla de duas letras maiúsculas', () => {
+    // `addressRegion` do schema.org espera a sigla. "Bahia" por extenso
+    // passaria no TypeScript e o Google não casaria com o estado.
+    const uf = CONTROLADOR.endereco?.uf
+    if (uf) expect(uf).toMatch(/^[A-Z]{2}$/)
   })
 
   /**

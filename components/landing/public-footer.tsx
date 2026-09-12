@@ -4,7 +4,7 @@ import { MessageCircle } from 'lucide-react'
 import { Logo } from '@/components/branding/logo'
 import { SelosDeSeguranca } from '@/components/landing/selos-de-seguranca'
 import { SuporteEmailMenu } from '@/components/landing/suporte-email-menu'
-import { assinaturaPublica, CONTROLADOR } from '@/lib/legal'
+import { assinaturaPublica, CONTROLADOR, enderecoEmLinha } from '@/lib/legal'
 
 // O rodapé repetia os links do menu do topo (Funcionalidades, Planos, Entrar,
 // Começar grátis), que já estão visíveis na navbar fixa. Espaço de rodapé
@@ -189,7 +189,7 @@ export function PublicFooter() {
         {CONTROLADOR.cnpj ? (
           <p className="text-muted-foreground text-center text-[11px] text-balance">
             {CONTROLADOR.nomeFantasia}
-            {CONTROLADOR.endereco ? ` · ${CONTROLADOR.endereco}` : ''}
+            {CONTROLADOR.endereco ? ` · ${enderecoEmLinha(CONTROLADOR.endereco)}` : ''}
             {CONTROLADOR.telefoneCadastral
               ? ` · Telefone cadastral: ${CONTROLADOR.telefoneCadastral}`
               : ''}

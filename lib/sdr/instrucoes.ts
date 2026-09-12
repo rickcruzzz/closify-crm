@@ -1,4 +1,4 @@
-import { CONTROLADOR } from '@/lib/legal'
+import { CONTROLADOR, enderecoEmLinha } from '@/lib/legal'
 import {
   FREE_LEAD_LIMIT,
   FREE_MEMBER_LIMIT,
@@ -156,7 +156,7 @@ export function fatosDaEmpresa(): string {
     'SOBRE A EMPRESA (responda com naturalidade, sem recitar):',
     `- ${CONTROLADOR.nomeFantasia} é um produto brasileiro, feito no Brasil para empresa brasileira.`,
     `- Empresa: ${CONTROLADOR.razaoSocial}, CNPJ ${CONTROLADOR.cnpj}.`,
-    CONTROLADOR.endereco ? `- Ficamos em ${CONTROLADOR.endereco}.` : '',
+    CONTROLADOR.endereco ? `- Ficamos em ${enderecoEmLinha(CONTROLADOR.endereco)}.` : '',
     `- Site: ${CONTROLADOR.site}. Suporte: ${CONTROLADOR.email}.`,
     '- Os dados ficam em servidor no Brasil, em São Paulo. Não saem do país.',
     '- Seguimos a LGPD. Cada empresa só enxerga os próprios dados, e a separação é feita no banco, não só na tela.',

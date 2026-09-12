@@ -4,6 +4,7 @@ import Link from 'next/link'
 import {
   ATUALIZADO_EM,
   CONTROLADOR,
+  enderecoEmLinha,
   identificacaoDoControlador,
   PRAZO_RESPOSTA_TITULAR_DIAS,
   SUBOPERADORES,
@@ -35,7 +36,7 @@ export default function PrivacidadePage() {
         <LegalP>
           {identificacaoDoControlador()}, operando sob o nome fantasia{' '}
           {CONTROLADOR.nomeFantasia}
-          {CONTROLADOR.endereco ? `, com sede em ${CONTROLADOR.endereco}` : ''}, é a
+          {CONTROLADOR.endereco ? `, com sede em ${enderecoEmLinha(CONTROLADOR.endereco)}` : ''}, é a
           controladora dos dados pessoais tratados nesta plataforma, nos termos do
           art. 5º, VI da Lei nº 13.709/2018 (LGPD).
         </LegalP>

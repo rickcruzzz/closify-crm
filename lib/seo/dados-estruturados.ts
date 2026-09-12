@@ -71,11 +71,40 @@ export function organizacao() {
     logo: `${SITE}/icon.png`,
     email: CONTROLADOR.email,
     ...(CONTROLADOR.cnpj ? { taxID: CONTROLADOR.cnpj } : {}),
+    /**
+     * ## O endereço em CAMPOS, e não a linha inteira em `streetAddress`
+     *
+     * Até 12/09 isto despejava a frase pronta em `streetAddress` e declarava
+     * só `addressCountry`. O schema validava, e o Google não conseguia
+     * extrair nada: `addressLocality`, `addressRegion` e `postalCode` são o
+     * que ele lê para associar a empresa a uma cidade.
+     *
+     * Não é detalhe de conformidade. O diagnóstico de 03/09 concluiu que o
+     * problema deste site é **demanda**, não visibilidade — 114 impressões em
+     * três meses, quase todas pelo nome próprio. Busca local é uma das poucas
+     * fontes de demanda que não depende de comprar clique, e ela começa por
+     * o buscador saber onde a empresa fica.
+     *
+     * `streetAddress` leva logradouro, número e complemento juntos, que é o
+     * que o schema.org especifica para ele — bairro NÃO cabe ali, e vai em
+     * `addressLocality` junto da cidade seria errado. Fica de fora: o schema
+     * não tem campo para bairro, e inventar um seria ruído.
+     */
     ...(CONTROLADOR.endereco
       ? {
           address: {
             '@type': 'PostalAddress',
-            streetAddress: CONTROLADOR.endereco,
+            streetAddress: [
+              `${CONTROLADOR.endereco.logradouro}, ${CONTROLADOR.endereco.numero}`,
+              CONTROLADOR.endereco.complemento,
+            ]
+              .filter(Boolean)
+              .join(', '),
+            addressLocality: CONTROLADOR.endereco.cidade,
+            addressRegion: CONTROLADOR.endereco.uf,
+            // Sem a máscara: o schema.org pede o código, e `41.820-021` com
+            // pontuação não casa com a base de CEP do Google.
+            postalCode: CONTROLADOR.endereco.cep.replace(/\D/g, ''),
             addressCountry: 'BR',
           },
         }

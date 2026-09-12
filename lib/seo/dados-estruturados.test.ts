@@ -89,6 +89,52 @@ describe('dados estruturados da landing', () => {
     }
   })
 
+  /**
+   * ## O endereço em CAMPOS, e o que o teste antigo não teria pegado
+   *
+   * Até 12/09 o `PostalAddress` recebia a linha inteira em `streetAddress` e
+   * mais nada. Isso VALIDA no schema.org — um endereço com só a rua é um
+   * endereço legítimo —, então nenhum validador reclamaria, e o Google
+   * continuaria sem saber em que cidade a empresa fica.
+   *
+   * Este caso trava os três campos que ele lê para busca local. Ele falha no
+   * dia em que alguém "simplificar" o bloco de volta para uma string, que é
+   * exatamente o que aconteceria sem um teste, porque a versão simples
+   * funciona em toda tela.
+   */
+  it('o endereço vai em CAMPOS, não numa linha só', () => {
+    const org = organizacao() as { address?: Record<string, string> }
+    const endereco = CONTROLADOR.endereco
+    if (!endereco) {
+      expect(org).not.toHaveProperty('address')
+      return
+    }
+    expect(org.address).toMatchObject({
+      '@type': 'PostalAddress',
+      addressLocality: endereco.cidade,
+      addressRegion: endereco.uf,
+      addressCountry: 'BR',
+    })
+    // `streetAddress` leva rua, número e complemento — e NÃO o bairro, que o
+    // schema não tem campo para representar.
+    expect(org.address?.streetAddress).toContain(endereco.numero)
+    expect(org.address?.streetAddress).not.toContain(endereco.bairro)
+  })
+
+  /**
+   * O CEP sai sem máscara, e isso não é preferência de formato.
+   *
+   * `lib/legal.ts` guarda `41.820-021` porque é como a Receita imprime e é
+   * como o rodapé exibe. A base de CEP do Google casa pelo código, e
+   * `postalCode` com ponto é um valor que não existe na base dela — o campo
+   * ficaria preenchido e inútil, que é pior que ausente porque parece certo.
+   */
+  it('o CEP do dado estruturado não leva a máscara', () => {
+    const org = organizacao() as { address?: { postalCode?: string } }
+    if (!CONTROLADOR.endereco) return
+    expect(org.address?.postalCode).toMatch(/^\d{8}$/)
+  })
+
   it('identifica o controlador pela razão social do cadastro', () => {
     expect(organizacao().legalName).toBe(CONTROLADOR.razaoSocial)
     expect(organizacao().name).toBe(CONTROLADOR.nomeFantasia)
