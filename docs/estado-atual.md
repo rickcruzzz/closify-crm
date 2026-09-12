@@ -4,9 +4,10 @@ Documento de continuidade. É lido no começo de toda sessão (referenciado no
 [CLAUDE.md](../CLAUDE.md)) para que uma conversa nova, ou outra conta, comece
 sabendo o que já foi feito, o que foi decidido e onde estão as armadilhas.
 
-**Atualizado em:** 12/09/2026, manha (a resposta do prospect passou a entrar
-no sistema; o opt-out era pior do que a auditoria escreveu e agora vale por
-telefone; e o cron diario falhava havia quatro dias sem ninguem ver)
+**Atualizado em:** 12/09/2026, manha (a captura da resposta esta NO AR, com o
+webhook da Evolution apontado para o Velo; o opt-out era pior do que a
+auditoria escreveu e agora vale por telefone; e o cron diario falhava havia
+quatro dias sem ninguem ver)
 
 ## A resposta entra no sistema, e o "nao quero" passa a valer (12/09)
 
@@ -109,16 +110,49 @@ que esta tabela responde e *quanto tempo levou ate responder*.
     banco    21 -> 22 tabelas | 32 -> 34 FKs | 37 -> 36 RPCs
     testes   1.700
 
-### Fica em aberto, e as duas sao do dono
+### Promovido e ligado, no mesmo dia
 
-**A promocao na Vercel.** O webhook so existe em producao depois dela, e ate
-la a Evolution nao tem para onde entregar.
+    producao                  d0462ae READY
+    sem segredo               401   a rota EXISTE e o portao fecha
+    com segredo, presence     200   {"ok":true,"ignorado":"evento"}
+    cron limpar-eventos       ok=true, e purgou 23 linhas de rate limit
+                              — ele devolvia `ok:false` desde 08/09, e os 23
+                              sao a prova de que o desalinhamento dos nomes
+                              era o que havia
 
-**A Evolution tem UM webhook so, e hoje ele aponta para o n8n**
-(`8-n8n.zohnng.easypanel.host/webhook/sdr-whatsapp`, `MESSAGES_UPSERT`,
-habilitado). Apontar para o Velo **desliga o caminho do n8n** — o que e
-consequencia esperada, ja que o SDR esta desligado por decisao de 11/09, mas e
-uma troca e nao um acrescimo.
+**O webhook da Evolution foi apontado para o Velo.** A instancia tem UM so, e
+a troca desliga o caminho do n8n — consequencia esperada, ja que o SDR esta
+desligado por decisao de 11/09, mas e troca e nao acrescimo.
+
+    ANTES   https://8-n8n.zohnng.easypanel.host/webhook/sdr-whatsapp
+            enabled=true  events=["MESSAGES_UPSERT"]  headers=null
+    AGORA   https://www.velofunil.com.br/api/webhooks/evolution
+            enabled=true  events=["MESSAGES_UPSERT"]  authorization presente
+
+**A URL antiga fica escrita aqui porque ela e o caminho de volta.**
+
+### O que NAO esta provado, e a distincao e a licao do proprio dia
+
+O `POST /webhook/set` devolveu **201**, e 201 so diz que a Evolution topou
+guardar a configuracao. **Aceitar nao e entregar** — e a licao de horas antes,
+quando `sendButtons` devolveu 201 quatro vezes e nenhuma renderizou.
+
+A entrega **nao foi provada** porque nao da para provar daqui: um evento gerado
+por nos volta com `fromMe: true`, que a rota ignora ANTES de tocar o banco, e
+portanto nao deixa rastro. A instancia e uma so (VELO, `71993309404`), entao
+nao ha um segundo numero para originar mensagem de verdade.
+
+**O que fecha e uma mensagem real**, do celular do dono para o `71993309404`.
+Se a captura funcionar, o aviso volta em segundos no WhatsApp dele.
+
+### E a consequencia que vale dizer antes de alguem descobrir
+
+O webhook captura **toda** mensagem recebida naquele numero, nao so resposta de
+prospect. Quem escrever para o `71993309404` vira contato na empresa
+`Prospeccao`, com conversa aberta. E o desenho certo — filtrar por "numero que
+esta na fila" perderia justamente o prospect cujo telefone no CSV difere do que
+ele usa —, e significa que a caixa vai ter gente que nao veio da prospecao.
+`prospeccao_prospect` e o que separa os dois: quem tem linha la veio da fila.
 
 ### O que NAO foi construido, e por que
 
