@@ -325,7 +325,18 @@ async function main() {
     )
   }
 
-  if (!dentroDoHorario() && !ignorarHorario) {
+  // ## A trava de horário vale para o ENVIO, não para o ensaio — 12/09
+  //
+  // Ela abortava antes de tudo, e isso tornava impossível conferir a rodada
+  // fora da janela: instância conectada, arte válida, link respondendo, fila
+  // por nicho. Justamente o trabalho de véspera, que existe para o disparo da
+  // manhã não começar com uma descoberta.
+  //
+  // O ensaio não envia nada — a trava ali não protegia de nada e custava a
+  // preparação. Agora ele roda a qualquer hora e AVISA que a janela está
+  // fechada; o `--confirmar` continua barrado exatamente como antes.
+  const foraDaJanela = !dentroDoHorario() && !ignorarHorario
+  if (foraDaJanela && confirmar) {
     const { hora, diaDaSemana } = agoraEmSaoPaulo()
     return abortar(
       `fora da janela comercial (${diaDaSemana} ${hora}h em São Paulo). ` +
@@ -442,6 +453,14 @@ async function main() {
   const minutos = Math.round((fila.length * ((INTERVALO_MIN + INTERVALO_MAX) / 2)) / 60_000)
 
   if (!confirmar) {
+    if (foraDaJanela) {
+      const { hora, diaDaSemana } = agoraEmSaoPaulo()
+      console.log(
+        `
+  JANELA FECHADA (${diaDaSemana} ${hora}h em São Paulo). ` +
+          'O ensaio roda; o envio, não.',
+      )
+    }
     console.log('\n  ENSAIO — nada será enviado. As três primeiras:\n')
     for (const p of fila.slice(0, 3)) {
       console.log(`  [${p.pontos} pts] ${p.nome}  (${p.dominio}, ${p.vertical})  ->  +${p.numero}`)
