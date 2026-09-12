@@ -5,6 +5,7 @@ import {
   assinaturaPublica,
   CONTROLADOR,
   enderecoEmLinha,
+  identificacaoComercial,
   identificacaoDoControlador,
 } from './legal'
 
@@ -195,5 +196,49 @@ describe('CONTROLADOR', () => {
   it('telefone cadastral e de suporte são campos distintos', () => {
     if (!CONTROLADOR.telefoneCadastral) return
     expect(CONTROLADOR.telefoneCadastral).not.toBe(CONTROLADOR.whatsapp.exibicao)
+  })
+})
+
+describe('identificação comercial, na tela de pagamento', () => {
+  /**
+   * ## O relato que criou esta função, em 12/09
+   *
+   * O cliente, ao digitar o CPF para pagar, lia **o nome civil completo do
+   * sócio** logo acima do botão de continuar. A tela usava
+   * `identificacaoDoControlador()`, que devolve razão social — e razão social
+   * aqui é `ORLANDO HENRIQUE BASTOS DA CRUZ LTDA`, o padrão da Receita para
+   * empresa aberta a partir de firma individual.
+   *
+   * Num B2B isso levanta *"em quem eu estou pagando?"* no pior segundo
+   * possível.
+   */
+  it('NÃO contém o nome civil do sócio', () => {
+    expect(identificacaoComercial()).not.toMatch(/ORLANDO|BASTOS DA CRUZ/i)
+    expect(identificacaoComercial()).not.toContain(CONTROLADOR.razaoSocial)
+  })
+
+  it('leva o CNPJ, que é o que a torna conferível', () => {
+    expect(identificacaoComercial()).toContain('Velo Funil LTDA')
+    expect(identificacaoComercial()).toContain(CONTROLADOR.cnpj!)
+  })
+
+  /**
+   * Sem inscrição, o nome continua — some a conferência, não o responsável.
+   * Mesma regra de `assinaturaPublica` e `identificacaoDoControlador`.
+   */
+  it('sem CNPJ, ainda identifica', () => {
+    const sem = identificacaoComercial({ nomeFantasia: 'Velo Funil', cnpj: null })
+    expect(sem).toBe('Velo Funil LTDA')
+  })
+
+  /**
+   * As duas frases vivem em telas diferentes e dizem coisas diferentes: esta
+   * identifica quem EMITE a cobrança; `nomeNoRecebedor` é o que o banco de
+   * quem paga vai mostrar, medido na API do Asaas. Misturá-las faria uma delas
+   * mentir — o Asaas não usa "LTDA".
+   */
+  it('não promete o extrato do banco', () => {
+    expect(CONTROLADOR.nomeNoRecebedor).toBe('VELO FUNIL')
+    expect(identificacaoComercial()).not.toBe(CONTROLADOR.nomeNoRecebedor)
   })
 })

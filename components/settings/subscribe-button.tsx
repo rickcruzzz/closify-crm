@@ -22,7 +22,7 @@ import { PagarDialog } from '@/components/settings/pagar-dialog'
 import { checkoutSchema, type CheckoutInput, type CheckoutValues } from '@/lib/validations/billing'
 import { CICLOS, PRO_ANUAL_ECONOMIA, PRO_ANUAL_MESES_GRATIS, PRO_PLAN_PRICE } from '@/lib/plans'
 import { formatarCpfCnpj } from '@/lib/documento-br'
-import { CONTROLADOR, identificacaoDoControlador } from '@/lib/legal'
+import { identificacaoComercial } from '@/lib/legal'
 import { cn } from '@/lib/utils'
 
 /**
@@ -221,13 +221,25 @@ export function SubscribeButton({
               )}
             </div>
 
-            {/* Diz de antemão o que aparece na fatura. Em MEI o recebedor é a
-                razão social da Receita, não o nome fantasia, quem não sabe
-                disso estranha ver um nome de pessoa física na cobrança e
-                desiste de pagar, achando que errou de site. */}
+            {/* ## Esta linha mostrava o NOME CIVIL do sócio, até 12/09
+
+                `identificacaoDoControlador()` devolve razão social + CNPJ, e a
+                razão social aqui é o nome completo de uma pessoa física — o
+                padrão da Receita para empresa aberta a partir de firma
+                individual. Ela é obrigatória nos Termos e na Privacidade, onde
+                o Art. 9º, I pede identificação do controlador.
+
+                Aqui era o oposto do que a tela precisa: relato do dono, o
+                cliente lia um nome de pessoa logo acima do botão de continuar,
+                e num B2B isso levanta "em quem eu estou pagando?" no pior
+                segundo possível.
+
+                O comentário antigo justificava com a regra do MEI — verdadeira
+                até 28/08, quando a LTDA entrou.
+
+                O CNPJ fica, e é ele que torna a frase conferível. */}
             <p className="text-muted-foreground text-xs">
-              A cobrança é emitida por {identificacaoDoControlador()}, razão social do{' '}
-              {CONTROLADOR.nomeFantasia}.
+              A cobrança é emitida por {identificacaoComercial()}.
             </p>
 
             <DialogFooter>

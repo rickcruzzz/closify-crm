@@ -222,6 +222,42 @@ export const CONTROLADOR: Controlador = {
 }
 
 /**
+ * Como a empresa se identifica para QUEM COMPRA.
+ *
+ * ## Por que ela não é `identificacaoDoControlador()`
+ *
+ * Aquela devolve **razão social + CNPJ**, e razão social aqui é
+ * `ORLANDO HENRIQUE BASTOS DA CRUZ LTDA` — o nome civil do sócio, que é o
+ * padrão da Receita para empresa aberta a partir de firma individual.
+ *
+ * Ela é obrigatória onde a lei pede identificação do controlador: Termos,
+ * Privacidade e o `legalName` do schema.org. Nesses lugares o nome civil é
+ * exatamente o ponto.
+ *
+ * **Na tela de pagamento ela é o oposto do que a tela precisa.** Relato do
+ * dono em 12/09: o cliente, ao digitar o CPF, lia o nome completo de uma
+ * pessoa física logo acima do botão de continuar. Num B2B isso levanta a
+ * pergunta *"em quem eu estou pagando?"* no pior segundo possível.
+ *
+ * ## "Velo Funil LTDA" não é a razão social, e isso é deliberado
+ *
+ * É descrição verdadeira — a empresa se chama Velo Funil e é uma sociedade
+ * limitada —, e o **CNPJ ao lado é o que a torna conferível**. Quem quiser o
+ * nome registrado o encontra nos Termos, na Privacidade e na Receita.
+ *
+ * O que ela NÃO faz é prometer o extrato: o nome que aparece no banco de quem
+ * paga é `nomeNoRecebedor`, medido na API do Asaas, e é `VELO FUNIL` sem o
+ * `LTDA`. São duas frases, em duas telas, e misturá-las faria uma delas
+ * mentir.
+ */
+export function identificacaoComercial(
+  controlador: Pick<Controlador, 'nomeFantasia' | 'cnpj'> = CONTROLADOR,
+): string {
+  if (!controlador.cnpj) return `${controlador.nomeFantasia} LTDA`
+  return `${controlador.nomeFantasia} LTDA, CNPJ ${controlador.cnpj}`
+}
+
+/**
  * Como o controlador se identifica num texto que a lei exige.
  *
  * Usada nas páginas legais, onde o art. 9º, I da LGPD pede identificação clara
