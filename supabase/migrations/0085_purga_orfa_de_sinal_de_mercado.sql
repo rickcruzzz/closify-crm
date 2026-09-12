@@ -1,0 +1,38 @@
+-- A purga de uma tabela que não existe mais, apagada.
+--
+-- ## O defeito, medido em 12/09 contra produção
+--
+-- A 0075 tirou `sinal_de_mercado` do banco em 08/09, quando a pesquisa de
+-- mercado saiu do produto. **A função que a purgava ficou**, e o cron diário
+-- continuou chamando:
+--
+--     select public.purge_old_sinais_de_mercado();
+--     ERROR: 42P01: relation "public.sinal_de_mercado" does not exist
+--
+-- `/api/cron/limpar-eventos` devolve `ok: false` todo dia desde então. As
+-- outras seis purgas rodam normalmente — o `supabase-js` devolve
+-- `{ data, error }` em vez de lançar, então o `Promise.all` não desmonta —, e
+-- é justamente por isso que ninguém notou: nada quebra, nada some, e ninguém
+-- lê o corpo da resposta de um cron.
+--
+-- ## E o log dizia o nome errado
+--
+-- A rota destruturava SEIS nomes de um array de SETE promessas. `tentativas`
+-- recebia o resultado de `purge_old_sinais_de_mercado`, e o resultado de
+-- `purge_old_rate_limit_attempts` não recebia nome nenhum. A linha impressa
+-- todo dia era *"Purga de rate limit falhou"* — uma purga que estava passando.
+--
+-- Fosse o contrário (a de rate limit falhando e o log acusando a de sinais), o
+-- rastro apontaria para a tabela errada e a investigação começaria no lugar
+-- errado. Corrigido junto, em `app/api/cron/limpar-eventos/route.ts`.
+--
+-- ## Por que `drop` e não recriar a tabela
+--
+-- A decisão de 08/09 está registrada: o card de pesquisa de mercado foi
+-- removido porque funcionava e ninguém usava — zero linhas desde que nasceu em
+-- 06/09 —, e porque obrigava a declarar o Exa como suboperador fora do Brasil
+-- na Política de Privacidade, para um caminho que ninguém percorreu uma vez.
+-- Manter uma função que purga o que não existe é o mesmo tipo de resíduo que a
+-- própria 0075 foi feita para varrer.
+
+drop function if exists public.purge_old_sinais_de_mercado();

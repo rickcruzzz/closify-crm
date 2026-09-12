@@ -4,10 +4,19 @@ import { readFile, readdir } from 'node:fs/promises'
 import { join } from 'node:path'
 
 import { createAdminClient } from '@/lib/supabase/admin'
+// Restrito por NOME, e nao "todos os workspaces": a Central le com
+// `createAdminClient()`, que ignora RLS. Sem o filtro, os contatos de um
+// cliente real entrariam nesta fila e receberiam mensagem fria. O porque
+// inteiro, e por que a lista de LEITURA tem duas empresas enquanto a de
+// ESCRITA tem uma, esta em `lib/prospeccao/empresas.ts`.
+import { EMPRESAS_DE_PROSPECCAO } from '@/lib/prospeccao/empresas'
 import {
   ehDominioExcluido,
   ehNomeInstitucional,
 } from '@/lib/inteligencia-de-mercado/dominio/prospeccao'
+
+import { carregarDescadastros } from '@/lib/prospeccao/opt-out-queries'
+import { ultimos8 } from '@/lib/prospeccao/opt-out'
 
 import { lerEstados } from './prateleira-estado'
 import { exigirAmbienteLocal } from './somente-local'
@@ -30,30 +39,22 @@ import {
 const PASTA_DO_UNIVERSO = join(process.cwd(), 'docs', 'mercado')
 const CAMINHO_NAO_PERTURBE = join(process.cwd(), 'scripts', 'inteligencia', 'nao-perturbe.txt')
 
-/**
- * As empresas onde a prospecção grava.
- *
- * Restrito por NOME, e não "todos os workspaces", de propósito. A Central lê
- * com `createAdminClient()`, que ignora RLS: sem este filtro, os contatos de um
- * cliente real entrariam na minha fila de prospecção e eu mandaria mensagem
- * fria para a carteira dele. O erro seria silencioso — a linha pareceria só
- * mais um prospect.
- */
-const EMPRESAS_DE_PROSPECCAO = ['Prospeccao', 'Orne']
 
 /** O mesmo teto de `queries.ts`, pela mesma razão: o PostgREST corta em 1.000. */
 const TETO = 5000
 
 /**
- * Quem pediu para não ser procurado de novo.
+ * Quem pediu para não ser procurado de novo, pelo ARQUIVO.
  *
- * A primeira mensagem promete, em texto, *"me avisa que não te procuro de
- * novo"*. Sem esta leitura a promessa seria mentira na rodada seguinte — e
- * segunda abordagem depois de um "não" é exatamente o que vira denúncia de
- * spam, que é o que derruba o número do dono.
+ * Metade da resposta. A outra metade está no banco — ver `carregarDescadastros`
+ * logo abaixo, e o porquê de serem duas fontes em `filtrarQuemPediuParaSair`.
  *
  * Mesmo arquivo que `scripts/inteligencia/prospectar.mjs` já lê, nunca uma
  * segunda cópia: duas listas divergem, e a que diverge em silêncio é a errada.
+ *
+ * **Continua valendo, e não é legado.** Ele é a escotilha manual: o dono
+ * acrescenta uma linha e a empresa sai da fila, sem depender de a pessoa ter
+ * clicado ou respondido nada.
  */
 async function lerNaoPerturbe(): Promise<Set<string>> {
   try {
@@ -135,11 +136,12 @@ export type PrateleiraCarregada = {
 export async function carregarPrateleira(): Promise<PrateleiraCarregada> {
   await exigirAmbienteLocal()
 
-  const [doCsv, leads, estados, naoPerturbe] = await Promise.all([
+  const [doCsv, leads, estados, doArquivo, doBanco] = await Promise.all([
     lerTodosOsCsv(),
     lerLeadsDaProspeccao(),
     lerEstados(),
     lerNaoPerturbe(),
+    carregarDescadastros(),
   ])
 
   const todos = mesclar(doCsv, leads, estados)
@@ -149,7 +151,34 @@ export async function carregarPrateleira(): Promise<PrateleiraCarregada> {
   const sobrando: Prospect[] = []
 
   for (const p of todos) {
-    if (naoPerturbe.has(p.dominio)) {
+    /**
+     * ## As DUAS fontes, e por que nenhuma sozinha bastava — 12/09
+     *
+     * Até aqui a fila consultava só `nao-perturbe.txt`: um arquivo na máquina
+     * do dono, alimentado à mão, com **zero linhas** na medição do dia. Quem
+     * respondesse "não quero" pelo WhatsApp dependia de alguém abrir o arquivo
+     * e digitar o domínio.
+     *
+     * E a tabela `descadastro_de_prospeccao`, que existe desde a 0080, também
+     * não resolvia — ela guardava só `email_hash`, e esta fila casa por
+     * DOMÍNIO e por TELEFONE. Não havia um campo em comum: mandá-la ler
+     * filtraria zero linhas para sempre, com o alarme calado parecendo
+     * resolvido. A 0083 é o que deu à tabela os dois campos que faltavam.
+     *
+     * ## E o TELEFONE é a metade que o domínio não cobre
+     *
+     * Quem responde pelo WhatsApp é identificado pelo número, e a mesma pessoa
+     * pode ter dois sites: `i9 Acrílicos` e `Fachadas Curitiba » i9` são
+     * domínios diferentes com o MESMO telefone, medido em 12/09. Barrar só o
+     * domínio mandaria a segunda mensagem para quem acabou de dizer não — pelo
+     * outro site dele.
+     */
+    if (doArquivo.has(p.dominio) || doBanco.dominios.has(p.dominio)) {
+      removidosPorNao += 1
+      continue
+    }
+    const oito = ultimos8(p.whatsapp ?? p.telefone)
+    if (oito && doBanco.telefones.has(oito)) {
       removidosPorNao += 1
       continue
     }

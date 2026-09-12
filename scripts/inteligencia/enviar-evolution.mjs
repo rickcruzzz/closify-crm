@@ -86,6 +86,20 @@ import { join, isAbsolute, basename } from 'node:path'
 const RAIZ = process.cwd()
 const ESTADO = join(RAIZ, '.dono-prospeccao.json')
 const FILA = 'http://localhost:3000/dono/prospeccao/fila'
+/**
+ * Onde o envio vira registro no banco.
+ *
+ * `.dono-prospeccao.json` continua sendo a verdade do que ja saiu DESTA
+ * maquina, e e ele que impede o reenvio. O que ele nao consegue ser e
+ * alcancavel do lado de la: quem recebe a resposta e o webhook da Evolution,
+ * que roda na Vercel, sem disco. Sem esta gravacao a resposta chega e o
+ * sistema nao sabe de quem e — grava a conversa e perde o nicho, a pontuacao
+ * e a mensagem que a provocou.
+ *
+ * Rota e nao escrita direta pelo mesmo motivo da `fila`: este arquivo e `.mjs`
+ * e reescrever a regra aqui seria a segunda copia que diverge em silencio.
+ */
+const REGISTRO = 'http://localhost:3000/dono/prospeccao/enviado'
 
 const EVOLUTION = process.env.EVOLUTION_BASE_URL ?? 'https://8-evolution-api.zohnng.easypanel.host'
 const CHAVE = process.env.EVOLUTION_API_KEY
@@ -113,6 +127,14 @@ const MAX = Number(args.find((a) => a.startsWith('--max='))?.split('=')[1] ?? 30
 const SO = args.find((a) => a.startsWith('--so='))?.split('=')[1] ?? null
 /** Manda so para os nichos que a regua de 07/09 aprovou. */
 const SO_APROVADOS = args.includes('--so-aprovados')
+/**
+ * Grava no banco o que JA foi enviado antes de o registro existir, e sai.
+ *
+ * Os ~100 disparos anteriores a 12/09 marcaram estado so no JSON local. Sem
+ * esta passada, uma resposta deles chegaria ao webhook sem prospect — a
+ * conversa seria gravada e a atribuicao, perdida. Nao envia nada.
+ */
+const SINCRONIZAR = args.includes('--sincronizar')
 
 const INTERVALO_MIN = 45_000
 const INTERVALO_MAX = 150_000
@@ -361,6 +383,27 @@ async function conferirLink(texto) {
   }
 }
 
+/**
+ * Registra no banco que a abordagem saiu. Nunca derruba a rodada.
+ *
+ * Falhar aqui custa a ATRIBUICAO de uma mensagem; lancar custaria a rodada
+ * inteira, com parte ja enviada. O aviso sai no console e o disparo segue —
+ * `--sincronizar` recupera o que faltou depois.
+ */
+async function registrarEnvio(prospects) {
+  try {
+    const r = await fetch(REGISTRO, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ prospects }),
+    })
+    if (!r.ok) return { ok: false, erro: `HTTP ${r.status}` }
+    return { ok: true, ...(await r.json()) }
+  } catch (e) {
+    return { ok: false, erro: e.message }
+  }
+}
+
 const evolution = async (caminho, corpo) => {
   const r = await fetch(`${EVOLUTION}${caminho}/${encodeURIComponent(INSTANCIA)}`, {
     method: 'POST',
@@ -402,6 +445,49 @@ async function enviarUm(numero, texto, arte) {
 
 async function main() {
   console.log('')
+
+  // A retaguarda nao toca a Evolution: ela le a fila local e grava no banco.
+  // Por isso vem ANTES da checagem de credencial — ela funciona com a
+  // instancia desconectada, que e justamente quando sobra tempo para rodar.
+  if (SINCRONIZAR) {
+    let todos
+    try {
+      const r = await fetch(`${FILA}?todos=1`)
+      if (!r.ok) throw new Error(`HTTP ${r.status}`)
+      todos = await r.json()
+    } catch (e) {
+      return abortar(`nao consegui ler ${FILA} (${e.message}). O \`npm run dev\` precisa estar de pe.`)
+    }
+
+    const marcados = await lerEstado()
+    const jaSairam = todos.fila.filter((p) => {
+      const estado = marcados[p.dominio]?.estado
+      return estado === 'enviado' || estado === 'confirmado'
+    })
+
+    if (jaSairam.length === 0) {
+      return console.log('\n  Nada para sincronizar: o estado local nao tem envio marcado.\n')
+    }
+
+    const corpo = jaSairam.map((p) => ({
+      dominio: p.dominio,
+      nome: p.nome,
+      vertical: p.vertical,
+      pontos: p.pontos,
+      numero: p.numero,
+      texto: p.texto,
+      // A data que o JSON guardou, e nao agora: escrever `now()` aqui diria
+      // que 100 empresas foram abordadas no instante da sincronizacao, e a
+      // primeira pergunta que esta tabela responde e "quanto tempo levou ate
+      // responder".
+      enviadoEm: marcados[p.dominio]?.em ?? null,
+    }))
+
+    const r = await registrarEnvio(corpo)
+    if (!r.ok) return abortar(`a sincronizacao falhou: ${r.erro}`)
+    console.log(`\n  sincronizados ${r.gravados} de ${r.recebidos} (o resto ja tinha linha).\n`)
+    return
+  }
 
   if (!CHAVE) {
     return abortar(
@@ -635,6 +721,21 @@ async function main() {
 
     if (r.ok) {
       await marcarEnviado(p.dominio, { via: 'evolution', comImagem: Boolean(arte) })
+      // Depois do arquivo, nunca antes: o arquivo e o que impede o reenvio, e
+      // ele precisa estar gravado mesmo que o banco esteja fora do ar.
+      const registro = await registrarEnvio([
+        {
+          dominio: p.dominio,
+          nome: p.nome,
+          vertical: p.vertical,
+          pontos: p.pontos,
+          numero: p.numero,
+          texto: p.texto,
+        },
+      ])
+      if (!registro.ok) {
+        console.error(`       (nao registrei ${p.dominio} no banco: ${registro.erro} — rode --sincronizar depois)`)
+      }
       enviados++
       falhasSeguidas = 0
       const st = r.json?.status ?? 'enviado'

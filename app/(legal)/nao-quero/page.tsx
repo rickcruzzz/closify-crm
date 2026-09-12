@@ -1,7 +1,7 @@
 import type { Metadata } from 'next'
 
-import { createAdminClient } from '@/lib/supabase/admin'
 import { hashDoToken, tokenPlausivel } from '@/lib/prospeccao/descadastro'
+import { registrarDescadastro } from '@/lib/prospeccao/opt-out-queries'
 import { assinaturaPublica } from '@/lib/legal'
 
 export const metadata: Metadata = {
@@ -49,14 +49,13 @@ export default async function NaoQueroPage({
 
   if (tokenPlausivel(token)) {
     try {
-      const supabase = createAdminClient()
-      // `upsert` e não `insert`: clicar duas vezes no mesmo link é o caso
-      // comum, e um erro de chave duplicada mostraria falha para quem fez
-      // tudo certo.
-      const { error } = await supabase
-        .from('descadastro_de_prospeccao')
-        .upsert({ email_hash: hashDoToken(token!), origem: 'link' }, { onConflict: 'email_hash' })
-      estado = error ? 'falhou' : 'ok'
+      // A gravação passa pelo MESMO ponto que o webhook da Evolution usa. Até
+      // 12/09 esta página escrevia direto na tabela, com `email_hash` como
+      // chave — e o disparo do WhatsApp, que casa por domínio e telefone, não
+      // tinha um único campo em comum com ela. Um escritor só é o que impede
+      // as duas superfícies de gravarem identidades que nunca se encontram.
+      await registrarDescadastro({ emailHash: hashDoToken(token!), origem: 'link' })
+      estado = 'ok'
     } catch {
       estado = 'falhou'
     }

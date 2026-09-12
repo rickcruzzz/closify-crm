@@ -291,27 +291,87 @@ export type Database = {
       // `updated_at` e `stage_changed_at` (0033) são escritos por trigger, e a
       // trigger sobrescreve o que vier do app, por isso ficam fora de `Insert`
       // e de `Update`. Mandá-los pelo PostgREST não adianta.
+      // A `chave` carrega o canal no proprio valor (`email:` | `fone:` |
+      // `dominio:`), montada por `chaveDe*` em lib/prospeccao/opt-out.ts. Era
+      // `email_hash` ate a 0083 — e enquanto era, o disparo do WhatsApp, que
+      // casa por dominio e telefone, nao tinha um campo em comum com ela.
       descadastro_de_prospeccao: {
         Row: {
+          chave: string
           created_at: string
           dominio: string | null
-          email_hash: string
           id: string
           origem: string
+          telefone_ultimos8: string | null
+        }
+        Insert: {
+          chave: string
+          created_at?: string
+          dominio?: string | null
+          id?: string
+          origem?: string
+          telefone_ultimos8?: string | null
+        }
+        Update: {
+          chave?: string
+          created_at?: string
+          dominio?: string | null
+          id?: string
+          origem?: string
+          telefone_ultimos8?: string | null
+        }
+        Relationships: []
+      }
+      // O prospect abordado e o que aconteceu depois (0084). Fora do produto
+      // do cliente: RLS ligada e zero policy, so `service_role` alcanca.
+      prospeccao_prospect: {
+        Row: {
+          created_at: string
+          dominio: string
+          enviado_em: string | null
+          estagio: string
+          id: string
+          lead_id: string | null
+          mensagem_enviada: string | null
+          nome: string | null
+          pontos: number | null
+          respondido_em: string | null
+          telefone_ultimos8: string | null
+          updated_at: string
+          vertical: string | null
+          workspace_id: string | null
         }
         Insert: {
           created_at?: string
-          dominio?: string | null
-          email_hash: string
+          dominio: string
+          enviado_em?: string | null
+          estagio?: string
           id?: string
-          origem?: string
+          lead_id?: string | null
+          mensagem_enviada?: string | null
+          nome?: string | null
+          pontos?: number | null
+          respondido_em?: string | null
+          telefone_ultimos8?: string | null
+          updated_at?: string
+          vertical?: string | null
+          workspace_id?: string | null
         }
         Update: {
           created_at?: string
-          dominio?: string | null
-          email_hash?: string
+          dominio?: string
+          enviado_em?: string | null
+          estagio?: string
           id?: string
-          origem?: string
+          lead_id?: string | null
+          mensagem_enviada?: string | null
+          nome?: string | null
+          pontos?: number | null
+          respondido_em?: string | null
+          telefone_ultimos8?: string | null
+          updated_at?: string
+          vertical?: string | null
+          workspace_id?: string | null
         }
         Relationships: []
       }

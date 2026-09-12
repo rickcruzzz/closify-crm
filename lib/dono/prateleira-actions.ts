@@ -3,6 +3,11 @@
 import { revalidatePath } from 'next/cache'
 
 import { createAdminClient } from '@/lib/supabase/admin'
+// "Prospeccao" e nao "Orne": a decisao do dono em 07/09 foi separar as duas,
+// para a empresa que um dia tera cliente pagante de verdade nao virar deposito
+// de lista fria. O nome mora em `lib/prospeccao/empresas.ts` porque o webhook
+// da Evolution precisa do MESMO valor, e uma terceira copia divergiria.
+import { EMPRESA_DA_PROSPECCAO } from '@/lib/prospeccao/empresas'
 
 import { registrarNoDiario } from './diario'
 import { marcar } from './prateleira-estado'
@@ -22,14 +27,6 @@ import type { ResultadoDaAcao } from './actions'
 
 const ROTA = '/dono/prospeccao'
 
-/**
- * A empresa onde o contato confirmado é gravado.
- *
- * "Prospeccao" e não "Orne": a decisão do dono em 07/09 foi separar as duas,
- * para a empresa que um dia terá cliente pagante de verdade não virar depósito
- * de lista fria.
- */
-const EMPRESA_DA_PROSPECCAO = 'Prospeccao'
 
 /**
  * Marca que a mensagem foi aberta no WhatsApp.

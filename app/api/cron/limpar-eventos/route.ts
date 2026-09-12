@@ -59,8 +59,13 @@ export async function GET(requisicao: Request) {
 
   const admin = createAdminClient()
 
-  // As duas em paralelo: são tabelas independentes e nenhuma depende do
+  // As seis em paralelo: são tabelas independentes e nenhuma depende do
   // resultado da outra.
+  //
+  // **Seis nomes para seis promessas, e a contagem é a regra.** Até 12/09 eram
+  // seis nomes para SETE promessas, e o desalinhamento fazia o log acusar a
+  // purga errada todo dia — ver o bloco de `purge_old_sinais_de_mercado` logo
+  // abaixo. Ao acrescentar ou remover uma linha aqui, o nome anda junto.
   const [asaas, whatsapp, erros, feedback, notificacoes, tentativas] = await Promise.all([
     admin.rpc('purge_old_asaas_webhook_events'),
     admin.rpc('purge_old_whatsapp_webhook_events'),
@@ -85,16 +90,20 @@ export async function GET(requisicao: Request) {
     // histórico de dinheiro que importa vive em `assinatura_eventos` (0055),
     // que é append-only e não é tocado por isto.
     admin.rpc('purge_old_notificacoes'),
-    // `sinal_de_mercado` (0072), pelo mesmo motivo das duas acima: purga
-    // escrita junto com a tabela, e agendada no MESMO dia — é o que separa
-    // esta linha de `purge_old_asaas_webhook_events`, que ficou sete
-    // migrations parada.
+    // ## `purge_old_sinais_de_mercado` SAIU daqui — 12/09
     //
-    // 180 dias e não 90: sinal de mercado é o histórico que dá contexto a uma
-    // negociação longa, e ciclo de venda B2B passa de três meses. Aviso de
-    // cobrança de 90 dias atrás não muda decisão; "a empresa contratou um head
-    // de vendas em março" ainda explica por que ela respondeu em setembro.
-    admin.rpc('purge_old_sinais_de_mercado'),
+    // A 0075 tirou `sinal_de_mercado` do banco em 08/09 e a função ficou. Esta
+    // chamada devolvia `42P01: relation "public.sinal_de_mercado" does not
+    // exist` todo dia, e a rota reportava `ok: false` desde então. As outras
+    // seis purgas rodavam normalmente — `supabase-js` devolve `{data, error}`
+    // em vez de lançar —, e foi por isso que ninguém notou: nada quebra, nada
+    // some, e ninguém lê o corpo da resposta de um cron.
+    //
+    // **E a destruturação escondia qual purga era.** Eram SEIS nomes para SETE
+    // promessas: `tentativas` recebia o resultado dos sinais, e o do rate
+    // limit não recebia nome nenhum. A linha impressa todo dia era "Purga de
+    // rate limit falhou" — uma purga que estava passando.
+    //
     // `rate_limit_attempts` era a UNICA tabela de sistema sem purga, e a mais
     // escrita de todas: ganha uma linha por TENTATIVA de login, cadastro,
     // convite, recuperacao de senha, relato e checkout. Ou seja, ela mede

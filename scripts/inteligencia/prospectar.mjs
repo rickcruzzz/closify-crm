@@ -97,7 +97,55 @@ async function lerNaoPerturbe() {
     return new Set()
   }
 }
-const naoPerturbe = await lerNaoPerturbe()
+
+/**
+ * A outra metade do "nao quero": a tabela `descadastro_de_prospeccao`.
+ *
+ * ## Por que a DESCOBERTA tambem precisa consultar, e nao so o disparo
+ *
+ * O reflexo e achar que basta o disparo respeitar o opt-out, porque e ele que
+ * manda mensagem. Nao basta: esta rodada GRAVA lead no banco, e um lead
+ * gravado reaparece na prateleira de toda rodada futura. Deixar quem pediu
+ * para sair entrar aqui e cometer o mesmo erro um passo antes — e ele fica
+ * guardado, esperando a proxima fila.
+ *
+ * ## Falha volta VAZIO, e aqui isso e o certo
+ *
+ * O oposto do que `carregarDescadastros` faz no lado do disparo, onde o erro
+ * sobe e para a rodada. A diferenca e o que cada um custa: la, seguir sem a
+ * lista MANDA mensagem para quem disse nao; aqui, seguir sem ela grava um lead
+ * que o disparo vai barrar de qualquer jeito. Derrubar uma colheita de credito
+ * pago do Exa por causa de uma leitura que o proximo passo refaz seria a troca
+ * errada.
+ */
+async function lerDescadastrados() {
+  const vazio = { dominios: new Set(), telefones: new Set() }
+  if (!URL_SUPABASE || !SERVICE_ROLE) return vazio
+  try {
+    const r = await fetch(
+      `${URL_SUPABASE}/rest/v1/descadastro_de_prospeccao?select=dominio,telefone_ultimos8&limit=5000`,
+      { headers: { apikey: SERVICE_ROLE, Authorization: `Bearer ${SERVICE_ROLE}` } },
+    )
+    if (!r.ok) {
+      console.error(`  (nao consegui ler o descadastro: HTTP ${r.status})`)
+      return vazio
+    }
+    const linhas = await r.json()
+    for (const l of linhas) {
+      if (l.dominio) vazio.dominios.add(String(l.dominio).trim().toLowerCase())
+      if (l.telefone_ultimos8) vazio.telefones.add(String(l.telefone_ultimos8))
+    }
+    return vazio
+  } catch (e) {
+    console.error(`  (nao consegui ler o descadastro: ${e.message})`)
+    return vazio
+  }
+}
+
+const [naoPerturbe, descadastrados] = await Promise.all([
+  lerNaoPerturbe(),
+  lerDescadastrados(),
+])
 
 // O domínio puro é TypeScript e este script é `.mjs`; em vez de duplicar a
 // regra, lê o módulo compilado sob demanda. Duas cópias divergem, e a que
@@ -455,6 +503,20 @@ async function gravarComoLeads(prospects) {
     }
 
     const telefone = p.contato.whatsapp ?? p.contato.telefone
+
+    // ## O telefone, e nao so o dominio
+    //
+    // A mesma pessoa pode ter dois sites — `i9 Acrilicos` e
+    // `Fachadas Curitiba » i9` compartilham numero, medido em 12/09. Quem
+    // respondeu "nao quero" por um deles nao pode entrar no CRM pelo outro:
+    // dali ele volta em toda prateleira futura, e a segunda abordagem depois
+    // de um "nao" e o primeiro item da lista do que derruba um numero.
+    const oito = (String(telefone ?? '').replace(/[^0-9]/g, '') || '').slice(-8)
+    if (oito.length === 8 && descadastrados.telefones.has(oito)) {
+      console.log(`  nao perturbe (telefone): ${p.dominio} — pulado`)
+      continue
+    }
+
     const r = await fetch(`${URL_SUPABASE}/rest/v1/leads`, {
       method: 'POST',
       headers: cabecalho,
@@ -619,7 +681,13 @@ const vistos = new Set()
 for (const c of candidatos) {
   const h = host(c.url)
   if (!h || vistos.has(h) || ehDominioExcluido(c.url)) continue
-  if (naoPerturbe.has(h) || naoPerturbe.has(h.replace(/^www\./, ''))) {
+  const semWww = h.replace(/^www\./, '')
+  if (
+    naoPerturbe.has(h) ||
+    naoPerturbe.has(semWww) ||
+    descadastrados.dominios.has(h) ||
+    descadastrados.dominios.has(semWww)
+  ) {
     console.log(`  nao perturbe: ${h} — pulado`)
     continue
   }

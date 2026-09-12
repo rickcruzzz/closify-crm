@@ -7,17 +7,32 @@ Migrations novas mudam este arquivo com o tempo; ao suspeitar de
 desatualização, reconsulte o catálogo em vez de confiar cegamente nele (mesma
 regra de `docs/estado-atual.md`).
 
-<!-- contagem: banco.tabelas=21 banco.rpcs_do_projeto=37 banco.foreign_keys=32 banco.triggers=16 banco.enums=8 -->
-**Estrutura reconferida em 11/09/2026.** Lida de `pg_catalog` e não do OpenAPI:
-**21 tabelas**, **37 RPCs do projeto**, **32 foreign keys**, **16 triggers**,
-**8 enums**, **39 check constraints** — mais **15 funções de trigger**, que não
+<!-- contagem: banco.tabelas=22 banco.rpcs_do_projeto=36 banco.foreign_keys=34 banco.triggers=16 banco.enums=8 -->
+**Estrutura reconferida em 12/09/2026.** Lida de `pg_catalog` e não do OpenAPI:
+**22 tabelas**, **36 RPCs do projeto**, **34 foreign keys**, **16 triggers**,
+**8 enums**, **41 check constraints** — mais **15 funções de trigger**, que não
 são RPC e por isso contam à parte.
+
+**A 22ª tabela é `prospeccao_prospect` (0084)**, e ela não é do produto: guarda
+o prospect abordado e o que aconteceu depois, com RLS ligada e **zero policy**,
+alcançável só por `service_role`. Mesmo padrão de `error_logs` e
+`descadastro_de_prospeccao`. As duas foreign keys novas são dela — `lead_id` e
+`workspace_id`, as duas anuláveis, porque a esmagadora maioria dos prospects
+nunca vira nem contato.
+
+**E uma RPC SUMIU, o que é raro o bastante para merecer a linha.**
+`purge_old_sinais_de_mercado` purgava `sinal_de_mercado`, que a 0075 removeu em
+08/09. A função ficou, o cron diário continuou chamando, e
+`/api/cron/limpar-eventos` devolvia `ok: false` desde então com
+`42P01: relation "public.sinal_de_mercado" does not exist`. As outras seis
+purgas rodavam normalmente — o `supabase-js` devolve `{data, error}` em vez de
+lançar —, e foi por isso que ninguém notou. Apagada pela 0085.
 
 **O recorte de "RPC" ficou explícito em 11/09, e o número mudou por isso.** O
 documento dizia 34 e o método era "65 no catálogo menos 31 do `pg_trgm`".
-Medido de novo: o catálogo tem **83** funções em `public`, **31** pertencem a
-extensões (conferido por `pg_depend`, não por prefixo de nome), sobram **52** do
-projeto — das quais **15 retornam `trigger`** e não são chamáveis. As 37 são as
+Remedido em 12/09: o catálogo tem **82** funções em `public`, **31** pertencem a
+extensões (conferido por `pg_depend`, não por prefixo de nome), sobram **51** do
+projeto — das quais **15 retornam `trigger`** e não são chamáveis. As 36 são as
 chamáveis.
 
 **Desde 11/09 estas contagens são conferidas por máquina.** O carimbo acima é
@@ -47,10 +62,10 @@ de custo: paywall no momento em que a pessoa sente o valor converte 8-12%,
 contra 3-4% de limite arbitrário — e as outras três são todas arbitrárias no
 sentido técnico do termo.
 
-<!-- contagem: migrations.arquivos=81 migrations.maior=0082 -->
-**81 arquivos de migration, e a maior é `0082`** (remedido em 08/09; o `0049`
+<!-- contagem: migrations.arquivos=84 migrations.maior=0085 -->
+**84 arquivos de migration, e a maior é `0085`** (remedido em 12/09; o `0049`
 não existe, removido em 22/08). Os dois números vêm sempre juntos: a contagem
-sozinha convida a inferir `0073`.
+sozinha convida a inferir `0084`.
 
 **A 0072 acrescentou duas tabelas e a 0075 as REMOVEU**, em 08/09:
 `enriquecimento_de_lead` e `sinal_de_mercado` viveram dois dias e nunca

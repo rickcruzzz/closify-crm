@@ -3,12 +3,27 @@
 > Iniciativa de conversão Free→Pro (copy da landing, limites, checkout) tem
 > PRD próprio: [prd-conversao-pro.md](prd-conversao-pro.md).
 >
-> <!-- contagem: banco.tabelas=21 banco.rpcs_do_projeto=37 banco.foreign_keys=32 banco.triggers=16 banco.enums=8 -->
-> **Estrutura reconferida contra o catálogo em 11/09/2026**: **21 tabelas**,
-> **37 RPCs do projeto**, **32 foreign keys**, **16 triggers**, **8 enums** —
+> <!-- contagem: banco.tabelas=22 banco.rpcs_do_projeto=36 banco.foreign_keys=34 banco.triggers=16 banco.enums=8 -->
+> **Estrutura reconferida contra o catálogo em 12/09/2026**: **22 tabelas**,
+> **36 RPCs do projeto**, **34 foreign keys**, **16 triggers**, **8 enums** —
 > mais **15 funções de trigger**, que não são RPC e por isso contam à parte.
-> A 32ª chave é `deals.orcamento_tarefa_id → tasks` (0076), a primeira deste
-> schema a fechar um ciclo — o porquê está em [schema.md](schema.md).
+>
+> **Três números andaram em 12/09, e cada um por um motivo diferente:**
+>
+>     tabelas   21 -> 22   `prospeccao_prospect` (0084): o prospect abordado
+>                          e o que aconteceu depois. Fora do produto do
+>                          cliente — RLS ligada e zero policy
+>     chaves    32 -> 34   as duas da tabela nova, `lead_id` e `workspace_id`,
+>                          anulaveis: a esmagadora maioria dos prospects nunca
+>                          vira nem contato
+>     RPCs      37 -> 36   `purge_old_sinais_de_mercado` foi APAGADA (0085).
+>                          Ela purgava uma tabela que a 0075 removeu em 08/09,
+>                          e o cron diario falhava desde entao com
+>                          `42P01: relation does not exist`
+>
+> A 32ª chave continua sendo `deals.orcamento_tarefa_id → tasks` (0076), a
+> primeira deste schema a fechar um ciclo — o porquê está em
+> [schema.md](schema.md).
 >
 > **Estas cinco passaram três dias erradas, e nada acusou.** O documento dizia
 > 20 tabelas desde que a 0080 criou `descadastro_de_prospeccao`, e a frase logo
@@ -17,9 +32,9 @@
 > **nenhuma métrica do catálogo**. Agora mede, e o carimbo acima é conferido
 > por `scripts/ci/conferir-documentos.mjs` como todos os outros.
 >
-> <!-- contagem: migrations.arquivos=81 migrations.maior=0082 -->
-> **81 arquivos de migration, e a maior é `0082`.** Os dois juntos, sempre: o
-> número de arquivos sozinho convida a inferir `0071`, e o `0049` não existe —
+> <!-- contagem: migrations.arquivos=84 migrations.maior=0085 -->
+> **84 arquivos de migration, e a maior é `0085`.** Os dois juntos, sempre: o
+> número de arquivos sozinho convida a inferir `0084`, e o `0049` não existe —
 > foi provado desnecessário e removido em 22/08. `node scripts/ci/contagens.mjs`
 > imprime o invariante que reconcilia os dois.
 >
