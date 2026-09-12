@@ -4,9 +4,160 @@ Documento de continuidade. É lido no começo de toda sessão (referenciado no
 [CLAUDE.md](../CLAUDE.md)) para que uma conversa nova, ou outra conta, comece
 sabendo o que já foi feito, o que foi decidido e onde estão as armadilhas.
 
-**Atualizado em:** 11/09/2026, noite (o importador so lia planilha feita PARA
-ele; o Kanban derrubava a tela ao mover um card; e cinco vezes no dia a falha
-que eu ia reportar era do meu proprio avaliador)
+**Atualizado em:** 12/09/2026, madrugada (o botao nativo do WhatsApp e aceito
+e NAO renderiza; o link da prospeccao virou atalho e ganhou a campanha que
+faltava; e a landing passou a mostrar o predio, com o numero da placa casando
+com o numero do endereco)
+
+## O disparo ganhou arte, e o 201 me enganou duas vezes (12/09)
+
+Pedido do dono: uma imagem para acompanhar a mensagem de prospeccao, com cinco
+variantes para escolher. Escolhida a **comparacao de preco**, e ela ganhou
+depois o *"Comece gratis"* que ele pediu.
+
+### O teste do projeto recusou minha primeira versao, e estava certo
+
+`oferta-nas-artes.test.ts` proibe `R$ <numero>` no codigo de um gerador, e eu
+tinha digitado o nosso preco e o do concorrente a mao:
+
+    AssertionError: expected [ 'R$ 97', 'R$ 85', 'R$ 332', ...(9) ] to equal []
+
+A regra nao e estetica. O preco mudou de 49 para 97 em 10/09, e **arte com
+numero digitado nao avisa quando passa a mentir** — foi assim que a bio do
+Instagram anunciou "gratis ate 300 contatos" meses depois de o teto virar 50.
+Agora sai de `PRO_PLAN_PRICE` e `FREE_LEAD_LIMIT`.
+
+O mesmo arquivo pegou um travessao na peca 5, banido dos criativos em 31/08.
+
+### O botao nativo do WhatsApp: aceito, e NAO renderiza
+
+O dono mandou o print dos botoes nativos e pediu essa pegada. Testei quatro
+formatos pela Evolution 2.3.7:
+
+    sendButtons url                  HTTP 201   nao renderizou
+    sendButtons url + imagem         HTTP 201   nao renderizou
+    sendButtons reply x2             HTTP 201   nao renderizou
+    o balao real do disparo          HTTP 201   nao renderizou
+    sendButtons url + reply juntos   HTTP 400   "Reply buttons cannot be mixed"
+
+Print do dono: nada no celular, e *"Nao foi possivel carregar a mensagem"* no
+WhatsApp Web. **O controle separa as duas explicacoes:** um `sendText` comum
+mandado no mesmo instante, para o mesmo aparelho, chegou normal nos dois.
+
+A causa e a ponte — Baileys embrulha interativo em `viewOnceMessage`, visivel
+na propria resposta da API, e o cliente oficial deixou de desenhar isso quando
+vem de fora da API oficial.
+
+**Eu afirmei o contrario no meio do caminho.** Disse que botao so existia na
+Cloud API (certo), depois li o 201 e disse ao dono que estava errado. O 201 so
+diz que a API topou mandar. O print do dono fechou.
+
+**E e PIOR que nao ter botao:** em 837 empresas, cada uma receberia uma
+mensagem que nao abre — candidata direta a "Bloquear e denunciar", o primeiro
+dos quatro padroes que derrubam numero.
+
+A saida foi a seta DESENHADA no botao da arte, tracada linha a linha: `→`
+depende de o glifo existir na Geist, e quando falta sai o retangulo de
+caractere ausente no meio do botao sem nada avisar.
+
+### O link virou `/wa`, e isso destravou o que eu tinha recusado
+
+Era `https://velofunil.com.br/?utm_source=whatsapp` — 44 caracteres de query
+crua no fim de um texto escrito para parecer uma pessoa falando.
+
+    tamanho   44 -> 31 caracteres
+    o `www`   eu tinha MEDIDO que nao dava: a mensagem mais longa ja estava em
+              560, o teto, e com `www.` ia a 564 — 59 das 837 seriam cortadas
+              em silencio. Com o atalho cabe, e o canonico deixa de pagar
+              259ms (575ms medidos contra 316ms)
+    medicao   ganha `utm_medium` e `utm_campaign`, que o link antigo NAO
+              tinha. `cruzarCampanhasComClientes` agrupa por CAMPANHA, e sem
+              ela a prospeccao caia no balde de "sem campanha identificada"
+              junto com o organico
+
+**A trava que o atalho exigiu:** `/wa` so existe em producao depois do deploy,
+e a promocao aqui e manual. Medido no dia — `/wa` devolvia 404 enquanto `/ig`,
+o atalho irmao, devolvia 307. Sem trava, disparar antes de promover mandaria
+837 empresas para uma pagina de erro, e **nada falharia**: o WhatsApp entrega,
+a Evolution devolve 201, e o estrago so apareceria no silencio de ninguem
+responder. `conferirLink` aborta a rodada.
+
+### O disparo comecava pelo nicho que a REGUA reprovou
+
+As tres primeiras da fila eram todas `energia-solar`:
+
+    nicho           n  media  FORTE  equipe  ORCA  agenda  contato
+    energia-solar   7   6.3     4      4      0      0       2
+
+Passa em UM dos tres criterios, e falha no principal: **zero pedidos de
+orcamento em sete sites**. O `contato` de 2 em 7 e o pior da tabela inteira.
+
+Mesmo assim e 125 das 837 e LIDERA, porque a fila ordena por PONTOS. Medido:
+13 das proximas 30 iriam para la. `--so-aprovados` corta; o ensaio **avisa** e
+nao filtra sozinho, porque a fila e do dono.
+
+**Fica em aberto:** 84 da fila estao como `sem-nicho`, sem classificacao.
+
+## A landing passou a mostrar o predio (12/09)
+
+Pedido do dono a partir do Story de localizacao ja publicado.
+
+### Nao e repeticao do rodape, e a diferenca decide
+
+Endereco em texto prova que alguem preencheu um cadastro; **lugar mostrado
+prova que o lugar existe**. E a prova mais forte que este produto tem hoje:
+nao ha cliente externo para exibir, e inventar depoimento e decisao travada.
+
+O recorte 4:3 saiu de conta. A placa com o 2539 ocupa de 58% a 86% da altura,
+e so `object-position: 72%` a mantem inteira — ela e o unico elemento da
+imagem que casa com o numero escrito ao lado.
+
+### O endereco deixou de ser uma string
+
+`CONTROLADOR.endereco` virou objeto, e a linha passou a ser DERIVADA por
+`enderecoEmLinha()`. Os quatro consumidores antigos — rodape, Privacidade,
+Termos, prompt do SDR — nao mudaram.
+
+**O ganho maior nao esta na tela:** `dados-estruturados.ts` despejava a linha
+inteira em `streetAddress` e declarava so `addressCountry`. Isso VALIDA no
+schema.org, e o Google continuava sem saber a cidade. Agora tem
+`addressLocality`, `addressRegion` e `postalCode` — e o diagnostico de 03/09
+concluiu que o problema deste site e DEMANDA, com busca local sendo das poucas
+fontes que nao dependem de comprar clique.
+
+### A barra fixa do rodape saiu, e a remocao sozinha teria quebrado
+
+Pedido do dono. O componente documentava que ele mitiga um defeito real: em
+390x659 o CTA do hero fica ATRAS do banner de consentimento.
+
+    com a barra   barra  473..521  "A: Comecar gratis"    OK
+                  hero   596..644  "DIV: RecusarAceitar"  BLOQUEADO
+    sem a barra   hero   596..644  "DIV: RecusarAceitar"  BLOQUEADO
+                  e AINDA sobra alvo clicavel: o do TOPO, em 8..56
+
+O hero continua tapado nos dois casos. O que muda e se existe OUTRO alvo.
+
+**E a navbar escondia o CTA dela** justamente porque a barra subia para
+substitui-lo. Tirar a barra sem desfazer isso deixaria a pessoa rolar 12.000px
+sem nenhum CTA — pior do que os dois botoes que a regra evitava.
+
+### Dois numeros meus estavam errados, e os dois eram o mesmo erro
+
+**CLS 0,045** vinha de `buffered: true`, que soma a pagina inteira desde o
+load. Atribuindo cada shift ao elemento causador, a secao contribui ZERO.
+
+**Contraste 2,03 nos QUATRO textos** — contraste identico para tamanhos
+diferentes e o proprio sinal de erro. `getComputedStyle` devolve
+`oklch(0.215 0.005 220)` e meu parse lia as coordenadas como RGB, exatamente o
+defeito de 03/09. Refeito pelo canvas: 16,77 / 6,77 / 7,68 no escuro e
+19,80 / 5,96 no claro.
+
+**Conferido em producao depois da promocao, 12 de 12** — inclusive o
+`PostalAddress` em campos no HTML servido.
+
+**Fica em aberto, e e do dono:** a foto tem 399x501, e o card pede 420px de
+largura em CSS (840 em retina). Ela entrega 0,47x disso e vai borrar em
+celular moderno. Nao e defeito de codigo — e resolucao de origem.
 
 ## O preco subiu e a parede mudou de lugar (10/09)
 
