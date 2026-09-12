@@ -4,10 +4,137 @@ Documento de continuidade. É lido no começo de toda sessão (referenciado no
 [CLAUDE.md](../CLAUDE.md)) para que uma conversa nova, ou outra conta, comece
 sabendo o que já foi feito, o que foi decidido e onde estão as armadilhas.
 
-**Atualizado em:** 12/09/2026, madrugada (o botao nativo do WhatsApp e aceito
-e NAO renderiza; o link da prospeccao virou atalho e ganhou a campanha que
-faltava; e a landing passou a mostrar o predio, com o numero da placa casando
-com o numero do endereco)
+**Atualizado em:** 12/09/2026, manha (a resposta do prospect passou a entrar
+no sistema; o opt-out era pior do que a auditoria escreveu e agora vale por
+telefone; e o cron diario falhava havia quatro dias sem ninguem ver)
+
+## A resposta entra no sistema, e o "nao quero" passa a valer (12/09)
+
+Pedido do dono, com o prompt mestre inteiro: transformar resposta de WhatsApp
+em inteligencia comercial. A secao 33 do proprio prompt manda construir em
+fases, e esta e a **FASE 1: captura**. Zero IA, zero resposta automatica.
+
+### O gargalo nao era volume
+
+A auditoria da madrugada mediu onde a maquina quebra: entre os passos 8 e 9. A
+mensagem sai, a resposta chega **no celular do dono**, e nada no sistema
+escuta. Sem registro de resposta, nenhuma etapa seguinte pode ser medida — nem
+taxa de resposta, nem qual gancho funciona, nem se o score preve alguma coisa.
+
+### O opt-out era PIOR do que a auditoria escreveu, e isso corrige a auditoria
+
+Ela registrou que *"o disparo nao le `descadastro_de_prospeccao`"*, o que
+sugere que bastaria manda-lo ler. **Nao bastava — os dois lados nao tinham um
+campo em comum:**
+
+    a tabela          chave `email_hash`, sha256 de um token que por sua vez e
+                      sha256 de "tempero:email"
+    a fila do disparo casa por DOMINIO e por TELEFONE
+    a coluna dominio  existe desde a 0080 e NUNCA foi escrita — a pagina grava
+                      so o hash, porque o token nao e reversivel
+
+Uma leitura acrescentada ao disparo filtraria **zero linhas para sempre**, com
+o alarme calado parecendo resolvido.
+
+**E o canal que a tabela atendia nunca existiu.** Medido: `tokenDeSaida()` nao
+tem um unico chamador fora do teste, o e-mail frio nunca saiu, e a tabela tem
+zero linhas. O opt-out que precisa funcionar chega por WhatsApp — e para esse
+nao havia nem coluna. `nao-perturbe.txt`, o unico que funcionava, tem **zero
+linhas**: e manual, local, e nunca foi usado uma vez.
+
+Enquanto isso a primeira mensagem promete, em texto, que nao volta a procurar.
+Com 200 disparos/dia a promessa quebra sozinha.
+
+**A 0083 da a tabela UMA chave que carrega o canal no valor** (`email:` |
+`fone:` | `dominio:`). Tres colunas anulaveis com unique PARCIAL — o desenho
+obvio — quebrariam o `upsert`: `on conflict` sobre indice parcial exige
+repetir o predicado, e o PostgREST nao tem como expressar isso em
+`onConflict=`. A pagina de descadastro falharia no segundo clique.
+
+### Reabrir um webhook que foi FECHADO de proposito
+
+`c52a718` removeu a rota da Evolution em 28/08 porque o segredo era unico para
+todas as empresas: quem o conhecesse injetaria mensagem falsa no funil de
+qualquer uma sabendo o UUID dela.
+
+**A rota nova nao reabre isso, e a diferenca e estrutural: prospeccao nao e
+multiempresa.** A empresa e resolvida no SERVIDOR, pelo nome, e nunca lida da
+requisicao. Nao existe UUID no payload — nao existe o que forjar.
+
+O segredo vai no CABECALHO, nao na URL que a Vercel registra em log. A
+Evolution 2.3.7 aceita: conferido lendo `GET /webhook/find/VELO`, que devolve
+o campo `headers`. Nao e suposicao sobre a documentacao.
+
+### Tres formatos de payload, e nenhum sai
+
+`normalizarMensagem` le `key/message` (Baileys, o que a instancia usa hoje),
+`Info/Message` (whatsmeow) e o que o Swagger descreve. Ler so um recria o
+defeito de 25/08, em que a rota respondia `200 {"ok":true}` sem gravar nada
+porque a documentacao nao descrevia o webhook — e o sintoma era silencio.
+
+### Achado adjacente: o cron diario falhava havia quatro dias
+
+`purge_old_sinais_de_mercado` purgava uma tabela que a 0075 removeu em 08/09.
+`/api/cron/limpar-eventos` devolvia `ok: false` todo dia com
+`42P01: relation "public.sinal_de_mercado" does not exist`. As outras seis
+purgas rodavam — o `supabase-js` devolve `{data, error}` em vez de lancar —, e
+foi por isso que ninguem notou.
+
+**E a rota destruturava SEIS nomes de SETE promessas.** `tentativas` recebia o
+resultado dos sinais, e o do rate limit nao recebia nome nenhum: a linha
+impressa todo dia era *"Purga de rate limit falhou"*, uma purga que passava.
+Fosse o contrario, a investigacao comecaria na tabela errada.
+
+### Provado contra producao, com controle
+
+    opt-out por DOMINIO      sumiu da fila, contador 0 -> 1
+    opt-out por TELEFONE     sumiu mesmo com dominio DIFERENTE
+    CONTROLE                 quem nao esta na tabela continua na fila
+    sem segredo / errado     401
+    evento de presenca       200 e ignorado (nao 500 — a fila do Asaas ensinou)
+    a NOSSA mensagem         ignorada
+    grupo                    ignorado
+    texto                    gravado, e avisado no WhatsApp do dono
+    o MESMO evento de novo   ignorado, e 3 mensagens no banco (nao 4)
+    audio                    tipo=audio, midia REFERENCIADA e nao baixada
+    "nao quero"              opt-out gravado, NAO respondido, some da fila
+
+20 de 20 no webhook, 6 de 6 no opt-out, tudo apagado num `finally`.
+
+**98 prospects ja abordados foram gravados no banco** por `--sincronizar`,
+com a data que o JSON guardou e nao a de agora: escrever `now()` diria que 100
+empresas foram abordadas no instante da sincronizacao, e a primeira pergunta
+que esta tabela responde e *quanto tempo levou ate responder*.
+
+    banco    21 -> 22 tabelas | 32 -> 34 FKs | 37 -> 36 RPCs
+    testes   1.700
+
+### Fica em aberto, e as duas sao do dono
+
+**A promocao na Vercel.** O webhook so existe em producao depois dela, e ate
+la a Evolution nao tem para onde entregar.
+
+**A Evolution tem UM webhook so, e hoje ele aponta para o n8n**
+(`8-n8n.zohnng.easypanel.host/webhook/sdr-whatsapp`, `MESSAGES_UPSERT`,
+habilitado). Apontar para o Velo **desliga o caminho do n8n** — o que e
+consequencia esperada, ja que o SDR esta desligado por decisao de 11/09, mas e
+uma troca e nao um acrescimo.
+
+### O que NAO foi construido, e por que
+
+    resposta automatica da IA   o SDR existe e continua DESLIGADO. Liga-lo
+                                antes de haver amostra de respostas e dar
+                                inteligencia a um sistema que nao enxerga nada
+    intencao / objecao          Fase 2, com as colunas nascendo junto do
+                                consumidor delas. Coluna gravada e nunca lida
+                                e a classe de defeito do `gclid` (0071), do
+                                `utm_content` (0069) e do `utm_campaign` —
+                                tres relatorios com aparencia de medicao e
+                                conteudo vazio
+    painel de inteligencia      depende do dado que esta rodada comeca a
+                                produzir
+    mexer no score ou no nicho  travado: capture, meca, compare, so entao
+                                otimize
 
 ## O disparo ganhou arte, e o 201 me enganou duas vezes (12/09)
 

@@ -105,6 +105,12 @@ OPERACAO LOCAL (nao roda na Vercel)
 Medido no catálogo (`pg_class`), não nas migrations. **21 tabelas em `public`**,
 **todas com RLS ligada**.
 
+> **Esta contagem é do momento da auditoria e já mudou: são 22 desde a 0084**,
+> na mesma data. `prospeccao_prospect` entrou, e `whatsapp_webhook_events` e
+> `descadastro_de_prospeccao` deixaram de estar "sem uso" — ver a seção 18. O
+> resto da tabela abaixo continua valendo, e fica como fotografia de onde o
+> sistema estava quando o diagnóstico foi feito.
+
 | Tabela | Finalidade | Policies | Linhas | Usada pelo código |
 |---|---|---:|---:|---|
 | `workspaces` | empresa; 33 colunas, inclui UTM, `fbc`, `fbp`, `gclid`, consentimento | 3 | 49 | sim |
@@ -488,46 +494,60 @@ mensagem chega no celular do dono e a conversa acontece fora do produto.
 
 ## 14. Gargalos encontrados no código
 
+> **Atualização de 12/09, manhã:** os itens 1, 3, 7 e 9 foram FECHADOS na mesma
+> data — ver a seção 18 no fim do documento. O resto continua aberto, e o
+> estado de cada um está marcado abaixo.
+
 ### CRÍTICO
 
-1. **Nada captura a resposta do prospect.** O disparo é one-way. Do passo 8 em
-   diante não existe sistema, e é onde o dinheiro se decide.
+1. ~~**Nada captura a resposta do prospect.**~~ **FECHADO em 12/09.**
+   `app/api/webhooks/evolution/route.ts` grava a resposta em
+   `conversas`/`mensagens`, identifica o prospect pelo telefone e avisa o dono
+   no WhatsApp. **A IA continua desligada** — captura não é resposta.
 2. **Webhook do Asaas cai repetidamente** — 4 vezes em 9 dias, causa não
-   determinada, e a API não expõe o log que a explicaria.
+   determinada, e a API não expõe o log que a explicaria. **ABERTO.**
 
 ### ALTO
 
-3. **O opt-out da página não chega ao disparo** — ver item 7, movido para cá
-   depois de confirmado. Promessa escrita na tela que o código não cumpre.
-4. **Prospect e cliente não se ligam.** Não há como responder "qual mensagem
-   trouxe qual pagante".
+3. ~~**O opt-out da página não chega ao disparo.**~~ **FECHADO em 12/09, e o
+   diagnóstico desta auditoria estava incompleto** — ver a seção 18.
+4. **Prospect e cliente não se ligam.** **PARCIAL desde 12/09:**
+   `prospeccao_prospect` tem `lead_id` e `workspace_id`, e o webhook os
+   preenche quando a pessoa responde. O elo até `subscriptions` continua sem
+   existir, então *"qual mensagem trouxe qual pagante"* ainda não tem resposta.
 5. **O rastreamento de origem não capturou o único cliente real** — as oito
-   colunas de UTM vieram nulas.
-6. **O score não é persistido.** Recalculado a cada leitura, impossível medir
-   se prevê alguma coisa.
+   colunas de UTM vieram nulas. **ABERTO.**
+6. **O score não é persistido.** **PARCIAL desde 12/09:** `pontuar` agora é
+   gravado em `prospeccao_prospect.pontos` no momento do envio. Medir se ele
+   prevê conversão exige respostas acumuladas, que é o que a captura começa a
+   produzir.
 
 ### MÉDIO
 
-7. **Estado da prospecção em arquivo local** (`.dono-prospeccao.json`) — some
-   com a máquina, não é auditável, não é compartilhável.
-7. **O opt-out da PÁGINA não chega ao disparo.** `/nao-quero`
-   (`app/(legal)/nao-quero/page.tsx:57`) grava em
-   `descadastro_de_prospeccao` e responde *"Pronto, não escrevo de novo."* —
-   mas **nenhum script de disparo lê essa tabela**. `enviar-evolution.mjs` e
-   `prospectar.mjs` consultam só `nao-perturbe.txt`.
-
-   A tabela tem **zero linhas**, então o estrago é potencial e não realizado:
-   o link só é gerado por `lib/prospeccao/email-copy.ts:115`, e o e-mail frio
-   nunca foi disparado. Mas o caminho existe, a promessa está escrita na tela,
-   e uma segunda abordagem depois de um "não" é o primeiro item da lista do
-   que derruba número em `docs/mercado/limites-e-bloqueios.md`.
+7. ~~**Estado da prospecção em arquivo local** (`.dono-prospeccao.json`).~~
+   **PARCIAL em 12/09.** O arquivo continua sendo a verdade do que já saiu
+   DESTA máquina, e é ele que impede o reenvio — não foi substituído. O que
+   passou a existir no banco é o que ele não conseguia ser: alcançável do lado
+   de lá, onde o webhook roda sem disco. 98 prospects já abordados foram
+   gravados por `--sincronizar`.
 8. **O SDR está construído e desligado** — custo de manutenção sem retorno.
+   **ABERTO, e agora é decisão de fase:** ele é a Fase 3 do plano, e ligá-lo
+   antes de haver amostra de respostas seria dar inteligência a um sistema que
+   não enxerga nada.
 
 ### BAIXO
 
-9. `whatsapp_webhook_events` existe sem consumidor.
+9. ~~`whatsapp_webhook_events` existe sem consumidor.~~ **FECHADO em 12/09:** é
+   a primeira das duas camadas de dedupe do webhook novo. A segunda é o índice
+   único `mensagens (workspace_id, external_id)` da 0056.
 10. `lib/plans.ts:230` comenta R$ 490 sobre uma constante que vale 970.
-11. `decisor.ts` permanece com testes, medido e recusado (0 de 6).
+    **ABERTO.**
+11. `decisor.ts` permanece com testes, medido e recusado (0 de 6). **ABERTO.**
+12. **NOVO, achado em 12/09 e já corrigido:** `purge_old_sinais_de_mercado`
+    purgava uma tabela que a 0075 removeu em 08/09, e `/api/cron/limpar-eventos`
+    devolvia `ok: false` todo dia desde então. A rota também destruturava SEIS
+    nomes de SETE promessas, então o log acusava a purga errada. Fechado pela
+    0085.
 
 ---
 
@@ -653,3 +673,89 @@ app/api/webhooks/asaas/route.ts                        pagamento
 lib/asaas/aplicar-evento.ts                            efeito do pagamento
 app/api/cron/reconciliar-assinaturas/route.ts          rede de seguranca
 ```
+
+---
+
+## 18. O que mudou em 12/09, manhã — a FASE 1
+
+Esta seção é posterior à auditoria e registra o que ela provocou. Ela também
+**corrige um diagnóstico dela**, o que vale mais do que a correção em si.
+
+### O achado do opt-out estava incompleto, e a diferença é a decisão
+
+A seção 14 registrou que o disparo não lê `descadastro_de_prospeccao`. A
+leitura natural é *"basta mandá-lo ler"*. **Não bastava:**
+
+```
+a tabela            chave `email_hash`, sha256 de um token que por sua vez e
+                    sha256 de "tempero:email"
+a fila do disparo   casa por DOMINIO e por TELEFONE
+a coluna `dominio`  existe desde a 0080 e NUNCA foi escrita — a pagina grava
+                    so o hash, porque o token nao e reversivel
+```
+
+Não havia um campo em comum. Uma leitura acrescentada ao disparo filtraria
+**zero linhas para sempre**, com o alarme calado parecendo resolvido — que é a
+classe de defeito mais cara deste projeto.
+
+E o canal que a tabela atendia nunca existiu: `tokenDeSaida()` não tem um único
+chamador fora do teste, o e-mail frio nunca saiu. O opt-out que precisa
+funcionar chega por WhatsApp, e para ele não havia nem coluna.
+`nao-perturbe.txt`, o único que funcionava, tem **zero linhas** — é manual,
+local, e nunca foi usado.
+
+### O que foi construído
+
+```
+0083   a tabela ganha UMA chave que carrega o canal no valor
+       (`email:` | `fone:` | `dominio:`), mais `telefone_ultimos8`
+0084   `prospeccao_prospect` — o prospect abordado e o que houve depois
+0085   apaga `purge_old_sinais_de_mercado`, orfa desde a 0075
+
+app/api/webhooks/evolution/route.ts          a captura
+lib/prospeccao/mensagem-recebida.ts          3 formatos de payload
+lib/prospeccao/opt-out.ts                    reconhece o pedido de saida
+lib/prospeccao/opt-out-queries.ts            grava e le, por qualquer canal
+lib/prospeccao/empresas.ts                   onde grava, de onde le
+app/(dono)/dono/prospeccao/enviado/route.ts  registra o envio no banco
+```
+
+### Por que reabrir um webhook que foi fechado de propósito
+
+`c52a718` removeu a rota da Evolution em 28/08 porque o segredo era único para
+todas as empresas: quem o conhecesse injetaria mensagem falsa no funil de
+qualquer uma sabendo o UUID dela.
+
+**A rota nova não reabre isso, e a diferença é estrutural: prospecção não é
+multiempresa.** A empresa é resolvida no servidor, pelo nome, e nunca lida da
+requisição. Não existe UUID no payload — não existe o que forjar. O segredo vai
+no cabeçalho, não na URL que a Vercel registra em log.
+
+### Provado contra produção, com controle
+
+```
+opt-out por DOMINIO      sumiu da fila, contador 0 -> 1
+opt-out por TELEFONE     sumiu mesmo com dominio DIFERENTE
+CONTROLE                 quem nao esta na tabela continua na fila
+sem segredo / errado     401
+evento de presenca       200 e ignorado (nao 500)
+a NOSSA mensagem         ignorada
+grupo                    ignorado
+texto                    gravado, avisado no WhatsApp do dono
+o MESMO evento de novo   ignorado, e 3 mensagens no banco (nao 4)
+audio                    tipo=audio, midia REFERENCIADA e nao baixada
+"nao quero"              opt-out gravado, NAO respondido, some da fila
+```
+
+20 de 20 no webhook, 6 de 6 no opt-out. 98 prospects já abordados foram
+gravados no banco, com a data que o JSON guardou.
+
+### O que continua valendo desta auditoria
+
+O parágrafo mais importante dela não mudou: **o gargalo não é volume, é a
+resposta** — e agora ele é mensurável em vez de suposto. As Fases 2 a 5
+(classificação, resposta sugerida, automação, otimização) continuam por
+construir, e a ordem continua sendo capture, meça, compare, só então otimize.
+
+**E o Hermes continua sendo 99 linhas de Markdown.** Nada nesta rodada o
+transformou em componente de software, e a seção 6 segue inteira.

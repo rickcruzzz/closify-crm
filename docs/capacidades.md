@@ -133,6 +133,26 @@ valendo inteira.
 | Favicon por empresa, com cache local (CSP intacta) | `app/(dono)/dono/prospeccao/icone/route.ts` | 08/09 |
 | **Ver o que vai sair, agrupado por modelo** | `app/(dono)/dono/mensagens/page.tsx` | 08/09 |
 | Agrupar mensagem pelo que repete (10 modelos) | `lib/dono/mensagens.ts` | 08/09 |
+| **A RESPOSTA do prospect entra no sistema** | `app/api/webhooks/evolution/route.ts` | 12/09 |
+| Ler o payload da Evolution nos 3 formatos | `lib/prospeccao/mensagem-recebida.ts` | 12/09 |
+| Reconhecer "não quero" numa resposta | `lib/prospeccao/opt-out.ts` | 12/09 |
+| Opt-out por telefone, domínio ou e-mail | `lib/prospeccao/opt-out-queries.ts` | 12/09 |
+| O prospect abordado, e o que houve depois | `supabase/migrations/0084_prospect_da_prospeccao.sql` | 12/09 |
+| Registrar o envio no banco (rota local) | `app/(dono)/dono/prospeccao/enviado/route.ts` | 12/09 |
+| Onde a prospecção grava e de onde ela lê | `lib/prospeccao/empresas.ts` | 12/09 |
+
+**A captura é FASE 1, e o que ela não faz é decisão.** Ela grava a resposta,
+identifica o prospect pelo telefone, honra o opt-out e avisa o dono no
+WhatsApp. Não classifica intenção, não trata objeção e **não responde
+ninguém** — o agente SDR existe em `app/api/sdr/responder` e continua
+desligado. Ligar a IA antes de existir amostra de respostas seria dar
+inteligência a um sistema que ainda não enxerga nada.
+
+**E o opt-out era pior do que a auditoria de 12/09 escreveu.** Ela registrou
+que o disparo não lia `descadastro_de_prospeccao`; o problema era que os dois
+lados não tinham campo em comum — a tabela guardava `email_hash` e a fila casa
+por domínio e telefone. Mandá-la ler filtraria zero linhas para sempre. A 0083
+deu à tabela uma chave única que carrega o canal no valor.
 
 **REMOVIDO em 08/09, e o motivo importa mais que a remoção:** a pesquisa de
 mercado do lado do CLIENTE saiu inteira na `0075` — o card em `/leads`, a
@@ -185,7 +205,16 @@ desde que o cartão de preço nasceu, e a tela nunca disse.
 ```
 importar conversa exportada do WhatsApp (.txt)   proposto em docs/dor-de-mercado.md,
                                                  nenhuma linha escrita
-WhatsApp por API                                 a ponte saiu em 28/08 (c52a718)
+WhatsApp por API no PRODUTO                      a ponte saiu em 28/08 (c52a718) e
+                                                 FASE_DO_WHATSAPP segue 'migrando'. O
+                                                 webhook de 12/09 e da PROSPECCAO do
+                                                 dono, resolve a empresa pelo NOME no
+                                                 servidor, e nao devolve WhatsApp a
+                                                 nenhum cliente
+IA respondendo o prospect sozinha                o SDR existe e esta DESLIGADO. A
+                                                 captura de 12/09 nao o liga
+intencao / objecao / temperatura persistidas     Fase 2. Coluna sem leitor e a classe
+                                                 de defeito do gclid e do utm_content
 campos e etapas customizaveis                    deal_stage e enum, em 10 arquivos de codigo
 aprovacao online do orcamento pelo cliente       27% do mercado tem; o nosso e um
                                                  RELOGIO (validade + cobranca), nao um

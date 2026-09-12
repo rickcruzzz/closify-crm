@@ -297,8 +297,8 @@ uma rodada antiga —, e nada na resposta de uma consulta avisava disso. Só
 instalado na pasta pessoal do usuário, fora daqui. O que foi retirado está
 inteiro em `graphify-out/arquivo/`, nada foi descartado.
 
-<!-- contagem: grafo.nos_sem_arquivo=119 -->
-**119 nós não têm arquivo de origem, e nenhum deles é fantasma.** A grande
+<!-- contagem: grafo.nos_sem_arquivo=120 -->
+**120 nós não têm arquivo de origem, e nenhum deles é fantasma.** A grande
 maioria são objetos do banco que o extrator representa sem arquivo —
 `public.workspaces`, `auth.users`, `public.checar_teto_de_mensagens` —, mais
 alguns símbolos importados pelos geradores em Python (`FreeTypeFont`, `Image`,
@@ -326,11 +326,26 @@ Como ele andou, em ordem:
                   migrations inteiras, e cada `alter` mintou o objeto sem
                   arquivo. NENHUMA tabela nasceu — a contagem do catalogo
                   continua 21, medida por `banco.tabelas`
+    120   12/09   `public_descadastro_de_prospeccao`, mintado pelo `alter
+                  table` da 0083. Mesmo caso do 107 e do 119 — a tabela ja
+                  existia desde a 0080
 
 **A leitura errada aqui é fácil e cara:** ver o número subir logo depois de uma
 migration convida a concluir que uma tabela nasceu. Em nenhum dos três últimos
 casos nasceu — inclusive no salto de onze em 11/09, que veio de `alter table` e
 não de `create`.
+
+**E em 12/09 as duas coisas aconteceram ao mesmo tempo, o que torna a distinção
+mais nítida, não menos.** Uma tabela DE FATO nasceu — `prospeccao_prospect`, da
+0084 —, e `banco.tabelas` foi de 21 para 22. Mas o **+1** dos nós sem arquivo
+não é ela: `create table` carrega o arquivo que o definiu, então
+`prospeccao_prospect` entrou no grafo COM origem. Quem entrou sem foi
+`descadastro_de_prospeccao`, pelo `alter` da 0083, numa tabela que existe desde
+08/09.
+
+Ou seja: as duas contagens se moveram no mesmo commit, por motivos que não têm
+relação nenhuma entre si. Ler uma pela outra daria a resposta certa por
+acidente desta vez, e errada na próxima.
 
 **E desde 11/09 há como conferir sem adivinhar:** `banco.tabelas` mede o
 catálogo de verdade, e é carimbado no `prd.md` e no `schema.md`. O número de nós
