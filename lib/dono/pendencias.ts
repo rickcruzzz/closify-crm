@@ -43,6 +43,23 @@ type EntradaDoCruzamento = {
     asaas_subscription_id: string | null
   }[]
   assinaturasNoAsaas: Resultado<AssinaturaNoAsaas[]>
+  /**
+   * Quais assinaturas de fato RECEBERAM dinheiro (`RECEIVED` + `CONFIRMED`).
+   *
+   * Sem isto, o alerta mais caro desta tela mentia: `status = ACTIVE` no Asaas
+   * significa que a assinatura existe e gera cobranças, e diz NADA sobre o
+   * dinheiro ter entrado. Medido em 12/09 — as duas assinaturas vivas da conta
+   * tinham só cobrança `OVERDUE`/`PENDING`, e a tela anunciava que duas
+   * pessoas "não estavam recebendo o que assinaram".
+   *
+   * A direção do erro é o que custava: quem lesse liberaria Pro de cortesia
+   * para quem nunca pagou.
+   *
+   * `central.ts` já calculava este conjunto (`idsPagas`) e o usava em
+   * `classificarAcesso`, sem passar adiante. A regra existia; faltava chegar
+   * aqui.
+   */
+  assinaturasPagas: Set<string>
   emails: Resultado<EmailEnviado[]>
   errosRecentes: number
   /** Id do erro mais recente. Carimba o alerta — ver o comentário no item 7. */
@@ -77,6 +94,7 @@ type EntradaDoCruzamento = {
  */
 export function montarPendencias({
   empresas,
+  assinaturasPagas,
   assinaturasNoBanco,
   assinaturasNoAsaas,
   emails,
@@ -115,6 +133,11 @@ export function montarPendencias({
     )
 
     for (const assinatura of vivasNoAsaas) {
+      // Assinatura sem nenhum pagamento recebido não é "alguém pagando sem
+      // receber" — é alguém que ainda não pagou, e o produto está certo em
+      // não liberar o Pro. Ver a nota em `assinaturasPagas`.
+      if (!assinaturasPagas.has(assinatura.id)) continue
+
       const noBanco = porIdNoBanco.get(assinatura.id)
 
       if (!noBanco) {

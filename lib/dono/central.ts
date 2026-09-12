@@ -99,6 +99,9 @@ export async function lerCentral(): Promise<DadosDaCentral> {
     empresas,
     assinaturasNoBanco: banco.assinaturas,
     assinaturasNoAsaas,
+    // O mesmo conjunto que  ja usa acima. Sem ele, o alerta
+    // de "assinatura ativa que nao virou Pro" dispara para quem nunca pagou.
+    assinaturasPagas: idsPagas,
     emails,
     errosRecentes: banco.errosRecentes,
     idDoErroMaisRecente: banco.idDoErroMaisRecente,

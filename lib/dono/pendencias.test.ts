@@ -46,6 +46,9 @@ const base = {
   empresas: [],
   assinaturasNoBanco: [],
   assinaturasNoAsaas: semAsaas,
+  // Vazio por padrao: assinatura sem pagamento NAO e "alguem pagando sem
+  // receber". Cada caso que precisa declara quem pagou.
+  assinaturasPagas: new Set<string>(),
   emails: semEmails,
   errosRecentes: 0,
   emailsDeContasReais: semContas,
@@ -97,6 +100,8 @@ describe('montarPendencias', () => {
         ok: true,
         dados: [{ id: 'sub_dbs8pblwj2irujc2', status: 'ACTIVE', deleted: false }],
       },
+      // O que faz este caso ser 'pagando sem receber': houve pagamento.
+      assinaturasPagas: new Set(['sub_dbs8pblwj2irujc2']),
     })
 
     expect(r).toHaveLength(1)
@@ -113,11 +118,48 @@ describe('montarPendencias', () => {
         ok: true,
         dados: [{ id: 'sub_epjbmoerbqoz7c76', status: 'ACTIVE', deleted: false }],
       },
+      // O que faz este caso ser 'pagando sem receber': houve pagamento.
+      assinaturasPagas: new Set(['sub_epjbmoerbqoz7c76']),
     })
 
     expect(r).toHaveLength(1)
     expect(r[0].tipo).toBe('assinatura-orfa')
     expect(r[0].gravidade).toBe('dinheiro')
+  })
+
+  /**
+   * ## O falso positivo de 12/09, e por que ele custava dinheiro
+   *
+   * `status = ACTIVE` no Asaas significa que a assinatura existe e gera
+   * cobrancas — diz NADA sobre o dinheiro ter entrado. Medido na conta real:
+   * as duas assinaturas vivas tinham so `OVERDUE`/`PENDING`, e a Central
+   * anunciava que duas pessoas "nao estavam recebendo o que assinaram".
+   *
+   * A DIRECAO do erro e o que importa: quem lesse liberaria Pro de cortesia
+   * para quem nunca pagou.
+   */
+  it('assinatura ACTIVE que NUNCA pagou nao vira alerta', () => {
+    const r = montarPendencias({
+      ...base,
+      empresas: [empresa({ nome: 'Portal da Cidade', statusAssinatura: 'trialing' })],
+      assinaturasNoBanco: [
+        {
+          workspace_id: 'w1',
+          status: 'trialing',
+          current_period_end: null,
+          asaas_subscription_id: 'sub_so_boleto_vencido',
+        },
+      ],
+      assinaturasNoAsaas: {
+        ok: true,
+        dados: [{ id: 'sub_so_boleto_vencido', status: 'ACTIVE', deleted: false }],
+      },
+      // O ponto: nenhuma cobranca RECEBIDA ou CONFIRMADA.
+      assinaturasPagas: new Set<string>(),
+    })
+
+    expect(r.filter((p) => p.tipo === 'assinatura-nao-entrega')).toHaveLength(0)
+    expect(r.filter((p) => p.tipo === 'assinatura-orfa')).toHaveLength(0)
   })
 
   it('acusa assinatura de teste dando Pro de graça', () => {
@@ -376,6 +418,9 @@ describe('montarPendencias', () => {
         ok: true,
         dados: [{ id: 'sub_real', status: 'ACTIVE', deleted: false }],
       },
+      // Este caso testa a ORDEM da fila, entao precisa que o alerta de
+      // dinheiro de fato exista — e desde 12/09 ele exige pagamento.
+      assinaturasPagas: new Set(['sub_real']),
       errosRecentes: 3,
     })
 
