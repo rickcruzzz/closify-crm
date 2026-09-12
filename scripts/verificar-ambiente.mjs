@@ -11,6 +11,8 @@
  * Não escreve nada em lugar nenhum, só lê. Pode rodar à vontade.
  */
 
+import { readFileSync } from 'node:fs'
+
 const resultados = []
 const ok = (nome, detalhe) => resultados.push({ nome, estado: 'ok', detalhe })
 const falha = (nome, detalhe) => resultados.push({ nome, estado: 'falha', detalhe })
@@ -35,6 +37,47 @@ const SRV = exigir('SUPABASE_SERVICE_ROLE_KEY')
 // que o carregador de .env do Next interpreta e o `--env-file` do Node não.
 const ASAAS = (exigir('ASAAS_API_KEY') ?? '').replace(/^\\/, '')
 const WEBHOOK = exigir('ASAAS_WEBHOOK_TOKEN')
+
+/**
+ * ## A barra AUSENTE, que este script nao detectava — 12/09
+ *
+ * A linha acima trata a barra PRESENTE. O caso oposto passava limpo, e ele e
+ * pior: a chave do Asaas comeca com `$aact_`, e o `dotenv-expand` que o
+ * Next usa le isso como referencia a uma variavel inexistente e substitui por
+ * **string vazia**.
+ *
+ * O `--env-file` do Node NAO expande. Ou seja: este script lia os 166
+ * caracteres, respondia "tudo certo", e o app nao conseguia falar com o
+ * gateway — a Central mostrando "Asaas fora do ar" e o vigia sem conferir
+ * dinheiro, enquanto o verificador de ambiente concordava com o estado errado.
+ *
+ * Aconteceu entre 11/09 e 12/09 e custou uma investigacao inteira, justamente
+ * porque o instrumento de diagnostico dizia que estava tudo bem.
+ *
+ * A conferencia NAO pode ser feita sobre o valor ja carregado — ele chega
+ * normalizado pelos dois lados. Tem que ser sobre o texto cru do arquivo, que
+ * e onde a barra existe ou nao.
+ */
+try {
+  const cru = readFileSync('.env.local', 'utf-8')
+  const linha = cru
+    .split(String.fromCharCode(10))
+    .find((l) => l.startsWith('ASAAS_API_KEY='))
+  const valorCru = linha?.slice('ASAAS_API_KEY='.length) ?? ''
+  if (valorCru.startsWith('$')) {
+    falha(
+      'ASAAS_API_KEY',
+      'comeca com `$` SEM escape no .env.local. O Next usa dotenv-expand e ' +
+        'transforma isso em string VAZIA: o app perde o Asaas e o `--env-file` ' +
+        'do Node nao reproduz. Escreva `\$aact_...` no arquivo.',
+    )
+  } else if (valorCru.startsWith('\\$')) {
+    ok('ASAAS_API_KEY', 'escapada como `\$aact_`, que e a forma que o Next entende')
+  }
+} catch {
+  // Sem `.env.local` nao ha o que conferir: o `exigir()` acima ja reclama.
+}
+
 const RESEND = exigir('RESEND_API_KEY')
 const APP_URL = exigir('NEXT_PUBLIC_APP_URL')
 
