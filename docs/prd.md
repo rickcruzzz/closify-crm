@@ -3,19 +3,22 @@
 > Iniciativa de conversão Free→Pro (copy da landing, limites, checkout) tem
 > PRD próprio: [prd-conversao-pro.md](prd-conversao-pro.md).
 >
-> <!-- contagem: banco.tabelas=22 banco.rpcs_do_projeto=36 banco.foreign_keys=34 banco.triggers=16 banco.enums=8 -->
-> **Estrutura reconferida contra o catálogo em 12/09/2026**: **22 tabelas**,
-> **36 RPCs do projeto**, **34 foreign keys**, **16 triggers**, **8 enums** —
+> <!-- contagem: banco.tabelas=23 banco.rpcs_do_projeto=36 banco.foreign_keys=37 banco.triggers=16 banco.enums=8 -->
+> **Estrutura reconferida contra o catálogo em 12/09/2026**: **23 tabelas**,
+> **36 RPCs do projeto**, **37 foreign keys**, **16 triggers**, **8 enums** —
 > mais **15 funções de trigger**, que não são RPC e por isso contam à parte.
 >
 > **Três números andaram em 12/09, e cada um por um motivo diferente:**
 >
->     tabelas   21 -> 22   `prospeccao_prospect` (0084): o prospect abordado
->                          e o que aconteceu depois. Fora do produto do
->                          cliente — RLS ligada e zero policy
->     chaves    32 -> 34   as duas da tabela nova, `lead_id` e `workspace_id`,
->                          anulaveis: a esmagadora maioria dos prospects nunca
->                          vira nem contato
+>     tabelas   21 -> 23   `prospeccao_prospect` (0084), o prospect abordado e
+>                          o que aconteceu depois, e `prospeccao_interacao`
+>                          (0086), uma linha por resposta classificada. As
+>                          duas sao da PROSPECCAO do dono, nao do produto:
+>                          RLS ligada e zero policy
+>     chaves    32 -> 37   duas da 0084 (`lead_id`, `workspace_id`) e tres da
+>                          0086 (`prospect_id`, `conversa_id`, `mensagem_id`).
+>                          `mensagem_id` e UNIQUE, e e ela a idempotencia: a
+>                          mesma resposta nao entra duas vezes na estatistica
 >     RPCs      37 -> 36   `purge_old_sinais_de_mercado` foi APAGADA (0085).
 >                          Ela purgava uma tabela que a 0075 removeu em 08/09,
 >                          e o cron diario falhava desde entao com
@@ -32,8 +35,8 @@
 > **nenhuma métrica do catálogo**. Agora mede, e o carimbo acima é conferido
 > por `scripts/ci/conferir-documentos.mjs` como todos os outros.
 >
-> <!-- contagem: migrations.arquivos=84 migrations.maior=0085 -->
-> **84 arquivos de migration, e a maior é `0085`.** Os dois juntos, sempre: o
+> <!-- contagem: migrations.arquivos=85 migrations.maior=0086 -->
+> **85 arquivos de migration, e a maior é `0086`.** Os dois juntos, sempre: o
 > número de arquivos sozinho convida a inferir `0084`, e o `0049` não existe —
 > foi provado desnecessário e removido em 22/08. `node scripts/ci/contagens.mjs`
 > imprime o invariante que reconcilia os dois.

@@ -140,6 +140,22 @@ valendo inteira.
 | O prospect abordado, e o que houve depois | `supabase/migrations/0084_prospect_da_prospeccao.sql` | 12/09 |
 | Registrar o envio no banco (rota local) | `app/(dono)/dono/prospeccao/enviado/route.ts` | 12/09 |
 | Onde a prospecção grava e de onde ela lê | `lib/prospeccao/empresas.ts` | 12/09 |
+| **O que a resposta QUER dizer (20 intenções, 12 objeções)** | `lib/prospeccao/classificacao.ts` | 12/09 |
+| A leitura pela IA, com a blindagem do SDR reusada | `lib/prospeccao/classificar.ts` | 12/09 |
+| O cron que lê o que chegou, aos :15 | `app/api/cron/classificar-respostas/route.ts` | 12/09 |
+| **O painel: funil, objeções, nichos, ganchos, score** | `app/(dono)/dono/inteligencia/page.tsx` | 12/09 |
+| A agregação que se RECUSA a mostrar taxa sem amostra | `lib/dono/inteligencia.ts` | 12/09 |
+
+**A FASE 2 saiu em 12/09, na mesma madrugada.** A resposta deixou de ser texto
+e virou categoria comparável: 20 intenções e 12 objeções fechadas, temperatura
+com teto por intenção, e o painel que lê tudo isso. **A IA continua sem
+responder ninguém** — ela lê e rotula.
+
+**A regra que governa o painel:** contagem sempre, taxa só a partir de 100
+abordagens no segmento. Cold outreach responde de 3,8% a 7,2%; com trinta
+abordagens o esperado é UMA resposta, e a diferença entre uma e duas dobraria a
+"taxa" por acaso. Onde a amostra não chegou, a tela diz **quantas faltam** em
+vez de mostrar zero.
 
 **A captura é FASE 1, e o que ela não faz é decisão.** Ela grava a resposta,
 identifica o prospect pelo telefone, honra o opt-out e avisa o dono no
@@ -211,10 +227,14 @@ WhatsApp por API no PRODUTO                      a ponte saiu em 28/08 (c52a718)
                                                  dono, resolve a empresa pelo NOME no
                                                  servidor, e nao devolve WhatsApp a
                                                  nenhum cliente
-IA respondendo o prospect sozinha                o SDR existe e esta DESLIGADO. A
-                                                 captura de 12/09 nao o liga
-intencao / objecao / temperatura persistidas     Fase 2. Coluna sem leitor e a classe
-                                                 de defeito do gclid e do utm_content
+IA respondendo o prospect sozinha                o SDR existe e esta DESLIGADO. Nem a
+                                                 captura nem a classificacao o ligam
+ligacao prospect -> cliente pagante              NAO existe. O painel PARA em
+                                                 "interessados" de proposito: mostrar
+                                                 "0 pagaram" leria como "ninguem chega
+                                                 la", e a verdade e "nao ha como saber"
+resposta sugerida para o dono aprovar            Fase 3, nao escrita
+ranking por RECEITA                              depende da ligacao acima
 campos e etapas customizaveis                    deal_stage e enum, em 10 arquivos de codigo
 aprovacao online do orcamento pelo cliente       27% do mercado tem; o nosso e um
                                                  RELOGIO (validade + cobranca), nao um

@@ -326,52 +326,133 @@ export type Database = {
       // do cliente: RLS ligada e zero policy, so `service_role` alcanca.
       prospeccao_prospect: {
         Row: {
+          classificado_em: string | null
           created_at: string
           dominio: string
           enviado_em: string | null
           estagio: string
           id: string
+          intencao: string | null
           lead_id: string | null
           mensagem_enviada: string | null
+          mensagens_recebidas: number
           nome: string | null
+          objecao: string | null
           pontos: number | null
+          precisa_humano: boolean
           respondido_em: string | null
           telefone_ultimos8: string | null
+          temperatura: string | null
           updated_at: string
           vertical: string | null
           workspace_id: string | null
         }
         Insert: {
+          classificado_em?: string | null
           created_at?: string
           dominio: string
           enviado_em?: string | null
           estagio?: string
           id?: string
+          intencao?: string | null
           lead_id?: string | null
           mensagem_enviada?: string | null
+          mensagens_recebidas?: number
           nome?: string | null
+          objecao?: string | null
           pontos?: number | null
+          precisa_humano?: boolean
           respondido_em?: string | null
           telefone_ultimos8?: string | null
+          temperatura?: string | null
           updated_at?: string
           vertical?: string | null
           workspace_id?: string | null
         }
         Update: {
+          classificado_em?: string | null
           created_at?: string
           dominio?: string
           enviado_em?: string | null
           estagio?: string
           id?: string
+          intencao?: string | null
           lead_id?: string | null
           mensagem_enviada?: string | null
+          mensagens_recebidas?: number
           nome?: string | null
+          objecao?: string | null
           pontos?: number | null
+          precisa_humano?: boolean
           respondido_em?: string | null
           telefone_ultimos8?: string | null
+          temperatura?: string | null
           updated_at?: string
           vertical?: string | null
           workspace_id?: string | null
+        }
+        Relationships: []
+      }
+      // Uma linha por mensagem classificada (0086). Idempotente por
+      // `mensagem_id`. As categorias sao fechadas e o `check` do banco e a
+      // ultima porta — a lista canonica vive em lib/prospeccao/classificacao.ts.
+      prospeccao_interacao: {
+        Row: {
+          confianca: number | null
+          conversa_id: string | null
+          created_at: string
+          estagio_antes: string | null
+          estagio_depois: string | null
+          id: string
+          intencao: string
+          mensagem_id: string
+          modelo: string | null
+          motivo_humano: string | null
+          objecao: string | null
+          objecao_texto: string | null
+          precisa_humano: boolean
+          prospect_id: string | null
+          resumo: string | null
+          temperatura: string
+          versao_do_prompt: string | null
+        }
+        Insert: {
+          confianca?: number | null
+          conversa_id?: string | null
+          created_at?: string
+          estagio_antes?: string | null
+          estagio_depois?: string | null
+          id?: string
+          intencao: string
+          mensagem_id: string
+          modelo?: string | null
+          motivo_humano?: string | null
+          objecao?: string | null
+          objecao_texto?: string | null
+          precisa_humano?: boolean
+          prospect_id?: string | null
+          resumo?: string | null
+          temperatura: string
+          versao_do_prompt?: string | null
+        }
+        Update: {
+          confianca?: number | null
+          conversa_id?: string | null
+          created_at?: string
+          estagio_antes?: string | null
+          estagio_depois?: string | null
+          id?: string
+          intencao?: string
+          mensagem_id?: string
+          modelo?: string | null
+          motivo_humano?: string | null
+          objecao?: string | null
+          objecao_texto?: string | null
+          precisa_humano?: boolean
+          prospect_id?: string | null
+          resumo?: string | null
+          temperatura?: string
+          versao_do_prompt?: string | null
         }
         Relationships: []
       }

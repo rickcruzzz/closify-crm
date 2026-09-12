@@ -7,18 +7,30 @@ Migrations novas mudam este arquivo com o tempo; ao suspeitar de
 desatualização, reconsulte o catálogo em vez de confiar cegamente nele (mesma
 regra de `docs/estado-atual.md`).
 
-<!-- contagem: banco.tabelas=22 banco.rpcs_do_projeto=36 banco.foreign_keys=34 banco.triggers=16 banco.enums=8 -->
+<!-- contagem: banco.tabelas=23 banco.rpcs_do_projeto=36 banco.foreign_keys=37 banco.triggers=16 banco.enums=8 -->
 **Estrutura reconferida em 12/09/2026.** Lida de `pg_catalog` e não do OpenAPI:
-**22 tabelas**, **36 RPCs do projeto**, **34 foreign keys**, **16 triggers**,
+**23 tabelas**, **36 RPCs do projeto**, **37 foreign keys**, **16 triggers**,
 **8 enums**, **41 check constraints** — mais **15 funções de trigger**, que não
 são RPC e por isso contam à parte.
 
-**A 22ª tabela é `prospeccao_prospect` (0084)**, e ela não é do produto: guarda
-o prospect abordado e o que aconteceu depois, com RLS ligada e **zero policy**,
-alcançável só por `service_role`. Mesmo padrão de `error_logs` e
-`descadastro_de_prospeccao`. As duas foreign keys novas são dela — `lead_id` e
-`workspace_id`, as duas anuláveis, porque a esmagadora maioria dos prospects
-nunca vira nem contato.
+**As duas tabelas novas são da PROSPECÇÃO do dono, não do produto** — RLS
+ligada e **zero policy**, alcançáveis só por `service_role`, mesmo padrão de
+`error_logs` e `descadastro_de_prospeccao`.
+
+`prospeccao_prospect` (0084) guarda o prospect abordado e o que aconteceu
+depois. As duas chaves dela — `lead_id` e `workspace_id` — são anuláveis,
+porque a esmagadora maioria dos prospects nunca vira nem contato.
+
+`prospeccao_interacao` (0086) guarda **uma linha por resposta classificada**:
+intenção, objeção, temperatura, confiança, modelo e versão do prompt. As três
+chaves dela são `prospect_id`, `conversa_id` e `mensagem_id` — e a última é
+**UNIQUE**, o que a torna a idempotência de toda a Fase 2: rodar o
+classificador duas vezes sobre a mesma fila não faz a mesma resposta contar
+duas vezes na estatística.
+
+**Guardar o modelo e a versão do prompt não é enfeite de auditoria.** Sem os
+dois, uma queda de qualidade depois de trocar de modelo fica indistinguível de
+*"os prospects pioraram"* — e a segunda conclusão manda mexer no lugar errado.
 
 **E uma RPC SUMIU, o que é raro o bastante para merecer a linha.**
 `purge_old_sinais_de_mercado` purgava `sinal_de_mercado`, que a 0075 removeu em
@@ -62,8 +74,8 @@ de custo: paywall no momento em que a pessoa sente o valor converte 8-12%,
 contra 3-4% de limite arbitrário — e as outras três são todas arbitrárias no
 sentido técnico do termo.
 
-<!-- contagem: migrations.arquivos=84 migrations.maior=0085 -->
-**84 arquivos de migration, e a maior é `0085`** (remedido em 12/09; o `0049`
+<!-- contagem: migrations.arquivos=85 migrations.maior=0086 -->
+**85 arquivos de migration, e a maior é `0086`** (remedido em 12/09; o `0049`
 não existe, removido em 22/08). Os dois números vêm sempre juntos: a contagem
 sozinha convida a inferir `0084`.
 

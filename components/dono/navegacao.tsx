@@ -4,6 +4,7 @@ import * as React from 'react'
 import { useRouter, usePathname } from 'next/navigation'
 import {
   BellRing,
+  Brain,
   Filter,
   Bookmark,
   Images,
@@ -61,6 +62,11 @@ const SECOES = [
   // respondia: o que exatamente vai sair. O texto so aparecia dentro do
   // `wa.me`, depois do clique — tarde demais para revisar.
   { href: '/dono/mensagens', rotulo: 'Mensagens', icone: MessageSquareText },
+  // Fecha o trio da prospeccao, e nesta ordem de proposito: Prospeccao e quem
+  // abordar, Mensagens e o que vai sair, Inteligencia e o que VOLTOU. Ela vem
+  // por ultimo porque so tem o que dizer depois que as outras duas rodaram — e
+  // porque ate 12/09 nao existia resposta nenhuma para ler.
+  { href: '/dono/inteligencia', rotulo: 'Inteligência', icone: Brain },
   // Logo depois de Alertas e Decidindo, e pelo mesmo critério de rotina: as
   // três são acionáveis HOJE. Alertas é o que o sistema detectou sozinho; esta
   // é o que o cliente DISSE — e é a única fonte de "por quê" que este produto
