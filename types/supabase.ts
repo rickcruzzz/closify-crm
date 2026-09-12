@@ -326,6 +326,7 @@ export type Database = {
       // do cliente: RLS ligada e zero policy, so `service_role` alcanca.
       prospeccao_prospect: {
         Row: {
+          automacao_detectada_em: string | null
           classificado_em: string | null
           created_at: string
           dominio: string
@@ -341,6 +342,7 @@ export type Database = {
           pontos: number | null
           precisa_humano: boolean
           respondido_em: string | null
+          respostas_automaticas: number
           telefone_ultimos8: string | null
           temperatura: string | null
           updated_at: string
@@ -348,6 +350,7 @@ export type Database = {
           workspace_id: string | null
         }
         Insert: {
+          automacao_detectada_em?: string | null
           classificado_em?: string | null
           created_at?: string
           dominio: string
@@ -363,6 +366,7 @@ export type Database = {
           pontos?: number | null
           precisa_humano?: boolean
           respondido_em?: string | null
+          respostas_automaticas?: number
           telefone_ultimos8?: string | null
           temperatura?: string | null
           updated_at?: string
@@ -370,6 +374,7 @@ export type Database = {
           workspace_id?: string | null
         }
         Update: {
+          automacao_detectada_em?: string | null
           classificado_em?: string | null
           created_at?: string
           dominio?: string
@@ -385,6 +390,7 @@ export type Database = {
           pontos?: number | null
           precisa_humano?: boolean
           respondido_em?: string | null
+          respostas_automaticas?: number
           telefone_ultimos8?: string | null
           temperatura?: string | null
           updated_at?: string

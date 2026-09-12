@@ -26,6 +26,7 @@ const base: ProspectObservado = {
   respondidoEm: null,
   mensagensRecebidas: 0,
   precisaHumano: false,
+  temAutomacao: false,
   mensagemEnviada: null,
 }
 

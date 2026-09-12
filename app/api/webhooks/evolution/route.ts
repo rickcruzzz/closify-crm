@@ -9,6 +9,7 @@ import {
   type MensagemRecebida,
 } from '@/lib/prospeccao/mensagem-recebida'
 import { EMPRESAS_DE_PROSPECCAO, EMPRESA_DA_PROSPECCAO } from '@/lib/prospeccao/empresas'
+import { ehRespostaAutomatica, segundosDepoisDoEnvio } from '@/lib/prospeccao/automacao'
 import { pediuParaSair, ultimos8 } from '@/lib/prospeccao/opt-out'
 import { registrarDescadastro } from '@/lib/prospeccao/opt-out-queries'
 import { createAdminClient } from '@/lib/supabase/admin'
@@ -212,11 +213,29 @@ export async function POST(request: Request) {
   const { data: prospect } = oito
     ? await supabase
         .from('prospeccao_prospect')
-        .select('id, dominio, nome')
+        .select('id, dominio, nome, enviado_em, respostas_automaticas, automacao_detectada_em')
         .eq('telefone_ultimos8', oito)
         .limit(1)
         .maybeSingle()
     : { data: null }
+
+  /**
+   * ## Robô NÃO é resposta, e marcar como se fosse mentiria no painel
+   *
+   * Medido no primeiro disparo real, em 12/09: 18 das 47 empresas responderam
+   * em 15 segundos de média. Nenhuma era pessoa — eram chatbots de atendimento
+   * ("Sou o Colibri, assistente virtual"). Isso produziria **38% de taxa de
+   * resposta** contra os 3,8-7,2% do setor, e a decisão que esse número
+   * orientaria é escalar para 200/dia sobre ruído.
+   *
+   * O que a detecção NÃO faz é descartar: a mensagem crua continua gravada, o
+   * aviso continua saindo, e a empresa fica marcada como **tendo automação** —
+   * que é o sinal "já paga por software" que `pontuarProspect` vale +3.
+   */
+  const robo = ehRespostaAutomatica(
+    mensagem.texto,
+    segundosDepoisDoEnvio(prospect?.enviado_em, new Date().toISOString()),
+  )
 
   // ## O opt-out é gravado ANTES da conversa
   //
@@ -334,14 +353,22 @@ export async function POST(request: Request) {
   }
 
   if (prospect) {
+    const agora = new Date().toISOString()
+    // Opt-out manda mesmo vindo de robô: se o texto pede para sair, sai.
+    const comoResposta = !robo.automatica || saiu
+
     await supabase
       .from('prospeccao_prospect')
       .update({
-        respondido_em: new Date().toISOString(),
-        estagio: saiu ? 'OPTED_OUT' : 'REPLIED',
+        ...(comoResposta
+          ? { respondido_em: agora, estagio: saiu ? 'OPTED_OUT' : 'REPLIED' }
+          : {
+              automacao_detectada_em: prospect.automacao_detectada_em ?? agora,
+              respostas_automaticas: (prospect.respostas_automaticas ?? 0) + 1,
+            }),
         lead_id: leadId,
         workspace_id: workspaceId,
-        updated_at: new Date().toISOString(),
+        updated_at: agora,
       })
       .eq('id', prospect.id)
   }
@@ -352,9 +379,11 @@ export async function POST(request: Request) {
   // a Evolution mora numa VPS que já saiu do ar: lançar por causa dela faria a
   // Evolution reentregar um evento cuja mensagem JÁ está no banco, e a única
   // consequência seria ruído.
-  const aviso = await avisarNoWhatsapp(
-    textoDoAviso(mensagem, prospect?.dominio ?? null, saiu),
-  )
+  const aviso = robo.automatica && !saiu
+    // Robô não acorda ninguém. Avisar a cada bot de atendimento treinaria o
+    // dono a ignorar o canal — que é exatamente o que ele existe para evitar.
+    ? { enviado: false, erro: `resposta automática (${robo.motivo}) — não avisei` }
+    : await avisarNoWhatsapp(textoDoAviso(mensagem, prospect?.dominio ?? null, saiu))
   if (!aviso.enviado) {
     console.error(`evolution: resposta de +${telefone} gravada, aviso falhou: ${aviso.erro}`)
   }
@@ -363,6 +392,7 @@ export async function POST(request: Request) {
     ok: true,
     gravado: gravou,
     optOut: saiu,
+    automatica: robo.automatica,
     prospect: prospect?.dominio ?? null,
     avisado: aviso.enviado,
   })

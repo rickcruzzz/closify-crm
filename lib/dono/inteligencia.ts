@@ -60,6 +60,8 @@ export type ProspectObservado = {
   respondidoEm: string | null
   mensagensRecebidas: number
   precisaHumano: boolean
+  /** A empresa tem robô no WhatsApp. NÃO é resposta — é sinal de que paga software. */
+  temAutomacao: boolean
   /** A mensagem exata que saiu. O gancho é a segunda linha dela. */
   mensagemEnviada: string | null
 }

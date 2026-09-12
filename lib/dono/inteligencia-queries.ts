@@ -57,7 +57,7 @@ export async function lerInteligencia(): Promise<InteligenciaCarregada> {
     // aqui em 12/09.
     supabase
       .from('prospeccao_prospect')
-      .select('dominio, nome, vertical, pontos, estagio, intencao, objecao, temperatura, enviado_em, respondido_em, mensagens_recebidas, precisa_humano, mensagem_enviada, telefone_ultimos8')
+      .select('dominio, nome, vertical, pontos, estagio, intencao, objecao, temperatura, enviado_em, respondido_em, mensagens_recebidas, precisa_humano, mensagem_enviada, telefone_ultimos8, automacao_detectada_em')
       .limit(TETO),
     supabase
       .from('prospeccao_interacao')
@@ -85,6 +85,7 @@ export async function lerInteligencia(): Promise<InteligenciaCarregada> {
     respondidoEm: p.respondido_em,
     mensagensRecebidas: p.mensagens_recebidas ?? 0,
     precisaHumano: p.precisa_humano ?? false,
+    temAutomacao: p.automacao_detectada_em !== null,
     mensagemEnviada: p.mensagem_enviada,
   }))
 
