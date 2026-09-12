@@ -50,19 +50,32 @@
  *
  * ## A imagem
  *
- * Vem de `PROSPECCAO_IMAGEM_URL` no `.env.local` e é **validada antes do
- * primeiro envio**: HEAD, `content-type` de imagem, tamanho acima de zero e
- * abaixo de 5 MB. Sem a variável, o disparo é só texto — que é o
- * comportamento seguro, e não um erro.
+ * Dois caminhos, e o de ARQUIVO é o preferido:
+ *
+ *     PROSPECCAO_IMAGEM_ARQUIVO   caminho no disco, mandado em base64
+ *     PROSPECCAO_IMAGEM_URL       endereço público, a Evolution que baixa
+ *
+ * O arquivo ganha porque a peça nasce em `public/`, e `public/` só vira URL
+ * pública **depois de um deploy**. Amarrar o disparo ao deploy significa que
+ * trocar a arte pede uma promoção na Vercel — e a promoção aqui é manual. Com
+ * base64 a arte gerada agora sai na mensagem seguinte.
+ *
+ * Medido antes de escolher: `sendMedia` com `media` em base64 devolve 201 com
+ * `imageMessage`, igual à URL. Não é suposição.
+ *
+ * Os dois são **validados antes do primeiro envio** — o arquivo pela
+ * assinatura dos bytes, a URL por HEAD e `content-type`, os dois pelo teto de
+ * 5 MB. Sem nenhuma das variáveis, o disparo é só texto, que é o
+ * comportamento seguro e não um erro.
  *
  * Imagem quebrada não é detalhe estético aqui: ela chega como quadrado cinza
  * no WhatsApp de uma empresa que nunca ouviu falar da gente, e é exatamente o
  * gatilho de "Bloquear e denunciar".
  */
 
-import { readFile, writeFile } from 'node:fs/promises'
+import { readFile, writeFile, stat } from 'node:fs/promises'
 import { existsSync } from 'node:fs'
-import { join } from 'node:path'
+import { join, isAbsolute, basename } from 'node:path'
 
 const RAIZ = process.cwd()
 const ESTADO = join(RAIZ, '.dono-prospeccao.json')
@@ -72,6 +85,20 @@ const EVOLUTION = process.env.EVOLUTION_BASE_URL ?? 'https://8-evolution-api.zoh
 const CHAVE = process.env.EVOLUTION_API_KEY
 const INSTANCIA = process.env.EVOLUTION_INSTANCIA ?? 'VELO'
 const IMAGEM = process.env.PROSPECCAO_IMAGEM_URL ?? null
+/**
+ * A arte escolhida pelo dono em 11/09: a comparação de preço.
+ *
+ * O padrão aponta para um arquivo em vez de ficar vazio porque a decisão já
+ * foi tomada — deixar `null` faria o disparo sair só com texto até alguém
+ * lembrar de exportar uma variável, e "esqueci de ligar a imagem" é
+ * indistinguível de "escolhi não mandar" olhando o log.
+ *
+ * Foi escolhida contra quatro alternativas geradas no mesmo dia (dor, lacuna,
+ * prova pelo print, risco) — a razão está no cabeçalho de
+ * `scripts/marketing/gerar-peca-prospeccao.py`, que continua gerando as cinco.
+ */
+const IMAGEM_ARQUIVO =
+  process.env.PROSPECCAO_IMAGEM_ARQUIVO ?? 'public/prospeccao/3-preco.png'
 
 const args = process.argv.slice(2)
 const confirmar = args.includes('--confirmar')
@@ -133,6 +160,41 @@ function abortar(mensagem) {
 }
 
 /**
+ * O arquivo existe, cabe no teto, e é mesmo uma imagem?
+ *
+ * A conferência é pela ASSINATURA dos bytes, não pela extensão. Extensão é
+ * texto que qualquer um escreve: um `.png` que na verdade é um HTML de erro
+ * salvo por engano passaria no teste da extensão e chegaria como quadrado
+ * cinza no WhatsApp de uma empresa que nunca ouviu falar da gente — que é
+ * exatamente o gatilho de "Bloquear e denunciar" que este script inteiro
+ * existe para evitar.
+ *
+ * Devolve o base64 junto: lido UMA vez e reusado nos 300 envios. Reler o
+ * arquivo por mensagem seria I/O à toa, e reconverter também.
+ */
+async function conferirArquivo(caminho) {
+  const abs = isAbsolute(caminho) ? caminho : join(RAIZ, caminho)
+  if (!existsSync(abs)) return { erro: `não existe: ${caminho}` }
+  const { size } = await stat(abs)
+  if (size === 0) return { erro: 'arquivo vazio' }
+  if (size > IMAGEM_MAX_BYTES) {
+    return { erro: `${(size / 1e6).toFixed(1)} MB, acima do teto de 5 MB` }
+  }
+  const bytes = await readFile(abs)
+  const png = bytes[0] === 0x89 && bytes[1] === 0x50 && bytes[2] === 0x4e && bytes[3] === 0x47
+  const jpeg = bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff
+  if (!png && !jpeg) {
+    return { erro: 'os primeiros bytes não são de PNG nem de JPEG' }
+  }
+  return {
+    tipo: png ? 'image/png' : 'image/jpeg',
+    bytes: size,
+    base64: bytes.toString('base64'),
+    nome: basename(abs),
+  }
+}
+
+/**
  * A imagem existe, responde e é mesmo uma imagem?
  *
  * Conferido UMA vez, antes do primeiro envio — não a cada mensagem: 300 HEADs
@@ -178,12 +240,14 @@ const evolution = async (caminho, corpo) => {
  * exato que a detecção de automação procura — e ainda deixa a janela de a
  * segunda falhar com a primeira já entregue.
  */
-async function enviarUm(numero, texto, imagemOk) {
-  if (imagemOk) {
+async function enviarUm(numero, texto, arte) {
+  if (arte) {
     return evolution('/message/sendMedia', {
       number: numero,
       mediatype: 'image',
-      media: IMAGEM,
+      ...(arte.base64
+        ? { media: arte.base64, mimetype: arte.tipo, fileName: arte.nome }
+        : { media: arte.url }),
       caption: texto,
     })
   }
@@ -245,14 +309,27 @@ async function main() {
   if (SO) fila = fila.filter((p) => p.dominio === SO || p.numero === SO)
   fila = fila.slice(0, MAX)
 
-  let imagemOk = false
+  // O ARQUIVO vem primeiro: ele é a arte que está no disco agora, enquanto a
+  // URL depende de um deploy ter acontecido. Quando as duas estão definidas,
+  // a mais nova é sempre a do disco.
+  let arte = null
   let imagemInfo = 'sem imagem (só texto)'
-  if (IMAGEM) {
+  if (IMAGEM_ARQUIVO) {
+    const c = await conferirArquivo(IMAGEM_ARQUIVO)
+    if (c.erro) {
+      imagemInfo = `ARQUIVO RECUSADO: ${c.erro} — a rodada seguiria só com texto`
+    } else {
+      arte = c
+      imagemInfo = `${IMAGEM_ARQUIVO} (${c.tipo}, ${(c.bytes / 1024).toFixed(0)} KB, base64)`
+    }
+  } else if (IMAGEM) {
     const c = await conferirImagem(IMAGEM)
-    imagemOk = !c.erro
-    imagemInfo = c.erro
-      ? `IMAGEM RECUSADA: ${c.erro} — a rodada seguiria só com texto`
-      : `${c.tipo}, ${(c.bytes / 1024).toFixed(0)} KB`
+    if (c.erro) {
+      imagemInfo = `IMAGEM RECUSADA: ${c.erro} — a rodada seguiria só com texto`
+    } else {
+      arte = { url: IMAGEM, tipo: c.tipo, bytes: c.bytes }
+      imagemInfo = `${c.tipo}, ${(c.bytes / 1024).toFixed(0)} KB (URL)`
+    }
   }
 
   console.log(`  instância         ${INSTANCIA} (${conexao}), ${inst.owner ?? inst.number ?? '—'}`)
@@ -297,10 +374,10 @@ async function main() {
       break
     }
 
-    const r = await enviarUm(p.numero, p.texto, imagemOk)
+    const r = await enviarUm(p.numero, p.texto, arte)
 
     if (r.ok) {
-      await marcarEnviado(p.dominio, { via: 'evolution', comImagem: imagemOk })
+      await marcarEnviado(p.dominio, { via: 'evolution', comImagem: Boolean(arte) })
       enviados++
       falhasSeguidas = 0
       const st = r.json?.status ?? 'enviado'

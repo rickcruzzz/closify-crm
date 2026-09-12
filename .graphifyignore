@@ -84,3 +84,11 @@ marketing/google-perfil/*.png
 .repro-*.mjs
 .avaliar-*.mjs
 .planilhas-prova/
+
+# Pecas da prospeccao por WhatsApp, pela MESMA regra do binario de marketing.
+# Sao cinco variantes geradas em 11/09 para o dono escolher — ele escolheu a de
+# preco —, e nenhuma responde "onde o preco e lido": quem responde isso e
+# `lib/plans.ts`, de onde o gerador le o numero. O gerador
+# (`scripts/marketing/gerar-peca-prospeccao.py`) continua dentro do grafo,
+# porque e ele que carrega o argumento de cada peca e a medicao que o sustenta.
+public/prospeccao/*.png
