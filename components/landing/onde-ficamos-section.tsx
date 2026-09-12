@@ -107,8 +107,17 @@ const FOTO = existsSync(join(process.cwd(), 'public', ARQUIVO_DA_FOTO))
        * texto porque é ele que casa com o endereço escrito ao lado.
        */
       alt: 'Entrada do CEO Salvador Shopping, com a placa do número 2539 na calçada',
-      largura: 1536,
-      altura: 2048,
+      /**
+       * As dimensoes REAIS do arquivo, e elas precisam bater.
+       *
+       * `next/image` usa as duas para reservar a caixa antes de a imagem
+       * chegar — e o CLS que isso evita e a falha que o guia de UX do projeto
+       * lista primeiro. Numero chutado aqui nao quebra nada visivelmente: a
+       * caixa e reservada com a proporcao errada, o conteudo abaixo salta
+       * quando a imagem carrega, e o salto e atribuido a "site pesado".
+       */
+      largura: 399,
+      altura: 501,
     }
   : null
 
@@ -141,7 +150,7 @@ export function OndeFicamosSection() {
           /* Coluna única até `lg`: a foto de um prédio e um bloco de endereço
              lado a lado em 700px ficam com 320px cada, e nessa largura a foto
              perde o que ela existe para mostrar. */
-          className="bg-card border-border superficie-elevada mx-auto flex max-w-3xl flex-col gap-6 rounded-xl border p-5 sm:p-6 lg:flex-row lg:items-center lg:gap-8"
+          className="bg-card border-border superficie-elevada mx-auto flex max-w-4xl flex-col gap-6 rounded-xl border p-5 sm:p-6 lg:flex-row lg:items-center lg:gap-8"
         >
           {FOTO ? (
             /* ## A proporção mora no CONTAINER, não no arquivo
@@ -153,11 +162,18 @@ export function OndeFicamosSection() {
                É a mesma regra que o gerador de criativos aprendeu em 09/09,
                quando espremia o print em 2,7x.
 
-               `object-[50%_38%]` e não `center`: o centro geométrico desta
-               foto é palmeira, e o que precisa sobreviver ao corte é a placa
-               com o 2539 — ela é o que casa com o número escrito ao lado, e é
-               o que transforma a imagem de ilustração em prova. Calibrado no
-               navegador, não estimado. */
+               `object-[50%_72%]` e nao `center`, e o 72 saiu de conta, nao
+               de gosto. A caixa 4:3 mostra 60% das 501 linhas da foto, e a
+               placa com o CEO e o 2539 ocupa de 58% a 86% da altura:
+
+                   38%   visivel 15% a 75%   corta a placa
+                   55%   visivel 22% a 82%   corta a placa
+                   65%   visivel 26% a 86%   corta a placa na borda
+                   72%   visivel 29% a 89%   PLACA INTEIRA
+
+               O que se perde em troca e o ceu do topo, que nao prova nada. O
+               que sobrevive e o unico elemento da imagem que casa com o texto
+               ao lado — sem ele isto vira foto de predio qualquer. */
             <div className="relative aspect-[4/3] w-full shrink-0 overflow-hidden rounded-lg lg:w-[420px]">
               <Image
                 src={FOTO.src}
@@ -186,7 +202,7 @@ export function OndeFicamosSection() {
                    Declarar `100vw` faria o navegador orçar para uma caixa
                    maior do que existe e atravessar um degrau inteiro. */
                 sizes="(min-width: 1024px) 420px, (min-width: 640px) 91vw, 84vw"
-                className="size-full object-cover object-[50%_38%]"
+                className="size-full object-cover object-[50%_72%]"
               />
               {/* A borda vai por dentro, sobre a imagem: `border` no
                   container seria coberto pelo `object-cover` do filho nos
@@ -211,15 +227,19 @@ export function OndeFicamosSection() {
                   não frase (o mesmo uso que a seção de confiança já faz do
                   `font-mono` nos rótulos). */}
               <address className="flex flex-col gap-1.5 not-italic">
+                {/* O numero fica SOZINHO na linha de destaque, e isso e o
+                    ponto: ele e o unico dado do bloco que a foto ao lado
+                    tambem mostra, na placa. Com o complemento junto, a linha
+                    quebrava no meio de "— Sala 2609" e o 2539 perdia o peso
+                    que faz a ligacao acontecer. */}
                 <span className="text-lg leading-snug font-semibold">
                   {endereco.logradouro}, {endereco.numero}
-                  {endereco.complemento ? ` — ${endereco.complemento}` : ''}
                 </span>
-                {endereco.edificio ? (
-                  <span className="text-muted-foreground text-sm leading-relaxed">
-                    {endereco.edificio}
-                  </span>
-                ) : null}
+                <span className="text-muted-foreground text-sm leading-relaxed">
+                  {[endereco.complemento, endereco.edificio]
+                    .filter(Boolean)
+                    .join(' · ')}
+                </span>
                 <span className="text-muted-foreground text-sm leading-relaxed">
                   {endereco.bairro} · {endereco.cidade}/{endereco.uf}
                 </span>
