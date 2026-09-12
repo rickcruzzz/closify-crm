@@ -36,12 +36,14 @@
  *                           segundo item da lista do que bane
  *     intervalo             45s a 150s SORTEADO. Cadencia fixa e assinatura de
  *                           robo mais obvia que a pressa
- *     horario               9h-18h seg a sex e 9h-13h no SABADO, em Sao
- *                           Paulo. Domingo nao. Mensagem comercial as 3h da
- *                           manha e denuncia na certa — mas as 10h de sabado
- *                           o dono da marcenaria esta na marcenaria, e a
- *                           regra antiga jogava fora 20% das janelas do mes.
- *                           O porque de cada nicho esta em `dentroDoHorario`
+ *     horario               9h as 16h de Sao Paulo, seg a SABADO. Domingo
+ *                           nao. Mensagem comercial as 3h da manha e denuncia
+ *                           na certa, e as 17h30 e lida no dia seguinte junto
+ *                           com o acumulo. O porque de cada limite, e o que o
+ *                           sabado a tarde custa, estao em `dentroDoHorario`
+ *     --bloco=N             pausa longa a cada N mensagens. Cinco horas de
+ *                           atividade sem um minuto de silencio e um padrao
+ *                           que o intervalo sorteado nao quebra
  *     estado ANTES do sono  grava assim que a Evolution confirma, entao Ctrl+C
  *                           nunca reenvia
  *     taxa de erro          3 falhas seguidas PARAM a rodada. Evolution fora
@@ -114,6 +116,57 @@ const SO_APROVADOS = args.includes('--so-aprovados')
 
 const INTERVALO_MIN = 45_000
 const INTERVALO_MAX = 150_000
+
+/**
+ * Quantas mensagens por bloco, antes da pausa longa. `0` desliga.
+ *
+ * Zero por padrão porque é o comportamento que já existia, e mudar o padrão
+ * mudaria rodadas que alguém já sabe como se comportam. Quem quer blocos
+ * pede: `--bloco=50`.
+ */
+const BLOCO = Number(args.find((a) => a.startsWith('--bloco='))?.split('=')[1] ?? 0)
+/**
+ * A pausa entre blocos, sorteada.
+ *
+ * 25 a 55 minutos é a faixa de um intervalo humano de verdade — café, um
+ * cliente no balcão, almoço. Fixar em 40 exatos criaria um relógio, e relógio
+ * é justamente o que a detecção procura.
+ */
+const PAUSA_MIN = 25 * 60_000
+/**
+ * 40 e nao 55: a janela encolheu para sete horas em 12/09, e com o teto
+ * antigo o SORTEIO podia estourar. Medido para 200 em blocos de 50 — media
+ * 7,0h e pior caso 7,4h, contra as 7h disponiveis. Uma rodada que depende de
+ * sorte para caber nao cabe.
+ */
+const PAUSA_MAX = 40 * 60_000
+
+/**
+ * A janela de disparo, em hora de Sao Paulo. Decisao do dono em 12/09.
+ *
+ * ## Por que 16h e nao 18h
+ *
+ * Pedido dele, e e mais conservador do que estava. As duas ultimas horas do
+ * expediente sao as piores para abordagem fria: quem esta fechando o dia nao
+ * comeca conversa nova, e mensagem comercial as 17h30 e lida no dia seguinte
+ * junto com o resto — ou seja, ela concorre com o acumulo em vez de chegar
+ * sozinha.
+ *
+ * ## E o sabado usa a MESMA janela, com uma ressalva escrita
+ *
+ * Ela era 9h-13h no sabado, pelo argumento de que os cinco nichos fecham ao
+ * meio-dia. O dono pediu 9h-16h para todos os dias, e isso vale — a decisao e
+ * dele e o numero e dele.
+ *
+ * Fica registrado o que a mudanca custa, para a leitura do resultado nao
+ * confundir as coisas: **sabado depois das 13h e mais fraco para ESTE ICP**.
+ * Dedetizadora, marcenaria e comunicacao visual costumam fechar ao meio-dia,
+ * entao mensagem das 14h em diante tende a ser lida so na segunda. Se a taxa
+ * de resposta do sabado vier baixa, o horario e uma explicacao antes de a
+ * mensagem ser culpada.
+ */
+const ABRE = 9
+const FECHA = 16
 /** Falhas seguidas que param a rodada. */
 const FALHAS_SEGUIDAS_ATE_PARAR = 3
 /** Teto do arquivo de imagem. Acima disso o WhatsApp recomprime e demora. */
@@ -189,8 +242,7 @@ function agoraEmSaoPaulo() {
 function dentroDoHorario() {
   const { hora, diaDaSemana } = agoraEmSaoPaulo()
   if (/^dom/i.test(diaDaSemana)) return false
-  if (/^sáb/i.test(diaDaSemana)) return hora >= 9 && hora < 13
-  return hora >= 9 && hora < 18
+  return hora >= ABRE && hora < FECHA
 }
 
 async function lerEstado() {
@@ -449,6 +501,12 @@ async function main() {
 
   fila = fila.slice(0, MAX)
 
+  // Quantas pausas longas a rodada vai ter. Declarado AQUI porque o resumo
+  // logo abaixo ja o imprime, e o tempo total mais adiante o soma: sem isso a
+  // estimativa diria 5,4h para uma rodada que leva 8, e a pessoa planejaria o
+  // dia pelo numero errado.
+  const pausas = BLOCO > 0 ? Math.floor((fila.length - 1) / BLOCO) : 0
+
   // Conta sobre a fila QUE VAI SAIR, não sobre a fila inteira: o que importa
   // é quantas das próximas `--max` mensagens vão para nicho reprovado.
   const reprovados = {}
@@ -487,6 +545,12 @@ async function main() {
   console.log(`  já com marca      ${Object.keys(jaMarcados).length}`)
   console.log(`  vão nesta rodada  ${fila.length}  (teto --max=${MAX})`)
   console.log(`  intervalo         ${INTERVALO_MIN / 1000}s a ${INTERVALO_MAX / 1000}s, sorteado`)
+  if (BLOCO > 0) {
+    console.log(
+      `  blocos            ${BLOCO} por bloco, pausa de ` +
+        `${PAUSA_MIN / 60_000}-${PAUSA_MAX / 60_000} min entre eles (${pausas} pausa(s))`,
+    )
+  }
   console.log(`  imagem            ${imagemInfo}`)
   if (duplicados.length > 0) {
     console.log(
@@ -523,7 +587,11 @@ async function main() {
 
   if (fila.length === 0) return console.log('\n  Nada a enviar.\n')
 
-  const minutos = Math.round((fila.length * ((INTERVALO_MIN + INTERVALO_MAX) / 2)) / 60_000)
+  const minutos = Math.round(
+    (fila.length * ((INTERVALO_MIN + INTERVALO_MAX) / 2) +
+      pausas * ((PAUSA_MIN + PAUSA_MAX) / 2)) /
+      60_000,
+  )
 
   if (!confirmar) {
     if (foraDaJanela) {
@@ -595,7 +663,42 @@ async function main() {
       }
     }
 
-    if (i < fila.length - 1) await dormir(sortear(INTERVALO_MIN, INTERVALO_MAX))
+    if (i >= fila.length - 1) continue
+
+    /**
+     * ## A pausa longa entre BLOCOS — 12/09
+     *
+     * Pedido do dono ao subir para 200/dia: dividir em blocos pequenos ao
+     * longo do dia em vez de uma fita corrida de cinco horas.
+     *
+     * O intervalo sorteado de 45-150s já quebra a cadência fixa, que é a
+     * assinatura mais óbvia. O que ele NÃO quebra é o outro padrão: cinco
+     * horas de atividade ininterrupta, sem um minuto de silêncio. Pessoa
+     * nenhuma manda mensagem a cada dois minutos por cinco horas seguidas —
+     * ela atende um cliente, almoça, some.
+     *
+     * A pausa também é sorteada, pela mesma razão que o intervalo é: 40
+     * minutos exatos entre blocos é um relógio, e relógio é o que se detecta.
+     *
+     * **`Ctrl+C` durante a pausa não perde nada**, como em qualquer outro
+     * ponto: o estado foi gravado antes de dormir.
+     */
+    const fimDeBloco = BLOCO > 0 && (i + 1) % BLOCO === 0
+    if (fimDeBloco) {
+      const pausa = sortear(PAUSA_MIN, PAUSA_MAX)
+      const volta = new Intl.DateTimeFormat('pt-BR', {
+        timeZone: 'America/Sao_Paulo',
+        timeStyle: 'short',
+      }).format(new Date(Date.now() + pausa))
+      console.log(
+        `\n  bloco de ${BLOCO} fechado (${i + 1}/${fila.length}). ` +
+          `Pausa de ${Math.round(pausa / 60_000)} min, volta ~${volta}.\n`,
+      )
+      await dormir(pausa)
+      continue
+    }
+
+    await dormir(sortear(INTERVALO_MIN, INTERVALO_MAX))
   }
 
   const duracao = Math.round((Date.now() - comecou) / 60_000)
