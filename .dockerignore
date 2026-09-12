@@ -1,0 +1,23 @@
+# O que NAO entra na imagem.
+#
+# `.dono-prospeccao.json` e o mais importante da lista, e por um motivo que nao
+# e tamanho: se ele fosse copiado, o estado do container ficaria congelado no
+# instante do BUILD. Toda reimplantacao voltaria a fila para tras e reenviaria
+# para quem ja recebeu no meio.
+#
+# Ele entra por VOLUME, que e o que permite ele sobreviver e evoluir.
+.dono-prospeccao.json
+.rodadas.json
+
+node_modules
+.next
+.next-check
+.git
+.env
+.env.local
+.env*.local
+graphify-out
+test-results
+playwright-report
+tests/e2e
+*.log
