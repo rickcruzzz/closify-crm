@@ -159,12 +159,49 @@ def botao(d, texto, y, img=None):
     A altura sai de `fnt.size`, não de um número fixo: trocar o corpo do texto
     sem trocar a altura produziria ou um botão apertado ou um vão em volta da
     palavra, e os dois leem como render torto.
+
+    ## Este botão é DESENHADO porque o nativo não funciona — medido em 12/09
+
+    O dono mandou o print dos botões nativos do WhatsApp e pediu essa pegada.
+    Testei quatro formatos pela Evolution 2.3.7 e **os quatro foram aceitos**:
+    `sendButtons` com link, com link e imagem, e com botões de resposta,
+    todos HTTP 201.
+
+    **E nenhum renderizou.** No aparelho não aparece nada; no WhatsApp Web
+    chega *"Não foi possível carregar a mensagem. Use seu celular para
+    acessá-la."* Um `sendText` comum mandado no mesmo instante, para o mesmo
+    aparelho, chegou normal — o controle que separa "o formato não funciona"
+    de "a conexão está ruim".
+
+    A causa é a ponte: a Evolution fala por Baileys, que embrulha interativo
+    em `viewOnceMessage`, e o cliente oficial deixou de desenhar isso quando
+    vem de fora da API oficial. Botão interativo de verdade continua sendo
+    recurso da Cloud API, em template aprovado.
+
+    **É pior que não ter botão.** Em 837 empresas, cada uma receberia uma
+    mensagem que não abre — e uma mensagem ilegível de remetente desconhecido
+    é candidata direta a "Bloquear e denunciar", que é o primeiro dos quatro
+    padrões que derrubam número.
+
+    Então a seta aqui não é enfeite: ela é o que faz um retângulo pintado
+    parecer o botão que não dá para mandar.
     """
     fnt = g.fonte("Bold", 40)
     pad_x = int(g.W * 0.042)
     pad_y = int(fnt.size * 0.52)
     larg_texto = d.textlength(texto, font=fnt)
-    larg = int(larg_texto) + pad_x * 2
+    # ## A seta é DESENHADA, não é um caractere
+    #
+    # `→` depende de o glifo existir na Geist e de o Pillow escolher a fonte
+    # certa; quando falta, sai o retângulo de "caractere ausente" no meio do
+    # botão, e nada na geração avisa. Emoji está fora pela regra do projeto.
+    #
+    # Traçado geométrico também escala junto com o texto sem depender de
+    # métrica de fonte, e fica nítido na miniatura do WhatsApp, que é onde a
+    # peça é vista primeiro.
+    seta = int(fnt.size * 0.62)
+    vao = int(fnt.size * 0.55)
+    larg = int(larg_texto) + vao + seta + pad_x * 2
     alt = fnt.size + pad_y * 2
     x0 = g.MARGEM_ESQ
 
@@ -190,6 +227,18 @@ def botao(d, texto, y, img=None):
     # sobre teal vibra na borda das letras quando a peça é reamostrada para a
     # miniatura do WhatsApp.
     d.text((x0 + pad_x, y + pad_y - 3 * g.ESCALA), texto, font=fnt, fill=g.BRANCO)
+
+    # A seta: haste e duas diagonais, centradas na altura do botão. Ponta
+    # arredondada (`joint="curve"`) porque canto vivo em traço fino de 4px
+    # serrilha quando a peça é reamostrada de 2160 para 1080.
+    cx = x0 + pad_x + int(larg_texto) + vao
+    cy = y + alt // 2
+    trav = max(2, int(fnt.size * 0.105)) * g.ESCALA // 2 * 2
+    ponta = int(seta * 0.40)
+    d.line([(cx, cy), (cx + seta, cy)], fill=g.BRANCO, width=trav)
+    d.line([(cx + seta - ponta, cy - ponta), (cx + seta, cy),
+            (cx + seta - ponta, cy + ponta)],
+           fill=g.BRANCO, width=trav, joint="curve")
     return y + alt
 
 
