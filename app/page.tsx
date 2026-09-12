@@ -10,6 +10,7 @@ import { FeaturesSection } from '@/components/landing/features-section'
 import { ConfiancaSection } from '@/components/landing/confianca-section'
 import { PricingSection } from '@/components/landing/pricing-section'
 import { FaqSection, faqs } from '@/components/landing/faq-section'
+import { OndeFicamosSection } from '@/components/landing/onde-ficamos-section'
 import {
   aplicacao,
   organizacao,
@@ -179,6 +180,19 @@ export default function Home() {
         {/* A FAQ fica entre preço e CTA final de propósito: é onde a objeção
             aparece, a pessoa acabou de ver quanto custa e ainda não decidiu. */}
         <FaqSection />
+        {/* "Onde ficamos" entre a última objeção e o convite final, e essa
+            posição é a decisão.
+
+            Depois do CTA ele deixaria de ser a última coisa lida — o botão
+            iria para o meio da página e o fecho viraria um endereço, que
+            informa e não converte. Antes da FAQ também não: "vocês existem?"
+            é objeção, e a FAQ é o bloco que responde objeção; ela viria no
+            meio da conversa em vez de fechá-la.
+
+            Aqui ela faz o que a `ConfiancaSection` faz com o CNPJ, um degrau
+            adiante: lá a prova é um número que se consulta, aqui é um lugar
+            que se visita. */}
+        <OndeFicamosSection />
         <CtaSection />
       </main>
       <PublicFooter />
