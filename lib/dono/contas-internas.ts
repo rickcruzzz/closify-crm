@@ -66,6 +66,44 @@ const EMAILS_INTERNOS = new Set([
   // banco, não deduzido do nome. Juntas geraram 11 dos 21 erros de produção.
   'oauthtestks@gmail.com',
   'oauthtestmsn@gmail.com',
+  // Colega do dono, que entrou para experimentar em 12/09 às 00h06. Zero
+  // contato, zero negócio, um login — conferido no banco, não deduzido.
+  //
+  // Entra aqui porque ele responde `prestador` / `serviços` no onboarding, ou
+  // seja, cai EXATAMENTE no ICP. Sem esta linha ele contaria como o segundo
+  // cliente externo do público-alvo em toda leitura futura — e essa é a
+  // contagem que decide prioridade de roadmap.
+  //
+  // É a manutenção que o comentário do topo deste arquivo pede: lista
+  // conferida uma a uma, porque nenhum padrão de e-mail distingue o colega de
+  // alguém que chegou sozinho.
+  'fabriciodev01@gmail.com',
+  /**
+   * ## As cinco contas de `gmail.com` que sobravam — 12/09
+   *
+   * Perguntado quem era cliente de verdade, o dono respondeu: **"o único real
+   * é Portal"**. Estas cinco criaram empresa, não estão em nenhuma lista e
+   * nenhum filtro de domínio as pegaria, porque são `gmail.com` comuns.
+   *
+   * Entram em INTERNOS e não em `EMAILS_DO_DONO` de propósito: o comentário
+   * daquela lista diz que ela *"só cresce com conta que você mesmo criou"*, e
+   * eu não sei se são dele ou de conhecidos como o Fabrício. "Não é cliente"
+   * é o que foi afirmado, e é só isso que estas linhas registram.
+   *
+   * Duas delas carregam o achado que motivou a varredura:
+   *
+   *     rede riviera   1 contato  e  52 negocios
+   *     fcvb ds        0 contatos e  50 negocios
+   *
+   * Negócio sem contato não é uso — é seed. Um cliente real com 52 negócios
+   * teria 52 contatos, e essa desproporção era o sinal antes de a pergunta ser
+   * feita.
+   */
+  'gabrielcarcru25@gmail.com',
+  'estefanyy929a@gmail.com',
+  'estefanymayara56@gmail.com',
+  'enem85568@gmail.com',
+  'imperium.business7i@gmail.com',
 ])
 
 /**
@@ -108,6 +146,11 @@ const DOMINIOS_DESCARTAVEIS = new Set([
   'archifun.com',
   'ehwit.com',
   'prodbits.com',
+  // Faltavam, e as duas contas que os usam apareciam como cliente EXTERNO —
+  // achado em 12/09 ao listar quem sobrava depois da lista atual. `fcvb ds`
+  // ainda tem 50 negócios com ZERO contato, que é padrão de seed e não de uso.
+  'fanzher.com',
+  'dd2car.com',
   // Domínios que só existem dentro dos scripts de teste deste repositório.
   'exemplo-teste.com.br',
   'acmecorp.com.br',

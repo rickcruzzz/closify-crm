@@ -23,6 +23,8 @@ import {
 import { EMAIL_DE_AVISO_DO_DONO } from '@/lib/emails/destinatario'
 import { renderVigiaEmail } from '@/lib/emails/vigia'
 import { getResend } from '@/lib/resend/client'
+import { textoDoAviso } from '@/lib/dono/aviso-whatsapp'
+import { avisarNoWhatsapp } from '@/lib/dono/aviso-whatsapp-envio'
 import { createAdminClient } from '@/lib/supabase/admin'
 
 /**
@@ -419,6 +421,29 @@ export async function GET(request: Request) {
     minute: '2-digit',
   }).format(agora)
 
+  /**
+   * ## O WhatsApp sai ANTES do e-mail, e a ordem é a decisão — 12/09
+   *
+   * O vigia sempre funcionou. O que falhava era o degrau humano: em 06/09 ele
+   * detectou o webhook do Asaas parado e mandou o e-mail às 00h, e ninguém
+   * abriu — o webhook ficou parado mais dois dias. A mesma coisa em 08/09 e
+   * em 12/09. Quatro paradas em nove dias, todas detectadas, nenhuma lida a
+   * tempo.
+   *
+   * Primeiro porque é o canal que o dono de fato lê, e um aviso que chega
+   * depois de a função estourar o tempo é igual a aviso nenhum. A falha aqui
+   * NÃO interrompe nada: o e-mail sai logo abaixo com o detalhe, e a memória
+   * só é gravada depois dele.
+   */
+  const whats = await avisarNoWhatsapp(
+    textoDoAviso(novidades, jaAvisouDasFalhas ? [] : naoConferido, dia),
+  )
+  if (!whats.enviado) {
+    // Registrado e seguido em frente: o e-mail é o canal que fecha o ciclo, e
+    // derrubar o vigia porque a VPS caiu seria trocar um canal por nenhum.
+    console.error('vigia: WhatsApp não saiu —', whats.erro)
+  }
+
   const { error } = await getResend().emails.send({
     from: 'Velo Funil <suporte@velofunil.com.br>',
     to: DESTINATARIO,
@@ -448,6 +473,8 @@ export async function GET(request: Request) {
 
   return NextResponse.json({
     enviado: true,
+    whatsapp: whats.enviado,
+    ...(whats.erro ? { whatsappErro: whats.erro } : {}),
     novidades: novidades.length,
     naoConferido: naoConferido.length,
   })
