@@ -122,16 +122,22 @@ export function PublicNavbar() {
               custaria caminho de conversão em troca de nada, já que ali ele
               cabe. Abaixo de 360 o mesmo "Começar grátis" continua no menu
               lateral e no Hero, que fica logo abaixo. */}
-          {/* No CELULAR este botão some quando a barra fixa do rodapé sobe.
+          {/* ## Este botão voltou a acompanhar a rolagem no celular — 12/09
 
-              Medido em 24/08: ao rolar, os dois apareciam juntos — mesmo
-              texto, mesma cor, dois botões idênticos na mesma tela, somando
-              138px (16% da viewport) de moldura fixa. `mobile-sticky-cta`
-              existe para SUBSTITUIR este numa tela pequena, não para
-              acompanhá-lo; dois CTAs iguais competindo dividem a atenção em
-              vez de somar.
+              Até aqui ele SUMIA ao rolar, porque a barra fixa do rodapé subia
+              para substituí-lo: medido em 24/08, os dois apareciam juntos com
+              o mesmo texto e a mesma cor, somando 138px (16% da viewport) de
+              moldura fixa, e dois CTAs iguais dividem a atenção em vez de
+              somar.
 
-              No desktop (`md:`) nada muda: lá a barra do rodapé nem existe. */}
+              A barra saiu por decisão do dono em 12/09. Manter o `hidden`
+              deixaria a pessoa rolar 12.000px sem nenhum "Começar grátis"
+              alcançável — que é pior do que os dois botões que a regra
+              evitava. Agora ele é o ÚNICO CTA persistente no celular.
+
+              A condição continua existindo para o caso oposto: com o hero
+              visível, o botão dele está logo abaixo, e repetir o mesmo convite
+              a 500px de distância é a redundância de 24/08 com outro nome. */}
           <NavCtaLink
             href="/cadastro"
             className={cn(
@@ -142,7 +148,7 @@ export function PublicNavbar() {
               // botão continuava visível. Duas utilities de `display` no mesmo
               // elemento é briga de especificidade que o Tailwind resolve pela
               // ordem no CSS gerado, não pela ordem que se escreve aqui.
-              heroVisivel ? 'hidden min-[340px]:inline-flex' : 'hidden md:inline-flex',
+              heroVisivel ? 'hidden min-[340px]:inline-flex' : 'inline-flex',
             )}
           >
             Começar grátis
