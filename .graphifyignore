@@ -18,8 +18,11 @@
 #
 # Elas se atualizam por fora do Git (`skills add`), então também poluiriam o
 # diff a cada atualização. Saíram do versionamento no mesmo dia, e sair do
-# grafo é a outra metade da mesma decisão.
+# grafo é a outra metade da mesma decisão. O Caveman instalado via `npx skills`
+# fica em `.agents/skills/` e segue a mesma regra: ferramenta de agente, não
+# código do Velo Funil.
 .claude/skills/
+.agents/skills/
 .deepsec/
 
 # ## Saída do próprio grafo

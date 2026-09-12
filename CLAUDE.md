@@ -270,12 +270,13 @@ Depois de mexer em `docs/**` ou trocar um print, rode `/graphify . --update`.
 O cache guarda o que já foi extraído, então só o que mudou custa alguma coisa.
 
 **Desde 01/09 existe um `.graphifyignore`,** e ele é a outra metade da regra
-de corte abaixo. Ficaram de fora `.claude/skills/` e `.deepsec/` (ferramentas
-instaladas, que se atualizam por fora do Git), `graphify-out/` (sem isso cada
-rebuild indexa o relatório do anterior) e o binário de marketing — as artes
-continuam versionadas, mas um PNG não responde "onde o preço é lido"; os
-geradores, que são código, continuam dentro. Medido em 01/09: 249 dos 3.966 nós
-vinham de `.claude/`, e a poda tirou 235 de 53 arquivos.
+de corte abaixo. Ficaram de fora `.claude/skills/`, `.agents/skills/` e
+`.deepsec/` (ferramentas instaladas, que se atualizam por fora do Git),
+`graphify-out/` (sem isso cada rebuild indexa o relatório do anterior) e o
+binário de marketing — as artes continuam versionadas, mas um PNG não responde
+"onde o preço é lido"; os geradores, que são código, continuam dentro. Medido
+em 01/09: 249 dos 3.966 nós vinham de `.claude/`, e a poda tirou 235 de 53
+arquivos.
 
 <!-- contagem: grafo.nos_de_claude=38 -->
 **Hoje sobram 38**, em SEIS arquivos de `.claude/agents/`. Eram 28 em cinco até
