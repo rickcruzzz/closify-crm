@@ -242,6 +242,40 @@ async function conferirImagem(url) {
   }
 }
 
+/**
+ * O link que a mensagem carrega chega a algum lugar?
+ *
+ * Nasceu de um caso concreto, em 12/09: o link virou o atalho `/wa`, que é
+ * declarado em `next.config.mjs` e **só existe em produção depois do deploy**
+ * — e a promoção neste projeto é manual. Medido no dia: `/wa` devolvia 404 em
+ * produção enquanto `/ig`, o atalho irmão, devolvia 307.
+ *
+ * Sem esta conferência, disparar antes de promover mandaria 837 empresas para
+ * uma página de erro, com a mensagem prometendo um sistema. Nada falharia no
+ * script: o WhatsApp entrega o texto, a Evolution devolve 201, e o estrago só
+ * apareceria no silêncio de ninguém responder.
+ *
+ * Extraído do texto da PRÓPRIA mensagem, não escrito aqui: uma cópia do link
+ * neste arquivo passaria a conferir um endereço que a mensagem não usa no dia
+ * em que `abordagem.ts` mudasse — que é exatamente o dia em que a conferência
+ * importa.
+ *
+ * `GET` e não `HEAD` porque é redirecionamento: alguns servidores respondem
+ * diferente aos dois, e o que interessa é onde a pessoa de fato cai.
+ */
+async function conferirLink(texto) {
+  const achado = texto.match(/https?:\/\/[^\s]+/)
+  if (!achado) return { erro: 'a mensagem não tem link nenhum' }
+  const url = achado[0]
+  try {
+    const r = await fetch(url, { redirect: 'follow' })
+    if (!r.ok) return { url, erro: `HTTP ${r.status}` }
+    return { url, destino: r.url }
+  } catch (e) {
+    return { url, erro: `não respondeu (${e.message})` }
+  }
+}
+
 const evolution = async (caminho, corpo) => {
   const r = await fetch(`${EVOLUTION}${caminho}/${encodeURIComponent(INSTANCIA)}`, {
     method: 'POST',
@@ -376,6 +410,20 @@ async function main() {
   console.log(`  vão nesta rodada  ${fila.length}  (teto --max=${MAX})`)
   console.log(`  intervalo         ${INTERVALO_MIN / 1000}s a ${INTERVALO_MAX / 1000}s, sorteado`)
   console.log(`  imagem            ${imagemInfo}`)
+
+  // Conferido sobre a PRIMEIRA mensagem da fila, e uma vez so: as 837
+  // carregam o mesmo link, entao 837 requisicoes provariam o mesmo fato.
+  if (fila.length > 0) {
+    const link = await conferirLink(fila[0].texto)
+    if (link.erro) {
+      return abortar(
+        `o link da mensagem esta quebrado: ${link.url ?? '(nenhum)'} devolveu ${link.erro}. ` +
+          'Mandar a fila inteira para uma pagina de erro e pior que nao mandar. ' +
+          'Se o link e um atalho novo (/wa, /ig), ele so existe em producao DEPOIS da promocao na Vercel.',
+      )
+    }
+    console.log(`  link              ${link.url} -> ${link.destino}`)
+  }
 
   const fora = Object.entries(reprovados)
   if (fora.length > 0) {

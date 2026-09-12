@@ -267,15 +267,46 @@ const nextConfig = {
    * estava na bio até hoje.
    */
   async redirects() {
-    const paraCanal = (slug, medium) => ({
+    const paraCanal = (slug, fonte, medium, campanha) => ({
       source: `/${slug}`,
       destination:
-        `/?utm_source=${slug === 'ig' ? 'instagram' : slug}` +
-        `&utm_medium=${medium}&utm_campaign=perfil`,
+        `/?utm_source=${fonte}&utm_medium=${medium}&utm_campaign=${campanha}`,
       permanent: false,
     })
 
-    return [paraCanal('ig', 'bio')]
+    return [
+      paraCanal('ig', 'instagram', 'bio', 'perfil'),
+      /**
+       * ## `/wa`, o link da prospecção por WhatsApp
+       *
+       * A mensagem carregava `https://velofunil.com.br/?utm_source=whatsapp`
+       * — 44 caracteres de query crua no fim de um texto escrito para parecer
+       * uma pessoa falando. O dono apontou isso olhando a conversa.
+       *
+       * Três coisas melhoram de uma vez, e a terceira é a que importa:
+       *
+       *     aparencia   `www.velofunil.com.br/wa` le como endereco, e
+       *                 `?utm_source=` le como rastreamento
+       *     tamanho     44 -> 31 caracteres
+       *     o `www`     em 12/09 eu MEDI que nao dava para acrescenta-lo: a
+       *                 mensagem mais longa ja estava em 560, o teto, e com
+       *                 `www.` ia a 564 — 59 das 837 seriam cortadas em
+       *                 silencio por `truncarPreservando`. Com o atalho sobra
+       *                 folga, e o link canonico deixa de pagar os 259ms do
+       *                 redirecionamento de dominio
+       *
+       * **Ganha `utm_medium` e `utm_campaign`, que o link antigo não tinha.**
+       * `cruzarCampanhasComClientes` agrupa por campanha, então sem eles a
+       * prospecção caía no balde de "sem campanha identificada" junto com o
+       * tráfego orgânico — e a pergunta "as 837 mensagens trouxeram alguém?"
+       * não tinha como ser respondida.
+       *
+       * Temporário e não permanente, pela mesma razão escrita acima para o
+       * `/ig`: 308 fica no cache do navegador para sempre, e mudar a UTM
+       * depois exigiria que cada visitante limpasse o cache.
+       */
+      paraCanal('wa', 'whatsapp', 'prospeccao', 'prospeccao_2026_09'),
+    ]
   },
   /**
    * Para onde o build escreve.

@@ -1,3 +1,6 @@
+import { readFileSync } from 'node:fs'
+import { join } from 'node:path'
+
 import { describe, expect, it } from 'vitest'
 
 import { montarAbordagem, nomeCurto, TETO } from './abordagem'
@@ -240,7 +243,35 @@ describe('o link, e o que a operacao de SO ENVIO exige dele', () => {
     // Enviar sem responder significa que o unico sinal de vida e quem visita o
     // site. `utm-capture.tsx` grava `utm_source` no workspace de quem se
     // cadastra, entao a marca faz a origem aparecer sem codigo novo.
-    expect(montarAbordagem(base)).toContain('utm_source=whatsapp')
+    //
+    // ## A marca saiu do TEXTO e foi para o REDIRECT, em 12/09
+    //
+    // Era `?utm_source=whatsapp` escrito na mensagem. O dono apontou olhando a
+    // conversa: query crua no fim de um texto que imita uma pessoa falando le
+    // como rastreamento. Virou o atalho `/wa`, no molde do `/ig` da bio.
+    //
+    // A garantia continua a mesma e este caso continua sendo o dono dela —
+    // mudou onde ele olha. Um link SEM marca nenhuma reprova aqui igual antes.
+    expect(montarAbordagem(base)).toMatch(/velofunil\.com\.br\/wa\b|utm_source=/)
+  })
+
+  it('o atalho do link EXISTE no next.config, senao a marca nao acontece', () => {
+    // Este caso e a metade que faltava, e ele e mais forte que o anterior.
+    //
+    // Com a UTM escrita no texto, ver a string era ver a marca. Com atalho, o
+    // texto pode estar perfeito e a marca NAO existir — basta o redirect sumir
+    // do `next.config.mjs`, e ai `/wa` vira 404 em producao sem nada aqui
+    // falhar. Foi exatamente o estado medido no dia em que o atalho nasceu:
+    // `/wa` devolvia 404 enquanto `/ig` devolvia 307.
+    //
+    // Ler o arquivo de config num teste e incomum, e e o unico jeito de amarrar
+    // as duas pontas sem subir o servidor.
+    const config = readFileSync(join(process.cwd(), 'next.config.mjs'), 'utf-8')
+    const link = montarAbordagem(base).match(/https:\/\/[^\s]+/)?.[0] ?? ''
+    const slug = link.replace(/^https:\/\/[^/]+\//, '').split('?')[0]
+    expect(slug).toBeTruthy()
+    expect(config).toContain(`paraCanal('${slug}'`)
+    expect(config).toContain('utm_campaign=${campanha}')
   })
 
   it('a saida NAO exige resposta do remetente', () => {

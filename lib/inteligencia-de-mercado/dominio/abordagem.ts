@@ -96,7 +96,37 @@ export const TETO = 560
  * texto chega inteiro de uma vez, e apertar enviar no mesmo instante manda a
  * mensagem antes de a busca terminar. Esperar o cartão aparecer é do dono.
  */
-const LINK = 'https://velofunil.com.br/?utm_source=whatsapp'
+/**
+ * ## O atalho `/wa`, e por que ele é melhor que a query crua — 12/09
+ *
+ * Era `https://velofunil.com.br/?utm_source=whatsapp`. O dono apontou olhando
+ * a conversa: 44 caracteres de query no fim de um texto escrito para parecer
+ * uma pessoa falando. `?utm_source=` lê como rastreamento; `/wa` lê como
+ * endereço.
+ *
+ * O atalho é o mesmo mecanismo do `/ig` da bio do Instagram, declarado em
+ * `next.config.mjs`. Três ganhos, e o terceiro só existe por causa do
+ * segundo:
+ *
+ *     tamanho   44 -> 31 caracteres
+ *     o `www`   em 12/09 medi que NAO dava para acrescentar: a mensagem mais
+ *               longa ja estava em 560, o teto, e com `www.` ia a 564 — 59
+ *               das 837 seriam cortadas em silencio. Com o atalho sobra
+ *               folga, e o canonico deixa de pagar os 259ms do redirect de
+ *               dominio (575ms medidos contra 316ms)
+ *     medicao   ganha `utm_medium` e `utm_campaign`, que o link antigo nao
+ *               tinha. `cruzarCampanhasComClientes` agrupa por CAMPANHA, e
+ *               sem ela a prospeccao caia no balde de "sem campanha
+ *               identificada" junto com o organico
+ *
+ * **`/wa` não existia em produção quando esta linha foi escrita** — medido,
+ * 404 —, e o `/ig` respondia 307 no mesmo instante, o que prova que o
+ * mecanismo é o certo e o que falta é a promoção. Por isso
+ * `scripts/inteligencia/enviar-evolution.mjs` passou a exercitar este link
+ * antes do primeiro envio: sem essa trava, disparar antes de promover mandaria
+ * 837 empresas para um 404.
+ */
+const LINK = 'https://www.velofunil.com.br/wa'
 
 export type DadosDaAbordagem = {
   /** O domínio, que é como a pessoa reconhece a própria empresa. */
