@@ -105,6 +105,8 @@ const confirmar = args.includes('--confirmar')
 const ignorarHorario = args.includes('--ignorar-horario')
 const MAX = Number(args.find((a) => a.startsWith('--max='))?.split('=')[1] ?? 30)
 const SO = args.find((a) => a.startsWith('--so='))?.split('=')[1] ?? null
+/** Manda so para os nichos que a regua de 07/09 aprovou. */
+const SO_APROVADOS = args.includes('--so-aprovados')
 
 const INTERVALO_MIN = 45_000
 const INTERVALO_MAX = 150_000
@@ -112,6 +114,31 @@ const INTERVALO_MAX = 150_000
 const FALHAS_SEGUIDAS_ATE_PARAR = 3
 /** Teto do arquivo de imagem. Acima disso o WhatsApp recomprime e demora. */
 const IMAGEM_MAX_BYTES = 5 * 1024 * 1024
+
+/**
+ * Os nichos que a régua de 07/09 APROVOU, e os que ela reprovou.
+ *
+ * A régua foi escrita ANTES de olhar o resultado — `ORCAMENTO >= 2`,
+ * `FORTE >= 4`, `CONTATO >= 6` — e derrubou duas escolhas que já estavam
+ * tomadas. A tabela inteira está em
+ * `docs/mercado/nichos-medidos-2026-09-06.md`.
+ *
+ * **Isto não filtra nada sozinho.** Só avisa quando a fila traz alguém que a
+ * medição do próprio projeto reprovou, e o dono decide. Filtrar em silêncio
+ * seria pior: a fila é dele, e uma rodada que encolhe sem explicar parece
+ * defeito.
+ *
+ * O aviso existe porque a fila é ordenada por PONTOS, não por nicho — então
+ * um nicho reprovado com pontuação alta lidera o disparo, e as primeiras
+ * mensagens do dia saem para quem menos tem chance de responder.
+ */
+const NICHOS_APROVADOS = new Set([
+  'dedetizacao',
+  'comunicacao-visual',
+  'marcenaria',
+  'locacao-equipamentos',
+  'eventos-corporativos',
+])
 
 const sortear = (min, max) => Math.floor(min + Math.random() * (max - min))
 const dormir = (ms) => new Promise((r) => setTimeout(r, ms))
@@ -307,7 +334,17 @@ async function main() {
   const jaMarcados = await lerEstado()
   let fila = dados.fila.filter((p) => !jaMarcados[p.dominio])
   if (SO) fila = fila.filter((p) => p.dominio === SO || p.numero === SO)
+  if (SO_APROVADOS) fila = fila.filter((p) => NICHOS_APROVADOS.has(p.vertical))
   fila = fila.slice(0, MAX)
+
+  // Conta sobre a fila QUE VAI SAIR, não sobre a fila inteira: o que importa
+  // é quantas das próximas `--max` mensagens vão para nicho reprovado.
+  const reprovados = {}
+  for (const p of fila) {
+    if (!NICHOS_APROVADOS.has(p.vertical)) {
+      reprovados[p.vertical] = (reprovados[p.vertical] ?? 0) + 1
+    }
+  }
 
   // O ARQUIVO vem primeiro: ele é a arte que está no disco agora, enquanto a
   // URL depende de um deploy ter acontecido. Quando as duas estão definidas,
@@ -339,6 +376,18 @@ async function main() {
   console.log(`  vão nesta rodada  ${fila.length}  (teto --max=${MAX})`)
   console.log(`  intervalo         ${INTERVALO_MIN / 1000}s a ${INTERVALO_MAX / 1000}s, sorteado`)
   console.log(`  imagem            ${imagemInfo}`)
+
+  const fora = Object.entries(reprovados)
+  if (fora.length > 0) {
+    const total = fora.reduce((soma, [, q]) => soma + q, 0)
+    console.log('')
+    console.log(`  ATENCAO: ${total} de ${fila.length} vao para nicho que a regua REPROVOU`)
+    for (const [nicho, q] of fora.sort((a, b) => b[1] - a[1])) {
+      console.log(`    ${String(q).padStart(4)}  ${nicho}`)
+    }
+    console.log('    docs/mercado/nichos-medidos-2026-09-06.md tem a tabela')
+    console.log('    use --so-aprovados para mandar so para os cinco aprovados')
+  }
 
   if (fila.length === 0) return console.log('\n  Nada a enviar.\n')
 
