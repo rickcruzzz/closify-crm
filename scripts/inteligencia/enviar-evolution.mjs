@@ -36,8 +36,12 @@
  *                           segundo item da lista do que bane
  *     intervalo             45s a 150s SORTEADO. Cadencia fixa e assinatura de
  *                           robo mais obvia que a pressa
- *     horario               9h as 18h de Sao Paulo, seg a sex. Mensagem
- *                           comercial as 3h da manha e denuncia na certa
+ *     horario               9h-18h seg a sex e 9h-13h no SABADO, em Sao
+ *                           Paulo. Domingo nao. Mensagem comercial as 3h da
+ *                           manha e denuncia na certa — mas as 10h de sabado
+ *                           o dono da marcenaria esta na marcenaria, e a
+ *                           regra antiga jogava fora 20% das janelas do mes.
+ *                           O porque de cada nicho esta em `dentroDoHorario`
  *     estado ANTES do sono  grava assim que a Evolution confirma, entao Ctrl+C
  *                           nunca reenvia
  *     taxa de erro          3 falhas seguidas PARAM a rodada. Evolution fora
@@ -154,10 +158,39 @@ function agoraEmSaoPaulo() {
   return { hora: Number(partes.hour), diaDaSemana: partes.weekday }
 }
 
+/**
+ * A janela comercial, e o SÁBADO entrou nela em 12/09.
+ *
+ * ## Por que a regra antiga estava errada para ESTE ICP
+ *
+ * Ela era `seg-sex, 9h-18h` — a janela de escritório, copiada sem pensar em
+ * quem recebe. Os cinco nichos que a régua de 07/09 aprovou não são
+ * escritório, e para todos os cinco o sábado de manhã é horário de trabalho
+ * de verdade:
+ *
+ *     dedetizacao            sabado e quando casa e comercio ficam livres
+ *                            para o servico acontecer
+ *     comunicacao-visual     grafica rapida tem pico no sabado de manha
+ *     marcenaria             abre sabado; e o dia em que o cliente vai medir
+ *     locacao-equipamentos   entrega para obra que trabalha no sabado
+ *     eventos-corporativos   o evento ACONTECE no fim de semana
+ *
+ * Tratar sábado como madrugada custava 20% das janelas de contato do mês,
+ * contra um risco que não existe para este público: o que vira denúncia é
+ * mensagem comercial em hora que a pessoa não está trabalhando, e às 10h de
+ * sábado o dono da marcenaria está na marcenaria.
+ *
+ * **Domingo continua fora, e a distinção é a mesma**: nenhum dos cinco abre
+ * domingo. E o sábado fecha às 13h, não às 18h — depois do almoço, os cinco
+ * fecharam.
+ *
+ * A trava de madrugada não mudou em nada. 2h continua sendo 2h.
+ */
 function dentroDoHorario() {
   const { hora, diaDaSemana } = agoraEmSaoPaulo()
-  const fimDeSemana = /^(sáb|dom)/i.test(diaDaSemana)
-  return !fimDeSemana && hora >= 9 && hora < 18
+  if (/^dom/i.test(diaDaSemana)) return false
+  if (/^sáb/i.test(diaDaSemana)) return hora >= 9 && hora < 13
+  return hora >= 9 && hora < 18
 }
 
 async function lerEstado() {
