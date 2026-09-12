@@ -1,0 +1,14 @@
+# Quebra de linha, e por que isto existe.
+#
+# O Windows converte para CRLF ao gravar (`core.autocrlf=true`). Para `.ts` e
+# `.md` isso e invisivel. Para um SHELL SCRIPT que roda em Linux, e fatal:
+#
+#     /bin/sh^M: bad interpreter: No such file or directory
+#
+# O `^M` e o CR. O kernel le a primeira linha inteira como o caminho do
+# interpretador, e "/bin/sh\r" nao existe. O container subiria e morreria em
+# laco, com uma mensagem que nao parece ter relacao com quebra de linha.
+*.sh text eol=lf
+Dockerfile text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
