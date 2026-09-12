@@ -43,7 +43,7 @@ import importlib.util
 import sys
 from pathlib import Path
 
-from PIL import Image, ImageDraw
+from PIL import Image, ImageDraw, ImageFilter
 
 # Mesmo mecanismo dos outros geradores: o modulo de Stories e a base, e as
 # funcoes dele leem as dimensoes como globais resolvidas em tempo de chamada.
@@ -129,6 +129,68 @@ def _salvar(img, nome):
     destino = SAIDA / nome
     img.resize((g.W_FINAL, g.H_FINAL), Image.LANCZOS).save(destino, quality=95)
     print(f"  {nome}  {g.W_FINAL}x{g.H_FINAL}  {destino.stat().st_size // 1024} KB")
+
+
+def botao(d, texto, y, img=None):
+    """
+    O CTA desenhado como BOTÃO, e não como mais uma linha de texto.
+
+    ## Isto parece contrariar a decisão de 31/08, e não contraria
+
+    Naquele dia a cápsula do `pill` foi removida por pedido do dono, com uma
+    palavra só: *não é profissional*. O raciocínio ficou escrito lá e continua
+    valendo — pílula com contorno é vocabulário de INTERFACE, onde a forma
+    existe para delimitar algo clicável no meio de outros elementos, e num
+    criativo o rótulo já está sozinho sobre fundo vazio. A borda não separava
+    de nada: era forma sem função.
+
+    **Aqui a forma TEM função.** O que este retângulo comunica é exatamente
+    "isto é a ação" — informação que nenhuma outra parte da peça carrega, e
+    que o olho lê antes de decodificar a palavra. É a diferença entre desenhar
+    um botão em volta de um rótulo (enfeite) e desenhar um botão em volta de
+    um convite (sinalização).
+
+    ## Sólido, não contornado
+
+    Contorno seria o `variant="outline"` do produto, que ali significa ação
+    SECUNDÁRIA. Este é o único convite da peça, então leva o preenchimento
+    cheio — o mesmo peso que o botão primário tem no produto de verdade.
+
+    A altura sai de `fnt.size`, não de um número fixo: trocar o corpo do texto
+    sem trocar a altura produziria ou um botão apertado ou um vão em volta da
+    palavra, e os dois leem como render torto.
+    """
+    fnt = g.fonte("Bold", 40)
+    pad_x = int(g.W * 0.042)
+    pad_y = int(fnt.size * 0.52)
+    larg_texto = d.textlength(texto, font=fnt)
+    larg = int(larg_texto) + pad_x * 2
+    alt = fnt.size + pad_y * 2
+    x0 = g.MARGEM_ESQ
+
+    # ## A sombra só existe no claro, e é a mesma regra do produto
+    #
+    # `globals.css` deu elevação ao cartão no modo claro e ANULOU a regra no
+    # escuro: sombra sobre fundo quase preto não aparece, e tentar compensar
+    # com opacidade produz uma mancha suja em volta do objeto. O botão segue a
+    # mesma escada de superfície em vez de inventar uma própria.
+    if img is not None and g._TEMA_CLARO:
+        mascara = Image.new("L", img.size, 0)
+        ImageDraw.Draw(mascara).rounded_rectangle(
+            [x0 + 4 * g.ESCALA, y + 10 * g.ESCALA,
+             x0 + larg + 4 * g.ESCALA, y + alt + 10 * g.ESCALA],
+            radius=alt // 2, fill=120,
+        )
+        mascara = mascara.filter(ImageFilter.GaussianBlur(14 * g.ESCALA))
+        img.paste(Image.new("RGB", img.size, (168, 184, 186)), (0, 0), mascara)
+
+    d.rounded_rectangle([x0, y, x0 + larg, y + alt], radius=alt // 2,
+                        fill=g.cor_destaque())
+    # Off-white e não branco puro: é o `BRANCO` da paleta, e o branco absoluto
+    # sobre teal vibra na borda das letras quando a peça é reamostrada para a
+    # miniatura do WhatsApp.
+    d.text((x0 + pad_x, y + pad_y - 3 * g.ESCALA), texto, font=fnt, fill=g.BRANCO)
+    return y + alt
 
 
 def _quadrado(claro=True):
@@ -259,7 +321,11 @@ def preco():
         ("Velo Funil, a empresa toda", f"R$ {g.PRO_PLAN_PRICE}/mês", True),
     ]
 
-    def corpo(d, y):
+    # `img_alvo` só existe no desenho de verdade. Na medição o bloco roda sobre
+    # um rascunho descartável, e pintar a sombra do botão nele seria desenhar
+    # numa imagem que ninguém salva — inofensivo, mas o `None` deixa explícito
+    # que a passada seca só mede.
+    def corpo(d, y, img_alvo=None):
         y = g.escrever_esq(
             d,
             f"{EQUIPE_POR_EXTENSO} vendedores.",
@@ -296,15 +362,22 @@ def preco():
         # Instagram anunciou "grátis até 300 contatos" por meses depois de o
         # teto virar 50, e é esse defeito que a leitura de `lib/plans.ts`
         # existe para impedir.
+        #
+        # O botão leva DUAS palavras e a condição fica fora dele, abaixo, em
+        # corpo menor. Rótulo de botão com vírgula e três informações deixa de
+        # ser rótulo e vira frase dentro de um retângulo — e um retângulo de
+        # 900px de largura não lê como botão, lê como faixa.
+        y = botao(d, "Comece grátis", y + int(g.H * 0.05), img=img_alvo)
         return g.escrever_esq(
             d,
-            f"Comece grátis, até {g.FREE_LEAD_LIMIT} contatos, sem cartão.",
-            g.fonte("Bold", 40),
-            y + int(g.H * 0.045),
-            g.cor_destaque(),
+            f"Até {g.FREE_LEAD_LIMIT} contatos, sem cartão. "
+            "Cancela quando quiser e leva tudo em CSV.",
+            g.fonte("Regular", 32),
+            y + int(g.H * 0.028),
+            g.cor_corpo(),
         )
 
-    corpo(draw, g.centrar(topo, base, g.medir(corpo)))
+    corpo(draw, g.centrar(topo, base, g.medir(corpo)), img_alvo=img)
     g.assinar_discreto(img, draw)
     _salvar(img, "3-preco.png")
 
