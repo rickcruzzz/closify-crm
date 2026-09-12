@@ -267,6 +267,8 @@ e sem custo, então cabe dentro do hook.
 
 O que o hook **não** cobre: documento e imagem, que exigem leitura semântica.
 Depois de mexer em `docs/**` ou trocar um print, rode `/graphify . --update`.
+Sempre que atualizar o grafo, sinalize isso na resposta e deixe claro se o
+Graphify foi só consultado ou se o `graphify-out/` foi reconstruído.
 O cache guarda o que já foi extraído, então só o que mudou custa alguma coisa.
 
 **Desde 01/09 existe um `.graphifyignore`,** e ele é a outra metade da regra
