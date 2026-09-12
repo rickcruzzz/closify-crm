@@ -34,7 +34,7 @@ type Cobranca = { value?: number; subscription?: string }
 type Assinatura = { id: string; status: string; deleted?: boolean; externalReference?: string }
 
 /**
- * Assinaturas ativas no Asaas cuja empresa NÃO tem Pro vigente no banco.
+ * Assinaturas PAGAS no Asaas cuja empresa NÃO tem Pro vigente no banco.
  *
  * ## É o alerta mais caro do vigia
  *
@@ -59,6 +59,53 @@ export async function contarAssinaturasSemPro(): Promise<number> {
   const vivas = data.filter((a) => a.status === 'ACTIVE' && !a.deleted)
   if (vivas.length === 0) return 0
 
+  /**
+   * ## `ACTIVE` no Asaas NÃO quer dizer "pagou" — medido em 12/09
+   *
+   * Este era o defeito, e ele fazia o alerta mais caro do vigia mentir todo
+   * dia. No Asaas, `subscription.status = ACTIVE` significa que a assinatura
+   * existe e está gerando cobranças; diz nada sobre o dinheiro ter entrado.
+   * Uma assinatura criada agora, com boleto vencendo em três dias e ninguém
+   * pagando, fica `ACTIVE` do mesmo jeito.
+   *
+   * Medido nas duas assinaturas vivas da conta:
+   *
+   *     sub_...gqkk7  R$ 970  YEARLY   cobrancas: OVERDUE           nunca pagou
+   *     sub_...1qofd  R$  49  MONTHLY  cobrancas: PENDING, OVERDUE  nunca pagou
+   *
+   *     o vigia contava            2 "assinatura(s) ativa(s) sem Pro liberado"
+   *     de fato pagaram e nao receberam   0
+   *
+   * **A direção do erro é o que torna isto grave.** O alerta afirma *"alguém
+   * pagou e não recebeu"*, e quem o lesse iria liberar Pro de cortesia para
+   * duas pessoas que não pagaram nada — perdendo receita para consertar um
+   * problema que não existe.
+   *
+   * E é a quarta aparição da mesma classe neste projeto: alerta falso desvia
+   * atenção dos reais, e fila com lixo dentro ensina a ignorar a fila inteira.
+   *
+   * ## O cruzamento já existia em `lerDinheiro()`
+   *
+   * `dinheiro.ts` monta um `Set` de assinaturas que de fato receberam, a
+   * partir de `RECEIVED` + `CONFIRMED`, e o comentário de lá explica por que
+   * os dois: `CONFIRMED` é cartão aprovado com repasse a caminho, e sem ele a
+   * assinatura no cartão sumiria nos dias entre a aprovação e o dinheiro cair.
+   *
+   * Duas leituras do mesmo fato divergiram porque a regra morava só em uma.
+   */
+  const [recebidos, confirmados] = await Promise.all([
+    asaasFetch<{ data: Cobranca[] }>('/payments?status=RECEIVED&limit=100'),
+    asaasFetch<{ data: Cobranca[] }>('/payments?status=CONFIRMED&limit=100'),
+  ])
+  const comPagamento = new Set<string>()
+  for (const cobranca of [...recebidos.data, ...confirmados.data]) {
+    // Cobrança avulsa não tem `subscription`, e ignorá-la aqui é correto.
+    if (cobranca.subscription) comPagamento.add(cobranca.subscription)
+  }
+
+  const pagas = vivas.filter((a) => comPagamento.has(a.id))
+  if (pagas.length === 0) return 0
+
   const admin = createAdminClient()
   const { data: assinaturasNoBanco, error } = await admin
     .from('subscriptions')
@@ -69,12 +116,12 @@ export async function contarAssinaturasSemPro(): Promise<number> {
       // longas — medido em 11/08: 500 valores já dão 400. Com teto de 100
       // assinaturas do lado do Asaas isso não é alcançável hoje, e o corte
       // fica explícito para o dia em que for.
-      vivas.slice(0, 100).map((a) => a.id),
+      pagas.slice(0, 100).map((a) => a.id),
     )
   if (error) throw error
 
   let semPro = 0
-  for (const viva of vivas) {
+  for (const viva of pagas) {
     const linha = (assinaturasNoBanco ?? []).find((l) => l.asaas_subscription_id === viva.id)
 
     // Assinatura ativa no gateway que o banco nunca registrou. É o caso mais

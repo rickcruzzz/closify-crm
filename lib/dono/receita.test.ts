@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
 import {
+  assinaturasComPagamento,
   classificarAcesso,
   montarQuadroDeReceita,
   type EstadoDoAcesso,
@@ -151,5 +152,38 @@ describe('montarQuadroDeReceita', () => {
 
     expect(quadro.entraPorMes).toBe(0)
     expect(quadro.emTrial + quadro.cortesias + quadro.assinaramSemPagar).toBe(3)
+  })
+})
+
+describe('assinaturasComPagamento', () => {
+  it('assinatura sem NENHUMA cobrança paga não conta', () => {
+    // O caso real de 12/09: duas assinaturas `ACTIVE` no Asaas, ambas só com
+    // cobrança OVERDUE. O vigia anunciava "2 ativas sem Pro liberado" e a
+    // resposta certa era ZERO.
+    const vivas = [{ id: 'sub_a' }, { id: 'sub_b' }]
+    expect(assinaturasComPagamento(vivas, [])).toEqual([])
+  })
+
+  it('conta a que recebeu, e só ela', () => {
+    const vivas = [{ id: 'sub_a' }, { id: 'sub_b' }]
+    const cobrancas = [{ subscription: 'sub_b' }]
+    expect(assinaturasComPagamento(vivas, cobrancas)).toEqual([{ id: 'sub_b' }])
+  })
+
+  it('cobrança AVULSA não credita assinatura nenhuma', () => {
+    // Pagamento sem `subscription` é cobrança solta. Tratá-lo como prova de
+    // pagamento faria uma venda avulsa liberar Pro para quem tem assinatura
+    // vencida — que é o mesmo erro, com outro disfarce.
+    const vivas = [{ id: 'sub_a' }]
+    expect(assinaturasComPagamento(vivas, [{ subscription: null }, {}])).toEqual([])
+  })
+
+  it('CONTROLE: a função não é "devolve sempre vazio"', () => {
+    // Sem este caso, uma implementação que retornasse `[]` cegamente passaria
+    // nos três acima — e o alerta mais caro do vigia ficaria mudo para sempre,
+    // que é pior do que o falso positivo que estamos consertando.
+    const vivas = [{ id: 'sub_a' }, { id: 'sub_b' }]
+    const cobrancas = [{ subscription: 'sub_a' }, { subscription: 'sub_b' }]
+    expect(assinaturasComPagamento(vivas, cobrancas)).toHaveLength(2)
   })
 })

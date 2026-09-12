@@ -131,3 +131,38 @@ export function montarQuadroDeReceita(
     internas: contar('interna'),
   }
 }
+
+/**
+ * Quais assinaturas de fato RECEBERAM dinheiro.
+ *
+ * ## O defeito que esta função existe para travar — 12/09
+ *
+ * `contarAssinaturasSemPro` (o alerta mais caro do vigia) tratava
+ * `subscription.status === 'ACTIVE'` como "pagou". No Asaas isso é falso:
+ * `ACTIVE` significa que a assinatura existe e gera cobranças, e diz nada
+ * sobre dinheiro ter entrado.
+ *
+ * Medido na conta real naquele dia — as duas assinaturas vivas tinham só
+ * cobrança `OVERDUE` / `PENDING`, ou seja **nenhuma pagou**, e o vigia
+ * anunciava "2 assinatura(s) ativa(s) sem Pro liberado" todo dia.
+ *
+ * **A direção do erro é o que torna isto caro.** O alerta afirma que alguém
+ * pagou e não recebeu, então quem o lê libera Pro de cortesia — perdendo
+ * receita para consertar um problema que não existe.
+ *
+ * Vive aqui, e não em `dinheiro-do-vigia.ts`, porque aquele arquivo é
+ * `server-only` e o vitest não consegue importá-lo. Mesma razão que separou
+ * `google-ads.ts` de `google-ads-queries.ts`.
+ */
+export function assinaturasComPagamento<T extends { id: string }>(
+  assinaturas: T[],
+  cobrancas: { subscription?: string | null }[],
+): T[] {
+  const pagas = new Set<string>()
+  for (const cobranca of cobrancas) {
+    // Cobrança avulsa não tem `subscription`, e ignorá-la aqui é correto: ela
+    // não prova nada sobre nenhuma assinatura.
+    if (cobranca.subscription) pagas.add(cobranca.subscription)
+  }
+  return assinaturas.filter((a) => pagas.has(a.id))
+}
