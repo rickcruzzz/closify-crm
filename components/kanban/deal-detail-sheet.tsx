@@ -213,7 +213,32 @@ export function DealDetailSheet({
       return
     }
 
-    toast.success('Tarefa concluída.')
+    // ## Concluir devolvia o negócio ao alarme, sem oferecer a saída
+    //
+    // Relatado pelo dono com print: agenda, conclui, e a tela volta a dizer
+    // "Nada marcado para este negócio" — com o card virando "Sem próximo
+    // passo" no board ao lado. Tecnicamente certo: a única tarefa acabou de
+    // ser fechada, logo não há próxima. E é exatamente aí que este produto
+    // não pode calar.
+    //
+    // A tese inteira é que o orçamento morre quando ninguém marca o retorno.
+    // Quem acabou de concluir o follow-up está no ÚNICO instante em que sabe
+    // o que vem depois — e era o instante em que o produto tirava o assunto
+    // da frente dela e trocava por um aviso vermelho.
+    //
+    // A oferta vai no toast, e não num diálogo que abre sozinho: quem fecha
+    // cinco tarefas seguidas em `/hoje` não pode levar cinco diálogos na
+    // cara. Um clique para quem quer, zero atrito para quem não quer, e o
+    // botão "Agendar" continua onde sempre esteve para quem perceber depois.
+    toast.success('Tarefa concluída.', {
+      // Mais longo que o padrão de propósito: a decisão de marcar o próximo
+      // passo não cabe nos 4s de um aviso de "deu certo".
+      duration: 8000,
+      action: {
+        label: 'Marcar a próxima',
+        onClick: () => setAgendando(true),
+      },
+    })
     // `concluirTarefa` já revalida '/kanban'.
     //
     // O id continua guardado de propósito: entre a Server Action resolver e o
