@@ -2,7 +2,12 @@ import Link from 'next/link'
 import { ChevronDown } from 'lucide-react'
 
 import { RevealOnScroll } from '@/components/landing/reveal-on-scroll'
-import { FREE_LEAD_LIMIT, FREE_MEMBER_LIMIT, PRO_PLAN_PRICE } from '@/lib/plans'
+import {
+  FREE_COLABORADORES,
+  FREE_LEAD_LIMIT,
+  FREE_WORKSPACE_LIMIT,
+  PRO_PLAN_PRICE,
+} from '@/lib/plans'
 
 // Respostas honestas sobre o produto COMO ELE É HOJE. Nada aqui promete
 // funcionalidade que não existe. A resposta sobre planilha ficou desatualizada
@@ -26,7 +31,7 @@ export const faqs = [
    */
   {
     q: 'O plano grátis é grátis mesmo?',
-    a: `É, e não pede cartão para começar. O grátis não expira: 1 empresa, até ${FREE_MEMBER_LIMIT} colaboradores e ${FREE_LEAD_LIMIT} contatos, com o funil e o painel de resultados inteiros. Chegando aos ${FREE_LEAD_LIMIT} contatos nada some — você só não cadastra novos até assinar o Pro. Nada é cobrado sem você escolher.`,
+    a: `É, e não pede cartão para começar. O grátis não expira: ${FREE_WORKSPACE_LIMIT} empresa, você + ${FREE_COLABORADORES} colaborador e ${FREE_LEAD_LIMIT} contatos, com o funil e o painel de resultados inteiros. Chegando aos ${FREE_LEAD_LIMIT} contatos nada some — você só não cadastra novos até assinar o Pro. Nada é cobrado sem você escolher.`,
   },
   {
     q: 'Preciso instalar alguma coisa?',

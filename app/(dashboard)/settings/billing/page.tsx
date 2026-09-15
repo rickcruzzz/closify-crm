@@ -104,8 +104,13 @@ export default async function BillingPage({
           {plan === 'free' && (
             <div className="grid gap-4 sm:grid-cols-2">
               <UsageBar label="Contatos" used={leadCount ?? 0} limit={FREE_LEAD_LIMIT} />
+              {/* "Pessoas" e não "Colaboradores": `members.length` inclui o
+                  DONO, e `FREE_MEMBER_LIMIT` também. Com o rótulo antigo, um
+                  dono sozinho lia "1/2 colaboradores" e concluía que ainda
+                  cabiam dois — cabia um. O número sempre esteve certo; a
+                  palavra é que contava outra coisa. */}
               <UsageBar
-                label="Colaboradores"
+                label="Pessoas na empresa"
                 used={members.length}
                 limit={FREE_MEMBER_LIMIT}
               />

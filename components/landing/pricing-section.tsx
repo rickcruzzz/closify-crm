@@ -21,7 +21,7 @@ import { CtaDoPlano } from '@/components/landing/cta-do-plano'
 import { EventoAoVer } from '@/components/analytics/evento-ao-ver'
 import {
   FREE_LEAD_LIMIT,
-  FREE_MEMBER_LIMIT,
+  FREE_COLABORADORES,
   FREE_PLAN_PRICE,
   FREE_ORCAMENTO_LIMIT,
   FREE_WORKSPACE_LIMIT,
@@ -103,7 +103,11 @@ const plans: Plan[] = [
         icone: BellRing,
       },
       { texto: `${FREE_WORKSPACE_LIMIT} empresa`, icone: Building2 },
-      { texto: `Até ${FREE_MEMBER_LIMIT} colaboradores`, icone: Users },
+      // `FREE_MEMBER_LIMIT` conta PESSOAS na empresa, e o dono entra na
+      // conta — 2 membros são o dono e mais um. Dizer "até 2
+      // colaboradores" prometia TRÊS, e a terceira tomava erro depois de
+      // o convite já ter sido mandado.
+      { texto: `Você + ${FREE_COLABORADORES} colaborador`, icone: Users },
       { texto: `Até ${FREE_LEAD_LIMIT} contatos`, icone: Contact },
       { texto: 'Funil visual, arrasta e solta', icone: Filter },
       { texto: 'Painel de resultados', icone: LayoutDashboard },
