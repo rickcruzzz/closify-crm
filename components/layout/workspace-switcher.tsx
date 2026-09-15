@@ -6,6 +6,8 @@ import { Building2, Check, ChevronsUpDown, Loader2, Plus, Zap } from 'lucide-rea
 import { toast } from 'sonner'
 
 import { avisarLimite } from '@/components/plano/avisar-limite'
+import { DESTINO_DO_UPGRADE, PLANO_NA_TELA } from '@/lib/plans'
+import { cn } from '@/lib/utils'
 
 import { criarEmpresa, trocarEmpresa } from '@/lib/workspace/actions'
 
@@ -222,8 +224,23 @@ export function WorkspaceSwitcher({
           </div>
           <div className="flex min-w-0 flex-1 flex-col">
             <span className="truncate font-medium">{active.name}</span>
-            <span className="text-muted-foreground text-xs capitalize">
-              {active.plan}
+            {/* ## O plano era texto solto em minúscula, até 15/09
+                Ele dizia "pro" ou "free" com `capitalize`, no mesmo peso visual
+                do resto — e a primeira pergunta de quem abre o produto é em
+                qual plano está. Selo responde de relance; palavra solta pede
+                leitura.
+
+                `PLANO_NA_TELA` sai de `lib/plans.ts` para esta tela, a de
+                Configurações e a de comparação dizerem o mesmo nome. */}
+            <span
+              className={cn(
+                'w-fit rounded px-1.5 py-0.5 text-[11px] font-medium leading-none',
+                active.plan === 'pro'
+                  ? 'bg-primary/15 text-primary'
+                  : 'bg-muted text-muted-foreground',
+              )}
+            >
+              {PLANO_NA_TELA[active.plan === 'pro' ? 'pro' : 'free']}
             </span>
           </div>
           <ChevronsUpDown className="text-muted-foreground size-4 shrink-0" />
@@ -277,6 +294,33 @@ export function WorkspaceSwitcher({
             </p>
           )}
           <DropdownMenuSeparator />
+
+          {/* ## O caminho para o Pro estava só dentro do erro
+              Até 15/09 o único "Ver o plano Pro" desta tela morava dentro do
+              diálogo de nova empresa, e só aparecia DEPOIS de a pessoa tentar
+              criar a segunda e ser recusada. Quem quisesse conhecer o plano
+              antes de esbarrar num limite não tinha por onde.
+
+              Aqui ele fica no menu que a pessoa já abre para trocar de
+              empresa — o lugar onde ela olha o plano. */}
+          {active.plan !== 'pro' && (
+            <>
+              <DropdownMenuItem
+                className="text-primary gap-2 font-medium"
+                disabled={navegando}
+                onClick={() => {
+                  startTransitionNavegacao(() => {
+                    router.push(DESTINO_DO_UPGRADE)
+                  })
+                }}
+              >
+                <Zap className="size-4" />
+                Conhecer o {PLANO_NA_TELA.pro}
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+            </>
+          )}
+
           {/* No Free o limite é de uma empresa. Mostrar "Nova empresa" para quem
             não pode criar leva a pessoa a preencher o formulário inteiro e só
             então tomar o erro, melhor dizer o motivo aqui e mandar direto

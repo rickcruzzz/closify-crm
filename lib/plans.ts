@@ -360,3 +360,16 @@ export function ehLimiteDePlano(mensagem: string | null | undefined): boolean {
     /faca upgrade|upgrade para o pro|recurso pro|plano free (permite|inclui|acompanha)/.test(limpo)
   )
 }
+
+/**
+ * Como cada plano se chama NA TELA.
+ *
+ * O seletor de empresa mostrava `workspaces.plan` cru — `"pro"` e `"free"`,
+ * minúsculos, maquiados por um `capitalize` de CSS. Funciona enquanto os
+ * valores do enum forem apresentáveis, e para de funcionar no dia em que um
+ * plano se chamar `pro_anual` no banco.
+ *
+ * Nome de banco e nome de tela respondem perguntas diferentes, e misturá-los é
+ * o que faz uma renomeação interna vazar para o cliente.
+ */
+export const PLANO_NA_TELA = { free: 'Free', pro: 'Pro' } as const
