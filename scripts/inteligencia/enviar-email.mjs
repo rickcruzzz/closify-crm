@@ -52,6 +52,41 @@ const RESEND = process.env.RESEND_API_KEY
 const DE = process.env.PROSPECCAO_EMAIL_DE
 const RESPONDER_PARA = process.env.PROSPECCAO_EMAIL_RESPONDER ?? null
 
+// ## APOSENTADO em 15/09 — nao envie por aqui
+//
+// Este script manda pela `RESEND_API_KEY`, que e a MESMA chave que manda
+// recuperacao de senha, confirmacao de cadastro e convite. E a politica de uso
+// do Resend proibe, em texto:
+//
+//     "You are prohibited from sending unsolicited messages of any kind,
+//      including cold outreach, purchased lists, or scraped contact data."
+//
+// com desligamento da conta "without warning" acima de 0,08% de reclamacao.
+//
+// A trava de dominio separado logo abaixo (`PROSPECCAO_EMAIL_DE` abortando em
+// velofunil.com.br) esta CERTA e resolve o adversario errado: ela defende a
+// reputacao no Gmail e no Outlook, que medem por dominio raiz. Nao defende
+// contra o ESP, que mede por CONTA e e quem tem o interruptor do transacional.
+//
+// Rodar isto nao arriscaria a entrega do e-mail frio. Arriscaria o cliente nao
+// conseguir mais entrar no produto, e o primeiro sintoma seria suporte.
+//
+// O disparo frio saiu para a Instantly, que permite cold outreach por
+// construcao. O Resend continua inteiro para o transacional — ver o bloco
+// INSTANTLY no `.env.example`.
+console.error(
+  [
+    'Este disparo esta APOSENTADO e nao envia mais.',
+    '',
+    'Ele usa a RESEND_API_KEY, que e a mesma da recuperacao de senha, e a',
+    'politica do Resend proibe cold outreach com desligamento da CONTA.',
+    '',
+    'O disparo frio agora sai pela Instantly. Ver o bloco INSTANTLY no',
+    '.env.example e `scripts/inteligencia/` para o caminho novo.',
+  ].join('\n'),
+)
+process.exit(1)
+
 const args = process.argv.slice(2)
 const confirmar = args.includes('--confirmar')
 const DIA = Number(args.find((a) => a.startsWith('--dia='))?.split('=')[1] ?? 1)
