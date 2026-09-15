@@ -50,12 +50,25 @@ export function ProdutoPrint({
   alt,
   prioridade = false,
   className,
+  sizes,
 }: {
   /** Base do arquivo em `public/produto/`, sem o sufixo de tema. */
   nome: 'kanban' | 'dashboard' | 'hoje'
   alt: string
   prioridade?: boolean
   className?: string
+  /**
+   * Sobrescreve o `sizes` padrão, que foi calibrado para a largura da LANDING.
+   *
+   * O painel de `/login` e `/cadastro` ocupa metade da viewport menos o
+   * `p-10`/`xl:p-16` do `auth-arte.tsx` — cerca de 590px numa tela de 1440.
+   * Com o padrão, que termina em `2048px`, o navegador baixaria um degrau
+   * grande demais para desenhar quase um terço disso.
+   *
+   * Opcional de propósito: sem valor, o comportamento é exatamente o de antes,
+   * e nenhum consumidor da landing precisou mudar.
+   */
+  sizes?: string
 }) {
   // `alt` fica FORA deste objeto e é passado explicitamente em cada `<Image>`:
   // dentro do spread a regra `jsx-a11y/alt-text` não enxerga o atributo e
@@ -115,7 +128,7 @@ export function ProdutoPrint({
      *
      * Não é troca de nitidez — é parar de mentir sobre o tamanho da caixa.
      */
-    sizes: '(max-width: 639px) 263vw, (max-width: 1200px) 180vw, 2048px',
+    sizes: sizes ?? '(max-width: 639px) 263vw, (max-width: 1200px) 180vw, 2048px',
     className: 'h-auto w-full',
   }
 

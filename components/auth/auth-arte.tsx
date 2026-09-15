@@ -1,20 +1,47 @@
-import { PipelinePreviewCard } from '@/components/landing/pipeline-preview-card'
+import { ProdutoPrint } from '@/components/landing/produto-print'
 
 /**
  * O painel que ocupa a metade direita de login e cadastro no desktop.
  *
- * **O que mostra é o produto, não um banco de imagens.** `PipelinePreviewCard`
- * é o mesmo componente do hero da landing: desenhado em HTML sobre os dados de
- * `lib/deals/mock-data.ts`, sem foto, sem depoimento, sem número inventado. A
- * régua do projeto sobre prova social vale aqui inteira — a `StatsSection` já
- * teve métrica falsa copiada de concorrente e removida, e o motivo está
- * escrito no arquivo dela.
+ * **O que mostra é o produto, não um banco de imagens.** A régua do projeto
+ * sobre prova social vale aqui inteira: sem foto de banco de imagem, sem
+ * depoimento, sem número inventado. A `StatsSection` já teve métrica falsa
+ * copiada de concorrente e removida, e o motivo está escrito no arquivo dela.
  *
- * Sendo Server Component puro, sem props e sem estado, o painel custa **zero
- * JavaScript**: só HTML atravessa. É o que torna barato mantê-lo montado e
- * apenas escondido no mobile, em vez de decidir por `matchMedia` — decidir no
- * cliente produziria descasamento de hidratação e transformaria o layout
- * inteiro em client component.
+ * ## Até 15/09 este painel repetia o hero da landing, e o dono viu
+ *
+ * Ele renderizava `PipelinePreviewCard`, o MESMO componente do hero de
+ * `velofunil.com.br`, sem props e portanto sem como variar nem o texto. Quem
+ * chegava pelo site clicava em "Começar grátis" e via a mesma figura duas
+ * telas seguidas — o que faz a segunda parecer que não carregou nada novo.
+ *
+ * O comentário antigo aqui afirmava que repetir o componente era proposital,
+ * "para a tela de login parecer a mesma marca". A intenção estava certa e o
+ * meio estava errado: continuidade de marca vem do device, da tipografia e da
+ * cor, que continuam idênticos logo abaixo. Repetir a ILUSTRAÇÃO inteira não é
+ * continuidade, é a mesma imagem duas vezes.
+ *
+ * ## Por que `hoje` e não `contatos`
+ *
+ * Dos quatro prints em `public/produto/`, `contatos` é o único que nenhum
+ * componente usa, e ele daria zero repetição. É a escolha pior: uma lista de
+ * nomes não mostra o produto funcionando.
+ *
+ * O eyebrow logo abaixo pergunta **"Como fica na sua tela"**, e para quem está
+ * criando conta a resposta é a tela que ela vai abrir toda manhã. `hoje`
+ * também aparece na landing, mas lá embaixo em "Como funciona" e não na dobra
+ * — a adjacência hero -> login, que era o problema relatado, desaparece.
+ *
+ * `next/image` em Server Component emite `<img>` com `srcset` e **não traz
+ * runtime**: o painel continua custando zero JavaScript, que é o que torna
+ * barato mantê-lo montado e apenas escondido no mobile em vez de decidir por
+ * `matchMedia` — decidir no cliente produziria descasamento de hidratação e
+ * transformaria o layout inteiro em client component.
+ *
+ * O `sizes` é passado à mão porque o padrão do `ProdutoPrint` foi calibrado
+ * para a largura da landing e termina em `2048px`. Aqui a imagem ocupa cerca
+ * de 590px numa tela de 1440, e o padrão faria o navegador baixar um degrau
+ * grande demais para desenhar um terço disso.
  *
  * O texto é reaproveitado da landing sem reescrita: a linha do "como funciona"
  * fala exatamente do momento em que a pessoa está (acabou de chegar na tela de
@@ -46,7 +73,11 @@ export function AuthArte() {
       </p>
 
       <div className="animate-entrada fade-in slide-in-from-bottom-3 fill-mode-both ease-entrada duration-entrada delay-passo-3">
-        <PipelinePreviewCard />
+        <ProdutoPrint
+          nome="hoje"
+          alt="o que precisa da sua atenção · Acme Corp"
+          sizes="(min-width: 1280px) 40vw, 45vw"
+        />
       </div>
 
       {/* TERCEIRA cópia da mesma promessa, achada só ao ler o DOM da tela de
