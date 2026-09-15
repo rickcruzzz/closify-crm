@@ -1,10 +1,11 @@
 'use client'
 
 import * as React from 'react'
-import { useRouter } from 'next/navigation'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { Controller, useForm } from 'react-hook-form'
 import { toast } from 'sonner'
+
+import { avisarLimite } from '@/components/plano/avisar-limite'
 import { Loader2, MoreHorizontal, Plus, UserPlus } from 'lucide-react'
 
 import { Badge } from '@/components/ui/badge'
@@ -97,7 +98,6 @@ export function MembersCard({
 
   // Workspace nunca fica com zero membros (quem cria já entra como admin), então
   // o estado vazio real é "só eu, sem convite pendente", comum em conta nova.
-  const router = useRouter()
   const isAlone = members.length <= 1 && invites.length === 0
 
   async function onInvite(values: InviteMemberValues) {
@@ -109,14 +109,12 @@ export function MembersCard({
         // na importação de planilha e ao criar empresa: dizer "faça upgrade"
         // sem mostrar onde deixa a pessoa num beco, no exato momento em que
         // ela demonstrou intenção de pagar.
-        const eLimiteDePlano =
-          result.error.includes('limite de') || result.error.includes('plano Free')
-        toast.error(result.error, {
-          duration: eLimiteDePlano ? 10_000 : undefined,
-          action: eLimiteDePlano
-            ? { label: 'Ver o Pro', onClick: () => router.push('/settings/billing') }
-            : undefined,
-        })
+        // A regra de "isto é limite de plano?" era escrita AQUI à mão, com
+        // `.includes('limite de')`, duração própria e um destino sem o
+        // `?assinar=1`. Ela virou `ehLimiteDePlano`, em `lib/plans.ts`, pura e
+        // testada — e agora vale para os sete lugares do produto que mandam
+        // fazer upgrade, não só para este.
+        avisarLimite(result.error)
         return
       }
       toast.success('Convite enviado.')
@@ -129,7 +127,7 @@ export function MembersCard({
 
   async function handleRoleChange(userId: string, role: 'admin' | 'membro') {
     const result = await updateMemberRole(userId, role)
-    if (result?.error) toast.error(result.error)
+    if (result?.error) avisarLimite(result.error)
     else toast.success('Papel atualizado.')
   }
 
@@ -143,13 +141,13 @@ export function MembersCard({
 
   async function handleRemove(userId: string) {
     const result = await removeMember(userId)
-    if (result?.error) toast.error(result.error)
+    if (result?.error) avisarLimite(result.error)
     else toast.success('Membro removido.')
   }
 
   async function handleRevoke(inviteId: string) {
     const result = await revokeInvite(inviteId)
-    if (result?.error) toast.error(result.error)
+    if (result?.error) avisarLimite(result.error)
     else toast.success('Convite cancelado.')
   }
 

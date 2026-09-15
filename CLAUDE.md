@@ -300,8 +300,8 @@ uma rodada antiga —, e nada na resposta de uma consulta avisava disso. Só
 instalado na pasta pessoal do usuário, fora daqui. O que foi retirado está
 inteiro em `graphify-out/arquivo/`, nada foi descartado.
 
-<!-- contagem: grafo.nos_sem_arquivo=123 -->
-**123 nós não têm arquivo de origem, e nenhum deles é fantasma.** A grande
+<!-- contagem: grafo.nos_sem_arquivo=120 -->
+**120 nós não têm arquivo de origem, e nenhum deles é fantasma.** A grande
 maioria são objetos do banco que o extrator representa sem arquivo —
 `public.workspaces`, `auth.users`, `public.checar_teto_de_mensagens` —, mais
 alguns símbolos importados pelos geradores em Python (`FreeTypeFont`, `Image`,
@@ -336,6 +336,17 @@ Como ele andou, em ordem:
                   tabela que a 0084 tinha CRIADO horas antes) mais
                   `public_conversas` e `public_mensagens`, citadas nas
                   foreign keys. Mesmo caso de novo
+    120   15/09   DESCEU tres, e e a primeira queda da serie. A 0087 nao
+                  acrescentou objeto nenhum: ela so mexeu em `check` e em
+                  coluna de tabela que ja existia. Os tres que sairam sao os
+                  do proprio salto acima — o `--update` reextraiu as
+                  migrations e os `alter` da 0086 deixaram de mintar nó
+                  proprio quando a 0087 passou a ser a ultima a tocar as
+                  mesmas tabelas.
+
+                  **Queda e o unico caso que o piso nao pega**, e por isso
+                  este numero e EXATO e nao piso: ele desceu sem nada ter
+                  sido apagado do repositorio
 
 **A leitura errada aqui é fácil e cara:** ver o número subir logo depois de uma
 migration convida a concluir que uma tabela nasceu. Em nenhum dos três últimos

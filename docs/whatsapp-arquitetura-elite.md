@@ -1,7 +1,22 @@
 # ARQUITETURA: WhatsApp Integrado como Feature Premium (Velo Funil)
 
 **Data**: 2026-09-12  
-**Status**: Pronto para implementação  
+**Status**: PROPOSTA — nada disto existe no repositório ainda
+
+> **Este documento é uma PROPOSTA.** Os caminhos citados abaixo são arquivos a
+> CONSTRUIR, não estado atual — `scripts/ci/conferir-documentos.mjs` lê esta
+> marca e conta as citações em vez de reprová-las, sem calar o alarme.
+>
+> **O que existe hoje, medido:** `FASE_DO_WHATSAPP` está em `'migrando'`
+> (`lib/integrations/whatsapp-estado.ts`), o produto do cliente **não** envia
+> WhatsApp, e o único webhook no ar é `app/api/webhooks/evolution/route.ts` —
+> que é da PROSPECÇÃO do dono e resolve a empresa pelo nome no servidor, nunca
+> pelo payload.
+>
+> A ponte não oficial saiu em 28/08 (`c52a718`) por um motivo que continua
+> valendo e que qualquer implementação daqui precisa responder primeiro: o
+> segredo do webhook era único para todas as empresas, então quem o conhecesse
+> injetaria mensagem falsa no funil de qualquer uma sabendo o UUID dela.  
 **Versão**: 1.0
 
 ---

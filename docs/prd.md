@@ -35,8 +35,8 @@
 > **nenhuma métrica do catálogo**. Agora mede, e o carimbo acima é conferido
 > por `scripts/ci/conferir-documentos.mjs` como todos os outros.
 >
-> <!-- contagem: migrations.arquivos=85 migrations.maior=0086 -->
-> **85 arquivos de migration, e a maior é `0086`.** Os dois juntos, sempre: o
+> <!-- contagem: migrations.arquivos=86 migrations.maior=0087 -->
+> **86 arquivos de migration, e a maior é `0087`.** Os dois juntos, sempre: o
 > número de arquivos sozinho convida a inferir `0084`, e o `0049` não existe —
 > foi provado desnecessário e removido em 22/08. `node scripts/ci/contagens.mjs`
 > imprime o invariante que reconcilia os dois.

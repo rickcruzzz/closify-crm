@@ -12,9 +12,10 @@ import {
 } from '@/components/ui/card'
 import { SubscribeButton } from '@/components/settings/subscribe-button'
 import {
+  FREE_COLABORADORES,
   FREE_LEAD_LIMIT,
-  FREE_MEMBER_LIMIT,
   FREE_WORKSPACE_LIMIT,
+  PAPEIS_DO_COLABORADOR,
   PRO_WORKSPACE_LIMIT,
   PRO_PLAN_PRICE,
 } from '@/lib/plans'
@@ -86,11 +87,25 @@ export function PlanCard({
                    renomeação de 19/08 tirou do produto, e a tela do menu se
                    chama Contatos. */
                 `Até ${PRO_WORKSPACE_LIMIT} empresas, colaboradores e contatos ilimitados.`
-              : `Plano Free: ${FREE_WORKSPACE_LIMIT} empresa, até ${FREE_MEMBER_LIMIT} colaboradores e ${FREE_LEAD_LIMIT} contatos.`}
+              : /* "até 2 colaboradores" prometia TRÊS pessoas.
+                   `FREE_MEMBER_LIMIT` conta membros da empresa e
+                   `verificarLimiteDeMembros` soma o DONO — então 2 membros são
+                   o dono e mais um. Quem convidasse a terceira tomava o erro
+                   depois de já ter mandado o convite.
+
+                   `FREE_COLABORADORES` é derivado, e a frase anda sozinha se o
+                   teto mudar. */
+                `${FREE_WORKSPACE_LIMIT} empresa, você + ${FREE_COLABORADORES} colaborador e ${FREE_LEAD_LIMIT} contatos.`}
           </CardDescription>
         </div>
-        <Badge variant={plan === 'pro' ? 'default' : 'secondary'}>
-          {plan === 'pro' ? 'Pro' : 'Free'}
+        {/* O selo diz PLANO ATUAL, não só o nome.
+            "Free" sozinho é ambíguo entre "este é o seu plano" e "este é um
+            plano que existe" — e a primeira pergunta de quem abre esta tela é
+            justamente em qual dos dois ela está. O `Check` carrega o sentido
+            sem precisar de mais palavra. */}
+        <Badge variant={plan === 'pro' ? 'default' : 'secondary'} className="gap-1">
+          <Check className="size-3" aria-hidden />
+          {plan === 'pro' ? 'Pro · plano atual' : 'Free · plano atual'}
         </Badge>
       </CardHeader>
 
@@ -119,6 +134,15 @@ export function PlanCard({
               </ul>
             </div>
 
+            {/* Os papéis valem nos DOIS planos — o Free também escolhe o do
+                único colaborador que cabe. Uma linha, aqui, em vez de um bloco:
+                o card é de conversão, e a explicação completa mora na tela de
+                comparação. */}
+            <p className="text-muted-foreground text-xs">
+              Colaborador entra como{' '}
+              {PAPEIS_DO_COLABORADOR.map((p) => p.papel).join(' ou ')} — nos dois planos.
+            </p>
+
             <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
               {/* Só admin assina, `createCheckout` recusa os demais, e mostrar
                   o botão a quem não pode usar só produz um caminho morto. */}
@@ -143,13 +167,31 @@ export function PlanCard({
         )}
 
         {plan === 'pro' && (
-          <Button
-            variant="outline"
-            className="w-fit"
-            render={<Link href="/settings/billing" />}
-          >
-            Gerenciar assinatura
-          </Button>
+          <>
+            {/* O lado Pro tinha só um botão. Quem paga abre esta tela para
+                conferir o que comprou — e não achava nada além do nome do
+                plano. As mesmas linhas do cartão do Free, agora como
+                confirmação em vez de promessa. */}
+            <ul className="flex flex-col gap-1.5">
+              {GANHOS_DO_PRO.filter((g) => g !== 'Tudo do Free').map((ganho) => (
+                <li key={ganho} className="text-muted-foreground flex items-center gap-2 text-sm">
+                  <Check
+                    aria-hidden
+                    className="size-4 shrink-0 text-emerald-500 dark:text-emerald-400"
+                  />
+                  {ganho}
+                </li>
+              ))}
+            </ul>
+
+            <Button
+              variant="outline"
+              className="w-fit"
+              render={<Link href="/settings/billing" />}
+            >
+              Gerenciar assinatura
+            </Button>
+          </>
         )}
       </CardContent>
     </Card>

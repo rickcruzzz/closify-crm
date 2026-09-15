@@ -1,7 +1,8 @@
 'use client'
 
 import * as React from 'react'
-import { toast } from 'sonner'
+
+import { avisarLimite } from '@/components/plano/avisar-limite'
 import {
   AlertTriangle,
   ArrowLeft,
@@ -151,7 +152,7 @@ export function ImportLeadsDialog({
    */
   function aceitarMatriz(lida: string[][], origem: string): boolean {
     if (lida.length < 2) {
-      toast.error('A planilha não tem nenhuma linha além do cabeçalho.')
+      avisarLimite('A planilha não tem nenhuma linha além do cabeçalho.')
       return false
     }
 
@@ -236,7 +237,7 @@ export function ImportLeadsDialog({
     // Mesmo teto do arquivo, medido sobre o texto: colar dez mil linhas
     // travaria a aba antes de qualquer validação nossa aparecer.
     if (limpo.length > CSV_MAX_BYTES) {
-      toast.error('Texto grande demais. O limite é o mesmo do arquivo, 512 KB.')
+      avisarLimite('Texto grande demais. O limite é o mesmo do arquivo, 512 KB.')
       return
     }
 
@@ -244,7 +245,7 @@ export function ImportLeadsDialog({
       aceitarMatriz(lerCsv(limpo), 'Colado da planilha')
     } catch (err) {
       console.error('falha ao ler o texto colado', err)
-      toast.error(
+      avisarLimite(
         'Não foi possível ler o que foi colado. Copie as linhas inteiras da planilha.',
       )
     }
@@ -252,7 +253,7 @@ export function ImportLeadsDialog({
 
   async function escolherArquivo(arquivo: File) {
     if (arquivo.size > CSV_MAX_BYTES) {
-      toast.error('Arquivo grande demais. O limite é 512 KB por importação.')
+      avisarLimite('Arquivo grande demais. O limite é 512 KB por importação.')
       return
     }
 
@@ -273,7 +274,7 @@ export function ImportLeadsDialog({
     // sido descartado seria frágil, então a ordem importa — este `if` roda
     // antes, e só casa quando NÃO termina em `xlsx`.
     if (/\.xls$/i.test(arquivo.name)) {
-      toast.error(
+      avisarLimite(
         'Este é um arquivo do Excel antigo (.xls). Abra no Excel e use "Salvar como" → "Pasta de Trabalho do Excel (.xlsx)".',
       )
       return
@@ -314,7 +315,7 @@ export function ImportLeadsDialog({
       if (!aceitarMatriz(lida, arquivo.name)) return
     } catch (err) {
       console.error('falha ao ler a planilha', err)
-      toast.error('Não foi possível ler o arquivo. Confira se é um .xlsx ou .csv válido.')
+      avisarLimite('Não foi possível ler o arquivo. Confira se é um .xlsx ou .csv válido.')
     } finally {
       setLendo(false)
     }
@@ -488,14 +489,14 @@ export function ImportLeadsDialog({
         duplicados,
       })
       if ('error' in retorno) {
-        toast.error(retorno.error)
+        avisarLimite(retorno.error)
         return
       }
       setResultado(retorno)
       setPasso('resultado')
       onImported()
     } catch {
-      toast.error('Não foi possível importar. Tente de novo.')
+      avisarLimite('Não foi possível importar. Tente de novo.')
     } finally {
       setEnviando(false)
     }

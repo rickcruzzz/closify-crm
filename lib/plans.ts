@@ -29,6 +29,42 @@ export const FREE_LEAD_LIMIT = 50
 export const FREE_MEMBER_LIMIT = 2
 
 /**
+ * Quantos COLABORADORES o Free aceita — e não é o mesmo que `FREE_MEMBER_LIMIT`.
+ *
+ * ## O off-by-one que duas telas mostravam, achado em 15/09
+ *
+ * `FREE_MEMBER_LIMIT` conta **pessoas na empresa**, e `verificarLimiteDeMembros`
+ * (`lib/limits.ts`) soma `workspace_members` — que inclui o dono — mais os
+ * convites pendentes. Com o dono dentro, 2 membros são **o dono e mais um**.
+ *
+ * `plan-card.tsx` e `plan-comparison-table.tsx` diziam *"até 2
+ * colaboradores"*, prometendo TRÊS pessoas. Quem convidasse a terceira tomaria
+ * o erro na cara, depois de já ter mandado o convite.
+ *
+ * Promessa que o banco recusa é pior que limite baixo: o limite baixo a pessoa
+ * decide se aceita antes de entrar; a promessa quebrada ela descobre usando.
+ *
+ * Derivado, nunca escrito à mão: no dia em que o teto virar 3, o texto anda
+ * junto.
+ */
+export const FREE_COLABORADORES = FREE_MEMBER_LIMIT - 1
+
+/**
+ * Os papéis que um colaborador pode ter, nos dois planos.
+ *
+ * São os mesmos valores do enum `workspace_role` no Postgres, e a diferença
+ * entre eles é checada em RLS **e** na interface — não é rótulo de tela.
+ *
+ * Fica aqui, e não escrito na tela, pelo motivo de sempre: `lib/plans.ts` é a
+ * fonte única do que cada plano entrega, e um papel novo precisa aparecer nas
+ * duas telas de plano sem alguém se lembrar de editar as duas.
+ */
+export const PAPEIS_DO_COLABORADOR = [
+  { papel: 'Administrador', pode: 'convida, remove e mexe no plano' },
+  { papel: 'Membro', pode: 'trabalha o funil, sem tocar em cobrança' },
+] as const
+
+/**
  * Orçamentos com lembrete que uma empresa Free mantém ativos ao mesmo tempo.
  *
  * ## A parede estava no lugar errado, e isso é medição de conversão
@@ -275,4 +311,52 @@ export type CicloDeCobranca = keyof typeof CICLOS
 /** O que se cobra por um ciclo, em reais. */
 export function valorDoCiclo(ciclo: CicloDeCobranca): number {
   return CICLOS[ciclo].valor
+}
+
+/**
+ * Para onde mandar quem bateu num limite do Free.
+ *
+ * `?assinar=1` abre o formulário de CPF de saída — `SubscribeButton` lê esse
+ * parâmetro e abre sozinho. Sem ele a pessoa cai na tela de cobrança e precisa
+ * procurar o botão de novo, depois de já ter decidido.
+ */
+export const DESTINO_DO_UPGRADE = '/settings/billing?assinar=1'
+
+/**
+ * Esta mensagem de erro é um limite de plano?
+ *
+ * ## O buraco que isto fecha, medido em 15/09
+ *
+ * SETE lugares do produto devolvem uma frase mandando fazer upgrade —
+ * orçamento, contato, importação, membro, empresa, integração e o PDF. Todas
+ * as sete chegam à tela como **texto dentro de um toast**, e nenhuma é
+ * clicável.
+ *
+ * O efeito é o pior possível numa tela de conversão: a pessoa é interrompida
+ * no meio do que estava fazendo, é informada de que existe um plano que
+ * resolve, e não recebe caminho nenhum até ele. Ela volta para o trabalho e a
+ * intenção morre ali.
+ *
+ * `workspace-switcher.tsx` já registra a mesma lição em comentário — *"dizer
+ * 'faça upgrade' sem mostrar onde deixa a pessoa num beco"*.
+ *
+ * ## Por que reconhecer por TEXTO, e não por código de erro
+ *
+ * Um código exigiria mudar as sete origens, e três delas devolvem a frase de
+ * dentro do Postgres (`raise exception` nas triggers de limite) — onde não há
+ * campo para carregar um código próprio.
+ *
+ * O reconhecimento é frouxo de propósito: errar para o lado de OFERECER o
+ * upgrade num erro que não era de plano mostra um botão a mais; errar para o
+ * outro lado deixa a pessoa no beco. O primeiro é recuperável.
+ */
+export function ehLimiteDePlano(mensagem: string | null | undefined): boolean {
+  if (!mensagem) return false
+  const limpo = mensagem
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+  return (
+    /faca upgrade|upgrade para o pro|recurso pro|plano free (permite|inclui|acompanha)/.test(limpo)
+  )
 }

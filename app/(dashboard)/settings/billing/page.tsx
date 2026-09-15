@@ -145,7 +145,7 @@ export default async function BillingPage({
           <CardTitle>Compare os planos</CardTitle>
         </CardHeader>
         <CardContent>
-          <PlanComparisonTable plan={plan} />
+          <PlanComparisonTable plan={plan} isAdmin={isAdmin} />
         </CardContent>
       </Card>
     </div>

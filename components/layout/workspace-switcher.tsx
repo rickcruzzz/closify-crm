@@ -5,6 +5,8 @@ import { useRouter } from 'next/navigation'
 import { Building2, Check, ChevronsUpDown, Loader2, Plus, Zap } from 'lucide-react'
 import { toast } from 'sonner'
 
+import { avisarLimite } from '@/components/plano/avisar-limite'
+
 import { criarEmpresa, trocarEmpresa } from '@/lib/workspace/actions'
 
 import { ConfirmarExclusao } from '@/components/comum/confirmar-exclusao'
@@ -121,7 +123,7 @@ export function WorkspaceSwitcher({
       console.error('trocarEmpresa rejeitou', err)
       setEnviando(false)
       setIdEmTroca(null)
-      toast.error('Nao foi possivel trocar de empresa. Confira sua conexao e tente de novo.')
+      avisarLimite('Nao foi possivel trocar de empresa. Confira sua conexao e tente de novo.')
       return
     }
     setEnviando(false)
@@ -131,7 +133,7 @@ export function WorkspaceSwitcher({
     // ao dia em que o mascaramento parar de acontecer.
     setIdEmTroca(null)
     if (resultado?.error) {
-      toast.error(resultado.error)
+      avisarLimite(resultado.error)
       return
     }
     // ## O aviso, em vez de um dialogo de confirmacao

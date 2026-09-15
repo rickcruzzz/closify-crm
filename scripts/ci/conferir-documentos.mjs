@@ -104,6 +104,29 @@ const REMOVIDOS_COM_REGISTRO = new Map([
 const MARCA_DE_REGISTRO = 'A ponte do WhatsApp SAIU do produto em 28/08'
 
 /**
+ * A marca que declara um documento como PROPOSTA.
+ *
+ * ## Por que uma terceira escotilha, e por que ela é do DOCUMENTO
+ *
+ * As duas de cima listam CAMINHOS: arquivo removido, arquivo de fora. Elas não
+ * cobrem o caso de um documento de arquitetura, que cita por definição arquivos
+ * que ainda não existem — é a função dele.
+ *
+ * `docs/whatsapp-arquitetura-elite.md` citava treze, e as treze viraram
+ * "citado e não existe". Listá-las em `REMOVIDOS_COM_REGISTRO` seria mentira
+ * (nada foi removido), e o documento seguinte citaria outras treze.
+ *
+ * Então a declaração é do documento, não do caminho: quem escreve uma proposta
+ * escreve a marca no topo, e assume que aquilo é plano e não estado.
+ *
+ * **E o alarme não fica mudo.** As citações puladas são CONTADAS e impressas
+ * no fim — o que muda é a classificação, não o silêncio. Um documento que se
+ * declara proposta e descreve o que já existe continua aparecendo no relatório,
+ * com o número na cara.
+ */
+const MARCA_DE_PROPOSTA = 'Este documento é uma PROPOSTA'
+
+/**
  * Arquivos citados que NÃO são deste repositório, e por isso nunca existirão aqui.
  *
  * Mesma regra de `REMOVIDOS_COM_REGISTRO`: cada entrada diz de onde o arquivo é.
@@ -321,6 +344,8 @@ const medidas = await medirTudo()
 let problemas = 0
 let carimbosConferidos = 0
 let toleradosSemRegistro = 0
+/** Citacoes puladas por virem de documento que se declara PROPOSTA. */
+let propostos = 0
 const textoDeTodos = (
   await Promise.all(docs.map((d) => readFile(join(RAIZ, d), 'utf-8').catch(() => '')))
 ).join('\n')
@@ -332,6 +357,11 @@ console.log(`\nCONFERINDO ${docs.length} documentos\n${'='.repeat(56)}`)
 for (const doc of docs) {
   const txt = await readFile(join(RAIZ, doc), 'utf-8').catch(() => '')
   const achados = []
+
+  // Documento que se declara PROPOSTA cita o que ainda não existe por função.
+  // As citações dele são contadas e reportadas, nunca caladas — ver
+  // `MARCA_DE_PROPOSTA`.
+  const ehProposta = txt.includes(MARCA_DE_PROPOSTA)
 
   if (!DOCS_HISTORICOS.has(doc)) {
     for (const m of txt.matchAll(CITACAO)) {
@@ -349,6 +379,10 @@ for (const doc of docs) {
       // `REMOVIDOS_COM_REGISTRO`: entra com o motivo escrito, ou não entra.
       if (EXTERNOS_CONHECIDOS.has(cam)) continue
       if (await existeComPrefixo(cam, arquivosDoRepo)) continue
+      if (ehProposta) {
+        propostos += 1
+        continue
+      }
 
       // Casa pelo caminho completo E pelo nome do arquivo: o documento cita
       // `vigiar-sessao-whatsapp.mjs` solto em alguns lugares e com o caminho
@@ -388,6 +422,16 @@ for (const doc of docs) {
 }
 
 console.log(`\n${'='.repeat(56)}`)
+// Fora do `if`, e isso é o ponto: contar só quando já há problema tornaria a
+// escotilha invisível justamente no dia em que ela estivesse escondendo algo.
+if (propostos > 0) {
+  console.log(
+    `${propostos} citação(ões) vieram de documento declarado PROPOSTA — arquivos a CONSTRUIR.`,
+  )
+  console.log('Contadas, nao caladas: proposta que descreve o que ja existe aparece aqui.')
+  console.log('')
+}
+
 if (problemas === 0) {
   // ## Verde que nao diz o que conferiu e o verde que criou este problema
   //
@@ -411,6 +455,14 @@ ATENCAO: ${semFonte.length} metrica(s) sem fonte nesta maquina.`)
   }
 } else {
   console.log(`${problemas} problema(s)`)
+  if (propostos > 0) {
+    console.log(
+      `
+${propostos} citação(ões) de documento declarado PROPOSTA — arquivos a construir, não estado.`,
+    )
+    console.log('   Contadas e não caladas: proposta que descreve o que já existe aparece aqui.')
+  }
+
   if (toleradosSemRegistro > 0) {
     console.log('\nATENCAO: a nota que explicava a remocao saiu do documento.')
     console.log('Sem ela, quem ler as secoes antigas conclui que o codigo existe.')

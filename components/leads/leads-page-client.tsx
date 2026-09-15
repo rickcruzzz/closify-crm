@@ -4,6 +4,8 @@ import * as React from 'react'
 import Link from 'next/link'
 import { useRouter, useSearchParams, usePathname } from 'next/navigation'
 import { toast } from 'sonner'
+
+import { avisarLimite } from '@/components/plano/avisar-limite'
 import {
   Download,
   Loader2,
@@ -208,7 +210,7 @@ export function LeadsPageClient({
       // procurando o João na lista, que é onde a maioria desiste e cadastra
       // de novo com o e-mail trocado.
       if ('leadExistenteId' in result && result.leadExistenteId) {
-        toast.error(result.error, {
+        avisarLimite(result.error, {
           action: {
             label: 'Ver contato',
             onClick: () => router.push(`/leads/${result.leadExistenteId}`),
@@ -216,7 +218,7 @@ export function LeadsPageClient({
         })
         return
       }
-      toast.error(result.error)
+      avisarLimite(result.error)
       return
     }
     toast.success(id ? 'Contato atualizado.' : 'Contato criado.')
@@ -237,7 +239,7 @@ export function LeadsPageClient({
     setExcluindoLeadId(null)
 
     if (result?.error) {
-      toast.error(result.error)
+      avisarLimite(result.error)
       return
     }
     toast.success('Contato excluído.')

@@ -4,6 +4,8 @@ import * as React from 'react'
 import { CalendarClock, FileDown, Loader2, Pencil, Plus } from 'lucide-react'
 import { toast } from 'sonner'
 
+import { avisarLimite } from '@/components/plano/avisar-limite'
+
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -151,7 +153,7 @@ export function OrcamentoDoNegocio({
 
       if (!r.ok) {
         const corpo = await r.json().catch(() => null)
-        toast.error(corpo?.error ?? 'Não foi possível gerar o PDF.')
+        avisarLimite(corpo?.error ?? 'Não foi possível gerar o PDF.')
         return
       }
 
@@ -166,7 +168,7 @@ export function OrcamentoDoNegocio({
       // aba até ela ser fechada.
       URL.revokeObjectURL(url)
     } catch {
-      toast.error('Não foi possível gerar o PDF.')
+      avisarLimite('Não foi possível gerar o PDF.')
     } finally {
       setBaixando(false)
     }

@@ -74,8 +74,8 @@ de custo: paywall no momento em que a pessoa sente o valor converte 8-12%,
 contra 3-4% de limite arbitrário — e as outras três são todas arbitrárias no
 sentido técnico do termo.
 
-<!-- contagem: migrations.arquivos=85 migrations.maior=0086 -->
-**85 arquivos de migration, e a maior é `0086`** (remedido em 12/09; o `0049`
+<!-- contagem: migrations.arquivos=86 migrations.maior=0087 -->
+**86 arquivos de migration, e a maior é `0087`** (remedido em 12/09; o `0049`
 não existe, removido em 22/08). Os dois números vêm sempre juntos: a contagem
 sozinha convida a inferir `0084`.
 
