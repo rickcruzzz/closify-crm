@@ -1,5 +1,3 @@
-import { readFileSync } from 'node:fs'
-import { join } from 'node:path'
 
 import { describe, expect, it } from 'vitest'
 
@@ -16,144 +14,104 @@ const base = {
 }
 
 describe('montarAbordagem', () => {
-  it('a linha de DESCARTE nunca e cortada, em nenhum nicho', () => {
-    // O defeito que este teste tranca: a primeira versao cortava a mensagem
-    // inteira no fim, e contra 90 prospects reais a saida terminava em
-    // "Se nao fizer sentido, me avisa que…" — comendo exatamente a linha que
-    // transforma "nao tenho interesse" em resposta em vez de denuncia de spam.
-    // O teste antigo passava porque conferia TAMANHO, nao o que sobrou.
-    //
-    // O TEXTO da linha mudou em 08/09, de "me avisa" para "e so ignorar": o
-    // dono passou a enviar sem responder, e promessa que exige acao do
-    // remetente vira promessa quebrada. A funcao e a mesma, e este teste
-    // continua travando o que importa — que ela seja a ULTIMA coisa.
-    for (const vertical of ['dedetizacao', 'comunicacao-visual', 'marcenaria', 'nicho-novo']) {
-      for (const motivos of [['tem equipe de vendas'], ['WhatsApp direto']]) {
-        const m = montarAbordagem({ ...base, vertical, motivos })
-        expect(m.endsWith('Não volto a procurar.')).toBe(true)
-        expect(m).not.toContain('…')
-      }
+  // A mensagem antiga deu 0 contas em 98 envios. Ela terminava em LINK DE
+  // CADASTRO, ou seja, pedia a um estranho que criasse conta, senha e empresa
+  // na primeira mensagem. Cold outreach nao converte pedindo conversao,
+  // converte pedindo RESPOSTA. Ver docs/mercado/abordagem-nova-2026-09-15.md.
+  const base = {
+    dominio: 'quatrocor.com.br',
+    nome: 'Gráfica Quatrocor',
+    vertical: 'comunicacao-visual',
+    motivos: ['pede orçamento', 'telefone na página'],
+    precoMensal: 97,
+    limiteGratis: 50,
+    limiteDeEmpresas: 5,
+  }
+
+  it('cabe no teto do WhatsApp em todos os nichos', () => {
+    for (const vertical of ['dedetizacao', 'marcenaria', 'locacao-equipamentos', 'inexistente']) {
+      expect(montarAbordagem({ ...base, vertical }).length).toBeLessThanOrEqual(TETO)
     }
   })
 
-  it('quando nao cabe, sai o OPCIONAL e nao o fim', () => {
-    const comEquipe = montarAbordagem({
-      ...base, vertical: 'marcenaria', motivos: ['tem equipe de vendas'],
-    })
-    // O gancho de marcenaria e o mais longo: a linha da equipe e sacrificada.
-    expect(comEquipe).toMatch(/n[ãa]o volto a procurar\.$/i)
-    expect(comEquipe.length).toBeLessThanOrEqual(TETO)
+  it('NEGA o mal-entendido na primeira linha', () => {
+    // O dono le "orcamento" e acha que e cliente comprando. Responde animado,
+    // descobre que e venda, e vai em "Bloquear e denunciar". E no painel isso
+    // contaria como REPLIED: a estatistica melhora enquanto o numero piora.
+    expect(montarAbordagem(base)).toMatch(/nao (e pedido de|vim pedir) orcamento/i)
   })
 
-  it('cabe na tela do WhatsApp', () => {
-    // Acima de ~520 caracteres o WhatsApp mostra "Ler mais" e a mensagem morre
-    // ali, sem leitura.
-    for (const vertical of ['dedetizacao', 'marcenaria', 'locacao-equipamentos', 'nicho-novo']) {
-      const m = montarAbordagem({ ...base, vertical, motivos: ['tem equipe de vendas'] })
-      expect(m.length).toBeLessThanOrEqual(TETO)
+  it('oferece a SAIDA, e ela e a ultima linha', () => {
+    const texto = montarAbordagem(base)
+    expect(texto).toMatch(/me diz que eu paro|so me dizer que eu paro/i)
+    expect(texto.trimEnd().endsWith('por aqui.')).toBe(true)
+  })
+
+  it('a saida e pegavel por pediuParaSair', () => {
+    // A promessa so vale se o opt-out reconhecer a palavra que a mensagem
+    // convida a pessoa a usar.
+    expect(montarAbordagem(base).includes('paro')).toBe(true)
+  })
+
+  it('NAO promete "nao volto a procurar", porque agora ha toque 2 e 3', () => {
+    // A frase antiga virou mentira quando a sequencia nasceu.
+    expect(montarAbordagem(base)).not.toMatch(/nao volto a procurar/i)
+  })
+
+  it('so cita o formulario quando o SITE disse que ele existe', () => {
+    expect(montarAbordagem(base)).toMatch(/recebem pedido de orcamento pelo site/i)
+    const sem = montarAbordagem({ ...base, motivos: ['telefone na página'] })
+    expect(sem).not.toMatch(/pelo site/i)
+  })
+
+  it('NAO leva preco: ele responde objecao que ninguem fez', () => {
+    const texto = montarAbordagem({ ...base, precoMensal: 97 })
+    expect(texto).not.toMatch(/R\$/)
+    expect(texto).not.toMatch(/97/)
+  })
+
+  it('NAO leva link: ele da um lugar para ir EM VEZ de responder', () => {
+    expect(montarAbordagem(base)).not.toMatch(/https?:\/\/|velofunil|wa\.me/i)
+  })
+
+  it('NAO promete o que o produto nao faz', () => {
+    const texto = montarAbordagem(base)
+    // O produto CRIA a tarefa; quem liga e a pessoa. E "cobrar" no portugues
+    // do cliente significa receber divida, medido no Exa em 09/09.
+    for (const p of [/cobra/i, /envia sozinho/i, /automatic/i, /garant/i]) {
+      expect(texto).not.toMatch(p)
     }
   })
 
-  it('diz de ONDE veio o contato', () => {
-    // Exigencia pratica da LGPD para interesse legitimo, e antes disso o que
-    // separa abordagem de spam.
-    // Propriedade, e não a string: a abertura passou a ter quatro formas em
-    // 09/09 para quebrar o padrão de texto idêntico. O que NÃO pode variar é
-    // dizer de onde veio o contato e nomear a empresa.
-    const m = montarAbordagem(base)
-    expect(m).toMatch(/^Oi[!,]/)
-    expect(m).toContain('no Google')
-    expect(m).toContain('Gráfica Quatrocor')
+  it('nao tem travessao', () => {
+    // Banido dos criativos em 31/08 e estendido a tudo em 15/09: ninguem
+    // digita travessao no WhatsApp, e ele denuncia texto de maquina no canal
+    // onde a mensagem precisa parecer uma pessoa.
+    expect(montarAbordagem(base)).not.toMatch(/[–—]/)
   })
 
-  it('oferece a saida na PRIMEIRA mensagem', () => {
-    // Uma linha de descarte custa nada e e a diferenca entre "nao tenho
-    // interesse" e uma denuncia de spam — que no WhatsApp derruba o numero.
-    expect(montarAbordagem(base)).toMatch(/n[ãa]o volto a procurar/i)
+  it('chama pelo nome quando o decisor foi casado com ESTA empresa', () => {
+    expect(montarAbordagem({ ...base, decisor: 'Carla' })).toMatch(/^Oi, Carla\./)
   })
 
-  it('NUNCA afirma dor que ninguem mediu', () => {
-    // Nos lemos o site, nao a carteira. "Vi que voce esta perdendo vendas" e
-    // invencao — vira pergunta, que e honesta e obriga resposta.
-    const m = montarAbordagem(base)
-    expect(m).not.toMatch(/vi que (voc[êe]|a empresa)|percebi que|notei que|voc[êe] est[áa] perdendo/i)
-    expect(m).toMatch(/\?/)
+  it('volta ao nome da empresa quando nao ha decisor', () => {
+    expect(montarAbordagem(base)).toMatch(/^Oi, Gráfica Quatrocor\./)
   })
 
-  it('so cita equipe quando o SITE disse que ela existe', () => {
-    // Nome curto de propósito: com as variantes de 09/09 a mensagem pode
-    // encostar no teto, e aí a linha da equipe é sacrificada — comportamento
-    // certo, com teste próprio logo acima. O que ESTE caso prova é a regra de
-    // negócio: sem o sinal no site, a frase não existe em combinação nenhuma.
-    const curto = { ...base, nome: 'Alfa' }
-    const com = montarAbordagem({ ...curto, motivos: ['tem equipe de vendas'] })
-    const sem = montarAbordagem({ ...curto, motivos: ['WhatsApp direto'] })
-    expect(com).toMatch(/mais de um no atendimento/)
-    expect(sem).not.toMatch(/mais de um no atendimento/)
-
-    // E a negativa vale para TODA variante, não só a que este domínio sorteou.
-    for (let i = 0; i < 50; i++) {
-      const m = montarAbordagem({ ...curto, dominio: `x${i}.com.br`, motivos: ['WhatsApp direto'] })
-      expect(m).not.toMatch(/mais de um no atendimento/)
-    }
+  it('duas empresas diferentes nao recebem o MESMO texto', () => {
+    // "texto identico" e o terceiro padrao que faz o WhatsApp banir um numero.
+    const a = montarAbordagem({ ...base, dominio: 'a.com.br', nome: 'Alfa' })
+    const b = montarAbordagem({ ...base, dominio: 'zzz.com.br', nome: 'Alfa' })
+    expect(a).not.toBe(b)
   })
 
-  it('preco e limite vem de fora, nunca escritos a mao', () => {
-    // Se `lib/plans.ts` mudar e a mensagem nao, a abordagem passa a prometer um
-    // preco que o checkout nao cobra.
-    const m = montarAbordagem({ ...base, precoMensal: 59, limiteGratis: 30 })
-    expect(m).toContain('R$ 59')
-    expect(m).toContain('30 contatos')
-    expect(m).not.toContain('R$ 49')
-  })
-
-  it('leva o argumento que a dor publica revelou: contrato, nao preco', () => {
-    // Medido em 06/09 no Reclame Aqui: a objecao numero um contra RD Station e
-    // Agendor e "nao consigo cancelar", nao "e caro".
-    const m = montarAbordagem(base)
-    expect(m).toMatch(/sem fidelidade/i)
-    expect(m).toMatch(/CSV/)
-  })
-
-  it('nao usa travessao: no WhatsApp ele vira caractere estranho em teclado antigo', () => {
-    // Pedido do dono em 07/09, junto com a mesma limpeza no sino e no card de
-    // sinais. O travessao tambem inflava o `wa.me`, onde ele vira `%E2%80%94` —
-    // tres bytes num link que ja carrega a mensagem inteira codificada.
-    const m = montarAbordagem(base)
-    expect(m).not.toMatch(/[—–]/)
-  })
-
-  it('NAO inventa prova social', () => {
-    // Decisao travada do projeto: este produto nao tem cliente externo.
-    const m = montarAbordagem(base)
-    expect(m).not.toMatch(/\+?\d+ (empresas|clientes) (j[áa] )?us|mais de \d+ (empresas|clientes)|l[íi]der/i)
-  })
-
-  it('o gancho muda por nicho, e cai num padrao seguro no nicho desconhecido', () => {
-    // Desde 09/09 cada nicho tem TRÊS ganchos e o domínio escolhe qual. Casar
-    // com uma palavra específica testaria a variante sorteada, não a regra —
-    // e passaria ou falharia conforme o hash, que é o pior tipo de teste.
-    //
-    // O que a regra promete é que o nicho muda o gancho. Provado comparando os
-    // conjuntos: nenhuma mensagem de marcenaria pode sair igual à do padrão.
-    const dominios = Array.from({ length: 30 }, (_, i) => `p${i}.com.br`)
-    const gancho = (vertical: string) => (dominio: string) =>
-      montarAbordagem({ ...base, vertical, dominio }).split('\n\n')[1]
-
-    const marcenaria = new Set(dominios.map(gancho('marcenaria')))
-    const desconhecido = new Set(dominios.map(gancho('inexistente')))
-
-    // `Array.from` e não `for...of` sobre o Set: o `target` deste tsconfig
-    // reprova a iteração direta com TS2802, e o vitest usa esbuild, que
-    // aceita. Ou seja, o teste passaria e o `tsc` quebraria — a mesma pegadinha
-    // que esta sessão já pagou uma vez com um `Map`.
-    expect(marcenaria.size).toBe(3)
-    expect(Array.from(marcenaria).some((g) => /planejados/.test(g))).toBe(true)
-    for (const g of Array.from(marcenaria)) expect(desconhecido.has(g)).toBe(false)
-    // O padrão continua falando de orçamento, que é o que o produto resolve.
-    for (const g of Array.from(desconhecido)) expect(g).toMatch(/or[çc]amento/)
+  it('a MESMA empresa recebe sempre o mesmo texto', () => {
+    // A semente e o dominio: sem isso, reenviar mandaria outra mensagem e a
+    // pessoa perceberia a maquina.
+    expect(montarAbordagem(base)).toBe(montarAbordagem(base))
   })
 })
+
 
 describe('nomeCurto', () => {
   it('corta a cauda de SEO do titulo', () => {
@@ -170,34 +128,6 @@ describe('nomeCurto', () => {
     expect(nomeCurto('Um título longo demais para ser o nome de uma empresa de verdade', 'q.com.br')).toBe(
       'q.com.br',
     )
-  })
-})
-
-describe('o nome de quem decide', () => {
-  it('chama pelo nome quando o decisor foi casado com ESTA empresa', () => {
-    const m = montarAbordagem({ ...base, decisor: 'Daniel' })
-    expect(m.startsWith('Oi, Daniel! ')).toBe(true)
-    expect(m.split('\n\n')[0]).toContain('Gráfica Quatrocor')
-  })
-
-  it('volta a saudacao generica quando nao ha decisor, sem quebrar nada', () => {
-    // `null` e o caso comum: `extrairDecisor` recusa casar quando o nome da
-    // empresa nao aparece no titulo do perfil. Nome errado na primeira palavra
-    // queima a abordagem inteira — generico e melhor que arriscado.
-    for (const d of [null, undefined]) {
-      const m = montarAbordagem({ ...base, decisor: d })
-      expect(m.startsWith('Oi! ')).toBe(true)
-      expect(m.split('\n\n')[0]).toContain('Gráfica Quatrocor')
-      expect(m.endsWith('Não volto a procurar.')).toBe(true)
-    }
-  })
-
-  it('com nome E equipe, o fim continua intocavel', () => {
-    const m = montarAbordagem({
-      ...base, vertical: 'marcenaria', decisor: 'Ana Beatriz', motivos: ['tem equipe de vendas'],
-    })
-    expect(m.length).toBeLessThanOrEqual(TETO)
-    expect(m.endsWith('Não volto a procurar.')).toBe(true)
   })
 })
 
@@ -229,71 +159,6 @@ describe('nomeCurto: o nome que a pessoa reconhece', () => {
   it('sem nome, ou nome absurdo, devolve o dominio', () => {
     expect(nomeCurto(null, 'x.com.br')).toBe('x.com.br')
     expect(nomeCurto('a'.repeat(60), 'x.com.br')).toBe('x.com.br')
-  })
-})
-
-describe('o link, e o que a operacao de SO ENVIO exige dele', () => {
-  it('a mensagem diz ONDE fica: sem link nao ha para onde ir', () => {
-    // Ate 08/09 ela dizia "Montei um CRM pra isso" e nunca dizia onde. Quem se
-    // interessasse tinha que PERGUNTAR — e a operacao nao responde.
-    expect(montarAbordagem(base)).toContain('velofunil.com.br')
-  })
-
-  it('o link e MARCADO: sem isso nao ha retorno nenhum', () => {
-    // Enviar sem responder significa que o unico sinal de vida e quem visita o
-    // site. `utm-capture.tsx` grava `utm_source` no workspace de quem se
-    // cadastra, entao a marca faz a origem aparecer sem codigo novo.
-    //
-    // ## A marca saiu do TEXTO e foi para o REDIRECT, em 12/09
-    //
-    // Era `?utm_source=whatsapp` escrito na mensagem. O dono apontou olhando a
-    // conversa: query crua no fim de um texto que imita uma pessoa falando le
-    // como rastreamento. Virou o atalho `/wa`, no molde do `/ig` da bio.
-    //
-    // A garantia continua a mesma e este caso continua sendo o dono dela —
-    // mudou onde ele olha. Um link SEM marca nenhuma reprova aqui igual antes.
-    expect(montarAbordagem(base)).toMatch(/velofunil\.com\.br\/wa\b|utm_source=/)
-  })
-
-  it('o atalho do link EXISTE no next.config, senao a marca nao acontece', () => {
-    // Este caso e a metade que faltava, e ele e mais forte que o anterior.
-    //
-    // Com a UTM escrita no texto, ver a string era ver a marca. Com atalho, o
-    // texto pode estar perfeito e a marca NAO existir — basta o redirect sumir
-    // do `next.config.mjs`, e ai `/wa` vira 404 em producao sem nada aqui
-    // falhar. Foi exatamente o estado medido no dia em que o atalho nasceu:
-    // `/wa` devolvia 404 enquanto `/ig` devolvia 307.
-    //
-    // Ler o arquivo de config num teste e incomum, e e o unico jeito de amarrar
-    // as duas pontas sem subir o servidor.
-    const config = readFileSync(join(process.cwd(), 'next.config.mjs'), 'utf-8')
-    const link = montarAbordagem(base).match(/https:\/\/[^\s]+/)?.[0] ?? ''
-    const slug = link.replace(/^https:\/\/[^/]+\//, '').split('?')[0]
-    expect(slug).toBeTruthy()
-    expect(config).toContain(`paraCanal('${slug}'`)
-    expect(config).toContain('utm_campaign=${campanha}')
-  })
-
-  it('a saida NAO exige resposta do remetente', () => {
-    // "me avisa que nao te procuro de novo" e promessa que exige acao de quem
-    // mandou. Numa operacao de so envio ela seria quebrada — e promessa
-    // quebrada e o que transforma desinteresse em denuncia.
-    const m = montarAbordagem(base)
-    expect(m).toContain('pode ignorar')
-    expect(m).not.toContain('me avisa')
-  })
-
-  it('cabe no teto em TODOS os nichos, com e sem a linha de equipe', () => {
-    // Medido em 08/09: com o link, o pior caso (marcenaria com equipe) fica em
-    // 559 de 560. UM caractere de folga — por isso este caso existe.
-    for (const vertical of ['dedetizacao', 'comunicacao-visual', 'marcenaria',
-      'locacao-equipamentos', 'eventos-corporativos', 'nicho-novo']) {
-      for (const motivos of [['tem equipe de vendas'], ['WhatsApp direto']]) {
-        const m = montarAbordagem({ ...base, vertical, motivos })
-        expect(m.length).toBeLessThanOrEqual(TETO)
-        expect(m.endsWith('Não volto a procurar.')).toBe(true)
-      }
-    }
   })
 })
 
@@ -372,49 +237,10 @@ describe('a variação que quebra o padrão de texto idêntico', () => {
         motivos: ['tem equipe de vendas', 'pede orçamento no site'],
       })
       expect(m.length).toBeLessThanOrEqual(560)
-      expect(m.endsWith('Não volto a procurar.')).toBe(true)
-    }
-  })
-})
-
-describe('a linha de multi-empresa', () => {
-  // "R$ 49 pela empresa toda" é ambíguo para quem tem dois negócios — e no
-  // Brasil isso é comum: a marcenaria e a loja de material. A pessoa lê e não
-  // sabe se paga duas vezes.
-  //
-  // A frase só ficou honesta com a migration 0078: antes dela a segunda
-  // empresa nascia Free, com teto de 50 contatos.
-
-  it('diz o número, e o número vem de fora', () => {
-    const m = montarAbordagem({ ...base, limiteDeEmpresas: 7 })
-    expect(m).toContain('o mesmo preço cobre até 7')
-  })
-
-  it('sai antes da linha de equipe quando a mensagem estoura', () => {
-    // A ordem de sacrifício é deliberada: empresas fala com poucos (3 de 45
-    // na base), equipe só aparece quando o site disse que ela existe — ou
-    // seja, já é dirigida a quem se encaixa.
-    const m = montarAbordagem({
-      ...base,
-      nome: 'Comunicação Visual e Serralheria do Litoral Norte Paulista',
-      vertical: 'marcenaria',
-      motivos: ['tem equipe de vendas'],
-    })
-    expect(m.length).toBeLessThanOrEqual(TETO)
-    expect(m).toContain('mais de um no atendimento')
-    expect(m).not.toContain('mais de um negócio')
-  })
-
-  it('a linha de descarte continua sendo a última, em toda combinação', () => {
-    for (let i = 0; i < 120; i++) {
-      const m = montarAbordagem({
-        ...base,
-        dominio: `e${i}.com.br`,
-        nome: 'Empresa de Comunicação Visual e Sinalização Viária Ltda',
-        motivos: ['tem equipe de vendas'],
-      })
-      expect(m.length).toBeLessThanOrEqual(TETO)
-      expect(m.endsWith('Não volto a procurar.')).toBe(true)
+      // A promessa mudou de FORMA em 15/09, nao de existencia: com os toques
+      // 2 e 3 nascendo, "nao volto a procurar" viraria mentira. "Me diz que eu
+      // paro" continua verdadeiro e e pegavel por `pediuParaSair`.
+      expect(m.endsWith('por aqui.')).toBe(true)
     }
   })
 })

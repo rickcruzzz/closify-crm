@@ -96,38 +96,6 @@ export const TETO = 560
  * texto chega inteiro de uma vez, e apertar enviar no mesmo instante manda a
  * mensagem antes de a busca terminar. Esperar o cartão aparecer é do dono.
  */
-/**
- * ## O atalho `/wa`, e por que ele é melhor que a query crua — 12/09
- *
- * Era `https://velofunil.com.br/?utm_source=whatsapp`. O dono apontou olhando
- * a conversa: 44 caracteres de query no fim de um texto escrito para parecer
- * uma pessoa falando. `?utm_source=` lê como rastreamento; `/wa` lê como
- * endereço.
- *
- * O atalho é o mesmo mecanismo do `/ig` da bio do Instagram, declarado em
- * `next.config.mjs`. Três ganhos, e o terceiro só existe por causa do
- * segundo:
- *
- *     tamanho   44 -> 31 caracteres
- *     o `www`   em 12/09 medi que NAO dava para acrescentar: a mensagem mais
- *               longa ja estava em 560, o teto, e com `www.` ia a 564 — 59
- *               das 837 seriam cortadas em silencio. Com o atalho sobra
- *               folga, e o canonico deixa de pagar os 259ms do redirect de
- *               dominio (575ms medidos contra 316ms)
- *     medicao   ganha `utm_medium` e `utm_campaign`, que o link antigo nao
- *               tinha. `cruzarCampanhasComClientes` agrupa por CAMPANHA, e
- *               sem ela a prospeccao caia no balde de "sem campanha
- *               identificada" junto com o organico
- *
- * **`/wa` não existia em produção quando esta linha foi escrita** — medido,
- * 404 —, e o `/ig` respondia 307 no mesmo instante, o que prova que o
- * mecanismo é o certo e o que falta é a promoção. Por isso
- * `scripts/inteligencia/enviar-evolution.mjs` passou a exercitar este link
- * antes do primeiro envio: sem essa trava, disparar antes de promover mandaria
- * 837 empresas para um 404.
- */
-const LINK = 'https://www.velofunil.com.br/wa'
-
 export type DadosDaAbordagem = {
   /** O domínio, que é como a pessoa reconhece a própria empresa. */
   dominio: string
@@ -221,142 +189,6 @@ function escolher<T>(opcoes: readonly T[], semente: string, fatia: string): T {
   }
   return opcoes[h % opcoes.length]
 }
-
-/**
- * As aberturas. Todas dizem a MESMA coisa: achei você procurando, não comprei
- * sua lista.
- *
- * A honestidade da origem não é enfeite — é o que separa esta mensagem de
- * spam, e é ela que sustenta a linha de descarte no fim.
- */
-const SAUDACAO = [
-  (nome: string) => `Achei a ${nome} procurando empresas do setor no Google.`,
-  (nome: string) => `Cheguei na ${nome} pesquisando empresas do setor aqui no Google.`,
-  (nome: string) => `Encontrei a ${nome} enquanto procurava empresas do setor no Google.`,
-  (nome: string) => `Vi a ${nome} numa busca por empresas do setor no Google.`,
-] as const
-
-/**
- * A oferta, em três formulações.
- *
- * As três carregam as mesmas duas coisas obrigatórias: o mecanismo ("cada
- * orçamento vira um card, com a data do retorno") e o preço pela empresa. A
- * primeira é o eco literal do `og:description` da landing, e por isso continua
- * na lista.
- */
-const OFERTA = [
-  (preco: number) =>
-    `Montei um sistema pra isso: cada orçamento vira um card, com a data do retorno. ` +
-    `R$ ${preco} pela empresa toda, sem cobrar por usuário.`,
-  (preco: number) =>
-    `Fiz um sistema pra isso: você guarda a validade e o card avisa na data do retorno. ` +
-    `R$ ${preco} pela empresa toda, não por pessoa.`,
-  (preco: number) =>
-    `Construí um sistema pra isso: o orçamento entra com a data do retorno e o lembrete ` +
-    `nasce junto. R$ ${preco} pela empresa toda.`,
-] as const
-
-/**
- * A linha do multi-empresa, e por que ela é OPCIONAL na mensagem.
- *
- * ## O mal-entendido que ela evita
- *
- * "R$ 49 pela empresa toda" é ambíguo para quem tem dois negócios — e no
- * Brasil isso é comum: a marcenaria e a loja de material, a dedetizadora e a
- * de limpeza. A pessoa lê "pela empresa toda" e não sabe se precisa pagar
- * duas vezes.
- *
- * Dizer o número resolve, e o número agora existe: a migration 0078 fez o Pro
- * cobrir cinco empresas do mesmo dono, todas com os recursos Pro. Antes disso
- * a frase seria mentira — a segunda empresa nascia Free.
- *
- * ## Por que não entra em todas
- *
- * A mensagem tem teto de 560 caracteres e a linha de descarte é intocável.
- * Quem tem duas empresas é minoria (3 de 45 na base medida em 09/09), então
- * pagar ~55 caracteres em toda mensagem para falar com poucos sairia caro em
- * "Ler mais" — que mata a mensagem inteira.
- *
- * Entra quando cabe, pelo mesmo mecanismo da linha de equipe: o que sai
- * quando estoura é o opcional, nunca o fim.
- */
-const LINHA_MULTI_EMPRESA = (limite: number) =>
-  ` Se você tem mais de um negócio, o mesmo preço cobre até ${limite}.`
-
-/**
- * O convite para testar. As três dizem sem cartão, sem prisão e com o número.
- *
- * ## O limite fica dito, e não anunciado (09/09)
- *
- * As versões anteriores abriam com ele — *"Grátis até 50 contatos"* — e o dono
- * apontou: a primeira coisa que a frase comunicava era o teto, não o convite.
- * Numa mensagem fria, liderar pela restrição é dar motivo para parar de ler.
- *
- * O número CONTINUA, e isso não é negociável: quem se cadastra esperando
- * ilimitado e bate em 50 vive a mesma promessa quebrada que a landing acabou
- * de consertar em "Empresas ilimitadas". A mudança é de ênfase, não de
- * conteúdo — o convite vem primeiro e o teto vem junto, sem holofote.
- */
-const TESTE = [
-  (limite: number) =>
-    `Testa sem pagar e sem cartão, com até ${limite} contatos. Sem fidelidade, e seus dados saem em CSV.`,
-  (limite: number) =>
-    `Dá pra usar de graça, sem cartão, com até ${limite} contatos. Cancela quando quiser e leva tudo em CSV.`,
-  (limite: number) =>
-    `Pode testar à vontade: sem cartão, até ${limite} contatos, e seus dados saem em CSV quando quiser.`,
-] as const
-
-const GANCHO: Record<string, readonly string[]> = {
-  dedetizacao: [
-    'Quando você manda um orçamento e o cliente some, quem lembra de dar o retorno?',
-    'Quantos orçamentos você mandou esse mês e nunca teve resposta?',
-    'Depois que o orçamento sai, o retorno fica na sua cabeça ou anotado em algum lugar?',
-  ],
-  'comunicacao-visual': [
-    'Quando você manda um orçamento e o cliente some, o retorno fica na memória de quem?',
-    'Orçamento de fachada demora pra decidir. Como você acompanha quem ficou de ver?',
-    'Quantos orçamentos você mandou essa semana e não sabe dizer em que pé estão?',
-  ],
-  marcenaria: [
-    'Planejados demoram semanas pra fechar. Como você acompanha quem ainda decide?',
-    'Depois que o projeto e o valor saem, quem lembra de voltar antes do cliente esfriar?',
-    'Quantos projetos de planejados estão parados esperando um retorno seu?',
-  ],
-  'locacao-equipamentos': [
-    'Quando uma locação está terminando, quem lembra de oferecer a renovação?',
-    'Orçamento de locação tem prazo curto. Como você acompanha quem pediu e não fechou?',
-    'Quantas locações venceram esse mês sem ninguém oferecer a renovação?',
-  ],
-  /**
-   * O gancho de solar fala a MÉDIA do setor, não a dor genérica.
-   *
-   * Os outros cinco perguntam "quem lembra de dar o retorno?" porque o dono
-   * ainda não nomeou o problema. O integrador solar já nomeou: o conteúdo do
-   * próprio setor diz que a conversão é de 3-5% e que "corrigir a cadência de
-   * follow-up e fechar 25% das propostas que você já envia produz o mesmo
-   * resultado que dobrar seus leads".
-   *
-   * Falar a linguagem dele — proposta, cadência, conversão — é o que separa
-   * "mais um CRM" de "alguém que conhece meu negócio". E o número entra sem
-   * ser acusação: é a média do setor, não um palpite sobre a empresa dele.
-   */
-  'energia-solar': [
-    'A média do setor fecha 3 a 5% das propostas. Você sabe quantas das suas ainda estão vivas?',
-    'Depois que a proposta sai, o follow-up fica na sua cabeça ou tem data marcada?',
-    'Quantas propostas de solar você mandou esse mês e não sabe em que pé estão?',
-  ],
-  'eventos-corporativos': [
-    'Depois que a proposta do evento sai, quem acompanha o cliente até a assinatura?',
-    'Proposta de evento leva semanas. Como você sabe quem ainda está decidindo?',
-    'Quantas propostas de evento estão paradas esperando um retorno seu?',
-  ],
-}
-
-const GANCHO_PADRAO = [
-  'Quando você manda um orçamento e o cliente some, quem lembra de dar o retorno?',
-  'Depois que o orçamento sai, o retorno fica na sua cabeça ou anotado em algum lugar?',
-  'Quantos orçamentos você mandou esse mês e não sabe dizer em que pé estão?',
-] as const
 
 /**
  * As duas linhas que NUNCA podem ser cortadas, e o defeito que provou isso.
@@ -480,73 +312,117 @@ function desgritar(nome: string): string {
  * automatizado em volume é exatamente o que faz o WhatsApp banir um número, e
  * o número aqui é o do dono. Quem aperta enviar é uma pessoa.
  */
+/**
+ * ## A abertura NEGA o mal-entendido mais caro
+ *
+ * O dono passa o olho no celular, le "orcamento" e conclui que e cliente
+ * comprando. Ele responde animado, descobre que e venda, e vai em "Bloquear e
+ * denunciar". O estrago e duplo: no painel isso conta como `REPLIED`, ou seja,
+ * a estatistica melhora enquanto o numero piora.
+ *
+ * Cinco palavras evitam a denuncia.
+ */
+const ABERTURA = [
+  (nome: string) => `Oi, ${nome}. Nao e pedido de orcamento, e uma ideia rapida.`,
+  (nome: string) => `Oi, ${nome}. Nao vim pedir orcamento, e so uma ideia rapida.`,
+  (nome: string) => `Oi, ${nome}. Antes de tudo: nao e pedido de orcamento, e uma ideia.`,
+] as const
+
+/**
+ * ## O paragrafo do estudo resolve os DOIS gatilhos que faltavam
+ *
+ * **Autoridade:** ele nao faz ideia de quem escreve, e um desconhecido esta
+ * falando do dinheiro dele. **Reciprocidade:** a versao antiga pedia (faca a
+ * conta, responda) antes de dar qualquer coisa.
+ *
+ * Enquadrar o achado como algo descoberto e compartilhado resolve os dois, e e
+ * verdade: 27 nichos medidos, 25 geradores de orcamento auditados, 61
+ * concorrentes lidos.
+ *
+ * O posicionamento e PERDA, nao organizacao. Organizacao e melhoria, e
+ * melhoria entra na fila do "depois eu vejo". "Seu concorrente voltou
+ * primeiro" ele nao nega, porque esse publico pede tres orcamentos e ja ganhou
+ * assim.
+ */
+const ESTUDO = [
+  'Passei os ultimos meses estudando como a pequena empresa brasileira perde venda, ' +
+    'e o padrao que mais apareceu foi esse: o cliente que pede orcamento e some quase ' +
+    'nunca desistiu de comprar. Ele comprou de quem voltou a falar com ele.',
+  'Passei meses estudando onde a pequena empresa brasileira perde venda. O que mais ' +
+    'apareceu foi isso: o cliente que pede orcamento e some quase nunca desistiu de ' +
+    'comprar. Ele fechou com quem voltou a procurar ele.',
+  'Estudei por meses como a pequena empresa perde venda por aqui, e o padrao se ' +
+    'repetiu: quem pede orcamento e some quase nunca desistiu. Comprou de quem voltou ' +
+    'a falar com ele.',
+] as const
+
+/**
+ * ## A conta e ELE quem faz, e isso nao e estilo
+ *
+ * Numero afirmado por desconhecido nao se acredita: nos lemos o site, nao a
+ * carteira. Numero que ele mesmo multiplicou nao se discute.
+ *
+ * E nenhuma cifra sai daqui, o que mantem a mensagem verdadeira sem depender de
+ * dado que este projeto nao tem.
+ */
+const CONTA = [
+  'Faz a conta: quanto vale um orcamento medio de voces? Multiplica pelos que estao ' +
+    'sem resposta hoje.',
+  'Faz a conta rapida: quanto vale um orcamento medio de voces? Multiplica pelos que ' +
+    'seguem sem resposta.',
+  'Calcula ai: o valor de um orcamento medio de voces, vezes quantos estao sem ' +
+    'resposta hoje.',
+] as const
+
+/**
+ * ## "Deu um numero alto?" vence "faz sentido pra voces?"
+ *
+ * A segunda e a pergunta que todo vendedor faz: pede opiniao em vez de acao, da
+ * para responder na cabeca, e o "nao" e a saida mais barata.
+ *
+ * Esta pressupoe que ele fez a conta, o que puxa a consistencia, e e sim ou
+ * nao. Nao se pergunta "quanto deu?" de proposito: dono de PME brasileiro nao
+ * manda numero de faturamento para desconhecido.
+ *
+ * **A segunda metade e a promessa que a linha de descarte carregava.** Ela
+ * mudou de forma porque agora existem os toques 2 e 3: "nao volto a procurar"
+ * seria mentira com uma sequencia atras. "Me diz que eu paro" continua
+ * verdadeiro, e pegavel por `pediuParaSair`, e faz das DUAS saidas uma
+ * resposta.
+ */
+const FECHO = [
+  'Deu um numero alto? Se nao for o caso, me diz que eu paro por aqui.',
+  'Deu um numero alto? Se nao for o caso, so me dizer que eu paro por aqui.',
+  'Deu um numero alto? Se nao fizer sentido, me diz que eu paro por aqui.',
+] as const
+
 export function montarAbordagem(d: DadosDaAbordagem): string {
   const nome = nomeCurto(d.nome, d.dominio)
-  // A semente é o DOMÍNIO, não o nome: nome muda quando o título do site
-  // muda, e aí a mesma empresa receberia outro texto na rodada seguinte.
+  // A semente e o DOMINIO, nao o nome: nome muda quando o titulo do site muda,
+  // e ai a mesma empresa receberia outro texto na rodada seguinte.
   const semente = d.dominio
-  const gancho = escolher(GANCHO[d.vertical] ?? GANCHO_PADRAO, semente, 'gancho')
-  const saudacao = escolher(SAUDACAO, semente, 'saudacao')(nome)
-  const oferta = escolher(OFERTA, semente, 'oferta')(d.precoMensal)
-  const teste = escolher(TESTE, semente, 'teste')(d.limiteGratis)
 
-  // Só cita equipe quando o próprio site disse que ela existe. Sem isso, a
-  // frase vira suposição sobre o negócio de outra pessoa.
-  const temEquipe = d.motivos.includes('tem equipe de vendas')
-  const linhaEquipe = temEquipe
-    ? ' Vocês sendo mais de um no atendimento, entra todo mundo pelo mesmo preço.'
-    : ''
-  const linhaEmpresas = LINHA_MULTI_EMPRESA(d.limiteDeEmpresas)
+  const abertura = escolher(ABERTURA, semente, 'abertura')(d.decisor ?? nome)
+  const estudo = escolher(ESTUDO, semente, 'estudo')
+  const conta = escolher(CONTA, semente, 'conta')
+  const fecho = escolher(FECHO, semente, 'fecho')
 
-  const montar = (equipe: string, empresas: string) =>
-    [
-      d.decisor ? `Oi, ${d.decisor}! ${saudacao}` : `Oi! ${saudacao}`,
-      gancho,
-      // ## "Sistema" e não "CRM", e a razão é a mesma da landing de 09/09
-      //
-      // Medido com o Exa: quando os cinco nichos desta lista procuram
-      // software, quem responde é orçamento (58%), ERP (44%) e só então CRM
-      // (28%). Em locação é 0 de 10 e em dedetização 1 de 10 — e esses dois
-      // nichos são 223 dos 790 domínios do universo.
-      //
-      // Anunciar a CATEGORIA antes do benefício obriga quem lê a reconhecer
-      // uma palavra que ele não procura. "Sistema" é o que a PME brasileira
-      // diz sozinha ("o sistema da loja"), não exige tradução e não compete
-      // com nada.
-      //
-      // O "sem cobrar por usuário" FICA: ali cobrar significa dinheiro, que é
-      // o sentido correto da palavra.
-      `${oferta}${equipe}`,
-      `${teste}${empresas}`,
-      // ## O link em parágrafo PRÓPRIO, e não no meio da frase
-      //
-      // Visto numa conversa real em 09/09: com o endereço encaixado depois de
-      // "sem cartão:" e seguido de mais texto, o WhatsApp desenha a prévia
-      // COMPACTA — miniatura de ~70px à esquerda, com o título espremido em
-      // duas linhas. Sozinho no parágrafo, o link é o assunto daquele bloco, e
-      // é assim que o cartão grande aparece.
-      //
-      // Ele fica no PENÚLTIMO lugar, nunca no fim: a última linha continua
-      // sendo a de descarte, que é o que transforma um "não" em resposta em
-      // vez de denúncia de spam — e o corte, quando a mensagem estoura, já tem
-      // teste provando que não a alcança.
-      LINK,
-      `Se não fizer sentido, pode ignorar. Não volto a procurar.`,
-    ].join('\n\n')
+  // So cita o formulario quando a pontuacao disse que ELE existe. Sem o motivo,
+  // a frase vira suposicao sobre o negocio de outra pessoa — e e justamente
+  // esta linha que faz a personalizacao passar no teste de remocao: tire-a e o
+  // resto continua fazendo sentido sozinho, que e o sinal de que ela nao estava
+  // trabalhando.
+  const temFormulario = d.motivos.includes('pede orçamento')
+  const formulario = temFormulario ? ' Vi que voces recebem pedido de orcamento pelo site.' : ''
 
-  // Duas linhas opcionais agora, e a ordem de sacrifício é deliberada: a de
-  // EMPRESAS sai primeiro porque fala com poucos (3 de 45 na base), e a de
-  // EQUIPE sai depois porque só aparece quando o próprio site disse que existe
-  // equipe — ou seja, ela já é dirigida a quem se encaixa.
-  //
-  // O fim continua intocável. Um defeito real já comeu a linha de descarte por
-  // truncamento, e o teste de tamanho não pegava.
-  for (const tentativa of [
-    montar(linhaEquipe, linhaEmpresas),
-    montar(linhaEquipe, ''),
-    montar('', ''),
-  ]) {
+  const montar = (extra: string) =>
+    [`${abertura}${extra}`, estudo, conta, fecho].join('\n\n')
+
+  // O fim continua intocavel: um defeito real ja comeu a linha de descarte por
+  // truncamento, e o teste de tamanho nao pegava. A linha do formulario e a
+  // unica sacrificavel, e ela sai primeiro.
+  for (const tentativa of [montar(formulario), montar('')]) {
     if (tentativa.length <= TETO) return tentativa
   }
-  return montar('', '')
+  return montar('')
 }

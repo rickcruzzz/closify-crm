@@ -212,7 +212,7 @@ describe('mensagemPara', () => {
     // denúncia é o que derruba o número do dono. Um defeito real já a comeu
     // por truncamento, e o teste de tamanho não pegava.
     const { texto } = mensagemPara(prospect())
-    expect(texto.trim().endsWith('Não volto a procurar.')).toBe(true)
+    expect(texto.trim().endsWith('por aqui.')).toBe(true)
   })
 
   it('sem numero devolve link nulo, e nao um wa.me quebrado', () => {
