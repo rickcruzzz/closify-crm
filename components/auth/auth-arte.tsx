@@ -1,4 +1,4 @@
-import { ProdutoPrint } from '@/components/landing/produto-print'
+import { LembretePreviewCard } from '@/components/auth/lembrete-preview-card'
 
 /**
  * O painel que ocupa a metade direita de login e cadastro no desktop.
@@ -21,27 +21,30 @@ import { ProdutoPrint } from '@/components/landing/produto-print'
  * cor, que continuam idênticos logo abaixo. Repetir a ILUSTRAÇÃO inteira não é
  * continuidade, é a mesma imagem duas vezes.
  *
- * ## Por que `hoje` e não `contatos`
+ * ## E em 15/09 o print tambem saiu, medido
  *
- * Dos quatro prints em `public/produto/`, `contatos` é o único que nenhum
- * componente usa, e ele daria zero repetição. É a escolha pior: uma lista de
- * nomes não mostra o produto funcionando.
+ * A primeira correcao trocou o funil por `ProdutoPrint nome="hoje"`, a captura
+ * real da tela. A repeticao sumiu e **a legibilidade foi junto**: a coluna e
+ * `minmax(32rem,1fr)` menos `p-10`, ou seja ~640px numa tela de 1440, e o print
+ * mostra 1440px de interface. Da **0,44x**, e texto de 14px vira 6,2px.
  *
- * O eyebrow logo abaixo pergunta **"Como fica na sua tela"**, e para quem está
- * criando conta a resposta é a tela que ela vai abrir toda manhã. `hoje`
- * também aparece na landing, mas lá embaixo em "Como funciona" e não na dobra
- * — a adjacência hero -> login, que era o problema relatado, desaparece.
+ * Este projeto ja registrou em 09/09 que print abaixo de **0,80x falha a
+ * geracao**, depois de o criativo do Instagram sair a 0,60x e ser recusado.
+ * Estava em metade do proprio minimo.
  *
- * `next/image` em Server Component emite `<img>` com `srcset` e **não traz
- * runtime**: o painel continua custando zero JavaScript, que é o que torna
- * barato mantê-lo montado e apenas escondido no mobile em vez de decidir por
- * `matchMedia` — decidir no cliente produziria descasamento de hidratação e
- * transformaria o layout inteiro em client component.
+ * **A causa e a mesma dos dois lados: captura de tela inteira nao sobrevive a
+ * caixa estreita.** O card do funil era legivel justamente por ser HTML em
+ * tamanho real. O erro nao foi trocar o funil; foi trocar HTML por bitmap.
  *
- * O `sizes` é passado à mão porque o padrão do `ProdutoPrint` foi calibrado
- * para a largura da landing e termina em `2048px`. Aqui a imagem ocupa cerca
- * de 590px numa tela de 1440, e o padrão faria o navegador baixar um degrau
- * grande demais para desenhar um terço disso.
+ * `LembretePreviewCard` desenha UM card grande em HTML, e resolve os dois de
+ * uma vez: nao repete o hero e nao depende de escala nenhuma. O porque de cada
+ * decisao de conteudo esta no arquivo dele.
+ *
+ * Sendo Server Component puro, sem props e sem estado, o painel volta a custar
+ * **zero JavaScript**: so HTML atravessa. E o que torna barato mante-lo montado
+ * e apenas escondido no mobile, em vez de decidir por `matchMedia` — decidir no
+ * cliente produziria descasamento de hidratacao e transformaria o layout
+ * inteiro em client component.
  *
  * O texto é reaproveitado da landing sem reescrita: a linha do "como funciona"
  * fala exatamente do momento em que a pessoa está (acabou de chegar na tela de
@@ -73,11 +76,7 @@ export function AuthArte() {
       </p>
 
       <div className="animate-entrada fade-in slide-in-from-bottom-3 fill-mode-both ease-entrada duration-entrada delay-passo-3">
-        <ProdutoPrint
-          nome="hoje"
-          alt="o que precisa da sua atenção · Acme Corp"
-          sizes="(min-width: 1280px) 40vw, 45vw"
-        />
+        <LembretePreviewCard />
       </div>
 
       {/* TERCEIRA cópia da mesma promessa, achada só ao ler o DOM da tela de
