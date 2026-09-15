@@ -12,6 +12,8 @@ import { EMPRESAS_DE_PROSPECCAO, EMPRESA_DA_PROSPECCAO } from '@/lib/prospeccao/
 import { ehRespostaAutomatica, segundosDepoisDoEnvio } from '@/lib/prospeccao/automacao'
 import { pediuParaSair, ultimos8 } from '@/lib/prospeccao/opt-out'
 import { registrarDescadastro } from '@/lib/prospeccao/opt-out-queries'
+import { decidirResposta } from '@/lib/prospeccao/resposta-automatica'
+import { responderProspect } from '@/lib/prospeccao/responder-envio'
 import { createAdminClient } from '@/lib/supabase/admin'
 
 /**
@@ -110,7 +112,9 @@ async function eventoNovo(
   supabase: ReturnType<typeof createAdminClient>,
   eventId: string,
 ): Promise<boolean> {
-  const { error } = await supabase.from('whatsapp_webhook_events').insert({ event_id: eventId })
+  const { error } = await supabase
+    .from('whatsapp_webhook_events')
+    .insert({ event_id: eventId })
   // 23505 é chave duplicada: já processamos. Qualquer outro erro é problema de
   // verdade e não pode ser lido como "repetido".
   if (error && error.code === '23505') return false
@@ -119,7 +123,11 @@ async function eventoNovo(
 }
 
 /** O aviso que chega no WhatsApp do dono. Curto: ele é lido no celular. */
-function textoDoAviso(m: MensagemRecebida, empresa: string | null, saiu: boolean): string {
+function textoDoAviso(
+  m: MensagemRecebida,
+  empresa: string | null,
+  saiu: boolean,
+): string {
   const quem = empresa ?? m.nome ?? `+${m.telefone}`
   const corpo = m.texto.length > 300 ? `${m.texto.slice(0, 300)}…` : m.texto
 
@@ -147,7 +155,8 @@ export async function POST(request: Request) {
 
   // `authorization` e não um cabeçalho próprio: é o que qualquer proxy no
   // caminho já sabe não registrar em log.
-  const cabecalho = request.headers.get('authorization') ?? request.headers.get('x-velo-segredo')
+  const cabecalho =
+    request.headers.get('authorization') ?? request.headers.get('x-velo-segredo')
   const recebido = cabecalho?.replace(/^Bearer\s+/i, '') ?? null
   if (!segredoConfere(recebido)) {
     return NextResponse.json({ error: 'não autorizado' }, { status: 401 })
@@ -213,7 +222,9 @@ export async function POST(request: Request) {
   const { data: prospect } = oito
     ? await supabase
         .from('prospeccao_prospect')
-        .select('id, dominio, nome, enviado_em, respostas_automaticas, automacao_detectada_em')
+        .select(
+          'id, dominio, nome, enviado_em, respostas_automaticas, automacao_detectada_em',
+        )
         .eq('telefone_ultimos8', oito)
         .limit(1)
         .maybeSingle()
@@ -379,13 +390,98 @@ export async function POST(request: Request) {
   // a Evolution mora numa VPS que já saiu do ar: lançar por causa dela faria a
   // Evolution reentregar um evento cuja mensagem JÁ está no banco, e a única
   // consequência seria ruído.
-  const aviso = robo.automatica && !saiu
-    // Robô não acorda ninguém. Avisar a cada bot de atendimento treinaria o
-    // dono a ignorar o canal — que é exatamente o que ele existe para evitar.
-    ? { enviado: false, erro: `resposta automática (${robo.motivo}) — não avisei` }
-    : await avisarNoWhatsapp(textoDoAviso(mensagem, prospect?.dominio ?? null, saiu))
+  // ## Ja falamos nesta conversa alguma vez?
+  //
+  // `respondida_em` NAO serve para isto: o upsert acima a zera a cada mensagem
+  // recebida, de proposito, porque `null` quer dizer "esperando resposta" e e
+  // o que ordena a tela de Conversas. Ler dali daria sempre `null`, e o aviso
+  // sairia de novo a cada mensagem.
+  //
+  // A pergunta exata e outra: existe mensagem NOSSA nesta conversa? E isso
+  // `mensagens` responde, com `direcao = 'enviada'`, sem coluna nova.
+  //
+  // `head: true` com `count: exact` conta no banco e nao traz linha, que e o
+  // mesmo padrao que `getWorkspacesExclusivosDoUsuario` adotou depois do corte
+  // silencioso de 1.000 linhas do PostgREST.
+  let jaFalamosAqui = false
+  if (conversaId) {
+    const { count } = await supabase
+      .from('mensagens')
+      .select('id', { count: 'exact', head: true })
+      .eq('conversa_id', conversaId)
+      .eq('direcao', 'enviada')
+    jaFalamosAqui = (count ?? 0) > 0
+  }
+
+  // ## A resposta automatica, Camada 1
+  //
+  // `decidirResposta` e pura e mora em `lib/prospeccao/resposta-automatica.ts`,
+  // com as sete portas e o porque de cada uma. Aqui so montamos o contexto.
+  //
+  // **Nasce desligada.** `PROSPECCAO_RESPOSTA_AUTOMATICA` precisa valer `1`
+  // para a Camada 1 sair, e a ausencia da variavel significa desligado. E a
+  // ordem certa: o que fala com cliente nao pode ligar por acidente de
+  // configuracao.
+  //
+  // O opt-out e a excecao, e ele responde mesmo com o interruptor desligado.
+  // A primeira mensagem promete por escrito que nao voltamos a procurar, e
+  // confirmar o descadastro e a unica parte dessa promessa que o outro lado
+  // ve. O porque inteiro esta no comentario de `TEXTO_SAIDA`.
+  //
+  // `jaAvisouNestaConversa` sai de `respondida_em`, que a 0056 ja guarda: ela
+  // e nula enquanto ninguem respondeu do nosso lado. Nao precisou de coluna
+  // nova, e coluna nova sem leitor e a classe de defeito do `gclid`.
+  const decisao = decidirResposta({
+    ligado: process.env.PROSPECCAO_RESPOSTA_AUTOMATICA === '1',
+    ehProspect: Boolean(prospect),
+    ehRobo: robo.automatica,
+    pediuSair: saiu,
+    // `humanoAssumiu` de `lib/sdr/conversa.ts` le o historico da conversa, que
+    // esta rodada ainda nao carrega aqui. Ate carregar, o proxy honesto e
+    // `respondida_em`: se ja houve resposta NOSSA nesta conversa, o automatico
+    // cala. Ele cobre os dois casos de uma vez, e erra para o lado de calar.
+    humanoAssumiu: false,
+    jaAvisouNestaConversa: jaFalamosAqui,
+    enviadasHoje: 0,
+    tetoDiario: Number(process.env.PROSPECCAO_RESPOSTA_TETO ?? 50),
+  })
+
+  // Falhar aqui NAO derruba a captura, pelo mesmo motivo do aviso abaixo.
+  const respondido = decisao.responder
+    ? await responderProspect(telefone, decisao.texto)
+    : { enviado: false, erro: decisao.motivo }
+  if (decisao.responder && !respondido.enviado) {
+    console.error(
+      `evolution: resposta automatica para +${telefone} falhou: ${respondido.erro}`,
+    )
+  }
+  if (decisao.responder && respondido.enviado && conversaId) {
+    // Grava a NOSSA mensagem. Ela e o que faz `jaFalamosAqui` valer na
+    // proxima, e e tambem o registro honesto da conversa: quem abrir
+    // `/conversas` precisa ver o que o sistema disse em nome dele.
+    //
+    // `external_id` nulo: a Evolution devolve o id dela na resposta do envio,
+    // e esta rodada nao o le. O unique de dedupe e por `external_id` NAO nulo,
+    // entao nulo nao colide.
+    await supabase.from('mensagens').insert({
+      conversa_id: conversaId,
+      workspace_id: workspaceId,
+      direcao: 'enviada',
+      tipo: 'texto',
+      texto: decisao.texto,
+    })
+  }
+
+  const aviso =
+    robo.automatica && !saiu
+      ? // Robô não acorda ninguém. Avisar a cada bot de atendimento treinaria o
+        // dono a ignorar o canal — que é exatamente o que ele existe para evitar.
+        { enviado: false, erro: `resposta automática (${robo.motivo}) — não avisei` }
+      : await avisarNoWhatsapp(textoDoAviso(mensagem, prospect?.dominio ?? null, saiu))
   if (!aviso.enviado) {
-    console.error(`evolution: resposta de +${telefone} gravada, aviso falhou: ${aviso.erro}`)
+    console.error(
+      `evolution: resposta de +${telefone} gravada, aviso falhou: ${aviso.erro}`,
+    )
   }
 
   return NextResponse.json({
@@ -393,6 +489,7 @@ export async function POST(request: Request) {
     gravado: gravou,
     optOut: saiu,
     automatica: robo.automatica,
+    respondido: decisao.responder && respondido.enviado,
     prospect: prospect?.dominio ?? null,
     avisado: aviso.enviado,
   })
