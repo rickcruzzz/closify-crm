@@ -323,9 +323,18 @@ function desgritar(nome: string): string {
  * Cinco palavras evitam a denuncia.
  */
 const ABERTURA = [
-  (nome: string) => `Oi, ${nome}. Nao e pedido de orcamento, e uma ideia rapida.`,
-  (nome: string) => `Oi, ${nome}. Nao vim pedir orcamento, e so uma ideia rapida.`,
-  (nome: string) => `Oi, ${nome}. Antes de tudo: nao e pedido de orcamento, e uma ideia.`,
+  (nome: string, obs: string) =>
+    obs
+      ? `Oi, ${nome}. Vi que voces recebem pedido de orcamento pelo site, mas nao vim pedir um. E uma ideia rapida.`
+      : `Oi, ${nome}. Nao vim pedir orcamento, e uma ideia rapida.`,
+  (nome: string, obs: string) =>
+    obs
+      ? `Oi, ${nome}. Vi que voces atendem pedido de orcamento pelo site, mas nao vim pedir um. E uma ideia rapida.`
+      : `Oi, ${nome}. Nao e pedido de orcamento, e uma ideia rapida.`,
+  (nome: string, obs: string) =>
+    obs
+      ? `Oi, ${nome}. Vi que da pra pedir orcamento no site de voces, mas nao vim pedir um. E uma ideia rapida.`
+      : `Oi, ${nome}. Nao vim pedir nada, e uma ideia rapida.`,
 ] as const
 
 /**
@@ -345,15 +354,15 @@ const ABERTURA = [
  * assim.
  */
 const ESTUDO = [
-  'Passei os ultimos meses estudando como a pequena empresa brasileira perde venda, ' +
-    'e o padrao que mais apareceu foi esse: o cliente que pede orcamento e some quase ' +
-    'nunca desistiu de comprar. Ele comprou de quem voltou a falar com ele.',
-  'Passei meses estudando onde a pequena empresa brasileira perde venda. O que mais ' +
-    'apareceu foi isso: o cliente que pede orcamento e some quase nunca desistiu de ' +
-    'comprar. Ele fechou com quem voltou a procurar ele.',
-  'Estudei por meses como a pequena empresa perde venda por aqui, e o padrao se ' +
-    'repetiu: quem pede orcamento e some quase nunca desistiu. Comprou de quem voltou ' +
-    'a falar com ele.',
+  'Passei meses estudando onde a pequena empresa brasileira perde venda, e o padrao que ' +
+    'mais apareceu foi esse: quem pede orcamento e some quase nunca desistiu de comprar. ' +
+    'Comprou de quem voltou a falar com ele.',
+  'Estudei por meses como a pequena empresa brasileira perde venda, e um padrao se repetiu: ' +
+    'quem pede orcamento e some quase nunca desistiu de comprar. Fechou com quem voltou a ' +
+    'procurar ele.',
+  'Passei meses olhando onde a pequena empresa brasileira perde venda. O padrao mais comum ' +
+    'foi esse: quem pede orcamento e some quase nunca desistiu. Comprou de quem voltou ' +
+    'primeiro.',
 ] as const
 
 /**
@@ -366,12 +375,12 @@ const ESTUDO = [
  * dado que este projeto nao tem.
  */
 const CONTA = [
-  'Faz a conta: quanto vale um orcamento medio de voces? Multiplica pelos que estao ' +
-    'sem resposta hoje.',
-  'Faz a conta rapida: quanto vale um orcamento medio de voces? Multiplica pelos que ' +
-    'seguem sem resposta.',
-  'Calcula ai: o valor de um orcamento medio de voces, vezes quantos estao sem ' +
+  'Faz a conta: quanto vale um orcamento medio de voces? Multiplica pelos que estao sem ' +
     'resposta hoje.',
+  'Faz a conta rapida: quanto vale um orcamento medio de voces? Multiplica pelos que seguem ' +
+    'sem resposta.',
+  'Faz uma conta rapida: um orcamento medio de voces vale quanto? Multiplica pelos que estao ' +
+    'parados sem resposta.',
 ] as const
 
 /**
@@ -402,27 +411,35 @@ export function montarAbordagem(d: DadosDaAbordagem): string {
   // e ai a mesma empresa receberia outro texto na rodada seguinte.
   const semente = d.dominio
 
-  const abertura = escolher(ABERTURA, semente, 'abertura')(d.decisor ?? nome)
+  const temFormulario = d.motivos.includes('pede orçamento')
+  const aberturaDe = escolher(ABERTURA, semente, 'abertura')
   const estudo = escolher(ESTUDO, semente, 'estudo')
   const conta = escolher(CONTA, semente, 'conta')
   const fecho = escolher(FECHO, semente, 'fecho')
 
-  // So cita o formulario quando a pontuacao disse que ELE existe. Sem o motivo,
-  // a frase vira suposicao sobre o negocio de outra pessoa — e e justamente
-  // esta linha que faz a personalizacao passar no teste de remocao: tire-a e o
-  // resto continua fazendo sentido sozinho, que e o sinal de que ela nao estava
-  // trabalhando.
-  const temFormulario = d.motivos.includes('pede orçamento')
-  const formulario = temFormulario ? ' Vi que voces recebem pedido de orcamento pelo site.' : ''
-
-  const montar = (extra: string) =>
-    [`${abertura}${extra}`, estudo, conta, fecho].join('\n\n')
+  // ## A observacao entra DENTRO da abertura, e a ordem foi corrigida em 15/09
+  //
+  // Na primeira versao a negacao vinha antes e a observacao depois, no mesmo
+  // paragrafo: "nao e pedido de orcamento... Vi que voces recebem pedido de
+  // orcamento pelo site". A palavra aparecia tres vezes em duas linhas e as
+  // duas frases brigavam, justamente onde ele decide se continua lendo.
+  //
+  // Invertido, um movimento so resolve tres coisas: a personalizacao vem na
+  // PRIMEIRA frase, que e onde ela vale; a negacao sai naturalmente dela; e a
+  // repeticao some.
+  //
+  // So cita o formulario quando a pontuacao disse que ele existe. Sem o motivo,
+  // a frase vira suposicao sobre o negocio de outra pessoa — e e esta linha que
+  // faz a personalizacao passar no teste de remocao: tire-a e o resto continua
+  // fazendo sentido sozinho, que e o sinal de que ela nao trabalhava.
+  const montar = (obs: boolean) =>
+    [aberturaDe(d.decisor ?? nome, obs ? 'sim' : ''), estudo, conta, fecho].join('\n\n')
 
   // O fim continua intocavel: um defeito real ja comeu a linha de descarte por
-  // truncamento, e o teste de tamanho nao pegava. A linha do formulario e a
-  // unica sacrificavel, e ela sai primeiro.
-  for (const tentativa of [montar(formulario), montar('')]) {
+  // truncamento, e o teste de tamanho nao pegava. A observacao e a unica
+  // sacrificavel, e ela sai primeiro.
+  for (const tentativa of [montar(temFormulario), montar(false)]) {
     if (tentativa.length <= TETO) return tentativa
   }
-  return montar('')
+  return montar(false)
 }

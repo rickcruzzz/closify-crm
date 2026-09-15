@@ -38,7 +38,7 @@ describe('montarAbordagem', () => {
     // O dono le "orcamento" e acha que e cliente comprando. Responde animado,
     // descobre que e venda, e vai em "Bloquear e denunciar". E no painel isso
     // contaria como REPLIED: a estatistica melhora enquanto o numero piora.
-    expect(montarAbordagem(base)).toMatch(/nao (e pedido de|vim pedir) orcamento/i)
+    expect(montarAbordagem(base)).toMatch(/nao vim pedir|nao e pedido de orcamento/i)
   })
 
   it('oferece a SAIDA, e ela e a ultima linha', () => {
@@ -59,9 +59,9 @@ describe('montarAbordagem', () => {
   })
 
   it('so cita o formulario quando o SITE disse que ele existe', () => {
-    expect(montarAbordagem(base)).toMatch(/recebem pedido de orcamento pelo site/i)
+    expect(montarAbordagem(base)).toMatch(/pelo site|no site de voces/i)
     const sem = montarAbordagem({ ...base, motivos: ['telefone na página'] })
-    expect(sem).not.toMatch(/pelo site/i)
+    expect(sem).not.toMatch(/pelo site|no site de voces/i)
   })
 
   it('NAO leva preco: ele responde objecao que ninguem fez', () => {
