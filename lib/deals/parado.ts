@@ -63,17 +63,20 @@ export function estadoDeMovimento(
 }
 
 /**
- * Rótulo para a tela, trocando de unidade conforme o número cresce.
+ * ## `rotuloDeParado` foi REMOVIDA em 16/09
  *
- * "Parado há 47 dias" obriga a pessoa a fazer a conta; "há 1 mês" ela sente. A
- * troca acontece cedo de propósito, a partir de 30 dias já é mês, não 8
- * semanas.
+ * Ela escrevia "parado há 3 semanas" / "há 1 mês", e o argumento dela era
+ * bom: *"parado há 47 dias obriga a pessoa a fazer a conta; há 1 mês ela
+ * sente"*. Só que a conta que importa não é essa. Quem abre o funil está
+ * decidindo para quem ligar hoje, com a agenda ao lado, e "há 3 semanas"
+ * precisa virar uma DATA antes de poder ser usada.
+ *
+ * O Kanban passou a escrever o instante exato (`lib/kanban/data-exata.ts`), e
+ * com isso nenhum chamador sobrou. Ficar como export sem uso seria código
+ * morto convidando alguém a ressuscitar a convenção antiga.
+ *
+ * **A fronteira de 30 dias dela NÃO se perdeu**: ela virou
+ * `urgenciaDoParado`, em `lib/kanban/urgencia.ts`, que usa o mesmo corte para
+ * decidir entre âmbar e vermelho. O que era unidade de texto virou grau de
+ * alarme.
  */
-export function rotuloDeParado(dias: number): string {
-  if (dias < 14) return `parado há ${dias} dias`
-
-  if (dias < 30) return `parado há ${Math.floor(dias / 7)} semanas`
-
-  const meses = Math.floor(dias / 30)
-  return meses === 1 ? 'parado há 1 mês' : `parado há ${meses} meses`
-}

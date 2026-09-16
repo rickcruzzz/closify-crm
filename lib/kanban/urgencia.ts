@@ -109,12 +109,14 @@ export function urgenciaSemProximaAcao(
  *
  * ## A fronteira não foi inventada: ela já estava no texto
  *
- * `rotuloDeParado` troca de unidade aos 30 dias — abaixo disso escreve
- * "semanas", acima escreve "meses". A pessoa já lê duas categorias diferentes;
- * o que faltava era a cor concordar com a palavra. Duas semanas paradas é algo
- * a olhar nesta semana; dois MESES parado é negócio que provavelmente morreu.
+ * `rotuloDeParado` trocava de unidade aos 30 dias — abaixo disso escrevia
+ * "semanas", acima escrevia "meses". Duas semanas paradas é algo a olhar nesta
+ * semana; dois MESES parado é negócio que provavelmente morreu, e a cor
+ * passou a concordar com essa divisão.
  *
- * Nenhum limiar novo entra no produto por causa disto.
+ * **Aquela função foi removida horas depois**, quando o Kanban trocou o tempo
+ * relativo pela data exata. O limiar dela sobreviveu aqui, e é por isso que
+ * esta explicação fica: sem ela, o 30 vira número mágico sem origem.
  */
 export function urgenciaDoParado(dias: number): Urgencia {
   const MES = 30

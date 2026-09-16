@@ -1,18 +1,11 @@
 import { describe, expect, it } from 'vitest'
 
-import {
-  DIAS_PARA_PARADO,
-  diasSemAndar,
-  estadoDeMovimento,
-  etapaFechada,
-  rotuloDeParado,
-} from './parado'
+import { DIAS_PARA_PARADO, diasSemAndar, estadoDeMovimento, etapaFechada } from './parado'
 
 const agora = new Date('2026-08-12T18:00:00.000Z')
 
 /** Data ISO de N dias antes do relógio dos testes. */
-const diasAtras = (n: number) =>
-  new Date(agora.getTime() - n * 86_400_000).toISOString()
+const diasAtras = (n: number) => new Date(agora.getTime() - n * 86_400_000).toISOString()
 
 describe('diasSemAndar', () => {
   it('conta dias inteiros', () => {
@@ -70,10 +63,7 @@ describe('estadoDeMovimento', () => {
   // linha. A pessoa aprenderia a ignorar o sinal.
   it('negócio fechado nunca está parado, por mais antigo que seja', () => {
     for (const stage of ['fechado_ganho', 'fechado_perdido'] as const) {
-      const estado = estadoDeMovimento(
-        { stage, stage_changed_at: diasAtras(400) },
-        agora,
-      )
+      const estado = estadoDeMovimento({ stage, stage_changed_at: diasAtras(400) }, agora)
       expect(estado.parado).toBe(false)
       // Os dias continuam contados: o painel de detalhe ainda mostra há quanto
       // tempo o negócio foi fechado.
@@ -85,19 +75,5 @@ describe('estadoDeMovimento', () => {
     expect(
       estadoDeMovimento({ stage: 'novo', stage_changed_at: diasAtras(0) }, agora).parado,
     ).toBe(false)
-  })
-})
-
-describe('rotuloDeParado', () => {
-  it('troca a unidade conforme o número cresce', () => {
-    expect(rotuloDeParado(3)).toBe('parado há 3 dias')
-    expect(rotuloDeParado(13)).toBe('parado há 13 dias')
-    expect(rotuloDeParado(14)).toBe('parado há 2 semanas')
-    expect(rotuloDeParado(21)).toBe('parado há 3 semanas')
-    expect(rotuloDeParado(60)).toBe('parado há 2 meses')
-  })
-
-  it('singular no mês', () => {
-    expect(rotuloDeParado(35)).toBe('parado há 1 mês')
   })
 })
