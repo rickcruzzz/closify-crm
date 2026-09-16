@@ -1,8 +1,22 @@
-# A abordagem nova, decidida em 15/09 e ainda NAO implementada
+# A abordagem nova, decidida em 15/09 e IMPLEMENTADA no mesmo dia
 
-Este documento e uma PROPOSTA. `montarAbordagem` continua com a versao
-antiga, e o que esta aqui foi decidido com o dono nesta data mas nao virou
-codigo. Ele existe para a decisao nao se perder entre sessoes.
+O **toque 1** virou codigo: `montarAbordagem` foi reescrito com `ABERTURA`,
+`ESTUDO`, `CONTA` e `FECHO`, tres variantes cada, sorteadas pelo dominio
+(`829ce0f`), e as variantes foram niveladas em seguida porque o primeiro
+sorteio real entregou a pior de quase todas (`e15c880`). Sairam preco, link,
+gancho por nicho, oferta e teste gratis.
+
+**Os toques 2 e 3 continuam FORA do codigo.** Nao existe agendamento de
+reenvio: o disparo manda uma vez e para. O que esta escrito abaixo para eles e
+decisao tomada, nao comportamento do sistema.
+
+Este cabecalho dizia *"Este documento e uma PROPOSTA, `montarAbordagem`
+continua com a versao antiga"* ate 16/09, um dia inteiro afirmando o contrario
+do codigo. E ele escapava de `scripts/ci/conferir-documentos.mjs` por um
+detalhe: o script procura a marca **"Este documento é uma PROPOSTA"** com
+acento, e aqui estava sem. Documento que se declara proposta e nao e lido como
+proposta tem o pior dos dois lados — nao aparece no relatorio, e continua
+dizendo que nada foi feito.
 
 ## O diagnostico: 98 enviadas, 0 contas criadas
 
