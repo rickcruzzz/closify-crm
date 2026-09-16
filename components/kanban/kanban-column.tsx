@@ -67,7 +67,7 @@ export const KanbanColumn = React.memo(function KanbanColumn({
       // O id e o ancora do `scrollIntoView` que traz a coluna para a tela.
       id={`etapa-${stage}`}
       className={cn(
-        'bg-muted/30 flex w-72 shrink-0 snap-start flex-col rounded-xl',
+        'bg-muted/30 relative flex w-72 shrink-0 snap-start flex-col rounded-xl',
         // Anel em vez de trocar o fundo: o fundo da coluna ja carrega
         // significado (e o que separa uma etapa da outra), e mexer nele faria
         // a coluna em foco parecer de outro tipo em vez de destacada.
@@ -91,7 +91,10 @@ export const KanbanColumn = React.memo(function KanbanColumn({
               dois. Cortar em silêncio é o defeito que a 0032 veio consertar,
               repeti-lo aqui, com um número nosso em vez do teto do PostgREST,
               não seria melhor. */}
-          <Badge variant="secondary" title={cortou ? `${totalNaEtapa} no total` : undefined}>
+          <Badge
+            variant="secondary"
+            title={cortou ? `${totalNaEtapa} no total` : undefined}
+          >
             {cortou ? `${deals.length} de ${totalNaEtapa}` : deals.length}
           </Badge>
         </div>
@@ -120,9 +123,23 @@ export const KanbanColumn = React.memo(function KanbanColumn({
           Com o board vazio a coluna encolhe: o guia de primeiros passos ocupa
           espaço acima, e manter altura cheia jogaria colunas vazias para baixo
           da dobra sem nada dentro. */}
+      {/* ## A coluna rolava e nada dizia isso
+          
+          Relatado pelo dono com 48 negocios em "A contatar": o unico sinal de
+          que havia mais era o card cortado na base, e card cortado le como
+          defeito de layout, nao como convite a rolar.
+          
+          A `ScrollArea` do Base UI so revela a barra ao passar o mouse, e o
+          polegar e `bg-border`, que sobre `bg-muted/30` quase nao existe. No
+          TOQUE ela nunca aparece — e o celular e onde o problema e pior,
+          porque nao ha hover nenhum para descobrir.
+          
+          `[&_[data-slot=scroll-area-scrollbar]]:opacity-100` mantem a barra
+          sempre visivel nesta coluna, sem tocar no componente compartilhado:
+          a `ScrollArea` serve outras telas onde a barra escondida esta certa. */}
       <ScrollArea
         className={cn(
-          'px-2 pb-2',
+          '[&_[data-slot=scroll-area-thumb]]:bg-muted-foreground/40 px-2 pb-2 [&_[data-slot=scroll-area-scrollbar]]:opacity-100',
           compact ? 'h-36' : 'h-[calc(100dvh-24rem)] min-h-64 lg:h-[calc(100dvh-20rem)]',
         )}
       >
@@ -155,6 +172,35 @@ export const KanbanColumn = React.memo(function KanbanColumn({
           </SortableContext>
         </div>
       </ScrollArea>
+
+      {/* ## O esmaecimento na base, e por que ele nao e enfeite
+          
+          Barra de rolagem diz QUE rola; o esmaecimento diz que ha MAIS coisa,
+          e e o sinal que funciona de relance, sem precisar procurar. Sem ele o
+          card cortado na base parece card quebrado.
+          
+          `deals.length > 3` e heuristica confessa: quantos cabem depende da
+          altura da janela (a coluna e `calc(100dvh-24rem)`, entao num notebook
+          de 768px cabem ~3 e num monitor de 1080px cabem ~6). Detectar o
+          transbordo de verdade exigiria medir no cliente, e medir altura no
+          cliente e o que produz descasamento de hidratacao.
+          
+          O custo de errar e assimetrico, e por isso a heuristica erra para
+          este lado: com 4 cards que cabem, sobra um degrade de 40px que nao
+          atrapalha; com 48 que nao cabem e sem o degrade, a pessoa nao sabe
+          que existem 45 embaixo.
+          
+          `from-muted/30` espelha o fundo da propria coluna: o degrade tem que
+          dissolver NO fundo dela, senao vira uma faixa cinza por cima.
+          
+          `pointer-events-none` e obrigatorio: sem isso ele engoliria o clique
+          e o arrasto do ultimo card. */}
+      {!compact && deals.length > 3 && (
+        <div
+          aria-hidden
+          className="from-muted/30 pointer-events-none absolute inset-x-0 bottom-0 h-10 rounded-b-xl bg-gradient-to-t to-transparent"
+        />
+      )}
     </div>
   )
 })
