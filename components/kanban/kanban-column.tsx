@@ -11,6 +11,7 @@ import { ScrollArea } from '@/components/ui/scroll-area'
 import { DealCard } from '@/components/kanban/deal-card'
 import { EmptyColumnState } from '@/components/kanban/empty-column-state'
 import { formatarValorDeNegocio } from '@/lib/deals/metrics'
+import { stageAccent } from '@/lib/deals/stage-colors'
 
 // `React.memo`: mesma razão de `DealCard`, sem isso, o board inteiro
 // (6 colunas) refazia o trabalho de renderizar toda coluna a cada tick de
@@ -27,6 +28,7 @@ export const KanbanColumn = React.memo(function KanbanColumn({
   compact = false,
   emFoco = false,
   agora,
+  mostrarResponsavel = true,
 }: {
   stage: DealStage
   deals: DealRow[]
@@ -51,6 +53,8 @@ export const KanbanColumn = React.memo(function KanbanColumn({
   emFoco?: boolean
   /** Relógio do cliente, repassado ao card para o cálculo de "parado há N". */
   agora: Date | null
+  /** Empresa de uma pessoa só não repete o mesmo avatar em todo card. */
+  mostrarResponsavel?: boolean
 }) {
   const { setNodeRef, isOver } = useDroppable({ id: stage, data: { stage } })
   const total = deals.reduce((sum, deal) => sum + deal.value, 0)
@@ -67,7 +71,30 @@ export const KanbanColumn = React.memo(function KanbanColumn({
       // O id e o ancora do `scrollIntoView` que traz a coluna para a tela.
       id={`etapa-${stage}`}
       className={cn(
-        'bg-muted/30 relative flex w-72 shrink-0 snap-start flex-col rounded-xl',
+        // ## As tres superficies precisavam se separar, e no escuro nao se
+        // ## separavam
+        //
+        // Medido em 16/09, em modo escuro, com `getComputedStyle` e a
+        // transparencia resolvida contra o que esta atras:
+        //
+        //     pagina   L 0.170
+        //     coluna   L 0.200   delta 0.030
+        //     card     L 0.215   delta 0.015   <- praticamente o mesmo tom
+        //
+        // Quinze milesimos de luminancia nao desenham um container. A coluna
+        // existia no codigo e nao existia na tela: os cards voltavam a flutuar
+        // sem pertencer a lugar nenhum, que e exatamente o defeito que o
+        // `bg-muted/30` tinha nascido para curar.
+        //
+        // A saida NAO foi escurecer mais a coluna. Empurrar luminancia num
+        // tema escuro tem pouco curso — entre 0.170 e 0.215 cabe pouca coisa —
+        // e no tema CLARO a separacao ja estava melhor (delta 0.029), entao
+        // mexer no tom consertaria um tema e estragaria o outro.
+        //
+        // `ring-1` resolve os dois de uma vez e sem inventar nada: e o mesmo
+        // recurso que o `Card` deste projeto usa para se definir desde que
+        // nasceu, com o mesmo token de borda.
+        'bg-muted/30 ring-border/60 relative flex w-72 shrink-0 snap-start flex-col rounded-xl ring-1',
         // Anel em vez de trocar o fundo: o fundo da coluna ja carrega
         // significado (e o que separa uma etapa da outra), e mexer nele faria
         // a coluna em foco parecer de outro tipo em vez de destacada.
@@ -83,6 +110,19 @@ export const KanbanColumn = React.memo(function KanbanColumn({
           alinhamento entre eles é que não existia. */}
       <div className="border-border/60 flex flex-col gap-1 border-b px-3 py-2.5">
         <div className="flex items-center gap-2">
+          {/* O ponto de cor da etapa.
+              
+              Ele e o que sobrou da borda colorida que cada card carregava ate
+              16/09. La a cor repetia, em seis tons saturados, a informacao que
+              a propria coluna ja da por posicao; aqui ela aparece UMA vez por
+              etapa, ancorada no nome, e serve ao unico caso em que ainda
+              distingue: reconhecer a coluna de relance ao rolar o board na
+              horizontal. */}
+          <span
+            aria-hidden
+            className="size-2 shrink-0 rounded-full"
+            style={{ backgroundColor: stageAccent[stage].bar }}
+          />
           {/* `h2`, não `span`: a página tinha só `h1: Pipeline` e as seis
               etapas não existiam na estrutura do documento, então quem navega
               por leitor de tela não conseguia pular de etapa em etapa. */}
@@ -166,6 +206,7 @@ export const KanbanColumn = React.memo(function KanbanColumn({
                   onOpen={onOpenDeal}
                   onAgendar={onAgendarDeal}
                   agora={agora}
+                  mostrarResponsavel={mostrarResponsavel}
                 />
               ))
             )}

@@ -131,7 +131,9 @@ export function KanbanBoard({
   const [activeId, setActiveId] = React.useState<string | null>(null)
   // Semeado pela URL: `?negocio=<id>` abre o painel já na primeira pintura,
   // sem piscar o quadro antes.
-  const [selectedDealId, setSelectedDealId] = React.useState<string | null>(negocioInicial)
+  const [selectedDealId, setSelectedDealId] = React.useState<string | null>(
+    negocioInicial,
+  )
   /**
    * Abrir o painel já no agendamento, quando veio do aviso do card.
    *
@@ -307,7 +309,11 @@ export function KanbanBoard({
    * movimento precisa de um caminho de volta que não seja arrastar de novo.
    * Toast com ação resolve os dois.
    */
-  async function gravarEtapa(dealId: string, destino: DealStage, origem: DealStage | undefined) {
+  async function gravarEtapa(
+    dealId: string,
+    destino: DealStage,
+    origem: DealStage | undefined,
+  ) {
     const desfazer = () => {
       if (origem) moverPara(dealId, origem)
     }
@@ -319,7 +325,10 @@ export function KanbanBoard({
       console.error('updateDealStage rejeitou', err)
       desfazer()
       toast.error('Não foi possível mover o negócio. A alteração foi desfeita.', {
-        action: { label: 'Tentar de novo', onClick: () => void gravarEtapa(dealId, destino, origem) },
+        action: {
+          label: 'Tentar de novo',
+          onClick: () => void gravarEtapa(dealId, destino, origem),
+        },
       })
       return
     }
@@ -327,7 +336,10 @@ export function KanbanBoard({
     if (result?.error) {
       desfazer()
       toast.error(result.error, {
-        action: { label: 'Tentar de novo', onClick: () => void gravarEtapa(dealId, destino, origem) },
+        action: {
+          label: 'Tentar de novo',
+          onClick: () => void gravarEtapa(dealId, destino, origem),
+        },
       })
       return
     }
@@ -510,6 +522,38 @@ export function KanbanBoard({
     return grupos
   }, [filteredDeals])
 
+  // ## A medicao da rolagem horizontal
+  //
+  // `useState` nasce `false` dos DOIS lados, servidor e cliente, entao o
+  // primeiro quadro e identico e nao ha descasamento de hidratacao. O valor
+  // real chega no efeito, depois da montagem, que e quando `scrollWidth`
+  // passa a existir.
+  const faixa = React.useRef<HTMLDivElement>(null)
+  const [temMaisADireita, setTemMaisADireita] = React.useState(false)
+  const [temMaisAEsquerda, setTemMaisAEsquerda] = React.useState(false)
+
+  const medirRolagem = React.useCallback(() => {
+    const el = faixa.current
+    if (!el) return
+    // A folga de 1px absorve o arredondamento subpixel do navegador: sem ela,
+    // rolar ate o fim deixa `scrollLeft + clientWidth` em 1855.5 contra
+    // `scrollWidth` 1856, e o degrade nunca sumiria — um aviso de "ha mais"
+    // apontando para nada.
+    setTemMaisADireita(el.scrollLeft + el.clientWidth < el.scrollWidth - 1)
+    setTemMaisAEsquerda(el.scrollLeft > 1)
+  }, [])
+
+  React.useEffect(() => {
+    medirRolagem()
+    // `ResizeObserver` e nao `window.resize`: a faixa tambem muda de largura
+    // quando a barra lateral recolhe, e isso nao redimensiona a janela.
+    const el = faixa.current
+    if (!el) return
+    const observador = new ResizeObserver(medirRolagem)
+    observador.observe(el)
+    return () => observador.disconnect()
+  }, [medirRolagem, deals.length])
+
   return (
     <>
       <div className="mb-4 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
@@ -615,25 +659,73 @@ export function KanbanBoard({
             viewport: sem isso as colunas eram cortadas pelo padding do `main`
             no mobile. O snap é só abaixo de `sm`, porque acima disso o board
             inteiro cabe e o snap só atrapalharia o auto-scroll do drag. */}
-        <div className="-mx-4 flex snap-x snap-proximity scroll-pl-4 gap-4 overflow-x-auto overscroll-x-contain px-4 pb-4 sm:snap-none md:-mx-6 md:scroll-pl-6 md:px-6">
-          {dealStages.map((stage) => (
-            <KanbanColumn
-              key={stage}
-              stage={stage}
-              deals={dealsPorEtapa.get(stage) ?? []}
-              leadsById={leadsById}
-              proximaAcaoPorNegocio={proximaAcaoPorNegocio}
-              totalNaEtapa={totalPorEtapa[stage] ?? 0}
-              emFoco={stage === etapaEmFoco}
-              onOpenDeal={setSelectedDealId}
-              onAgendarDeal={abrirDealNoAgendamento}
-              agora={agora}
-              filtered={hasActiveFilters}
-              // `deals`, não `filteredDeals`: quem filtrou até zerar a tela
-              // tem board com conteúdo, e a coluna deve manter a altura.
-              compact={deals.length === 0}
+        {/* ## O board rolava na horizontal e nada dizia isso
+
+            Medido em 1440px, o tamanho de tela mais comum: o board tem
+            **1.856px de largura contra 1.169 visiveis**. Sao 687px escondidos,
+            ou seja **duas das seis etapas nao existem na tela** — "Fechado
+            Ganho" e "Fechado Perdido" — e o unico sinal era a barra de rolagem
+            fina no rodape.
+
+            E o problema nao e de largura: seis colunas legiveis nao cabem em
+            1.169px (dariam 195px cada, contra os 288 de hoje). Encolher a
+            coluna para caber trocaria duas etapas invisiveis por seis etapas
+            apertadas, que e pior. A rolagem e inerente; o que faltava era ela
+            ser evidente.
+
+            `EsmaecimentoLateral` e o mesmo recurso que a coluna ja usa na
+            vertical, virado 90 graus, e com uma diferenca que importa: ele
+            MEDE, em vez de supor. O degrade vertical da coluna usa a
+            heuristica `deals.length > 3` porque medir altura no cliente e o
+            que produz descasamento de hidratacao; aqui a medida e de rolagem,
+            que so existe depois da montagem, entao da para ser exata sem
+            arriscar o primeiro quadro. */}
+        <div className="relative">
+          <div
+            ref={faixa}
+            onScroll={medirRolagem}
+            className="-mx-4 flex snap-x snap-proximity scroll-pl-4 gap-4 overflow-x-auto overscroll-x-contain px-4 pb-4 sm:snap-none md:-mx-6 md:scroll-pl-6 md:px-6"
+          >
+            {dealStages.map((stage) => (
+              <KanbanColumn
+                key={stage}
+                stage={stage}
+                deals={dealsPorEtapa.get(stage) ?? []}
+                leadsById={leadsById}
+                proximaAcaoPorNegocio={proximaAcaoPorNegocio}
+                totalNaEtapa={totalPorEtapa[stage] ?? 0}
+                emFoco={stage === etapaEmFoco}
+                onOpenDeal={setSelectedDealId}
+                onAgendarDeal={abrirDealNoAgendamento}
+                agora={agora}
+                // Empresa de uma pessoa: o mesmo avatar em 42 de 42 cards nao
+                // distingue card nenhum. Derivado do numero de membros, entao
+                // ele volta sozinho quando alguem entra na equipe.
+                mostrarResponsavel={members.length > 1}
+                filtered={hasActiveFilters}
+                // `deals`, não `filteredDeals`: quem filtrou até zerar a tela
+                // tem board com conteúdo, e a coluna deve manter a altura.
+                compact={deals.length === 0}
+              />
+            ))}
+          </div>
+
+          {/* Escondido de leitor de tela: quem navega por teclado chega nas
+              colunas pelo Tab de qualquer jeito, e o degrade e uma dica
+              exclusivamente visual. `pointer-events-none` e obrigatorio,
+              senao ele engoliria o arrasto do card mais a direita. */}
+          {temMaisAEsquerda && (
+            <div
+              aria-hidden
+              className="from-background pointer-events-none absolute inset-y-0 left-0 w-8 bg-gradient-to-r to-transparent md:-left-6"
             />
-          ))}
+          )}
+          {temMaisADireita && (
+            <div
+              aria-hidden
+              className="from-background pointer-events-none absolute inset-y-0 right-0 w-10 bg-gradient-to-l to-transparent md:-right-6"
+            />
+          )}
         </div>
 
         <DragOverlay>
@@ -643,6 +735,9 @@ export function KanbanBoard({
               lead={activeDeal.lead_id ? leadsById.get(activeDeal.lead_id) : undefined}
               proximaAcao={proximaAcaoPorNegocio.get(activeDeal.id)}
               agora={agora}
+              // O mesmo do card: sem isto o avatar reapareceria no instante do
+              // arrasto e o card mudaria de forma ao ser pego.
+              mostrarResponsavel={members.length > 1}
             />
           ) : null}
         </DragOverlay>
@@ -651,7 +746,9 @@ export function KanbanBoard({
       <DealDetailSheet
         deal={selectedDeal}
         lead={selectedDeal?.lead_id ? leadsById.get(selectedDeal.lead_id) : undefined}
-        proximaAcao={selectedDeal ? proximaAcaoPorNegocio.get(selectedDeal.id) : undefined}
+        proximaAcao={
+          selectedDeal ? proximaAcaoPorNegocio.get(selectedDeal.id) : undefined
+        }
         members={members}
         currentUserId={currentUserId}
         calendarConectado={calendarConectado}
