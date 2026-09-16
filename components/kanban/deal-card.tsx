@@ -10,7 +10,8 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { ProximaAcao } from '@/components/kanban/proxima-acao'
 import type { ProximaAcaoRow } from '@/lib/tasks/types'
 import { formatarValorDeNegocio } from '@/lib/deals/metrics'
-import { estadoDeMovimento, etapaFechada, rotuloDeParado } from '@/lib/deals/parado'
+import { estadoDeMovimento, etapaFechada } from '@/lib/deals/parado'
+import { dataExataCurta } from '@/lib/kanban/data-exata'
 import { iniciais } from '@/lib/leads/iniciais'
 import { corDaUrgencia, urgenciaDoParado } from '@/lib/kanban/urgencia'
 
@@ -162,17 +163,37 @@ export const DealCard = React.memo(function DealCard({
             // cor em um nível só. Medido no board de prova: **21 de 42 cards
             // em vermelho**, metade da tela.
             //
-            // `urgenciaDoParado` usa a fronteira que `rotuloDeParado` já
-            // aplica ao TEXTO: abaixo de 30 dias ele escreve "semanas", acima
-            // escreve "meses". Agora a cor concorda com a palavra.
+            // `urgenciaDoParado` usa a fronteira de 30 dias que o rótulo
+            // antigo aplicava ao texto ("semanas" abaixo, "meses" acima).
+            // Aquele rótulo saiu junto com o tempo relativo; o limiar ficou,
+            // e a origem dele está em `lib/kanban/urgencia.ts`.
             <span
               className={cn(
-                'flex items-center gap-1 text-xs font-medium',
+                'flex min-w-0 items-center gap-1 text-xs font-medium',
                 corDaUrgencia[urgenciaDoParado(movimento.dias)],
               )}
             >
               <Clock aria-hidden className="size-3 shrink-0" />
-              {rotuloDeParado(movimento.dias)}
+              {/* ## A DATA, não "parado há 3 semanas"
+
+                  Pedido do dono em 16/09. "Há 3 semanas" obriga quem lê a
+                  reconstruir a data de cabeça antes de agir, e quem abre o
+                  funil está decidindo para quem ligar hoje, com a agenda ao
+                  lado: "qua • 14:30" entra na agenda, "em 3 dias" precisa
+                  virar quarta primeiro.
+
+                  A palavra "Parado" fica, porque ela é o ESTADO e continua
+                  sendo o que a cor explica. O que saiu foi só a contagem
+                  relativa. E os dois vêm de campos diferentes, que a tela
+                  agora não mistura: aqui é `stage_changed_at`, a última
+                  movimentação; o prazo, logo ao lado, é `due_at` da tarefa.
+
+                  Nenhum cálculo mudou: `estadoDeMovimento` continua decidindo
+                  o que é parado, e `urgenciaDoParado` continua decidindo a
+                  cor. */}
+              <span className="truncate">
+                Parado desde {dataExataCurta(deal.stage_changed_at)}
+              </span>
             </span>
           )}
 

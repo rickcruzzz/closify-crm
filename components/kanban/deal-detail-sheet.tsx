@@ -21,7 +21,8 @@ import type { TaskFormValues } from '@/lib/validations/task'
 import { criarTarefa, concluirTarefa } from '@/lib/tasks/actions'
 import { agendarReuniaoNoGoogleCalendar } from '@/lib/integrations/workflow-actions'
 import { deleteDeal } from '@/lib/deals/actions'
-import { estadoDeMovimento, rotuloDeParado } from '@/lib/deals/parado'
+import { estadoDeMovimento } from '@/lib/deals/parado'
+import { dataExata } from '@/lib/kanban/data-exata'
 import { processando } from '@/lib/ui/estado-assincrono'
 import { ProximaAcao } from '@/components/kanban/proxima-acao'
 import { EscolherProximaAcao } from '@/components/tasks/escolher-proxima-acao'
@@ -450,18 +451,34 @@ export function DealDetailSheet({
                 <span className="text-muted-foreground text-xs">Movimento</span>
                 {movimento === null ? (
                   <p className="text-muted-foreground text-sm">Calculando…</p>
-                ) : movimento.parado ? (
-                  <p className="text-destructive flex items-center gap-1.5 text-sm font-medium">
-                    <AlarmClock aria-hidden className="size-4 shrink-0" />
-                    {rotuloDeParado(movimento.dias)}
-                  </p>
                 ) : (
-                  <p className="text-sm">
-                    {movimento.dias === 0
-                      ? 'Mudou de etapa hoje'
-                      : movimento.dias === 1
-                        ? 'Mudou de etapa ontem'
-                        : `Na mesma etapa há ${movimento.dias} dias`}
+                  /* ## A data exata, parado ou não
+
+                     Aqui cabe a forma LONGA — o painel tem 400px, contra os
+                     288 do card. Mesma ordem, mesmo separador, mesmos campos:
+                     é isso que faz as duas serem a mesma convenção, e não duas.
+
+                     As três frases relativas que saíram daqui ("Mudou de etapa
+                     hoje", "ontem", "Na mesma etapa há N dias") eram o mesmo
+                     defeito das do card, com o agravante de que este painel é
+                     onde a pessoa decide o que fazer com o negócio.
+
+                     O ESTADO continua visível e continua vermelho quando é
+                     parado: `estadoDeMovimento` não mudou, `AlarmClock` e a
+                     cor não mudaram. O que saiu foi a contagem. */
+                  <p
+                    className={cn(
+                      'flex items-center gap-1.5 text-sm',
+                      movimento.parado && 'text-destructive font-medium',
+                    )}
+                  >
+                    {movimento.parado && (
+                      <AlarmClock aria-hidden className="size-4 shrink-0" />
+                    )}
+                    <span>
+                      {movimento.parado ? 'Parado desde ' : 'Última movimentação: '}
+                      {dataExata(deal.stage_changed_at)}
+                    </span>
                   </p>
                 )}
               </div>

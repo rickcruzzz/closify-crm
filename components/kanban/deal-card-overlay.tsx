@@ -5,7 +5,8 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { ProximaAcao } from '@/components/kanban/proxima-acao'
 import type { ProximaAcaoRow } from '@/lib/tasks/types'
 import { formatarValorDeNegocio } from '@/lib/deals/metrics'
-import { estadoDeMovimento, etapaFechada, rotuloDeParado } from '@/lib/deals/parado'
+import { estadoDeMovimento, etapaFechada } from '@/lib/deals/parado'
+import { dataExataCurta } from '@/lib/kanban/data-exata'
 import { corDaUrgencia, urgenciaDoParado } from '@/lib/kanban/urgencia'
 import { stageAccent } from '@/lib/deals/stage-colors'
 import { Clock } from 'lucide-react'
@@ -88,12 +89,17 @@ export function DealCardOverlay({
         {movimento?.parado && (
           <span
             className={cn(
-              'flex items-center gap-1 text-xs font-medium',
+              'flex min-w-0 items-center gap-1 text-xs font-medium',
               corDaUrgencia[urgenciaDoParado(movimento.dias)],
             )}
           >
             <Clock aria-hidden className="size-3 shrink-0" />
-            {rotuloDeParado(movimento.dias)}
+            {/* Espelha o card campo a campo, inclusive aqui: texto diferente
+                entre o card parado e o card arrastado faria a linha mudar no
+                instante em que o dedo desce. */}
+            <span className="truncate">
+              Parado desde {dataExataCurta(deal.stage_changed_at)}
+            </span>
           </span>
         )}
 

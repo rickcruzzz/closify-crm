@@ -4,7 +4,7 @@ import * as React from 'react'
 import { CircleAlert, Plus } from 'lucide-react'
 
 import { cn } from '@/lib/utils'
-import { rotuloDePrazo } from '@/lib/tasks/buckets'
+import { dataExataCurta } from '@/lib/kanban/data-exata'
 import { iconePorTipo, type ProximaAcaoRow } from '@/lib/tasks/types'
 import {
   corDaUrgencia,
@@ -190,16 +190,40 @@ export function ProximaAcao({
   // tarefa de mês que vem, e a de hoje é a única que ainda dá para cumprir.
   const nivel = urgenciaDaProximaAcao(task.due_at, agora)
 
+  const quando = dataExataCurta(task.due_at)
+  const vencida = nivel === 'critico'
+
   return (
     <span
       title={task.title}
       className={cn(
-        'flex items-center gap-1 text-xs font-medium whitespace-nowrap',
+        'flex min-w-0 items-center gap-1 text-xs font-medium',
         corDaUrgencia[nivel],
       )}
     >
-      <Icone aria-hidden className="size-3" />
-      {rotuloDePrazo(task.due_at, agora)}
+      <Icone aria-hidden className="size-3 shrink-0" />
+      {/* ## A DATA, e não "hoje", "amanhã", "em 3 dias"
+
+          Pedido do dono em 16/09. `rotuloDePrazo` continua existindo e
+          continua sendo usada por `/hoje` e `/calendario` — ali ela está
+          certa, porque aquelas telas JÁ estão organizadas por dia e o
+          relativo não obriga ninguém a converter nada.
+
+          No card do funil é o contrário: a pessoa está montando o dia dela e
+          precisa do horário para agendar. Por isso o Kanban formata por conta
+          própria em vez de a função compartilhada mudar de comportamento para
+          as três telas.
+
+          "Vencido" no fim, e não no lugar da data: o estado é adjetivo do
+          prazo, não substituto dele. Quem vê "12 abr • dom • 09:00 • Vencido"
+          sabe o quanto atrasou sem a tela ter que contar.
+
+          O nível de urgência que pinta isto NÃO mudou: quem decide continua
+          sendo `urgenciaDaProximaAcao`, com o relógio do cliente. */}
+      <span className="truncate">
+        {quando ?? task.title}
+        {vencida && quando && ' • Vencido'}
+      </span>
     </span>
   )
 }
