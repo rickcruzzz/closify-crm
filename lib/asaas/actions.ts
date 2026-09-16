@@ -17,7 +17,13 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { getCurrentUserAndWorkspace } from '@/lib/supabase/workspace'
 import { dadosDeCorrespondencia } from '@/lib/analytics/dados-de-correspondencia'
 import { cancelSubscriptionSchema, checkoutSchema } from '@/lib/validations/billing'
-import { CICLOS, PRO_PLAN_PRICE, valorDoCiclo } from '@/lib/plans'
+import {
+  CICLOS,
+  PLANO_NA_TELA,
+  PRO_PLAN_PRICE,
+  valorDoCiclo,
+  valorDoPlano,
+} from '@/lib/plans'
 import { CONTROLADOR } from '@/lib/legal'
 import { prepararPixParaExibir, type QrCodePixDoAsaas } from '@/lib/asaas/pix'
 import { prepararBoletoParaExibir, type LinhaDigitavelDoAsaas } from '@/lib/asaas/boleto'
@@ -108,6 +114,8 @@ export async function createCheckout(values: unknown) {
     return { error: parsed.error.issues[0]?.message ?? 'Não foi possível iniciar a assinatura.' }
   }
   const ciclo = parsed.data.ciclo
+  const plano = parsed.data.plano
+  const planoNaTela = PLANO_NA_TELA[plano]
 
   const { user, workspaceId } = await getCurrentUserAndWorkspace()
   const supabase = await createClient()
@@ -116,7 +124,7 @@ export async function createCheckout(values: unknown) {
     target_workspace_id: workspaceId,
   })
   if (!isAdmin) {
-    return { error: 'Apenas administradores podem assinar o plano Pro.' }
+    return { error: `Apenas administradores podem assinar o plano ${planoNaTela}.` }
   }
 
   // Depois do gate de admin e antes de qualquer chamada ao Asaas: a ideia é
@@ -147,21 +155,31 @@ export async function createCheckout(values: unknown) {
 
   const { data: existingSubscription } = await supabase
     .from('subscriptions')
-    .select('asaas_customer_id, asaas_subscription_id, status, ciclo')
+    .select('asaas_customer_id, asaas_subscription_id, status, ciclo, plano')
     .eq('workspace_id', workspaceId)
     .maybeSingle()
 
   if (existingSubscription?.status === 'active') {
-    return { error: 'Este workspace já tem uma assinatura Pro ativa.' }
+    // Nomeia o plano que ESTÁ ativo, não o que se tentou assinar: quem tem Pro
+    // e clica em Max precisa ler "você já tem Pro", e não "você já tem Max".
+    const ativo = PLANO_NA_TELA[existingSubscription.plano === 'max' ? 'max' : 'pro']
+    return { error: `Este workspace já tem uma assinatura ${ativo} ativa.` }
   }
 
-  // ## Trocar de ciclo com assinatura viva é recusado, e o motivo é dinheiro
+  // ## Trocar de ciclo OU DE PLANO com assinatura viva é recusado, e o motivo
+  // é dinheiro nos dois casos
   //
   // Logo abaixo, `subscriptionId` é reaproveitado quando a assinatura anterior
   // não está `canceled` — e nesse caso o `if (!subscriptionId)` PULA a criação
   // no Asaas. A assinatura lá continuaria MONTHLY, cobrando R$ 49, enquanto o
   // upsert daqui gravaria `ciclo = 'YEARLY'`. A pessoa pagaria R$ 49 e a RPC
   // lhe daria um ano.
+  //
+  // Com o Max o buraco fica pior, porque a coluna `plano` não decide duração:
+  // decide DIREITO. Reusando uma assinatura Pro de R$ 97, a cobrança
+  // continuaria R$ 97 e a coluna diria `max` — e `max_vigente()` liberaria uma
+  // instância de WhatsApp paga por um plano que não a cobre. É o único lugar
+  // deste produto onde um erro de coluna vira custo recorrente de verdade.
   //
   // Cancelar-e-recriar e `PUT /subscriptions` foram considerados e ficaram de
   // fora: o primeiro reproduz o estado do workspace "pedro eee" se o POST
@@ -174,12 +192,22 @@ export async function createCheckout(values: unknown) {
     Boolean(existingSubscription?.asaas_subscription_id) &&
     existingSubscription?.status !== 'canceled'
 
-  if (temAssinaturaViva && existingSubscription!.ciclo !== ciclo) {
-    const atual = CICLOS[existingSubscription!.ciclo]
+  const cicloAtual = existingSubscription?.ciclo ?? 'MONTHLY'
+  // `=== 'max'` e não um cast: a coluna é `text` no banco, e uma linha gravada
+  // antes da 0089 (ou por migration futura) pode trazer qualquer coisa. Ler
+  // como Pro o que não reconheço é o default seguro — o inverso liberaria Max.
+  const planoAtual = existingSubscription?.plano === 'max' ? 'max' : 'pro'
+
+  if (temAssinaturaViva && (cicloAtual !== ciclo || planoAtual !== plano)) {
+    const periodo = CICLOS[cicloAtual].periodo
+    // O valor do plano E do ciclo que a assinatura de fato tem. Ler de
+    // `CICLOS[ciclo].valor`, como esta linha fazia, daria sempre o preço do Pro
+    // — e anunciaria "cobrança de R$ 250" como "R$ 97" para quem tem Max.
+    const valor = valorDoPlano(planoAtual, cicloAtual)
     return {
       error:
-        `Já existe uma cobrança ${atual.periodo} de R$ ${atual.valor} em aberto nesta empresa. ` +
-        'Cancele a assinatura atual em Configurações → Cobrança para trocar de plano.',
+        `Já existe uma cobrança ${periodo} de R$ ${valor} (plano ${PLANO_NA_TELA[planoAtual]}) ` +
+        'em aberto nesta empresa. Cancele a assinatura atual em Configurações → Cobrança para trocar de plano.',
     }
   }
 
@@ -274,7 +302,7 @@ export async function createCheckout(values: unknown) {
           // visita é exatamente o caso de uso do plano anual.
           billingType: 'UNDEFINED',
           cycle: ciclo,
-          value: valorDoCiclo(ciclo),
+          value: valorDoPlano(plano, ciclo),
           nextDueDate: new Date().toISOString().slice(0, 10),
           // Aparece na fatura, no boleto e no extrato do cartão. É o único
           // texto de marca que controlamos nessa tela: o nome do recebedor vem
@@ -291,7 +319,7 @@ export async function createCheckout(values: unknown) {
           //
           // Só vale para assinaturas novas, as já criadas mantêm a descrição
           // gravada no Asaas, que é a fonte da verdade da cobrança.
-          description: `Velo Funil, Plano Pro · CRM de vendas · Assinatura ${CICLOS[ciclo].periodo} · ${CONTROLADOR.email}`,
+          description: `Velo Funil, Plano ${planoNaTela} · CRM de vendas · Assinatura ${CICLOS[ciclo].periodo} · ${CONTROLADOR.email}`,
           externalReference,
         }),
       })
@@ -346,7 +374,13 @@ export async function createCheckout(values: unknown) {
       //
       // O guard lá em cima é a educação; isto é a trava. Se alguém remover
       // aquele, este continua impedindo a divergência.
-      ...(subscriptionFoiRecriada ? { ciclo } : {}),
+      //
+      // `plano` anda JUNTO de `ciclo`, na mesma condição e pelo mesmo motivo,
+      // com uma consequência a mais: `plano` não decide duração, decide
+      // DIREITO. Gravado sobre uma assinatura reusada, `max_vigente()` passaria
+      // a devolver `true` para quem pagou Pro — e cada `true` desses é uma
+      // instância de WhatsApp paga por nós, todo mês, até alguém notar.
+      ...(subscriptionFoiRecriada ? { ciclo, plano } : {}),
     },
     { onConflict: 'workspace_id' },
   )

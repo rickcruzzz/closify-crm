@@ -308,9 +308,80 @@ export const CICLOS = {
 
 export type CicloDeCobranca = keyof typeof CICLOS
 
-/** O que se cobra por um ciclo, em reais. */
+/** O que se cobra por um ciclo do Pro, em reais. */
 export function valorDoCiclo(ciclo: CicloDeCobranca): number {
   return CICLOS[ciclo].valor
+}
+
+/**
+ * R$ 250. O Max: tudo do Pro, mais o WhatsApp dentro do CRM.
+ *
+ * ## É o primeiro preço deste produto que tem custo do outro lado
+ *
+ * Contato, negócio, tarefa, orçamento e colaborador custam zero por unidade —
+ * são linhas num Postgres que já está pago. Por isso o Pro pôde ser vendido
+ * **pela empresa inteira** e transformar isso no argumento central: uma equipe
+ * de quatro paga R$ 340 no Agendor e R$ 97 aqui.
+ *
+ * O WhatsApp quebra essa propriedade. Cada empresa conectada consome uma
+ * instância paga no provedor, todo mês, conectada ou ociosa. O preço deixa de
+ * ser margem pura e passa a ter piso.
+ *
+ * ## Por que 250, e não 197
+ *
+ * O degrau precisa pagar a instância **e** sobrar margem que aguente o suporte
+ * que o WhatsApp traz junto: número desconectado, celular sem bateria, QR
+ * expirado. É o recurso deste produto com a maior razão entre chamado e
+ * receita, e um preço que só cobre a instância vende trabalho no prejuízo.
+ *
+ * ## E por que ele é por EMPRESA, ao contrário do Pro
+ *
+ * `pro_vigente()` (0078) cobre até cinco empresas do mesmo dono, de graça, e
+ * está certo: replicar um workspace não custa nada. A migration 0089 deixa o
+ * Max **fora** dessa regra de propósito — cinco empresas seriam cinco
+ * instâncias pagas contra uma mensalidade só.
+ *
+ * É a mesma aritmética do preço acima, dita no lugar onde ela vira código.
+ */
+export const MAX_PLAN_PRICE = 250
+
+/**
+ * R$ 2.500. Doze meses de Max pelo preço de dez.
+ *
+ * Derivado de `PRO_ANUAL_MESES_COBRADOS`, e não escrito à mão: o desconto anual
+ * é uma política só, e dois números soltos divergiriam no dia em que ela mudar.
+ */
+export const MAX_ANUAL_PRICE = MAX_PLAN_PRICE * PRO_ANUAL_MESES_COBRADOS
+
+/**
+ * Os planos que se paga, no vocabulário da coluna `subscriptions.plano`.
+ *
+ * Minúsculo e em português porque o termo é **nosso**: o Asaas não conhece
+ * plano nenhum, só assinatura com valor. O contrário vale para `CICLOS`, que
+ * atravessa a fronteira do gateway e por isso fica no idioma dele.
+ */
+export const PLANOS_PAGOS = ['pro', 'max'] as const
+
+export type PlanoPago = (typeof PLANOS_PAGOS)[number]
+
+/**
+ * Quanto custa cada plano em cada ciclo.
+ *
+ * Uma tabela e não quatro constantes soltas: o `POST /subscriptions` precisa do
+ * valor, o e-mail de confirmação precisa do valor, a tela precisa do valor, e
+ * três leituras de três lugares diferentes é como um preço sai divergente numa
+ * superfície só — que é exatamente o defeito de 10/09, quando
+ * `pricing-section.tsx` tinha `R$49` digitado à mão enquanto a linha 571 do
+ * mesmo arquivo já lia `PRO_PLAN_PRICE`.
+ */
+export const PRECO_DO_PLANO = {
+  pro: { MONTHLY: PRO_PLAN_PRICE, YEARLY: PRO_ANUAL_PRICE },
+  max: { MONTHLY: MAX_PLAN_PRICE, YEARLY: MAX_ANUAL_PRICE },
+} as const satisfies Record<PlanoPago, Record<CicloDeCobranca, number>>
+
+/** O que se cobra por um plano num ciclo, em reais. É o valor que vai ao Asaas. */
+export function valorDoPlano(plano: PlanoPago, ciclo: CicloDeCobranca): number {
+  return PRECO_DO_PLANO[plano][ciclo]
 }
 
 /**
@@ -372,4 +443,4 @@ export function ehLimiteDePlano(mensagem: string | null | undefined): boolean {
  * Nome de banco e nome de tela respondem perguntas diferentes, e misturá-los é
  * o que faz uma renomeação interna vazar para o cliente.
  */
-export const PLANO_NA_TELA = { free: 'Free', pro: 'Pro' } as const
+export const PLANO_NA_TELA = { free: 'Free', pro: 'Pro', max: 'Max' } as const

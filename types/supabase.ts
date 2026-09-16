@@ -14,6 +14,20 @@ export type WorkspacePlan = 'free' | 'pro'
  * `lib/plans/anual.test.ts`, que para de compilar se divergirem.
  */
 export type CicloDeCobranca = 'MONTHLY' | 'YEARLY'
+
+/**
+ * O plano da assinatura (migration 0089), no vocabulário da coluna.
+ *
+ * `text` com `check` no banco, e não um enum novo, de propósito: `workspace_plan`
+ * continua com dois valores, e `pro_vigente()` continua devolvendo boolean para
+ * os sete lugares que a leem. O Max acrescenta direito por uma coluna e uma
+ * função (`max_vigente`), sem tocar em nenhum deles.
+ *
+ * Declarado aqui e não importado de `lib/plans` pela mesma convenção de
+ * `CicloDeCobranca` acima. `lib/plans/max.test.ts` trava a equivalência.
+ */
+export type PlanoDaAssinatura = 'pro' | 'max'
+
 export type DealStage =
   | 'novo'
   | 'contato_realizado'
@@ -963,6 +977,11 @@ export type Database = {
           // que `intervalo_do_ciclo()` lê para decidir se um pagamento compra
           // 30 dias ou um ano. `not null default 'MONTHLY'` no banco.
           ciclo: CicloDeCobranca
+          // `pro` ou `max` (migration 0089). Escrito por `createCheckout` junto
+          // do `asaas_subscription_id` a que pertence, e lido só por
+          // `max_vigente()`. Nunca vem do payload do webhook (ver 0027).
+          // `not null default 'pro'` no banco.
+          plano: PlanoDaAssinatura
           created_at: string
         }
         Insert: {
@@ -975,6 +994,7 @@ export type Database = {
           ultimo_billing_type?: string | null
           aviso_vencimento_enviado_em?: string | null
           ciclo?: CicloDeCobranca
+          plano?: PlanoDaAssinatura
           created_at?: string
         }
         Update: {
@@ -987,6 +1007,7 @@ export type Database = {
           ultimo_billing_type?: string | null
           aviso_vencimento_enviado_em?: string | null
           ciclo?: CicloDeCobranca
+          plano?: PlanoDaAssinatura
           created_at?: string
         }
         Relationships: []
@@ -1136,6 +1157,18 @@ export type Database = {
        * Ver migrations 0027 (assinatura) e 0051 (trial).
        */
       pro_vigente: {
+        Args: { target_workspace_id: string }
+        Returns: boolean
+      }
+      /**
+       * O Max está valendo nesta empresa agora? (migration 0089)
+       *
+       * Um ramo só, ao contrário de `pro_vigente`, que tem três: sem trial e
+       * sem a cobertura por dono da 0078. Cada empresa conectada consome uma
+       * instância paga no provedor de WhatsApp, e é o único recurso deste
+       * produto cujo custo marginal não é zero.
+       */
+      max_vigente: {
         Args: { target_workspace_id: string }
         Returns: boolean
       }

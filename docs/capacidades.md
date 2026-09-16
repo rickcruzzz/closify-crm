@@ -64,6 +64,9 @@ envelhecer em silêncio, que é o defeito de todo documento desse tipo.
 | Classificar acesso: pagante, trial, cortesia | `lib/dono/receita.ts` | 30/08 |
 | Preços e limites de plano, num lugar só | `lib/plans.ts` | 07/08 |
 | Plano **anual** (R$ 490, ciclo na assinatura) | `supabase/migrations/0070_ciclo_da_assinatura.sql` | 04/09 |
+| Plano **Max** (R$ 250, coluna `plano` e `max_vigente`) — ESCRITA, NÃO APLICADA | `supabase/migrations/0089_plano_max.sql` | 16/09 |
+| Direito ao WhatsApp, a árvore de 4 bloqueios | `lib/plans/max.ts` | 16/09 |
+| Auditoria de arquitetura do Max e da Z-API | [docs/auditoria-whatsapp-max-2026-09-16.md](auditoria-whatsapp-max-2026-09-16.md) | 16/09 |
 
 ## Integrações
 
@@ -226,7 +229,21 @@ WhatsApp por API no PRODUTO                      a ponte saiu em 28/08 (c52a718)
                                                  webhook de 12/09 e da PROSPECCAO do
                                                  dono, resolve a empresa pelo NOME no
                                                  servidor, e nao devolve WhatsApp a
-                                                 nenhum cliente
+                                                 nenhum cliente. A Fase 1 do Max
+                                                 (16/09) criou o DIREITO ao recurso,
+                                                 nao o recurso: nao ha provider da
+                                                 Z-API, nao ha tabela de instancia,
+                                                 nao ha QR e nao ha envio
+tabela whatsapp_instances                        Fase 2. O desenho esta na secao 11 da
+                                                 auditoria de 16/09
+provider da Z-API                                Fase 2. A INTERFACE ja existe desde
+                                                 28/08 em lib/conversas/remetente.ts,
+                                                 e `escolherRemetente(workspaceId)` ja
+                                                 recebe o parametro sem le-lo
+webhook da Z-API                                 Fase 2. O pipeline de receber ja
+                                                 existe e esta provado: a rota da
+                                                 Evolution grava em conversas/mensagens
+                                                 desde 12/09
 IA respondendo o prospect sozinha                o SDR existe e esta DESLIGADO. Nem a
                                                  captura nem a classificacao o ligam
 ligacao prospect -> cliente pagante              NAO existe. O painel PARA em

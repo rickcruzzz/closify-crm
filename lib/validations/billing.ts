@@ -33,6 +33,20 @@ export const checkoutSchema = z.object({
    * tela diria que a escolha se perdeu.
    */
   ciclo: z.enum(['MONTHLY', 'YEARLY']).default('MONTHLY'),
+
+  /**
+   * Qual plano está sendo assinado.
+   *
+   * `.default('pro')` pelo mesmo motivo escrito acima para `ciclo`, e com o
+   * mesmo cuidado: todo chamador que existia antes desta linha continua
+   * assinando Pro, e um valor desconhecido **reprova** em vez de virar Pro em
+   * silêncio.
+   *
+   * A diferença aqui é maior que a do ciclo. Entre Pro e Max há R$ 153 por mês
+   * e um recurso que custa dinheiro do outro lado: engolir um valor estranho e
+   * cobrar Pro entregaria uma instância de WhatsApp paga por R$ 97.
+   */
+  plano: z.enum(['pro', 'max']).default('pro'),
 })
 
 /** O que a Server Action recebe DEPOIS da validação: `ciclo` já resolvido. */

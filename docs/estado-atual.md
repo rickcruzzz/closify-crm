@@ -4,10 +4,143 @@ Documento de continuidade. É lido no começo de toda sessão (referenciado no
 [CLAUDE.md](../CLAUDE.md)) para que uma conversa nova, ou outra conta, comece
 sabendo o que já foi feito, o que foi decidido e onde estão as armadilhas.
 
-**Atualizado em:** 16/09/2026 (o Resend PROIBE e-mail frio e a chave dele e a
-mesma da recuperacao de senha; o disparo mudou de posicionamento e de canal; e
-doze rodadas de produto foram ao ar, sendo que tres eram alarme vermelho
-aparecendo onde nada esta errado)
+**Atualizado em:** 16/09/2026 (o plano Max nasceu como COLUNA e nao como
+terceiro valor do enum, e tres das quatro tabelas que o pedido mandava criar ja
+existiam; o Resend PROIBE e-mail frio e a chave dele e a mesma da recuperacao de
+senha; o disparo mudou de posicionamento e de canal; e doze rodadas de produto
+foram ao ar, sendo que tres eram alarme vermelho aparecendo onde nada esta
+errado)
+
+## O plano Max: tres das quatro tabelas pedidas JA EXISTIAM (16/09)
+
+Pedido do dono, com um brief de 32 secoes: WhatsApp nativo no CRM, provedor
+Z-API, billing Asaas, plano Max a R$ 250/mes por empresa. A secao 3 do proprio
+brief manda **auditar antes de escrever codigo**, e foi o que produziu o achado.
+
+Auditoria inteira em
+[docs/auditoria-whatsapp-max-2026-09-16.md](auditoria-whatsapp-max-2026-09-16.md).
+
+### O que o brief mandava criar contra o que ja estava em producao
+
+    whatsapp_conversations   `conversas`, migration 0056     NAO criar
+    whatsapp_messages        `mensagens`, migration 0056     NAO criar
+    whatsapp_webhook_events  mesmo nome, migration 0047      NAO criar
+    whatsapp_instances       nao existe                      criar, na Fase 2
+
+**Criar as tres produziria uma segunda caixa de entrada.** Leem as atuais, hoje:
+a tela `/conversas`, quatro consultas de `lib/conversas/queries.ts`, tres Server
+Actions, a regra de ordenacao com teste, o contador da barra lateral em toda
+navegacao, a FK de `prospeccao_interacao` (0086) e o `join` da 0087. Oito
+consumidores, e nenhum migraria sozinho.
+
+E `conversas` ja e MELHOR que a proposta num ponto que o brief nao viu:
+`respondida_em` no lugar de `unread_count`. A primeira responde "este cliente
+esta esperando ha 40 minutos", a segunda responde "quantas nao li". Num produto
+cuja promessa e nao perder venda por esquecimento, trocar seria regressao.
+
+**O pipeline de RECEBER tambem ja existe e esta provado**: a rota da Evolution
+(496 linhas, 20 de 20 contra producao em 12/09) faz exatamente os oito passos da
+secao 14 do brief. A rota da Z-API nao e pipeline novo — e o mesmo com outro
+normalizador de payload.
+
+**E a camada de provider que a secao 4 pede tambem ja existe.**
+`lib/conversas/remetente.ts` E o `WhatsAppProvider`, e
+`escolherRemetente(workspaceId)` ja recebe o parametro **sem le-lo**, com o
+motivo escrito no codigo desde 28/08: acrescentar o parametro depois obrigaria a
+tocar em todo chamador.
+
+### O Max e COLUNA, nao terceiro valor do enum, e isso e a decisao da rodada
+
+`workspace_plan` e enum de dois valores e `pro_vigente()` devolve **boolean**,
+lido por SETE lugares (0027, 0028, 0037 com tres policies, 0050, 0052, 0078,
+0079). Acrescentar `'max'` ao enum obrigaria a reler os sete, e **um esquecido
+vira cliente de R$ 250 tomando o limite do Free na cara**.
+
+Com `subscriptions.plano`, `pro_vigente` nao muda uma linha: quem tem Max tem
+assinatura viva, logo o ramo 1 ja devolve `true` para ele. O Max acrescenta
+direito, nunca substitui. E o proprio brief escreve esse desenho na secao 6.
+
+### A armadilha de dinheiro, e ela estava escondida no ramo 3
+
+`pro_vigente` (0078) cobre **cinco empresas do mesmo dono**. Copiar esse ramo em
+`max_vigente` daria a uma assinatura de R$ 250 o direito a CINCO instancias
+Z-API pagas: receita fixa contra custo que multiplica por cinco.
+
+`max_vigente` fica com **um ramo so**, a assinatura DESTA empresa. E o trial
+tambem fica de fora, pelo mesmo motivo: Pro nao custa nada por conta nova, Max
+custa, e um trial de Max seria uma instancia paga por cadastro.
+
+**E o primeiro recurso deste produto cujo custo marginal nao e zero**, e por isso
+o preco e por empresa enquanto o Pro e pela empresa inteira.
+
+### O contrato da Z-API, lido e nao suposto
+
+    base       https://api.z-api.io/instances/{id}/token/{token}/{endpoint}
+    cabecalho  Client-Token, por CONTA e nao por instancia
+    partner    POST com Bearer <Partner-Token>, devolve { id, token, due }
+    send-text  { phone, message } -> { zaapId, messageId, id }
+    webhooks   ReceivedCallback, MessageStatusCallback, DisconnectedCallback
+               os tres exigem 200 com {"value": true}, e HTTPS obrigatorio
+
+**A Z-API NAO assina o webhook**, e o payload carrega `instanceId` em texto
+puro. Resolver a empresa por ele repetiria o defeito de 28/08 (`c52a718`), que
+removeu a rota antiga porque o segredo era global. A saida desenhada e **segredo
+por instancia na URL**, com a empresa resolvida a partir do segredo e nunca do
+payload: nao existe campo de empresa na requisicao, entao nao existe o que
+forjar.
+
+**`mensagens.status` vai precisar de `alter` no check.** Ele aceita tres valores
+e a Z-API tem cinco (`SENT`, `RECEIVED`, `READ`, `READ_BY_ME`, `PLAYED`). Sem o
+alter, o webhook de status grava e toma `23514` em silencio.
+
+### O que foi construido nesta rodada (Fase 1: o dinheiro)
+
+    0089          subscriptions.plano (text + check) e max_vigente(uuid)
+    plans.ts      MAX_PLAN_PRICE 250, MAX_ANUAL_PRICE derivado, PRECO_DO_PLANO
+    max.ts        direitoAoWhatsapp: a arvore de QUATRO bloqueios
+    max-queries   le a RPC, e `null` da RPC cai no lado NEGADO
+    checkout      aceita `plano`, e o guard recusa TROCAR de plano com
+                  assinatura viva — mesma trava do `ciclo`, motivo pior
+    testes        1.870 -> 1.884
+
+**A arvore tem quatro negativas de proposito**, e cada uma pede acao diferente:
+`exige_max` (nunca assinou), `max_vencido` (assinou e caiu), `sem_conexao`
+(pagou e nao conectou), `conexao_caiu`. Um `if` por chamador produziria quatro
+versoes, e a que diverge em silencio e a que manda **cliente pagante para a tela
+de vendas** — o defeito ja pago em 18/08 com *"Seu Pro venceu, reative"*
+aparecendo para quem nunca teve Pro.
+
+**E `podeLerConversas` devolve `true` SEMPRE**, com teste travando. Assinatura
+inativa bloqueia acao nova e preserva historico: uma caixa de entrada que some
+quando a cobranca falha apaga da tela a conversa em que o cliente estava
+negociando, e manda ele de volta para o celular — que e o habito que este
+produto existe para desfazer.
+
+### A 0089 NAO foi aplicada, e o motivo nao e decisao
+
+O MCP do Supabase respondeu **"is not connected"** nesta sessao, e o CLI nao
+esta linkado (`supabase/config.toml` e `.temp/project-ref` nao existem). Nao ha
+caminho daqui ate o DDL de producao sem senha de banco, que nao esta no
+`.env.local` e nao se adivinha.
+
+**Os quatro portoes passam e o conferidor fecha em zero**, entao o codigo esta
+pronto. O que falta e um comando que so o dono pode rodar. Enquanto ela nao
+sobe, `max_vigente` nao existe no banco e qualquer chamada a ela devolve erro —
+e nenhuma tela a chama ainda, de proposito.
+
+**O carimbo de catalogo do `schema.md` NAO se moveu**, e isso e a distincao que
+importa: ele mede o banco de producao, nao a pasta. Quando a 0089 subir,
+`banco.rpcs_do_projeto` vai de 36 para 37 e **nenhuma tabela nasce**.
+
+### O que continua FORA, e a ordem
+
+    Fase 2   whatsapp_instances, provider da Z-API, os tres webhooks, QR,
+             tela de Configuracoes > WhatsApp
+    Fase 3   caixa de entrada com o gate, painel lateral do lead, follow-up
+
+E `FASE_DO_WHATSAPP` continua `'migrando'`: enquanto essa constante nao ganhar a
+fase `'zapi'` **nada envia mensagem**, porque `escolherRemetente` devolve
+`emMigracao` com teto 0 para todo mundo.
 
 ## O Resend PROIBE o que a gente ia fazer com ele (16/09)
 

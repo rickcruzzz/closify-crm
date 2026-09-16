@@ -74,10 +74,19 @@ de custo: paywall no momento em que a pessoa sente o valor converte 8-12%,
 contra 3-4% de limite arbitrário — e as outras três são todas arbitrárias no
 sentido técnico do termo.
 
-<!-- contagem: migrations.arquivos=87 migrations.maior=0088 -->
-**87 arquivos de migration, e a maior é `0088`** (remedido em 16/09; o `0049`
+<!-- contagem: migrations.arquivos=88 migrations.maior=0089 -->
+**88 arquivos de migration, e a maior é `0089`** (remedido em 16/09; o `0049`
 não existe, removido em 22/08). Os dois números vêm sempre juntos: a contagem
-sozinha convida a inferir `0084`.
+sozinha convida a inferir `0085`.
+
+**A 0089 está escrita e NÃO foi aplicada**, e é por isso que as cinco contagens
+de catálogo acima não se moveram: elas medem o banco de produção, não a pasta.
+Quando ela subir, `banco.rpcs_do_projeto` vai de 36 para 37 (`max_vigente`) e
+nenhuma tabela nasce — ela acrescenta uma coluna e uma função.
+
+O carimbo separando as duas coisas é o ponto: arquivo escrito e objeto existindo
+são perguntas diferentes, e lê-las como uma só é o erro que a série de "nós sem
+arquivo de origem" do `CLAUDE.md` documenta em cinco datas.
 
 **A 0072 acrescentou duas tabelas e a 0075 as REMOVEU**, em 08/09:
 `enriquecimento_de_lead` e `sinal_de_mercado` viveram dois dias e nunca
@@ -417,6 +426,7 @@ classDiagram
         +text ultimo_billing_type
         +timestamptz aviso_vencimento_enviado_em
         +text ciclo "MONTHLY|YEARLY, migration 0070 — decide 30 dias ou 1 ano"
+        +text plano "pro|max, migration 0089 — decide DIREITO, nao duracao"
         +timestamptz created_at
     }
 
