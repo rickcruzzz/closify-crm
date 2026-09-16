@@ -3,9 +3,10 @@
 import * as React from 'react'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useForm } from 'react-hook-form'
-import { Loader2 } from 'lucide-react'
+import { Crown, Loader2 } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
+import { DESTINO_DO_UPGRADE } from '@/lib/plans'
 import {
   Dialog,
   DialogContent,
@@ -96,6 +97,7 @@ export function SendEmailDialog({
   open,
   onOpenChange,
   remetente,
+  temPro,
   destinatario,
   nomeDoContato,
   onSend,
@@ -104,6 +106,15 @@ export function SendEmailDialog({
   onOpenChange: (open: boolean) => void
   /** E-mail da conta Gmail conectada. `null` quando ninguém conectou ainda. */
   remetente: string | null
+  /**
+   * Pro vigente. Decide QUAL beco a mensagem evita.
+   *
+   * Sem isto o dialogo dizia sempre "Conecte o Gmail em Configuracoes" — e no
+   * Free nao ha o que conectar: Gmail e recurso Pro, e a tela de Integracoes
+   * recusa a conexao. A instrucao mandava a pessoa a uma porta trancada e a
+   * deixava la, sem dizer que a chave e o plano.
+   */
+  temPro: boolean
   /** Só para mostrar pra quem vai, o e-mail de verdade sai do lead no servidor. */
   destinatario: string
   /**
@@ -152,7 +163,9 @@ export function SendEmailDialog({
           <DialogDescription>
             {remetente
               ? 'Este e-mail sai da sua conta do Gmail conectada.'
-              : 'Conecte o Gmail em Configurações para enviar.'}
+              : temPro
+                ? 'Conecte o Gmail em Configurações para enviar.'
+                : 'Enviar e-mail pelo Gmail é um recurso do plano Pro.'}
           </DialogDescription>
         </DialogHeader>
 
@@ -165,7 +178,7 @@ export function SendEmailDialog({
               De
             </span>
             <span className="truncate font-medium">
-              {remetente ?? 'Gmail não conectado'}
+              {remetente ?? (temPro ? 'Gmail não conectado' : 'Disponível no plano Pro')}
             </span>
           </div>
           <div className="flex items-baseline gap-2">
@@ -255,10 +268,31 @@ export function SendEmailDialog({
             {/* O botão diz PARA QUEM: "Enviar" sozinho num diálogo que pode
                 ter sido aberto de outra tela não confirma o destinatário no
                 momento em que a ação acontece. */}
-            <Button type="submit" disabled={isSubmitting || !remetente}>
-              {isSubmitting && <Loader2 className="size-4 animate-spin" />}
-              {nomeDoContato ? `Enviar para ${primeiroNome(nomeDoContato)}` : 'Enviar'}
-            </Button>
+            {/* ## O botao muda de TRABALHO quando falta o plano
+                
+                Desabilitado, ele dizia "Enviar para Fulano" e nao fazia nada:
+                a pessoa lia que o Gmail nao esta conectado, via um botao
+                apagado, e nao tinha para onde ir. `workspace-switcher.tsx` ja
+                registra a licao em comentario — "dizer 'faca upgrade' sem
+                mostrar onde deixa a pessoa num beco".
+                
+                Com o Pro vigente e sem Gmail conectado o botao continua
+                desabilitado, e ai esta certo: o caminho e Configuracoes, que a
+                propria descricao acima ja nomeia. */}
+            {!remetente && !temPro ? (
+              <Button
+                type="button"
+                onClick={() => (window.location.href = DESTINO_DO_UPGRADE)}
+              >
+                <Crown aria-hidden className="size-4" />
+                Conhecer o plano Pro
+              </Button>
+            ) : (
+              <Button type="submit" disabled={isSubmitting || !remetente}>
+                {isSubmitting && <Loader2 className="size-4 animate-spin" />}
+                {nomeDoContato ? `Enviar para ${primeiroNome(nomeDoContato)}` : 'Enviar'}
+              </Button>
+            )}
           </DialogFooter>
         </form>
       </DialogContent>

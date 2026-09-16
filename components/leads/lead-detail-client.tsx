@@ -73,6 +73,7 @@ export function LeadDetailClient({
   currentUserId,
   isAdmin,
   remetenteGmail,
+  temPro,
   negociosAbertos,
 }: {
   lead: LeadRow
@@ -83,6 +84,8 @@ export function LeadDetailClient({
   isAdmin: boolean
   /** E-mail da conta Gmail conectada, mostrado como remetente no diálogo de envio. `null` se ninguém conectou. */
   remetenteGmail: string | null
+  /** Pro vigente. Decide se o dialogo manda CONECTAR ou manda ASSINAR. */
+  temPro: boolean
   /**
    * Os negócios em andamento deste contato.
    *
@@ -509,6 +512,7 @@ export function LeadDetailClient({
           remetente={remetenteGmail}
           destinatario={lead.email}
           nomeDoContato={lead.name}
+          temPro={temPro}
           onSend={handleSendEmail}
         />
       )}

@@ -23,6 +23,7 @@ export default async function LeadDetailPage({ params }: { params: Promise<{ id:
     { data: isAdmin },
     integracoes,
     negociosAbertos,
+    { data: temPro },
   ] = await Promise.all([
       getLeadById(workspaceId, id),
       getWorkspaceMembers(workspaceId),
@@ -32,6 +33,10 @@ export default async function LeadDetailPage({ params }: { params: Promise<{ id:
       // Entra no MESMO `Promise.all`: encadear seria mais uma ida de rede em
       // série até São Paulo, na página que a pessoa mais abre depois do funil.
       getNegociosAbertosDoLead(workspaceId, id),
+      // A FUNCAO, nunca a coluna `plan`: ela e o ultimo valor gravado e nao
+      // sabe que o tempo passou. Regra de plano le `pro_vigente`, e isso esta
+      // travado como decisao desde a 0027.
+      supabase.rpc('pro_vigente', { target_workspace_id: workspaceId }),
     ])
   if (!result) {
     notFound()
@@ -53,6 +58,7 @@ export default async function LeadDetailPage({ params }: { params: Promise<{ id:
       currentUserId={user.id}
       isAdmin={!!isAdmin}
       remetenteGmail={remetenteGmail}
+      temPro={!!temPro}
       negociosAbertos={negociosAbertos}
     />
   )
