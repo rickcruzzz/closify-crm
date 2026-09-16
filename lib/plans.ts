@@ -253,7 +253,7 @@ export const FREE_PLAN_PRICE = 0
  *
  * Venda presencial. Uma visita custa cerca de uma hora entre deslocamento,
  * demonstração e retorno, e fecha em 10% a 20% — cinco a dez horas por cliente.
- * A R$ 49 isso não se paga; a R$ 490 à vista, sim. E trava 12 meses de
+ * A R$ 49 isso não se paga; a R$ 970 à vista, sim. E trava 12 meses de
  * retenção, que é o número que este produto nunca teve.
  *
  * `PRO_PLAN_PRICE` continua sendo o preço MENSAL e não muda de forma: os 18
@@ -263,7 +263,7 @@ export const FREE_PLAN_PRICE = 0
 export const PRO_ANUAL_MESES = 12
 export const PRO_ANUAL_MESES_COBRADOS = 10
 
-/** R$ 490. Doze meses pelo preço de dez. */
+/** R$ 970. Doze meses pelo preço de dez. */
 export const PRO_ANUAL_PRICE = PRO_PLAN_PRICE * PRO_ANUAL_MESES_COBRADOS
 
 /** Dois. O que a peça de venda promete, calculado e não escrito. */
@@ -320,7 +320,7 @@ export function valorDoCiclo(ciclo: CicloDeCobranca): number {
  * parâmetro e abre sozinho. Sem ele a pessoa cai na tela de cobrança e precisa
  * procurar o botão de novo, depois de já ter decidido.
  */
-export const DESTINO_DO_UPGRADE = '/settings/billing?assinar=1'
+export const DESTINO_DO_UPGRADE = '/settings/billing#comparar'
 
 /**
  * Esta mensagem de erro é um limite de plano?

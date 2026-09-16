@@ -9,7 +9,6 @@ import {
   CardTitle,
 } from '@/components/ui/card'
 import { PlanComparisonTable } from '@/components/settings/plan-comparison-table'
-import { SubscribeButton } from '@/components/settings/subscribe-button'
 import { SubscriptionCard } from '@/components/settings/subscription-card'
 import { createClient } from '@/lib/supabase/server'
 import { getCurrentUserAndWorkspace } from '@/lib/supabase/workspace'
@@ -137,11 +136,17 @@ export default async function BillingPage({
           {/* Só oferece assinar quem não tem cobrança em andamento, senão a
               pessoa criaria uma segunda assinatura sem perceber que a primeira
               está esperando pagamento. */}
-          {plan === 'free' &&
-            isAdmin &&
-            (!assinatura || assinatura.status === 'canceled') && (
-              <SubscribeButton abrirDeInicio={assinar === '1'} />
-            )}
+          {/* ## O botao de assinar saiu DAQUI em 16/09
+              
+              Ele aparecia ANTES do cartao de comparacao, ou seja a oferta vinha
+              antes do argumento — e havia dois botoes na mesma pagina, cada um
+              com o proprio dialogo. O cabecalho de `plan-comparison-table.tsx`
+              documenta o problema oposto ("quem se convencia lendo o cartao do
+              Pro tinha que rolar de volta"), e ao consertar aquilo ninguem
+              removeu este.
+              
+              Sobra um, dentro do cartao do Pro, depois do argumento. O
+              `abrirDeInicio` foi junto. */}
         </CardContent>
       </Card>
 
@@ -150,7 +155,15 @@ export default async function BillingPage({
           <CardTitle>Compare os planos</CardTitle>
         </CardHeader>
         <CardContent>
-          <PlanComparisonTable plan={plan} isAdmin={isAdmin} />
+          <PlanComparisonTable
+          plan={plan}
+          isAdmin={isAdmin}
+          // `?assinar=1` continua abrindo o formulario direto para quem JA
+          // decidiu: e o destino dos e-mails de trial, da reconciliacao e da
+          // landing logada. Quem chega por "Conhecer o Pro" cai na ancora, sem
+          // parametro, e le antes.
+          assinarDeInicio={assinar === '1' && (!assinatura || assinatura.status === 'canceled')}
+        />
         </CardContent>
       </Card>
     </div>

@@ -97,6 +97,7 @@ const PRO_FEATURES = [
 export function PlanComparisonTable({
   plan,
   isAdmin = false,
+  assinarDeInicio = false,
 }: {
   plan: 'free' | 'pro'
   /**
@@ -105,9 +106,11 @@ export function PlanComparisonTable({
    * conversão é pior que ausência: ele gasta a decisão e devolve um erro.
    */
   isAdmin?: boolean
+  /** Abre o formulario direto, para quem chega por `?assinar=1` ja decidido. */
+  assinarDeInicio?: boolean
 }) {
   return (
-    <div className="flex flex-col gap-4">
+    <div id="comparar" className="flex flex-col gap-4">
       <div className="grid items-start gap-4 sm:grid-cols-2">
         <CartaoDoPlano
           name="Free"
@@ -126,7 +129,7 @@ export function PlanComparisonTable({
           isCurrent={plan === 'pro'}
           recommended
           // O botão mora AQUI, no cartão que convence. Ver o cabeçalho.
-          acao={plan === 'free' && isAdmin ? <SubscribeButton className="w-full" /> : null}
+          acao={plan === 'free' && isAdmin ? <SubscribeButton className="w-full" abrirDeInicio={assinarDeInicio} /> : null}
           aviso={
             plan === 'free' && !isAdmin
               ? 'Peça a um administrador da empresa para fazer o upgrade.'

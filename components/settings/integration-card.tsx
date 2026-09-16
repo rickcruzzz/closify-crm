@@ -378,6 +378,7 @@ export function IntegrationCard({
         open={upsellAberto}
         onOpenChange={setUpsellAberto}
         recurso={info.titulo}
+        isAdmin={isAdmin}
       />
 
       {info.conectarHref && (

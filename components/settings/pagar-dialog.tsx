@@ -2,7 +2,15 @@
 
 import * as React from 'react'
 import { useRouter } from 'next/navigation'
-import { Check, Copy, CreditCard, ExternalLink, FileText, Loader2, QrCode } from 'lucide-react'
+import {
+  Check,
+  Copy,
+  CreditCard,
+  ExternalLink,
+  FileText,
+  Loader2,
+  QrCode,
+} from 'lucide-react'
 import { toast } from 'sonner'
 
 import { Button } from '@/components/ui/button'
@@ -60,7 +68,27 @@ const TEMPO_MAXIMO_MS = 15 * 60_000
  * transforma surpresa em detalhe — e surpresa na hora de pagar é desistência,
  * ou pior, contestação trinta dias depois.
  */
-export function PagarDialog({
+/**
+ * O conteúdo do pagamento, SEM o `Dialog` em volta.
+ *
+ * Extraído em 16/09 para o `SubscribeButton` poder mostrá-lo dentro do MESMO
+ * diálogo do CPF, em vez de fechar um para abrir outro.
+ *
+ * O defeito que isso fecha estava no caminho do dinheiro: `setDialogOpen(false)`
+ * e `setPagamentoAberto(true)` rodavam no mesmo lote do React, um diálogo
+ * desmontava enquanto o outro montava, e a limpeza do primeiro (restaurar foco,
+ * soltar a trava de rolagem, tirar o `aria-hidden` do resto) rodava DEPOIS,
+ * desfazendo o que o segundo tinha acabado de instalar. O pagamento nascia e
+ * era morto pela saída do formulário.
+ *
+ * E a assinatura JÁ EXISTE no Asaas quando isso acontece: a pessoa via o
+ * diálogo sumir e concluía que falhou.
+ *
+ * `open` continua entrando porque as duas leituras dependem dele: só busca a
+ * cobrança quando a tela aparece, e só fica vigiando o pagamento enquanto ela
+ * está visível.
+ */
+export function PagarConteudo({
   open,
   onOpenChange,
 }: {
@@ -92,7 +120,13 @@ export function PagarDialog({
           setPagamento(resultado.pagamento as Pagamento)
           // Abre no primeiro método que de fato carregou: se o Pix falhou,
           // abrir na aba dele mostraria um vazio para quem quer pagar.
-          setMetodo(resultado.pagamento.pix ? 'pix' : resultado.pagamento.boleto ? 'boleto' : 'cartao')
+          setMetodo(
+            resultado.pagamento.pix
+              ? 'pix'
+              : resultado.pagamento.boleto
+                ? 'boleto'
+                : 'cartao',
+          )
         }
       })
       // O `finally` ja parava o spinner, mas `setErro` so era preenchido no
@@ -101,7 +135,9 @@ export function PagarDialog({
       .catch((err) => {
         if (cancelado) return
         console.error('obterFormasDePagamento falhou', err)
-        setErro('Não foi possível carregar as formas de pagamento. Tente de novo em instantes.')
+        setErro(
+          'Não foi possível carregar as formas de pagamento. Tente de novo em instantes.',
+        )
       })
       .finally(() => {
         if (!cancelado) setCarregando(false)
@@ -176,155 +212,180 @@ export function PagarDialog({
   const avisoPix = pagamento?.pix ? avisoDeValidade(pagamento.pix.expiraEm) : null
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle>Assinar o Plano Pro</DialogTitle>
-          {/* ## Sem preço inventado, e sem período errado
+    <>
+      <DialogHeader>
+        <DialogTitle>Assinar o Plano Pro</DialogTitle>
+        {/* ## Sem preço inventado, e sem período errado
               O `?? 49` que estava aqui inventava um valor quando a leitura
               falhava — numa tela de PAGAMENTO, não mostrar o preço é melhor
               que mostrar o errado. E o período agora vem do ciclo da
               assinatura: com o anual, o valor já sairia certo (490) e o texto
               diria "por mês", que é pior que os dois errados, porque parece
               correto. */}
-          <DialogDescription>
-            {pagamento
-              ? `R$ ${pagamento.valor} ${CICLOS[pagamento.ciclo].porPeriodo}, pela empresa inteira. Cancele quando quiser.`
-              : 'Pela empresa inteira, sem cobrar por pessoa. Cancele quando quiser.'}
-          </DialogDescription>
-        </DialogHeader>
+        <DialogDescription>
+          {pagamento
+            ? `R$ ${pagamento.valor} ${CICLOS[pagamento.ciclo].porPeriodo}, pela empresa inteira. Cancele quando quiser.`
+            : 'Pela empresa inteira, sem cobrar por pessoa. Cancele quando quiser.'}
+        </DialogDescription>
+      </DialogHeader>
 
-        {carregando && (
-          <div className="text-muted-foreground flex items-center justify-center gap-2 py-10 text-sm">
-            <Loader2 className="size-4 animate-spin" />
-            Preparando o pagamento…
+      {carregando && (
+        <div className="text-muted-foreground flex items-center justify-center gap-2 py-10 text-sm">
+          <Loader2 className="size-4 animate-spin" />
+          Preparando o pagamento…
+        </div>
+      )}
+
+      {erro && (
+        <div className="flex flex-col gap-3 py-2">
+          <p
+            role="alert"
+            className="bg-destructive/10 text-destructive rounded-md px-3 py-2 text-sm"
+          >
+            {erro}
+          </p>
+          <p className="text-muted-foreground text-sm">
+            Se continuar, escreva para {CONTROLADOR.email} que resolvemos por lá.
+          </p>
+        </div>
+      )}
+
+      {pagamento && !carregando && (
+        <div className="flex flex-col gap-4">
+          <div className="bg-muted/50 flex gap-1 rounded-lg p-1">
+            {(
+              [
+                {
+                  id: 'pix' as const,
+                  rotulo: 'Pix',
+                  icone: QrCode,
+                  ativo: !!pagamento.pix,
+                },
+                {
+                  id: 'boleto' as const,
+                  rotulo: 'Boleto',
+                  icone: FileText,
+                  ativo: !!pagamento.boleto,
+                },
+                {
+                  id: 'cartao' as const,
+                  rotulo: 'Cartão',
+                  icone: CreditCard,
+                  ativo: true,
+                },
+              ] satisfies Array<{
+                id: Metodo
+                rotulo: string
+                icone: typeof QrCode
+                ativo: boolean
+              }>
+            )
+              .filter((aba) => aba.ativo)
+              .map((aba) => (
+                <button
+                  key={aba.id}
+                  type="button"
+                  onClick={() => setMetodo(aba.id)}
+                  className={cn(
+                    'flex flex-1 items-center justify-center gap-1.5 rounded-md px-3 py-2 text-sm font-medium transition-colors',
+                    metodo === aba.id
+                      ? 'bg-background text-foreground shadow-sm'
+                      : 'text-muted-foreground hover:text-foreground',
+                  )}
+                >
+                  <aba.icone className="size-4" />
+                  {aba.rotulo}
+                </button>
+              ))}
           </div>
-        )}
 
-        {erro && (
-          <div className="flex flex-col gap-3 py-2">
-            <p role="alert" className="bg-destructive/10 text-destructive rounded-md px-3 py-2 text-sm">
-              {erro}
-            </p>
-            <p className="text-muted-foreground text-sm">
-              Se continuar, escreva para {CONTROLADOR.email} que resolvemos por lá.
-            </p>
-          </div>
-        )}
-
-        {pagamento && !carregando && (
-          <div className="flex flex-col gap-4">
-            <div className="bg-muted/50 flex gap-1 rounded-lg p-1">
-              {(
-                [
-                  { id: 'pix' as const, rotulo: 'Pix', icone: QrCode, ativo: !!pagamento.pix },
-                  { id: 'boleto' as const, rotulo: 'Boleto', icone: FileText, ativo: !!pagamento.boleto },
-                  { id: 'cartao' as const, rotulo: 'Cartão', icone: CreditCard, ativo: true },
-                ] satisfies Array<{
-                  id: Metodo
-                  rotulo: string
-                  icone: typeof QrCode
-                  ativo: boolean
-                }>
-              )
-                .filter((aba) => aba.ativo)
-                .map((aba) => (
-                  <button
-                    key={aba.id}
-                    type="button"
-                    onClick={() => setMetodo(aba.id)}
-                    className={cn(
-                      'flex flex-1 items-center justify-center gap-1.5 rounded-md px-3 py-2 text-sm font-medium transition-colors',
-                      metodo === aba.id
-                        ? 'bg-background text-foreground shadow-sm'
-                        : 'text-muted-foreground hover:text-foreground',
-                    )}
-                  >
-                    <aba.icone className="size-4" />
-                    {aba.rotulo}
-                  </button>
-                ))}
-            </div>
-
-            {metodo === 'pix' && pagamento.pix && (
-              <div className="flex flex-col items-center gap-3">
-                {/* O QR vem do Asaas em Base64. `unoptimized` não se aplica: é
+          {metodo === 'pix' && pagamento.pix && (
+            <div className="flex flex-col items-center gap-3">
+              {/* O QR vem do Asaas em Base64. `unoptimized` não se aplica: é
                     `img` mesmo, porque `next/image` não otimiza data URL e
                     ainda exigiria configurar domínio. */}
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={pagamento.pix.imagemDataUrl}
-                  alt="QR Code do Pix para pagar a assinatura"
-                  className="size-52 rounded-lg bg-white p-2"
-                />
-                <p className="text-muted-foreground text-center text-sm">
-                  Abra o app do seu banco, escolha Pix e aponte a câmera.
-                </p>
-                <Button
-                  variant="outline"
-                  className="w-full"
-                  onClick={() => copiar(pagamento.pix!.copiaECola, 'pix')}
-                >
-                  {copiado === 'pix' ? <Check className="size-4" /> : <Copy className="size-4" />}
-                  {copiado === 'pix' ? 'Código copiado' : 'Copiar código Pix'}
-                </Button>
-                {avisoPix && <p className="text-muted-foreground text-xs">{avisoPix}</p>}
-              </div>
-            )}
-
-            {metodo === 'boleto' && pagamento.boleto && (
-              <div className="flex flex-col gap-3">
-                <p className="bg-muted/50 rounded-lg px-3 py-3 text-center font-mono text-sm break-all">
-                  {pagamento.boleto.linhaFormatada}
-                </p>
-                <Button
-                  variant="outline"
-                  onClick={() => copiar(pagamento.boleto!.linhaParaCopiar, 'boleto')}
-                >
-                  {copiado === 'boleto' ? <Check className="size-4" /> : <Copy className="size-4" />}
-                  {copiado === 'boleto' ? 'Linha copiada' : 'Copiar linha digitável'}
-                </Button>
-                {pagamento.boletoPdfUrl && (
-                  <a
-                    href={pagamento.boletoPdfUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-muted-foreground hover:text-foreground inline-flex items-center justify-center gap-1.5 text-sm underline underline-offset-4"
-                  >
-                    Baixar o boleto em PDF
-                    <ExternalLink className="size-3.5" />
-                  </a>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={pagamento.pix.imagemDataUrl}
+                alt="QR Code do Pix para pagar a assinatura"
+                className="size-52 rounded-lg bg-white p-2"
+              />
+              <p className="text-muted-foreground text-center text-sm">
+                Abra o app do seu banco, escolha Pix e aponte a câmera.
+              </p>
+              <Button
+                variant="outline"
+                className="w-full"
+                onClick={() => copiar(pagamento.pix!.copiaECola, 'pix')}
+              >
+                {copiado === 'pix' ? (
+                  <Check className="size-4" />
+                ) : (
+                  <Copy className="size-4" />
                 )}
-                <p className="text-muted-foreground text-xs">
-                  O boleto leva até 3 dias úteis para compensar. No Pix, o Pro é liberado em
-                  segundos.
-                </p>
-              </div>
-            )}
+                {copiado === 'pix' ? 'Código copiado' : 'Copiar código Pix'}
+              </Button>
+              {avisoPix && <p className="text-muted-foreground text-xs">{avisoPix}</p>}
+            </div>
+          )}
 
-            {metodo === 'cartao' && (
-              <div className="flex flex-col gap-3">
-                <p className="text-muted-foreground text-sm">
-                  O cartão é processado com segurança pelo Asaas, nosso meio de pagamento. Você
-                  será levado para a página segura deles.
-                </p>
-                {/* Âncora estilizada, não `Button asChild`: o `Button` deste
-                    projeto não repassa `asChild`, e envolver um link num botão
-                    quebraria abrir em nova aba e o menu de contexto. */}
+          {metodo === 'boleto' && pagamento.boleto && (
+            <div className="flex flex-col gap-3">
+              <p className="bg-muted/50 rounded-lg px-3 py-3 text-center font-mono text-sm break-all">
+                {pagamento.boleto.linhaFormatada}
+              </p>
+              <Button
+                variant="outline"
+                onClick={() => copiar(pagamento.boleto!.linhaParaCopiar, 'boleto')}
+              >
+                {copiado === 'boleto' ? (
+                  <Check className="size-4" />
+                ) : (
+                  <Copy className="size-4" />
+                )}
+                {copiado === 'boleto' ? 'Linha copiada' : 'Copiar linha digitável'}
+              </Button>
+              {pagamento.boletoPdfUrl && (
                 <a
-                  href={pagamento.urlDoCartao}
+                  href={pagamento.boletoPdfUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="bg-primary text-primary-foreground hover:bg-primary/90 inline-flex h-11 w-full items-center justify-center gap-2 rounded-lg px-4 text-sm font-medium transition-colors md:h-10"
+                  className="text-muted-foreground hover:text-foreground inline-flex items-center justify-center gap-1.5 text-sm underline underline-offset-4"
                 >
-                  <CreditCard className="size-4" />
-                  Pagar com cartão
+                  Baixar o boleto em PDF
                   <ExternalLink className="size-3.5" />
                 </a>
-              </div>
-            )}
+              )}
+              <p className="text-muted-foreground text-xs">
+                O boleto leva até 3 dias úteis para compensar. No Pix, o Pro é liberado em
+                segundos.
+              </p>
+            </div>
+          )}
 
-            {/* ## Esta linha dizia o NOME CIVIL do sócio, até 12/09
+          {metodo === 'cartao' && (
+            <div className="flex flex-col gap-3">
+              <p className="text-muted-foreground text-sm">
+                O cartão é processado com segurança pelo Asaas, nosso meio de pagamento.
+                Você será levado para a página segura deles.
+              </p>
+              {/* Âncora estilizada, não `Button asChild`: o `Button` deste
+                    projeto não repassa `asChild`, e envolver um link num botão
+                    quebraria abrir em nova aba e o menu de contexto. */}
+              <a
+                href={pagamento.urlDoCartao}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="bg-primary text-primary-foreground hover:bg-primary/90 inline-flex h-11 w-full items-center justify-center gap-2 rounded-lg px-4 text-sm font-medium transition-colors md:h-10"
+              >
+                <CreditCard className="size-4" />
+                Pagar com cartão
+                <ExternalLink className="size-3.5" />
+              </a>
+            </div>
+          )}
+
+          {/* ## Esta linha dizia o NOME CIVIL do sócio, até 12/09
 
                 Avisar antes transforma surpresa em detalhe, e isso continua
                 valendo. O que mudou é o fato: o comentário antigo afirmava que
@@ -336,12 +397,34 @@ export function PagarDialog({
                 `name` todos em `VELO FUNIL`, `status: APPROVED`. A tela estava
                 avisando de um problema que não existe mais — e o fazia na tela
                 do CPF, que é onde a pessoa decide. */}
-            <p className="text-muted-foreground border-t pt-3 text-xs">
-              No seu banco, o recebedor aparece como{' '}
-              <strong>{CONTROLADOR.nomeNoRecebedor}</strong>.
-            </p>
-          </div>
-        )}
+          <p className="text-muted-foreground border-t pt-3 text-xs">
+            No seu banco, o recebedor aparece como{' '}
+            <strong>{CONTROLADOR.nomeNoRecebedor}</strong>.
+          </p>
+        </div>
+      )}
+    </>
+  )
+}
+
+/**
+ * O pagamento como diálogo próprio, para quem chega por fora.
+ *
+ * `/settings/billing?pagar=1` abre daqui. O `SubscribeButton` NÃO usa este
+ * componente: ele monta `PagarConteudo` dentro do diálogo que já está aberto,
+ * pelo motivo escrito acima.
+ */
+export function PagarDialog({
+  open,
+  onOpenChange,
+}: {
+  open: boolean
+  onOpenChange: (open: boolean) => void
+}) {
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-md">
+        <PagarConteudo open={open} onOpenChange={onOpenChange} />
       </DialogContent>
     </Dialog>
   )

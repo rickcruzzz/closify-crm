@@ -33,11 +33,18 @@ export function ProUpsellDialog({
   open,
   onOpenChange,
   recurso,
+  isAdmin = false,
 }: {
   open: boolean
   onOpenChange: (open: boolean) => void
   /** O que a pessoa tentou fazer, para o título falar do caso dela. */
   recurso: string
+  /**
+   * Sem isto a tabela caía no padrão `false` e o cartão do Pro vinha sem botão,
+   * com a frase "Peça a um administrador da empresa para fazer o upgrade" — dita
+   * ao próprio administrador, que é quem esbarra no bloqueio de integração.
+   */
+  isAdmin?: boolean
 }) {
   const router = useRouter()
 
@@ -54,7 +61,7 @@ export function ProUpsellDialog({
         {/* A mesma tabela da aba Plano, com os limites reais de `lib/plans.ts`.
             Duas listas que discordassem sobre o que o Pro entrega seria pior
             que não ter comparação nenhuma. */}
-        <PlanComparisonTable plan="free" />
+        <PlanComparisonTable plan="free" isAdmin={isAdmin} />
 
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>

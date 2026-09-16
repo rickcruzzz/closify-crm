@@ -66,8 +66,8 @@ describe('limite de plano: o off-by-one e o caminho', () => {
     expect(ehLimiteDePlano('Faça upgrade para o Pro')).toBe(true)
   })
 
-  /** Sem `?assinar=1` a pessoa cai na tela e procura o botão de novo. */
+  /** Sem `?#comparar` a pessoa cai na tela e procura o botão de novo. */
   it('o destino abre o formulário sozinho', () => {
-    expect(DESTINO_DO_UPGRADE).toContain('assinar=1')
+    expect(DESTINO_DO_UPGRADE).toContain('#comparar')
   })
 })
