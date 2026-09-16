@@ -300,8 +300,8 @@ uma rodada antiga —, e nada na resposta de uma consulta avisava disso. Só
 instalado na pasta pessoal do usuário, fora daqui. O que foi retirado está
 inteiro em `graphify-out/arquivo/`, nada foi descartado.
 
-<!-- contagem: grafo.nos_sem_arquivo=122 -->
-**122 nós não têm arquivo de origem, e nenhum deles é fantasma.** A grande
+<!-- contagem: grafo.nos_sem_arquivo=123 -->
+**123 nós não têm arquivo de origem, e nenhum deles é fantasma.** A grande
 maioria são objetos do banco que o extrator representa sem arquivo —
 `public.workspaces`, `auth.users`, `public.checar_teto_de_mensagens` —, mais
 alguns símbolos importados pelos geradores em Python (`FreeTypeFont`, `Image`,
@@ -352,6 +352,13 @@ Como ele andou, em ordem:
                   referencia de funcao a uma tabela nao carrega o arquivo que
                   definiu a tabela. **Nenhuma tabela nasceu** — a 0088 nao tem
                   um `create table`, so duas RPCs. `banco.tabelas` nao se moveu
+    123   16/09   MAIS UM, no mesmo dia e pelo mesmo motivo: o hook de
+                  post-commit reextraiu a 0088 depois do commit dela, e a
+                  segunda RPC (`get_funnel_performance`) referencia
+                  `public.deals` tambem. O carimbo anterior foi medido ANTES
+                  do rebuild terminar — e isso e uma armadilha do proprio
+                  metodo: carimbar numero de grafo no mesmo commit que mexe em
+                  migration mede o grafo de antes
 
 **A leitura errada aqui é fácil e cara:** ver o número subir logo depois de uma
 migration convida a concluir que uma tabela nasceu. Em nenhum dos três últimos
