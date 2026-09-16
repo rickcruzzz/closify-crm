@@ -1,4 +1,4 @@
-import { getFunnelCounts } from '@/lib/dashboard/queries'
+import { contarAbertosSemValor, getFunnelCounts } from '@/lib/dashboard/queries'
 import type { PeriodoDoDashboard } from '@/lib/dashboard/queries'
 import { FunnelChart } from '@/components/dashboard/funnel-chart'
 
@@ -10,6 +10,12 @@ export async function FunnelChartAsync({
   workspaceId: string
   periodo?: PeriodoDoDashboard
 }) {
-  const data = await getFunnelCounts(workspaceId, periodo)
-  return <FunnelChart data={data} />
+  // As duas em paralelo: são independentes, e em série a segunda esperaria a
+  // primeira sem motivo — o painel inteiro já é um boundary de Suspense.
+  const [data, abertosSemValor] = await Promise.all([
+    getFunnelCounts(workspaceId, periodo),
+    contarAbertosSemValor(workspaceId, periodo),
+  ])
+
+  return <FunnelChart data={data} abertosSemValor={abertosSemValor} />
 }

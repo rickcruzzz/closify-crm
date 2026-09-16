@@ -1,5 +1,15 @@
 import Link from 'next/link'
-import { ArrowRight, Briefcase, DollarSign, Target, Users, type LucideIcon } from 'lucide-react'
+import {
+  ArrowRight,
+  Briefcase,
+  DollarSign,
+  Minus,
+  Target,
+  TrendingDown,
+  TrendingUp,
+  Users,
+  type LucideIcon,
+} from 'lucide-react'
 
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
@@ -7,6 +17,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { EmptyState } from '@/components/ui/empty-state'
 import { formatCompactBRL } from '@/lib/deals/metrics'
 import { textoDaConversao } from '@/lib/dashboard/conversao'
+import { compararComAnterior, type UnidadeDaVariacao } from '@/lib/dashboard/variacao'
 import { CONTATOS, FUNIL, hrefDaEtapa } from '@/lib/dashboard/destinos'
 import type { DashboardMetrics } from '@/lib/dashboard/queries'
 
@@ -15,26 +26,23 @@ type MetricCardConfig = {
   icon: LucideIcon
   accent: { text: string; bg: string }
   valor: (metrics: DashboardMetrics) => string
-  /**
-   * A linha de baixo. Ou informação de verdade (a base do percentual), ou o
-   * nome do lugar para onde o card leva.
-   */
+  /** A linha de baixo. Ou a base do percentual, ou o nome do destino. */
   rodape: (metrics: DashboardMetrics) => string
-  /**
-   * Todos os quatro têm destino agora.
-   *
-   * Antes só dois tinham, e o link era um texto de 12px no rodapé do card —
-   * "Negócios abertos" e "Valor no funil" não abriam nada. Um usuário do
-   * produto tentou clicar para ver o detalhe e a tela não respondeu.
-   */
   href: string
+  /**
+   * O número que a comparação usa, e em que unidade ele deve ser lido.
+   *
+   * `null` desliga a comparação para aquele card. Conversão sai em PONTOS
+   * porque ela já é um percentual: de 40% para 50% são dez pontos e um
+   * crescimento de 25%, e misturar os dois é a mentira que
+   * `lib/dashboard/variacao.ts` existe para recusar.
+   */
+  comparavel: {
+    extrair: (m: DashboardMetrics) => number
+    unidade: UnidadeDaVariacao
+  } | null
 }
 
-// Sem histórico de métricas por período no schema ainda, não há como
-// calcular variação real (ex: "+18% vs mês anterior"), mostrar um número
-// inventado ao lado de dados reais seria mais enganoso do que não mostrar
-// nada. Fica pendente até existir uma tabela de snapshots mensais. A BASE do
-// percentual, essa sim, é dado real e entra — ver `lib/dashboard/conversao.ts`.
 const cards: MetricCardConfig[] = [
   {
     label: 'Contatos',
@@ -46,6 +54,7 @@ const cards: MetricCardConfig[] = [
     valor: (metrics) => metrics.totalLeads.toString(),
     rodape: () => 'Ver contatos',
     href: CONTATOS,
+    comparavel: { extrair: (m) => m.totalLeads, unidade: 'percentual' },
   },
   {
     label: 'Negócios abertos',
@@ -57,6 +66,7 @@ const cards: MetricCardConfig[] = [
     valor: (metrics) => metrics.openDeals.toString(),
     rodape: () => 'Ver no funil',
     href: FUNIL,
+    comparavel: { extrair: (m) => m.openDeals, unidade: 'percentual' },
   },
   {
     label: 'Valor no funil',
@@ -68,6 +78,7 @@ const cards: MetricCardConfig[] = [
     valor: (metrics) => formatCompactBRL(metrics.pipelineValue),
     rodape: () => 'Ver negócios abertos',
     href: FUNIL,
+    comparavel: { extrair: (m) => m.pipelineValue, unidade: 'percentual' },
   },
   {
     label: 'Viraram venda',
@@ -79,17 +90,30 @@ const cards: MetricCardConfig[] = [
     valor: (metrics) => textoDaConversao(metrics.wonDeals, metrics.closedDeals).valor,
     // A base no lugar do "Ver no funil": o percentual sozinho é o que mente.
     rodape: (metrics) => textoDaConversao(metrics.wonDeals, metrics.closedDeals).base,
-    // Não existe tela própria de detalhamento de conversão por período, e o
-    // funil já mostra a coluna Fechado Ganho, que é o numerador desse número.
     href: hrefDaEtapa('fechado_ganho'),
+    comparavel: {
+      // Recalculado dos crus dos DOIS lados, e não do texto: `textoDaConversao`
+      // devolve "-" quando nada foi fechado, e comparar strings daria NaN.
+      extrair: (m) => (m.closedDeals > 0 ? (m.wonDeals / m.closedDeals) * 100 : 0),
+      unidade: 'pontos',
+    },
   },
 ]
 
 export function MetricCards({
   metrics,
+  anteriores = null,
   temFiltroDePeriodo = false,
 }: {
   metrics: DashboardMetrics
+  /**
+   * As mesmas métricas na janela imediatamente anterior, ou `null`.
+   *
+   * `null` quando não há período escolhido — o anterior a "todo o período" é
+   * vazio, e toda métrica subiria infinito por cima de zero. Sem isto, o card
+   * mostra só o número, que é o comportamento de antes de 16/09.
+   */
+  anteriores?: DashboardMetrics | null
   /**
    * Há um período escolhido? `false` significa "todo o histórico".
    *
@@ -101,18 +125,10 @@ export function MetricCards({
    * mandando "cadastrar o primeiro contato".
    *
    * E o pior não era a tela: estes cartões ficam DENTRO de `<ReportArea>`, então
-   * a frase entrava no PDF que a pessoa manda ao cliente dela. É exatamente o
-   * que a decisão de tirar o checklist do relatório existia para evitar.
+   * a frase entrava no PDF que a pessoa manda ao cliente dela.
    */
   temFiltroDePeriodo?: boolean
 }) {
-  // Workspace sem nenhum lead: quatro zeros não informam nada e ainda dão a
-  // impressão de sistema quebrado. Um convite à ação ocupa o mesmo espaço e
-  // diz o que fazer. Basta o primeiro lead para os cartões voltarem, e eles
-  // voltam com número de verdade, não com zero.
-  //
-  // Só vale para a empresa REALMENTE vazia: com filtro de período, zero quer
-  // dizer "nada neste intervalo", que é outra frase e outro botão.
   if (metrics.totalLeads === 0 && metrics.openDeals === 0 && !temFiltroDePeriodo) {
     return (
       <Card>
@@ -130,10 +146,6 @@ export function MetricCards({
     )
   }
 
-  // Com período escolhido e nada dentro dele, a resposta é sobre o RECORTE, não
-  // sobre a conta. Quatro zeros sem frase deixam a pessoa concluir que o
-  // sistema perdeu os dados dela — e o botão certo aqui é trocar o filtro, não
-  // cadastrar contato.
   if (metrics.totalLeads === 0 && metrics.openDeals === 0) {
     return (
       <Card>
@@ -150,48 +162,105 @@ export function MetricCards({
 
   return (
     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-      {cards.map((card) => (
-        // O alvo é o CARD INTEIRO, não o texto do rodapé.
-        //
-        // A versão anterior punha um `<Link>` de 12px dentro do cartão: para
-        // acertar, era preciso mirar numa linha de texto que nem parecia
-        // botão. Envolver o cartão dá ~180×100px de alvo, muito acima dos
-        // 44px mínimos, e resolve o toque no celular junto.
-        <Link
-          key={card.label}
-          href={card.href}
-          className="focus-visible:ring-ring/50 rounded-xl outline-none focus-visible:ring-3"
-        >
-          <Card className="group/metrica hover:bg-accent/40 hover:ring-foreground/20 h-full cursor-pointer transition-colors">
-            <CardHeader className="flex flex-row items-start justify-between">
-              <CardTitle className="text-muted-foreground text-sm font-medium">
-                {card.label}
-              </CardTitle>
-              <div
-                className={cn(
-                  'flex size-9 shrink-0 items-center justify-center rounded-lg',
-                  card.accent.bg,
+      {cards.map((card) => {
+        const variacao =
+          anteriores && card.comparavel
+            ? compararComAnterior(
+                card.comparavel.extrair(metrics),
+                card.comparavel.extrair(anteriores),
+                card.comparavel.unidade,
+              )
+            : null
+
+        return (
+          // O alvo é o CARD INTEIRO, não o texto do rodapé: a versão anterior
+          // punha um `<Link>` de 12px dentro do cartão, e para acertar era
+          // preciso mirar numa linha de texto que nem parecia botão.
+          <Link
+            key={card.label}
+            href={card.href}
+            className="focus-visible:ring-ring/50 rounded-xl outline-none focus-visible:ring-3"
+          >
+            <Card className="group/metrica hover:bg-accent/40 hover:ring-foreground/20 h-full cursor-pointer transition-colors motion-reduce:transition-none">
+              <CardHeader className="flex flex-row items-start justify-between">
+                <CardTitle className="text-muted-foreground text-sm font-medium">
+                  {card.label}
+                </CardTitle>
+                <div
+                  className={cn(
+                    'flex size-9 shrink-0 items-center justify-center rounded-lg',
+                    card.accent.bg,
+                  )}
+                >
+                  <card.icon className={cn('size-4.5', card.accent.text)} />
+                </div>
+              </CardHeader>
+              <CardContent className="flex flex-col gap-1">
+                <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
+                  {/* `tabular-nums` porque os quatro números são lidos em linha
+                      e comparados entre si: com largura variável de dígito,
+                      eles dançam de card para card.
+                      3xl e não 2xl: o número é o único dado do cartão, e a
+                      distância tipográfica para o rótulo de 14px é o que faz a
+                      leitura acontecer em um golpe de vista. */}
+                  <span className="text-3xl leading-none font-semibold tabular-nums">
+                    {card.valor(metrics)}
+                  </span>
+                  {variacao && <SeloDeVariacao variacao={variacao} />}
+                </div>
+                <span className="text-muted-foreground inline-flex items-center gap-1 text-xs">
+                  {card.rodape(metrics)}
+                  <ArrowRight
+                    aria-hidden
+                    className="size-3 transition-transform group-hover/metrica:translate-x-0.5 motion-reduce:transition-none"
+                  />
+                </span>
+                {variacao && (
+                  <span className="text-muted-foreground text-xs">
+                    vs. período anterior
+                  </span>
                 )}
-              >
-                <card.icon className={cn('size-4.5', card.accent.text)} />
-              </div>
-            </CardHeader>
-            <CardContent className="flex flex-col gap-1">
-              {/* `tabular-nums` porque os quatro números são lidos em linha e
-                  comparados entre si: com largura variável de dígito, eles
-                  dançam de card para card. */}
-              <span className="text-2xl font-semibold tabular-nums">{card.valor(metrics)}</span>
-              <span className="text-muted-foreground inline-flex items-center gap-1 text-xs">
-                {card.rodape(metrics)}
-                <ArrowRight
-                  aria-hidden
-                  className="size-3 transition-transform group-hover/metrica:translate-x-0.5"
-                />
-              </span>
-            </CardContent>
-          </Card>
-        </Link>
-      ))}
+              </CardContent>
+            </Card>
+          </Link>
+        )
+      })}
     </div>
+  )
+}
+
+/**
+ * O selo de variação.
+ *
+ * Cor semântica e não a da marca: verde e vermelho aqui querem dizer "melhor" e
+ * "pior", e o teal é identidade — usá-lo para bem-estar faria a marca significar
+ * "positivo" e perder o próprio papel.
+ *
+ * Estável é CINZA e com traço, não verde: ficar igual não é vitória.
+ */
+function SeloDeVariacao({
+  variacao,
+}: {
+  variacao: { texto: string; direcao: 'subiu' | 'desceu' | 'estavel' }
+}) {
+  const Icone =
+    variacao.direcao === 'subiu'
+      ? TrendingUp
+      : variacao.direcao === 'desceu'
+        ? TrendingDown
+        : Minus
+
+  return (
+    <span
+      className={cn(
+        'inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-xs font-medium tabular-nums',
+        variacao.direcao === 'subiu' && 'bg-success/10 text-success',
+        variacao.direcao === 'desceu' && 'bg-destructive/10 text-destructive',
+        variacao.direcao === 'estavel' && 'bg-muted text-muted-foreground',
+      )}
+    >
+      <Icone aria-hidden className="size-3" />
+      {variacao.texto}
+    </span>
   )
 }

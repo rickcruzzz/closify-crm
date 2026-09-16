@@ -10,6 +10,7 @@ import { CABECALHOS } from '@/lib/telas/cabecalhos'
 import { MetricCardsAsync } from '@/components/dashboard/metric-cards-async'
 import { FunnelChartAsync } from '@/components/dashboard/funnel-chart-async'
 import { UpcomingDealsTableAsync } from '@/components/dashboard/upcoming-deals-table-async'
+import { PainelDeDesempenhoAsync } from '@/components/dashboard/painel-de-desempenho-async'
 import { PeriodFilter } from '@/components/dashboard/period-filter'
 import { ChecklistCard, RetomarChecklist } from '@/components/onboarding/checklist-card'
 import { TourDeBoasVindas } from '@/components/onboarding/tour'
@@ -27,7 +28,8 @@ export default async function DashboardPage({
 }) {
   const params = await searchParams
   const { workspaceId, workspaces } = await getCurrentUserAndWorkspace()
-  const nomeDoWorkspace = workspaces.find((w) => w.id === workspaceId)?.name ?? 'Velo Funil'
+  const nomeDoWorkspace =
+    workspaces.find((w) => w.id === workspaceId)?.name ?? 'Velo Funil'
 
   // `new Date()` aqui é só o instante "agora" pra ancorar o cálculo, quem
   // decide o que é "hoje" de verdade é `resolverPeriodo` via `diaEmSaoPaulo`,
@@ -148,8 +150,20 @@ export default async function DashboardPage({
           <MetricCardsAsync workspaceId={workspaceId} periodo={periodo} />
         </Suspense>
 
-        <Suspense fallback={<Skeleton className="h-80 w-full" />}>
+        <Suspense fallback={<Skeleton className="h-96 w-full" />}>
           <FunnelChartAsync workspaceId={workspaceId} periodo={periodo} />
+        </Suspense>
+
+        {/* O desempenho vem DEPOIS do funil, e a ordem é a da pergunta: o
+            funil responde "onde estão meus negócios", o desempenho responde "o
+            que os que já fecharam me ensinam". Invertido, a pessoa leria média
+            de fechamento antes de saber quantos negócios existem.
+
+            O painel some inteiro quando não há fechamento nenhum, e por isso
+            não tem skeleton de altura fixa: reservar 100px para um card que
+            talvez não exista deixaria buraco na tela de quem está começando. */}
+        <Suspense fallback={null}>
+          <PainelDeDesempenhoAsync workspaceId={workspaceId} periodo={periodo} />
         </Suspense>
 
         <Suspense fallback={<Skeleton className="h-64 w-full" />}>

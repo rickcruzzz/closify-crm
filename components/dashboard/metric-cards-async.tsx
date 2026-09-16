@@ -1,5 +1,6 @@
 import { getDashboardMetrics } from '@/lib/dashboard/queries'
 import type { PeriodoDoDashboard } from '@/lib/dashboard/queries'
+import { janelaAnterior } from '@/lib/dashboard/variacao'
 import { MetricCards } from '@/components/dashboard/metric-cards'
 
 /**
@@ -18,9 +19,25 @@ export async function MetricCardsAsync({
   workspaceId: string
   periodo?: PeriodoDoDashboard
 }) {
-  const metrics = await getDashboardMetrics(workspaceId, periodo)
+  const anterior = janelaAnterior(periodo ?? null)
+
+  // A segunda chamada existe SÓ quando há período escolhido, e é o custo
+  // inteiro da comparação: nenhuma tabela de snapshot, nenhuma coluna nova.
+  // Sem período, `anterior` é `null` e o dashboard faz exatamente o mesmo
+  // número de consultas de antes de 16/09.
+  const [metrics, metricsAnteriores] = await Promise.all([
+    getDashboardMetrics(workspaceId, periodo),
+    anterior ? getDashboardMetrics(workspaceId, anterior) : Promise.resolve(null),
+  ])
+
   // `periodo` ausente significa "todo o histórico", que é o padrão da tela.
   // `MetricCards` precisa dessa distinção para não mandar uma empresa com 200
   // contatos "cadastrar o primeiro" só porque ela filtrou por Hoje.
-  return <MetricCards metrics={metrics} temFiltroDePeriodo={periodo !== undefined} />
+  return (
+    <MetricCards
+      metrics={metrics}
+      anteriores={metricsAnteriores}
+      temFiltroDePeriodo={periodo !== undefined}
+    />
+  )
 }
