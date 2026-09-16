@@ -35,8 +35,8 @@
 > **nenhuma métrica do catálogo**. Agora mede, e o carimbo acima é conferido
 > por `scripts/ci/conferir-documentos.mjs` como todos os outros.
 >
-> <!-- contagem: migrations.arquivos=86 migrations.maior=0087 -->
-> **86 arquivos de migration, e a maior é `0087`.** Os dois juntos, sempre: o
+> <!-- contagem: migrations.arquivos=87 migrations.maior=0088 -->
+> **87 arquivos de migration, e a maior é `0088`.** Os dois juntos, sempre: o
 > número de arquivos sozinho convida a inferir `0084`, e o `0049` não existe —
 > foi provado desnecessário e removido em 22/08. `node scripts/ci/contagens.mjs`
 > imprime o invariante que reconcilia os dois.
@@ -184,11 +184,16 @@ dado real; o que não está tem o motivo escrito ao lado.
       `lib/leads/exportar-csv.ts` (esta linha dizia "próximo da fila" até 08/09,
       cinco dias depois de a exportação estar no ar)
 - [x] Orçamento com prazo — **entregue em 08/09**, ver a seção própria abaixo
-- [ ] Dashboard de receita — ganho no mês e ticket médio saem do que já existe;
-      tempo médio de fechamento não, exige histórico de MUDANÇA de etapa
-<!-- contagem: deal_stage.arquivos_de_codigo=10 -->
+- [x] Dashboard de receita — **entregue em 16/09** pela 0088: ganho e perdido no
+      período, ticket médio (só a partir de três vendas, senão é o valor de um
+      negócio com nome de estatística) e tempo até fechar. O tempo é
+      APROXIMADO e a tela diz isso: ele sai de `stage_changed_at - created_at`,
+      e `stage_changed_at` guarda a última troca de etapa, não a data de
+      fechamento. O histórico de MUDANÇA de etapa continua não existindo, e é
+      ele que daria o número exato
+<!-- contagem: deal_stage.arquivos_de_codigo=11 -->
 - [ ] Campos e etapas customizáveis — `deal_stage` é enum do Postgres, citado em
-      10 arquivos de código; virar tabela é projeto próprio. Só com cliente
+      11 arquivos de código; virar tabela é projeto próprio. Só com cliente
       pagante pedindo. (Dizia 22 até 04/09, e `capacidades.md` dizia 19: não
       eram três erros de contagem, eram três definições — com documentos, com o
       `.svg` do diagrama, e só código. A métrica agora carrega a definição no
@@ -1259,4 +1264,4 @@ que foi resolvido do mesmo jeito.
 O que vale como requisito de hoje está nas seções 1 a 7 acima, e o estado
 vivo — pendências, decisões travadas, armadilhas já pagas — em
 [estado-atual.md](estado-atual.md).
-
+
