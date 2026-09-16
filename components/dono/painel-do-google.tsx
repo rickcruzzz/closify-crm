@@ -60,7 +60,7 @@ const dinheiro = (v: number) =>
  */
 const percentual = (v: number | null) =>
   v === null
-    ? '—'
+    ? '-'
     : (v * 100).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) +
       '%'
 
@@ -112,7 +112,7 @@ export function PainelDoGoogle({ dados }: { dados: DesempenhoDoGoogle }) {
                     <span className="text-foreground font-semibold">{c.cliques}</span> cliques
                   </span>
                   <span>CTR {percentual(c.ctr)}</span>
-                  <span>CPC {c.cpcMedio === null ? '—' : dinheiro(c.cpcMedio)}</span>
+                  <span>CPC {c.cpcMedio === null ? '-' : dinheiro(c.cpcMedio)}</span>
                   <span>
                     gasto <span className="text-foreground font-semibold">{dinheiro(c.custo)}</span>
                   </span>

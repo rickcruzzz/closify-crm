@@ -8,13 +8,13 @@ describe('ehClienteDeOutraConta', () => {
    * O caso que motivou a função: 13 das 15 linhas de `subscriptions` ficaram
    * com `asaas_customer_id` da conta velha quando o CNPJ mudou em 31/08.
    */
-  it('reconhece 404 — o cliente não existe nesta conta', () => {
+  it('reconhece 404, o cliente não existe nesta conta', () => {
     expect(
       ehClienteDeOutraConta(new AsaasApiError(404, '/customers/cus_1', 'not found')),
     ).toBe(true)
   })
 
-  it('reconhece 400 — o Asaas também recusa id desconhecido assim', () => {
+  it('reconhece 400, o Asaas também recusa id desconhecido assim', () => {
     expect(
       ehClienteDeOutraConta(new AsaasApiError(400, '/customers/cus_1', 'invalid_object')),
     ).toBe(true)
@@ -27,13 +27,13 @@ describe('ehClienteDeOutraConta', () => {
    * cliente e assinatura novos toda vez que o Asaas piscasse — cobrança
    * duplicada por retry cego, que é pior que o defeito original.
    */
-  it('não engole 500 — o Asaas está com problema, o cliente pode existir', () => {
+  it('não engole 500, o Asaas está com problema, o cliente pode existir', () => {
     expect(
       ehClienteDeOutraConta(new AsaasApiError(500, '/customers/cus_1', 'server error')),
     ).toBe(false)
   })
 
-  it('não engole 401 — chave errada não é cliente ausente', () => {
+  it('não engole 401, chave errada não é cliente ausente', () => {
     expect(
       ehClienteDeOutraConta(new AsaasApiError(401, '/customers/cus_1', 'unauthorized')),
     ).toBe(false)

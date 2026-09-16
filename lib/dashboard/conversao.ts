@@ -38,7 +38,7 @@ export function textoDaConversao(ganhos: number, fechados: number): Conversao {
   // Sem nenhum fechamento não existe taxa. Um travessão é lido como "ainda
   // não", e `0%` seria lido como "fracassou".
   if (fechados <= 0) {
-    return { valor: '—', base: 'nenhum negócio fechado ainda' }
+    return { valor: '-', base: 'nenhum negócio fechado ainda' }
   }
 
   const percentual = Math.round((ganhos / fechados) * 100)

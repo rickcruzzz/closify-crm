@@ -441,7 +441,7 @@ export async function GET(request: Request) {
   if (!whats.enviado) {
     // Registrado e seguido em frente: o e-mail é o canal que fecha o ciclo, e
     // derrubar o vigia porque a VPS caiu seria trocar um canal por nenhum.
-    console.error('vigia: WhatsApp não saiu —', whats.erro)
+    console.error('vigia: WhatsApp não saiu -', whats.erro)
   }
 
   const { error } = await getResend().emails.send({

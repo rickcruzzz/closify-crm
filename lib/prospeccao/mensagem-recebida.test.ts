@@ -48,7 +48,7 @@ const WHATSMEOW = {
   Message: { conversation: 'Olá tudo bem', messageContextInfo: {} },
 }
 
-describe('Evolution 2.x / Baileys — o formato em uso', () => {
+describe('Evolution 2.x / Baileys, o formato em uso', () => {
   it('lê a mensagem inteira', () => {
     const m = normalizarMensagem(BAILEYS)
     expect(m).not.toBeNull()
@@ -127,7 +127,7 @@ describe('Evolution 2.x / Baileys — o formato em uso', () => {
     expect(deveRegistrar(m)).toBe(true)
   })
 
-  it('legenda de imagem é o texto — quase sempre é a pergunta de verdade', () => {
+  it('legenda de imagem é o texto, quase sempre é a pergunta de verdade', () => {
     const m = normalizarMensagem({
       ...BAILEYS,
       message: { imageMessage: { caption: 'é isso aqui?', mediaKey: 'k', mimetype: 'image/jpeg' } },
@@ -143,7 +143,7 @@ describe('Evolution 2.x / Baileys — o formato em uso', () => {
   })
 })
 
-describe('Evolution GO / whatsmeow — o formato de 25/08', () => {
+describe('Evolution GO / whatsmeow, o formato de 25/08', () => {
   it('continua sendo lido', () => {
     const m = normalizarMensagem(WHATSMEOW)
     expect(m!.id).toBe('2AECBEEDF3E39E800EDE')

@@ -80,7 +80,7 @@ const POR_PECA: Record<string, EcoDaPeca> = {
   // de fingir que mostrou: promete o minuto que falta, não o que já passou.
   'a4-prova-produto': {
     titulo: 'O funil inteiro, em uma tela',
-    descricao: `Sem manual e sem instalar nada — em um minuto ele está montado com os seus. ${GRATIS}`,
+    descricao: `Sem manual e sem instalar nada, em um minuto ele está montado com os seus. ${GRATIS}`,
   },
   // "Grátis até 50 contatos, sem cartão e sem prazo para decidir."
   'a5-oferta': {

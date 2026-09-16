@@ -14,7 +14,7 @@ describe('ehAmbienteLocal', () => {
       expect(ehAmbienteLocal('development', 'localhost:3000')).toBe(true)
     })
 
-    it('outra porta serve igual — o dono roda em 3980 quando testa build', () => {
+    it('outra porta serve igual, o dono roda em 3980 quando testa build', () => {
       expect(ehAmbienteLocal('development', 'localhost:3980')).toBe(true)
     })
 

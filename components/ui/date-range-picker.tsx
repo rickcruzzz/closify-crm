@@ -103,7 +103,7 @@ export function DateRangePicker({
     inicioSelecao && fimSelecao
       ? `${formatarCurto(inicioSelecao)} – ${formatarCurto(fimSelecao)}`
       : inicioSelecao
-        ? `${formatarCurto(inicioSelecao)} – selecione o fim`
+        ? `${formatarCurto(inicioSelecao)} - selecione o fim`
         : 'Selecione o início'
 
   return (

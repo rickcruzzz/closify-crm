@@ -85,7 +85,7 @@ function diagnosticarCampanha(c: CampanhaCompleta): Impedimento[] {
       titulo: 'Esta campanha não tem nenhum anúncio',
       oQueFazer:
         'Ligar não vai veicular nada. Crie o anúncio dentro do conjunto ' +
-        'antes de ativar — pelo Gerenciador de Anúncios, que é onde o criativo é escolhido.',
+        'antes de ativar, pelo Gerenciador de Anúncios, que é onde o criativo é escolhido.',
       campanha: c.nome,
     })
   }

@@ -60,7 +60,7 @@ export function textoDoAviso(
   const partes: string[] = []
 
   if (alertas.length > 0) {
-    partes.push(`*Velo Funil — ${alertas.length} alerta(s)* · ${dia}`)
+    partes.push(`*Velo Funil, ${alertas.length} alerta(s)* · ${dia}`)
     partes.push('')
     // Teto de cinco: acima disso o WhatsApp corta com "Ler mais", e o que fica
     // escondido é justamente o fim da lista.

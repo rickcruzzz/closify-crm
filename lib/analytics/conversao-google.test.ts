@@ -32,7 +32,7 @@ describe('montarSendTo', () => {
     expect(montarSendTo('AW-123456789', 'AbC-dEfG')).toBe(SEND_TO)
   })
 
-  it('recusa com o ID e SEM o rótulo — a falha mais silenciosa daqui', () => {
+  it('recusa com o ID e SEM o rótulo, a falha mais silenciosa daqui', () => {
     // Sem o rótulo a tag carrega, a chamada sai e o Google não sabe qual
     // conversão contar: relatório zerado com tudo parecendo certo na tela.
     expect(montarSendTo('AW-123456789', null)).toBeNull()
@@ -60,7 +60,7 @@ describe('podeConverter', () => {
     expect(podeConverter(RECUSADO, false, gtag)).toBe(false)
   })
 
-  it('recusa quem NÃO DECIDIU — ausência nunca é consentimento', () => {
+  it('recusa quem NÃO DECIDIU, ausência nunca é consentimento', () => {
     expect(podeConverter(null, false, gtag)).toBe(false)
     expect(podeConverter('', false, gtag)).toBe(false)
     // Chave de outra versão, ou storage editado à mão.

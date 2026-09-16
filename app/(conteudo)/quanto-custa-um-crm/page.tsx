@@ -78,7 +78,7 @@ export const metadata: Metadata = {
     title: 'Quanto custa um CRM no Brasil em 2026',
     description:
       'A maioria dos CRMs cobra por usuário. A conta muda bastante conforme o ' +
-      'tamanho da equipe — e quase ninguém faz essa conta antes de assinar.',
+      'tamanho da equipe, e quase ninguém faz essa conta antes de assinar.',
     type: 'article',
   },
 }
@@ -131,7 +131,7 @@ const PERGUNTAS = [
     q: 'Como funciona o cancelamento no Velo Funil?',
     a:
       `Pela própria tela, sem multa e sem falar com vendedor. A conta volta para ` +
-      `o plano gratuito e os contatos continuam lá — e você pode exportar tudo em ` +
+      `o plano gratuito e os contatos continuam lá, e você pode exportar tudo em ` +
       `CSV a qualquer momento, inclusive para levar a um concorrente. Não há ` +
       `fidelidade nem prazo mínimo.`,
   },

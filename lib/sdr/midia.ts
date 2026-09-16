@@ -114,7 +114,7 @@ export const FALHA_DE_MIDIA = {
   audio: 'Não consegui ouvir seu áudio. Um atendente já entra aqui para te responder.',
   imagem: 'Não consegui abrir sua imagem. Um atendente já entra aqui para te responder.',
   audioLongo:
-    'Seu áudio é longo, então um atendente vai ouvir e te responder direito — já estou chamando.',
+    'Seu áudio é longo, então um atendente vai ouvir e te responder direito, já estou chamando.',
 } as const
 
 /** Só formatos que o WhatsApp de fato produz, e que a OpenAI aceita. */

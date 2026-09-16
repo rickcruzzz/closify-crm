@@ -135,7 +135,7 @@ export function ehRespostaAutomatica(
   if (segundos !== null && segundos >= 0 && segundos < SEGUNDOS_HUMANAMENTE_IMPOSSIVEL) {
     return {
       automatica: true,
-      motivo: `chegou em ${Math.round(segundos)}s — humano não lê e responde nesse tempo`,
+      motivo: `chegou em ${Math.round(segundos)}s, humano não lê e responde nesse tempo`,
     }
   }
 

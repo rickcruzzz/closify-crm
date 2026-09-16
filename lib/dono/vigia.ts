@@ -128,7 +128,7 @@ export function montarAlertas(leitura: LeituraDoVigia): Alerta[] {
       titulo: `Webhook do Asaas parado: ${leitura.webhooksParados.join(', ')}`,
       detalhe:
         'A fila de eventos está interrompida e não volta sozinha. Pagamento confirmado ' +
-        'não chega ao produto em tempo real — o cron de reconciliação corrige no dia ' +
+        'não chega ao produto em tempo real, o cron de reconciliação corrige no dia ' +
         'seguinte, mas quem pagou por Pix fica esperando. Religue em Integrações → ' +
         'Webhooks, no painel do Asaas.',
       ondeOlhar: '/dono',

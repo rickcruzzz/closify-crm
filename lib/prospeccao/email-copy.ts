@@ -98,7 +98,7 @@ export function corpoDoEmail(d: CorpoDoEmail): string {
     `Dá pra testar sem pagar e sem cartão, com até ${FREE_LEAD_LIMIT} contatos:`,
     `${base}/?utm_source=email`,
     ``,
-    `Se não fizer sentido, é só ignorar — ou clicar abaixo que eu não escrevo de novo.`,
+    `Se não fizer sentido, é só ignorar, ou clicar abaixo que eu não escrevo de novo.`,
     ``,
     `--`,
     // `assinaturaPublica` e nao a razao social: a decisao de 24/08 tirou o
@@ -110,7 +110,7 @@ export function corpoDoEmail(d: CorpoDoEmail): string {
     // que nenhum teste pegou — os casos conferiam se o NUMERO aparecia, e ele
     // aparecia. Achado abrindo o texto renderizado, que e a regra que o
     // `conferir-criativos.py` ja repete: colisao de texto, so o olho pega.
-    assinaturaPublica(CONTROLADOR, ' — '),
+    assinaturaPublica(CONTROLADOR, ', '),
     `Achei seu contato no site da empresa. Não quer mais receber?`,
     `${base}/nao-quero?t=${encodeURIComponent(d.tokenDeSaida)}`,
   ].join('\n')

@@ -121,7 +121,7 @@ describe('parseValorBRL', () => {
   })
 })
 
-describe('escolherSeparador — planilha com titulo acima do cabecalho', () => {
+describe('escolherSeparador, planilha com titulo acima do cabecalho', () => {
   // ## O defeito de 08/09, e ele so aparece com o arquivo INTEIRO
   //
   // `lerCsv` decidia o separador pela PRIMEIRA linha do arquivo. Relatorio

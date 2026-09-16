@@ -21,7 +21,7 @@ describe('textoDaConversao', () => {
   it('sem nenhum fechamento não mostra 0%, mostra travessão', () => {
     const { valor, base } = textoDaConversao(0, 0)
     expect(valor).not.toBe('0%')
-    expect(valor).toBe('—')
+    expect(valor).toBe('-')
     expect(base).toBe('nenhum negócio fechado ainda')
   })
 
@@ -64,6 +64,6 @@ describe('textoDaConversao', () => {
   // Contagem negativa não deveria existir, mas dividir por ela produziria
   // percentual negativo num card de resultado.
   it('denominador negativo cai no caso de "ainda não", não em conta torta', () => {
-    expect(textoDaConversao(0, -2).valor).toBe('—')
+    expect(textoDaConversao(0, -2).valor).toBe('-')
   })
 })

@@ -161,7 +161,7 @@ describe('validar a resposta antes de enviar', () => {
 
   it.each([
     'REGRAS QUE NÃO SE QUEBRAM: nunca invente recurso',
-    'O QUE O VELO FUNIL NÃO FAZ — nunca diga que faz',
+    'O QUE O VELO FUNIL NÃO FAZ, nunca diga que faz',
     '--- MENSAGEM DO CLIENTE ---',
     'Você é o assistente do Velo Funil, respondendo no WhatsApp quem reagiu',
   ])('recusa vazamento do prompt: %s', (texto) => {

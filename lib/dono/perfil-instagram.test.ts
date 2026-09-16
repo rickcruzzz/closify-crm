@@ -56,7 +56,7 @@ describe('bio do Instagram', () => {
     }
   })
 
-  it('não ataca a planilha — o inimigo mudou por medição', () => {
+  it('não ataca a planilha, o inimigo mudou por medição', () => {
     // 82% da PME brasileira vende pelo WhatsApp (Pesquisa Pulso do Sebrae,
     // 2026). Quem não tem planilha lê "sem planilha" e conclui que o produto é
     // para outra pessoa. A landing foi repositionada em 24/08; a bio ficou.

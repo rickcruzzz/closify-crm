@@ -127,7 +127,7 @@ describe('a amostra mínima, que é a regra que governa a tela', () => {
     expect(nichos[0].rotulo).toBe('volume')
   })
 
-  it('prospect sem nicho não some — vira "sem-nicho"', () => {
+  it('prospect sem nicho não some, vira "sem-nicho"', () => {
     const nichos = rankingDeNichos([prospect({ vertical: null })])
     expect(nichos[0].rotulo).toBe('sem-nicho')
   })

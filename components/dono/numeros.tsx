@@ -58,7 +58,7 @@ export function Numeros({
             número mudo. */}
         <NumeroCard
           rotulo="Entra por mês"
-          valor={receita ? formatarDinheiro(receita.entraPorMes) : '—'}
+          valor={receita ? formatarDinheiro(receita.entraPorMes) : '-'}
           icone={TrendingUp}
           destaque
           // `—` e não R$ 0,00 quando o Asaas não responde: "não sei" é
@@ -80,7 +80,7 @@ export function Numeros({
             escondido DENTRO da receita, inflando-a. */}
         <NumeroCard
           rotulo="Usando sem pagar"
-          valor={receita ? String(receita.emTrial + receita.cortesias + receita.assinaramSemPagar) : '—'}
+          valor={receita ? String(receita.emTrial + receita.cortesias + receita.assinaramSemPagar) : '-'}
           icone={Gift}
           nota={
             receita

@@ -101,14 +101,14 @@ const PERGUNTAS = [
     q: 'Preço fixo é sempre mais barato que cobrança por usuário?',
     a:
       `Não. Para quem vende sozinho, um plano por usuário costuma sair mais em ` +
-      `conta — a conta só vira quando a equipe cresce. A partir de duas ou três ` +
+      `conta, a conta só vira quando a equipe cresce. A partir de duas ou três ` +
       `pessoas o fixo passa à frente, e a diferença aumenta a cada contratação.`,
   },
   {
     q: 'Como faço para migrar de CRM sem perder os dados?',
     a:
-      `Exporte seus contatos do sistema atual em CSV — todo CRM sério oferece ` +
-      `isso — e importe no novo. No Velo Funil a importação lê .csv e .xlsx, ` +
+      `Exporte seus contatos do sistema atual em CSV, todo CRM sério oferece ` +
+      `isso, e importe no novo. No Velo Funil a importação lê .csv e .xlsx, ` +
       `reconhece as colunas sozinha e ignora contatos repetidos. Antes de migrar, ` +
       `confira se o sistema atual devolve os dados sem exigir contato com vendedor.`,
   },

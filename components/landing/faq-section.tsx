@@ -31,7 +31,7 @@ export const faqs = [
    */
   {
     q: 'O plano grátis é grátis mesmo?',
-    a: `É, e não pede cartão para começar. O grátis não expira: ${FREE_WORKSPACE_LIMIT} empresa, você + ${FREE_COLABORADORES} colaborador e ${FREE_LEAD_LIMIT} contatos, com o funil e o painel de resultados inteiros. Chegando aos ${FREE_LEAD_LIMIT} contatos nada some — você só não cadastra novos até assinar o Pro. Nada é cobrado sem você escolher.`,
+    a: `É, e não pede cartão para começar. O grátis não expira: ${FREE_WORKSPACE_LIMIT} empresa, você + ${FREE_COLABORADORES} colaborador e ${FREE_LEAD_LIMIT} contatos, com o funil e o painel de resultados inteiros. Chegando aos ${FREE_LEAD_LIMIT} contatos nada some, você só não cadastra novos até assinar o Pro. Nada é cobrado sem você escolher.`,
   },
   {
     q: 'Preciso instalar alguma coisa?',

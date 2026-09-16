@@ -356,7 +356,7 @@ export function objetivoDa(intencao: Intencao): string {
     case 'INTERESSE_ALTO':
       return 'levar ao cadastro, hoje'
     case 'QUER_DEMO':
-      return 'mostrar a tela — ou mandar o print de /hoje'
+      return 'mostrar a tela, ou mandar o print de /hoje'
     case 'PEDIU_PRECO':
       return 'responder o preço e criar o próximo passo'
     case 'PEDIU_DETALHES':
@@ -384,7 +384,7 @@ export function objetivoDa(intencao: Intencao): string {
     case 'SEM_INTERESSE':
       return 'agradecer e encerrar'
     case 'OPT_OUT':
-      return 'não responder — já registrado'
+      return 'não responder, já registrado'
     case 'SPAM':
       return 'ignorar'
     case 'INCONCLUSIVO':

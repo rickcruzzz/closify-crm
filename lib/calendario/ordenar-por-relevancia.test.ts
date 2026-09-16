@@ -26,7 +26,7 @@ function tarefa(campos: { id: string; hora: string; concluida?: boolean }): Task
 const ids = (tarefas: TaskRow[]) => tarefas.map((t) => t.id)
 
 describe('ordenarPorRelevancia', () => {
-  it('põe a vencida à frente de concluídas mais cedo — o defeito que motivou a função', () => {
+  it('põe a vencida à frente de concluídas mais cedo, o defeito que motivou a função', () => {
     // Exatamente o caso do print que expôs o problema: três tarefas concluídas
     // de manhã e uma vencida à tarde. Com ordem só cronológica, as três
     // concluídas ocupavam os 3 chips visíveis do modo Mês e a vencida sumia

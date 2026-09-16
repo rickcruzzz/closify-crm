@@ -20,7 +20,7 @@ import {
  * de NÃO disparar sem derrubar nada.
  */
 describe('podeDispararNoPixel', () => {
-  it('aceita função — é o único valor chamável', () => {
+  it('aceita função, é o único valor chamável', () => {
     expect(podeDispararNoPixel(() => {})).toBe(true)
   })
 

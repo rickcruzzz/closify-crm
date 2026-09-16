@@ -127,7 +127,7 @@ export async function lerDesempenhoDoGoogle(): Promise<Resultado<DesempenhoDoGoo
         ok: false,
         erro:
           'O refresh token do Google não foi aceito. Ele expira se ficar seis meses sem uso, ' +
-          'ou se a senha da conta mudar — nos dois casos, é preciso refazer o consentimento.',
+          'ou se a senha da conta mudar, nos dois casos, é preciso refazer o consentimento.',
       }
     }
 
@@ -165,11 +165,11 @@ export async function lerDesempenhoDoGoogle(): Promise<Resultado<DesempenhoDoGoo
 
     const c0 = contas[0]?.customer ?? {}
     const conversoes: AcaoDeConversao[] = acoes.map((l) => ({
-      nome: String(l.conversionAction?.name ?? '—'),
-      status: String(l.conversionAction?.status ?? '—'),
-      tipo: String(l.conversionAction?.type ?? '—'),
-      categoria: String(l.conversionAction?.category ?? '—'),
-      contagem: String(l.conversionAction?.countingType ?? '—'),
+      nome: String(l.conversionAction?.name ?? '-'),
+      status: String(l.conversionAction?.status ?? '-'),
+      tipo: String(l.conversionAction?.type ?? '-'),
+      categoria: String(l.conversionAction?.category ?? '-'),
+      contagem: String(l.conversionAction?.countingType ?? '-'),
       janelaDeCliqueEmDias: num(l.conversionAction?.clickThroughLookbackWindowDays),
     }))
 
@@ -182,7 +182,7 @@ export async function lerDesempenhoDoGoogle(): Promise<Resultado<DesempenhoDoGoo
       dados: {
         conta: {
           id: String(c0.id ?? cred.customerId),
-          nome: String(c0.descriptiveName ?? '—'),
+          nome: String(c0.descriptiveName ?? '-'),
           // A flag que prova o nível do token: conta de teste é o que um
           // developer token não aprovado alcança.
           ehContaDeTeste: Boolean(c0.testAccount),
@@ -193,9 +193,9 @@ export async function lerDesempenhoDoGoogle(): Promise<Resultado<DesempenhoDoGoo
           const impressoes = num(l.metrics?.impressions)
           const custo = reaisDeMicros(l.metrics?.cost_micros ?? l.metrics?.costMicros)
           return {
-            id: String(l.campaign?.id ?? '—'),
-            nome: String(l.campaign?.name ?? '—'),
-            status: String(l.campaign?.status ?? '—'),
+            id: String(l.campaign?.id ?? '-'),
+            nome: String(l.campaign?.name ?? '-'),
+            status: String(l.campaign?.status ?? '-'),
             orcamentoDiario: reaisDeMicros(
               l.campaignBudget?.amount_micros ?? l.campaignBudget?.amountMicros,
             ),
@@ -213,9 +213,9 @@ export async function lerDesempenhoDoGoogle(): Promise<Resultado<DesempenhoDoGoo
             const impressoes = num(l.metrics?.impressions)
             const k = l.adGroupCriterion?.keyword as Record<string, string> | undefined
             return {
-              texto: String(k?.text ?? '—'),
-              correspondencia: String(k?.matchType ?? '—'),
-              status: String(l.adGroupCriterion?.status ?? '—'),
+              texto: String(k?.text ?? '-'),
+              correspondencia: String(k?.matchType ?? '-'),
+              status: String(l.adGroupCriterion?.status ?? '-'),
               impressoes,
               cliques,
               custo: reaisDeMicros(l.metrics?.cost_micros ?? l.metrics?.costMicros),

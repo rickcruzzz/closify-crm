@@ -131,7 +131,7 @@ export function textoDoPrazo(validade: DiaISO, agora: Date): string {
  */
 const TETO_DO_TITULO = 200
 
-const PREFIXO = 'Cobrar retorno do orçamento — '
+const PREFIXO = 'Cobrar retorno do orçamento, '
 
 /**
  * O título da tarefa de retorno.

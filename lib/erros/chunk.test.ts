@@ -56,7 +56,7 @@ describe('deveRecarregar', () => {
     expect(deveRecarregar(1_000_000, null)).toBe(true)
   })
 
-  it('recusa a segunda dentro da janela — a trava contra o ciclo', () => {
+  it('recusa a segunda dentro da janela, a trava contra o ciclo', () => {
     // Sem isto, um erro que sobrevive ao reload vira
     // recarregar-quebrar-recarregar, e a pessoa não consegue nem ler a
     // mensagem nem sair da tela. É a falha mais cara que a recuperação

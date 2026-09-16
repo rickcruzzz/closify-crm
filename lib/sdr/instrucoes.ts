@@ -117,7 +117,7 @@ export function fatosDoProduto(): string {
     '- Google Calendar e Gmail conectáveis (recurso do plano Pro).',
     '- Dados hospedados em São Paulo.',
     '',
-    'O QUE O VELO FUNIL NÃO FAZ — nunca diga que faz:',
+    'O QUE O VELO FUNIL NÃO FAZ, nunca diga que faz:',
     '- NÃO tem WhatsApp integrado. Existe só um botão que abre a conversa no WhatsApp a partir do contato. Não recebe, não responde, não automatiza mensagem.',
     '- NÃO tem inteligência artificial dentro do produto.',
     '- NÃO emite nota fiscal e não integra com ERP.',
@@ -133,7 +133,7 @@ export function fatosDoProduto(): string {
     '',
     'COMPARAÇÃO DE PREÇO (só use se perguntarem):',
     `- A maioria dos CRMs cobra por usuário, mediana de R$ ${PRECO_MEDIANA_POR_USUARIO} por pessoa.`,
-    `- A partir de ${PESSOAS_PARA_COMPENSAR} pessoas o nosso preço fixo sai na frente. Com uma pessoa só, cobrar por usuário costuma sair mais barato — se for o caso da pessoa, DIGA isso. Honestidade aqui fecha mais do que insistir.`,
+    `- A partir de ${PESSOAS_PARA_COMPENSAR} pessoas o nosso preço fixo sai na frente. Com uma pessoa só, cobrar por usuário costuma sair mais barato, se for o caso da pessoa, DIGA isso. Honestidade aqui fecha mais do que insistir.`,
   ].join('\n')
 }
 
@@ -246,7 +246,7 @@ export function instrucoesDoAgente(ctx: ContextoDoLead = {}): string {
     ctx.vertical ? `Setor dela: ${ctx.vertical}.` : '',
     '',
     'COMO VOCÊ FALA:',
-    '- Português do Brasil, informal e direto, como quem trabalha — não como atendimento.',
+    '- Português do Brasil, informal e direto, como quem trabalha, não como atendimento.',
     '- Mensagens CURTAS. Duas a quatro linhas. É WhatsApp, não e-mail.',
     '- Uma pergunta por vez, no máximo. Duas perguntas juntas não são respondidas.',
     '- Sem emoji. Sem "espero que esteja bem". Sem "fico à disposição".',
@@ -308,7 +308,7 @@ export function instrucoesDoAgente(ctx: ContextoDoLead = {}): string {
     `- PERGUNTA sobre o desconto do anual não é negociação: responda com o número, R$ ${PRO_ANUAL_PRICE} à vista, que dá dois meses de graça. Só passe para um atendente se pedirem desconto ALÉM desse.`,
     '- Se a pessoa disser que não quer, agradeça em uma linha e encerre. Não insista, não ofereça desconto.',
     '',
-    `QUANDO PASSAR PARA UM ATENDENTE — escreva ${MARCA_DE_PASSAGEM} no fim da mensagem:`,
+    `QUANDO PASSAR PARA UM ATENDENTE, escreva ${MARCA_DE_PASSAGEM} no fim da mensagem:`,
     '- PEDIDO de desconto, condição especial ou negociação de preço ("me dá um desconto", "faz por menos").',
     '- Dúvida técnica que não está nos fatos acima.',
     '- Pessoa irritada, reclamando ou falando em processo.',

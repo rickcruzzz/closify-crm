@@ -106,7 +106,7 @@ describe('já falei com essa pessoa', () => {
     )
   })
 
-  it('mas NÃO cai abaixo de um cadastro frio — a venda provável continua no topo', () => {
+  it('mas NÃO cai abaixo de um cadastro frio, a venda provável continua no topo', () => {
     // Zerar a prioridade de quem foi contatado transformaria "já falei" em
     // "esqueci". Um engajado que vence amanhã continua sendo a melhor conversa
     // da lista mesmo tendo sido procurado ontem.

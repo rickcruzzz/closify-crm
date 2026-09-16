@@ -25,7 +25,7 @@ export const runtime = 'edge'
 //
 // A frase agora é o eco literal da mensagem de prospecção e do hero, que é o
 // que faz quem clica reconhecer que chegou no lugar certo.
-export const alt = 'Velo Funil: o cliente pediu orçamento e sumiu — o sistema lembra você de dar o retorno'
+export const alt = 'Velo Funil: o cliente pediu orçamento e sumiu, o sistema lembra você de dar o retorno'
 export const size = { width: 1200, height: 630 }
 export const contentType = 'image/png'
 

@@ -45,7 +45,7 @@ export function renderVigiaEmail(params: {
     naoConferido.length > 0
       ? paragraph(
           `Não consegui conferir: ${naoConferido.join(', ')}. ` +
-            'Isso não quer dizer que esteja tudo bem por lá — quer dizer que não sei.',
+            'Isso não quer dizer que esteja tudo bem por lá, quer dizer que não sei.',
         )
       : ''
 
@@ -65,6 +65,6 @@ export function renderVigiaEmail(params: {
       // O fuso vai escrito: "01:11" sozinho e ambiguo para quem sabe que o
       // servidor roda em UTC, e a duvida derrota o proposito de mostrar a hora.
       `Varredura de ${escapeHtml(dia)} (horário de Brasília). ` +
-      'Este e-mail só chega quando há algo — silêncio significa que está tudo em ordem.',
+      'Este e-mail só chega quando há algo, silêncio significa que está tudo em ordem.',
   })
 }

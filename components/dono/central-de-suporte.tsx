@@ -379,7 +379,7 @@ function CartaoDeRelato({ relato }: { relato: RelatoNaTela }) {
 
       <footer className="flex flex-wrap items-center gap-2">
         <a
-          href={`mailto:${relato.pessoa.email}?subject=${encodeURIComponent('Sobre o que você nos escreveu — Velo Funil')}`}
+          href={`mailto:${relato.pessoa.email}?subject=${encodeURIComponent('Sobre o que você nos escreveu, Velo Funil')}`}
           className={cn(buttonVariants({ size: 'sm', variant: 'outline' }), 'gap-2')}
         >
           <Mail className="size-4" />

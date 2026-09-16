@@ -115,7 +115,7 @@ export function SignUpForm({
       }
     } catch {
       setFormError(
-        'Não conseguimos concluir agora. Confira sua conexão e tente de novo — o que você digitou continua aqui.',
+        'Não conseguimos concluir agora. Confira sua conexão e tente de novo, o que você digitou continua aqui.',
       )
       setIsSubmitting(false)
     }

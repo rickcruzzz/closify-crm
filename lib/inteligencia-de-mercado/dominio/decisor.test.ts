@@ -75,7 +75,7 @@ describe('extrairDecisor', () => {
 })
 
 describe('o rendimento medido, e por que a trava fica como esta', () => {
-  it('titulo que e SO o nome da pessoa nao casa — e assim deve ser', () => {
+  it('titulo que e SO o nome da pessoa nao casa, e assim deve ser', () => {
     // Medido em 06/09: buscando por "Quatro Pontos Grafica", o Exa devolveu
     // "junior andrades" e "marcio bertholetti" — nomes sem empresa nenhuma.
     // Afrouxar para aceitar isso trocaria zero nome por nomes ERRADOS.

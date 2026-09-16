@@ -250,7 +250,7 @@ describe('propensao a PAGAR, separada de alcancabilidade', () => {
     expect(so('Faça sua cotação agora').motivos).toContain('pede orçamento no site')
   })
 
-  it('AGENDAMENTO nao e orcamento, e vale menos — defeito medido em 10 nichos', () => {
+  it('AGENDAMENTO nao e orcamento, e vale menos, defeito medido em 10 nichos', () => {
     // `clinica` liderou o sinal de captura porque todo site de clinica diz
     // "agende sua avaliacao". Agendamento e a dor de uma AGENDA, que este
     // produto nao tem e que o software vertical do setor ja resolve: a regua

@@ -290,7 +290,7 @@ function Arvore({ campanhas }: { campanhas: ProntidaoDaConta['campanhas'] }) {
                       )}
                     >
                       {s.totalDeAnuncios === 0
-                        ? 'nenhum anúncio — não veicula'
+                        ? 'nenhum anúncio, não veicula'
                         : `${s.totalDeAnuncios} anúncio(s)`}
                     </p>
                   </li>

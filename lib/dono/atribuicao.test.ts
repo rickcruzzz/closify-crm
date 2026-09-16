@@ -73,7 +73,7 @@ describe('cruzarCampanhasComClientes', () => {
   // Com igualdade exata, os seis anúncios reportariam zero — a campanha
   // apareceria com gasto e nenhum resultado, e a tabela por peça, vazia.
   describe('o nome da campanha e o utm_campaign nunca são idênticos', () => {
-    const REAL = 'Velo Funil — aquisicao (cadastro)'
+    const REAL = 'Velo Funil, aquisicao (cadastro)'
 
     it('casa a campanha real com o utm_campaign real dos seis criativos', () => {
       const [r] = cruzarCampanhasComClientes(
@@ -89,7 +89,7 @@ describe('cruzarCampanhasComClientes', () => {
 
     it('ignora acento dos dois lados', () => {
       const [r] = cruzarCampanhasComClientes(
-        [campanha({ nome: 'Aquisição — Cadastro' })],
+        [campanha({ nome: 'Aquisição, Cadastro' })],
         [empresa({ utmCampaign: 'aquisicao-cadastro' })],
         MENSALIDADE,
       )
@@ -103,7 +103,7 @@ describe('cruzarCampanhasComClientes', () => {
     it('não atribui quando duas campanhas casam com o mesmo utm', () => {
       const desempenho = cruzarCampanhasComClientes(
         [
-          campanha({ id: 'c1', nome: 'Velo Funil — aquisicao (cadastro)' }),
+          campanha({ id: 'c1', nome: 'Velo Funil, aquisicao (cadastro)' }),
           campanha({ id: 'c2', nome: 'Teste aquisicao cadastro frio' }),
         ],
         [empresa({ utmCampaign: 'aquisicao_cadastro' })],
@@ -437,7 +437,7 @@ describe('resumirAtribuicao', () => {
   it('cala quando todo utm_campaign bate', () => {
     const empresas = [empresa({ id: 'a', utmCampaign: 'aquisicao_cadastro' })]
     const desempenho = cruzarCampanhasComClientes(
-      [campanha({ nome: 'Velo Funil — aquisicao (cadastro)' })],
+      [campanha({ nome: 'Velo Funil, aquisicao (cadastro)' })],
       empresas,
       MENSALIDADE,
     )
@@ -490,7 +490,7 @@ describe('comCliqueDoGoogleSemId', () => {
     expect(resumo.comCliqueDoGoogleSemId).toBe(0)
   })
 
-  it('NAO conta conta ORGANICA — e este e o controle que separa os dois', () => {
+  it('NAO conta conta ORGANICA, e este e o controle que separa os dois', () => {
     // Toda conta organica tem `gclid` nulo. Sem este controle, o alarme
     // acusaria um defeito de URL em quem nunca passou por anuncio nenhum —
     // exatamente o erro que `semPecaIdentificada` evita ao sair do

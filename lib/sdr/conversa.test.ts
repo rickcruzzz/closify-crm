@@ -183,7 +183,7 @@ describe('temMensagemDoCliente', () => {
    * Isso matava o fluxo em dois lugares ao mesmo tempo — a rota calava "nada
    * novo" e o n8n ia para `Ignora`. Três execuções `success`, zero respostas.
    */
-  it('é falso quando só há mensagem nossa — o caso real', () => {
+  it('é falso quando só há mensagem nossa, o caso real', () => {
     expect(temMensagemDoCliente([doAgente('olá!', 1)])).toBe(false)
   })
 

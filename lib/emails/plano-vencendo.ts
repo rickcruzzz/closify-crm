@@ -101,7 +101,7 @@ export function corpoDoAviso(params: {
     bodyHtml: [
       abertura,
       paragraph(
-        `A renovação de ${valorFormatado} é automática. Se você paga no cartão, não precisa fazer nada — este e-mail é só para você não ser pego de surpresa.`,
+        `A renovação de ${valorFormatado} é automática. Se você paga no cartão, não precisa fazer nada, este e-mail é só para você não ser pego de surpresa.`,
       ),
       paragraph(
         'Se paga por Pix ou boleto, o botão abaixo já abre a cobrança para pagar quando quiser.',

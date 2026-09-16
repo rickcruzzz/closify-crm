@@ -141,7 +141,7 @@ export function MetricCards({
           <EmptyState
             icon={Target}
             title="Nada neste período"
-            description="Nenhum contato ou negócio foi criado no intervalo escolhido. Seus dados continuam aqui — escolha outro período para vê-los."
+            description="Nenhum contato ou negócio foi criado no intervalo escolhido. Seus dados continuam aqui, escolha outro período para vê-los."
           />
         </CardContent>
       </Card>

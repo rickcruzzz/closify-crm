@@ -58,7 +58,7 @@ export function renderDicaImportarListaEmail(params: {
           'Uma coisa do Velo Funil que costuma passar batido: você pode importar sua lista de contatos de uma planilha, em vez de cadastrar um por um.',
         ),
         paragraph(
-          'Serve Excel (.xlsx) ou CSV — inclusive o arquivo que sai do Excel em português, com ponto e vírgula. A gente lê as colunas e você confere o que vai entrar antes de salvar.',
+          'Serve Excel (.xlsx) ou CSV, inclusive o arquivo que sai do Excel em português, com ponto e vírgula. A gente lê as colunas e você confere o que vai entrar antes de salvar.',
         ),
         paragraph(
           'Se a sua lista estiver no WhatsApp, dá para exportar os contatos de lá e trazer o arquivo direto.',

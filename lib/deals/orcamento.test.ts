@@ -109,7 +109,7 @@ describe('textoDoPrazo', () => {
 describe('tituloDoLembrete', () => {
   it('carrega o nome do negocio, porque /hoje mistura empresas', () => {
     expect(tituloDoLembrete('Dedetização Restaurante Sabor')).toBe(
-      'Cobrar retorno do orçamento — Dedetização Restaurante Sabor',
+      'Cobrar retorno do orçamento, Dedetização Restaurante Sabor',
     )
   })
 

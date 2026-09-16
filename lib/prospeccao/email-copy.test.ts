@@ -105,7 +105,7 @@ describe('conformidade com a LGPD', () => {
     // ' — CNPJ ' produzia "Velo Funil — CNPJ CNPJ 68.877.105/0001-67". Conferir
     // so o numero aprovava a linha duplicada.
     expect(corpo).not.toMatch(/CNPJ\s+CNPJ/)
-    expect(corpo).toContain(`Velo Funil — CNPJ ${CONTROLADOR.cnpj}`)
+    expect(corpo).toContain(`Velo Funil, CNPJ ${CONTROLADOR.cnpj}`)
   })
 
   it('recusa corpo sem CNPJ', () => {

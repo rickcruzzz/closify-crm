@@ -61,7 +61,7 @@ export function enderecoEmLinha(endereco: Endereco): string {
   ]
     .filter(Boolean)
     .join(', ')
-  return `${inicio} — ${endereco.bairro}, ${endereco.cidade}/${endereco.uf}, CEP ${endereco.cep}`
+  return `${inicio}, ${endereco.bairro}, ${endereco.cidade}/${endereco.uf}, CEP ${endereco.cep}`
 }
 
 export type Controlador = {
@@ -380,7 +380,7 @@ export const SUBOPERADORES: Suboperador[] = [
       'cadastro. Só ocorre para quem aceita os cookies no banner',
     dados:
       'Endereço IP, identificador do navegador e, no cadastro, e-mail, ' +
-      'telefone, nome, cidade, estado e CEP — todos transmitidos com hash',
+      'telefone, nome, cidade, estado e CEP, todos transmitidos com hash',
     paisDeProcessamento: 'Estados Unidos',
   },
   // ## Entrada SEPARADA do "Google" acima, e a separação é o que informa
@@ -405,7 +405,7 @@ export const SUBOPERADORES: Suboperador[] = [
       'cada visita e cadastro. Só ocorre para quem aceita os cookies no banner',
     dados:
       'Endereço IP, identificador do clique no anúncio (gclid) e o registro ' +
-      'de que uma conta foi criada — sem nome, e-mail ou telefone',
+      'de que uma conta foi criada, sem nome, e-mail ou telefone',
     paisDeProcessamento: 'Estados Unidos',
   },
   // ## O Exa SAIU daqui em 08/09, e a ausência é a informação

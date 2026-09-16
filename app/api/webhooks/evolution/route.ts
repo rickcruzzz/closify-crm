@@ -476,7 +476,7 @@ export async function POST(request: Request) {
     robo.automatica && !saiu
       ? // Robô não acorda ninguém. Avisar a cada bot de atendimento treinaria o
         // dono a ignorar o canal — que é exatamente o que ele existe para evitar.
-        { enviado: false, erro: `resposta automática (${robo.motivo}) — não avisei` }
+        { enviado: false, erro: `resposta automática (${robo.motivo}), não avisei` }
       : await avisarNoWhatsapp(textoDoAviso(mensagem, prospect?.dominio ?? null, saiu))
   if (!aviso.enviado) {
     console.error(

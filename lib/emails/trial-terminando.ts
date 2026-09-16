@@ -100,7 +100,7 @@ export function corpoDoTrial(params: {
       bodyHtml: [
         abertura,
         paragraph(
-          `Se estiver fazendo sentido, o Pro sai por ${valorFormatado} por mês pela empresa toda — não por pessoa.`,
+          `Se estiver fazendo sentido, o Pro sai por ${valorFormatado} por mês pela empresa toda, não por pessoa.`,
         ),
       ].join('\n'),
       footnote: 'Sem fidelidade: cancele quando quiser, direto na tela de cobrança.',

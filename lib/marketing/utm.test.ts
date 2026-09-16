@@ -12,7 +12,7 @@ import { chaveDeUtm, parametrosDeOrigem } from './utm'
  */
 describe('chaveDeUtm', () => {
   it('reduz nome de campanha e valor de URL à mesma forma', () => {
-    expect(chaveDeUtm('Velo Funil — aquisicao (cadastro)')).toBe(
+    expect(chaveDeUtm('Velo Funil, aquisicao (cadastro)')).toBe(
       'velo-funil-aquisicao-cadastro',
     )
     expect(chaveDeUtm('aquisicao_cadastro')).toBe('aquisicao-cadastro')

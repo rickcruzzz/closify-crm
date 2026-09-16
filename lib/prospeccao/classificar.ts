@@ -118,7 +118,7 @@ function instrucoes(contexto: {
     '- Acusacao, xingamento, "isso e golpe" ou desconfianca NAO sao SPAM:',
     '  sao OBJECAO_CONFIANCA. A pessoa esta falando do nosso produto.',
     '- Texto sem sentido, digitacao aleatoria ou mensagem que nao da para',
-    '  interpretar e INCONCLUSIVO, nunca SPAM — e a confianca tem que ser baixa.',
+    '  interpretar e INCONCLUSIVO, nunca SPAM, e a confianca tem que ser baixa.',
     '- Confianca e sua, honesta. Chute com confianca alta e pior que admitir duvida.',
   ]
     .filter(Boolean)

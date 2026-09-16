@@ -37,7 +37,7 @@ export async function classificarAgora(): Promise<ResultadoDaAcao> {
     revalidatePath('/dono/inteligencia')
 
     if (r.pendentes === 0) {
-      return { ok: true, mensagem: 'Nada pendente — tudo que chegou já foi lido.' }
+      return { ok: true, mensagem: 'Nada pendente, tudo que chegou já foi lido.' }
     }
     if (r.falhas > 0 && r.classificadas === 0) {
       return { ok: false, erro: `Nenhuma classificada. ${r.erros.join(' | ')}` }

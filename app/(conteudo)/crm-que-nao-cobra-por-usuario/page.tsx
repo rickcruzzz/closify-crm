@@ -71,7 +71,7 @@ const PERGUNTAS = [
   {
     q: 'Existe CRM que não cobra por usuário?',
     a:
-      `Existe, mas é minoria. A maioria dos CRMs cobra por assento — entre ` +
+      `Existe, mas é minoria. A maioria dos CRMs cobra por assento, entre ` +
       `R$ 50 e R$ 75 por pessoa por mês no Brasil. No modelo de preço fixo, a ` +
       `empresa paga um valor único independentemente de quantas pessoas usam. ` +
       `O Velo Funil cobra R$ ${PRO_PLAN_PRICE} por mês pela empresa inteira.`,
@@ -97,7 +97,7 @@ const PERGUNTAS = [
       `Só se a ferramenta atual não estiver sendo usada. Migrar custa tempo e ` +
       `atenção da equipe, e um CRM que já virou hábito vale o que custa. A troca ` +
       `costuma compensar quando a equipe cresceu e a fatura acompanhou, ou ` +
-      `quando assentos estão sendo economizados — com gente de fora do sistema.`,
+      `quando assentos estão sendo economizados, com gente de fora do sistema.`,
   },
   {
     // A pergunta que os sete concorrentes de preço fixo não respondem, e que a
@@ -111,7 +111,7 @@ const PERGUNTAS = [
     q: 'Como funciona o cancelamento no Velo Funil?',
     a:
       `Pela própria tela, sem multa e sem falar com vendedor. A conta volta para ` +
-      `o plano gratuito e os contatos continuam lá — e você pode exportar tudo em ` +
+      `o plano gratuito e os contatos continuam lá, e você pode exportar tudo em ` +
       `CSV a qualquer momento, inclusive para levar a um concorrente. Não há ` +
       `fidelidade nem prazo mínimo.`,
   },
