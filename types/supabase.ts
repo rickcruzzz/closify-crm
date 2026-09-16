@@ -1173,7 +1173,25 @@ export type Database = {
       // 1.000 do PostgREST, ver 0032.
       get_funnel_counts: {
         Args: { target_workspace_id: string; desde?: string | null; ate?: string | null }
-        Returns: { stage: DealStage; total: number }[]
+        // `valor` nasceu na 0088, junto do consumidor dela: a lista de etapas
+        // do dashboard passou a mostrar dinheiro na mesma linha da contagem.
+        Returns: { stage: DealStage; total: number; valor: number }[]
+      }
+      // Ticket medio, ciclo e o dinheiro ganho e perdido no periodo (0088).
+      //
+      // `ticket_medio` e `dias_ate_fechar` sao ANULAVEIS de proposito: media de
+      // nada e ausencia, e `lib/dashboard/desempenho.ts` depende dessa
+      // distincao para calar em vez de afirmar zero.
+      get_funnel_performance: {
+        Args: { target_workspace_id: string; desde?: string | null; ate?: string | null }
+        Returns: {
+          valor_ganho: number
+          valor_perdido: number
+          negocios_ganhos: number
+          negocios_perdidos: number
+          ticket_medio: number | null
+          dias_ate_fechar: number | null
+        }[]
       }
       // Teto POR ETAPA, com o total de cada uma junto, para a tela poder dizer
       // quantos ficaram de fora em vez de sumir com os cards.
