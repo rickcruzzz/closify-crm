@@ -3,10 +3,14 @@ import Link from 'next/link'
 import { cn } from '@/lib/utils'
 
 import { SidebarNav } from '@/components/layout/sidebar-nav'
-import { WorkspaceSwitcher, type WorkspaceSummary } from '@/components/layout/workspace-switcher'
+import {
+  WorkspaceSwitcher,
+  type WorkspaceSummary,
+} from '@/components/layout/workspace-switcher'
 import { UserMenu, type CurrentUser } from '@/components/layout/user-menu'
 import { Logo } from '@/components/branding/logo'
 import { DialogoDeFeedback } from '@/components/feedback/dialogo-de-feedback'
+import { TituloDeGrupoDaBarra } from '@/components/layout/titulo-de-grupo'
 import type { DecisaoDeNovaEmpresa } from '@/lib/plans/multi-empresa'
 
 export function SidebarContent({
@@ -44,7 +48,9 @@ export function SidebarContent({
   recolhida?: boolean
 }) {
   return (
-    <div className={cn('flex h-full flex-col gap-4 p-3', recolhida && 'items-center px-2')}>
+    <div
+      className={cn('flex h-full flex-col gap-4 p-3', recolhida && 'items-center px-2')}
+    >
       <Link
         href="/dashboard"
         aria-label="Velo Funil"
@@ -98,19 +104,33 @@ export function SidebarContent({
           rota no cálculo de item ativo — que já teve um defeito em que TODO
           item acendia em `/settings`.
 
+          O rótulo "SUPORTE" (16/09) é o que faz essa exceção estrutural parar
+          de PARECER exceção: para quem lê a barra, ele é o terceiro bloco, com
+          o mesmo peso dos outros dois. O componente do rótulo é compartilhado
+          com `sidebar-nav.tsx` justamente para os dois não divergirem.
+
           Chega ao celular de graça: `mobile-sidebar.tsx` renderiza este mesmo
           componente. */}
       <div
         className={cn(
-          'border-sidebar-border mt-auto flex flex-col gap-1 border-t pt-3',
+          'border-sidebar-border mt-auto flex flex-col gap-3 border-t pt-3',
           recolhida && 'w-full items-center',
         )}
       >
         {/* O dialogo de feedback e um botao com texto. Recolhida ele sairia
-            cortado, e o `UserMenu` ja tem a variante compacta que o `Topbar`
-            usa desde que nasceu. */}
-        {!recolhida && <DialogoDeFeedback />}
-        <UserMenu currentUser={currentUser} variant={recolhida ? 'compact' : 'expanded'} />
+            cortado — e o rótulo do grupo sairia junto, senão sobraria um
+            cabeçalho sem nada embaixo. O `UserMenu` ja tem a variante compacta
+            que o `Topbar` usa desde que nasceu. */}
+        {!recolhida && (
+          <div className="flex flex-col gap-1">
+            <TituloDeGrupoDaBarra>Suporte</TituloDeGrupoDaBarra>
+            <DialogoDeFeedback />
+          </div>
+        )}
+        <UserMenu
+          currentUser={currentUser}
+          variant={recolhida ? 'compact' : 'expanded'}
+        />
       </div>
     </div>
   )

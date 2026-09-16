@@ -25,14 +25,34 @@ export type NavItem = {
 }
 
 export type NavGroup = {
-  /** `null` renderiza sem cabeçalho — é o grupo principal, sem rótulo. */
+  /**
+   * O cabeçalho da seção. `null` renderiza sem cabeçalho nenhum.
+   *
+   * Os três grupos da barra são rotulados desde 16/09. Antes o primeiro vinha
+   * sem rótulo, com o raciocínio de que "o principal não precisa se
+   * apresentar" — e o efeito era o oposto: sem o rótulo, "CONFIGURAÇÕES" no
+   * meio da lista parecia o começo da estrutura, e os seis itens de cima
+   * ficavam soltos, sem nome coletivo. Rotular os três custa uma linha de 12px
+   * cada e faz a barra ser lida como três blocos, que é o que ela é.
+   */
   title: string | null
   items: NavItem[]
 }
 
+/**
+ * ## A ordem, e por que ela não muda sozinha
+ *
+ * `lib/nav-items.test.ts` trava a lista inteira — grupos, ordem e rótulos —
+ * contra o que foi aprovado em 16/09. Item de menu é a superfície mais fácil de
+ * mexer sem querer (um `push`, um copiar e colar), e reordenar a navegação de
+ * quem já usa o produto todo dia é caro: a pessoa clica por memória muscular,
+ * não por leitura.
+ *
+ * O teste não impede mudar a ordem. Impede mudar sem perceber.
+ */
 export const navGroups: NavGroup[] = [
   {
-    title: null,
+    title: 'Principal',
     items: [
       // Primeira da lista porque é a tela de abrir de manhã: ela responde "o
       // que eu faço agora", que é a pergunta que traz a pessoa de volta todo
@@ -76,7 +96,12 @@ export const navGroups: NavGroup[] = [
       { title: 'Equipe', href: '/settings?aba=equipe', icon: UserCog, aba: 'equipe' },
       // Aponta pra mesma página de Preferências, só que já na aba certa,
       // evita duplicar a tela de integrações num lugar novo.
-      { title: 'Integrações', href: '/settings?aba=integracoes', icon: Plug, aba: 'integracoes' },
+      {
+        title: 'Integrações',
+        href: '/settings?aba=integracoes',
+        icon: Plug,
+        aba: 'integracoes',
+      },
       // Era "Configurações" — renomeado porque a página guarda dados da
       // empresa (logo, CNPJ, endereço), "Preferências" descreve melhor o
       // conteúdo do que um rótulo que soa como "todo o resto de config".
