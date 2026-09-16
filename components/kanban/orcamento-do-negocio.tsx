@@ -153,7 +153,32 @@ export function OrcamentoDoNegocio({
 
       if (!r.ok) {
         const corpo = await r.json().catch(() => null)
-        avisarLimite(corpo?.error ?? 'Não foi possível gerar o PDF.')
+        // ## A recusa que traz o caminho junto
+        //
+        // A rota devolve `destino` quando a recusa tem uma tela que resolve —
+        // hoje o 409 de "complete os dados da sua empresa", que aponta para
+        // Configurações. `avisarLimite` já trata o 402 de plano com o próprio
+        // botão; o que faltava era o MESMO cuidado para as recusas que não são
+        // de plano.
+        //
+        // Sem isto a pessoa lia "complete os dados da sua empresa" num toast
+        // vermelho sem nada clicável, no meio do trabalho — o beco que o
+        // comentário de `avisarLimite` descreve por escrito: *"dizer sem
+        // mostrar onde"*.
+        avisarLimite(
+          corpo?.error ?? 'Não foi possível gerar o PDF.',
+          typeof corpo?.destino === 'string'
+            ? {
+                duration: 12000,
+                action: {
+                  label: 'Completar dados',
+                  onClick: () => {
+                    window.location.href = corpo.destino as string
+                  },
+                },
+              }
+            : undefined,
+        )
         return
       }
 
@@ -162,7 +187,8 @@ export function OrcamentoDoNegocio({
       const a = document.createElement('a')
       a.href = url
       a.download =
-        r.headers.get('Content-Disposition')?.match(/filename="(.+?)"/)?.[1] ?? 'orcamento.pdf'
+        r.headers.get('Content-Disposition')?.match(/filename="(.+?)"/)?.[1] ??
+        'orcamento.pdf'
       a.click()
       // Sem o revoke, cada download deixa o PDF inteiro preso na memória da
       // aba até ela ser fechada.
@@ -174,7 +200,8 @@ export function OrcamentoDoNegocio({
     }
   }
 
-  const dias = orcamento?.validade && agora ? diasAteVencer(orcamento.validade, agora) : null
+  const dias =
+    orcamento?.validade && agora ? diasAteVencer(orcamento.validade, agora) : null
 
   return (
     <div>
@@ -259,10 +286,12 @@ export function OrcamentoDoNegocio({
       <Dialog open={aberto} onOpenChange={setAberto}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>{orcamento?.validade ? 'Editar orçamento' : 'Registrar orçamento'}</DialogTitle>
+            <DialogTitle>
+              {orcamento?.validade ? 'Editar orçamento' : 'Registrar orçamento'}
+            </DialogTitle>
             <DialogDescription>
-              Ao salvar com uma validade, entra uma tarefa para cobrar o retorno dois dias antes
-              de vencer.
+              Ao salvar com uma validade, entra uma tarefa para cobrar o retorno dois dias
+              antes de vencer.
             </DialogDescription>
           </DialogHeader>
 

@@ -3,6 +3,7 @@ import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { resolverWorkspaceAtivo } from '@/lib/workspace/ativo'
 import { montarPdfDoOrcamento } from '@/lib/deals/orcamento-pdf'
+import { podeEmitirOrcamento } from '@/lib/deals/emissor'
 import { uuidSchema } from '@/lib/validations/workspace'
 
 /**
@@ -86,7 +87,10 @@ export async function GET(_req: Request, { params }: { params: { dealId: string 
 
   if (error) {
     console.error('PDF do orçamento: leitura do negócio falhou', error)
-    return NextResponse.json({ error: 'Não foi possível ler o negócio.' }, { status: 500 })
+    return NextResponse.json(
+      { error: 'Não foi possível ler o negócio.' },
+      { status: 500 },
+    )
   }
   if (!negocio) {
     return NextResponse.json({ error: 'Negócio não encontrado.' }, { status: 404 })
@@ -115,16 +119,37 @@ export async function GET(_req: Request, { params }: { params: { dealId: string 
 
   const { data: empresa } = await supabase
     .from('workspaces')
-    .select('name, nome_fantasia, cnpj, telefone, whatsapp, email_comercial, site, cidade, estado')
+    .select(
+      'name, nome_fantasia, cnpj, telefone, whatsapp, email_comercial, site, cidade, estado',
+    )
     .eq('id', workspaceId)
     .maybeSingle()
+
+  // ## O documento precisa dizer QUEM esta cobrando
+  //
+  // A regra vive em `lib/deals/emissor.ts`, pura e testada, e nao aqui: rota
+  // nao tem teste neste projeto, e esta e uma decisao que fecha (ou abre) o
+  // recurso pago para uma parte do publico. Ver la o porque de CNPJ NAO ser
+  // exigido.
+  const emissor = podeEmitirOrcamento(empresa)
+
+  if (!emissor.pode) {
+    return NextResponse.json(
+      { error: emissor.motivo, destino: '/settings' },
+      { status: 409 },
+    )
+  }
 
   const bytes = montarPdfDoOrcamento({
     emissor: {
       // `nome_fantasia` primeiro: é o nome que o cliente do cliente reconhece.
       // `workspaces.name` é como a pessoa chamou a empresa dentro do produto e
       // pode ser um apelido ("Minha empresa").
-      nome: empresa?.nome_fantasia?.trim() || empresa?.name || 'Orçamento',
+      //
+      // O antigo `|| 'Orçamento'` saiu: ele era a última linha de defesa de um
+      // caso que a guarda acima agora recusa antes, e produzia um documento
+      // cujo emissor se chamava literalmente "Orçamento".
+      nome: emissor.nome,
       cnpj: empresa?.cnpj ?? null,
       telefone: empresa?.telefone || empresa?.whatsapp || null,
       email: empresa?.email_comercial ?? null,
