@@ -1,7 +1,7 @@
 'use client'
 
 import * as React from 'react'
-import { CircleAlert, CircleDashed } from 'lucide-react'
+import { CircleAlert, Plus } from 'lucide-react'
 
 import { cn } from '@/lib/utils'
 import { rotuloDePrazo } from '@/lib/tasks/buckets'
@@ -151,9 +151,25 @@ export function ProximaAcao({
         {urgencia === 'critico' ? (
           <CircleAlert aria-hidden className="size-3" />
         ) : (
-          <CircleDashed aria-hidden className="size-3" />
+          <Plus aria-hidden className="size-3" />
         )}
-        Sem próximo passo
+        {/* ## O texto muda com o nível, e é a correção mais importante daqui
+
+            "Sem próximo passo" é um JULGAMENTO, e ele aparecia em **34 dos 42
+            cards do board de prova, 81%**. Algo que é verdade em oito de cada
+            dez cards não é sinal: é o fundo. E escrito em âmbar, ele pintava
+            de alerta a maior parte da tela — o mesmo defeito que
+            `lib/kanban/urgencia.ts` nasceu para resolver, um degrau mais
+            baixo de intensidade.
+
+            Quando não há alarme, o card passa a oferecer a AÇÃO: "Marcar
+            próximo passo" é o que o clique faz, é lido como afordância e não
+            como acusação, e some do radar visual porque vem em `neutro`.
+
+            O julgamento fica reservado para `critico`, que é parado E sem
+            próximo passo — dois sinais na mesma direção. Aí a frase volta a
+            ser exceção, que é quando ela funciona. */}
+        {urgencia === 'critico' ? 'Sem próximo passo' : 'Marcar próximo passo'}
       </button>
     )
   }

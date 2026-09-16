@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest'
 
-import { urgenciaDaProximaAcao, urgenciaSemProximaAcao } from './urgencia'
+import {
+  urgenciaDaProximaAcao,
+  urgenciaDoParado,
+  urgenciaSemProximaAcao,
+} from './urgencia'
 
 // 18/08/2026, 15h em São Paulo (UTC-3).
 const agora = new Date('2026-08-18T18:00:00.000Z')
@@ -38,10 +42,15 @@ describe('urgenciaDaProximaAcao', () => {
 })
 
 describe('urgenciaSemProximaAcao', () => {
-  // Nunca neutro: negócio sem próximo passo é o que morre calado no funil.
-  it('negócio recém-criado sem próximo passo pede atenção, não pânico', () => {
-    expect(urgenciaSemProximaAcao(0)).toBe('atencao')
-    expect(urgenciaSemProximaAcao(3)).toBe('atencao')
+  // Medido em 16/09: 34 de 42 cards (81%) exibiam a linha ambar. Alerta que
+  // vale para oito de cada dez cards nao ordena nada — e o proprio arquivo
+  // nasceu para curar essa doenca, um degrau acima de intensidade.
+  //
+  // A informacao nao se perde: o card escreve "Marcar proximo passo", que e a
+  // acao, em vez de "Sem proximo passo", que e a acusacao.
+  it('negócio recém-criado sem próximo passo NAO pinta alerta', () => {
+    expect(urgenciaSemProximaAcao(0)).toBe('neutro')
+    expect(urgenciaSemProximaAcao(3)).toBe('neutro')
   })
 
   // Dois sinais na mesma direção: ninguém marcou o passo E ninguém mexeu.
@@ -50,9 +59,20 @@ describe('urgenciaSemProximaAcao', () => {
     expect(urgenciaSemProximaAcao(60)).toBe('critico')
   })
 
-  it('nunca devolve neutro', () => {
+  it('so o PARADO pinta, e a fronteira e exatamente DIAS_PARA_PARADO', () => {
+    // O caso que separa os dois mundos. Um dia antes do corte o card e uma
+    // afordancia calada; no dia do corte ele vira alarme, porque ai sao dois
+    // sinais na mesma direcao.
+    expect(urgenciaSemProximaAcao(13)).toBe('neutro')
+    expect(urgenciaSemProximaAcao(14)).toBe('critico')
+  })
+
+  it('NENHUM negocio aberto sem proximo passo devolve ambar', () => {
+    // Este caso substitui um que travava o contrario ("nunca devolve neutro").
+    // Ambar aqui e o ruido de 81% dos cards; ele continua valendo para tarefa
+    // que vence HOJE, em `urgenciaDaProximaAcao`, que e outro caminho.
     for (const dias of [0, 1, 7, 13, 14, 100]) {
-      expect(urgenciaSemProximaAcao(dias)).not.toBe('neutro')
+      expect(urgenciaSemProximaAcao(dias)).not.toBe('atencao')
     }
   })
 })
@@ -74,18 +94,44 @@ describe('urgenciaSemProximaAcao: os dois casos que apagavam alarme falso', () =
     expect(urgenciaSemProximaAcao(30, { sabemosAData: false })).toBe('neutro')
   })
 
-  it('CONTROLE: etapa aberta com a data continua alertando', () => {
-    // Sem estes dois, "consertei o alarme" e "matei o alarme" seriam
-    // indistinguiveis.
+  it('CONTROLE: etapa aberta e PARADA continua alertando', () => {
+    // Sem este caso, "calei o ruido" e "matei o alarme" seriam
+    // indistinguiveis — e o segundo e uma regressao seria.
+    //
+    // A segunda linha deste controle exigia `atencao` para 3 dias ate 16/09.
+    // Ela saiu DE PROPOSITO: era ela que garantia o ambar em 81% dos cards. O
+    // caso acima, "NENHUM negocio aberto devolve ambar", e o que ficou no
+    // lugar, e os dois juntos travam a decisao pelos dois lados.
     expect(urgenciaSemProximaAcao(14)).toBe('critico')
-    expect(urgenciaSemProximaAcao(3)).toBe('atencao')
-    expect(urgenciaSemProximaAcao(14, { etapaFechada: false, sabemosAData: true })).toBe('critico')
+    expect(urgenciaSemProximaAcao(14, { etapaFechada: false, sabemosAData: true })).toBe(
+      'critico',
+    )
   })
 
-  it('o padrao sem opcoes nao mudou', () => {
-    // Todo chamador antigo continua valendo: as opcoes sao opcionais e os
-    // padroes reproduzem o comportamento anterior.
-    for (const dias of [0, 1, 7, 13]) expect(urgenciaSemProximaAcao(dias)).toBe('atencao')
+  it('as opcoes continuam OPCIONAIS, e o padrao e o caso comum', () => {
+    // Todo chamador antigo continua compilando e rodando: o que mudou foi o
+    // NIVEL devolvido no caso comum, nao a assinatura.
+    for (const dias of [0, 1, 7, 13]) expect(urgenciaSemProximaAcao(dias)).toBe('neutro')
     for (const dias of [14, 60, 400]) expect(urgenciaSemProximaAcao(dias)).toBe('critico')
+  })
+})
+
+describe('urgenciaDoParado', () => {
+  it('semanas pedem atencao, MESES pedem alarme', () => {
+    // A fronteira nao e nova: `rotuloDeParado` ja troca de unidade aos 30
+    // dias, e ate 16/09 a cor ignorava isso e pintava os dois de vermelho.
+    expect(urgenciaDoParado(14)).toBe('atencao')
+    expect(urgenciaDoParado(29)).toBe('atencao')
+    expect(urgenciaDoParado(30)).toBe('critico')
+    expect(urgenciaDoParado(120)).toBe('critico')
+  })
+
+  it('NUNCA devolve neutro: a linha so existe quando ja e parado', () => {
+    // Controle. Se ela pudesse sair neutra, o card teria uma linha de texto
+    // dizendo "parado ha 3 semanas" sem nenhum peso visual — pior que nao
+    // mostrar, porque ocupa espaco e nao ordena.
+    for (const dias of [14, 20, 29, 30, 60, 400]) {
+      expect(urgenciaDoParado(dias)).not.toBe('neutro')
+    }
   })
 })

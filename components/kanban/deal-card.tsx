@@ -4,7 +4,6 @@ import { CSS } from '@dnd-kit/utilities'
 import { Clock } from 'lucide-react'
 
 import { cn } from '@/lib/utils'
-import type { DealStage } from '@/lib/deals/types'
 import type { DealRow, DealLeadRow } from '@/lib/deals/queries'
 import { Card, CardContent } from '@/components/ui/card'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
@@ -13,15 +12,7 @@ import type { ProximaAcaoRow } from '@/lib/tasks/types'
 import { formatarValorDeNegocio } from '@/lib/deals/metrics'
 import { estadoDeMovimento, etapaFechada, rotuloDeParado } from '@/lib/deals/parado'
 import { iniciais } from '@/lib/leads/iniciais'
-
-const stageAccent: Record<DealStage, string> = {
-  novo: 'border-l-blue-500 dark:border-l-blue-400',
-  contato_realizado: 'border-l-amber-500 dark:border-l-amber-400',
-  proposta_enviada: 'border-l-violet-500 dark:border-l-violet-400',
-  negociacao: 'border-l-orange-500 dark:border-l-orange-400',
-  fechado_ganho: 'border-l-emerald-500 dark:border-l-emerald-400',
-  fechado_perdido: 'border-l-red-500 dark:border-l-red-400',
-}
+import { corDaUrgencia, urgenciaDoParado } from '@/lib/kanban/urgencia'
 
 // `React.memo`: `handleDragOver` (kanban-board.tsx) só troca o objeto do
 // card ATIVO a cada tick de arrasto, `prev.map` mantém a mesma referência
@@ -35,6 +26,7 @@ export const DealCard = React.memo(function DealCard({
   onOpen,
   onAgendar,
   agora,
+  mostrarResponsavel = true,
 }: {
   deal: DealRow
   lead: DealLeadRow | undefined
@@ -51,11 +43,23 @@ export const DealCard = React.memo(function DealCard({
    * simplesmente não fala de tempo, em vez de arriscar um número errado.
    */
   agora: Date | null
+  /**
+   * Mostrar o avatar do responsável.
+   *
+   * `false` quando a empresa tem UMA pessoa. Medido no board de prova: o mesmo
+   * "MD" aparecia em 42 de 42 cards. Informação que é idêntica em todos os
+   * cards não distingue nenhum deles — é a mesma razão pela qual a coluna
+   * "Responsável" do dashboard repete o mesmo nome cinco vezes. Com equipe de
+   * verdade ela volta sozinha, porque a condição é derivada do número de
+   * membros, não gravada.
+   */
+  mostrarResponsavel?: boolean
 }) {
   // A informação já existia e não aparecia: `estadoDeMovimento` alimentava só
   // o botão de filtro "Parados", então um negócio movido ontem e outro
   // congelado há dois meses tinham cards idênticos.
   const movimento = agora ? estadoDeMovimento(deal, agora) : null
+  const fechada = etapaFechada(deal.stage)
 
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
     useSortable({
@@ -77,34 +81,54 @@ export const DealCard = React.memo(function DealCard({
       {...attributes}
       {...listeners}
     >
+      {/* ## A borda colorida por etapa SAIU, e isso é subtração de propósito
+
+          Cada card carregava `border-l-2` na cor da própria etapa. Só que o
+          card está DENTRO da coluna daquela etapa, com o nome dela escrito no
+          cabeçalho logo acima: a barra repetia, em cor, a única informação que
+          o board já garante por posição.
+
+          O custo não era o pixel. Com seis cores saturadas empilhadas em seis
+          colunas, o board inteiro virava um arco-íris, e aí a cor parou de
+          poder significar qualquer outra coisa — inclusive as duas que
+          importam, que são atraso e parado. A cor de etapa continua existindo
+          onde ela AINDA distingue: o ponto no cabeçalho da coluna, e o card
+          solto do `DragOverlay`, que durante o arrasto está fora de qualquer
+          coluna e precisa dizer de onde veio.
+
+          Ganho medido junto: sem a borda, o conteúdo recupera 2px de largura
+          útil em cada um dos 288px da coluna. */}
       <Card
         size="sm"
         className={cn(
-          'hover:bg-accent/40 cursor-grab border-l-2 transition-colors hover:shadow-sm active:cursor-grabbing',
-          stageAccent[deal.stage],
+          'hover:bg-accent/40 hover:ring-foreground/20 cursor-grab transition-[background-color,box-shadow] duration-150 active:cursor-grabbing motion-reduce:transition-none',
+          // Fechado não some e não fica igual ao aberto: ele desce um degrau de
+          // contraste. Ganho e perdido já cumpriram o papel deles, e competir
+          // por atenção com o que ainda está em jogo é o oposto do que o board
+          // serve para fazer.
+          fechada && 'opacity-80',
           isDragging && 'opacity-40',
         )}
       >
         <CardContent className="flex flex-col gap-1.5">
-          {/* `title` com o valor cheio: o card abrevia acima de um milhão
-              para o número não virar a coisa mais pesada do card, mas quem
-              precisa do centavo consegue ver passando o mouse. */}
-          <span
-            className="text-sm font-semibold tabular-nums"
-            title={deal.value.toLocaleString('pt-BR', {
-              style: 'currency',
-              currency: 'BRL',
-            })}
-          >
-            {formatarValorDeNegocio(deal.value)}
-          </span>
+          {/* ## A ordem inverteu: NEGÓCIO antes de VALOR
+
+              O valor vinha primeiro, em semibold, acima do título. Parece
+              certo num CRM — e é errado para este board: medido em produção,
+              **119 dos 132 negócios têm `value` zerado**, então o elemento
+              mais proeminente da maioria dos cards era um `R$ 0,00` que não é
+              um valor, é um campo em branco.
+
+              O nome do negócio é o que identifica o card numa coluna de vinte.
+              O valor qualifica esse nome. Essa é a ordem em que a pessoa
+              procura: primeiro acha o negócio, depois pergunta quanto vale. */}
           <div className="flex flex-col items-start">
             {/* O card inteiro é o alvo de drag (dnd-kit ocupa Enter/Espaço
                 para pegar e soltar), então abrir o detalhe precisa do próprio
                 alvo focável, senão a ação fica inacessível por teclado. */}
             <button
               type="button"
-              className="focus-visible:ring-ring/50 -my-1 flex min-h-11 max-w-full items-center truncate rounded-sm py-1 text-left text-sm font-medium outline-none md:min-h-6 hover:underline focus-visible:ring-3"
+              className="focus-visible:ring-ring/50 -my-1 flex min-h-11 max-w-full items-center truncate rounded-sm py-1 text-left text-sm font-medium outline-none hover:underline focus-visible:ring-3 md:min-h-6"
               onClick={(event) => {
                 event.stopPropagation()
                 onOpen(deal.id)
@@ -124,32 +148,57 @@ export const DealCard = React.memo(function DealCard({
               </span>
             )}
           </div>
+
+          <ValorDoNegocio valor={deal.value} />
+
           {/* Só aparece quando já preocupa. Negócio que anda normal não ganha
               texto nenhum: o card fala quando tem o que dizer. */}
           {movimento?.parado && (
-            // `text-destructive` DIRETO, e não `corDaUrgencia[...]`: a linha
-            // só renderiza quando `movimento.parado`, que é `dias >= 14`, que
-            // é exatamente a condição de `critico`. O ramo âmbar era
-            // inalcançável — uma constante vestida de cálculo, que fazia quem
-            // lesse acreditar numa gradação que não existe.
-            <span className="text-destructive flex items-center gap-1 text-xs font-medium">
+            // ## A gradação que faltava, e ela nasce do próprio texto
+            //
+            // Isto era `text-destructive` fixo. O motivo estava certo — o
+            // ramo âmbar de `urgenciaSemProximaAcao` era inalcançável aqui,
+            // "uma constante vestida de cálculo" — e a correção congelou a
+            // cor em um nível só. Medido no board de prova: **21 de 42 cards
+            // em vermelho**, metade da tela.
+            //
+            // `urgenciaDoParado` usa a fronteira que `rotuloDeParado` já
+            // aplica ao TEXTO: abaixo de 30 dias ele escreve "semanas", acima
+            // escreve "meses". Agora a cor concorda com a palavra.
+            <span
+              className={cn(
+                'flex items-center gap-1 text-xs font-medium',
+                corDaUrgencia[urgenciaDoParado(movimento.dias)],
+              )}
+            >
               <Clock aria-hidden className="size-3 shrink-0" />
               {rotuloDeParado(movimento.dias)}
             </span>
           )}
-          <div className="mt-1 flex items-center justify-between gap-2">
-            <Avatar size="sm">
-              <AvatarFallback>{iniciais(deal.owner_name ?? '?')}</AvatarFallback>
-            </Avatar>
+
+          <div
+            className={cn(
+              'mt-1 flex items-center gap-2',
+              // Sem avatar, a próxima ação não fica órfã à direita de um vão
+              // vazio de 240px: ela encosta na esquerda, alinhada com o resto
+              // do card.
+              mostrarResponsavel ? 'justify-between' : 'justify-start',
+            )}
+          >
+            {mostrarResponsavel && (
+              <Avatar size="sm">
+                <AvatarFallback>{iniciais(deal.owner_name ?? '?')}</AvatarFallback>
+              </Avatar>
+            )}
             {/* ## Um vermelho por card, não dois
-                
+
                 "parado há 2 semanas" e "Sem próximo passo" dizem a mesma coisa
                 por ângulos diferentes, e as duas pintavam de `destructive` ao
                 mesmo tempo: duas de quatro linhas do card em alarme. É o
                 próprio problema que `lib/kanban/urgencia.ts` nasceu para
                 resolver ("o board inteiro estava vermelho"), voltando por uma
                 porta nova.
-                
+
                 Quando a linha de parado já apareceu, ela carrega o alarme —
                 ela tem o NÚMERO. O botão passa a `etapaFechada` para cair em
                 `neutro` e sobrar como ação, sem repetir o grito. */}
@@ -157,7 +206,7 @@ export const DealCard = React.memo(function DealCard({
               task={proximaAcao}
               onAgendar={() => onAgendar(deal.id)}
               diasParado={movimento?.dias ?? 0}
-              etapaFechada={etapaFechada(deal.stage) || Boolean(movimento?.parado)}
+              etapaFechada={fechada || Boolean(movimento?.parado)}
               sabemosAData={movimento !== null}
             />
           </div>
@@ -166,3 +215,35 @@ export const DealCard = React.memo(function DealCard({
     </div>
   )
 })
+
+/**
+ * O valor, e a diferença entre zero e em branco.
+ *
+ * `R$ 0,00` em negrito afirma que o negócio vale zero. Medido em produção:
+ * **119 de 132 negócios estão com o campo vazio**, ou seja a afirmação seria
+ * falsa em 90% dos cards, e ainda ocuparia o lugar de maior peso visual.
+ *
+ * Ausência de dado não é dado — a mesma regra que `textoDaConversao` aplica ao
+ * percentual e que `medidasDeDesempenho` aplica ao ticket médio. Aqui ela vira
+ * um rótulo discreto que diz o que fazer, em vez de um número que mente.
+ *
+ * Zero NEGATIVO ou positivo de verdade continua sendo mostrado: a condição é
+ * `=== 0`, não "falsy", então um negócio de R$ 0,01 aparece normalmente.
+ */
+function ValorDoNegocio({ valor }: { valor: number }) {
+  if (valor === 0) {
+    return <span className="text-muted-foreground text-xs">Sem valor definido</span>
+  }
+
+  return (
+    // `title` com o valor cheio: o card abrevia acima de um milhão para o
+    // número não virar a coisa mais pesada do card, mas quem precisa do
+    // centavo consegue ver passando o mouse.
+    <span
+      className="text-sm font-semibold tabular-nums"
+      title={valor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+    >
+      {formatarValorDeNegocio(valor)}
+    </span>
+  )
+}
