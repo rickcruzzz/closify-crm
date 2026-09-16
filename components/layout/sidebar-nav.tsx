@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { usePathname, useSearchParams } from 'next/navigation'
 
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { cn } from '@/lib/utils'
 import { navGroups } from '@/lib/nav-items'
 
@@ -10,11 +11,14 @@ export function SidebarNav({
   onNavigate,
   tarefasDoDia,
   conversasEsperando,
+  recolhida = false,
 }: {
   onNavigate?: () => void
   /** Quantas tarefas minhas vencem hoje ou já venceram — o badge do "Hoje". */
   tarefasDoDia: number
   conversasEsperando: number
+  /** Barra em modo icone: o rotulo sai do item e vira tooltip. */
+  recolhida?: boolean
 }) {
   const pathname = usePathname()
   const searchParams = useSearchParams()
@@ -23,8 +27,18 @@ export function SidebarNav({
   return (
     <nav aria-label="Navegação principal" className="flex flex-col gap-4">
       {navGroups.map((group, indiceDoGrupo) => (
-        <div key={group.title ?? `grupo-${indiceDoGrupo}`} className="flex flex-col gap-1">
-          {group.title && (
+        <div
+          key={group.title ?? `grupo-${indiceDoGrupo}`}
+          className="flex flex-col gap-1"
+        >
+          {/* Recolhida, o titulo do grupo vira um FILETE. A palavra
+              "CONFIGURACOES" nao cabe em 4,5rem, e abreviar rotulo de secao
+              produz sigla que ninguem decifra. O filete preserva o unico
+              trabalho que o titulo faz ali: separar um grupo do outro. */}
+          {group.title && recolhida && (
+            <span aria-hidden className="bg-sidebar-border mx-auto my-1 h-px w-6" />
+          )}
+          {group.title && !recolhida && (
             <span className="text-muted-foreground px-2.5 text-xs font-semibold tracking-wide uppercase">
               {group.title}
             </span>
@@ -32,7 +46,8 @@ export function SidebarNav({
 
           {group.items.map((item) => {
             const rotaDoItem = item.href.split('?')[0]!
-            const mesmaRota = pathname === rotaDoItem || pathname.startsWith(`${rotaDoItem}/`)
+            const mesmaRota =
+              pathname === rotaDoItem || pathname.startsWith(`${rotaDoItem}/`)
 
             // "Preferências", "Equipe" e "Integrações" apontam pras três pro
             // mesmo `/settings`, o que diferencia qual fica destacada é a
@@ -50,12 +65,14 @@ export function SidebarNav({
             const active =
               rotaDoItem === '/settings'
                 ? mesmaRota &&
-                  (item.aba ? abaAtual === item.aba : abaAtual !== 'equipe' && abaAtual !== 'integracoes')
+                  (item.aba
+                    ? abaAtual === item.aba
+                    : abaAtual !== 'equipe' && abaAtual !== 'integracoes')
                 : mesmaRota
 
             const Icon = item.icon
 
-            return (
+            const link = (
               <Link
                 key={item.href}
                 href={item.href}
@@ -69,12 +86,23 @@ export function SidebarNav({
                   // ícone continua exatamente na mesma posição horizontal do
                   // item inativo, padding e margin se cancelam.
                   active
-                    ? '-mx-1 bg-primary px-3.5 text-primary-foreground'
+                    ? 'bg-primary text-primary-foreground -mx-1 px-3.5'
                     : 'text-muted-foreground hover:bg-muted hover:text-foreground px-2.5',
+                  // Recolhida o item vira quadrado centrado. `justify-center`
+                  // com o texto fora do fluxo e o que evita o icone "pular"
+                  // de posicao entre os dois estados.
+                  recolhida && 'size-11 justify-center px-0',
+                  recolhida && active && 'mx-0 px-0',
                 )}
               >
                 <Icon aria-hidden className="size-4 shrink-0" />
-                <span className="flex-1 truncate">{item.title}</span>
+                {/* `sr-only` e nao removido: o nome continua sendo o nome
+                    acessivel do link. Sem ele o leitor de tela anunciaria
+                    "link" e mais nada, e o `aria-label` no `<a>` seria uma
+                    segunda copia do titulo para manter em dia. */}
+                <span className={cn(recolhida ? 'sr-only' : 'flex-1 truncate')}>
+                  {item.title}
+                </span>
 
                 {/* O único badge do menu, e só quando há o que cobrar. Um
                     contador que mostra "0" vira ruído permanente: a pessoa
@@ -121,6 +149,24 @@ export function SidebarNav({
                   </span>
                 )}
               </Link>
+            )
+
+            // ## O rotulo vira tooltip, e o envelope e um `div`
+            //
+            // `TooltipTrigger render={<Link/>}` seria o caminho idiomatico do
+            // Base UI e e justamente o que este projeto ja pagou em 08/09: no
+            // merge de props o `onClick` do elemento de dentro foi DESCARTADO,
+            // a aba abria e a acao nunca rodava, sem erro nenhum no console.
+            //
+            // Com o `div` por fora, o `Link` continua sendo um `Link` comum,
+            // com o `onNavigate` intacto; o tooltip ancora no envelope.
+            return recolhida ? (
+              <Tooltip key={item.href}>
+                <TooltipTrigger render={<div />}>{link}</TooltipTrigger>
+                <TooltipContent side="right">{item.title}</TooltipContent>
+              </Tooltip>
+            ) : (
+              link
             )
           })}
         </div>

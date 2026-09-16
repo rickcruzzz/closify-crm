@@ -1,7 +1,8 @@
+import { cookies } from 'next/headers'
 import type { Metadata } from 'next'
 import { redirect } from 'next/navigation'
 
-import { Sidebar } from '@/components/layout/sidebar'
+import { COOKIE_DA_BARRA, Sidebar } from '@/components/layout/sidebar'
 import { CapturaDeComponente } from '@/components/erros/captura-de-componente'
 import { Topbar } from '@/components/layout/topbar'
 import { TooltipProvider } from '@/components/ui/tooltip'
@@ -118,6 +119,12 @@ export default async function DashboardLayout({
           impede o banner de tapar o fim de página curta. */}
       <div data-casca="tela-cheia" className="flex h-dvh overflow-hidden">
         <Sidebar
+          // Lido no SERVIDOR para o HTML ja sair com a largura certa.
+          // `localStorage` so existe depois da hidratacao: a barra nasceria
+          // expandida e pularia para recolhida no primeiro quadro, em toda
+          // navegacao. Este layout ja e dinamico porque autentica, entao mais
+          // um cookie nao custa renderizacao estatica nenhuma.
+          recolhidaInicial={(await cookies()).get(COOKIE_DA_BARRA)?.value === '1'}
           workspaces={workspaces}
           activeWorkspaceId={workspaceId}
           currentUser={currentUser}
