@@ -106,12 +106,30 @@ export function Sidebar({
           onClick={alternar}
           aria-label={recolhida ? 'Expandir a barra lateral' : 'Recolher a barra lateral'}
           aria-expanded={!recolhida}
-          className="bg-sidebar border-sidebar-border text-muted-foreground hover:text-foreground focus-visible:ring-ring/50 absolute top-16 -right-3 z-10 grid size-6 place-items-center rounded-full border shadow-sm transition-colors outline-none focus-visible:ring-3"
+          className={cn(
+            'bg-sidebar border-sidebar-border text-muted-foreground absolute top-16 -right-3.5 z-10 grid size-7 place-items-center rounded-full border shadow-sm transition-colors outline-none',
+            // Estados visiveis. Sem o `hover:border`, o botao so mudava de cor
+            // do icone e o circulo ficava morto sob o cursor.
+            'hover:border-primary/40 hover:text-foreground hover:bg-accent',
+            'focus-visible:ring-ring/50 focus-visible:ring-3',
+            // ## O alvo de toque e MAIOR que o circulo
+            //
+            // O desenho pede um botao discreto na borda; a WCAG 2.2 pede 24px
+            // e o guia do projeto pede 44 no toque. Os dois so convivem
+            // separando o que se VE do que se CLICA.
+            //
+            // `after` com `-inset-2` leva a area clicavel a 44px sem crescer um
+            // pixel do circulo. E o mesmo recurso que `password-field.tsx` usa
+            // nos botoes dentro do campo de senha, pela mesma razao: la o campo
+            // tem 44px e dois controles desse tamanho comeriam a area de
+            // digitar.
+            'after:absolute after:-inset-2 after:content-[""]',
+          )}
         >
           {recolhida ? (
-            <PanelLeftOpen aria-hidden className="size-3.5" />
+            <PanelLeftOpen aria-hidden className="size-4" />
           ) : (
-            <PanelLeftClose aria-hidden className="size-3.5" />
+            <PanelLeftClose aria-hidden className="size-4" />
           )}
         </TooltipTrigger>
         <TooltipContent side="right">
