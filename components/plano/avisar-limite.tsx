@@ -1,5 +1,6 @@
 'use client'
 
+import { Crown } from 'lucide-react'
 import { toast } from 'sonner'
 
 import { DESTINO_DO_UPGRADE, ehLimiteDePlano } from '@/lib/plans'
@@ -26,11 +27,36 @@ import { DESTINO_DO_UPGRADE, ehLimiteDePlano } from '@/lib/plans'
  * oferecer mora em `ehLimiteDePlano`, que é pura e testada; aqui fica só o
  * toast.
  *
- * ## O destino leva `?assinar=1`, e isso é o que evita o segundo beco
+ * ## O destino leva ao ARGUMENTO, não ao CPF
  *
- * Sem o parâmetro, o clique deposita a pessoa numa tela de cobrança onde ela
- * precisa procurar o botão de novo — depois de já ter decidido duas vezes.
- * Com ele, o formulário de CPF abre sozinho.
+ * Levava para `?assinar=1`, que abre o formulário de documento sozinho. O dono
+ * percorreu isso como cliente em 16/09 e o defeito ficou óbvio: o botão diz
+ * "Conhecer o Pro" e entrega um campo de CPF. Pedir documento antes de mostrar
+ * o que a pessoa compra é a ordem invertida de qualquer venda.
+ *
+ * Agora é `#comparar`, a âncora dos dois cartões de plano. O `?assinar=1`
+ * continua existindo para quem JÁ decidiu: e-mails de trial, reconciliação e a
+ * landing logada.
+ *
+ * ## Não é `toast.error`, e isso não é detalhe
+ *
+ * Era. O `error` do sonner pinta círculo vermelho com X e barra vermelha na
+ * lateral — a linguagem de "você fez algo errado".
+ *
+ * Bater no limite do Free não é erro: é o produto funcionando exatamente como
+ * projetado, e é o instante em que ele VENDE. Vermelho ali transforma uma
+ * oferta em repreensão, no único momento em que a pessoa está considerando
+ * pagar.
+ *
+ * E há o custo que `lib/kanban/urgencia.ts` já registra por escrito: quando
+ * tudo é vermelho, nada é urgente. O aviso de limite competia visualmente com
+ * falha de rede e erro de gravação, que são coisas de outra natureza.
+ *
+ * A coroa em âmbar foi escolha do dono, entre cinco opções desenhadas com os
+ * tokens reais. Fica registrado que ela é o único ícone do produto sem par em
+ * nenhuma outra tela — o raio, que é o que o botão "Assinar Pro", o selo
+ * "Recomendado" e o CTA da barra lateral já usam, era a alternativa
+ * consistente.
  *
  * ## Duração longa de propósito
  *
@@ -53,7 +79,13 @@ export function avisarLimite(
     return
   }
 
-  toast.error(mensagem, {
+  toast(mensagem, {
+    // `icon` explícito porque isto não é nenhuma das variantes do sonner: não
+    // é erro, não é sucesso, não é aviso de sistema. É oferta.
+    icon: <Crown aria-hidden className="text-warning size-5 shrink-0" />,
+    // A barra lateral acompanha o ícone. Trocar um sem o outro deixaria coroa
+    // âmbar ao lado de faixa vermelha, que lê como defeito de tema.
+    className: 'border-l-warning border-l-2',
     duration: 12000,
     action: {
       label: 'Conhecer o Pro',
