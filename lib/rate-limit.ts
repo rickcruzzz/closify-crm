@@ -76,6 +76,18 @@ const LIMITES = {
   // é da conta do produto, e duas pessoas da mesma empresa gastando em
   // paralelo somam.
   'enriquecer-lead': { limite: 20, janelaSegundos: 60 * 60 },
+  // A TERCEIRA ação que gasta dinheiro por chamada, e a mais cara das três por
+  // unidade: criar instância na Z-API provisiona um recurso COBRADO POR MÊS. As
+  // outras duas gastam uma vez; esta gasta para sempre.
+  //
+  // A trigger `whatsapp_instances_exige_max` (0090) já barra quem não paga, e
+  // o `unique (workspace_id)` já impede a segunda instância da mesma empresa.
+  // Este teto cobre o que nenhum dos dois cobre: a instância criada no provedor
+  // ANTES de a linha chegar ao banco. Um laço de tentativas que falham no
+  // `insert` deixaria um rastro de instâncias órfãs faturando.
+  //
+  // Três por hora: conectar dá certo na primeira, e errar o QR duas vezes cabe.
+  'whatsapp-conectar': { limite: 3, janelaSegundos: 60 * 60 },
 } as const
 
 export type AcaoLimitada = keyof typeof LIMITES

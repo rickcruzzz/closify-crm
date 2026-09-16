@@ -5,6 +5,7 @@ import {
   LayoutDashboard,
   MessageCircle,
   Plug,
+  Smartphone,
   Settings,
   User,
   UserCog,
@@ -102,6 +103,14 @@ export const navGroups: NavGroup[] = [
         icon: Plug,
         aba: 'integracoes',
       },
+      // Rota PRÓPRIA, e não uma aba de Preferências como as duas acima.
+      //
+      // O motivo é o mesmo que tirou o WhatsApp de Integrações: ele não é uma
+      // integração gateada em `pro_vigente()` — é o plano Max, com conexão por
+      // empresa, estado que cai sozinho e um QR que precisa de tela inteira.
+      // Uma aba dentro de Preferências esconderia justamente o que a pessoa
+      // procura depois de pagar por ele.
+      { title: 'WhatsApp', href: '/settings/whatsapp', icon: Smartphone },
       // Era "Configurações" — renomeado porque a página guarda dados da
       // empresa (logo, CNPJ, endereço), "Preferências" descreve melhor o
       // conteúdo do que um rótulo que soa como "todo o resto de config".

@@ -24,8 +24,21 @@ describe('navGroups', () => {
         'Principal',
         ['Hoje', 'Conversas', 'Funil', 'Contatos', 'Resultados', 'Calendário'],
       ],
-      ['Configurações', ['Perfil', 'Equipe', 'Integrações', 'Preferências']],
+      [
+        'Configurações',
+        ['Perfil', 'Equipe', 'Integrações', 'WhatsApp', 'Preferências'],
+      ],
     ])
+  })
+
+  it('WhatsApp tem ROTA própria, e não uma aba de /settings', () => {
+    // As outras três entradas de Configurações apontam para `/settings` com
+    // query. Esta não: o WhatsApp é o plano Max, com conexão por empresa,
+    // estado que cai sozinho e um QR que precisa de tela inteira. Uma aba
+    // escondida dentro de Preferências seria o oposto do que se paga por ele.
+    const item = navGroups[1]?.items.find((i) => i.title === 'WhatsApp')
+    expect(item?.href).toBe('/settings/whatsapp')
+    expect(item?.aba).toBeUndefined()
   })
 
   it('o primeiro grupo TEM rotulo', () => {

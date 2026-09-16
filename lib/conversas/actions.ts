@@ -8,6 +8,9 @@ import { resolverWorkspaceAtivo } from '@/lib/workspace/ativo'
 import { escolherRemetente } from '@/lib/conversas/remetente'
 import { normalizarTelefoneBrasileiro } from '@/lib/leads/whatsapp'
 import { podeEnviarWhatsapp } from '@/lib/integrations/whatsapp-estado'
+import { direitoAoWhatsapp } from '@/lib/plans/max'
+import { situacaoDoMax } from '@/lib/plans/max-queries'
+import { conexaoDaEmpresa } from '@/lib/whatsapp/instancia'
 
 /**
  * Responder, assumir e arquivar conversa.
@@ -196,34 +199,39 @@ export async function enviarMensagem(
     }
   }
 
-  // Mesmo gate do webhook: WhatsApp é recurso do Pro, e a regra vive no banco.
-  const { data: temPro } = await sessao.supabase.rpc('pro_vigente', {
-    target_workspace_id: sessao.workspaceId,
-  })
-  if (temPro !== true) {
-    return { error: 'O WhatsApp faz parte do plano Pro. Faça upgrade para responder por aqui.' }
-  }
+  // ## O gate mudou de PRO para MAX em 16/09, e a árvore virou uma só
+  //
+  // Antes eram dois `if` seguidos: `pro_vigente()` e depois
+  // `integration_connections.status === 'connected'`. Cada um com a própria
+  // frase, escrita no lugar onde foi precisa.
+  //
+  // Agora é `direitoAoWhatsapp`, que responde as duas perguntas de uma vez e
+  // devolve QUAL das quatro negativas é. A razão está no cabeçalho de
+  // `lib/plans/max.ts`: cada negativa pede uma ação diferente de quem lê, e um
+  // `if` por chamador produz versões que divergem. A que diverge em silêncio é
+  // a que manda cliente pagante para a tela de vendas.
+  //
+  // O WhatsApp é do Max e não do Pro porque cada empresa conectada consome uma
+  // instância paga no provedor. É o único recurso deste produto cujo custo
+  // marginal não é zero.
+  const [assinatura, conexao] = await Promise.all([
+    situacaoDoMax(sessao.workspaceId),
+    conexaoDaEmpresa(sessao.workspaceId),
+  ])
 
-  const { data: conexao, error: erroConexao } = await sessao.supabase
-    .from('integration_connections')
-    .select('status, created_at, last_synced_at')
-    .eq('workspace_id', sessao.workspaceId)
-    .eq('provider', 'whatsapp')
-    .maybeSingle()
+  const direito = direitoAoWhatsapp(assinatura, conexao.estado)
+  if (!direito.pode) return { error: direito.motivo }
 
-  if (erroConexao) {
-    console.error('enviarMensagem: falha ao ler a conexão', erroConexao)
-    return { error: 'Não foi possível conferir a conexão do WhatsApp.' }
-  }
-  if (!conexao || conexao.status !== 'connected') {
-    return { error: 'O WhatsApp não está conectado. Conecte em Configurações, Integrações.' }
-  }
-
-  // Qual transporte entrega a mensagem. Hoje Evolution, amanhã Cloud API: a
-  // troca acontece dentro de `escolherRemetente`, e nada abaixo muda.
+  // Qual transporte entrega a mensagem. Hoje Z-API, amanhã Cloud API: a troca
+  // acontece dentro de `escolherRemetente`, e nada abaixo muda.
   const remetente = escolherRemetente(sessao.workspaceId)
 
-  const limite = await conferirTetoDeEnvio(sessao, remetente, conexao.created_at)
+  // `conectada_em` e não `created_at`: o aquecimento conta do dia em que o
+  // NÚMERO foi pareado, não do dia em que a linha nasceu no banco. Uma empresa
+  // que criou a conexão, desistiu, e voltou duas semanas depois teria o teto de
+  // número maduro num número que acabou de entrar — e o número em risco é o
+  // dela, não o nosso.
+  const limite = await conferirTetoDeEnvio(sessao, remetente, conexao.conectadaEm)
   if (limite) return { error: limite }
 
   const numero = normalizarTelefoneBrasileiro(alvo.telefone) ?? alvo.telefone

@@ -5,13 +5,14 @@ Documento de continuidade. É lido no começo de toda sessão (referenciado no
 sabendo o que já foi feito, o que foi decidido e onde estão as armadilhas.
 
 **Atualizado em:** 16/09/2026 (o plano Max nasceu como COLUNA e nao como
-terceiro valor do enum, e tres das quatro tabelas que o pedido mandava criar ja
-existiam; o Resend PROIBE e-mail frio e a chave dele e a mesma da recuperacao de
+terceiro valor do enum, tres das quatro tabelas que o pedido mandava criar ja
+existiam, e o caminho inteiro da Z-API entrou no mesmo dia — escrito, com os
+quatro portoes limpos, e NAO exercitado contra o provedor real; o Resend PROIBE e-mail frio e a chave dele e a mesma da recuperacao de
 senha; o disparo mudou de posicionamento e de canal; e doze rodadas de produto
 foram ao ar, sendo que tres eram alarme vermelho aparecendo onde nada esta
 errado)
 
-## O plano Max: tres das quatro tabelas pedidas JA EXISTIAM (16/09)
+## O plano Max e o WhatsApp pela Z-API (16/09)
 
 Pedido do dono, com um brief de 32 secoes: WhatsApp nativo no CRM, provedor
 Z-API, billing Asaas, plano Max a R$ 250/mes por empresa. A secao 3 do proprio
@@ -132,15 +133,111 @@ e nenhuma tela a chama ainda, de proposito.
 importa: ele mede o banco de producao, nao a pasta. Quando a 0089 subir,
 `banco.rpcs_do_projeto` vai de 36 para 37 e **nenhuma tabela nasce**.
 
+### FASE 2, no mesmo dia: o caminho inteiro da Z-API
+
+O dono mandou seguir. O que entrou:
+
+    0090            whatsapp_instances + trigger de plano + a escada de entrega
+    zapi.ts         o UNICO lugar que fala HTTP com a Z-API
+    payload.ts      normaliza os TRES callbacks, com o payload da documentacao
+    entrega.ts      a escada, que so anda para frente
+    receber.ts      grava na empresa dona da instancia
+    instancia.ts    le e escreve, com o token cifrado
+    actions.ts      conectar, QR, desconectar, remover
+    3 webhooks      /api/webhooks/zapi/{receive,status,disconnected}/[segredo]
+    a tela          Configuracoes > WhatsApp, com polling de teto 12
+    testes          1.884 -> 1.920
+
+**`FASE_DO_WHATSAPP` passou a `'zapi'`**, e com ela vem uma distincao que as
+fases anteriores nao tinham: a constante diz que o PRODUTO tem caminho de
+WhatsApp, e nao que uma empresa pode usar. Quem responde isso e
+`direitoAoWhatsapp`, por empresa. Antes as duas perguntas tinham a mesma
+resposta — a ponte estava de pe para todos ou para ninguem.
+
+### O segredo por instancia, e por que ele NAO reabre o que foi fechado
+
+A Z-API nao assina o webhook: o payload carrega `instanceId` em texto puro.
+Resolver a empresa por ele repetiria, com outro nome, o defeito que fez
+`c52a718` remover a rota da Evolution em 28/08.
+
+    /api/webhooks/zapi/receive/<segredo-aleatorio-de-64-hex>
+
+**Nao e a URL de 28/08.** La o segredo era GLOBAL e o `workspaceId` estava na
+URL, ou seja havia o que forjar. Aqui o segredo E a identidade: nao existe campo
+de empresa na requisicao. O `instanceId` do corpo continua sendo lido para UMA
+coisa, conferir contra o que o segredo achou — divergiu, 200 e ignora.
+
+E ele fica FORA dos grants de coluna, ao lado do token. A 0090 revoga `select`
+da tabela inteira e concede de volta so nas colunas seguras, que e a unica forma
+que funciona: `revoke select (coluna)` sozinho nao subtrai de um grant mais
+amplo ja concedido, e foi assim que um admin leu `access_token_enc` em 12/08.
+
+### Quatro decisoes que ficam, e todas sao sobre dinheiro ou sobre o numero
+
+    conectar e trigger    `whatsapp_instances_exige_max` recusa o insert com
+                          42501. `service_role` ignora RLS e NAO ignora trigger,
+                          e a escrita aqui e toda pelo admin client
+    instancia orfa        se o insert falhar depois de a instancia existir, ela
+                          e apagada no provedor antes de devolver o erro. Sem
+                          isso ficaria faturando sem linha nenhuma apontando
+                          para ela: invisivel para toda tela e toda purga
+    desconectar != remover  desconectar tira o numero e MANTEM a instancia
+                          faturando. Remover apaga no provedor. Sao dois botoes
+                          porque tem o mesmo nome na cabeca de quem clica e
+                          consequencias diferentes na fatura
+    aquecimento           10/h na primeira semana, 20 ate a terceira, 30 depois.
+                          O numero em risco e o DO CLIENTE, e um CRM que faz a
+                          marcenaria perder o WhatsApp da empresa nao e um CRM
+                          com bug
+
+### O teste achou um defeito meu, e era do tipo que grava dado errado
+
+`digitos()` tirava os nao-digitos ANTES de recusar, entao o LID
+`81896604192873@lid` virava `81896604192873` — catorze caracteres, que passam em
+qualquer faixa de tamanho plausivel. LID nao e telefone e nao recebe mensagem:
+gravar poria no banco um numero falso com **aparencia de dado bom**. O `@` passou
+a ser recusado antes de qualquer limpeza.
+
+### A escada de entrega, e o `-1` que ela existe para nao repetir
+
+`mensagens.status` tinha tres valores e a Z-API manda cinco. Sem o `alter` da
+0090, o webhook gravaria e tomaria `23514` **em silencio**, com toda mensagem
+parada em "enviada" para sempre.
+
+E `proximoStatusDeEntrega` nunca regride, porque webhook entrega fora de ordem:
+`READ` antes de `RECEIVED` e normal. Regredir apagaria o dado que separa "o
+cliente nao viu" de "viu e nao quis" — duas leituras que pedem acoes opostas.
+
+**Nenhum `-1` entra em comparacao**, e e o defeito exato de 12/09: `indexOf`
+devolvia -1 para estagio fora da ordenacao, -1 e menor que tudo, e a mensagem
+seguinte desfazia o pedido de saida em silencio.
+
+E `READ_BY_ME` **nao** vira `lida`: ele diz que NOS lemos algo que nos mandaram,
+e mapea-lo afirmaria que o cliente leu quando quem leu foi o vendedor.
+
+### O WhatsApp SAIU de Integracoes, e o motivo e o gate
+
+`integration_connections` e gateada em `pro_vigente()` por tres policies da
+0037. Guardar a conexao la daria o recurso a quem paga Pro, e o Pro nao cobre a
+instancia paga. O card fica como PLACA e aponta para a tela nova.
+
+### O que NAO foi provado, e e a maior lacuna desta rodada
+
+**Nenhum numero foi pareado.** As duas migrations nao subiram, o
+`ZAPI_PARTNER_TOKEN` nao esta no `.env.local`, e nada do caminho da Z-API foi
+exercitado contra o provedor real. Os quatro portoes passam e o conferidor fecha
+em zero, o que prova que compila e que a logica pura esta travada por teste — e
+nao prova que a Z-API aceita o que mandamos.
+
+O 201 do `sendButtons` de 12/09 e a licao a ter na mao aqui: **aceitar nao e
+entregar**, e quatro chamadas responderam 201 sem nada renderizar.
+
 ### O que continua FORA, e a ordem
 
-    Fase 2   whatsapp_instances, provider da Z-API, os tres webhooks, QR,
-             tela de Configuracoes > WhatsApp
-    Fase 3   caixa de entrada com o gate, painel lateral do lead, follow-up
-
-E `FASE_DO_WHATSAPP` continua `'migrando'`: enquanto essa constante nao ganhar a
-fase `'zapi'` **nada envia mensagem**, porque `escolherRemetente` devolve
-`emMigracao` com teto 0 para todo mundo.
+    Fase 3   enviar MIDIA (a caixa ja RECEBE audio, imagem, video, documento e
+             figurinha, e guarda a referencia sem baixar), resposta sugerida por
+             IA, painel lateral do lead na tela de conversas, follow-up
+             automatico em cima de `tasks`
 
 ## O Resend PROIBE o que a gente ia fazer com ele (16/09)
 

@@ -74,15 +74,22 @@ de custo: paywall no momento em que a pessoa sente o valor converte 8-12%,
 contra 3-4% de limite arbitrário — e as outras três são todas arbitrárias no
 sentido técnico do termo.
 
-<!-- contagem: migrations.arquivos=88 migrations.maior=0089 -->
-**88 arquivos de migration, e a maior é `0089`** (remedido em 16/09; o `0049`
+<!-- contagem: migrations.arquivos=89 migrations.maior=0090 -->
+**89 arquivos de migration, e a maior é `0090`** (remedido em 16/09; o `0049`
 não existe, removido em 22/08). Os dois números vêm sempre juntos: a contagem
 sozinha convida a inferir `0085`.
 
-**A 0089 está escrita e NÃO foi aplicada**, e é por isso que as cinco contagens
-de catálogo acima não se moveram: elas medem o banco de produção, não a pasta.
-Quando ela subir, `banco.rpcs_do_projeto` vai de 36 para 37 (`max_vigente`) e
-nenhuma tabela nasce — ela acrescenta uma coluna e uma função.
+**A 0089 e a 0090 estão escritas e NÃO foram aplicadas**, e é por isso que as
+cinco contagens de catálogo acima não se moveram: elas medem o banco de
+produção, não a pasta. Quando as duas subirem:
+
+    banco.tabelas          23 -> 24   `whatsapp_instances` (0090)
+    banco.rpcs_do_projeto  36 -> 37   `max_vigente` (0089)
+    banco.foreign_keys     37 -> 38   `whatsapp_instances.workspace_id`
+    banco.triggers         16 -> 17   `whatsapp_instances_exige_max` (0090)
+    banco.enums             8 ->  8   NENHUM. `workspace_plan` continua com
+                                      dois valores, e é o ponto inteiro do
+                                      desenho do Max (ver 0089)
 
 O carimbo separando as duas coisas é o ponto: arquivo escrito e objeto existindo
 são perguntas diferentes, e lê-las como uma só é o erro que a série de "nós sem
@@ -566,9 +573,26 @@ classDiagram
         +int midia_segundos "nullable"
         +text external_id "nullable, unico por workspace quando nao nulo"
         +uuid enviada_por "→ auth.users, FK declarada, SET NULL"
-        +text status "check: pendente, enviada, falhou"
+        +text status "check: pendente, enviada, entregue, lida, falhou (0090)"
         +text erro "nullable"
         +timestamptz created_at
+    }
+
+    class whatsapp_instances {
+        +uuid id PK
+        +uuid workspace_id FK "UNIQUE, uma conexao por empresa"
+        +text provider "check: zapi"
+        +text instance_id "UNIQUE, id no provedor"
+        +text token_cifrado "NUNCA sai para o navegador"
+        +text segredo_do_webhook "UNIQUE, resolve a empresa na entrada do webhook"
+        +text telefone "nullable, so depois do QR lido"
+        +text status "check: ausente, conectando, conectado, desconectado, erro"
+        +text ultimo_erro "nullable, motivo CRU do provedor"
+        +timestamptz conectada_em "nullable"
+        +timestamptz desconectada_em "nullable"
+        +timestamptz vista_em "nullable, prova de vida"
+        +timestamptz created_at
+        +timestamptz updated_at
     }
 
     class assinatura_eventos {
@@ -588,6 +612,7 @@ classDiagram
     workspaces "1" --> "many" activities : CASCADE
     workspaces "1" --> "many" tasks : CASCADE
     workspaces "1" --> "many" subscriptions : CASCADE
+    workspaces "1" --> "1" whatsapp_instances : CASCADE
     workspaces "1" --> "many" workspace_invites : CASCADE
     workspaces "1" --> "many" integration_connections : CASCADE
     workspaces "1" --> "many" conversas : CASCADE

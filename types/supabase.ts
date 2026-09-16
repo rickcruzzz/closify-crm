@@ -640,6 +640,69 @@ export type Database = {
         }
         Relationships: []
       }
+      /**
+       * A conexão de WhatsApp de cada empresa (migration 0090).
+       *
+       * `token_cifrado` e `segredo_do_webhook` estão no tipo porque o admin
+       * client os lê. **Eles não são alcançáveis por `authenticated`**: a 0090
+       * revoga `select` da tabela inteira e concede de volta só nas colunas
+       * seguras — e o revoke da tabela antes do grant é a parte que importa,
+       * porque `revoke select (coluna)` sozinho não subtrai de um grant mais
+       * amplo já concedido. Armadilha paga em 12/08 com `access_token_enc`.
+       */
+      whatsapp_instances: {
+        Row: {
+          id: string
+          workspace_id: string
+          provider: string
+          instance_id: string
+          token_cifrado: string
+          // Aleatório por instância, vai na URL do webhook. É a identidade da
+          // empresa na entrada: o `instanceId` do payload nunca resolve empresa.
+          segredo_do_webhook: string
+          telefone: string | null
+          status: 'ausente' | 'conectando' | 'conectado' | 'desconectado' | 'erro'
+          ultimo_erro: string | null
+          conectada_em: string | null
+          desconectada_em: string | null
+          vista_em: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          workspace_id: string
+          provider?: string
+          instance_id: string
+          token_cifrado: string
+          segredo_do_webhook: string
+          telefone?: string | null
+          status?: 'ausente' | 'conectando' | 'conectado' | 'desconectado' | 'erro'
+          ultimo_erro?: string | null
+          conectada_em?: string | null
+          desconectada_em?: string | null
+          vista_em?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          workspace_id?: string
+          provider?: string
+          instance_id?: string
+          token_cifrado?: string
+          segredo_do_webhook?: string
+          telefone?: string | null
+          status?: 'ausente' | 'conectando' | 'conectado' | 'desconectado' | 'erro'
+          ultimo_erro?: string | null
+          conectada_em?: string | null
+          desconectada_em?: string | null
+          vista_em?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       whatsapp_webhook_events: {
         Row: {
           event_id: string
@@ -773,7 +836,7 @@ export type Database = {
           midia_segundos: number | null
           external_id: string | null
           enviada_por: string | null
-          status: 'pendente' | 'enviada' | 'falhou'
+          status: 'pendente' | 'enviada' | 'entregue' | 'lida' | 'falhou'
           erro: string | null
           created_at: string
         }
@@ -789,7 +852,7 @@ export type Database = {
           midia_segundos?: number | null
           external_id?: string | null
           enviada_por?: string | null
-          status?: 'pendente' | 'enviada' | 'falhou'
+          status?: 'pendente' | 'enviada' | 'entregue' | 'lida' | 'falhou'
           erro?: string | null
           created_at?: string
         }
@@ -798,7 +861,7 @@ export type Database = {
         // reescrever história com o cliente.
         Update: {
           external_id?: string | null
-          status?: 'pendente' | 'enviada' | 'falhou'
+          status?: 'pendente' | 'enviada' | 'entregue' | 'lida' | 'falhou'
           erro?: string | null
         }
         Relationships: []

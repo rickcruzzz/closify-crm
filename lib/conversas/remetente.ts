@@ -1,5 +1,6 @@
 import 'server-only'
-import { AVISO_DE_MIGRACAO } from '@/lib/integrations/whatsapp-estado'
+import { AVISO_DE_MIGRACAO, FASE_DO_WHATSAPP } from '@/lib/integrations/whatsapp-estado'
+import { remetenteZapi } from '@/lib/conversas/remetente-zapi'
 
 
 /**
@@ -97,9 +98,20 @@ const emMigracao: Remetente = {
  * O parâmetro já entra na assinatura para essa mudança não virar refatoração.
  */
 export function escolherRemetente(workspaceId: string): Remetente {
-  // O parâmetro ainda não é lido, e está aqui de propósito: quando a Cloud API
-  // entrar, a escolha passa a sair de `integration_connections` desta empresa,
-  // e acrescentar um parâmetro depois obrigaria a tocar em todo chamador.
+  // ## O parâmetro continua sem ser lido, e agora isso é uma afirmação
+  //
+  // Ele está aqui desde 28/08 esperando o dia em que duas pontes coexistissem.
+  // Esse dia ainda não é hoje: a Z-API é a única, e a Cloud API da Meta segue
+  // dependendo de App Review. Quando ela entrar, a escolha passa a sair de
+  // `whatsapp_instances.provider` desta empresa, e é por isso que a coluna
+  // nasceu com `check (provider in ('zapi'))` em vez de não existir.
+  //
+  // **O que decide por empresa NÃO é esta função.** É `direitoAoWhatsapp`
+  // (`lib/plans/max.ts`), que lê `max_vigente()` e o estado da conexão. Aqui a
+  // pergunta é "qual transporte", lá é "esta empresa pode". Misturar as duas
+  // faria o gate de plano viver dentro do módulo de transporte, que é
+  // exatamente a fronteira que este arquivo existe para manter.
   void workspaceId
-  return emMigracao
+
+  return FASE_DO_WHATSAPP === 'zapi' ? remetenteZapi : emMigracao
 }

@@ -25,7 +25,10 @@ import {
   AVISO_PARA_QUEM_NAO_TEM_PRO,
   podeConectarWhatsapp,
   seloDoWhatsapp,
+  WHATSAPP_MORA_NO_MAX,
 } from '@/lib/integrations/whatsapp-estado'
+import { buttonVariants } from '@/components/ui/button'
+import Link from 'next/link'
 
 const META: Record<
   IntegrationProvider,
@@ -352,14 +355,28 @@ export function IntegrationCard({
           // resolve no DNS, e o cliente tomaria erro de rede sem entender o
           // que fez de errado. Melhor dizer a verdade.
           podeConectarWhatsapp() ? (
-            // A ponte nao oficial saiu do produto em 28/08/2026. Quando a
-            // Cloud API for aprovada, o botao de conectar volta AQUI — com o
-            // fluxo dela, que e OAuth pela Meta e nao leitura de QR Code.
-            <div className="border-border/60 flex flex-col gap-1 rounded-lg border p-3">
-              <span className="text-sm font-medium">{AVISO_DE_MIGRACAO.titulo}</span>
+            // O WhatsApp saiu de Integracoes e virou plano proprio: a conexao
+            // e por empresa e consome uma instancia paga, enquanto esta tela e
+            // gateada em pro_vigente() pela 0037. O card fica como PLACA, e nao
+            // como ausencia: quem procura WhatsApp aqui precisa achar o
+            // caminho.
+            //
+            // Ancora crua com `buttonVariants`, e nao `<Button render={<Link/>}>`:
+            // o Base UI DESCARTA o onClick do filho no merge, defeito que
+            // custou uma rodada em 08/09. Aqui nao ha handler, e a ancora e o
+            // elemento certo para navegar.
+            <div className="border-border/60 flex flex-col items-start gap-2 rounded-lg border p-3">
+              <span className="text-sm font-medium">{WHATSAPP_MORA_NO_MAX.titulo}</span>
               <p className="text-muted-foreground text-xs leading-relaxed">
-                {AVISO_DE_MIGRACAO.detalhe}
+                {WHATSAPP_MORA_NO_MAX.detalhe}
               </p>
+              <Link
+                href={WHATSAPP_MORA_NO_MAX.destino}
+                className={buttonVariants({ variant: 'outline', size: 'sm' })}
+              >
+                <MessageCircle className="size-4" />
+                Abrir o WhatsApp
+              </Link>
             </div>
           ) : (
             <div className="border-border/60 flex flex-col gap-1 rounded-lg border p-3">

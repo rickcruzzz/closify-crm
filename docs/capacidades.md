@@ -68,13 +68,30 @@ envelhecer em silêncio, que é o defeito de todo documento desse tipo.
 | Direito ao WhatsApp, a árvore de 4 bloqueios | `lib/plans/max.ts` | 16/09 |
 | Auditoria de arquitetura do Max e da Z-API | [docs/auditoria-whatsapp-max-2026-09-16.md](auditoria-whatsapp-max-2026-09-16.md) | 16/09 |
 
+## WhatsApp no produto (plano Max, 16/09)
+
+| capacidade | onde | desde |
+|---|---|---|
+| Conexão por empresa (tabela, RLS, trigger de plano) — ESCRITA, NÃO APLICADA | `supabase/migrations/0090_whatsapp_da_empresa.sql` | 16/09 |
+| Cliente HTTP da Z-API, o único que fala com ela | `lib/whatsapp/zapi.ts` | 16/09 |
+| Provider que implementa `Remetente`, com aquecimento | `lib/conversas/remetente-zapi.ts` | 16/09 |
+| Normalizar o payload da Z-API (recebida, status, desconexão) | `lib/whatsapp/payload.ts` | 16/09 |
+| Escada de entrega, que só anda para frente | `lib/whatsapp/entrega.ts` | 16/09 |
+| Gravar a mensagem na empresa dona da instância | `lib/whatsapp/receber.ts` | 16/09 |
+| Ler e escrever a instância, com o token cifrado | `lib/whatsapp/instancia.ts` | 16/09 |
+| Conectar, QR, desconectar e remover | `lib/whatsapp/actions.ts` | 16/09 |
+| Webhook de mensagem recebida | `app/api/webhooks/zapi/receive/[segredo]/route.ts` | 16/09 |
+| Webhook de status de entrega | `app/api/webhooks/zapi/status/[segredo]/route.ts` | 16/09 |
+| Webhook de desconexão | `app/api/webhooks/zapi/disconnected/[segredo]/route.ts` | 16/09 |
+| A tela de conexão, com polling controlado | `components/settings/whatsapp-conexao.tsx` | 16/09 |
+
 ## Integrações
 
 | capacidade | onde | desde |
 |---|---|---|
 | Google Calendar e Gmail (OAuth aprovado) | `lib/integrations/google.ts` | 12/08 |
 | Token cifrado em repouso | `lib/integrations/crypto.ts` | 12/08 |
-| Estado do WhatsApp (hoje: `migrando`) | `lib/integrations/whatsapp-estado.ts` | 28/08 |
+| Fase do WhatsApp (hoje: `zapi`) | `lib/integrations/whatsapp-estado.ts` | 28/08 |
 
 ## Suporte, legal e descoberta
 
@@ -229,21 +246,21 @@ WhatsApp por API no PRODUTO                      a ponte saiu em 28/08 (c52a718)
                                                  webhook de 12/09 e da PROSPECCAO do
                                                  dono, resolve a empresa pelo NOME no
                                                  servidor, e nao devolve WhatsApp a
-                                                 nenhum cliente. A Fase 1 do Max
-                                                 (16/09) criou o DIREITO ao recurso,
-                                                 nao o recurso: nao ha provider da
-                                                 Z-API, nao ha tabela de instancia,
-                                                 nao ha QR e nao ha envio
-tabela whatsapp_instances                        Fase 2. O desenho esta na secao 11 da
-                                                 auditoria de 16/09
-provider da Z-API                                Fase 2. A INTERFACE ja existe desde
-                                                 28/08 em lib/conversas/remetente.ts,
-                                                 e `escolherRemetente(workspaceId)` ja
-                                                 recebe o parametro sem le-lo
-webhook da Z-API                                 Fase 2. O pipeline de receber ja
-                                                 existe e esta provado: a rota da
-                                                 Evolution grava em conversas/mensagens
-                                                 desde 12/09
+                                                 nenhum cliente. A Fase 2 do Max
+                                                 (16/09) construiu o caminho inteiro
+                                                 pela Z-API — provider, webhooks, QR
+                                                 e envio —, e ele so vale para quem
+                                                 tem `max_vigente()`. FASE_DO_WHATSAPP
+                                                 passou a `zapi` no mesmo commit
+envio de MIDIA pelo CRM                          so texto sai. A caixa RECEBE audio,
+                                                 imagem, video, documento e figurinha
+                                                 e guarda a referencia; mandar de
+                                                 volta e Fase 3
+resposta sugerida por IA na conversa             Fase 3. O SDR existe e segue desligado
+conexao provada ponta a ponta                    0089 e 0090 NAO foram aplicadas, e
+                                                 nenhum numero foi pareado. Todo o
+                                                 caminho da Z-API esta escrito e NAO
+                                                 exercitado contra o provedor real
 IA respondendo o prospect sozinha                o SDR existe e esta DESLIGADO. Nem a
                                                  captura nem a classificacao o ligam
 ligacao prospect -> cliente pagante              NAO existe. O painel PARA em
