@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { Filter } from 'lucide-react'
+import { Bar, BarChart, Cell, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 
 import { Button } from '@/components/ui/button'
 import {
@@ -13,7 +14,6 @@ import {
   CardTitle,
 } from '@/components/ui/card'
 import { EmptyState } from '@/components/ui/empty-state'
-import { cn } from '@/lib/utils'
 import { formatBRL, formatCompactBRL } from '@/lib/deals/metrics'
 import type { FunnelStageCount } from '@/lib/dashboard/queries'
 import { montarFunil, type LinhaDoFunil } from '@/lib/dashboard/funil'
@@ -21,35 +21,36 @@ import { stageAccent } from '@/lib/deals/stage-colors'
 import { FUNIL, hrefDaEtapa } from '@/lib/dashboard/destinos'
 
 /**
- * O funil, como LISTA de etapas e não como gráfico de barras.
+ * Negócios por etapa, em barras verticais.
  *
- * ## O gráfico anterior desperdiçava o card por construção
+ * ## A etapa dominante, e por que ela NÃO apaga as outras aqui
  *
  * Medido no workspace principal em 16/09/2026: **110 dos 132 negócios em "A
- * contatar"**. Numa barra proporcional isso dá uma barra cheia e cinco fios, e
- * as cinco etapas que somam os outros 22 negócios — inclusive "Negociação",
- * que é dinheiro decidindo agora — ficavam ilegíveis. Mais de dois terços da
- * largura do card eram grade vazia à direita.
+ * contatar"**, 83% numa etapa só. Numa barra proporcional pura isso dá uma
+ * barra cheia e cinco fios de dois pixels, e as cinco etapas que somam os
+ * outros 22 negócios — inclusive "Negociação", que é dinheiro decidindo
+ * agora — deixam de existir na tela.
  *
- * Três direções foram exploradas na Replicate a partir de uma captura real
- * (`scripts/design/explorar-dashboard.mjs`) antes de escrever esta linha. O
- * funil em trapézio, que é o desenho óbvio, foi RECUSADO por medição: com
- * 28/6/0/0/0/0 os segmentos saem quase do mesmo tamanho e blocos enormes
- * exibem "0". Ele é bonito e mente.
+ * Três coisas resolvem isso ao mesmo tempo, e nenhuma delas é distorcer a
+ * escala:
  *
- * ## O que a lista resolve
+ * 1. **O número vai ESCRITO acima de cada barra.** A barra deixa de ser a
+ *    única portadora do dado; ela vira a comparação, o número vira o fato.
+ *    Com "3" escrito em cima, uma barra de 2% continua informando.
+ * 2. **O valor vai escrito embaixo**, no eixo, junto do nome da etapa. Duas
+ *    perguntas respondidas por coluna, sem nenhum hover.
+ * 3. **`minPointSize`**: etapa com negócio dentro nunca desenha zero pixel.
+ *    Etapa VAZIA continua desenhando nada, porque aí o vazio é a informação.
  *
- * A barra deixa de ser a portadora do número. Cada linha diz em texto quantos
- * negócios, quanto em dinheiro e que fatia do funil aquilo é; a barra fica
- * como leitura periférica, com piso de 2% para etapa com negócio dentro nunca
- * sumir. Nenhuma informação depende de hover, o que importa porque **este
- * painel entra no PDF do "Exportar relatório", e no PDF não existe hover**.
+ * Escala truncada ou logarítmica foi recusada: ela some com o fato de que uma
+ * etapa domina, e esse fato é o diagnóstico mais importante que este funil
+ * dá — a fila de entrada entupida é o problema do negócio, não do gráfico.
  *
- * ## O que foi PRESERVADO
+ * ## Nada depende de hover
  *
- * Clicar numa etapa continua abrindo os negócios dela, etapa vazia continua
- * não navegando, e o alvo continua alcançável por teclado. Agora o alvo é a
- * linha inteira (~1100x56px) em vez do rótulo de 12px do eixo.
+ * Este painel entra no PDF do "Exportar relatório" (`ReportArea` envolve os
+ * três), e **no PDF não existe hover**. Até 16/09 o relatório que o cliente
+ * recebia saía com barras sem nenhum valor legível.
  */
 export function FunnelChart({
   data,
@@ -62,8 +63,8 @@ export function FunnelChart({
   const router = useRouter()
   const funil = montarFunil(data, abertosSemValor)
 
-  function abrirEtapa(linha: LinhaDoFunil) {
-    if (linha.quantidade === 0) return
+  function abrirEtapa(linha: LinhaDoFunil | undefined) {
+    if (!linha || linha.quantidade === 0) return
     router.push(hrefDaEtapa(linha.stage))
   }
 
@@ -71,13 +72,13 @@ export function FunnelChart({
     return (
       <Card>
         <CardHeader>
-          <CardTitle>Funil de negócios</CardTitle>
+          <CardTitle>Negócios por etapa</CardTitle>
           <CardDescription>
             Quantos negócios e quanto dinheiro há em cada etapa.
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="flex h-64 items-center justify-center">
+          <div className="flex h-72 items-center justify-center">
             <EmptyState
               icon={Filter}
               title="Seu funil começa aqui"
@@ -91,41 +92,153 @@ export function FunnelChart({
     )
   }
 
+  const maior = Math.max(...funil.linhas.map((l) => l.quantidade))
+
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Funil de negócios</CardTitle>
+        <CardTitle>Negócios por etapa</CardTitle>
         <CardDescription>
           {funil.abertos} em aberto, {formatCompactBRL(funil.valorAberto)} em jogo. Clique
           numa etapa para abrir os negócios dela.
         </CardDescription>
       </CardHeader>
 
-      <CardContent className="flex flex-col gap-1">
-        {/* Cabeçalho da tabela visual. Some no telefone, onde a linha vira
-            duas alturas e o rótulo ficaria longe demais do número que nomeia. */}
-        <div className="text-muted-foreground hidden px-3 pb-1 text-xs sm:grid sm:grid-cols-[minmax(9rem,1.4fr)_5rem_7rem_1fr] sm:gap-4">
-          <span>Etapa</span>
-          <span className="text-right">Negócios</span>
-          <span className="text-right">Valor</span>
-          <span className="text-right">Participação</span>
+      <CardContent className="flex flex-col gap-3">
+        {/* A altura caiu de `h-80` para `h-72` na segunda passada.
+            
+            Com 24 contra 2 na etapa menor, os 320px de altura viravam meia
+            tela de ar acima das cinco barras pequenas: o card ficava enorme e
+            a densidade, baixa. Encurtar não muda a proporção entre as barras
+            (ela é o dado), muda a quantidade de vazio ao redor delas. */}
+        <div className="h-60 w-full sm:h-72">
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart
+              data={funil.linhas}
+              // `top: 28` reserva a faixa do número escrito acima da barra
+              // mais alta. Sem ela o rótulo da maior etapa é cortado pelo topo
+              // do card, que é justamente a etapa que mais importa ler.
+              margin={{ top: 28, right: 8, left: 8, bottom: 0 }}
+              barCategoryGap="22%"
+            >
+              {/* ## O eixo perdeu os rótulos, e a LEGENDA virou o eixo
+                  
+                  Na segunda passada ficou evidente: o nome da etapa aparecia
+                  duas vezes, no eixo e na legenda logo abaixo, a 40px de
+                  distância. Duplicação que não informa — só consome altura e
+                  faz a tela parecer cheia sem estar dizendo mais.
+                  
+                  Quem ficou foi a legenda, e por três razões: ela nomeia, ela
+                  carrega o dinheiro, e ela é um BOTÃO de verdade. O rótulo do
+                  eixo era um `<text>` de 12px com `tabIndex` — alvo que
+                  ninguém acerta com o dedo e que leitor de tela anuncia mal.
+                  
+                  A linha do eixo fica: é ela que dá a base sobre a qual as
+                  barras se apoiam, sem a qual elas flutuam. */}
+              <XAxis
+                dataKey="label"
+                tick={false}
+                tickLine={false}
+                axisLine={{ stroke: 'var(--border)' }}
+                height={1}
+              />
+              {/* Eixo Y escondido: o número já está escrito em cada barra, e
+                  uma régua numérica ao lado seria a MESMA informação lida duas
+                  vezes, roubando largura das barras. O eixo continua existindo
+                  para o Recharts calcular a escala. */}
+              <YAxis hide domain={[0, Math.max(1, maior)]} />
+              <Tooltip
+                content={<DicaDaEtapa />}
+                // O realce padrão do Recharts pinta um bloco cinza da altura
+                // inteira do card, mais pesado que a própria barra. Com
+                // opacidade baixa ele vira contexto, não protagonista.
+                cursor={{ fill: 'var(--muted)', opacity: 0.35 }}
+              />
+              <Bar
+                dataKey="quantidade"
+                radius={[6, 6, 0, 0]}
+                maxBarSize={72}
+                // 6px e nao 3: com 2 negocios contra 24, a barra menor dava 3px
+                // e lia como risco, nao como barra. O piso nao distorce a
+                // comparacao — ele garante que a etapa EXISTA na tela.
+                minPointSize={6}
+                isAnimationActive={false}
+                onClick={(entrada: unknown) => abrirEtapa(entrada as LinhaDoFunil)}
+                label={<NumeroNaBarra />}
+              >
+                {funil.linhas.map((linha) => (
+                  <Cell
+                    key={linha.stage}
+                    fill={stageAccent[linha.stage].bar}
+                    // Etapa vazia não navega: mandar alguém para uma coluna
+                    // sem nada dentro é outro beco sem saída.
+                    cursor={linha.quantidade > 0 ? 'pointer' : 'default'}
+                  />
+                ))}
+              </Bar>
+            </BarChart>
+          </ResponsiveContainer>
         </div>
 
-        <ul className="flex flex-col">
+        {/* ## A lista de atalhos, e por que ela não é redundante
+
+            O SVG do Recharts não entra na ordem de tabulação e não é lido por
+            leitor de tela como seis itens navegáveis. Até 16/09 a única forma
+            de abrir uma etapa pelo teclado era o rótulo do eixo, um `<text>`
+            com `tabIndex` — alvo de 12px que ninguém acha com o dedo.
+
+            Estes botões são o MESMO destino, alcançáveis por Tab, com 44px de
+            altura. Eles também são o que mantém o painel legível em 375px,
+            onde seis rótulos no eixo não cabem lado a lado. */}
+        {/* `grid-cols-6` a partir de `sm`: cada item cai exatamente sob a
+            barra que nomeia, e e isso que faz a legenda poder SUBSTITUIR o
+            eixo em vez de so acompanha-lo. Abaixo disso ela vira lista de duas
+            colunas, na mesma ordem das etapas. */}
+        <ul className="grid grid-cols-2 gap-1 sm:grid-cols-3 lg:grid-cols-6">
           {funil.linhas.map((linha) => (
-            <LinhaDaEtapa
-              key={linha.stage}
-              linha={linha}
-              aoAbrir={() => abrirEtapa(linha)}
-            />
+            <li key={linha.stage}>
+              <button
+                type="button"
+                disabled={linha.quantidade === 0}
+                onClick={() => abrirEtapa(linha)}
+                aria-label={`${linha.label}: ${linha.quantidade} ${linha.quantidade === 1 ? 'negócio' : 'negócios'}, ${formatBRL(linha.valor)}. Abrir.`}
+                className="hover:bg-muted/60 focus-visible:ring-ring/50 flex min-h-11 w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left transition-colors outline-none focus-visible:ring-3 disabled:pointer-events-none disabled:opacity-50 motion-reduce:transition-none"
+              >
+                <span
+                  aria-hidden
+                  className="size-2.5 shrink-0 rounded-full"
+                  style={{ backgroundColor: stageAccent[linha.stage].bar }}
+                />
+                <span className="min-w-0 flex-1">
+                  {/* `title` porque `truncate` corta de verdade: medido em
+                      1024px, onde a grade de 6 colunas divide a area util com
+                      a barra lateral, cinco dos seis rotulos cortam. O nome
+                      inteiro ja esta no `aria-label` para quem usa leitor de
+                      tela; o `title` e para quem usa o mouse. */}
+                  <span
+                    title={linha.label}
+                    className="text-muted-foreground block truncate text-xs"
+                  >
+                    {linha.label}
+                  </span>
+                  <span className="block text-sm font-medium tabular-nums">
+                    {linha.quantidade}
+                    {linha.valor > 0 && (
+                      <span className="text-muted-foreground ml-1.5 text-xs font-normal">
+                        {formatCompactBRL(linha.valor)}
+                      </span>
+                    )}
+                  </span>
+                </span>
+              </button>
+            </li>
           ))}
         </ul>
 
         {/* A frase que impede a coluna de valor de parecer defeito.
-            Medido: 119 de 132 negócios reais estão com valor zerado. Sem isto a
-            pessoa lê seis "R$ 0" e conclui que o sistema não está somando. */}
+            Medido: 119 de 132 negócios reais estão com valor zerado. */}
         {funil.abertosSemValor > 0 && (
-          <p className="text-muted-foreground mt-2 px-3 text-xs">
+          <p className="text-muted-foreground text-xs">
             {funil.abertosSemValor}{' '}
             {funil.abertosSemValor === 1
               ? 'negócio aberto está sem valor preenchido e não entra na soma.'
@@ -138,106 +251,56 @@ export function FunnelChart({
 }
 
 /**
- * `65,4%`, com VIRGULA.
+ * O número escrito acima da barra.
  *
- * `{linha.participacao}%` direto no JSX imprime o número do jeito do
- * JavaScript, com ponto decimal — e num produto brasileiro, ao lado de
- * `R$ 34.550`, isso põe as duas convenções decimais na mesma linha. O
- * dashboard já pagou exatamente esse defeito em 08/09, quando a Central
- * mostrava `R$ 2,39` e `5.26%` lado a lado.
- *
- * Inteiro sai sem casa: `8%`, não `8,0%`.
+ * É ele que faz a etapa de 2% continuar informando quando outra tem 83%. Zero
+ * não é escrito: uma etapa vazia com "0" flutuando sobre o eixo lê como rótulo
+ * órfão, e a ausência da barra já diz o que precisa.
  */
-function formatarParticipacao(n: number): string {
-  return `${Number.isInteger(n) ? n : n.toFixed(1).replace('.', ',')}%`
-}
-
-function LinhaDaEtapa({ linha, aoAbrir }: { linha: LinhaDoFunil; aoAbrir: () => void }) {
-  const clicavel = linha.quantidade > 0
-
-  const conteudo = (
-    <>
-      {/* No telefone o rótulo ocupa a LINHA inteira: com ele dividindo espaço
-          com o valor, "Contato Realizado" saía cortado em "Contato Realiza…",
-          e nome de etapa truncado deixa a pessoa sem saber que linha está
-          lendo. A partir de `sm` ele volta a ser a primeira coluna da tabela. */}
-      <span className="col-span-2 flex min-w-0 items-center gap-2.5 sm:col-span-1">
-        <span
-          aria-hidden
-          className="size-2.5 shrink-0 rounded-full"
-          style={{ backgroundColor: stageAccent[linha.stage].bar }}
-        />
-        <span className="truncate font-medium">{linha.label}</span>
-      </span>
-
-      <span className="tabular-nums sm:text-right">
-        <span className="text-muted-foreground mr-1 text-xs sm:hidden">Negócios</span>
-        {linha.quantidade}
-      </span>
-
-      {/* `formatBRL` e não compacto: aqui os valores são comparados entre si
-          linha a linha, e "R$ 8,4 mil" ao lado de "R$ 11,9 mil" esconde a
-          diferença que a pessoa quer ver. O compacto fica no resumo do topo,
-          onde o número é lido sozinho. */}
-      <span
-        className={cn(
-          'tabular-nums sm:text-right',
-          linha.valor === 0 && 'text-muted-foreground',
-        )}
-      >
-        <span className="text-muted-foreground mr-1 text-xs sm:hidden">Valor</span>
-        {formatBRL(linha.valor)}
-      </span>
-
-      {/* A barra atravessa as duas colunas no telefone, pelo mesmo motivo do
-          rótulo: espremida em meia largura ela vira um traço de 40px, e aí não
-          informa proporção nenhuma. */}
-      <span className="col-span-2 flex items-center gap-2 sm:col-span-1 sm:justify-end">
-        {/* A barra vem ANTES do número na ordem visual e DEPOIS na leitura:
-            ela é referência periférica, o número é o dado. */}
-        <span
-          aria-hidden
-          className="bg-muted relative h-1.5 w-full max-w-24 overflow-hidden rounded-full sm:w-24"
-        >
-          <span
-            className="bg-primary/70 group-hover/etapa:bg-primary absolute inset-y-0 left-0 rounded-full transition-[width,background-color] duration-200 motion-reduce:transition-none"
-            style={{ width: `${linha.larguraDaBarra}%` }}
-          />
-        </span>
-        <span className="text-muted-foreground w-11 shrink-0 text-right text-xs tabular-nums">
-          {formatarParticipacao(linha.participacao)}
-        </span>
-      </span>
-    </>
-  )
-
-  const classes =
-    'group/etapa grid grid-cols-2 items-center gap-x-4 gap-y-1 rounded-lg px-3 py-2.5 text-sm sm:grid-cols-[minmax(9rem,1.4fr)_5rem_7rem_1fr] sm:gap-4'
-
-  if (!clicavel) {
-    return (
-      <li>
-        {/* Etapa vazia não é link: mandar alguém para uma coluna sem nada
-            dentro é outro beco. Ela fica com opacidade menor para a diferença
-            ser perceptível antes do clique que não acontece. */}
-        <div className={cn(classes, 'text-muted-foreground opacity-70')}>{conteudo}</div>
-      </li>
-    )
-  }
+function NumeroNaBarra(props: {
+  x?: number
+  y?: number
+  width?: number
+  value?: number
+}) {
+  const { x = 0, y = 0, width = 0, value = 0 } = props
+  if (!value) return null
 
   return (
-    <li>
-      <button
-        type="button"
-        onClick={aoAbrir}
-        aria-label={`${linha.label}: ${linha.quantidade} ${linha.quantidade === 1 ? 'negócio' : 'negócios'}, ${formatBRL(linha.valor)}, ${formatarParticipacao(linha.participacao)} do funil. Abrir.`}
-        className={cn(
-          classes,
-          'hover:bg-muted/60 focus-visible:ring-ring/50 w-full cursor-pointer text-left transition-colors outline-none focus-visible:ring-3 motion-reduce:transition-none',
-        )}
-      >
-        {conteudo}
-      </button>
-    </li>
+    <text
+      x={x + width / 2}
+      y={y - 8}
+      textAnchor="middle"
+      className="fill-foreground text-sm font-semibold"
+      style={{ fontVariantNumeric: 'tabular-nums' }}
+    >
+      {value}
+    </text>
+  )
+}
+
+/** Quantidade, valor e participação, na ordem em que a pergunta é feita. */
+function DicaDaEtapa({
+  active,
+  payload,
+}: {
+  active?: boolean
+  payload?: { payload: LinhaDoFunil }[]
+}) {
+  if (!active || !payload?.length) return null
+  const linha = payload[0]!.payload
+
+  return (
+    <div className="bg-popover text-popover-foreground ring-foreground/10 rounded-lg px-3 py-2 text-xs shadow-sm ring-1">
+      <p className="font-medium">{linha.label}</p>
+      <p className="tabular-nums">
+        {linha.quantidade} {linha.quantidade === 1 ? 'negócio' : 'negócios'} ·{' '}
+        {formatBRL(linha.valor)}
+      </p>
+      <p className="text-muted-foreground tabular-nums">
+        {linha.participacao}% do funil
+        {linha.quantidade > 0 ? ' · clique para abrir' : ''}
+      </p>
+    </div>
   )
 }
