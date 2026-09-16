@@ -1,4 +1,4 @@
-import { FREE_WORKSPACE_LIMIT } from '@/lib/plans'
+import { FREE_WORKSPACE_LIMIT, PRO_WORKSPACE_LIMIT } from '@/lib/plans'
 
 /**
  * Quem pode criar uma segunda empresa, e o que dizer a quem não pode.
@@ -40,11 +40,49 @@ import { FREE_WORKSPACE_LIMIT } from '@/lib/plans'
  * de deixar criar. Incomoda, não custa formulário perdido — o oposto do
  * defeito que isto conserta. Fechar essa fresta exigiria uma consulta por
  * empresa a cada navegação, no caminho mais quente do produto.
+ *
+ * ## O teto do Pro faltava aqui, e era o MESMO defeito um andar acima
+ *
+ * Até 16/09 o caminho pago devolvia `{ pode: true }` incondicionalmente:
+ *
+ *     if (temAssinaturaPaga) return { pode: true, motivo: null }
+ *
+ * `quantidadeDeEmpresas` chegava na função e era ignorado. E havia um teste
+ * travando exatamente isso, com o nome dizendo o que fazia: *"assinatura paga
+ * libera, com quantas empresas já tiver"*.
+ *
+ * O banco nunca esteve de acordo. A migration 0078 aplica
+ * `teto := case when tem_plano_pro then 5 else 1 end` e levanta
+ * *"O plano Pro inclui 5 empresas"* na sexta. `lib/limits.ts` faz a mesma
+ * conta no servidor.
+ *
+ * Ou seja: quem tinha Pro e cinco empresas via "Nova empresa" disponível,
+ * abria o diálogo, digitava o nome, enviava — e o banco recusava. É
+ * **literalmente o defeito que este arquivo nasceu para consertar**, repetido
+ * um degrau acima: lá era o trial, aqui é o teto do pago.
+ *
+ * A frase devolvida é a MESMA de `lib/limits.ts` e da 0078, palavra por
+ * palavra. Duas mensagens diferentes para a mesma recusa fazem a pessoa achar
+ * que são dois problemas.
  */
 export type DecisaoDeNovaEmpresa = {
   pode: boolean
   /** Por que não pode, escrito para quem lê. `null` quando pode. */
   motivo: string | null
+  /**
+   * QUAL recusa é esta. `null` quando pode.
+   *
+   * Existe porque as duas recusas pedem telas opostas, e a tela não pode
+   * descobrir isso lendo a frase — comparar string para decidir navegação é
+   * como uma correção de copy vira um defeito de roteamento.
+   *
+   *     'exige_pro'      quem está no Free ou no trial. Oferecer o Pro é a
+   *                      resposta certa: existe uma compra que resolve
+   *     'limite_do_pro'  quem JÁ pagou e tem as 5. Mandar para a tela de
+   *                      cobrança oferece a ele o que ele já tem, e não há
+   *                      nada para comprar que resolva
+   */
+  tipo: 'exige_pro' | 'limite_do_pro' | null
 }
 
 export function decidirNovaEmpresa({
@@ -57,10 +95,19 @@ export function decidirNovaEmpresa({
   emTrial: boolean
   quantidadeDeEmpresas: number
 }): DecisaoDeNovaEmpresa {
-  if (temAssinaturaPaga) return { pode: true, motivo: null }
+  const teto = temAssinaturaPaga ? PRO_WORKSPACE_LIMIT : FREE_WORKSPACE_LIMIT
 
-  if (quantidadeDeEmpresas < FREE_WORKSPACE_LIMIT) {
-    return { pode: true, motivo: null }
+  if (quantidadeDeEmpresas < teto) {
+    return { pode: true, motivo: null, tipo: null }
+  }
+
+  if (temAssinaturaPaga) {
+    return {
+      pode: false,
+      // Palavra por palavra igual a `lib/limits.ts` e a 0078.
+      motivo: `O plano Pro inclui ${PRO_WORKSPACE_LIMIT} empresas. Fale com a gente para ter mais.`,
+      tipo: 'limite_do_pro',
+    }
   }
 
   // Duas frases diferentes de propósito. "Disponível no plano Pro" para quem
@@ -69,5 +116,6 @@ export function decidirNovaEmpresa({
   return {
     pode: false,
     motivo: emTrial ? 'Assine o Pro para ter mais de uma' : 'Disponível no plano Pro',
+    tipo: 'exige_pro',
   }
 }

@@ -317,6 +317,26 @@ export function WorkspaceSwitcher({
                 )}
                 Nova empresa
               </DropdownMenuItem>
+            ) : novaEmpresa.tipo === 'limite_do_pro' ? (
+              /* ## Quem ja pagou nao recebe oferta de pagar
+
+                 Ate 16/09 as duas recusas caiam no mesmo item: icone de raio e
+                 navegacao para `/settings/billing`. Para quem esta no Free
+                 isso e exatamente certo — existe uma compra que resolve.
+
+                 Para quem tem Pro e as cinco empresas, e duas coisas erradas
+                 ao mesmo tempo: oferece o Pro a quem ja tem, e leva para uma
+                 tela que nao muda nada. Aqui nao ha compra que resolva, entao
+                 o item nao navega: ele so informa, desabilitado. */
+              <DropdownMenuItem className="gap-2" disabled>
+                <Building2 aria-hidden className="size-4" />
+                <span className="flex flex-col">
+                  <span>Nova empresa</span>
+                  <span className="text-muted-foreground text-xs text-pretty">
+                    {novaEmpresa.motivo}
+                  </span>
+                </span>
+              </DropdownMenuItem>
             ) : (
               <DropdownMenuItem
                 className="gap-2"
