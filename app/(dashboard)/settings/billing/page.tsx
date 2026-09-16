@@ -10,6 +10,8 @@ import {
 } from '@/components/ui/card'
 import { PlanComparisonTable } from '@/components/settings/plan-comparison-table'
 import { SubscriptionCard } from '@/components/settings/subscription-card'
+import { MaxCard } from '@/components/settings/max-card'
+import { situacaoDoMax } from '@/lib/plans/max-queries'
 import { createClient } from '@/lib/supabase/server'
 import { getCurrentUserAndWorkspace } from '@/lib/supabase/workspace'
 import { getWorkspaceSettingsData } from '@/lib/workspace/queries'
@@ -41,12 +43,17 @@ export default async function BillingPage({
   // (`getEstadoAssinatura`), não só o plano: sem isto, quem tinha assinatura
   // criada com fatura em aberto via "Free" e um botão de assinar de novo,
   // sem saber que já existia uma cobrança esperando pagamento.
-  const [{ workspace, members }, { count: leadCount }, assinatura, historico] =
+  const [{ workspace, members }, { count: leadCount }, assinatura, historico, max] =
     await Promise.all([
       getWorkspaceSettingsData(workspaceId),
       supabase.from('leads').select('id', { count: 'exact', head: true }).eq('workspace_id', workspaceId),
       getEstadoAssinatura(workspaceId),
       getHistoricoDaAssinatura(workspaceId),
+      // Entra no MESMO `Promise.all`, e não numa quinta ida em série. O
+      // comentário acima já registra por que estas leituras foram juntadas: são
+      // independentes entre si, e encadeá-las paga uma viagem de rede a mais
+      // em toda abertura da tela de cobrança.
+      situacaoDoMax(workspaceId),
     ])
 
   const plan = workspace?.plan ?? 'free'
@@ -166,6 +173,15 @@ export default async function BillingPage({
         />
         </CardContent>
       </Card>
+
+      {/* Depois da comparacao, e nao como terceira coluna dela: o Max nao e uma
+          opcao paralela ao Pro, e TUDO do Pro mais uma coisa. Ver o cabecalho
+          de `max-card.tsx`. */}
+      <MaxCard
+        temMax={max.maxVigente}
+        isAdmin={isAdmin}
+        temCobrancaEmAberto={Boolean(assinatura) && assinatura?.status !== 'canceled'}
+      />
     </div>
   )
 }

@@ -26,9 +26,12 @@ import {
 } from '@/lib/validations/billing'
 import {
   CICLOS,
+  PLANO_NA_TELA,
+  PRECO_DO_PLANO,
   PRO_ANUAL_ECONOMIA,
   PRO_ANUAL_MESES_GRATIS,
-  PRO_PLAN_PRICE,
+  valorDoPlano,
+  type PlanoPago,
 } from '@/lib/plans'
 import { formatarCpfCnpj } from '@/lib/documento-br'
 import { identificacaoComercial } from '@/lib/legal'
@@ -45,8 +48,21 @@ import { cn } from '@/lib/utils'
 export function SubscribeButton({
   className,
   abrirDeInicio = false,
+  plano = 'pro',
 }: {
   className?: string
+  /**
+   * Qual plano este botão vende.
+   *
+   * Padrão `'pro'`, e isso é a mesma escolha de `checkoutSchema`: todo chamador
+   * que existia antes do Max continua vendendo Pro sem uma linha mudar.
+   *
+   * O componente é um só porque o FLUXO é um só — ciclo, CPF, a mesma cobrança
+   * com Pix, boleto e cartão. Duplicá-lo para trocar um preço criaria duas
+   * cópias da validação de documento e do tratamento de rejeição da Server
+   * Action, e a segunda é onde um defeito já corrigido volta.
+   */
+  plano?: PlanoPago
   /**
    * Já abre o formulário de CPF ao montar.
    *
@@ -106,10 +122,24 @@ export function SubscribeButton({
     formState: { errors },
   } = useForm<CheckoutInput, unknown, CheckoutValues>({
     resolver: zodResolver(checkoutSchema),
-    defaultValues: { cpfCnpj: '', ciclo: 'MONTHLY' },
+    defaultValues: { cpfCnpj: '', ciclo: 'MONTHLY', plano },
   })
 
   const ciclo = watch('ciclo')
+  const nomeDoPlano = PLANO_NA_TELA[plano]
+  const precos = PRECO_DO_PLANO[plano]
+
+  /**
+   * O plano vem de PROP e é escrito no formulário, não digitado.
+   *
+   * `defaultValues` sozinho resolveria a montagem, e não a troca: se um dia a
+   * mesma instância servir dois planos, o valor ficaria preso no primeiro. O
+   * efeito seria cobrar Pro de quem clicou em Max, em silêncio — e é a classe
+   * de defeito que `?assinar=1` já pagou, com inicializador que só roda uma vez.
+   */
+  React.useEffect(() => {
+    setValue('plano', plano)
+  }, [plano, setValue])
 
   /**
    * Cria a assinatura e abre o pagamento AQUI DENTRO.
@@ -167,7 +197,7 @@ export function SubscribeButton({
     <>
       <Button onClick={() => setDialogOpen(true)} className={cn('w-fit', className)}>
         <Zap className="size-4" />
-        Assinar Pro por R$ {PRO_PLAN_PRICE}/mês
+        Assinar {nomeDoPlano} por R$ {valorDoPlano(plano, 'MONTHLY')}/mês
       </Button>
 
       <Dialog
@@ -183,7 +213,7 @@ export function SubscribeButton({
           {passo === 'dados' ? (
             <>
               <DialogHeader>
-                <DialogTitle>Assinar plano Pro</DialogTitle>
+                <DialogTitle>Assinar plano {nomeDoPlano}</DialogTitle>
                 <DialogDescription>
                   Escolha como quer pagar e informe o CPF ou CNPJ. Na próxima tela você
                   escolhe entre Pix, boleto e cartão.
@@ -199,7 +229,12 @@ export function SubscribeButton({
                 <div className="grid grid-cols-2 gap-2">
                   {(['MONTHLY', 'YEARLY'] as const).map((opcao) => {
                     const escolhido = ciclo === opcao
+                    // `CICLOS` dá o vocabulário (mensal, anual, /mês); o VALOR
+                    // sai de `PRECO_DO_PLANO`, que conhece os dois planos. Ler
+                    // `CICLOS[opcao].valor` aqui mostraria o preço do Pro numa
+                    // tela que está vendendo Max.
                     const dados = CICLOS[opcao]
+                    const valor = precos[opcao]
                     return (
                       <button
                         key={opcao}
@@ -220,7 +255,7 @@ export function SubscribeButton({
                           {dados.periodo}
                         </span>
                         <span className="text-lg font-semibold tabular-nums">
-                          R$ {dados.valor}
+                          R$ {valor}
                           <span className="text-muted-foreground text-xs font-normal">
                             {dados.sufixo}
                           </span>
@@ -228,7 +263,9 @@ export function SubscribeButton({
                         {opcao === 'YEARLY' && (
                           <span className="text-xs text-emerald-600 dark:text-emerald-400">
                             {PRO_ANUAL_MESES_GRATIS} meses grátis · economize R${' '}
-                            {PRO_ANUAL_ECONOMIA}
+                            {plano === 'pro'
+                              ? PRO_ANUAL_ECONOMIA
+                              : precos.MONTHLY * PRO_ANUAL_MESES_GRATIS}
                           </span>
                         )}
                       </button>

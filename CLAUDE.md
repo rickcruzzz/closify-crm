@@ -300,8 +300,8 @@ uma rodada antiga —, e nada na resposta de uma consulta avisava disso. Só
 instalado na pasta pessoal do usuário, fora daqui. O que foi retirado está
 inteiro em `graphify-out/arquivo/`, nada foi descartado.
 
-<!-- contagem: grafo.nos_sem_arquivo=124 -->
-**124 nós não têm arquivo de origem, e nenhum deles é fantasma.** A grande
+<!-- contagem: grafo.nos_sem_arquivo=125 -->
+**125 nós não têm arquivo de origem, e nenhum deles é fantasma.** A grande
 maioria são objetos do banco que o extrator representa sem arquivo —
 `public.workspaces`, `auth.users`, `public.checar_teto_de_mensagens` —, mais
 alguns símbolos importados pelos geradores em Python (`FreeTypeFont`, `Image`,
@@ -369,6 +369,17 @@ Como ele andou, em ordem:
                   `whatsapp_instances`, ainda nao entrou nesta contagem: ela e
                   do commit seguinte, e quando entrar o no dela vira COM
                   arquivo, porque `create table` carrega a origem
+    125   16/09   MAIS UM, no commit seguinte, e a previsao acima se CONFIRMOU
+                  inteira. A 0090 faz `alter table public.mensagens` para
+                  abrir o `check` de `status`, e `mensagens` foi definida na
+                  0056 — referencia de `alter` nao carrega o arquivo.
+
+                  **E `whatsapp_instances`, que a MESMA migration CRIA, entrou
+                  COM arquivo e nao aparece aqui.** As duas coisas no mesmo
+                  commit, e so uma move este numero: e a prova de que a serie
+                  mede `alter`, nunca nascimento de tabela. Ler o +1 como
+                  "nasceu uma tabela" daria a resposta certa por acidente desta
+                  vez, e errada na proxima
 
 **A leitura errada aqui é fácil e cara:** ver o número subir logo depois de uma
 migration convida a concluir que uma tabela nasceu. Em nenhum dos três últimos
