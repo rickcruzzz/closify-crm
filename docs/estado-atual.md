@@ -4,10 +4,253 @@ Documento de continuidade. É lido no começo de toda sessão (referenciado no
 [CLAUDE.md](../CLAUDE.md)) para que uma conversa nova, ou outra conta, comece
 sabendo o que já foi feito, o que foi decidido e onde estão as armadilhas.
 
-**Atualizado em:** 12/09/2026, manha (a resposta do prospect entra no sistema E
-vira categoria comparavel, com o painel de inteligencia; o opt-out era pior do
-que a auditoria escreveu e agora vale por telefone; e a prova de ponta a ponta
-achou tres defeitos que leitura nenhuma acharia)
+**Atualizado em:** 16/09/2026 (o Resend PROIBE e-mail frio e a chave dele e a
+mesma da recuperacao de senha; o disparo mudou de posicionamento e de canal; e
+doze rodadas de produto foram ao ar, sendo que tres eram alarme vermelho
+aparecendo onde nada esta errado)
+
+## O Resend PROIBE o que a gente ia fazer com ele (16/09)
+
+Pedido do dono: montar o canal de cold email. Antes de conectar qualquer coisa,
+a politica de uso do Resend, palavra por palavra:
+
+> *"You are prohibited from sending unsolicited messages of any kind, including
+> **cold outreach**, purchased lists, or scraped contact data."*
+
+com desligamento da conta *"without warning"* acima de 0,08% de reclamacao.
+
+### E o disparador usava a chave do TRANSACIONAL
+
+`scripts/inteligencia/enviar-email.mjs:206` postava em `api.resend.com/emails`
+com `RESEND_API_KEY` — a **mesma** de `lib/resend/client.ts`. Uma so no
+`.env.local`, conferido.
+
+**A trava que existia resolvia o adversario errado.** `PROSPECCAO_EMAIL_DE`
+aborta se o remetente apontar para `velofunil.com.br`, e esta CERTA: Gmail e
+Outlook medem reputacao por dominio RAIZ. Mas ela defende contra os provedores
+de CAIXA. Nao defende contra o **ESP**, que mede por CONTA e e quem tem o
+interruptor da recuperacao de senha.
+
+Rodar o script nao arriscava a entrega do e-mail frio: arriscava o cliente nao
+conseguir mais entrar no produto, e o primeiro sintoma seria suporte.
+
+O script agora para com `exit 1` e diz para onde ir. **Nao foi apagado**: a
+rampa (5/10/15/20/25), o intervalo sorteado de 45-180s e a leitura de opt-out
+sao decisoes medidas, e viram referencia para configurar a Instantly.
+
+**Segunda conta no Resend nao resolve**, e foi o que eu disse ao dono antes de
+ler a politica: a atividade e proibida em qualquer conta.
+
+### O dominio, e o que ficou de pe
+
+`usevelofunil.app`, comprado pelo dono, com DNS na Vercel:
+
+    MX      smtp.google.com pref=1     no ar, propagado nos tres resolvedores
+    SPF     v=spf1 include:_spf.google.com ~all
+    DMARC   v=DMARC1; p=none
+    DKIM    FALTA. Nao bloqueia: a exigencia do Gmail e do Outlook abaixo de
+            5.000/dia e SPF *ou* DKIM, e o disparo e de 75/dia
+
+**Sobre o `.app`:** medido, ele e Tier 2 (78-84% de chegada na caixa) contra o
+`.com` como referencia, com 2 a 4 pontos de diferenca. Nao e a faixa queimada
+(`.xyz`, `.info`, 62-72%). Eu recomendei trocar por `velofunil.com`, que parecia
+livre, pelo argumento do LEITOR e nao do filtro: o ICP e dono de marcenaria e
+dedetizadora, e `.app` e desconhecido para ele. **O dono decidiu ficar com o
+`.app`**, e a mitigacao e a marca ir no NOME do remetente.
+
+Tres caixas criadas no Google Workspace. **O aquecimento NAO comecou**: a API da
+Instantly responde zero caixas conectadas, e ele e o unico relogio do plano que
+nao acelera (2 a 3 semanas).
+
+### A Instantly entrou, e a API v2 so aceita SMTP
+
+Descoberto tentando criar uma caixa e lendo o que ela recusa, campo a campo:
+`provider_code`, `imap_*` e `smtp_*` com SENHA. **Nao existe caminho de OAuth
+pela API** — OAuth e interativo por construcao. Conectar caixa e do dono, no
+painel.
+
+Tres variaveis nasceram no `.env.example` com o porque de cada uma. E uma
+diferenca que fica registrada: `INSTANTLY_API_KEY` vai para os DOIS ambientes,
+ao contrario do `META_ADS_TOKEN`, que fica local porque a Central devolve 404 em
+producao. Webhook recebe de fora, e `localhost` nao recebe nada.
+
+**O formato do payload de `reply_received` NAO e publicado, e nao se sabe se ela
+assina o webhook.** Conferido nas duas fontes. Escrever o parser em cima de
+palpite e o defeito de 25/08, em que a rota respondia `200` sem gravar nada. O
+webhook espera um evento real capturado.
+
+---
+
+## O disparo mudou de POSICIONAMENTO, e "zero respostas" era leitura errada (16/09)
+
+98 mensagens enviadas, zero contas criadas. O dono pediu auditoria da fala.
+
+### A mensagem pedia a coisa mais cara que existe
+
+Ela terminava em **link de cadastro**: pedia a um estranho que criasse conta,
+senha e empresa na primeira mensagem. Cold outreach nao converte pedindo
+conversao, converte pedindo **resposta**. A escada e resposta, conversa,
+cadastro, e ela pulava dois degraus.
+
+### E houve resposta. Nenhuma humana.
+
+O comentario da propria rota da Evolution ja registrava: **18 das 47 empresas
+responderam em 15 segundos de media, e nenhuma era pessoa** — eram chatbots de
+atendimento.
+
+"A copy nao engaja" e "o nicho e automatizado" pedem acoes OPOSTAS, e sem
+`ehRespostaAutomatica` as duas leituras sao indistinguiveis.
+
+### O posicionamento novo
+
+Nao se vende organizacao, que e melhoria e entra na fila do "depois eu vejo".
+Vende-se dinheiro que ja e dele:
+
+> **O cliente que sumiu nao desistiu de comprar. Ele comprou de quem voltou.**
+
+Ele nega "voce e desorganizado". Nao nega "seu concorrente voltou primeiro",
+porque esse publico pede tres orcamentos e ja ganhou assim.
+
+`montarAbordagem` foi reescrito: `ABERTURA`, `ESTUDO`, `CONTA` e `FECHO`, tres
+variantes cada, sorteadas pelo dominio. **Sairam preco, link, gancho por nicho,
+oferta e teste gratis.**
+
+Quatro decisoes que ficam:
+
+    a abertura NEGA         "nao vim pedir um": o dono le "orcamento" e acha
+                            que e cliente comprando, responde animado,
+                            descobre que e venda, e vai em "Bloquear e
+                            denunciar". No painel isso conta como REPLIED, ou
+                            seja a estatistica melhora enquanto o numero piora
+    o ESTUDO da autoridade  e reciprocidade, os dois gatilhos que faltavam. E
+                            e verdade: 27 nichos, 25 geradores, 61 concorrentes
+    a CONTA e dele          numero afirmado por desconhecido nao se acredita;
+                            numero proprio nao se discute
+    "Deu um numero alto?"   no lugar de "faz sentido pra voces?", que pede
+                            opiniao e tem o "nao" mais barato
+
+**A promessa mudou de FORMA, nao de existencia.** "Nao volto a procurar" viraria
+mentira com os toques 2 e 3 nascendo. "Me diz que eu paro" continua verdadeiro e
+e pegavel por `pediuParaSair`.
+
+**E as variantes precisaram ser NIVELADAS.** Tres variantes em quatro blocos dao
+81 combinacoes, e o primeiro sorteio real entregou a pior de quase todas. O que
+decide a qualidade das 740 e a PIOR das 81, nao a melhor.
+
+O documento inteiro, com os tres toques e a escada depois da resposta, esta em
+[docs/mercado/abordagem-nova-2026-09-15.md](mercado/abordagem-nova-2026-09-15.md).
+
+### Por que NAO ha teste A/B
+
+740 restantes dao 370 por variante, e isso so detecta diferenca de 4 pontos
+percentuais sobre base de 4%: so acusa se a variante DOBRAR. Detectar 50% de
+ganho pediria ~1.500 por variante.
+
+O que da para medir e **antes e depois**: 0 de 98 contra X de 740.
+
+### A Camada 1 da resposta automatica
+
+`lib/prospeccao/resposta-automatica.ts`, pura, 13 casos. **Nasce desligada** por
+`PROSPECCAO_RESPOSTA_AUTOMATICA`, e ja esta ligada no webhook.
+
+A ordem das portas e a regra: **opt-out responde MESMO desligado e MESMO no
+teto**, porque a primeira mensagem promete por escrito que nao voltamos a
+procurar, e confirmar e a unica parte dessa promessa que o outro lado ve. E
+**robo nao recebe confirmacao de saida nem pedindo**: menu de chatbot contem
+"digite 0 para sair".
+
+Fica FORA, e e pre-requisito para LIGAR: `enviadasHoje` esta fixo em 0 (o teto
+nao morde) e `humanoAssumiu` esta fixo em `false`.
+
+**A decisao de nao fazer prospeccao fisica** entrou na tabela de decisoes
+travadas, e o motivo registrado nao e conversao: canal que o dono detesta e
+canal que ele abandona.
+
+---
+
+## Doze rodadas de produto, e tres eram alarme onde nada esta errado (16/09)
+
+### O alarme vermelho voltou a significar uma coisa so
+
+`lib/kanban/urgencia.ts` nasceu porque "o board inteiro estava vermelho". Para a
+populacao que mais importa (96% dos negocios abertos nao tem proxima acao), ele
+voltou a estar, agora DUAS vezes por card.
+
+    negocio GANHO         `estadoDeMovimento` guarda `dias` mesmo em etapa
+                          fechada, de proposito, e o card repassava o numero
+                          CRU: um negocio fechado ha 400 dias exibia alerta
+                          vermelho pedindo o proximo passo. A linha "parado"
+                          ja se protegia; o botao nunca herdou a protecao. E
+                          as fechadas sao "as que mais acumulam linha"
+    a linha "parado"      chamava `corDaUrgencia[urgenciaSemProximaAcao(dias)]`
+                          e o ramo ambar era INALCANCAVEL: a linha so renderiza
+                          quando `dias >= 14`, que e a condicao de `critico`.
+                          Constante vestida de calculo
+    dois vermelhos        "parado ha 2 semanas" e "Sem proximo passo" dizem a
+                          mesma coisa por angulos diferentes, e pintavam juntos
+    piscada ambar         `diasParado` caia no padrao 0 antes da hidratacao
+
+### O painel de login parou de repetir o hero, em DUAS tentativas
+
+A primeira trocou o card do funil por `ProdutoPrint nome="hoje"`. A repeticao
+sumiu e **a legibilidade foi junto**: a coluna e ~640px numa tela de 1440 e o
+print mostra 1440px de interface. Da **0,44x**, contra a regua de 09/09 que
+reprova abaixo de **0,80x**.
+
+**A causa e a mesma dos dois lados: captura de tela inteira nao sobrevive a
+caixa estreita.** O erro nao foi trocar o funil; foi trocar HTML por bitmap. A
+solucao e `LembretePreviewCard`, desenhado em HTML.
+
+Pelo mesmo motivo, o print do painel de resultados **saiu da landing**.
+
+### O caminho do Pro, e o defeito que estava no dinheiro
+
+    "Conhecer o Pro"    levava a `?assinar=1`, que abre o formulario de CPF
+                        sozinho. Pedir documento antes de mostrar o que a
+                        pessoa compra e a ordem invertida. Virou `#comparar`
+    o QR nao abria      `setDialogOpen(false)` e `setPagamentoAberto(true)` no
+                        mesmo lote: um Dialog desmontava enquanto o outro
+                        montava, e a limpeza do primeiro rodava DEPOIS. E a
+                        ASSINATURA JA EXISTIA no Asaas nesse instante
+    dois botoes         de assinar na mesma pagina, e o de cima vinha ANTES da
+                        comparacao
+    `?assinar=1`        `useState(abrirDeInicio)` e inicializador: com
+                        `router.push` o parametro entrava e nada abria
+
+**Nao foi provado contra o Asaas real.** E o unico caminho do produto que mexe
+em dinheiro, e continua sem prova ponta a ponta.
+
+### O resto
+
+    aviso de limite     era `toast.error`, circulo vermelho com X. Bater no
+                        limite do Free nao e erro: e o produto vendendo. Virou
+                        coroa ambar, escolha do dono entre cinco desenhadas
+    e-mail no Free      mandava "Conecte o Gmail em Configuracoes", e no Free
+                        NAO HA o que conectar. Agora oferece o plano
+    barra lateral       recolhe, com estado em COOKIE. `localStorage` so existe
+                        depois da hidratacao: a barra pularia no primeiro
+                        quadro, em toda navegacao
+    travessao           91 ocorrencias fora, e um teste com tres controles
+                        impede a volta. A regra ja existia so para os
+                        criativos, desde 31/08
+    coluna do funil     passou a dizer que rola: a barra do Base UI so aparece
+                        no hover, e no TOQUE nunca
+
+    testes   1.753 -> 1.804
+
+### O tour guiado NAO foi construido, e o motivo importa
+
+O dono pediu spotlight/coachmark. **Ele ja existe** em
+`components/onboarding/tour.tsx`, com `marcarTour`, `tour_status` no banco e o
+texto dos cinco passos escrito. So que e um **Dialog central**, que e exatamente
+o formato que o pedido recusa.
+
+Ou seja: nao e construir do zero, e trocar o formato. E o problema dificil nao e
+o spotlight: os cinco passos falam de TELAS DIFERENTES, e no App Router cada
+troca de rota desmonta a arvore. A saida e os passos apontarem para a BARRA
+LATERAL, que existe em toda rota logada.
+
+---
 
 ## A resposta virou categoria, e a prova achou tres defeitos (12/09, FASE 2)
 
