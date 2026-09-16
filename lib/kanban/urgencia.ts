@@ -32,15 +32,36 @@ export function urgenciaDaProximaAcao(dueAt: string, agora: Date): Urgencia {
 /**
  * A urgência de um negócio SEM próxima ação.
  *
- * Nunca é `neutro`: negócio sem próximo passo é o que morre calado no funil, e
- * essa é a informação mais valiosa que o card pode dar. Mas também não nasce
- * `critico`: quem acabou de criar o negócio ainda não errou nada, e pintar de
- * vermelho no primeiro minuto é o que fazia o board inteiro gritar.
+ * Negócio sem próximo passo é o que morre calado no funil, e essa é a
+ * informação mais valiosa que o card pode dar. Mas ele não nasce `critico`:
+ * quem acabou de criar o negócio ainda não errou nada, e pintar de vermelho no
+ * primeiro minuto é o que fazia o board inteiro gritar.
  *
- * Vira `critico` quando o negócio também está parado, aí são dois sinais na
- * mesma direção: ninguém marcou o próximo passo E ninguém mexeu nele.
+ * ## `etapaFechada` e `sabemosAData` entraram em 16/09, e cada um fecha um
+ * ## defeito medido
+ *
+ * **Fechada devolve `neutro`.** `estadoDeMovimento` guarda `dias` mesmo em
+ * etapa fechada, de propósito, e o card repassava esse número cru: um negócio
+ * GANHO há 400 dias exibia alerta vermelho pedindo o próximo passo. A linha
+ * "parado há N" já se protegia; o botão não tinha herdado a proteção. E as
+ * fechadas são, pelo comentário de `parado.ts`, "as que mais acumulam linha" —
+ * ou seja, o alarme falso aparecia justamente onde há mais cards.
+ *
+ * **Sem a data, também `neutro`.** O relógio nasce `null` no servidor (o
+ * servidor roda em UTC e erraria a virada do dia em São Paulo), então o
+ * primeiro quadro não sabe quantos dias passaram. Assumir zero pintava todo
+ * card de âmbar e virava vermelho na hidratação: uma piscada de cor no board
+ * inteiro. `neutro` é o que "ainda não sei" de fato significa.
+ *
+ * O `critico` continua sendo o negócio parado E sem próximo passo: dois sinais
+ * na mesma direção, ninguém marcou o que fazer E ninguém mexeu nele.
  */
-export function urgenciaSemProximaAcao(diasParado: number): Urgencia {
+export function urgenciaSemProximaAcao(
+  diasParado: number,
+  opcoes: { etapaFechada?: boolean; sabemosAData?: boolean } = {},
+): Urgencia {
+  const { etapaFechada = false, sabemosAData = true } = opcoes
+  if (etapaFechada || !sabemosAData) return 'neutro'
   return diasParado >= DIAS_PARA_PARADO ? 'critico' : 'atencao'
 }
 

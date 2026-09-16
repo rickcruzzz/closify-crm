@@ -28,6 +28,8 @@ export function ProximaAcao({
   task,
   onAgendar,
   diasParado = 0,
+  etapaFechada = false,
+  sabemosAData = true,
 }: {
   task: ProximaAcaoRow | undefined
   /**
@@ -47,6 +49,28 @@ export function ProximaAcao({
    * passo são dois sinais na mesma direção.
    */
   diasParado?: number
+  /**
+   * Se o negócio está em `fechado_ganho` ou `fechado_perdido`.
+   *
+   * Entrou em 16/09 fechando um alarme FALSO: `estadoDeMovimento` guarda
+   * `dias` mesmo em etapa fechada, de propósito, e o card repassava o número
+   * cru. Um negócio GANHO há 400 dias exibia `CircleAlert` vermelho pedindo o
+   * próximo passo — e as fechadas são "as que mais acumulam linha".
+   *
+   * Quem decide é `etapaFechada` de `lib/deals/parado.ts`, nunca uma segunda
+   * lista de etapas escrita aqui: duas listas divergem, e a que diverge em
+   * silêncio é a copiada.
+   */
+  etapaFechada?: boolean
+  /**
+   * Se o relógio do cliente já chegou.
+   *
+   * `false` no primeiro quadro, porque o servidor roda em UTC e erraria a
+   * virada do dia em São Paulo. Sem isto, `diasParado` caía no padrão `0`,
+   * todo card sem tarefa nascia ÂMBAR e virava vermelho na hidratação: uma
+   * piscada de cor no board inteiro.
+   */
+  sabemosAData?: boolean
 }) {
   // O relógio nasce no cliente: o servidor da Vercel roda em UTC, e "atrasada"
   // calculada lá erraria por três horas todo fim de tarde.
@@ -89,7 +113,7 @@ export function ProximaAcao({
     }
   }, [onAgendar])
 
-  const urgencia = urgenciaSemProximaAcao(diasParado)
+  const urgencia = urgenciaSemProximaAcao(diasParado, { etapaFechada, sabemosAData })
 
   if (!task) {
     // Botão de verdade, com `stopPropagation` e Enter/Espaço tratados à mão:
@@ -111,7 +135,7 @@ export function ProximaAcao({
         // alerta em tudo não distingue nada. Agora é âmbar por padrão e só
         // vira vermelho quando o negócio TAMBÉM está parado.
         className={cn(
-          'focus-visible:ring-ring/50 -my-1 flex min-h-6 items-center gap-1 rounded-sm px-1 py-1 text-xs font-medium whitespace-nowrap outline-none hover:underline focus-visible:ring-3',
+          'focus-visible:ring-ring/50 -my-1 flex min-h-11 items-center gap-1 rounded-sm px-1 py-1 text-xs font-medium whitespace-nowrap outline-none hover:underline focus-visible:ring-3 md:min-h-6',
           corDaUrgencia[urgencia],
         )}
         ref={aviso}

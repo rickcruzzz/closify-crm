@@ -7,7 +7,6 @@ import { ProximaAcao } from '@/components/kanban/proxima-acao'
 import type { ProximaAcaoRow } from '@/lib/tasks/types'
 import { formatarValorDeNegocio } from '@/lib/deals/metrics'
 import { estadoDeMovimento, rotuloDeParado } from '@/lib/deals/parado'
-import { corDaUrgencia, urgenciaSemProximaAcao } from '@/lib/kanban/urgencia'
 import { Clock } from 'lucide-react'
 import { iniciais } from '@/lib/leads/iniciais'
 
@@ -54,7 +53,7 @@ export function DealCardOverlay({
       )}
     >
       <CardContent className="flex flex-col gap-1.5">
-        <span className="text-base font-semibold">
+        <span className="text-sm font-semibold tabular-nums">
           {formatarValorDeNegocio(deal.value)}
         </span>
         <div className="flex flex-col items-start">
@@ -75,7 +74,7 @@ export function DealCardOverlay({
           <span
             className={cn(
               'flex items-center gap-1 text-xs font-medium',
-              corDaUrgencia[urgenciaSemProximaAcao(movimento.dias)],
+              'text-destructive',
             )}
           >
             <Clock aria-hidden className="size-3 shrink-0" />

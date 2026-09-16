@@ -56,3 +56,36 @@ describe('urgenciaSemProximaAcao', () => {
     }
   })
 })
+
+describe('urgenciaSemProximaAcao: os dois casos que apagavam alarme falso', () => {
+  it('etapa FECHADA nunca pinta urgencia, nem com 400 dias', () => {
+    // `estadoDeMovimento` guarda `dias` mesmo em etapa fechada, de proposito, e
+    // o card repassava o numero cru: um negocio GANHO ha 400 dias exibia alerta
+    // vermelho pedindo o proximo passo. As fechadas sao "as que mais acumulam
+    // linha", entao o alarme falso aparecia onde ha mais cards.
+    expect(urgenciaSemProximaAcao(400, { etapaFechada: true })).toBe('neutro')
+    expect(urgenciaSemProximaAcao(0, { etapaFechada: true })).toBe('neutro')
+  })
+
+  it('sem a data ainda, e neutro e nao ambar', () => {
+    // O relogio nasce `null` no servidor. Assumir zero pintava todo card de
+    // ambar e virava vermelho na hidratacao: piscada de cor no board inteiro.
+    expect(urgenciaSemProximaAcao(0, { sabemosAData: false })).toBe('neutro')
+    expect(urgenciaSemProximaAcao(30, { sabemosAData: false })).toBe('neutro')
+  })
+
+  it('CONTROLE: etapa aberta com a data continua alertando', () => {
+    // Sem estes dois, "consertei o alarme" e "matei o alarme" seriam
+    // indistinguiveis.
+    expect(urgenciaSemProximaAcao(14)).toBe('critico')
+    expect(urgenciaSemProximaAcao(3)).toBe('atencao')
+    expect(urgenciaSemProximaAcao(14, { etapaFechada: false, sabemosAData: true })).toBe('critico')
+  })
+
+  it('o padrao sem opcoes nao mudou', () => {
+    // Todo chamador antigo continua valendo: as opcoes sao opcionais e os
+    // padroes reproduzem o comportamento anterior.
+    for (const dias of [0, 1, 7, 13]) expect(urgenciaSemProximaAcao(dias)).toBe('atencao')
+    for (const dias of [14, 60, 400]) expect(urgenciaSemProximaAcao(dias)).toBe('critico')
+  })
+})

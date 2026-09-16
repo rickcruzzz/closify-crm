@@ -11,8 +11,7 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { ProximaAcao } from '@/components/kanban/proxima-acao'
 import type { ProximaAcaoRow } from '@/lib/tasks/types'
 import { formatarValorDeNegocio } from '@/lib/deals/metrics'
-import { estadoDeMovimento, rotuloDeParado } from '@/lib/deals/parado'
-import { corDaUrgencia, urgenciaSemProximaAcao } from '@/lib/kanban/urgencia'
+import { estadoDeMovimento, etapaFechada, rotuloDeParado } from '@/lib/deals/parado'
 import { iniciais } from '@/lib/leads/iniciais'
 
 const stageAccent: Record<DealStage, string> = {
@@ -68,6 +67,12 @@ export const DealCard = React.memo(function DealCard({
     <div
       ref={setNodeRef}
       style={{ transform: CSS.Transform.toString(transform), transition }}
+      // O dnd-kit espalha `tabIndex={0}` e `role="button"` pelo `attributes`,
+      // ou seja este div É alvo de teclado — e era o ÚNICO foco da tela sem
+      // anel, caindo no contorno padrão do navegador enquanto todo o resto do
+      // repositório usa `focus-visible:ring-3`. Ele é a alça de arrasto, o
+      // alvo mais importante do board por teclado.
+      className="focus-visible:ring-ring/50 rounded-xl outline-none focus-visible:ring-3"
       onClick={() => onOpen(deal.id)}
       {...attributes}
       {...listeners}
@@ -85,7 +90,7 @@ export const DealCard = React.memo(function DealCard({
               para o número não virar a coisa mais pesada do card, mas quem
               precisa do centavo consegue ver passando o mouse. */}
           <span
-            className="text-base font-semibold"
+            className="text-sm font-semibold tabular-nums"
             title={deal.value.toLocaleString('pt-BR', {
               style: 'currency',
               currency: 'BRL',
@@ -99,7 +104,7 @@ export const DealCard = React.memo(function DealCard({
                 alvo focável, senão a ação fica inacessível por teclado. */}
             <button
               type="button"
-              className="focus-visible:ring-ring/50 -my-1 flex min-h-6 max-w-full items-center rounded-sm py-1 text-left text-sm outline-none hover:underline focus-visible:ring-3"
+              className="focus-visible:ring-ring/50 -my-1 flex min-h-11 max-w-full items-center truncate rounded-sm py-1 text-left text-sm font-medium outline-none md:min-h-6 hover:underline focus-visible:ring-3"
               onClick={(event) => {
                 event.stopPropagation()
                 onOpen(deal.id)
@@ -122,12 +127,12 @@ export const DealCard = React.memo(function DealCard({
           {/* Só aparece quando já preocupa. Negócio que anda normal não ganha
               texto nenhum: o card fala quando tem o que dizer. */}
           {movimento?.parado && (
-            <span
-              className={cn(
-                'flex items-center gap-1 text-xs font-medium',
-                corDaUrgencia[urgenciaSemProximaAcao(movimento.dias)],
-              )}
-            >
+            // `text-destructive` DIRETO, e não `corDaUrgencia[...]`: a linha
+            // só renderiza quando `movimento.parado`, que é `dias >= 14`, que
+            // é exatamente a condição de `critico`. O ramo âmbar era
+            // inalcançável — uma constante vestida de cálculo, que fazia quem
+            // lesse acreditar numa gradação que não existe.
+            <span className="text-destructive flex items-center gap-1 text-xs font-medium">
               <Clock aria-hidden className="size-3 shrink-0" />
               {rotuloDeParado(movimento.dias)}
             </span>
@@ -136,10 +141,24 @@ export const DealCard = React.memo(function DealCard({
             <Avatar size="sm">
               <AvatarFallback>{iniciais(deal.owner_name ?? '?')}</AvatarFallback>
             </Avatar>
+            {/* ## Um vermelho por card, não dois
+                
+                "parado há 2 semanas" e "Sem próximo passo" dizem a mesma coisa
+                por ângulos diferentes, e as duas pintavam de `destructive` ao
+                mesmo tempo: duas de quatro linhas do card em alarme. É o
+                próprio problema que `lib/kanban/urgencia.ts` nasceu para
+                resolver ("o board inteiro estava vermelho"), voltando por uma
+                porta nova.
+                
+                Quando a linha de parado já apareceu, ela carrega o alarme —
+                ela tem o NÚMERO. O botão passa a `etapaFechada` para cair em
+                `neutro` e sobrar como ação, sem repetir o grito. */}
             <ProximaAcao
               task={proximaAcao}
               onAgendar={() => onAgendar(deal.id)}
               diasParado={movimento?.dias ?? 0}
+              etapaFechada={etapaFechada(deal.stage) || Boolean(movimento?.parado)}
+              sabemosAData={movimento !== null}
             />
           </div>
         </CardContent>
