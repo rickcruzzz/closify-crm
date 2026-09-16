@@ -63,6 +63,15 @@ export type UpcomingDeal = {
   stage: DealStage
   value: number
   due_date: string | null
+  /**
+   * Quem e a PESSOA do outro lado.
+   *
+   * Entrou em 16/09 junto da coluna "Contato" da tabela, que substituiu
+   * "Responsavel". A empresa ja vinha; faltava o nome de quem atende — e e
+   * ele que a pessoa precisa para ligar. `lead_company` continua, como
+   * segunda linha da mesma celula.
+   */
+  lead_name: string | null
   lead_company: string | null
   owner_name: string | null
 }
@@ -289,14 +298,19 @@ export async function getUpcomingDeals(
 
   const [leadsResult, ownerNames] = await Promise.all([
     leadIds.length > 0
-      ? supabase.from('leads').select('id, company').in('id', leadIds)
+      ? supabase.from('leads').select('id, name, company').in('id', leadIds)
       : Promise.resolve({ data: [] }),
     ownerIds.length > 0
       ? getMemberNames(workspaceId, ownerIds)
       : Promise.resolve(new Map()),
   ])
 
-  const companyById = new Map((leadsResult.data ?? []).map((l) => [l.id, l.company]))
+  const leadById = new Map(
+    (leadsResult.data ?? []).map((l) => [
+      l.id,
+      l as { name: string; company: string | null },
+    ]),
+  )
 
   return {
     deals: data.map((deal) => ({
@@ -305,7 +319,8 @@ export async function getUpcomingDeals(
       stage: deal.stage,
       value: deal.value,
       due_date: deal.due_date,
-      lead_company: deal.lead_id ? (companyById.get(deal.lead_id) ?? null) : null,
+      lead_name: deal.lead_id ? (leadById.get(deal.lead_id)?.name ?? null) : null,
+      lead_company: deal.lead_id ? (leadById.get(deal.lead_id)?.company ?? null) : null,
       owner_name: deal.owner_id ? (ownerNames.get(deal.owner_id) ?? null) : null,
     })),
     abertosSemPrazo: 0,

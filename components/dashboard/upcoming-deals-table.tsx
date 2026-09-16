@@ -96,7 +96,9 @@ export function UpcomingDealsTable({
             vem pela frente pela data de nascimento seria o defeito. O que
             faltava era a tela dizer isso, em vez de parecer que ignora o
             filtro em silêncio. */}
-        <CardDescription>Sempre o que vem à frente, independente do período acima.</CardDescription>
+        <CardDescription>
+          Sempre o que vem à frente, independente do período acima.
+        </CardDescription>
       </CardHeader>
       <CardContent>
         {deals.length === 0 ? (
@@ -117,7 +119,10 @@ export function UpcomingDealsTable({
               }
               description="Marque uma data de fechamento em cada um e eles passam a aparecer aqui, do mais urgente para o menos."
             >
-              <Button variant="outline" render={<Link href={FUNIL}>Definir prazos</Link>} />
+              <Button
+                variant="outline"
+                render={<Link href={FUNIL}>Definir prazos</Link>}
+              />
             </EmptyState>
           ) : (
             <EmptyState
@@ -125,7 +130,10 @@ export function UpcomingDealsTable({
               title="Nenhum negócio em aberto"
               description="Assim que você criar negócios no funil, os prazos mais próximos aparecem aqui."
             >
-              <Button variant="outline" render={<Link href={FUNIL}>Ir para o funil</Link>} />
+              <Button
+                variant="outline"
+                render={<Link href={FUNIL}>Ir para o funil</Link>}
+              />
             </EmptyState>
           )
         ) : (
@@ -149,9 +157,11 @@ export function UpcomingDealsTable({
                       <div className="flex items-start justify-between gap-3">
                         <div className="flex min-w-0 flex-col">
                           <span className="truncate font-medium">{deal.title}</span>
-                          {deal.lead_company && (
+                          {(deal.lead_name || deal.lead_company) && (
                             <span className="text-muted-foreground truncate text-xs">
-                              {deal.lead_company}
+                              {[deal.lead_name, deal.lead_company]
+                                .filter(Boolean)
+                                .join(' · ')}
                             </span>
                           )}
                         </div>
@@ -165,9 +175,6 @@ export function UpcomingDealsTable({
                         <span className={cn('font-medium', due?.className)}>
                           {due?.label ?? 'Sem prazo'}
                         </span>
-                        <span className="text-muted-foreground">
-                          · {deal.owner_name ?? 'Sem responsável'}
-                        </span>
                       </div>
                     </Link>
                   </li>
@@ -179,11 +186,27 @@ export function UpcomingDealsTable({
               <Table>
                 <TableHeader>
                   <TableRow>
+                    {/* ## "Contato" no lugar de "Responsável", e a ordem mudou
+                        
+                        O responsável saiu porque ele repete: medido no board
+                        de prova, a mesma pessoa em cinco de cinco linhas. Numa
+                        empresa de uma pessoa — que é o caso do público deste
+                        produto — a coluna inteira é a mesma palavra cinco
+                        vezes, e coluna que não distingue linha nenhuma só
+                        consome largura.
+                        
+                        O que a pessoa precisa para AGIR sobre um prazo é quem
+                        está do outro lado. Esse nome já existia no banco e a
+                        tela nunca mostrou.
+                        
+                        E o VALOR foi para o fim, alinhado à direita: números
+                        comparados entre si se leem por coluna, e coluna de
+                        número no meio de texto obriga o olho a saltar. */}
                     <TableHead>Negócio</TableHead>
+                    <TableHead>Contato</TableHead>
                     <TableHead>Etapa</TableHead>
-                    <TableHead>Valor</TableHead>
-                    <TableHead>Responsável</TableHead>
                     <TableHead>Prazo</TableHead>
+                    <TableHead className="text-right">Valor</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -217,12 +240,24 @@ export function UpcomingDealsTable({
                           </div>
                         </TableCell>
                         <TableCell>
+                          {deal.lead_name ? (
+                            <span className="truncate">{deal.lead_name}</span>
+                          ) : (
+                            // Negócio sem contato vinculado existe: o funil
+                            // aceita negócio solto. Dizer "Sem contato" é
+                            // melhor que a célula vazia, que lê como falha de
+                            // carregamento.
+                            <span className="text-muted-foreground">Sem contato</span>
+                          )}
+                        </TableCell>
+                        <TableCell>
                           <Badge variant="secondary">{dealStageLabels[deal.stage]}</Badge>
                         </TableCell>
-                        <TableCell className="tabular-nums">{formatBRL(deal.value)}</TableCell>
-                        <TableCell>{deal.owner_name ?? 'Sem responsável'}</TableCell>
                         <TableCell className={cn('font-medium', due?.className)}>
                           {due?.label ?? 'Sem prazo'}
+                        </TableCell>
+                        <TableCell className="text-right font-medium tabular-nums">
+                          {formatBRL(deal.value)}
                         </TableCell>
                       </TableRow>
                     )
