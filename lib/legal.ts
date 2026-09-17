@@ -315,7 +315,17 @@ export const PRAZO_RESPOSTA_TITULAR_DIAS = 15
 // finalidade, e a secao 3 nomeava so a Meta enquanto duas ferramentas passam a
 // carregar pelo mesmo aceite. A data anda porque a lista mudou, nunca porque
 // alguem releu o texto.
-export const ATUALIZADO_EM = '4 de setembro de 2026'
+//
+// 17/09: a Z-API entrou, e ela e diferente de todas as anteriores. Os seis
+// suboperadores da lista recebem dado CADASTRAL — nome, e-mail, telefone, CPF.
+// Este recebe **conteudo de conversa de terceiro**: o que o cliente do nosso
+// cliente escreveu, incluindo audio e imagem.
+//
+// Entra ANTES de existir a primeira conexao, e nao depois. Declarar depois de
+// comecar a tratar e o erro que a Meta ja custou aqui, em 02 e 03/09: o
+// consentimento foi construido num dia e a politica so acompanhou no seguinte,
+// um dia inteiro afirmando o contrario do que o codigo fazia.
+export const ATUALIZADO_EM = '17 de setembro de 2026'
 
 export type Suboperador = {
   nome: string
@@ -382,6 +392,46 @@ export const SUBOPERADORES: Suboperador[] = [
       'Endereço IP, identificador do navegador e, no cadastro, e-mail, ' +
       'telefone, nome, cidade, estado e CEP, todos transmitidos com hash',
     paisDeProcessamento: 'Estados Unidos',
+  },
+  // ## A Z-API é a primeira que recebe CONTEÚDO, e não cadastro
+  //
+  // Os seis acima recebem dado cadastral: nome, e-mail, telefone, CPF, valor de
+  // transação. A Z-API recebe **o que foi dito** — o texto, o áudio e a imagem
+  // que o cliente do nosso cliente mandou pelo WhatsApp.
+  //
+  // A diferença importa para o titular. Um telefone num CRM é um dado de
+  // contato; a conversa em que ele negocia um orçamento é conteúdo de
+  // comunicação, e ele nunca concordou com nada conosco — ele escreveu para a
+  // marcenaria, não para o Velo Funil.
+  //
+  // ## E a cadeia tem TRÊS elos, não dois
+  //
+  // Para essas conversas, quem é controlador é **a empresa cliente**: ela
+  // decide conectar o número, ela fala com aquelas pessoas, ela responde por
+  // elas. Nós somos operador, como já somos para os leads (seção 2), e a Z-API
+  // é **suboperador** — subcontratada nossa para executar o transporte.
+  //
+  // ## O país não está publicado, e dizer "Brasil" seria afirmar o que não se
+  // conferiu
+  //
+  // A Z-API é empresa brasileira, com contrato em português e preço em real.
+  // Onde ficam os servidores **não é publicado**: os Termos de Uso citam
+  // subcontratação e mandam para um PDF de contrato, e a página pública não
+  // responde. Lido em 17/09.
+  //
+  // Escrever "Brasil" fecharia a tabela com um dado bonito e não conferido, que
+  // é exatamente a classe do CNPJ baixado exibido 17 dias como prova de
+  // confiança. A linha diz o que se sabe e admite o que não se sabe, e é o que
+  // o Art. 33 exige quando a transferência internacional é possível.
+  {
+    nome: 'Z-API',
+    finalidade:
+      'Conexão do WhatsApp da sua empresa ao CRM, no plano Max: entrega e ' +
+      'recebimento das mensagens trocadas com os seus clientes',
+    dados:
+      'Número de telefone e o conteúdo das mensagens, incluindo texto, áudio, ' +
+      'imagem e documento',
+    paisDeProcessamento: 'Brasil; a localização dos servidores não é publicada pelo fornecedor',
   },
   // ## Entrada SEPARADA do "Google" acima, e a separação é o que informa
   //

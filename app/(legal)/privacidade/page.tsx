@@ -87,6 +87,22 @@ export default function PrivacidadePage() {
           uma base legal própria para isso. Nós fornecemos a ferramenta e a segurança;
           não substituímos a sua obrigação como controlador dos dados dos seus clientes.
         </LegalP>
+        {/* ## A cadeia do WhatsApp tem TRES elos, e o terceiro precisa ser dito
+            Os outros suboperadores recebem dado cadastral. A Z-API recebe o
+            CONTEUDO da conversa — o que a pessoa escreveu para a empresa
+            cliente, incluindo audio e imagem —, e essa pessoa nunca concordou
+            com nada conosco: ela escreveu para a marcenaria, nao para o Velo
+            Funil.
+            Entra ANTES de existir a primeira conexao. Declarar depois de
+            comecar a tratar e o erro que a Meta ja custou aqui em 02 e 03/09. */}
+        <LegalP>
+          <strong className="text-foreground">Se você conectar o WhatsApp</strong> (plano
+          Max), as mensagens trocadas entre a sua empresa e os seus clientes passam a ser
+          guardadas aqui e transitam pela Z-API, nossa subcontratada para essa entrega.
+          Nessa troca você continua sendo o controlador: foi você quem decidiu conectar o
+          número e é você quem conversa com aquelas pessoas. Avise seus clientes de que o
+          atendimento é registrado, como você já faria com uma gravação de ligação.
+        </LegalP>
       </LegalSection>
 
       <LegalSection titulo="3. Quais dados tratamos">
@@ -232,8 +248,19 @@ export default function PrivacidadePage() {
           </li>
         </LegalList>
         <LegalP>
-          Ao excluir um workspace, os leads, negócios e atividades vinculados a ele são
-          eliminados junto, em definitivo.
+          Ao excluir um workspace, os leads, negócios, atividades e conversas de WhatsApp
+          vinculados a ele são eliminados junto, em definitivo.
+        </LegalP>
+        {/* ## Desconectar o numero NAO apaga a conversa, e isso precisa ser dito
+            E decisao de produto: uma caixa de entrada que some quando a
+            cobranca falha apaga da tela a negociacao em andamento. Mas o
+            titular tem direito de saber que o historico sobrevive ao fim da
+            conexao, senao a leitura natural e a oposta. */}
+        <LegalP>
+          Desconectar ou remover o WhatsApp <strong className="text-foreground">não</strong>{' '}
+          apaga o histórico de conversas já guardado: ele pertence à empresa e continua
+          disponível para ela. Para eliminá-lo é preciso excluir o workspace, ou pedir a
+          eliminação pelos canais da seção 7.
         </LegalP>
       </LegalSection>
 
