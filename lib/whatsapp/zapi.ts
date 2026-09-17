@@ -367,7 +367,7 @@ export async function qrCode(instancia: Instancia): Promise<string | null> {
   //     GET /qrcode/image    {"error":"NOT_FOUND"}  <- 200 com erro no CORPO
   //
   // Horas antes eu tinha trocado para a versao sem hifen, lendo a documentacao:
-  // o nome da pagina e `qr-code-image.md`, e eu conclui que o hifen era do
+  // o nome da pagina da Z-API e `qr-code-image`, e eu conclui que o hifen era do
   // documento e nao do endpoint. **Era do endpoint.**
   //
   // O que torna esse erro pior que um 404: a Z-API devolve **200 com erro no

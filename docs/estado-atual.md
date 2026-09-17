@@ -607,7 +607,9 @@ lendo a documentacao.
     POST /disconnect      405  Method Not Allowed      <- a minha "correcao"
 
 **O original estava certo nas duas.** Eu li o nome do arquivo de documentacao
-(`qr-code-image.md`) e conclui que o hifen era do documento; era do endpoint. E
+(`qr-code-image`, sem extensao aqui de proposito: o conferidor leria um `.md`
+como caminho deste repositorio) e conclui que o hifen era do documento. Era do
+endpoint. E
 li "verifique se voce enviou POST ou GET" como especificacao, quando e frase
 generica que aparece na secao de erro de TODA pagina.
 
