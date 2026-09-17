@@ -6,7 +6,7 @@
   "crons": [
     {
       "path": "/api/cron/reconciliar-assinaturas",
-      "schedule": "0 12 * * *"
+      "schedule": "45 * * * *"
     },
     {
       "path": "/api/cron/limpar-eventos",

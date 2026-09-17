@@ -474,6 +474,56 @@ O que muda daqui: quando o contrato nao estiver publicado, a funcao DIZ que nao
 esta, e quem chama trata o "nao confirmado" como estado — foi assim que
 `tentarConfigurarWebhooks` nasceu, e e assim que os tres deveriam ter nascido.
 
+### A reconciliacao virou DE HORA EM HORA, e o Max e o motivo (17/09)
+
+Pergunta do dono, conferindo o desenho: *"o valor de 250 ja paga a instancia e
+libera o acesso?"*. Sim, e a cadeia inteira e automatica nos dois sentidos:
+
+    1  cliente paga R$ 250         Asaas
+    2  webhook                     status=active + current_period_end
+    3  max_vigente                 TRUE
+    4  cliente clica Conectar      criarInstancia (Partner), trial de 48h
+    5  le o QR                     numero pareado
+    6  assinarInstancia            AQUI o R$ 250 paga a instancia
+    7  parou de pagar              7 dias depois a cobranca e CANCELADA
+
+**Mas a cadeia inteira pendura no passo 2, e o webhook do Asaas interrompeu
+QUATRO vezes em doze dias.** Quando ele para, o pagamento nao vira
+`max_vigente`, e o cliente paga e NAO consegue conectar.
+
+A rede existe — esta rota — e rodava **uma vez por dia**, as 12h UTC.
+
+    antes   0 12 * * *    pior caso 24 horas
+    agora   45 * * * *    pior caso 1 hora
+
+Com o Pro, um dia de atraso era chato. Com o Max e caro: a pessoa acabou de
+pagar R$ 250 exatamente para conectar o WhatsApp, e a primeira coisa que o
+produto faz e recusar o botao.
+
+**Os minutos sao deslocados**, e a 0063 ja tinha usado esse raciocinio:
+
+    :00   vigia
+    :15   classificar-respostas
+    :30   vigiar_o_vigia, por pg_cron
+    :45   reconciliar-assinaturas
+
+**E 24x mais execucoes nao custam 24x mais.** A varredura le so quem esta
+`trialing` ou `past_due`, conjunto pequeno por construcao; os dois e-mails sao
+guardados por `avisadoHoje`, que compara DIA de calendario em Sao Paulo; e a
+purga so escreve a marca quando ela nao existe.
+
+### A decisao que fica registrada: pagar nao conecta, pagar DESBLOQUEIA
+
+A instancia nasce no CLIQUE, nunca no webhook. Tres motivos:
+
+    trial de 48h     paga sexta e conecta segunda = instancia morta sem uso
+    quem nao pareia  parte assina e demora dias. Pagariamos por todos
+    o webhook CAI    gastar dinheiro dentro dele e por a fatura no
+                     componente mais instavel do sistema
+
+E quem paga a Z-API somos NOS; o cliente paga o Asaas. Os 7 dias de carencia da
+0091 sao o colchao entre os dois relogios, e custam ~R$ 23 por cliente que sai.
+
 ### O que continua FORA, e a ordem
 
     Fase 3   enviar MIDIA (a caixa ja RECEBE audio, imagem, video, documento e

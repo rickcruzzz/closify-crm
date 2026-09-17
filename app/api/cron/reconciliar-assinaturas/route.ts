@@ -97,6 +97,43 @@ function eventoParaStatus(status: StatusAssinatura): string {
   return 'PAYMENT_REFUNDED'
 }
 
+/**
+ * ## Roda DE HORA EM HORA desde 17/09, e não uma vez por dia
+ *
+ * Esta rota é a rede de segurança do pagamento: quando o webhook do Asaas não
+ * entrega, é ela que descobre que alguém pagou. E o webhook **interrompeu
+ * quatro vezes em doze dias** — está registrado, com data.
+ *
+ * Com o Pro, um dia de atraso era chato. Com o Max virou caro: a pessoa acabou
+ * de pagar R$ 250 exatamente para conectar o WhatsApp, e a primeira coisa que o
+ * produto faz é recusar o botão. Quem paga 12h01 esperava até o dia seguinte.
+ *
+ *     antes   0 12 * * *    pior caso 24 horas
+ *     agora   45 * * * *    pior caso 1 hora
+ *
+ * ## Os minutos são deslocados de propósito
+ *
+ *     :00   /api/cron/vigia
+ *     :15   /api/cron/classificar-respostas
+ *     :30   vigiar_o_vigia, por pg_cron
+ *     :45   esta rota
+ *
+ * Quatro rotinas na hora cheia disputariam a mesma janela de execução, e a que
+ * perdesse apareceria como "não rodou". A 0063 já usou esse raciocínio para
+ * pôr o vigia do vigia aos :30.
+ *
+ * ## Por que rodar 24x mais não custa 24x mais
+ *
+ * A varredura lê `subscriptions` com status `trialing` ou `past_due`, que é o
+ * conjunto de quem está no meio de um pagamento — pequeno por construção. Os
+ * dois avisos por e-mail são guardados por `avisadoHoje`, que compara DIA de
+ * calendário em São Paulo: eles continuam saindo no máximo uma vez ao dia, e a
+ * mudança de frequência não os multiplica.
+ *
+ * A purga de instância é idempotente pelo mesmo motivo: `decidirPurga` só
+ * escreve a marca quando ela não existe, e o resto das passagens devolve
+ * `nada`.
+ */
 export async function GET(request: Request) {
   if (!isValidCronSecret(request.headers.get('authorization'))) {
     return NextResponse.json({ error: 'unauthorized' }, { status: 401 })

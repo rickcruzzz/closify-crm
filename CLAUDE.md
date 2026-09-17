@@ -311,8 +311,8 @@ uma rodada antiga —, e nada na resposta de uma consulta avisava disso. Só
 instalado na pasta pessoal do usuário, fora daqui. O que foi retirado está
 inteiro em `graphify-out/arquivo/`, nada foi descartado.
 
-<!-- contagem: grafo.nos_sem_arquivo=126 -->
-**126 nós não têm arquivo de origem, e nenhum deles é fantasma.** A grande
+<!-- contagem: grafo.nos_sem_arquivo=127 -->
+**127 nós não têm arquivo de origem, e nenhum deles é fantasma.** A grande
 maioria são objetos do banco que o extrator representa sem arquivo —
 `public.workspaces`, `auth.users`, `public.checar_teto_de_mensagens` —, mais
 alguns símbolos importados pelos geradores em Python (`FreeTypeFont`, `Image`,
@@ -390,6 +390,14 @@ Como ele andou, em ordem:
                   119, 120, 122/123, 125 e agora. Nenhuma tabela nasceu em
                   nenhum deles: `banco.tabelas` e medido a parte, pelo
                   catalogo, e e ele que responde essa pergunta
+    127   17/09   SETIMA, e a primeira que NAO e de tabela: a 0092 faz
+                  `alter table public.notificacoes` para abrir o `check` de
+                  `tipo`, e `notificacoes` nasceu na 0066. Mesmo mecanismo,
+                  objeto diferente.
+
+                  **Nenhuma tabela nasceu, nas sete.** Quem responde essa
+                  pergunta e `banco.tabelas`, medido pelo catalogo, e ele
+                  continua em 24
     125   16/09   MAIS UM, no commit seguinte, e a previsao acima se CONFIRMOU
                   inteira. A 0090 faz `alter table public.mensagens` para
                   abrir o `check` de `status`, e `mensagens` foi definida na
