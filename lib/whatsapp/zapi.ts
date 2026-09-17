@@ -155,7 +155,22 @@ export async function criarInstancia(params: {
   const partner = process.env.ZAPI_PARTNER_TOKEN
   if (!partner) throw new Error('ZAPI_PARTNER_TOKEN não configurado.')
 
-  return chamar<InstanciaCriada>('/partner/instances', {
+  // ## `/instances`, e nao `/partner/instances`
+  //
+  // O que distingue a chamada de Partner da de instancia NAO e o caminho: e o
+  // cabecalho. `Authorization: Bearer <Partner-Token>` no lugar do
+  // `Client-Token`, e a documentacao diz em texto que o Client-Token nao vai
+  // nestas requisicoes.
+  //
+  // A prova esta no endpoint de LISTAR, que a documentacao publica: `GET
+  // /instances`. Mesmo recurso, verbo diferente. Eu tinha escrito
+  // `/partner/instances` por analogia com o nome da secao do documento.
+  //
+  // **Continua sendo o unico caminho deste arquivo sem confirmacao direta**, e
+  // uma chamada real com o Partner token fecha a duvida. Ele falha ALTO: sem
+  // instancia criada, `conectarWhatsapp` devolve erro com mensagem e nao grava
+  // nada. Nao ha risco de sucesso silencioso.
+  return chamar<InstanciaCriada>('/instances', {
     method: 'POST',
     headers: { Authorization: `Bearer ${partner}` },
     body: {
@@ -292,14 +307,34 @@ export async function cancelarAssinaturaDaInstancia(instancia: Instancia): Promi
  * objeto JSON dentro não mostra erro nenhum, só um quadrado quebrado.
  */
 export async function qrCode(instancia: Instancia): Promise<string | null> {
-  const r = await chamar<{ value?: string; connected?: boolean; challenge?: unknown }>(
-    comInstancia(instancia, 'qr-code/image'),
-    { headers: { 'Client-Token': clientToken() } },
-  )
+  // ## `qrcode/image`, sem hifen. Eu tinha escrito `qr-code/image`
+  //
+  // O hifen esta no NOME DA PAGINA da documentacao
+  // (`/en/instance/qr-code-image.md`), nao no caminho do endpoint. Escrevi o
+  // caminho a partir da URL do documento, que e uma fonte diferente — e errada.
+  //
+  // Achado relendo a documentacao inteira em 17/09, e e a PRIMEIRA chamada que
+  // o cliente dispara: com o hifen, todo "Conectar WhatsApp" responderia 404 e
+  // a tela diria "o provedor nao respondeu".
+  const r = await chamar<{
+    value?: string
+    // A documentacao descreve a resposta como "o QRCode em base64" e NAO
+    // publica o nome do campo. `value` e o padrao da casa (o `/disconnect` e os
+    // tres webhooks usam), e os outros dois nomes estao aqui porque um `<img>`
+    // com `undefined` dentro nao mostra erro nenhum: so um quadrado quebrado.
+    qrcode?: string
+    base64?: string
+    connected?: boolean
+    challenge?: unknown
+  }>(comInstancia(instancia, 'qrcode/image'), {
+    headers: { 'Client-Token': clientToken() },
+  })
 
   if (r.connected) return null
   if (r.challenge) return null
-  return typeof r.value === 'string' && r.value.length > 0 ? r.value : null
+
+  const imagem = r.value ?? r.qrcode ?? r.base64
+  return typeof imagem === 'string' && imagem.length > 0 ? imagem : null
 }
 
 export type StatusDaInstancia = {
@@ -429,7 +464,13 @@ export async function tentarConfigurarWebhooks(
  * Quem para a cobrança é `cancelarAssinaturaDaInstancia`, e ela é outro botão.
  */
 export async function desconectar(instancia: Instancia): Promise<void> {
+  // POST, e nao GET. O `chamar` cai em GET quando ninguem diz o metodo, e era
+  // isso que acontecia aqui: a Z-API responderia 405, e a tela diria "nao foi
+  // possivel desconectar" para uma chamada que nunca teve chance.
+  //
+  // Conferido na documentacao em 17/09, junto do caminho do QR.
   await chamar(comInstancia(instancia, 'disconnect'), {
+    method: 'POST',
     headers: { 'Client-Token': clientToken() },
   })
 }
