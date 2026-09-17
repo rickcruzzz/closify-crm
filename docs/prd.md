@@ -3,10 +3,10 @@
 > Iniciativa de conversão Free→Pro (copy da landing, limites, checkout) tem
 > PRD próprio: [prd-conversao-pro.md](prd-conversao-pro.md).
 >
-> <!-- contagem: banco.tabelas=23 banco.rpcs_do_projeto=36 banco.foreign_keys=37 banco.triggers=16 banco.enums=8 -->
-> **Estrutura reconferida contra o catálogo em 12/09/2026**: **23 tabelas**,
-> **36 RPCs do projeto**, **37 foreign keys**, **16 triggers**, **8 enums** —
-> mais **15 funções de trigger**, que não são RPC e por isso contam à parte.
+> <!-- contagem: banco.tabelas=24 banco.rpcs_do_projeto=38 banco.foreign_keys=38 banco.triggers=17 banco.enums=8 -->
+> **Estrutura reconferida contra o catálogo em 16/09/2026**: **24 tabelas**,
+> **38 RPCs do projeto**, **38 foreign keys**, **17 triggers**, **8 enums** —
+> mais **16 funções de trigger**, que não são RPC e por isso contam à parte.
 >
 > **Três números andaram em 12/09, e cada um por um motivo diferente:**
 >

@@ -212,7 +212,18 @@ escrita indevida**. Se passar, a regra não existe.
 ### Antes de encerrar qualquer mudança
 
 `npx tsc --noEmit`, `npm run lint`, `npm test` e **`npm run build:check`**, os
-quatro limpos. Testes cobrem lógica pura em `lib/**` (schemas, parsers,
+quatro limpos.
+
+E o conferidor de documentos **com a credencial**:
+
+```sh
+node --env-file=.env.local scripts/ci/conferir-documentos.mjs
+```
+
+**Sem `--env-file` ele pula as seis metricas de catalogo e sai com codigo 0.**
+Achado em 16/09: `banco.rpcs_do_projeto` estava documentado como 36 e o real era
+37 havia uma migration inteira, e o vigia passava limpo. E a mesma classe que ele
+existe para fechar, aparecendo por outra porta. Testes cobrem lógica pura em `lib/**` (schemas, parsers,
 formatadores); cada caso documenta o defeito que o motivou, e é assim que devem
 continuar.
 

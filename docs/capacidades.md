@@ -64,7 +64,7 @@ envelhecer em silêncio, que é o defeito de todo documento desse tipo.
 | Classificar acesso: pagante, trial, cortesia | `lib/dono/receita.ts` | 30/08 |
 | Preços e limites de plano, num lugar só | `lib/plans.ts` | 07/08 |
 | Plano **anual** (R$ 490, ciclo na assinatura) | `supabase/migrations/0070_ciclo_da_assinatura.sql` | 04/09 |
-| Plano **Max** (R$ 250, coluna `plano` e `max_vigente`) — ESCRITA, NÃO APLICADA | `supabase/migrations/0089_plano_max.sql` | 16/09 |
+| Plano **Max** (R$ 250, coluna `plano` e `max_vigente`) | `supabase/migrations/0089_plano_max.sql` | 16/09 |
 | Direito ao WhatsApp, a árvore de 4 bloqueios | `lib/plans/max.ts` | 16/09 |
 | Auditoria de arquitetura do Max e da Z-API | [docs/auditoria-whatsapp-max-2026-09-16.md](auditoria-whatsapp-max-2026-09-16.md) | 16/09 |
 
@@ -72,7 +72,7 @@ envelhecer em silêncio, que é o defeito de todo documento desse tipo.
 
 | capacidade | onde | desde |
 |---|---|---|
-| Conexão por empresa (tabela, RLS, trigger de plano) — ESCRITA, NÃO APLICADA | `supabase/migrations/0090_whatsapp_da_empresa.sql` | 16/09 |
+| Conexão por empresa (tabela, RLS, trigger de plano) | `supabase/migrations/0090_whatsapp_da_empresa.sql` | 16/09 |
 | Cliente HTTP da Z-API, o único que fala com ela | `lib/whatsapp/zapi.ts` | 16/09 |
 | Provider que implementa `Remetente`, com aquecimento | `lib/conversas/remetente-zapi.ts` | 16/09 |
 | Normalizar o payload da Z-API (recebida, status, desconexão) | `lib/whatsapp/payload.ts` | 16/09 |
@@ -259,10 +259,11 @@ envio de MIDIA pelo CRM                          so texto sai. A caixa RECEBE au
                                                  e guarda a referencia; mandar de
                                                  volta e Fase 3
 resposta sugerida por IA na conversa             Fase 3. O SDR existe e segue desligado
-conexao provada ponta a ponta                    0089 e 0090 NAO foram aplicadas, e
-                                                 nenhum numero foi pareado. Todo o
-                                                 caminho da Z-API esta escrito e NAO
-                                                 exercitado contra o provedor real
+conexao provada ponta a ponta                    as migrations ENTRARAM em 16/09, com
+                                                 24 provas contra producao. O que NAO
+                                                 foi exercitado e o provedor: nenhum
+                                                 numero foi pareado, e falta o
+                                                 ZAPI_PARTNER_TOKEN
 IA respondendo o prospect sozinha                o SDR existe e esta DESLIGADO. Nem a
                                                  captura nem a classificacao o ligam
 ligacao prospect -> cliente pagante              NAO existe. O painel PARA em

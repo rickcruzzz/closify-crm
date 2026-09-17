@@ -7,11 +7,42 @@ Migrations novas mudam este arquivo com o tempo; ao suspeitar de
 desatualização, reconsulte o catálogo em vez de confiar cegamente nele (mesma
 regra de `docs/estado-atual.md`).
 
-<!-- contagem: banco.tabelas=23 banco.rpcs_do_projeto=36 banco.foreign_keys=37 banco.triggers=16 banco.enums=8 -->
-**Estrutura reconferida em 12/09/2026.** Lida de `pg_catalog` e não do OpenAPI:
-**23 tabelas**, **36 RPCs do projeto**, **37 foreign keys**, **16 triggers**,
-**8 enums**, **41 check constraints** — mais **15 funções de trigger**, que não
-são RPC e por isso contam à parte.
+<!-- contagem: banco.tabelas=24 banco.rpcs_do_projeto=38 banco.foreign_keys=38 banco.triggers=17 banco.enums=8 -->
+**Estrutura reconferida em 16/09/2026.** Lida de `pg_catalog` e não do OpenAPI:
+**24 tabelas**, **38 RPCs do projeto**, **38 foreign keys**, **17 triggers**,
+**8 enums** — mais **16 funções de trigger**, que não são RPC e por isso contam
+à parte.
+
+## As 0089 e 0090 ENTRARAM, e o +2 de RPC não é uma só
+
+Aplicadas em 16/09 pela Management API, com 24 provas contra produção e tudo o
+que elas criaram desfeito por `rollback`.
+
+    tabelas       23 -> 24   `whatsapp_instances` (0090)
+    foreign keys  37 -> 38   `whatsapp_instances.workspace_id`
+    triggers      16 -> 17   `whatsapp_instances_exige_max` (0090)
+    fn de trigger 15 -> 16   `checar_max_para_conectar` (0090)
+    enums          8 ->  8   NENHUM. `workspace_plan` continua com dois
+                             valores, e é o ponto inteiro do desenho do Max
+    RPCs          36 -> 38   DUAS, e só UMA é destas migrations
+
+**A segunda RPC é `get_funnel_performance`, da 0088**, que subiu hoje de manhã.
+O carimbo dizia 36 desde antes dela e **ninguém foi avisado** — ver abaixo.
+
+### O conferidor passava limpo sobre os carimbos de banco
+
+`scripts/ci/conferir-documentos.mjs` sem `.env.local` **pula as seis métricas de
+catálogo e sai com código 0**. Ele as imprime como não conferidas, e a linha
+some no meio da saída.
+
+Achado em 16/09 ao aplicar a 0089: o número real era 37 e o documento dizia 36,
+por uma migration inteira. É exatamente a classe de defeito que este script
+existe para fechar — em 04/09 ele *"passava limpo sobre os arquivos que continham
+os erros"* —, aparecendo de novo por outra porta.
+
+**A regra que fica: `node --env-file=.env.local scripts/ci/conferir-documentos.mjs`.**
+Sem a credencial ele confere caminho e carimbo de repositório, e é cego para o
+banco.
 
 **As duas tabelas novas são da PROSPECÇÃO do dono, não do produto** — RLS
 ligada e **zero policy**, alcançáveis só por `service_role`, mesmo padrão de
@@ -79,21 +110,16 @@ sentido técnico do termo.
 não existe, removido em 22/08). Os dois números vêm sempre juntos: a contagem
 sozinha convida a inferir `0085`.
 
-**A 0089 e a 0090 estão escritas e NÃO foram aplicadas**, e é por isso que as
-cinco contagens de catálogo acima não se moveram: elas medem o banco de
-produção, não a pasta. Quando as duas subirem:
+**As duas ENTRARAM em 16/09**, e as contagens de catálogo acima se moveram
+junto — ver a seção logo abaixo do carimbo, no topo deste arquivo.
 
-    banco.tabelas          23 -> 24   `whatsapp_instances` (0090)
-    banco.rpcs_do_projeto  36 -> 37   `max_vigente` (0089)
-    banco.foreign_keys     37 -> 38   `whatsapp_instances.workspace_id`
-    banco.triggers         16 -> 17   `whatsapp_instances_exige_max` (0090)
-    banco.enums             8 ->  8   NENHUM. `workspace_plan` continua com
-                                      dois valores, e é o ponto inteiro do
-                                      desenho do Max (ver 0089)
+A previsão escrita aqui antes de aplicar acertou quatro das cinco linhas e
+errou uma: dizia `rpcs 36 -> 37`, e o real foi **38**. A diferença não era da
+0089 — era a 0088, aplicada horas antes, cujo carimbo ninguém atualizou porque
+o conferidor rodava sem credencial e é cego para o banco nesse modo.
 
-O carimbo separando as duas coisas é o ponto: arquivo escrito e objeto existindo
-são perguntas diferentes, e lê-las como uma só é o erro que a série de "nós sem
-arquivo de origem" do `CLAUDE.md` documenta em cinco datas.
+Arquivo escrito e objeto existindo continuam sendo perguntas diferentes, e é
+por isso que o carimbo as separa.
 
 **A 0072 acrescentou duas tabelas e a 0075 as REMOVEU**, em 08/09:
 `enriquecimento_de_lead` e `sinal_de_mercado` viveram dois dias e nunca

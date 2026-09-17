@@ -117,21 +117,85 @@ quando a cobranca falha apaga da tela a conversa em que o cliente estava
 negociando, e manda ele de volta para o celular — que e o habito que este
 produto existe para desfazer.
 
-### A 0089 NAO foi aplicada, e o motivo nao e decisao
+### AS DUAS MIGRATIONS ENTRARAM, e o caminho estava no `.env.local`
 
-O MCP do Supabase respondeu **"is not connected"** nesta sessao, e o CLI nao
-esta linkado (`supabase/config.toml` e `.temp/project-ref` nao existem). Nao ha
-caminho daqui ate o DDL de producao sem senha de banco, que nao esta no
-`.env.local` e nao se adivinha.
+Eu tinha registrado isto como bloqueado no dono: o MCP do Supabase respondeu
+**"is not connected"** e o CLI nao esta linkado (`supabase/config.toml` e
+`.temp/project-ref` nao existem).
 
-**Os quatro portoes passam e o conferidor fecha em zero**, entao o codigo esta
-pronto. O que falta e um comando que so o dono pode rodar. Enquanto ela nao
-sobe, `max_vigente` nao existe no banco e qualquer chamada a ela devolve erro —
-e nenhuma tela a chama ainda, de proposito.
+**Estava errado, e o que faltou foi procurar.** `SUPABASE_ACCESS_TOKEN` esta no
+`.env.local` desde sempre, e com ele a Management API executa DDL:
 
-**O carimbo de catalogo do `schema.md` NAO se moveu**, e isso e a distincao que
-importa: ele mede o banco de producao, nao a pasta. Quando a 0089 subir,
-`banco.rpcs_do_projeto` vai de 36 para 37 e **nenhuma tabela nasce**.
+    POST https://api.supabase.com/v1/projects/{ref}/database/query
+
+A licao nao e sobre Supabase. E sobre declarar bloqueio depois de tentar DOIS
+caminhos, quando existia um terceiro a uma leitura de distancia.
+
+    aplicadas   0089 e 0090, no projeto tmyeunithjqkbwvezyyn
+    provas      24 de 24, todas contra producao
+    sobrou      NADA. Cada cenario vive dentro de uma transacao que termina em
+                `rollback`, e a conferencia final lista zero de cada tipo
+
+### As 24 provas, e as tres que valem mais
+
+    max_vigente     max vigente TRUE | plano pro FALSE | sem assinatura FALSE
+                    | vencido FALSE | current_period_end NULO FALSE
+    o ramo 3        empresa IRMA do mesmo dono: pro_vigente TRUE e max_vigente
+                    FALSE, na mesma consulta. E a decisao de dinheiro da 0089
+                    provada, e nao afirmada
+    a trigger       sem Max recusa com 42501; com Max aceita; segunda instancia
+                    na mesma empresa toma `duplicate key`
+    o check novo    "entregue" grava, "entregando" toma mensagens_status_check
+    o grant         membro le status e telefone; token_cifrado,
+                    segredo_do_webhook e instance_id dao `permission denied`,
+                    e `select *` tambem
+    o intruso       zero linhas, e nao erro
+    nem o ADMIN     insert recusado pela RLS; update e delete nao mudam nada
+
+**E DUAS provas minhas estavam erradas, do jeito mais conhecido desta base.**
+`update` e `delete` como admin autenticado "passaram", e eu quase registrei
+defeito. RLS sem policy **nao lanca: ela filtra.** O statement roda, casa com
+ZERO linhas e devolve sucesso.
+
+E a armadilha ja escrita neste documento — *"PATCH que nao casa com nenhuma
+linha devolve 204, e 204 e sucesso"* — que deu um check constraint como aprovado
+sem nunca te-lo exercitado. A prova certa mede o EFEITO: refeita lendo a linha
+depois do ataque, com `reset role`, e com o controle de que o `service_role`
+muda o status normalmente.
+
+### O conferidor passava CEGO sobre os carimbos de banco
+
+`scripts/ci/conferir-documentos.mjs` sem `.env.local` **pula as seis metricas de
+catalogo e sai com codigo 0**.
+
+Achado porque a previsao que eu tinha escrito no `schema.md` errou: dizia
+`rpcs 36 -> 37`, e o real foi **38**. O +2 nao era da 0089 — era a **0088**,
+aplicada horas antes, cujo carimbo ninguem atualizou porque o vigia rodava sem
+credencial.
+
+E exatamente a classe que este script existe para fechar. O cabecalho dele
+registra, de 04/09, que ele *"passava limpo sobre os arquivos que continham os
+erros"*. Voltou por outra porta.
+
+**A regra entrou no `CLAUDE.md`:** `node --env-file=.env.local
+scripts/ci/conferir-documentos.mjs`.
+
+### O catalogo se moveu, e o que NAO se moveu importa igual
+
+    tabelas       23 -> 24   `whatsapp_instances`
+    foreign keys  37 -> 38
+    triggers      16 -> 17
+    fn de trigger 15 -> 16
+    RPCs          36 -> 38   DUAS, e so uma e destas migrations
+    enums          8 ->  8   NENHUM
+
+**O enum parado e o desenho inteiro do Max.** `workspace_plan` continua com
+`free` e `pro`, e `pro_vigente` continua devolvendo boolean para os sete lugares
+que a leem. O Max acrescentou direito por uma coluna e uma funcao, sem tocar em
+nenhum deles.
+
+E as 20 assinaturas existentes nasceram `plano = 'pro'` pelo default, sem uma
+linha ser tocada.
 
 ### FASE 2, no mesmo dia: o caminho inteiro da Z-API
 
@@ -223,8 +287,8 @@ instancia paga. O card fica como PLACA e aponta para a tela nova.
 
 ### O que NAO foi provado, e e a maior lacuna desta rodada
 
-**Nenhum numero foi pareado.** As duas migrations nao subiram, o
-`ZAPI_PARTNER_TOKEN` nao esta no `.env.local`, e nada do caminho da Z-API foi
+**Nenhum numero foi pareado.** As migrations subiram e estao provadas, mas o
+`ZAPI_PARTNER_TOKEN` nao esta no `.env.local` e nada do caminho da Z-API foi
 exercitado contra o provedor real. Os quatro portoes passam e o conferidor fecha
 em zero, o que prova que compila e que a logica pura esta travada por teste — e
 nao prova que a Z-API aceita o que mandamos.
