@@ -85,6 +85,7 @@ envelhecer em silêncio, que é o defeito de todo documento desse tipo.
 | Webhook de status de entrega | `app/api/webhooks/zapi/status/[segredo]/route.ts` | 16/09 |
 | Webhook de desconexão | `app/api/webhooks/zapi/disconnected/[segredo]/route.ts` | 16/09 |
 | A tela de conexão, com polling controlado | `components/settings/whatsapp-conexao.tsx` | 16/09 |
+| Aviso no sino quando o número cai | `supabase/migrations/0092_o_numero_caiu_e_alguem_precisa_saber.sql` | 17/09 |
 | Oferta do Max na tela de cobrança | `components/settings/max-card.tsx` | 16/09 |
 | Busca e filtros da caixa de entrada | `lib/conversas/filtrar.ts` | 16/09 |
 | Purga de instância órfã, para a cobrança parar | `lib/whatsapp/purga.ts` | 16/09 |

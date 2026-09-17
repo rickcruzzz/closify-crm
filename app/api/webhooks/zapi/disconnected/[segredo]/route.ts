@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 
 import { instanciaPorSegredo, registrarEstado } from '@/lib/whatsapp/instancia'
+import { registrarNotificacao } from '@/lib/notificacoes/registrar'
 import { instanciaDoPayload, normalizarDesconexaoZapi } from '@/lib/whatsapp/payload'
 
 /**
@@ -60,11 +61,38 @@ export async function POST(
   const evento = normalizarDesconexaoZapi(corpo)
   if (!evento) return ACEITO
 
-  await registrarEstado({
+  const { anterior } = await registrarEstado({
     workspaceId: instancia.workspaceId,
     estado: 'desconectado',
     erro: evento.erro,
   })
+
+  // ## O aviso só sai na TRANSIÇÃO, e nunca na repetição
+  //
+  // Uma conexão que oscila manda vários `DisconnectedCallback` seguidos.
+  // Avisar em todos encheria o sino com o mesmo fato, e é assim que uma fila
+  // deixa de ser olhada — em 20/08, 8 de 11 alertas da Central eram ruído e o
+  // efeito foi ninguém mais abrir. Junto com o item chato vai embora o alerta
+  // que importa.
+  //
+  // Mesma regra do vigia de 01/09: varre sempre, avisa quando MUDA.
+  if (anterior === 'conectado') {
+    await registrarNotificacao({
+      workspaceId: instancia.workspaceId,
+      tipo: 'whatsapp_caiu',
+      titulo: 'O WhatsApp da sua empresa desconectou',
+      // O motivo do provedor NÃO entra aqui: ele vem em inglês e descreve o
+      // estado interno dele ("Device has been disconnected"). A tela de
+      // Configurações já o mostra cru, para quem for reconectar. No sino, o que
+      // importa é a CONSEQUÊNCIA, e ela é a mesma seja qual for o motivo.
+      corpo: 'As mensagens dos seus clientes pararam de chegar aqui. Reconecte para voltar a receber.',
+      href: '/settings/whatsapp',
+      // Para a empresa inteira, e não só para quem conectou: quem trabalha as
+      // conversas precisa saber por que elas pararam, mesmo sem poder
+      // reconectar. A tela diz que só administrador reconecta.
+      userId: null,
+    })
+  }
 
   return ACEITO
 }

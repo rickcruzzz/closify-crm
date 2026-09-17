@@ -19,9 +19,6 @@
  * Dois candidatos óbvios foram recusados por essa regra, e vale registrar
  * quais para ninguém "completar a lista" depois:
  *
- *     whatsapp_caiu     a integracao esta em FASE_DO_WHATSAPP = 'migrando' e o
- *                       e-mail que avisava disso nao existe mais. Tipo sem
- *                       chamador e codigo morto com aparencia de recurso.
  *     limite_do_plano   `lib/leads/actions.ts` ja trata o 42501 e devolve a
  *                       mensagem NA TELA, no mesmo segundo. Repetir no sino
  *                       seria avisar sobre o que a pessoa acabou de fazer.
@@ -53,10 +50,38 @@ export const TIPOS_DE_NOTIFICACAO = [
    * O caso que o motivou esta na migration 0082.
    */
   'dica_de_uso',
+  /**
+   * O número de WhatsApp da empresa saiu do ar.
+   *
+   * ## Ele foi RECUSADO em 02/09, e a recusa está aqui embaixo na história
+   *
+   * O texto dizia: *"a integracao esta em FASE_DO_WHATSAPP = 'migrando' e o
+   * e-mail que avisava disso nao existe mais. Tipo sem chamador e codigo morto
+   * com aparencia de recurso."*
+   *
+   * **A razão caducou em 17/09.** A fase virou `'zapi'`, existe conexão por
+   * empresa, e o webhook de desconexão grava o estado. Ele entra no mesmo
+   * commit em que ganha chamador — que é a condição que a recusa impunha.
+   *
+   * ## E ele passa na regra dura do sino, por três motivos
+   *
+   *     e o recurso PAGO parando    a empresa paga R$ 250 pelo WhatsApp no
+   *                                 CRM, e enquanto o numero esta fora ela
+   *                                 paga por uma caixa que nao recebe
+   *     nao e algo que ela fez      conexao nao oficial CAI sozinha. Ninguem
+   *                                 apertou nada
+   *     o sintoma e SILENCIO        sem aviso, ela descobre pela ausencia, e
+   *                                 "ninguem me escreveu hoje" e o que ela vai
+   *                                 concluir
+   *
+   * O `check` do banco passou a aceitá-lo na migration 0092.
+   */
+  'whatsapp_caiu',
   // `sinal_de_mercado` esteve aqui entre 07 e 08/09, e saiu junto com a
   // pesquisa de mercado do lado do cliente (0075). Fica registrado para
   // ninguém recolocar sem o recurso: tipo sem chamador é código morto com
-  // aparência de recurso, a mesma razão que já recusou `whatsapp_caiu`.
+  // aparência de recurso — a mesma razão que recusou `whatsapp_caiu` até 17/09,
+  // quando ele finalmente ganhou um.
 ] as const
 
 export type TipoDeNotificacao = (typeof TIPOS_DE_NOTIFICACAO)[number]
@@ -86,6 +111,14 @@ export function gravidadeDe(tipo: TipoDeNotificacao): Gravidade {
     case 'pagamento_atrasado':
     case 'plano_vencendo':
     case 'trial_terminando':
+    // ## `alta` custa as DUAS coisas que a gravidade mede
+    //
+    // Número fora do ar tira o acesso ao recurso que foi pago **e** a venda que
+    // chega por mensagem enquanto ninguém vê. Num produto cuja promessa é não
+    // perder venda por esquecimento, canal de venda mudo é o pior estado que
+    // existe — e é o único item desta lista que a pessoa não causou nem pode
+    // prever.
+    case 'whatsapp_caiu':
       return 'alta'
     // `media`, e isso é decisão: gravidade aqui é sobre DINHEIRO que se perde
     // se ninguém agir. Tudo que a pessoa precisa saber mas que não trava nada

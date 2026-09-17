@@ -210,9 +210,26 @@ export async function registrarEstado(params: {
   estado: Exclude<EstadoDaConexao, 'desconhecido'>
   telefone?: string | null
   erro?: string | null
-}): Promise<void> {
+}): Promise<{ anterior: EstadoDaConexao | null }> {
   const admin = createAdminClient()
   const agora = new Date().toISOString()
+
+  // ## O estado ANTERIOR sai daqui, e é o que impede o sino de virar ruído
+  //
+  // Quem chama precisa saber se houve TRANSIÇÃO ou repetição. Uma conexão que
+  // oscila manda vários `DisconnectedCallback` seguidos, e avisar em todos
+  // encheria a fila com o mesmo fato — que é como uma fila deixa de ser olhada
+  // (8 de 11 alertas eram ruído em 20/08).
+  //
+  // É a mesma regra do vigia de 01/09: varre sempre, avisa quando MUDA.
+  //
+  // O `select` extra custa uma ida, e ela acontece em webhook de desconexão —
+  // raro por construção. Devolver do próprio `update` exigiria uma RPC.
+  const { data: antes } = await admin
+    .from('whatsapp_instances')
+    .select('status')
+    .eq('workspace_id', params.workspaceId)
+    .maybeSingle()
 
   const { error } = await admin
     .from('whatsapp_instances')
@@ -238,6 +255,8 @@ export async function registrarEstado(params: {
     // fila do Asaas.
     console.error('registrarEstado: falha ao gravar', error)
   }
+
+  return { anterior: (antes?.status as EstadoDaConexao | undefined) ?? null }
 }
 
 /** Remove a linha. Só o caminho de desconectar de vez chama. */

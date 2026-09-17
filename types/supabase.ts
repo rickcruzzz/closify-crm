@@ -75,6 +75,9 @@ export type TipoDeNotificacao =
   | 'trial_terminando'
   | 'convite_instagram'
   | 'dica_de_uso'
+  // Recusado em 02/09 por nao ter chamador, e admitido na 0092 quando ganhou
+  // um: o webhook de desconexao da Z-API.
+  | 'whatsapp_caiu'
 
 /**
  * Os campos de empresa acrescentados em 0030.

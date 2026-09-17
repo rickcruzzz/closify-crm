@@ -47,7 +47,25 @@ describe('quem pode virar notificação', () => {
     // lista voltou a ter um item só. Teste que trava lista quebra em toda
     // mudança; teste que trava regra sobrevive às duas direções.
     const altas = TIPOS_DE_NOTIFICACAO.filter((t) => gravidadeDe(t) === 'alta')
-    expect(altas).toEqual(['pagamento_atrasado', 'plano_vencendo', 'trial_terminando'])
+    expect(altas).toEqual([
+      'pagamento_atrasado',
+      'plano_vencendo',
+      'trial_terminando',
+      // ## O quarto, e o primeiro que não é sobre a COBRANÇA
+      //
+      // Os três acima custam ACESSO: o plano cai e o produto aperta. Este custa
+      // RECEITA direta — enquanto o número está fora, a mensagem do cliente não
+      // chega, e a venda que chegaria por ela se perde.
+      //
+      // A regra que o teste tranca é "vermelho só para o que custa dinheiro ou
+      // acesso", e ele custa dinheiro pelos dois lados: a empresa paga R$ 250
+      // por uma caixa de entrada que não recebe.
+      //
+      // E é o único da lista inteira que a pessoa **não causou e não pode
+      // prever**: conexão não oficial cai sozinha. Os outros três ela vê chegar
+      // no calendário.
+      'whatsapp_caiu',
+    ])
 
     const medias = TIPOS_DE_NOTIFICACAO.filter((t) => gravidadeDe(t) === 'media')
     expect(medias).toContain('pagamento_confirmado')
