@@ -311,8 +311,8 @@ uma rodada antiga —, e nada na resposta de uma consulta avisava disso. Só
 instalado na pasta pessoal do usuário, fora daqui. O que foi retirado está
 inteiro em `graphify-out/arquivo/`, nada foi descartado.
 
-<!-- contagem: grafo.nos_sem_arquivo=125 -->
-**125 nós não têm arquivo de origem, e nenhum deles é fantasma.** A grande
+<!-- contagem: grafo.nos_sem_arquivo=126 -->
+**126 nós não têm arquivo de origem, e nenhum deles é fantasma.** A grande
 maioria são objetos do banco que o extrator representa sem arquivo —
 `public.workspaces`, `auth.users`, `public.checar_teto_de_mensagens` —, mais
 alguns símbolos importados pelos geradores em Python (`FreeTypeFont`, `Image`,
@@ -380,6 +380,16 @@ Como ele andou, em ordem:
                   `whatsapp_instances`, ainda nao entrou nesta contagem: ela e
                   do commit seguinte, e quando entrar o no dela vira COM
                   arquivo, porque `create table` carrega a origem
+    126   17/09   MAIS UM, e a SEXTA vez do mesmo caso: a 0091 faz
+                  `alter table public.whatsapp_instances` para acrescentar
+                  `sem_max_desde`, e a tabela foi definida na 0090 — do commit
+                  anterior, com arquivo. O `alter` mintou um segundo no sem
+                  arquivo.
+
+                  **A serie inteira ate aqui e UM caso so**, repetido em 107,
+                  119, 120, 122/123, 125 e agora. Nenhuma tabela nasceu em
+                  nenhum deles: `banco.tabelas` e medido a parte, pelo
+                  catalogo, e e ele que responde essa pergunta
     125   16/09   MAIS UM, no commit seguinte, e a previsao acima se CONFIRMOU
                   inteira. A 0090 faz `alter table public.mensagens` para
                   abrir o `check` de `status`, e `mensagens` foi definida na
