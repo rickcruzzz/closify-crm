@@ -444,3 +444,35 @@ export function ehLimiteDePlano(mensagem: string | null | undefined): boolean {
  * o que faz uma renomeação interna vazar para o cliente.
  */
 export const PLANO_NA_TELA = { free: 'Free', pro: 'Pro', max: 'Max' } as const
+
+export type PlanoNaTela = (typeof PLANO_NA_TELA)[keyof typeof PLANO_NA_TELA]
+
+/**
+ * Como chamar o plano desta empresa na tela.
+ *
+ * ## O defeito que isto fecha, visto em produção em 17/09
+ *
+ * O seletor de empresa dizia **"Pro"** para quem paga R$ 250. Não era bug de
+ * lógica: `workspaces.plan` é um enum de dois valores, e vale `'pro'` para o
+ * Max **por construção** — é o desenho inteiro da 0089, que deixou
+ * `pro_vigente()` intacto para os sete lugares que a leem.
+ *
+ * O número estava certo e a palavra contava outra coisa. Mesma classe do
+ * *"até 2 colaboradores"* que prometia três pessoas, e do *"gratis ate 300
+ * contatos"* que a bio anunciou meses depois de o teto virar 50.
+ *
+ * ## `temMax` vem da FUNÇÃO, e é por isso que ele é parâmetro
+ *
+ * Não existe coluna que responda "é Max": `subscriptions.plano` diz o que foi
+ * contratado, e `max_vigente()` diz o que vale **agora**. A doutrina da 0027 é
+ * a mesma de sempre — regra de plano lê a função, nunca a coluna.
+ *
+ * Deixá-lo de fora e derivar aqui exigiria reimplementar vigência, graça e
+ * status em TypeScript, que é exatamente a segunda cópia que diverge.
+ */
+export function rotuloDoPlano(plan: string, temMax: boolean): PlanoNaTela {
+  // O Max vem primeiro: quem o tem também tem `plan === 'pro'`, e ler a coluna
+  // antes devolveria "Pro" para todo mundo que paga o plano mais caro.
+  if (temMax) return PLANO_NA_TELA.max
+  return plan === 'pro' ? PLANO_NA_TELA.pro : PLANO_NA_TELA.free
+}

@@ -381,6 +381,41 @@ coluna nova nasceria publica.
     provas   4 de 4 na 0091, depois das 24 das outras duas
     testes   1.935 -> 1.948
 
+### O seletor dizia "Pro" para quem paga R$ 250 (17/09)
+
+Achado abrindo a tela em PRODUCAO com conta descartavel Max, depois de promover.
+As duas telas novas renderizaram certo — e o canto superior esquerdo dizia
+**"PROVA MAX RENDER / Pro"**.
+
+**Nao era bug de logica.** `workspaces.plan` e enum de dois valores e vale
+`'pro'` para o Max POR CONSTRUCAO: e o desenho inteiro da 0089, que deixou
+`pro_vigente()` intacto para os sete lugares que a leem.
+
+O numero estava certo e a palavra contava outra coisa. Mesma classe do
+*"ate 2 colaboradores"* prometendo tres pessoas, e do *"gratis ate 300
+contatos"* que a bio anunciou meses depois de o teto virar 50.
+
+E o item da LISTA era pior: mostrava `workspace.plan` cru, "pro" e "free"
+maquiados por `capitalize`. O selo do topo virou `PLANO_NA_TELA` em 15/09 e este
+ficou para tras.
+
+### O conserto custou ZERO viagem de rede
+
+`situacaoDoPlanoDaEmpresaAtiva` ja roda no layout com DUAS RPCs num
+`Promise.all`. A terceira entrou na mesma onda: `max_vigente` custa zero ida a
+mais, e o comentario do proprio layout registra, em texto, por que um selo nao
+vale uma viagem de rede.
+
+`rotuloDoPlano(plan, temMax)` e pura, com seis casos. O Max vem PRIMEIRO na
+arvore: quem o tem tambem tem `plan === 'pro'`, e ler a coluna antes devolveria
+"Pro" para quem paga o plano mais caro.
+
+**E so a empresa ATIVA diz Max.** `max_vigente` e por empresa, e responder pelas
+cinco custaria cinco RPCs em toda navegacao. A ativa fica na tela o tempo todo;
+trocar para a irma recarrega e o selo do topo corrige.
+
+    testes   1.948 -> 1.954
+
 ### O que continua FORA, e a ordem
 
     Fase 3   enviar MIDIA (a caixa ja RECEBE audio, imagem, video, documento e

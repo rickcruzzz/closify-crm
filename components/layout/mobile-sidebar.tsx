@@ -17,6 +17,7 @@ export function MobileSidebar({
   tarefasDoDia,
   conversasEsperando,
   novaEmpresa,
+  temMax,
 }: {
   workspaces: WorkspaceSummary[]
   activeWorkspaceId: string
@@ -25,6 +26,7 @@ export function MobileSidebar({
   conversasEsperando: number
   /** Se pode criar outra empresa, decidido no servidor. */
   novaEmpresa: DecisaoDeNovaEmpresa
+  temMax: boolean
 }) {
   const [open, setOpen] = React.useState(false)
 
@@ -46,6 +48,7 @@ export function MobileSidebar({
           tarefasDoDia={tarefasDoDia}
           conversasEsperando={conversasEsperando}
           novaEmpresa={novaEmpresa}
+          temMax={temMax}
           onNavigate={() => setOpen(false)}
         />
       </SheetContent>

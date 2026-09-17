@@ -131,6 +131,9 @@ export default async function DashboardLayout({
           tarefasDoDia={tarefasDoDia}
           conversasEsperando={conversasEsperando}
           novaEmpresa={novaEmpresa}
+          // O selo do seletor. `situacaoDoPlano` ja veio na onda acima e
+          // consulta `max_vigente`, entao isto nao custa viagem de rede.
+          temMax={situacaoDoPlano.temMax}
         />
         {/* `overflow-x-hidden` explícito ao lado do `overflow-y-auto`: pela
             própria especificação CSS, `overflow-y` diferente de `visible`
@@ -147,6 +150,9 @@ export default async function DashboardLayout({
             conversasEsperando={conversasEsperando}
             avisosNaoLidos={avisosNaoLidos}
             novaEmpresa={novaEmpresa}
+          // O selo do seletor. `situacaoDoPlano` ja veio na onda acima e
+          // consulta `max_vigente`, entao isto nao custa viagem de rede.
+          temMax={situacaoDoPlano.temMax}
           />
           {/* Entre a barra e o conteúdo: não empurra a navegação para baixo e
               aparece antes de qualquer tela do produto. Só renderiza algo nos

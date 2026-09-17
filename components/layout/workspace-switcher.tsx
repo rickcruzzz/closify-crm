@@ -6,7 +6,7 @@ import { Building2, Check, ChevronsUpDown, Loader2, Plus, Zap } from 'lucide-rea
 import { toast } from 'sonner'
 
 import { avisarLimite } from '@/components/plano/avisar-limite'
-import { DESTINO_DO_UPGRADE, PLANO_NA_TELA } from '@/lib/plans'
+import { DESTINO_DO_UPGRADE, PLANO_NA_TELA, rotuloDoPlano } from '@/lib/plans'
 import { cn } from '@/lib/utils'
 
 import { criarEmpresa, trocarEmpresa } from '@/lib/workspace/actions'
@@ -42,10 +42,24 @@ export type WorkspaceSummary = {
 }
 
 export function WorkspaceSwitcher({
+  temMax = false,
   workspaces,
   activeId,
   novaEmpresa,
 }: {
+  /**
+   * A empresa ATIVA tem Max vigente.
+   *
+   * Vem do layout, que já roda `situacaoDoPlanoDaEmpresaAtiva()` numa onda de
+   * seis leituras paralelas — a terceira RPC entrou lá e custou zero viagem de
+   * rede a mais. Ler daqui exigiria uma ida por navegação, e o comentário do
+   * próprio layout registra por que isso não se faz por um selo.
+   *
+   * Só a ATIVA, e não as irmãs: `max_vigente` é por empresa, e responder pelas
+   * cinco custaria cinco RPCs em toda navegação. Ver o comentário no item da
+   * lista, abaixo.
+   */
+  temMax?: boolean
   workspaces: WorkspaceSummary[]
   /** Empresa em uso agora, resolvida no servidor a partir do cookie. */
   activeId: string
@@ -245,7 +259,16 @@ export function WorkspaceSwitcher({
                     : 'bg-muted text-muted-foreground',
                 )}
               >
-                {PLANO_NA_TELA[active.plan === 'pro' ? 'pro' : 'free']}
+                {/* ## Ele dizia "Pro" para quem paga R$ 250, ate 17/09
+
+                `workspaces.plan` e enum de dois valores e vale `'pro'` para o
+                Max POR CONSTRUCAO — e o desenho da 0089, que deixou
+                `pro_vigente()` intacto para os sete lugares que a leem.
+
+                O numero estava certo e a palavra contava outra coisa, que e a
+                mesma classe do "ate 2 colaboradores" prometendo tres pessoas.
+                `rotuloDoPlano` decide, com teste. */}
+                {rotuloDoPlano(active.plan, temMax)}
               </span>
             </div>
             <ChevronsUpDown className="text-muted-foreground size-4 shrink-0" />
@@ -281,8 +304,26 @@ export function WorkspaceSwitcher({
                   )}
                   <span className="truncate">{workspace.name}</span>
                 </span>
-                <Badge variant="secondary" className="shrink-0 capitalize">
-                  {workspace.plan}
+                {/* ## Aqui a coluna CRUA vazava, e o `capitalize` disfarcava
+
+                O selo do topo virou `PLANO_NA_TELA` em 15/09 e este ficou
+                mostrando `workspace.plan` direto — "pro" e "free" maquiados por
+                CSS. Funciona enquanto os valores do enum forem apresentaveis, e
+                para no dia em que um plano se chamar `pro_anual` no banco.
+
+                ## E ele NAO diz Max nas irmas, de proposito
+
+                `max_vigente` e por empresa, e responder pelas cinco custaria
+                cinco RPCs em TODA navegacao — o layout registra, em texto, por
+                que um selo nao vale uma ida de rede.
+
+                A empresa ATIVA, que e a que fica na tela o tempo todo, diz Max
+                certo. Trocar para a irma recarrega e o selo do topo corrige. */}
+                <Badge variant="secondary" className="shrink-0">
+                  {rotuloDoPlano(
+                    workspace.plan,
+                    temMax && workspace.id === activeId,
+                  )}
                 </Badge>
               </DropdownMenuItem>
             ))}

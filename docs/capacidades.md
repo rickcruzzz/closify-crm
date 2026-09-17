@@ -66,6 +66,7 @@ envelhecer em silêncio, que é o defeito de todo documento desse tipo.
 | Plano **anual** (R$ 490, ciclo na assinatura) | `supabase/migrations/0070_ciclo_da_assinatura.sql` | 04/09 |
 | Plano **Max** (R$ 250, coluna `plano` e `max_vigente`) | `supabase/migrations/0089_plano_max.sql` | 16/09 |
 | Direito ao WhatsApp, a árvore de 4 bloqueios | `lib/plans/max.ts` | 16/09 |
+| Como o plano se chama na tela (Free, Pro, Max) | `rotuloDoPlano` em `lib/plans.ts` | 17/09 |
 | Auditoria de arquitetura do Max e da Z-API | [docs/auditoria-whatsapp-max-2026-09-16.md](auditoria-whatsapp-max-2026-09-16.md) | 16/09 |
 
 ## WhatsApp no produto (plano Max, 16/09)

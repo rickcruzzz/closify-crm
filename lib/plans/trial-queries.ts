@@ -8,6 +8,19 @@ export type SituacaoDoPlano = {
   emTrial: boolean
   /** Assinatura paga valendo agora — o trial não conta aqui. */
   temAssinaturaPaga: boolean
+  /**
+   * Max vigente nesta empresa (migration 0089).
+   *
+   * Entra aqui e não numa leitura própria porque as três RPCs já vão no mesmo
+   * `Promise.all`: acrescentar a terceira custa ZERO viagem de rede a mais, e
+   * esta função roda em toda navegação do produto.
+   *
+   * Sem ele, o seletor de empresa mostrava **"Pro"** para quem paga R$ 250 —
+   * `workspaces.plan` é enum de dois valores e vale `'pro'` para o Max, por
+   * construção. O número estava certo e a palavra contava outra coisa, que é a
+   * mesma classe do *"até 2 colaboradores"* prometendo três pessoas.
+   */
+  temMax: boolean
 }
 
 /**
@@ -41,18 +54,23 @@ export type SituacaoDoPlano = {
  */
 export async function situacaoDoPlanoDaEmpresaAtiva(): Promise<SituacaoDoPlano> {
   const { workspaceId } = await getCurrentUserAndWorkspace()
-  if (!workspaceId) return { emTrial: false, temAssinaturaPaga: false }
+  if (!workspaceId) return { emTrial: false, temAssinaturaPaga: false, temMax: false }
 
   const supabase = await createClient()
 
-  const [{ data: emTrial }, { data: proVigente }] = await Promise.all([
+  const [{ data: emTrial }, { data: proVigente }, { data: maxVigente }] = await Promise.all([
     supabase.rpc('em_trial', { target_workspace_id: workspaceId }),
     supabase.rpc('pro_vigente', { target_workspace_id: workspaceId }),
+    supabase.rpc('max_vigente', { target_workspace_id: workspaceId }),
   ])
 
   return {
     emTrial: emTrial === true,
     // Pro valendo sem ser por trial só pode ser assinatura paga.
     temAssinaturaPaga: proVigente === true && emTrial !== true,
+    // `=== true` e não `Boolean(...)`: a RPC devolve `null` quando a leitura
+    // falha, e `null` precisa cair no lado NEGADO. Aqui o custo de errar é só
+    // um rótulo, mas a mesma função é lida por quem decide acesso.
+    temMax: maxVigente === true,
   }
 }

@@ -44,6 +44,7 @@ export function Sidebar({
   tarefasDoDia,
   conversasEsperando,
   novaEmpresa,
+  temMax,
   recolhidaInicial = false,
 }: {
   workspaces: WorkspaceSummary[]
@@ -59,6 +60,7 @@ export function Sidebar({
    * trial ela diz 'pro' enquanto o banco recusa a criacao.
    */
   novaEmpresa: DecisaoDeNovaEmpresa
+  temMax: boolean
   /** Lido do cookie no layout. Ver o comentário acima. */
   recolhidaInicial?: boolean
 }) {
@@ -93,6 +95,7 @@ export function Sidebar({
         tarefasDoDia={tarefasDoDia}
         conversasEsperando={conversasEsperando}
         novaEmpresa={novaEmpresa}
+          temMax={temMax}
         recolhida={recolhida}
       />
 

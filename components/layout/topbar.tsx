@@ -13,6 +13,7 @@ export function Topbar({
   conversasEsperando,
   avisosNaoLidos,
   novaEmpresa,
+  temMax,
 }: {
   workspaces: WorkspaceSummary[]
   activeWorkspaceId: string
@@ -23,6 +24,7 @@ export function Topbar({
   avisosNaoLidos: number
   /** Se pode criar outra empresa, decidido no servidor. */
   novaEmpresa: DecisaoDeNovaEmpresa
+  temMax: boolean
 }) {
   return (
     <header className="bg-background/80 sticky top-0 z-40 flex h-14 shrink-0 items-center gap-3 border-b px-4 backdrop-blur-sm">
@@ -33,6 +35,7 @@ export function Topbar({
         tarefasDoDia={tarefasDoDia}
         conversasEsperando={conversasEsperando}
         novaEmpresa={novaEmpresa}
+        temMax={temMax}
       />
       <div className="flex-1" />
       {/* Antes do tema e da conta, e não depois: a ordem da direita para a

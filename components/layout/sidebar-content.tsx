@@ -20,6 +20,7 @@ export function SidebarContent({
   tarefasDoDia,
   conversasEsperando,
   novaEmpresa,
+  temMax,
   onNavigate,
   recolhida = false,
 }: {
@@ -37,6 +38,8 @@ export function SidebarContent({
    * trial ela diz 'pro' enquanto o banco recusa a criacao.
    */
   novaEmpresa: DecisaoDeNovaEmpresa
+  /** A empresa ativa tem Max vigente. Vem do layout, sem ida de rede extra. */
+  temMax: boolean
   onNavigate?: () => void
   /**
    * Barra em modo icone, so no desktop.
@@ -76,6 +79,7 @@ export function SidebarContent({
           workspaces={workspaces}
           activeId={activeWorkspaceId}
           novaEmpresa={novaEmpresa}
+          temMax={temMax}
         />
       )}
       <SidebarNav
