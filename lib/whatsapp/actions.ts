@@ -1,6 +1,7 @@
 'use server'
 
 import { revalidatePath } from 'next/cache'
+import { z } from '@/lib/validations/zod'
 
 import { appUrl } from '@/lib/app-url'
 import { direitoAoWhatsapp } from '@/lib/plans/max'
@@ -19,6 +20,7 @@ import {
 import {
   apagarInstancia,
   criarInstancia,
+  tentarConfigurarWebhooks,
   desconectar as desconectarNoProvedor,
   qrCode,
   statusDaInstancia,
@@ -123,7 +125,7 @@ export async function conectarWhatsapp(): Promise<RespostaDaConexao> {
   }
 
   const segredo = segredoNovo()
-  const base = appUrl()
+  const urls = urlsDoWebhook(segredo)
 
   let criada: { id: string; token: string }
   try {
@@ -132,9 +134,9 @@ export async function conectarWhatsapp(): Promise<RespostaDaConexao> {
       // dezenas de linhas auditável. O id da empresa entra porque nome de
       // empresa se repete.
       nome: `velofunil-${sessao.workspaceId}`,
-      webhookRecebida: `${base}/api/webhooks/zapi/receive/${segredo}`,
-      webhookStatus: `${base}/api/webhooks/zapi/status/${segredo}`,
-      webhookDesconexao: `${base}/api/webhooks/zapi/disconnected/${segredo}`,
+      webhookRecebida: urls.recebida,
+      webhookStatus: urls.status,
+      webhookDesconexao: urls.desconexao,
     })
   } catch (erro) {
     console.error('conectarWhatsapp: provedor recusou', erro)
@@ -166,6 +168,150 @@ export async function conectarWhatsapp(): Promise<RespostaDaConexao> {
 
   revalidar()
   return lerQrCode()
+}
+
+/**
+ * As três URLs que a instância desta empresa precisa chamar.
+ *
+ * Uma função e não três strings soltas: elas nascem juntas, do mesmo segredo, e
+ * qualquer caminho que monte uma delas por conta própria vai errar o dia em que
+ * uma rota mudar de lugar.
+ */
+function urlsDoWebhook(segredo: string) {
+  const base = appUrl()
+  return {
+    base: `${base}/api/webhooks/zapi`,
+    recebida: `${base}/api/webhooks/zapi/receive/${segredo}`,
+    status: `${base}/api/webhooks/zapi/status/${segredo}`,
+    desconexao: `${base}/api/webhooks/zapi/disconnected/${segredo}`,
+  }
+}
+
+const adocaoSchema = z.object({
+  // A Z-API entrega os dois em hexadecimal maiúsculo. A validação é de FORMA e
+  // não de conteúdo: quem decide se as credenciais valem é o `GET /status`
+  // abaixo, contra o provedor. Recusar aqui só evita gastar uma chamada com
+  // texto que obviamente não é credencial.
+  instanceId: z
+    .string()
+    .trim()
+    .min(8, 'O ID da instância parece curto demais. Copie do painel da Z-API.')
+    .max(120, 'O ID da instância parece longo demais.'),
+  token: z
+    .string()
+    .trim()
+    .min(8, 'O token parece curto demais. Copie do painel da Z-API.')
+    .max(200, 'O token parece longo demais.'),
+})
+
+export type RespostaDaAdocao =
+  | {
+      ok: true
+      /** Os webhooks foram configurados por API, ou precisam ser colados à mão? */
+      webhooksConfirmados: boolean
+      urls: { recebida: string; status: string; desconexao: string }
+    }
+  | { ok: false; error: string }
+
+/**
+ * Adota uma instância criada À MÃO no painel da Z-API.
+ *
+ * ## Por que este caminho existe ao lado de `conectarWhatsapp`
+ *
+ * `conectarWhatsapp` cria a instância por API e é o caminho do cliente: ele
+ * nunca vê credencial nenhuma, que é o que a seção 10 do desenho exige.
+ *
+ * Ele depende do **Partner token**, e o programa Partner tem condição comercial
+ * a partir de dez instâncias. Contra a receita externa de hoje, que é zero, isso
+ * é um contrato antes do primeiro cliente.
+ *
+ * Esta função é a ponte: com o trial de dois dias da Z-API, que não pede cartão,
+ * dá para criar UMA instância no painel e exercitar o produto inteiro — parear
+ * um número, receber, responder, ver o status andar — sem Partner e sem gastar.
+ *
+ * **Não é o caminho do cliente**, e é por isso que ela pede as credenciais e o
+ * outro não. Ela existe para o dono provar o que foi construído.
+ *
+ * ## As credenciais são validadas CONTRA O PROVEDOR antes de gravar
+ *
+ * `GET /status` é contrato confirmado na documentação. Gravar primeiro e
+ * descobrir depois deixaria uma linha dizendo "conectado" para uma instância que
+ * não existe, e a trigger da 0090 teria sido gasta à toa.
+ *
+ * ## E os webhooks podem não ser confirmados, o que é dito em vez de escondido
+ *
+ * A documentação da Z-API publica o corpo e o método do endpoint de webhook, e
+ * **não publica o segmento de caminho**. Se a chamada falhar, esta função NÃO
+ * finge que deu certo: devolve `webhooksConfirmados: false` e as três URLs, para
+ * a pessoa colar no painel.
+ *
+ * Um webhook que não foi configurado de verdade produz o pior sintoma possível
+ * aqui: silêncio, com a tela dizendo conectado. É a lição do `sendButtons` de
+ * 12/09, que respondeu 201 quatro vezes sem renderizar nada.
+ */
+export async function adotarInstancia(valores: unknown): Promise<RespostaDaAdocao> {
+  const lido = adocaoSchema.safeParse(valores)
+  if (!lido.success) {
+    return { ok: false, error: lido.error.issues[0]?.message ?? 'Dados inválidos.' }
+  }
+
+  const sessao = await abrirSessao()
+  if ('error' in sessao) return { ok: false, error: sessao.error }
+  if (!sessao.ehAdmin) {
+    return { ok: false, error: 'Apenas administradores podem conectar o WhatsApp.' }
+  }
+
+  // O mesmo gate do caminho automático: a trigger da 0090 recusaria de qualquer
+  // jeito, e chegar até ela gastaria uma chamada ao provedor por uma escrita
+  // que já ia ser negada.
+  const assinatura = await situacaoDoMax(sessao.workspaceId)
+  const direito = direitoAoWhatsapp(assinatura, 'ausente')
+  if (!direito.pode && direito.tipo !== 'sem_conexao') {
+    return { ok: false, error: direito.motivo }
+  }
+
+  const jaExiste = await conexaoDaEmpresa(sessao.workspaceId)
+  if (jaExiste.estado !== 'ausente') {
+    return {
+      ok: false,
+      error: 'Esta empresa já tem uma conexão. Remova a atual antes de adotar outra.',
+    }
+  }
+
+  const instancia = { instanceId: lido.data.instanceId, token: lido.data.token }
+
+  try {
+    await statusDaInstancia(instancia)
+  } catch (erro) {
+    console.error('adotarInstancia: credenciais recusadas pelo provedor', erro)
+    return {
+      ok: false,
+      error: 'A Z-API não reconheceu este ID e token. Confira os dois no painel dela.',
+    }
+  }
+
+  const segredo = segredoNovo()
+  const urls = urlsDoWebhook(segredo)
+
+  const guardada = await guardarInstancia({
+    workspaceId: sessao.workspaceId,
+    instanceId: instancia.instanceId,
+    token: instancia.token,
+    segredo,
+  })
+  if (!guardada.ok) return { ok: false, error: guardada.motivo }
+
+  // Depois de gravar, e não antes: aqui a instância NÃO foi criada por nós, e
+  // falhar a configuração não deixa nada órfão faturando. O risco que sobra é o
+  // oposto — webhook não apontado —, e ele é devolvido para a tela dizer.
+  const webhooks = await tentarConfigurarWebhooks(instancia, urls.base)
+
+  revalidar()
+  return {
+    ok: true,
+    webhooksConfirmados: webhooks.confirmado,
+    urls: { recebida: urls.recebida, status: urls.status, desconexao: urls.desconexao },
+  }
 }
 
 /**

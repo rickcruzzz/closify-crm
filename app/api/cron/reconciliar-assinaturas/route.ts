@@ -3,6 +3,8 @@ import { timingSafeEqual } from 'node:crypto'
 import { NextResponse } from 'next/server'
 
 import { createAdminClient } from '@/lib/supabase/admin'
+import { rodarPurgaDeInstancias } from '@/lib/whatsapp/purga-queries'
+import { mereceAviso } from '@/lib/whatsapp/purga'
 import {
   aplicarEventoAsaas,
   buscarAssinante,
@@ -168,14 +170,38 @@ export async function GET(request: Request) {
     }
   }
 
-  // As duas varreduras em paralelo: são independentes, uma olha `subscriptions`
-  // e a outra `workspaces`, e serializá-las só somaria latência.
-  const [avisos, avisosDeTrial] = await Promise.all([
+  // As três varreduras em paralelo: são independentes, olham tabelas
+  // diferentes, e serializá-las só somaria latência.
+  //
+  // ## Por que a purga de instância mora AQUI, e não num cron próprio
+  //
+  // Esta rota já é a que reconcilia o estado do produto com o que o gateway diz
+  // sobre o dinheiro, e já roda uma vez por dia lendo `subscriptions`. A purga
+  // responde a mesma pergunta por outro ângulo: *o que o produto ainda paga por
+  // quem parou de pagar?*
+  //
+  // Um cron próprio seria mais uma entrada que pode falhar em silêncio, e o
+  // vigia de 01/09 já registra o custo disso: silêncio de rotina que ninguém
+  // olha é indistinguível de rotina que morreu.
+  const [avisos, avisosDeTrial, purgaDeInstancias] = await Promise.all([
     avisarQuemEstaPertoDeVencer(supabase),
     avisarQuemEstaSaindoDoTrial(supabase),
+    rodarPurgaDeInstancias(),
   ])
 
-  return NextResponse.json({ ...resumo, avisos, avisosDeTrial })
+  // ## O que a purga fez sai no LOG quando ela mexe em dinheiro
+  //
+  // `mereceAviso` é a regra do vigia de 01/09 aplicada aqui: marcar e limpar
+  // são rotina (acontecem no dia seguinte a todo atraso de pagamento) e não
+  // valem uma linha; apagar e falhar valem.
+  //
+  // Falha é o caso mais caro dos dois: a instância que o provedor recusou
+  // apagar continua na fatura do mês seguinte, e continua até alguém agir.
+  if (mereceAviso(purgaDeInstancias)) {
+    console.warn('Purga de instancias de WhatsApp', purgaDeInstancias)
+  }
+
+  return NextResponse.json({ ...resumo, avisos, avisosDeTrial, purgaDeInstancias })
 }
 
 /**

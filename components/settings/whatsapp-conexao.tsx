@@ -16,11 +16,14 @@ import {
   CardTitle,
 } from '@/components/ui/card'
 import {
+  adotarInstancia,
   conectarWhatsapp,
   desconectarWhatsapp,
   lerQrCode,
   removerWhatsapp,
 } from '@/lib/whatsapp/actions'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 import type { EstadoDaConexao, MotivoDoBloqueio } from '@/lib/plans/max'
 import { MAX_PLAN_PRICE, PLANO_NA_TELA } from '@/lib/plans'
 
@@ -73,6 +76,7 @@ export function WhatsappConexao({
   const [buscando, setBuscando] = React.useState(false)
   const [tentativas, setTentativas] = React.useState(0)
   const [expirou, setExpirou] = React.useState(false)
+  const [urlsParaColar, setUrlsParaColar] = React.useState<string[] | null>(null)
 
   const pararBusca = React.useCallback(() => {
     setBuscando(false)
@@ -315,8 +319,130 @@ export function WhatsappConexao({
             protege o WhatsApp da sua empresa de ser bloqueado.
           </p>
         ) : null}
+
+        {urlsParaColar ? (
+          <div className="border-border/60 flex flex-col gap-2 rounded-lg border p-3">
+            <span className="text-sm font-medium">Falta apontar os webhooks</span>
+            {/* A configuração automática NÃO foi confirmada, e dizer isso é o
+                ponto. Webhook que não aponta produz o pior sintoma daqui:
+                silêncio, com a tela dizendo conectado. É a lição do 201 do
+                `sendButtons`, que aceitou quatro vezes sem entregar nada. */}
+            <p className="text-muted-foreground text-xs leading-relaxed">
+              Cole estas três URLs nos webhooks da instância, no painel da Z-API. Sem
+              elas a conexão fica de pé e nenhuma mensagem chega aqui.
+            </p>
+            {urlsParaColar.map((u) => (
+              <code
+                key={u}
+                className="bg-muted overflow-x-auto rounded px-2 py-1 text-[11px] break-all"
+              >
+                {u}
+              </code>
+            ))}
+          </div>
+        ) : null}
+
+        {/* ## O caminho manual, e ele NÃO é o caminho do cliente
+            `conectarWhatsapp` cria a instância por API e o cliente nunca vê
+            credencial. Ele depende do Partner token, cuja condição comercial
+            começa em dez instâncias. Este bloco existe para o DONO provar o
+            produto com o trial de dois dias, que não pede cartão. */}
+        {ehAdmin && estado === 'ausente' && temMax ? (
+          <details className="border-border/60 rounded-lg border p-3">
+            <summary className="cursor-pointer text-xs font-medium">
+              Já tenho uma instância na Z-API
+            </summary>
+            <FormularioDeAdocao
+              onAdotado={(urls, confirmados) => {
+                setUrlsParaColar(confirmados ? null : urls)
+                router.refresh()
+              }}
+            />
+          </details>
+        ) : null}
       </CardContent>
     </Card>
+  )
+}
+
+/**
+ * Adotar uma instância criada à mão no painel.
+ *
+ * As credenciais vão direto para a Server Action e **não ficam no estado depois
+ * do envio**: elas são segredo de infraestrutura, e deixá-las num `useState`
+ * montado as põe no heap do navegador e em qualquer extensão que leia o React
+ * DevTools. O campo é limpo no sucesso.
+ */
+function FormularioDeAdocao({
+  onAdotado,
+}: {
+  onAdotado: (urls: string[], confirmados: boolean) => void
+}) {
+  const [instanceId, setInstanceId] = React.useState('')
+  const [token, setToken] = React.useState('')
+  const [enviando, setEnviando] = React.useState(false)
+
+  async function enviar() {
+    setEnviando(true)
+    const r = await adotarInstancia({ instanceId, token })
+    setEnviando(false)
+
+    if (!r.ok) {
+      toast.error(r.error)
+      return
+    }
+
+    setInstanceId('')
+    setToken('')
+    toast.success(
+      r.webhooksConfirmados
+        ? 'Instância adotada. Gere o QR Code para parear o número.'
+        : 'Instância adotada. Falta apontar os webhooks no painel da Z-API.',
+    )
+    onAdotado([r.urls.recebida, r.urls.status, r.urls.desconexao], r.webhooksConfirmados)
+  }
+
+  return (
+    <div className="mt-3 flex flex-col gap-3">
+      <p className="text-muted-foreground text-xs leading-relaxed">
+        Copie o ID e o token da instância no painel da Z-API. Eles ficam cifrados aqui
+        e nunca voltam para a tela.
+      </p>
+      <div className="flex flex-col gap-1.5">
+        <Label htmlFor="zapi-instance">ID da instância</Label>
+        <Input
+          id="zapi-instance"
+          value={instanceId}
+          onChange={(e) => setInstanceId(e.target.value)}
+          disabled={enviando}
+          autoComplete="off"
+          spellCheck={false}
+        />
+      </div>
+      <div className="flex flex-col gap-1.5">
+        <Label htmlFor="zapi-token">Token da instância</Label>
+        <Input
+          id="zapi-token"
+          // `type="password"` porque isto é credencial, e a tela pode estar
+          // sendo compartilhada numa chamada.
+          type="password"
+          value={token}
+          onChange={(e) => setToken(e.target.value)}
+          disabled={enviando}
+          autoComplete="off"
+          spellCheck={false}
+        />
+      </div>
+      <Button
+        size="sm"
+        className="w-fit"
+        onClick={enviar}
+        disabled={enviando || !instanceId.trim() || !token.trim()}
+      >
+        {enviando ? <Loader2 className="size-4 animate-spin" /> : <Plug className="size-4" />}
+        Adotar instância
+      </Button>
+    </div>
   )
 }
 

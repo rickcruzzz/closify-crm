@@ -287,6 +287,56 @@ export async function enviarTexto(
 }
 
 /**
+ * Aponta os webhooks de uma instância que JÁ existe, sem a Partner API.
+ *
+ * ## Por que isto existe ao lado de `criarInstancia`
+ *
+ * `criarInstancia` já configura os quatro webhooks na mesma chamada, e é o
+ * caminho que o cliente percorre. Esta função serve o outro caso: uma instância
+ * criada **à mão no painel**, que é o único jeito de exercitar o produto inteiro
+ * sem o Partner token — e o Partner tem condição comercial a partir de dez
+ * instâncias.
+ *
+ * ## O caminho NÃO está confirmado na documentação, e isso fica escrito
+ *
+ * Lida em 16/09, a documentação da Z-API descreve o corpo
+ * (`{ value, notifySentByMe }`) e o método (POST ou PUT), e **não publica o
+ * segmento de caminho** depois de `token/{token}/`. `update-every-webhooks` é o
+ * nome da página, não um contrato lido.
+ *
+ * Por isso esta função **devolve se deu certo em vez de afirmar que deu**. O
+ * chamador mostra as três URLs de qualquer jeito, e a pessoa confere no painel.
+ *
+ * É a lição de 12/09 aplicada antes do prejuízo: `sendButtons` respondeu 201
+ * quatro vezes e nenhuma mensagem renderizou. **Aceitar não é entregar**, e um
+ * webhook que não foi configurado de verdade produz o pior sintoma que existe
+ * aqui: silêncio, com a tela dizendo conectado.
+ */
+export async function tentarConfigurarWebhooks(
+  instancia: Instancia,
+  urlBase: string,
+): Promise<{ confirmado: boolean; motivo?: string }> {
+  try {
+    await chamar(comInstancia(instancia, 'update-every-webhooks'), {
+      method: 'PUT',
+      headers: { 'Client-Token': clientToken() },
+      body: {
+        value: urlBase,
+        // O que faz a mensagem enviada pelo CELULAR do dono aparecer no CRM.
+        // Sem isto a caixa mostra as perguntas do cliente sem nenhuma resposta
+        // ao lado, e a pessoa conclui que o produto perdeu o que ela escreveu.
+        notifySentByMe: true,
+      },
+    })
+    return { confirmado: true }
+  } catch (erro) {
+    const motivo = erro instanceof ZapiError ? `${erro.status} em ${erro.caminho}` : String(erro)
+    console.error('tentarConfigurarWebhooks: nao confirmado', motivo)
+    return { confirmado: false, motivo }
+  }
+}
+
+/**
  * Tira o número do WhatsApp, e **mantém a instância**.
  *
  * É o que a pessoa quer quando clica em "Desconectar": trocar de aparelho,

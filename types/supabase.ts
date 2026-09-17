@@ -666,6 +666,10 @@ export type Database = {
           conectada_em: string | null
           desconectada_em: string | null
           vista_em: string | null
+          // Desde quando esta empresa esta sem `max_vigente` (migration 0091).
+          // Escrito E LIMPO pela purga diaria, que apaga a instancia no
+          // provedor depois de 7 dias. Nulo quer dizer plano em dia.
+          sem_max_desde: string | null
           created_at: string
           updated_at: string
         }
@@ -682,6 +686,7 @@ export type Database = {
           conectada_em?: string | null
           desconectada_em?: string | null
           vista_em?: string | null
+          sem_max_desde?: string | null
           created_at?: string
           updated_at?: string
         }
@@ -698,6 +703,7 @@ export type Database = {
           conectada_em?: string | null
           desconectada_em?: string | null
           vista_em?: string | null
+          sem_max_desde?: string | null
           created_at?: string
           updated_at?: string
         }

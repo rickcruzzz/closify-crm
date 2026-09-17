@@ -296,6 +296,91 @@ nao prova que a Z-API aceita o que mandamos.
 O 201 do `sendButtons` de 12/09 e a licao a ter na mao aqui: **aceitar nao e
 entregar**, e quatro chamadas responderam 201 sem nada renderizar.
 
+### A instancia parava de ser usada e NAO parava de faturar (0091)
+
+Pergunta do dono sobre o custo da Z-API, e ela expos um buraco que eu tinha
+deixado aberto.
+
+A 0090 blindou a CRIACAO: instancia que nao vira linha no banco e apagada no
+provedor antes de a Server Action devolver o erro, porque instancia sem linha e
+cobranca invisivel. **Nao blindei a SAIDA.**
+
+Cliente assina, conecta, para de pagar. `max_vigente` cai e ele deixa de enviar,
+o que esta certo. E a instancia **continua faturando R$ 99,99 por mes, para
+sempre**, ate alguem olhar a fatura e perguntar de quem e aquele numero.
+
+E o mesmo defeito da criacao, do outro lado do ciclo de vida.
+
+### Por que uma COLUNA e nao uma conta sobre `subscriptions`
+
+O primeiro desenho derivava a data: `current_period_end + graca + 7 dias`. Furo
+real: **troca de plano**. Quem sai do Max para o Pro fica com
+`current_period_end` valido e no futuro, e a conta diria "ainda na carencia"
+para sempre. A instancia nunca seria apagada.
+
+`sem_max_desde` guarda o fato observado, na forma de `vigia_ultimo_aviso` (0062).
+
+### Sete dias, e o motivo nao e financeiro
+
+`max_vigente` ja inclui `dias_de_graca`, que cobre a compensacao bancaria. Quando
+ele cai, essa carencia JA correu.
+
+Os sete daqui existem por outro custo: **reconectar exige pegar o celular e ler
+um QR de novo**. Cortar de quem teve o cartao recusado numa terca e pagou na
+quinta transformaria um atraso de dois dias em trabalho manual do cliente. Uma
+semana de uma instancia custa ~R$ 23.
+
+### Tres ramos, e o terceiro e o que todo mundo esquece
+
+    sem Max e sem marca      marca a data. Nada e apagado hoje
+    sem Max ha mais de 7d    apaga no PROVEDOR e so entao esquece a linha
+    COM Max e com marca      LIMPA a marca
+
+Sem o terceiro, quem atrasa e volta a pagar carrega marca velha, e o proximo
+atraso de UM dia soma com a espera do anterior: a instancia morre por uma conta
+que ninguem escreveu. Mesma classe do alarme preso tres dias em 09/09.
+
+E a ordem importa: se o provedor recusar apagar, **a linha FICA**. Esquece-la
+deixaria instancia viva que nenhuma tela alcanca e nenhuma varredura reencontra,
+que e exatamente a cobranca invisivel que a 0090 evita.
+
+A purga mora no cron de reconciliacao, que ja roda diario lendo `subscriptions`.
+Cron proprio seria mais uma entrada para falhar em silencio.
+
+### E o caminho de ADOTAR instancia, que destrava a prova de graca
+
+`conectarWhatsapp` depende do Partner token, cuja condicao comercial comeca em
+DEZ instancias. Contra receita externa zero, e contrato antes do primeiro
+cliente.
+
+`adotarInstancia` e a ponte: com o trial de 2 dias da Z-API, que nao pede cartao,
+da para criar UMA instancia no painel e exercitar o produto inteiro. **Nao e o
+caminho do cliente** — e por isso que ela pede credencial e o outro nao.
+
+As credenciais sao validadas com `GET /status` ANTES de gravar, e o token e
+cifrado com a mesma chave do Google.
+
+**E os webhooks podem NAO ser confirmados, o que e dito em vez de escondido.** A
+documentacao da Z-API publica o corpo e o metodo do endpoint de webhook e **nao
+publica o segmento de caminho**. Se a chamada falhar, a acao devolve
+`webhooksConfirmados: false` e as tres URLs para colar no painel.
+
+Webhook que nao aponta produz o pior sintoma daqui: silencio, com a tela dizendo
+conectado. E a licao do `sendButtons` de 12/09, que aceitou 201 quatro vezes sem
+renderizar nada.
+
+### A 0091 expos uma propriedade boa do grant da 0090
+
+`revoke select` na tabela inteira mais `grant select (11 colunas)` significa que
+**toda coluna nova nasce FORA do grant**. `sem_max_desde` nao e legivel por
+`authenticated`, sem ninguem ter decidido isso.
+
+E o lado seguro de errar, e o oposto do que um `grant select` amplo faria: la a
+coluna nova nasceria publica.
+
+    provas   4 de 4 na 0091, depois das 24 das outras duas
+    testes   1.935 -> 1.948
+
 ### O que continua FORA, e a ordem
 
     Fase 3   enviar MIDIA (a caixa ja RECEBE audio, imagem, video, documento e

@@ -29,6 +29,22 @@ que elas criaram desfeito por `rollback`.
 **A segunda RPC é `get_funnel_performance`, da 0088**, que subiu hoje de manhã.
 O carimbo dizia 36 desde antes dela e **ninguém foi avisado** — ver abaixo.
 
+### E a 0091 entrou depois, sem mover NENHUMA das seis
+
+Ela acrescenta `whatsapp_instances.sem_max_desde` e um índice parcial, e é o que
+impede instância de empresa que parou de pagar continuar faturando para sempre.
+Coluna e índice não entram em nenhuma das seis contagens, e é por isso que elas
+ficaram paradas: o carimbo mede objetos, não mudanças.
+
+**E ela expôs uma propriedade do grant de coluna da 0090 que vale registrar.**
+`revoke select` na tabela inteira mais `grant select (11 colunas)` significa que
+**toda coluna nova nasce FORA do grant**: `sem_max_desde` não é legível por
+`authenticated`, sem ninguém ter decidido isso.
+
+É o lado seguro de errar, e é o oposto do que um `grant select` amplo faria — lá
+a coluna nova nasceria pública. Conferido depois de aplicar: o SELECT continua
+exatamente nas mesmas 11 colunas.
+
 ### O conferidor passava limpo sobre os carimbos de banco
 
 `scripts/ci/conferir-documentos.mjs` sem `.env.local` **pula as seis métricas de
@@ -105,8 +121,8 @@ de custo: paywall no momento em que a pessoa sente o valor converte 8-12%,
 contra 3-4% de limite arbitrário — e as outras três são todas arbitrárias no
 sentido técnico do termo.
 
-<!-- contagem: migrations.arquivos=89 migrations.maior=0090 -->
-**89 arquivos de migration, e a maior é `0090`** (remedido em 16/09; o `0049`
+<!-- contagem: migrations.arquivos=90 migrations.maior=0091 -->
+**90 arquivos de migration, e a maior é `0091`** (remedido em 16/09; o `0049`
 não existe, removido em 22/08). Os dois números vêm sempre juntos: a contagem
 sozinha convida a inferir `0085`.
 

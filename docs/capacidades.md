@@ -86,6 +86,8 @@ envelhecer em silêncio, que é o defeito de todo documento desse tipo.
 | A tela de conexão, com polling controlado | `components/settings/whatsapp-conexao.tsx` | 16/09 |
 | Oferta do Max na tela de cobrança | `components/settings/max-card.tsx` | 16/09 |
 | Busca e filtros da caixa de entrada | `lib/conversas/filtrar.ts` | 16/09 |
+| Purga de instância órfã, para a cobrança parar | `lib/whatsapp/purga.ts` | 16/09 |
+| Adotar instância criada à mão (sem Partner) | `adotarInstancia` em `lib/whatsapp/actions.ts` | 16/09 |
 
 ## Integrações
 
