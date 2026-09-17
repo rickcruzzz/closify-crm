@@ -22,21 +22,32 @@ describe('navGroups', () => {
     expect(estrutura).toEqual([
       [
         'Principal',
-        ['Hoje', 'Conversas', 'Funil', 'Contatos', 'Resultados', 'Calendário'],
+        ['Hoje', 'Conversas', 'WhatsApp', 'Funil', 'Contatos', 'Resultados', 'Calendário'],
       ],
-      [
-        'Configurações',
-        ['Perfil', 'Equipe', 'Integrações', 'WhatsApp', 'Preferências'],
-      ],
+      ['Configurações', ['Perfil', 'Equipe', 'Integrações', 'Preferências']],
     ])
   })
 
-  it('WhatsApp tem ROTA própria, e não uma aba de /settings', () => {
-    // As outras três entradas de Configurações apontam para `/settings` com
-    // query. Esta não: o WhatsApp é o plano Max, com conexão por empresa,
-    // estado que cai sozinho e um QR que precisa de tela inteira. Uma aba
-    // escondida dentro de Preferências seria o oposto do que se paga por ele.
-    const item = navGroups[1]?.items.find((i) => i.title === 'WhatsApp')
+  it('WhatsApp fica COLADO em Conversas, e não em Configurações', () => {
+    // Ele morava em Configurações até 17/09, cinco itens abaixo, numa seção que
+    // a pessoa só visita para mexer em cobrança. Conectar o número acontece uma
+    // vez; o que ela procura ali depois é o estado da conexão — e ela procura
+    // isso justamente quando abre Conversas e não vê mensagem chegando.
+    const principal = navGroups[0]?.items.map((i) => i.title) ?? []
+    expect(principal.indexOf('WhatsApp')).toBe(principal.indexOf('Conversas') + 1)
+
+    const config = navGroups[1]?.items.map((i) => i.title) ?? []
+    expect(config).not.toContain('WhatsApp')
+  })
+
+  it('a ROTA continua em /settings, mesmo com o item fora de lá', () => {
+    // Mudou o lugar no menu, não o endereço: renomear a rota quebraria link
+    // salvo para trocar uma palavra que ninguém digita. Mesma decisão de
+    // "Funil", que lê Funil e continua em `/kanban`.
+    //
+    // E `aba` fica indefinido porque ele NÃO é uma aba de Preferências: é tela
+    // própria, com QR e estado que cai sozinho.
+    const item = navGroups[0]?.items.find((i) => i.title === 'WhatsApp')
     expect(item?.href).toBe('/settings/whatsapp')
     expect(item?.aba).toBeUndefined()
   })

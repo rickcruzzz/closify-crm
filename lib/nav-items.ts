@@ -5,17 +5,32 @@ import {
   LayoutDashboard,
   MessageCircle,
   Plug,
-  Smartphone,
   Settings,
   User,
   UserCog,
   Users,
 } from 'lucide-react'
 
+import type { ComponentType, SVGProps } from 'react'
+
+import { IconeWhatsapp } from '@/components/ui/icone-whatsapp'
+
 export type NavItem = {
   title: string
   href: string
-  icon: typeof LayoutDashboard
+  /**
+   * O glifo do item.
+   *
+   * Era `typeof LayoutDashboard`, ou seja o tipo exato do `lucide-react`. O
+   * WhatsApp obrigou a abrir: **o lucide não tem marcas** — ele removeu os
+   * ícones de marca do pacote —, e o que sobrava por lá era genérico. Um balão
+   * qualquer ao lado de "Conversas", que já é um balão, anula a função do
+   * ícone.
+   *
+   * O tipo aceita qualquer componente que receba props de SVG, que é o contrato
+   * de verdade: o renderizador faz `<Icon className={...} />` e nada mais.
+   */
+  icon: ComponentType<SVGProps<SVGSVGElement>>
   /**
    * Só para itens que apontam pra `/settings`: qual aba conta como "ativo"
    * pra este item. `undefined` cobre as abas que não têm entrada própria no
@@ -68,6 +83,21 @@ export const navGroups: NavGroup[] = [
       // conversa sem resposta vira venda perdida em minutos, enquanto negócio
       // parado no funil espera dias sem piorar.
       { title: 'Conversas', href: '/conversas', icon: MessageCircle },
+      // ## Ele morava em CONFIGURAÇÕES, e o lugar estava errado
+      //
+      // A rota continua `/settings/whatsapp` — é lá que a conexão vive, e
+      // renomear quebraria link salvo para trocar uma palavra que ninguém
+      // digita. O que muda é ONDE ele aparece.
+      //
+      // Conectar o número é coisa de configuração e acontece **uma vez**.
+      // Depois disso, o que a pessoa procura ali é o estado da conexão, e ela
+      // procura isso justamente quando abre Conversas e não vê mensagem
+      // chegando. Ficar cinco itens abaixo, numa seção que ela só visita para
+      // mexer em cobrança, é esconder a resposta da pergunta que a trouxe.
+      //
+      // Colado em Conversas, os dois se explicam: um é a caixa, o outro é o
+      // cano que a enche.
+      { title: 'WhatsApp', href: '/settings/whatsapp', icon: IconeWhatsapp },
       { title: 'Funil', href: '/kanban', icon: KanbanSquare },
       // "Contatos", não "Leads". O PRD de copy adiou esta troca temendo
       // prometer "contatos" na landing e a pessoa encontrar "Leads" depois de
@@ -103,14 +133,6 @@ export const navGroups: NavGroup[] = [
         icon: Plug,
         aba: 'integracoes',
       },
-      // Rota PRÓPRIA, e não uma aba de Preferências como as duas acima.
-      //
-      // O motivo é o mesmo que tirou o WhatsApp de Integrações: ele não é uma
-      // integração gateada em `pro_vigente()` — é o plano Max, com conexão por
-      // empresa, estado que cai sozinho e um QR que precisa de tela inteira.
-      // Uma aba dentro de Preferências esconderia justamente o que a pessoa
-      // procura depois de pagar por ele.
-      { title: 'WhatsApp', href: '/settings/whatsapp', icon: Smartphone },
       // Era "Configurações" — renomeado porque a página guarda dados da
       // empresa (logo, CNPJ, endereço), "Preferências" descreve melhor o
       // conteúdo do que um rótulo que soa como "todo o resto de config".
