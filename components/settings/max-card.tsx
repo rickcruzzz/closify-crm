@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { MessageCircle } from 'lucide-react'
+import { IconeWhatsapp } from '@/components/ui/icone-whatsapp'
 
 import { Badge } from '@/components/ui/badge'
 import { buttonVariants } from '@/components/ui/button'
@@ -56,7 +56,7 @@ export function MaxCard({
       <CardHeader>
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div className="flex items-center gap-2">
-            <MessageCircle className="text-muted-foreground size-5" />
+            <IconeWhatsapp className="text-muted-foreground size-5" />
             <CardTitle>Plano {PLANO_NA_TELA.max}</CardTitle>
           </div>
           {temMax ? (
@@ -99,7 +99,7 @@ export function MaxCard({
             href="/settings/whatsapp"
             className={buttonVariants({ variant: 'outline', size: 'sm', className: 'w-fit' })}
           >
-            <MessageCircle className="size-4" />
+            <IconeWhatsapp className="size-4" />
             Conectar o WhatsApp
           </Link>
         ) : !isAdmin ? (

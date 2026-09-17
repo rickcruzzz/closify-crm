@@ -4,7 +4,9 @@ import * as React from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
-import { Loader2, MessageCircle, Plug, RefreshCw, Trash2, Unplug, Zap } from 'lucide-react'
+import { Loader2, Plug, RefreshCw, Trash2, Unplug, Zap } from 'lucide-react'
+
+import { IconeWhatsapp } from '@/components/ui/icone-whatsapp'
 
 import { Badge } from '@/components/ui/badge'
 import { Button, buttonVariants } from '@/components/ui/button'
@@ -208,7 +210,7 @@ export function WhatsappConexao({
       <Card>
         <CardHeader>
           <div className="flex items-center gap-2">
-            <MessageCircle className="text-muted-foreground size-5" />
+            <IconeWhatsapp className="text-muted-foreground size-5" />
             <CardTitle>WhatsApp no {PLANO_NA_TELA.max}</CardTitle>
           </div>
           <CardDescription>{bloqueio.motivo}</CardDescription>
@@ -253,7 +255,7 @@ export function WhatsappConexao({
       <CardHeader>
         <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-2">
-            <MessageCircle className="text-muted-foreground size-5" />
+            <IconeWhatsapp className="text-muted-foreground size-5" />
             <CardTitle>Conexão</CardTitle>
           </div>
           <Selo estado={estado} />

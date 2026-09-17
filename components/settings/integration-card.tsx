@@ -2,16 +2,10 @@
 
 import * as React from 'react'
 import { toast } from 'sonner'
-import {
-  CalendarDays,
-  Loader2,
-  Mail,
-  MessageCircle,
-  Plug,
-  Trash2,
-  Zap,
-  type LucideIcon,
-} from 'lucide-react'
+import { CalendarDays, Loader2, Mail, Plug, Trash2, Zap } from 'lucide-react'
+import type { ComponentType, SVGProps } from 'react'
+
+import { IconeWhatsapp } from '@/components/ui/icone-whatsapp'
 
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -35,7 +29,18 @@ const META: Record<
   {
     titulo: string
     descricao: string
-    icone: LucideIcon
+    /**
+     * O glifo do provedor.
+     *
+     * Era `LucideIcon`, o tipo exato da biblioteca. O WhatsApp obrigou a abrir:
+     * o lucide **nao tem marcas**, e o que sobrava era `MessageCircle` — o mesmo
+     * balao generico que serve "Conversas". Num cartao cujo titulo ja diz
+     * WhatsApp, balao generico nao ajuda a reconhecer nada.
+     *
+     * O tipo aceita qualquer componente que receba props de SVG, que e o
+     * contrato de verdade: o render faz `<Icone className={...} />` e nada mais.
+     */
+    icone: ComponentType<SVGProps<SVGSVGElement>>
     conectarHref: string | null
     /** Como nomear o uso pro cliente, singular e plural, linguagem dele, não termo técnico. */
     usoSingular: string
@@ -101,7 +106,7 @@ const META: Record<
     // `null` de propósito: conectar exige ler QR Code, então é diálogo, não
     // link direto como o OAuth do Google.
     conectarHref: null,
-    icone: MessageCircle,
+    icone: IconeWhatsapp,
     usoSingular: 'conversa registrada',
     usoPlural: 'conversas registradas',
     ganhoNoPro:
@@ -374,7 +379,7 @@ export function IntegrationCard({
                 href={WHATSAPP_MORA_NO_MAX.destino}
                 className={buttonVariants({ variant: 'outline', size: 'sm' })}
               >
-                <MessageCircle className="size-4" />
+                <IconeWhatsapp className="size-4" />
                 Abrir o WhatsApp
               </Link>
             </div>
