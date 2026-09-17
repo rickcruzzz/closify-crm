@@ -166,7 +166,10 @@ export function WhatsappConexao({
       toast.error(r.error ?? 'Não foi possível remover.')
       return
     }
-    toast.success('Conexão removida. A cobrança do número para no provedor.')
+    // A Z-API mantem a instancia ativa ate o fim do ciclo, que e o ultimo dia
+    // do mes. Dizer "removida" e ponto faria a pessoa achar que o numero caiu
+    // agora, e ela tentaria reconectar por nada.
+    toast.success('Conexão removida. O número segue ativo até o fim do mês e a cobrança para.')
     router.refresh()
   }
 
@@ -285,7 +288,11 @@ export function WhatsappConexao({
               </Button>
               {/* Remover PARA a cobrança; desconectar não. São dois botões de
                   propósito: têm o mesmo nome na cabeça de quem clica e
-                  consequências muito diferentes na fatura. */}
+                  consequências muito diferentes na fatura.
+
+                  E remover não desliga o número na hora: o provedor mantém a
+                  instância até o fim do ciclo. Está no toast, porque quem não
+                  lê isso tenta reconectar achando que quebrou. */}
               <Button variant="ghost" size="sm" onClick={remover} disabled={ocupado}>
                 <Trash2 className="size-4" />
                 Remover conexão

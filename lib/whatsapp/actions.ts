@@ -18,7 +18,8 @@ import {
   segredoNovo,
 } from '@/lib/whatsapp/instancia'
 import {
-  apagarInstancia,
+  assinarInstancia,
+  cancelarAssinaturaDaInstancia,
   criarInstancia,
   tentarConfigurarWebhooks,
   desconectar as desconectarNoProvedor,
@@ -155,11 +156,17 @@ export async function conectarWhatsapp(): Promise<RespostaDaConexao> {
 
   if (!guardada.ok) {
     // Ver o cabeçalho: instância sem linha é cobrança invisível.
+    //
+    // Ela ainda está em TRIAL neste ponto — `assinarInstancia` só é chamada
+    // depois que o QR é lido —, então a Z-API a apagaria sozinha em 48h de
+    // qualquer jeito. Cancelar mesmo assim é o cinto: o trial pode acabar
+    // depois de alguém assinar por engano, e uma instância órfã que nenhuma
+    // tela alcança só aparece na fatura.
     try {
-      await apagarInstancia(criada.id)
+      await cancelarAssinaturaDaInstancia({ instanceId: criada.id, token: criada.token })
     } catch (erro) {
       console.error(
-        `conectarWhatsapp: instancia ${criada.id} ficou ORFA no provedor e PRECISA ser apagada a mao`,
+        `conectarWhatsapp: instancia ${criada.id} ficou ORFA no provedor e PRECISA ser cancelada a mao`,
         erro,
       )
     }
@@ -334,9 +341,29 @@ export async function lerQrCode(): Promise<RespostaDaConexao> {
   try {
     const estado = await statusDaInstancia(instancia)
     if (estado.connected) {
-      // Já conectou entre um giro e outro do laço. Registrar aqui e não só no
-      // webhook: a Z-API não manda callback de CONEXÃO configurado por nós, e
-      // sem isto a tela ficaria pedindo QR de um número que já está de pé.
+      // ## A ASSINATURA começa aqui, e não na criação
+      //
+      // `criarInstancia` devolve um trial de DOIS DIAS, e a Z-API apaga sozinha
+      // o que ninguém assinar. Sem esta chamada, um cliente que pagasse o Max
+      // numa sexta teria o WhatsApp da empresa desligado no domingo, **sem nada
+      // falhar do nosso lado**: a linha diria "conectado", o envio passaria a
+      // tomar 404, e o sintoma seria silêncio.
+      //
+      // Depois do QR lido, e não antes, porque é aqui que a instância deixa de
+      // ser uma aposta: assinar na criação pagaria por quem nunca pareia.
+      //
+      // Falhar NÃO derruba a conexão que acabou de dar certo. O cliente está
+      // com o celular na mão e o número já está pareado; o que se perde é a
+      // renovação, e ela tem 48h de folga para uma segunda tentativa.
+      try {
+        await assinarInstancia(instancia)
+      } catch (erro) {
+        console.error(
+          `lerQrCode: instancia ${instancia.instanceId} CONECTOU e NAO foi assinada. Ela expira em 48h se ninguem assinar no painel.`,
+          erro,
+        )
+      }
+
       const telefone = await telefoneConectado(instancia).catch(() => null)
       await registrarEstado({
         workspaceId: sessao.workspaceId,
@@ -400,6 +427,10 @@ export async function desconectarWhatsapp(): Promise<{ ok: boolean; error?: stri
  * instância faturando, e a diferença entre as duas coisas aparece na fatura do
  * mês seguinte.
  *
+ * O número NÃO cai na hora: a Z-API mantém a instância ativa até o fim do ciclo
+ * de cobrança, que é o último dia do mês. Isso é do provedor, e está dito no
+ * toast da tela — sem essa frase a pessoa acha que quebrou e tenta reconectar.
+ *
  * As conversas e as mensagens FICAM. Elas são da empresa, não da conexão, e
  * apagá-las junto puniria quem trocou de número com a perda do histórico de
  * venda — o mesmo raciocínio que faz `podeLerConversas` devolver `true` sempre.
@@ -415,12 +446,14 @@ export async function removerWhatsapp(): Promise<{ ok: boolean; error?: string }
   if (!instancia) return { ok: false, error: 'Nenhuma conexão encontrada nesta empresa.' }
 
   try {
-    await apagarInstancia(instancia.instanceId)
+    await cancelarAssinaturaDaInstancia(instancia)
   } catch (erro) {
     // Aqui NÃO segue: esquecer a linha sem apagar no provedor deixaria uma
     // instância faturando que nenhuma tela alcança. É o pior desfecho possível,
     // e o único jeito de descobrir seria a fatura.
-    console.error('removerWhatsapp: provedor recusou', erro)
+    // Aqui NÃO segue: esquecer a linha sem cancelar no provedor deixaria uma
+    // instância faturando que nenhuma tela alcança.
+    console.error('removerWhatsapp: provedor recusou cancelar', erro)
     return {
       ok: false,
       error: 'Não foi possível remover a conexão no provedor. Tente de novo.',

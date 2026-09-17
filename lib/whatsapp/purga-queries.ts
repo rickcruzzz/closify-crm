@@ -1,7 +1,8 @@
 import 'server-only'
 
 import { createAdminClient } from '@/lib/supabase/admin'
-import { apagarInstancia } from '@/lib/whatsapp/zapi'
+import { decifrar } from '@/lib/integrations/crypto'
+import { cancelarAssinaturaDaInstancia } from '@/lib/whatsapp/zapi'
 import { decidirPurga, resumoVazio, type ResumoDaPurga } from '@/lib/whatsapp/purga'
 
 /**
@@ -47,7 +48,11 @@ export async function rodarPurgaDeInstancias(): Promise<ResumoDaPurga> {
 
   const { data, error } = await admin
     .from('whatsapp_instances')
-    .select('id, workspace_id, instance_id, sem_max_desde')
+    // `token_cifrado` entra porque cancelar a assinatura exige as DUAS
+    // credenciais: a rota do provedor e `/instances/{id}/token/{token}/...`.
+    // Ele nunca sai desta função — o `decifrar` acontece no ramo de apagar e o
+    // valor morre ali.
+    .select('id, workspace_id, instance_id, token_cifrado, sem_max_desde')
     .limit(TETO_DE_INSTANCIAS)
 
   if (error) {
@@ -109,11 +114,20 @@ export async function rodarPurgaDeInstancias(): Promise<ResumoDaPurga> {
     }
 
     // `apagar`. Provedor primeiro, linha depois. Ver o cabeçalho.
+    //
+    // ## Cancelar não desliga o número na hora, e isso é do provedor
+    //
+    // A Z-API mantém a instância ativa até o fim do ciclo de cobrança, que é o
+    // último dia do mês. Para nós o efeito é o que importa: **a cobrança para**.
+    // Para o cliente que voltar dentro do mês, o número ainda está lá.
     try {
-      await apagarInstancia(inst.instance_id)
+      await cancelarAssinaturaDaInstancia({
+        instanceId: inst.instance_id,
+        token: decifrar(inst.token_cifrado),
+      })
     } catch (erro) {
       console.error(
-        `rodarPurgaDeInstancias: provedor recusou apagar ${inst.instance_id}, a linha FICA e ela continua faturando`,
+        `rodarPurgaDeInstancias: provedor recusou cancelar ${inst.instance_id}, a linha FICA e ela continua faturando`,
         erro,
       )
       resumo.falhas += 1
@@ -126,7 +140,8 @@ export async function rodarPurgaDeInstancias(): Promise<ResumoDaPurga> {
       .eq('id', inst.id)
 
     if (erroDelete) {
-      // A instância já morreu no provedor: a cobrança parou, que é o objetivo.
+      // A assinatura já foi cancelada no provedor: a cobrança parou, que é o
+      // objetivo.
       // A linha órfã no banco faz a tela dizer "conectado" para um número que
       // não existe, e a próxima varredura vai tentar apagar de novo e tomar
       // 404 do provedor. Ruim, e muito menos caro que o contrário.

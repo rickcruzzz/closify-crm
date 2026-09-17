@@ -160,37 +160,119 @@ export async function criarInstancia(params: {
     headers: { Authorization: `Bearer ${partner}` },
     body: {
       name: params.nome,
-      deliveryCallbackUrl: params.webhookStatus,
-      receivedCallbackUrl: params.webhookRecebida,
+      // ## `receivedAndDelivery` e NÃO `received`, e a diferença é a metade
+      // que faltava da conversa
+      //
+      // O primeiro corte deste arquivo mandava `receivedCallbackUrl` mais
+      // `notifySentByMe: true`. **`notifySentByMe` não existe neste endpoint** —
+      // conferido campo a campo na documentação em 17/09, e a lista de
+      // opcionais não o tem. Ele seria ignorado em silêncio, e o sintoma seria
+      // a caixa mostrando as perguntas do cliente sem nenhuma resposta ao lado.
+      //
+      // Quem entrega as duas direções é `receivedAndDeliveryCallbackUrl`,
+      // descrito como *"Webhook URL for received and sent messages"*. A rota de
+      // recebimento já sabe tratar `fromMe`: ela grava a nossa como `enviada` e
+      // FECHA a espera da conversa.
+      //
+      // Sem isso a pessoa conclui que o produto perdeu o que ela escreveu, e
+      // volta para o celular — que é o hábito que este recurso existe para
+      // desfazer.
+      receivedAndDeliveryCallbackUrl: params.webhookRecebida,
       messageStatusCallbackUrl: params.webhookStatus,
       disconnectedCallbackUrl: params.webhookDesconexao,
-      // ## "Notify sent by me", e é o que faz a caixa de entrada ser honesta
-      //
-      // Sem isto, a mensagem que o dono manda PELO CELULAR não chega ao CRM, e
-      // a tela mostra metade da conversa: as perguntas do cliente sem nenhuma
-      // resposta ao lado. A pessoa conclui que o produto perdeu o que ela
-      // escreveu, e volta para o celular — que é o hábito que este recurso
-      // existe para desfazer.
-      notifySentByMe: true,
     },
   })
 }
 
 /**
- * Apaga a instância no provedor.
+ * ASSINA a instância, e sem isto ela morre em 48 horas.
  *
- * É o que PARA a cobrança. Desconectar sozinho tira o número do WhatsApp e
- * deixa a instância faturando, e a diferença entre as duas coisas é a fatura
- * do mês seguinte.
+ * ## O que acontece sem esta chamada
+ *
+ * `criarInstancia` devolve uma instância em **trial de dois dias**. A Z-API a
+ * apaga sozinha se ninguém assinar: *"após 2 dias sem assinatura, a instância é
+ * automaticamente deletada"*.
+ *
+ * Na prática, um cliente que pagasse o Max numa sexta e lesse o QR no mesmo dia
+ * teria o WhatsApp da empresa dele desligado no domingo, **sem nada falhar do
+ * nosso lado**: a linha continuaria no banco dizendo "conectado", o envio
+ * passaria a tomar 404 do provedor, e o sintoma seria silêncio.
+ *
+ * ## É AQUI que a cobrança começa
+ *
+ * Esta é a única chamada do projeto que liga uma cobrança recorrente no
+ * provedor. Ela fica depois do QR lido de propósito: assinar antes seria pagar
+ * por uma instância que a pessoa talvez nunca pareie.
+ *
+ * `withCalls: false` porque o produto não atende ligação — ele lê e responde
+ * mensagem. Ligar suporte a chamada custaria mais por uma capacidade que
+ * nenhuma tela usa.
  */
-export async function apagarInstancia(instanceId: string): Promise<void> {
+export async function assinarInstancia(instancia: Instancia): Promise<void> {
   const partner = process.env.ZAPI_PARTNER_TOKEN
   if (!partner) throw new Error('ZAPI_PARTNER_TOKEN não configurado.')
 
-  await chamar(`/partner/instances/${instanceId}`, {
-    method: 'DELETE',
+  await chamar(comInstancia(instancia, 'integrator/on-demand/subscription'), {
+    method: 'POST',
+    // O Partner token entra no lugar do `Client-Token`: a documentação diz, em
+    // texto, que *"não é necessário enviar o Client-Token nestas requisições"*.
     headers: { Authorization: `Bearer ${partner}` },
+    body: { withCalls: false },
   })
+}
+
+/**
+ * CANCELA a assinatura da instância. É o que faz a cobrança parar.
+ *
+ * ## Cancelar não apaga na hora, e a diferença precisa estar na tela
+ *
+ * A documentação é explícita: *"quando uma instância é cancelada, ela permanece
+ * ativa até o fim do ciclo de cobrança atual, que corresponde ao último dia do
+ * mês. Depois do fim do ciclo, a instância é automaticamente desativada."*
+ *
+ * Ou seja o número continua funcionando até virar o mês. Para o cliente isso é
+ * bom — ele não perde o WhatsApp no dia em que cancela —, e para a nossa fatura
+ * significa que o mês corrente já está pago de qualquer jeito.
+ *
+ * O primeiro corte deste arquivo chamava isto de `apagarInstancia` e batia em
+ * `DELETE /partner/instances/{id}`. **Esse endpoint não existe na documentação**
+ * — foi inventado, e a lista real de rotas do Partner tem sete entradas, nenhuma
+ * delas com essa forma. Conferido em 17/09.
+ *
+ * ## O método NÃO está publicado, e isso fica escrito em vez de escondido
+ *
+ * A documentação do cancelamento descreve o efeito e **não publica o método nem
+ * o caminho**. O caminho aqui é o simétrico do de assinar, que ESTÁ publicado
+ * (`integrator/on-demand/subscription`), e o método é inferido.
+ *
+ * Por isso a função **tenta DELETE e cai para POST** no 405. Um cancelamento
+ * que falha em silêncio é a pior falha deste arquivo: a instância continua na
+ * fatura e nenhuma tela sabe. Quem chama trata a exceção e conta como falha —
+ * `rodarPurgaDeInstancias` já faz isso e mantém a linha no banco para a
+ * varredura do dia seguinte reencontrar.
+ *
+ * **Uma chamada real contra a conta fecha esta dúvida**, e é o primeiro teste a
+ * fazer quando o Partner token existir.
+ */
+export async function cancelarAssinaturaDaInstancia(instancia: Instancia): Promise<void> {
+  const partner = process.env.ZAPI_PARTNER_TOKEN
+  if (!partner) throw new Error('ZAPI_PARTNER_TOKEN não configurado.')
+
+  const caminho = comInstancia(instancia, 'integrator/on-demand/subscription')
+  const cabecalhos = { Authorization: `Bearer ${partner}` }
+
+  try {
+    await chamar(caminho, { method: 'DELETE', headers: cabecalhos })
+  } catch (erro) {
+    // 405 é "método errado", e é a única falha que vale uma segunda tentativa:
+    // ela diz que o caminho existe. Qualquer outro status sobe, porque tentar
+    // de novo com outro verbo esconderia um 401 ou um 404 de verdade.
+    if (erro instanceof ZapiError && erro.status === 405) {
+      await chamar(caminho, { method: 'POST', headers: cabecalhos })
+      return
+    }
+    throw erro
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -344,7 +426,7 @@ export async function tentarConfigurarWebhooks(
  * reconexão, o que gasta dinheiro e muda o `instanceId` que os webhooks já
  * conhecem.
  *
- * Quem para a cobrança é `apagarInstancia`, e ela é outro botão.
+ * Quem para a cobrança é `cancelarAssinaturaDaInstancia`, e ela é outro botão.
  */
 export async function desconectar(instancia: Instancia): Promise<void> {
   await chamar(comInstancia(instancia, 'disconnect'), {

@@ -416,6 +416,64 @@ trocar para a irma recarrega e o selo do topo corrige.
 
     testes   1.948 -> 1.954
 
+### DOIS contratos da Z-API que eu tinha inventado, e o segundo matava o cliente em 48h (17/09)
+
+Pergunta do dono — *"o que falta pra deixar pronto quando chegar o primeiro
+cliente?"* — e conferir a resposta exigiu reler a documentacao do Partner campo
+a campo. Achei dois defeitos MEUS.
+
+**1. `notifySentByMe` NAO existe no create-instance.** Eu mandava o campo junto
+de `receivedCallbackUrl`, e a lista de opcionais publicada nao o tem: ele seria
+ignorado em silencio. O sintoma seria a caixa mostrando as perguntas do cliente
+**sem nenhuma resposta ao lado**, e a pessoa concluindo que o produto perdeu o
+que ela escreveu.
+
+Quem entrega as duas direcoes e `receivedAndDeliveryCallbackUrl`, descrito como
+*"Webhook URL for received and sent messages"*. A rota de recebimento ja sabe
+tratar `fromMe`.
+
+**2. A instancia morria em 48 HORAS.** `criarInstancia` devolve um trial de dois
+dias, e a Z-API apaga sozinha o que ninguem assinar. Eu nunca chamei o endpoint
+de assinar — nem sabia que ele existia.
+
+Na pratica: cliente paga o Max na sexta, le o QR, e o WhatsApp da empresa dele
+desliga no domingo. **Sem nada falhar do nosso lado**: a linha diria
+"conectado", o envio passaria a tomar 404, e o sintoma seria silencio.
+
+`assinarInstancia` entrou em `lerQrCode`, DEPOIS do QR lido — assinar na criacao
+pagaria por quem nunca pareia.
+
+    POST /instances/{id}/token/{token}/integrator/on-demand/subscription
+    Authorization: Bearer <Partner-Token>     { "withCalls": false }
+
+**3. E `apagarInstancia` batia num endpoint que nao existe.** Eu tinha escrito
+`DELETE /partner/instances/{id}`. A lista real do Partner tem SETE rotas e
+nenhuma com essa forma. O certo e cancelar a assinatura, no caminho simetrico do
+de assinar.
+
+**Cancelar NAO desliga o numero na hora**, e isso mudou a frase da tela: a Z-API
+mantem a instancia ativa ate o fim do ciclo, que e o ultimo dia do mes. Dizer so
+"removida" faria a pessoa achar que caiu agora e tentar reconectar por nada.
+
+O metodo do cancelamento **nao e publicado**. A funcao tenta DELETE e cai para
+POST no 405, e a incerteza esta escrita no codigo em vez de escondida: uma
+chamada real contra a conta fecha a duvida, e e o primeiro teste a fazer quando
+o Partner token existir.
+
+### O que isso ensina sobre o metodo, e vale mais que os tres
+
+Os tres nasceram do mesmo lugar: a documentacao `.md` da Z-API descreve o CORPO
+e o EFEITO, e frequentemente **nao publica o caminho**. Eu preenchi as lacunas
+por simetria e segui em frente.
+
+E o defeito de 25/08 com outro nome — a rota do Evolution escrita a partir do
+Swagger, que descrevia outra forma, respondendo `200` sem gravar nada. **O
+sintoma dos tres seria silencio**, que e o mais caro de perceber.
+
+O que muda daqui: quando o contrato nao estiver publicado, a funcao DIZ que nao
+esta, e quem chama trata o "nao confirmado" como estado — foi assim que
+`tentarConfigurarWebhooks` nasceu, e e assim que os tres deveriam ter nascido.
+
 ### O que continua FORA, e a ordem
 
     Fase 3   enviar MIDIA (a caixa ja RECEBE audio, imagem, video, documento e
