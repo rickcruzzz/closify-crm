@@ -524,6 +524,75 @@ A instancia nasce no CLIQUE, nunca no webhook. Tres motivos:
 E quem paga a Z-API somos NOS; o cliente paga o Asaas. Os 7 dias de carencia da
 0091 sao o colchao entre os dois relogios, e custam ~R$ 23 por cliente que sai.
 
+### O Partner custa R$ 899,90 FIXOS, e a virada e em NOVE clientes (17/09)
+
+O dono abriu a tabela de precos do Partner e perguntou se funciona sem ele. A
+resposta mudou a recomendacao que eu tinha dado uma hora antes.
+
+    10 a 49 instancias   R$ 89,99 cada
+    minimo CONTRATADO    10, e e caixa obrigatoria no formulario
+
+    clientes Max   sem Partner   com Partner
+             5      R$ 499,95     R$ 899,90
+             9      R$ 899,91     R$ 899,90   <- empate
+            10      R$ 999,90     R$ 899,90
+            20      R$ 1.999,80   R$ 1.799,80
+
+**Abaixo de nove, o Partner e pagar por vaga vazia.** Com zero clientes, R$ 900
+por mes contra R$ 0. Eu tinha dito "marque 10+ com pressa" — marcar para
+CONVERSAR continua certo, contratar agora nao.
+
+### O que quebrava sem Partner, e eram dois BOTOES
+
+Conferido funcao por funcao, e nao de memoria:
+
+    criarInstancia        conectarWhatsapp          QUEBRAVA
+    assinarInstancia      try/catch que so loga     nao quebra
+    cancelar (rollback)   so roda se criou          irrelevante
+    cancelar (remover)    removerWhatsapp           QUEBRAVA
+    cancelar (purga)      conta falha, mantem linha nao quebra, nao limpa
+
+**1. "Conectar WhatsApp"** dizia *"Nao foi possivel preparar a conexao agora.
+Tente de novo em alguns minutos."* Mentira nas duas metades: nao adianta tentar
+de novo, e nao sao alguns minutos. A pessoa acabou de pagar R$ 250.
+
+**2. "Remover conexao"** recusava e MANTINHA a linha. Era meu desenho
+funcionando pelo lado errado: eu fiz a remocao nao esquecer a linha se o
+cancelamento falhar, para nunca deixar instancia faturando invisivel. Sem
+Partner o cancelamento SEMPRE falha, entao ninguem conseguia remover.
+
+### O modo manual, e ele e vendavel
+
+`provisionamentoAutomatico()` le `ZAPI_PARTNER_TOKEN` e decide, no SERVIDOR.
+A tela recebe a resposta pronta.
+
+    automatico    "Conectar WhatsApp"  -> cria instancia por API
+    manual        "Pedir meu numero"   -> e-mail para o dono + espera honesta
+
+O cliente ve: *"Estamos preparando o numero da sua empresa. Assim que estiver
+pronto, esta tela mostra o QR Code."* E o dono recebe um e-mail com o nome da
+empresa no ASSUNTO e os tres passos no corpo.
+
+**O `preparando` NAO liga o polling**, e isso e decisao: nao existe QR para
+buscar, ninguem criou instancia. Ligar bateria no provedor doze vezes por nada e
+terminaria em "o QR expirou" — a mesma mentira por outro caminho.
+
+E remover sem Partner passou a esquecer a linha e **avisar alto no log** para
+cancelar no painel. A regra de "provedor primeiro" existe contra instancia
+faturando invisivel, e aqui ela nao se aplica: a instancia foi criada a mao, o
+dono sabe que ela existe.
+
+### O `rawParagraph` que o `tsc` nao pega
+
+`paragraph()` do layout de e-mail **escapa tudo**, entao `<strong>` sairia
+literal na tela. `rawParagraph()` nao escapa nada — e por isso o nome da empresa
+e o e-mail, que vem do banco, passam por `escapeHtml` a mao, um a um.
+
+Os dois helpers recebem `string`, entao o compilador aprova as duas formas. Quem
+pega e ler o helper, e um teste com `<script>` no nome da empresa.
+
+    testes   1.955 -> 1.962
+
 ### O que continua FORA, e a ordem
 
     Fase 3   enviar MIDIA (a caixa ja RECEBE audio, imagem, video, documento e

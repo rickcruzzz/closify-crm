@@ -41,6 +41,36 @@ import 'server-only'
 const BASE = 'https://api.z-api.io'
 
 /**
+ * O produto consegue criar instância sozinho?
+ *
+ * ## Por que isto é uma pergunta, e não um pressuposto
+ *
+ * Criar e cancelar instância exige o **Partner token**, e o programa Partner da
+ * Z-API pede **10 instâncias contratadas**: R$ 899,90 por mês, fixos. A conta
+ * que decide está medida, e ela inverte com o número de clientes:
+ *
+ *     ate 9 clientes Max    pagar por instancia sai mais barato
+ *     a partir de 10        o Partner vira o barato
+ *
+ * Abaixo de nove, contratar seria pagar por vaga vazia. Então o produto precisa
+ * funcionar nos DOIS modos, e a diferença entre eles é uma variável de ambiente.
+ *
+ * ## O que muda quando isto é `false`
+ *
+ * O cliente não cria a instância no clique. Ele pede, o dono é avisado por
+ * e-mail, cria no painel e cola as credenciais. Tudo o mais é idêntico: receber,
+ * responder, QR, status, caixa de entrada e o gate do plano não tocam no
+ * Partner.
+ *
+ * A tela pergunta isto **no servidor** e escolhe o que mostrar. Sem a pergunta,
+ * o botão chamaria a API, tomaria erro e diria "tente de novo em alguns
+ * minutos" — mentira, para quem acabou de pagar R$ 250.
+ */
+export function provisionamentoAutomatico(): boolean {
+  return Boolean(process.env.ZAPI_PARTNER_TOKEN)
+}
+
+/**
  * Teto de espera por chamada.
  *
  * Oito segundos, contra o `maxDuration` de 15 das rotas de webhook. A folga é

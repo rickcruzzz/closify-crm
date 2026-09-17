@@ -61,6 +61,7 @@ export function WhatsappConexao({
   ehAdmin,
   temMax,
   bloqueio,
+  automatico,
 }: {
   estado: EstadoDaConexao
   telefone: string | null
@@ -69,6 +70,14 @@ export function WhatsappConexao({
   ehAdmin: boolean
   temMax: boolean
   bloqueio: Bloqueio | null
+  /**
+   * O produto cria a instância sozinho, ou o dono cria à mão?
+   *
+   * Vem do servidor porque depende de `ZAPI_PARTNER_TOKEN`, que o navegador não
+   * vê. Ela muda só o TEXTO e o que acontece depois do clique: o gate de plano,
+   * o QR, o estado e a remoção são idênticos nos dois modos.
+   */
+  automatico: boolean
 }) {
   const router = useRouter()
   const [qr, setQr] = React.useState<string | null>(null)
@@ -77,6 +86,7 @@ export function WhatsappConexao({
   const [tentativas, setTentativas] = React.useState(0)
   const [expirou, setExpirou] = React.useState(false)
   const [urlsParaColar, setUrlsParaColar] = React.useState<string[] | null>(null)
+  const [pedido, setPedido] = React.useState(false)
 
   const pararBusca = React.useCallback(() => {
     setBuscando(false)
@@ -135,6 +145,17 @@ export function WhatsappConexao({
       return
     }
 
+    // ## `preparando` e o modo manual respondendo, e ele NAO liga o laco
+    //
+    // Nao existe QR para buscar: ninguem criou instancia. Ligar o polling aqui
+    // bateria no provedor doze vezes por nada e terminaria em "o QR expirou",
+    // que e a mesma mentira por outro caminho.
+    if (r.estado === 'preparando') {
+      setPedido(true)
+      toast.success('Pedido recebido. Avisamos assim que o número estiver pronto.')
+      return
+    }
+
     setQr(r.qr)
     if (r.estado === 'conectado') {
       router.refresh()
@@ -169,7 +190,11 @@ export function WhatsappConexao({
     // A Z-API mantem a instancia ativa ate o fim do ciclo, que e o ultimo dia
     // do mes. Dizer "removida" e ponto faria a pessoa achar que o numero caiu
     // agora, e ela tentaria reconectar por nada.
-    toast.success('Conexão removida. O número segue ativo até o fim do mês e a cobrança para.')
+    toast.success(
+      automatico
+        ? 'Conexão removida. O número segue ativo até o fim do mês e a cobrança para.'
+        : 'Conexão removida. As conversas continuam aqui.',
+    )
     router.refresh()
   }
 
@@ -271,6 +296,24 @@ export function WhatsappConexao({
           </p>
         ) : null}
 
+        {/* ## A espera HONESTA, no lugar de um botao que mentia
+            Sem Partner o numero e preparado a mao, e isso leva minutos. A
+            versao anterior chamava a API, tomava erro e dizia "tente de novo em
+            alguns minutos" — mentira nas duas metades, para quem acabou de
+            pagar R$ 250. */}
+        {pedido ? (
+          <p className="text-muted-foreground border-border/60 rounded-lg border p-3 text-xs leading-relaxed">
+            Estamos preparando o número da sua empresa. Assim que ele estiver pronto,
+            esta tela mostra o QR Code para você ler no celular. Costuma levar alguns
+            minutos em horário comercial.
+          </p>
+        ) : !automatico && estado === 'ausente' && ehAdmin && temMax ? (
+          <p className="text-muted-foreground text-xs leading-relaxed">
+            Seu número é preparado por nós, um a um. Peça aqui e avisamos quando o QR
+            Code estiver pronto.
+          </p>
+        ) : null}
+
         <div className="flex flex-wrap items-center gap-2">
           {!ehAdmin ? (
             <p className="text-muted-foreground text-xs">
@@ -300,7 +343,11 @@ export function WhatsappConexao({
             </>
           ) : (
             <>
-              <Button size="sm" onClick={conectar} disabled={ocupado || buscando}>
+              <Button
+                size="sm"
+                onClick={conectar}
+                disabled={ocupado || buscando || pedido}
+              >
                 {ocupado || buscando ? (
                   <Loader2 className="size-4 animate-spin" />
                 ) : expirou ? (
@@ -308,7 +355,13 @@ export function WhatsappConexao({
                 ) : (
                   <Plug className="size-4" />
                 )}
-                {expirou ? 'Gerar novo QR Code' : 'Conectar WhatsApp'}
+                {pedido
+                  ? 'Pedido enviado'
+                  : expirou
+                    ? 'Gerar novo QR Code'
+                    : automatico
+                      ? 'Conectar WhatsApp'
+                      : 'Pedir meu número'}
               </Button>
               {estado !== 'ausente' && temMax ? (
                 <Button variant="ghost" size="sm" onClick={remover} disabled={ocupado}>

@@ -27,6 +27,10 @@ import {
   statusDaInstancia,
   telefoneConectado,
 } from '@/lib/whatsapp/zapi'
+import { provisionamentoAutomatico } from '@/lib/whatsapp/zapi'
+import { getResend } from '@/lib/resend/client'
+import { EMAIL_DE_AVISO_DO_DONO } from '@/lib/emails/destinatario'
+import { renderPedidoDeConexaoEmail } from '@/lib/emails/pedido-de-conexao'
 
 /**
  * Conectar, conferir e desconectar o WhatsApp da empresa.
@@ -49,7 +53,7 @@ import {
  * client, que ignora RLS e não ignora trigger.
  */
 
-type Sessao = { userId: string; workspaceId: string; ehAdmin: boolean }
+type Sessao = { userId: string; email: string; workspaceId: string; ehAdmin: boolean }
 
 async function abrirSessao(): Promise<Sessao | { error: string }> {
   const supabase = await createClient()
@@ -65,7 +69,7 @@ async function abrirSessao(): Promise<Sessao | { error: string }> {
     target_workspace_id: workspaceId,
   })
 
-  return { userId: user.id, workspaceId, ehAdmin: ehAdmin === true }
+  return { userId: user.id, email: user.email ?? '', workspaceId, ehAdmin: ehAdmin === true }
 }
 
 function revalidar() {
@@ -124,6 +128,21 @@ export async function conectarWhatsapp(): Promise<RespostaDaConexao> {
       error: 'Você tentou conectar várias vezes seguidas. Aguarde alguns minutos.',
     }
   }
+
+  // ## Sem Partner token, a instancia e criada A MAO, e o cliente precisa saber
+  //
+  // Antes desta guarda, `criarInstancia` lancava "ZAPI_PARTNER_TOKEN nao
+  // configurado", o `catch` logo abaixo engolia, e a tela dizia *"Nao foi
+  // possivel preparar a conexao agora. Tente de novo em alguns minutos."*
+  //
+  // Era mentira nas duas metades: nao adianta tentar de novo, e nao sao alguns
+  // minutos. A pessoa acabou de pagar R$ 250 e bateria naquele botao a tarde
+  // inteira.
+  //
+  // Ver `provisionamentoAutomatico` para a conta que faz este modo existir: o
+  // Partner exige 10 instancias contratadas, e abaixo de 9 clientes ele e mais
+  // caro que pagar por instancia.
+  if (!provisionamentoAutomatico()) return pedirConexaoManual(sessao)
 
   const segredo = segredoNovo()
   const urls = urlsDoWebhook(segredo)
@@ -445,14 +464,33 @@ export async function removerWhatsapp(): Promise<{ ok: boolean; error?: string }
   const instancia = await credenciaisDaEmpresa(sessao.workspaceId)
   if (!instancia) return { ok: false, error: 'Nenhuma conexão encontrada nesta empresa.' }
 
+  // ## Sem Partner nao ha como cancelar por API, e recusar PRENDERIA o cliente
+  //
+  // `cancelarAssinaturaDaInstancia` exige o Partner token. Sem ele a chamada
+  // sempre falha, e a versao anterior devolvia erro e MANTINHA a linha: ninguem
+  // conseguia remover a conexao, nunca.
+  //
+  // A regra de "provedor primeiro, linha depois" existe para nao deixar
+  // instancia faturando invisivel. Aqui ela nao se aplica: a instancia foi
+  // criada A MAO no painel, o dono sabe que ela existe, e e la que ele cancela.
+  // O risco que a regra evita nao existe neste modo.
+  //
+  // O log e ALTO e nomeia a instancia, porque o cancelamento vira tarefa humana.
+  if (!provisionamentoAutomatico()) {
+    console.warn(
+      `removerWhatsapp: instancia ${instancia.instanceId} removida do produto. CANCELE A ASSINATURA DELA NO PAINEL DA Z-API, senao ela continua faturando.`,
+    )
+    await esquecerInstancia(sessao.workspaceId)
+    revalidar()
+    return { ok: true }
+  }
+
   try {
     await cancelarAssinaturaDaInstancia(instancia)
   } catch (erro) {
-    // Aqui NÃO segue: esquecer a linha sem apagar no provedor deixaria uma
-    // instância faturando que nenhuma tela alcança. É o pior desfecho possível,
-    // e o único jeito de descobrir seria a fatura.
-    // Aqui NÃO segue: esquecer a linha sem cancelar no provedor deixaria uma
-    // instância faturando que nenhuma tela alcança.
+    // Com Partner, aqui NAO segue: esquecer a linha sem cancelar no provedor
+    // deixaria uma instancia faturando que nenhuma tela alcanca. E o pior
+    // desfecho possivel, e o unico jeito de descobrir seria a fatura.
     console.error('removerWhatsapp: provedor recusou cancelar', erro)
     return {
       ok: false,
@@ -463,4 +501,52 @@ export async function removerWhatsapp(): Promise<{ ok: boolean; error?: string }
   await esquecerInstancia(sessao.workspaceId)
   revalidar()
   return { ok: true }
+}
+
+/**
+ * O pedido de conexao, quando o provisionamento e manual.
+ *
+ * ## O que ela entrega ao cliente e uma ESPERA HONESTA
+ *
+ * Nada acontece no provedor. O que acontece e um e-mail para o dono e uma frase
+ * verdadeira na tela: o numero esta sendo preparado.
+ *
+ * E pior que o automatico, e e muito melhor que a alternativa, que era um botao
+ * mentindo para quem acabou de pagar R$ 250.
+ *
+ * ## Falhar o e-mail NAO vira erro na tela
+ *
+ * O pedido e do cliente; o e-mail e do nosso lado. Devolver erro faria a pessoa
+ * clicar de novo achando que o pedido nao chegou, e cada clique seria outro
+ * e-mail. Se o Resend cair, o `console.error` fica.
+ */
+async function pedirConexaoManual(sessao: Sessao): Promise<RespostaDaConexao> {
+  const supabase = await createClient()
+  const { data: empresa } = await supabase
+    .from('workspaces')
+    .select('name')
+    .eq('id', sessao.workspaceId)
+    .maybeSingle()
+
+  try {
+    const { subject, html } = renderPedidoDeConexaoEmail({
+      nomeDaEmpresa: empresa?.name ?? sessao.workspaceId,
+      emailDeQuemPediu: sessao.email,
+      appUrl: appUrl(),
+    })
+    const { error } = await getResend().emails.send({
+      from: 'Velo Funil <suporte@velofunil.com.br>',
+      to: EMAIL_DE_AVISO_DO_DONO,
+      subject,
+      html,
+    })
+    // O `error` e checado e nao so o `catch`: o SDK do Resend **nao lanca** em
+    // recusa, devolve `{ error }`. Foi assim que ele engoliu falha de envio em
+    // 30/08.
+    if (error) console.error('pedirConexaoManual: e-mail nao saiu', error)
+  } catch (erro) {
+    console.error('pedirConexaoManual: e-mail nao saiu', erro)
+  }
+
+  return { ok: true, qr: null, estado: 'preparando' }
 }

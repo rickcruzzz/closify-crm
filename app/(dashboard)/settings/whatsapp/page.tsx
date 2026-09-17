@@ -7,6 +7,7 @@ import { situacaoDoMax } from '@/lib/plans/max-queries'
 import { createClient } from '@/lib/supabase/server'
 import { getCurrentUserAndWorkspace } from '@/lib/supabase/workspace'
 import { conexaoDaEmpresa } from '@/lib/whatsapp/instancia'
+import { provisionamentoAutomatico } from '@/lib/whatsapp/zapi'
 
 export const metadata: Metadata = { title: 'WhatsApp' }
 
@@ -60,6 +61,13 @@ export default async function WhatsappPage() {
         // quatro negativas de `direitoAoWhatsapp` existem porque cada uma pede
         // uma ação diferente, e reconstruí-las aqui criaria uma quinta versão.
         bloqueio={direito.pode ? null : { tipo: direito.tipo, motivo: direito.motivo }}
+        // ## O modo e resolvido no SERVIDOR, e a tela so obedece
+        //
+        // `ZAPI_PARTNER_TOKEN` e variavel de ambiente: o componente de cliente
+        // nao tem como saber. Sem esta prop, o botao chamaria a API, tomaria
+        // erro e diria "tente de novo em alguns minutos" — mentira, para quem
+        // acabou de pagar R$ 250.
+        automatico={provisionamentoAutomatico()}
       />
     </div>
   )
