@@ -20,9 +20,31 @@ import 'server-only'
  *     cabecalho  Client-Token: <token de seguranca da CONTA>
  *     partner    Authorization: Bearer <Partner-Token>
  *
- * Nada aqui é suposição sobre a documentação. O defeito de 25/08 nasceu
- * exatamente disso: a rota do Evolution foi escrita a partir do Swagger, que
- * descreve outra forma, e ela respondia `200` sem gravar nada.
+ * ## MEDIDO contra a conta real em 17/09, e não lido
+ *
+ *     GET  /status                  200  {connected, error, smartphoneConnected}
+ *     GET  /qr-code/image           200  {"value":"data:image/png;base64,..."}
+ *     GET  /device                  400  "You need to be connected" (existe)
+ *     GET  /disconnect              200  {"value":true}
+ *     POST /send-text               200  {zaapId, messageId, id}
+ *     PUT  /update-every-webhooks   200  {"value":true}
+ *
+ * E o Client-Token esta ATIVO nesta conta, provado nos tres sentidos:
+ *
+ *     com o token     200
+ *     SEM o token     400  "your client-token is not configured"
+ *     token errado    403  "Client-Token not allowed"
+ *
+ * ## A documentacao foi fonte ERRADA cinco vezes hoje
+ *
+ * Ela descreve o CORPO e o EFEITO, e frequentemente nao publica o caminho nem o
+ * metodo. A frase "verifique se voce enviou POST ou GET" aparece na secao de
+ * erro de TODA pagina, e nao e especificacao de nada.
+ *
+ * Duas vezes eu "consertei" o que ja estava certo lendo o documento, e a API
+ * real desfez as duas. **A API e a unica autoridade**, e o defeito de 25/08
+ * nasceu exatamente do contrario: a rota do Evolution foi escrita a partir do
+ * Swagger, que descreve outra forma, e ela respondia `200` sem gravar nada.
  *
  * ## As credenciais, e o que é de cada nível
  *
@@ -337,15 +359,24 @@ export async function cancelarAssinaturaDaInstancia(instancia: Instancia): Promi
  * objeto JSON dentro não mostra erro nenhum, só um quadrado quebrado.
  */
 export async function qrCode(instancia: Instancia): Promise<string | null> {
-  // ## `qrcode/image`, sem hifen. Eu tinha escrito `qr-code/image`
+  // ## `qr-code/image`, COM hifen, e eu quase quebrei isto "consertando"
   //
-  // O hifen esta no NOME DA PAGINA da documentacao
-  // (`/en/instance/qr-code-image.md`), nao no caminho do endpoint. Escrevi o
-  // caminho a partir da URL do documento, que e uma fonte diferente — e errada.
+  // Medido contra a conta real em 17/09, e os dois caminhos respondem 200:
   //
-  // Achado relendo a documentacao inteira em 17/09, e e a PRIMEIRA chamada que
-  // o cliente dispara: com o hifen, todo "Conectar WhatsApp" responderia 404 e
-  // a tela diria "o provedor nao respondeu".
+  //     GET /qr-code/image   7.214 bytes, {"value":"data:image/png;base64,..."}
+  //     GET /qrcode/image    {"error":"NOT_FOUND"}  <- 200 com erro no CORPO
+  //
+  // Horas antes eu tinha trocado para a versao sem hifen, lendo a documentacao:
+  // o nome da pagina e `qr-code-image.md`, e eu conclui que o hifen era do
+  // documento e nao do endpoint. **Era do endpoint.**
+  //
+  // O que torna esse erro pior que um 404: a Z-API devolve **200 com erro no
+  // corpo**. `resposta.ok` e `true`, o JSON entra, nenhum campo de imagem
+  // existe, e a funcao devolve `null` — a tela diria "nao foi possivel gerar o
+  // QR" sem nada no log. Silencio, de novo.
+  //
+  // A licao nao e sobre o hifen. E que a documentacao desta API foi FONTE
+  // ERRADA cinco vezes hoje, e a API real e a unica autoridade.
   const r = await chamar<{
     value?: string
     // A documentacao descreve a resposta como "o QRCode em base64" e NAO
@@ -356,7 +387,7 @@ export async function qrCode(instancia: Instancia): Promise<string | null> {
     base64?: string
     connected?: boolean
     challenge?: unknown
-  }>(comInstancia(instancia, 'qrcode/image'), {
+  }>(comInstancia(instancia, 'qr-code/image'), {
     headers: { 'Client-Token': clientToken() },
   })
 
@@ -494,13 +525,18 @@ export async function tentarConfigurarWebhooks(
  * Quem para a cobrança é `cancelarAssinaturaDaInstancia`, e ela é outro botão.
  */
 export async function desconectar(instancia: Instancia): Promise<void> {
-  // POST, e nao GET. O `chamar` cai em GET quando ninguem diz o metodo, e era
-  // isso que acontecia aqui: a Z-API responderia 405, e a tela diria "nao foi
-  // possivel desconectar" para uma chamada que nunca teve chance.
+  // ## GET, e a API real derrubou a minha "correcao" aqui tambem
   //
-  // Conferido na documentacao em 17/09, junto do caminho do QR.
+  //     GET  /disconnect   200 {"value":true}
+  //     POST /disconnect   405 Method Not Allowed
+  //
+  // Horas antes eu tinha trocado para POST, porque a documentacao diz
+  // "verifique se voce enviou POST ou GET" — frase generica que aparece na
+  // secao de erro de TODA pagina, e que eu li como especificacao.
+  //
+  // Medido contra a conta real em 17/09. `chamar` cai em GET sem `method`, que
+  // e o certo aqui.
   await chamar(comInstancia(instancia, 'disconnect'), {
-    method: 'POST',
     headers: { 'Client-Token': clientToken() },
   })
 }

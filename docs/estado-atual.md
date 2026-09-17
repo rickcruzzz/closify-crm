@@ -593,6 +593,75 @@ pega e ler o helper, e um teste com `<script>` no nome da empresa.
 
     testes   1.955 -> 1.962
 
+### A API REAL respondeu, e ela desfez DUAS "correcoes" minhas (17/09)
+
+O dono criou a conta na Z-API e poz o Client-Token e as credenciais da instancia
+no `.env.local`. Primeira vez que este caminho e exercitado contra a API de
+verdade, e o resultado inverte duas coisas que eu tinha "consertado" horas antes
+lendo a documentacao.
+
+    GET  /qr-code/image   200  {"value":"data:image/png;base64,..."}  7.214 bytes
+    GET  /qrcode/image    200  {"error":"NOT_FOUND"}   <- a minha "correcao"
+
+    GET  /disconnect      200  {"value":true}
+    POST /disconnect      405  Method Not Allowed      <- a minha "correcao"
+
+**O original estava certo nas duas.** Eu li o nome do arquivo de documentacao
+(`qr-code-image.md`) e conclui que o hifen era do documento; era do endpoint. E
+li "verifique se voce enviou POST ou GET" como especificacao, quando e frase
+generica que aparece na secao de erro de TODA pagina.
+
+### E o modo de falhar e o pior que existe: 200 com erro no CORPO
+
+`GET /qrcode/image` nao devolve 404. Devolve **200** com
+`{"error":"NOT_FOUND"}`. `resposta.ok` e `true`, o JSON entra, nenhum campo de
+imagem existe, e `qrCode()` devolve `null`.
+
+A tela diria *"nao foi possivel gerar o QR"* sem uma linha no log. Silencio, pela
+sexta vez hoje.
+
+### O que a API CONFIRMOU certo
+
+    GET  /status                  200  {connected, error, smartphoneConnected}
+    GET  /device                  400  "You need to be connected" (existe)
+    POST /send-text               200  {zaapId, messageId, id}
+    PUT  /update-every-webhooks   200  {"value":true}
+
+O ultimo importa: era um dos caminhos que eu marquei como NAO confirmado, e o
+modo manual depende dele para apontar os webhooks. Ele existe, e e PUT.
+
+### O Client-Token esta ATIVO, provado nos tres sentidos
+
+    com o token     200
+    SEM o token     400  "your client-token is not configured"
+    token errado    403  "Client-Token not allowed"
+
+O dono ativou. A partir daqui, qualquer chamada sem o cabecalho e recusada — e o
+codigo manda em todas.
+
+### A licao, e ela vale mais que os cinco defeitos
+
+A documentacao da Z-API descreve o CORPO e o EFEITO e frequentemente **nao
+publica o caminho nem o metodo**. Hoje ela me levou a erro cinco vezes, e duas
+delas foram "consertar" o que ja funcionava.
+
+**A API real e a unica autoridade.** E o mesmo aprendizado de 25/08, quando a
+rota do Evolution foi escrita a partir do Swagger e respondia 200 sem gravar
+nada — so que desta vez o documento nao estava desatualizado: ele estava
+incompleto, e eu preenchi a lacuna com o nome do arquivo.
+
+### A prova deixou lixo, e ele foi limpo
+
+`POST /send-text` respondeu 200 com a instancia DESCONECTADA: a Z-API enfileira
+para entregar quando conectar. Sobrou um "x" na fila, destinado a um numero
+inventado.
+
+    GET    /queue   [{"Message":"x", ...}]
+    DELETE /queue   204
+    GET    /queue   []
+
+Sem isso, o primeiro pareamento real mandaria "x" para um desconhecido.
+
 ### O que continua FORA, e a ordem
 
     Fase 3   enviar MIDIA (a caixa ja RECEBE audio, imagem, video, documento e
