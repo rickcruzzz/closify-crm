@@ -3,6 +3,13 @@
 import * as React from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import { Input } from '@/components/ui/input'
+import {
+  FILTROS_VAZIOS,
+  filtrarConversas,
+  temFiltroAtivo,
+  type Filtros,
+} from '@/lib/conversas/filtrar'
 import { toast } from 'sonner'
 import {
   Archive,
@@ -145,6 +152,20 @@ export function ConversasClient({
   }, [])
 
   const ordenadas = React.useMemo(() => ordenarPorEspera(conversas), [conversas])
+
+  const [filtros, setFiltros] = React.useState<Filtros>(FILTROS_VAZIOS)
+  const visiveis = React.useMemo(
+    () => filtrarConversas(ordenadas, filtros, usuarioId),
+    [ordenadas, filtros, usuarioId],
+  )
+
+  /**
+   * A conversa aberta sai de `ordenadas` e NÃO de `visiveis`.
+   *
+   * Filtrar é uma lente sobre a lista, não uma navegação. Ler daqui faria a
+   * conversa desaparecer da tela no instante em que a pessoa digitasse algo que
+   * não casasse com ela — no meio de uma resposta, com o texto já escrito.
+   */
   const aberta = ordenadas.find((c) => c.id === conversaAberta) ?? null
 
   const [detalheAberto, setDetalheAberto] = React.useState(false)
@@ -156,7 +177,7 @@ export function ConversasClient({
         title={podeConectarWhatsapp() ? 'Nenhuma conversa ainda' : AVISO_DE_MIGRACAO.titulo}
         description={
           podeConectarWhatsapp()
-            ? 'Quando um cliente mandar mensagem no WhatsApp, ela aparece aqui com o negócio dele do lado. Conecte o WhatsApp em Configurações, Integrações.'
+            ? 'Quando um cliente mandar mensagem no WhatsApp, ela aparece aqui com o negócio dele do lado. Conecte o WhatsApp em Configurações, WhatsApp.'
             : `${AVISO_DE_MIGRACAO.detalhe} Esta tela já está pronta: assim que a aprovação sair, as conversas aparecem aqui com o negócio de cada cliente do lado.`
         }
       />
@@ -176,8 +197,14 @@ export function ConversasClient({
           aberta && 'hidden md:flex',
         )}
       >
+        <BarraDeFiltro
+          filtros={filtros}
+          onMudar={setFiltros}
+          total={ordenadas.length}
+          visiveis={visiveis.length}
+        />
         <ListaDeConversas
-          conversas={ordenadas}
+          conversas={visiveis}
           abertaId={conversaAberta}
           agora={agora}
           usuarioId={usuarioId}
@@ -218,6 +245,121 @@ export function ConversasClient({
         </SheetContent>
       </Sheet>
     </div>
+  )
+}
+
+/**
+ * Busca e os dois filtros que respondem as perguntas do dia.
+ *
+ * ## Dois, e não sete
+ *
+ * "Não lidas" e "minhas" cobrem as duas perguntas que aparecem o tempo todo:
+ * *o que falta atender* e *o que é meu*. Filtro por etapa, por valor e por
+ * período existiriam e ninguém usaria — e cada um a mais é um controle que a
+ * pessoa precisa ler antes de achar o que procura.
+ *
+ * É a mesma lição de `/dono/alertas`, onde 8 de 11 alertas eram ruído e o
+ * efeito foi ninguém mais olhar a fila inteira.
+ *
+ * ## O contador só aparece quando FILTRA
+ *
+ * Sem filtro, "200 de 200" é ruído. Com filtro, "3 de 200" é a informação que
+ * impede a leitura errada mais comum desta tela: uma lista curta que parece
+ * "acabaram as conversas" quando o que houve foi uma busca esquecida ligada.
+ */
+function BarraDeFiltro({
+  filtros,
+  onMudar,
+  total,
+  visiveis,
+}: {
+  filtros: Filtros
+  onMudar: (f: Filtros) => void
+  total: number
+  visiveis: number
+}) {
+  const ativo = temFiltroAtivo(filtros)
+
+  return (
+    <div className="border-border/60 flex flex-col gap-2 border-b p-3">
+      <Input
+        value={filtros.busca}
+        onChange={(e) => onMudar({ ...filtros, busca: e.target.value })}
+        placeholder="Buscar por nome, telefone ou mensagem"
+        aria-label="Buscar conversa"
+        className="h-9"
+      />
+
+      <div className="flex flex-wrap items-center gap-1.5">
+        <Chip
+          ligado={filtros.apenasEsperando}
+          onClick={() =>
+            onMudar({ ...filtros, apenasEsperando: !filtros.apenasEsperando })
+          }
+        >
+          Esperando
+        </Chip>
+        <Chip
+          ligado={filtros.apenasMinhas}
+          onClick={() => onMudar({ ...filtros, apenasMinhas: !filtros.apenasMinhas })}
+        >
+          Minhas
+        </Chip>
+
+        {ativo && (
+          <>
+            <span className="text-muted-foreground ml-auto text-xs tabular-nums">
+              {visiveis} de {total}
+            </span>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-7 px-2 text-xs"
+              onClick={() => onMudar(FILTROS_VAZIOS)}
+            >
+              Limpar
+            </Button>
+          </>
+        )}
+      </div>
+    </div>
+  )
+}
+
+/**
+ * Um filtro que liga e desliga.
+ *
+ * `aria-pressed` e não `role="checkbox"`: para o leitor de tela isto é um botão
+ * que fica pressionado, que é exatamente o que ele é. Mesmo padrão dos cartões
+ * de ciclo em `subscribe-button.tsx`.
+ *
+ * `min-h-11` no telefone e compacto no desktop: a regra de alvo de toque de 44px
+ * vale onde o dedo alcança, e uma barra de filtro com 44px de altura no desktop
+ * comeria a lista que ela existe para ajudar a ler.
+ */
+function Chip({
+  ligado,
+  onClick,
+  children,
+}: {
+  ligado: boolean
+  onClick: () => void
+  children: React.ReactNode
+}) {
+  return (
+    <button
+      type="button"
+      aria-pressed={ligado}
+      onClick={onClick}
+      className={cn(
+        'min-h-11 rounded-full border px-3 text-xs transition-colors md:min-h-0 md:py-1',
+        ligado
+          ? 'border-primary bg-primary/10 text-foreground'
+          : 'border-border text-muted-foreground hover:border-foreground/20',
+      )}
+    >
+      {children}
+    </button>
   )
 }
 
@@ -294,6 +436,17 @@ function ListaDeConversas({
       </div>
 
       <div className="min-h-0 flex-1 overflow-y-auto">
+        {/* ## Lista vazia com filtro ligado NÃO pode ser silêncio
+            Vazio lê-se como "acabaram as conversas", e a verdade é "nenhuma
+            casa com o que está ligado". As duas pedem ações opostas: parar de
+            trabalhar, ou limpar o filtro. É a mesma distinção que o painel de
+            inteligência faz entre "não deu nada" e "ainda não dá para saber". */}
+        {conversas.length === 0 && (
+          <p className="text-muted-foreground p-4 text-sm leading-relaxed">
+            Nenhuma conversa com esse filtro. Limpe a busca para ver todas.
+          </p>
+        )}
+
         {esperando.map((c) => (
           <LinhaDaConversa
             key={c.id}
@@ -712,6 +865,30 @@ function Balao({ mensagem }: { mensagem: MensagemNaTela }) {
 }
 
 /**
+ * O prazo da próxima ação, por extenso e no fuso de São Paulo.
+ *
+ * `timeZone` explícito e não o do navegador: o servidor roda em UTC, e às 21h
+ * de São Paulo já é o dia seguinte lá. Sem isto, uma tarefa marcada para hoje à
+ * noite apareceria com a data de amanhã — o mesmo defeito que `diaEmSaoPaulo`
+ * fechou para as telas de tarefa em 12/08.
+ *
+ * Data EXATA e não "em 2 dias": o Kanban trocou o relativo pelo absoluto em
+ * 16/09, e a razão vale igual aqui. "Amanhã" obriga quem lê a calcular contra
+ * um relógio que ela não vê.
+ */
+function dataDoPrazo(iso: string): string {
+  return new Intl.DateTimeFormat('pt-BR', {
+    timeZone: 'America/Sao_Paulo',
+    day: '2-digit',
+    month: 'short',
+    hour: '2-digit',
+    minute: '2-digit',
+  })
+    .format(new Date(iso))
+    .replace(/\./g, '')
+}
+
+/**
  * A coluna que só um CRM consegue desenhar.
  *
  * O WhatsApp guarda a conversa e não guarda o cliente: ele não sabe quanto
@@ -739,6 +916,41 @@ function PainelDoNegocio({ conversa }: { conversa: ConversaNaLista }) {
           )}
         </div>
       </div>
+
+      <Separator />
+
+      {/* ## A próxima ação vem ANTES do valor, e a ordem é a decisão
+          O valor responde "quanto está em jogo"; a próxima ação responde "o que
+          eu faço agora", que é a pergunta de quem abriu a conversa. Um CRM que
+          mostra o dinheiro e esconde o compromisso é um relatório, não uma
+          ferramenta de trabalho. */}
+      {conversa.proximaAcao ? (
+        <div className="flex flex-col gap-1">
+          <span className="text-muted-foreground text-xs">Próxima ação</span>
+          <span className="text-sm leading-snug">{conversa.proximaAcao.titulo}</span>
+          {conversa.proximaAcao.prazo && (
+            <span className="text-muted-foreground text-xs tabular-nums">
+              {dataDoPrazo(conversa.proximaAcao.prazo)}
+            </span>
+          )}
+        </div>
+      ) : (
+        <div className="flex flex-col gap-2">
+          {/* "Sem próxima ação" e não silêncio: o card do Kanban já trata a
+              ausência como alerta desde 16/09, porque 96% dos negócios abertos
+              não tinham nenhuma. Aqui vale o mesmo — a conversa sem compromisso
+              é a que se perde. */}
+          <span className="text-muted-foreground text-xs">Sem próxima ação marcada</span>
+          <Button
+            variant="outline"
+            size="sm"
+            className="w-fit"
+            render={<Link href={`/leads/${conversa.leadId}`} />}
+          >
+            Marcar o próximo passo
+          </Button>
+        </div>
+      )}
 
       <Separator />
 

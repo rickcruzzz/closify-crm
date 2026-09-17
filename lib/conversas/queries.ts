@@ -33,6 +33,15 @@ export type ConversaNaLista = ConversaParaOrdenar & {
   /** Valor em aberto do negócio ligado a este contato, se houver. */
   valorDoNegocio: number | null
   etapaDoNegocio: string | null
+  /**
+   * O que era para acontecer depois, e quando.
+   *
+   * É a informação que separa esta tela de um WhatsApp Web: o chat guarda a
+   * conversa e não guarda o compromisso. Sem ela, o painel do contato responde
+   * "quanto vale" e "em que etapa está" e fica mudo justamente na pergunta que
+   * o produto existe para responder.
+   */
+  proximaAcao: { titulo: string; prazo: string | null } | null
 }
 
 export type MensagemNaTela = {
@@ -116,11 +125,17 @@ export async function getConversas(workspaceId: string): Promise<ConversaNaLista
 
   // A prévia vem da última mensagem de cada conversa. Uma ida para todas, com
   // `in`, e não uma por conversa.
-  const previas = await ultimaMensagemDeCada(
-    supabase,
-    workspaceId,
-    linhas.map((l) => l.id),
-  )
+  // As duas leituras são independentes e vão juntas: em série, a tela mais
+  // aberta do produto pagaria duas viagens onde uma basta. Mesmo motivo que
+  // juntou as leituras do layout em 12/08.
+  const [previas, proximas] = await Promise.all([
+    ultimaMensagemDeCada(
+      supabase,
+      workspaceId,
+      linhas.map((l) => l.id),
+    ),
+    proximaAcaoDeCada(supabase, workspaceId, leadIds),
+  ])
 
   const conversas: ConversaNaLista[] = linhas.map((linha) => {
     // `leads!inner` devolve objeto; o supabase-js tipa como array em alguns
@@ -141,6 +156,7 @@ export async function getConversas(workspaceId: string): Promise<ConversaNaLista
       previa: previas.get(linha.id) ?? '',
       valorDoNegocio: negocio?.valor ?? null,
       etapaDoNegocio: negocio?.etapa ?? null,
+      proximaAcao: proximas.get(linha.lead_id) ?? null,
     }
   })
 
@@ -182,6 +198,51 @@ async function ultimaMensagemDeCada(
   }
 
   return previa
+}
+
+/**
+ * A próxima ação em aberto de cada contato, numa consulta só.
+ *
+ * Traz as tarefas não concluídas de todos os contatos da tela juntas, na ordem
+ * do prazo, e fica com a primeira de cada — a mais urgente. Uma ida por
+ * conversa seria N+1 na tela mais aberta do produto, mesma classe do defeito
+ * que `getBoardDeals` já corrigiu.
+ *
+ * `nullsFirst: false` porque tarefa sem prazo não é a mais urgente: ela é a que
+ * ninguém marcou para quando. Sem isso, um "ligar depois" sem data roubaria o
+ * lugar de uma cobrança que vence hoje.
+ */
+async function proximaAcaoDeCada(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  workspaceId: string,
+  leadIds: string[],
+): Promise<Map<string, { titulo: string; prazo: string | null }>> {
+  const porLead = new Map<string, { titulo: string; prazo: string | null }>()
+  if (leadIds.length === 0) return porLead
+
+  const { data, error } = await supabase
+    .from('tasks')
+    .select('lead_id, title, due_at')
+    .eq('workspace_id', workspaceId)
+    .in('lead_id', leadIds)
+    .is('done_at', null)
+    .order('due_at', { ascending: true, nullsFirst: false })
+    .limit(TETO_DE_CONVERSAS * 2)
+
+  if (error) {
+    // A coluna da direita perde uma linha; a tela inteira não pode cair por
+    // causa dela. Mas o erro precisa aparecer, senão a próxima falha vira "sem
+    // próxima ação" em silêncio — que é indistinguível de não haver nenhuma.
+    console.error('proximaAcaoDeCada: falha ao ler', error)
+    return porLead
+  }
+
+  for (const t of data ?? []) {
+    if (!t.lead_id || porLead.has(t.lead_id)) continue
+    porLead.set(t.lead_id, { titulo: t.title, prazo: t.due_at })
+  }
+
+  return porLead
 }
 
 /**
