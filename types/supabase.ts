@@ -862,6 +862,8 @@ export type Database = {
           enviada_por: string | null
           status: 'pendente' | 'enviada' | 'entregue' | 'lida' | 'falhou'
           erro: string | null
+          /** Quantas vezes o envio foi tentado. Fila de reenvio, 0095. */
+          tentativas: number
           created_at: string
         }
         Insert: {
@@ -878,6 +880,7 @@ export type Database = {
           enviada_por?: string | null
           status?: 'pendente' | 'enviada' | 'entregue' | 'lida' | 'falhou'
           erro?: string | null
+          tentativas?: number
           created_at?: string
         }
         // Só o envio atualiza, para marcar `enviada`/`falhou` depois da
@@ -887,6 +890,8 @@ export type Database = {
           external_id?: string | null
           status?: 'pendente' | 'enviada' | 'entregue' | 'lida' | 'falhou'
           erro?: string | null
+          /** A fila de reenvio incrementa a cada tentativa (0095). */
+          tentativas?: number
         }
         Relationships: []
       }
