@@ -36,8 +36,25 @@ export async function classificarAgora(): Promise<ResultadoDaAcao> {
     const r = await classificarRespostasPendentes({ teto: 10 })
     revalidatePath('/dono/inteligencia')
 
+    // ## "Nada pendente" passou a ser mentira possivel (18/09)
+    //
+    // Desde que o classificador filtra midia e quem esta fora da fila,
+    // `pendentes` conta so o que FOI ao modelo. Uma rodada em que 41 mensagens
+    // chegaram e nenhuma era resposta de prospect devolve `pendentes: 0`, e
+    // "tudo que chegou ja foi lido" descreveria uma caixa vazia que nao esta
+    // vazia.
+    //
+    // O numero pulado entra na frase, com o motivo: e a diferenca entre "nao
+    // chegou nada" e "chegou e nao era para ca".
+    const puladas = r.ignoradas.semTexto + r.ignoradas.foraDaFila
     if (r.pendentes === 0) {
-      return { ok: true, mensagem: 'Nada pendente, tudo que chegou já foi lido.' }
+      if (puladas === 0) {
+        return { ok: true, mensagem: 'Nada pendente, tudo que chegou já foi lido.' }
+      }
+      return {
+        ok: true,
+        mensagem: `Nenhuma resposta de prospect na fila. ${r.ignoradas.semTexto} sem texto (mídia) e ${r.ignoradas.foraDaFila} de fora da prospecção ficaram de lado.`,
+      }
     }
     if (r.falhas > 0 && r.classificadas === 0) {
       return { ok: false, erro: `Nenhuma classificada. ${r.erros.join(' | ')}` }

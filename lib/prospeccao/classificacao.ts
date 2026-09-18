@@ -391,3 +391,51 @@ export function objetivoDa(intencao: Intencao): string {
       return 'perguntar de volta, em uma linha'
   }
 }
+
+/**
+ * Esta mensagem merece uma chamada ao modelo?
+ *
+ * ## O que ela fecha, medido em 18/09
+ *
+ * O classificador chamava a OpenAI para **toda** mensagem recebida na empresa
+ * de prospeccao, e o webhook da Evolution captura tudo que chega naquele
+ * numero, nao so resposta de prospect. O resultado apareceu na estatistica:
+ * das 31 primeiras classificadas, **19 sairam `INCONCLUSIVO`** e nenhuma
+ * objecao foi extraida.
+ *
+ * A fila de 18/09 explica sozinha: dez imagens, um PDF de regimento interno de
+ * pousada, e tres textos de alguem vendendo diaria de praia para o dono.
+ *
+ * ## Duas portas, e a primeira nao perde informacao nenhuma
+ *
+ * **Sem texto.** Imagem, audio, video, documento e figurinha chegam com um
+ * rotulo no lugar do conteudo (`"(enviou uma imagem)"`), e esse rotulo NAO e
+ * vazio, entao o filtro de texto vazio que ja existia os deixava passar. Pedir
+ * ao modelo a intencao comercial de `"(enviou uma imagem)"` so pode devolver
+ * `INCONCLUSIVO`, e foi de onde boa parte dos 19 veio.
+ *
+ * **Fora da fila.** Sem linha em `prospeccao_prospect` nao existe abordagem
+ * original, e o comentario do proprio chamador ja dizia por que isso importa:
+ * *"sem a abordagem original o modelo le a resposta no vacuo"*. Ele dizia, e o
+ * codigo mandava assim mesmo.
+ *
+ * ## O custo desta segunda porta, dito em vez de escondido
+ *
+ * Prospect que responde de um numero DIFERENTE do que estava no CSV deixa de
+ * ser classificado. E a razao pela qual o webhook nao filtra por telefone, ja
+ * registrada em 12/09, e aqui ela e aceita de propósito: a mensagem continua
+ * gravada e visivel na caixa, o que se perde e a linha na estatistica. Hoje
+ * ela ja era meia-perda, porque sem prospect o funil nao se movia de qualquer
+ * jeito: `prospeccao_prospect` so e atualizado quando ele existe.
+ *
+ * Medido antes de decidir: das 31 ja classificadas, **30 tinham prospect**. A
+ * porta custa pouco e limpa a amostra.
+ */
+export function deveClassificar(m: {
+  tipo: string
+  temProspect: boolean
+}): { classificar: boolean; motivo?: 'sem_texto' | 'fora_da_fila' } {
+  if (m.tipo !== 'texto') return { classificar: false, motivo: 'sem_texto' }
+  if (!m.temProspect) return { classificar: false, motivo: 'fora_da_fila' }
+  return { classificar: true }
+}

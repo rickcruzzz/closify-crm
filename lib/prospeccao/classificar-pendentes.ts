@@ -5,7 +5,7 @@ import { ultimos8 } from '@/lib/prospeccao/opt-out'
 import { createAdminClient } from '@/lib/supabase/admin'
 
 import { classificarResposta } from './classificar'
-import { proximoEstagio } from './classificacao'
+import { deveClassificar, proximoEstagio } from './classificacao'
 
 /**
  * Percorre as respostas que ainda não foram lidas e classifica cada uma.
@@ -21,6 +21,15 @@ export type ResultadoDaRodada = {
   classificadas: number
   falhas: number
   paraHumano: number
+  /**
+   * Mensagens que NAO foram ao modelo, por motivo.
+   *
+   * Contadas e devolvidas em vez de sumirem: fila que encolhe sem explicacao e
+   * indistinguivel de fila que parou de ser lida, e este projeto ja pagou essa
+   * confusao com o `purge_old_sinais_de_mercado` falhando quatro dias em
+   * silencio.
+   */
+  ignoradas: { semTexto: number; foraDaFila: number }
   erros: string[]
 }
 
@@ -28,7 +37,18 @@ type MensagemPendente = {
   id: string
   conversa_id: string
   texto: string
+  tipo: string
   created_at: string
+}
+
+/** O que o classificador precisa saber do prospect, resolvido em lote. */
+type ProspectDaFila = {
+  id: string
+  nome: string | null
+  vertical: string | null
+  mensagem_enviada: string | null
+  estagio: string
+  mensagens_recebidas: number | null
 }
 
 /**
@@ -56,7 +76,7 @@ async function lerPendentes(
 
   const { data, error } = await supabase
     .from('mensagens')
-    .select('id, conversa_id, texto, created_at')
+    .select('id, conversa_id, texto, tipo, created_at')
     .in('workspace_id', workspaceIds)
     .eq('direcao', 'recebida')
     .order('created_at', { ascending: true })
@@ -69,6 +89,74 @@ async function lerPendentes(
   return (data ?? [])
     .filter((m) => !lidas.has(m.id) && m.texto.trim().length > 0)
     .slice(0, teto)
+}
+
+/**
+ * Resolve o prospect de cada mensagem numa ida de rede por tabela, nao por
+ * mensagem.
+ *
+ * O laco fazia tres consultas POR mensagem (conversa, lead, prospect). Com o
+ * teto de 20 eram 60 viagens ate Sao Paulo antes de qualquer chamada ao
+ * modelo, e a decisao de PULAR depende justamente da terceira: sem resolver em
+ * lote, descobrir que 18 das 20 nao sao da fila custaria as 54 viagens
+ * inteiras.
+ */
+async function resolverProspects(
+  supabase: ReturnType<typeof createAdminClient>,
+  mensagens: MensagemPendente[],
+): Promise<Map<string, ProspectDaFila>> {
+  const porMensagem = new Map<string, ProspectDaFila>()
+  if (mensagens.length === 0) return porMensagem
+
+  const conversaIds = Array.from(new Set(mensagens.map((m) => m.conversa_id)))
+  const { data: conversas } = await supabase
+    .from('conversas')
+    .select('id, lead_id')
+    .in('id', conversaIds)
+
+  const leadPorConversa = new Map<string, string>()
+  for (const c of conversas ?? []) if (c.lead_id) leadPorConversa.set(c.id, c.lead_id)
+
+  const leadIds = Array.from(new Set(Array.from(leadPorConversa.values())))
+  if (leadIds.length === 0) return porMensagem
+
+  const { data: leads } = await supabase
+    .from('leads')
+    .select('id, phone')
+    .in('id', leadIds)
+
+  const oitoPorLead = new Map<string, string>()
+  for (const l of leads ?? []) {
+    const oito = ultimos8(l.phone)
+    if (oito) oitoPorLead.set(l.id, oito)
+  }
+
+  const oitos = Array.from(new Set(Array.from(oitoPorLead.values())))
+  if (oitos.length === 0) return porMensagem
+
+  const { data: prospects } = await supabase
+    .from('prospeccao_prospect')
+    .select('id, nome, vertical, mensagem_enviada, estagio, mensagens_recebidas, telefone_ultimos8')
+    .in('telefone_ultimos8', oitos)
+
+  const porOito = new Map<string, ProspectDaFila>()
+  for (const p of prospects ?? []) {
+    // O primeiro vence. Dois prospects com os mesmos oito digitos finais e
+    // possivel e raro, e escolher por ordem e melhor que escolher por acaso
+    // de iteracao.
+    if (p.telefone_ultimos8 && !porOito.has(p.telefone_ultimos8)) {
+      porOito.set(p.telefone_ultimos8, p)
+    }
+  }
+
+  for (const m of mensagens) {
+    const leadId = leadPorConversa.get(m.conversa_id)
+    const oito = leadId ? oitoPorLead.get(leadId) : undefined
+    const prospect = oito ? porOito.get(oito) : undefined
+    if (prospect) porMensagem.set(m.id, prospect)
+  }
+
+  return porMensagem
 }
 
 export async function classificarRespostasPendentes(opcoes: {
@@ -86,41 +174,52 @@ export async function classificarRespostasPendentes(opcoes: {
 
   const ids = (empresas ?? []).map((e) => e.id)
   if (ids.length === 0) {
-    return { pendentes: 0, classificadas: 0, falhas: 0, paraHumano: 0, erros: ['sem empresa de prospecção'] }
+    return {
+      pendentes: 0,
+      classificadas: 0,
+      falhas: 0,
+      paraHumano: 0,
+      ignoradas: { semTexto: 0, foraDaFila: 0 },
+      erros: ['sem empresa de prospecção'],
+    }
   }
 
-  const pendentes = await lerPendentes(supabase, ids, teto)
+  // A janela e maior que o teto de proposito: o teto conta quantas vao ao
+  // MODELO, e a maioria dos candidatos agora e descartada antes disso. Ler so
+  // 20 faria uma rodada inteira passar em branco sempre que 20 imagens
+  // chegassem juntas, que e exatamente o que aconteceu em 17/09.
+  const candidatos = await lerPendentes(supabase, ids, teto * 5)
+  const ignoradas = { semTexto: 0, foraDaFila: 0 }
+
+  // O tipo e conferido ANTES de resolver prospect: e um filtro de memoria, e
+  // descartar dez imagens aqui evita as tres consultas que elas custariam.
+  const comTexto: MensagemPendente[] = []
+  for (const m of candidatos) {
+    if (deveClassificar({ tipo: m.tipo, temProspect: true }).classificar) comTexto.push(m)
+    else ignoradas.semTexto += 1
+  }
+
+  const prospectPorMensagem = await resolverProspects(supabase, comTexto)
+
+  const pendentes: MensagemPendente[] = []
+  for (const m of comTexto) {
+    if (!deveClassificar({ tipo: m.tipo, temProspect: prospectPorMensagem.has(m.id) }).classificar) {
+      ignoradas.foraDaFila += 1
+      continue
+    }
+    if (pendentes.length < teto) pendentes.push(m)
+  }
+
   let classificadas = 0
   let falhas = 0
   let paraHumano = 0
 
   for (const m of pendentes) {
-    // O contexto: de quem é a conversa, o que a empresa recebeu, e o que já
-    // foi dito. Sem a abordagem original o modelo lê a resposta no vácuo —
-    // "pode mandar" não quer dizer nada sem saber o que foi oferecido.
-    const { data: conversa } = await supabase
-      .from('conversas')
-      .select('id, lead_id')
-      .eq('id', m.conversa_id)
-      .maybeSingle()
-
-    const { data: lead } = conversa?.lead_id
-      ? await supabase
-          .from('leads')
-          .select('name, phone, company')
-          .eq('id', conversa.lead_id)
-          .maybeSingle()
-      : { data: null }
-
-    const oito = ultimos8(lead?.phone)
-    const { data: prospect } = oito
-      ? await supabase
-          .from('prospeccao_prospect')
-          .select('id, nome, vertical, mensagem_enviada, estagio, mensagens_recebidas')
-          .eq('telefone_ultimos8', oito)
-          .limit(1)
-          .maybeSingle()
-      : { data: null }
+    // O contexto: o que a empresa recebeu e o que já foi dito. Sem a abordagem
+    // original o modelo lê a resposta no vácuo, "pode mandar" não quer dizer
+    // nada sem saber o que foi oferecido. Por isso quem não tem prospect não
+    // chega até aqui: o filtro acima é esse comentário virando código.
+    const prospect = prospectPorMensagem.get(m.id)!
 
     const { data: anteriores } = await supabase
       .from('mensagens')
@@ -132,9 +231,9 @@ export async function classificarRespostasPendentes(opcoes: {
 
     const resultado = await classificarResposta({
       texto: m.texto,
-      empresa: prospect?.nome ?? lead?.company ?? lead?.name ?? null,
-      vertical: prospect?.vertical ?? null,
-      abordagem: prospect?.mensagem_enviada ?? null,
+      empresa: prospect.nome,
+      vertical: prospect.vertical,
+      abordagem: prospect.mensagem_enviada,
       historico: (anteriores ?? []).map((a) => ({
         de: a.direcao === 'recebida' ? ('cliente' as const) : ('nos' as const),
         texto: a.texto,
@@ -148,14 +247,14 @@ export async function classificarRespostasPendentes(opcoes: {
     }
 
     const { error: erroDeGravacao } = await supabase.from('prospeccao_interacao').insert({
-      prospect_id: prospect?.id ?? null,
+      prospect_id: prospect.id,
       conversa_id: m.conversa_id,
       mensagem_id: m.id,
       intencao: resultado.intencao,
       objecao: resultado.objecao,
       objecao_texto: resultado.objecaoTexto,
       temperatura: resultado.temperatura,
-      estagio_antes: prospect?.estagio ?? null,
+      estagio_antes: prospect.estagio,
       estagio_depois: resultado.estagio,
       confianca: resultado.confianca,
       precisa_humano: resultado.precisaHumano,
@@ -178,7 +277,7 @@ export async function classificarRespostasPendentes(opcoes: {
     classificadas += 1
     if (resultado.precisaHumano) paraHumano += 1
 
-    if (prospect) {
+    {
       // A regra mora em `classificacao.ts`, pura e com teste. Escrita aqui,
       // ela já deixou passar o defeito que a prova de 12/09 pegou: `indexOf`
       // devolvendo -1 para `OPTED_OUT` fazia qualquer mensagem seguinte
@@ -201,5 +300,12 @@ export async function classificarRespostasPendentes(opcoes: {
     }
   }
 
-  return { pendentes: pendentes.length, classificadas, falhas, paraHumano, erros: erros.slice(0, 5) }
+  return {
+    pendentes: pendentes.length,
+    classificadas,
+    falhas,
+    paraHumano,
+    ignoradas,
+    erros: erros.slice(0, 5),
+  }
 }
