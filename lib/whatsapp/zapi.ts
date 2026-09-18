@@ -245,6 +245,12 @@ export async function criarInstancia(params: {
       // volta para o celular — que é o hábito que este recurso existe para
       // desfazer.
       receivedAndDeliveryCallbackUrl: params.webhookRecebida,
+      // O MESMO destino tambem em `receivedCallbackUrl`, e e o que a adocao
+      // faz desde 18/09. Medido em `GET /me`: os dois campos existem lado a
+      // lado, e nada na documentacao diz que o combinado sozinho encaminha o
+      // que CHEGA. Apontar os dois para a mesma rota custa nada, e a rota ja
+      // deduplica por `external_id`.
+      receivedCallbackUrl: params.webhookRecebida,
       messageStatusCallbackUrl: params.webhookStatus,
       disconnectedCallbackUrl: params.webhookDesconexao,
     },
@@ -502,7 +508,7 @@ export async function enviarTexto(
  * ## Continua devolvendo se deu certo, em vez de afirmar
  *
  * `Promise.allSettled` e nao `all`: o interessante e quantos apontaram, e um
- * que falha nao deve esconder os outros dois. O chamador mostra as URLs de
+ * que falha nao deve esconder os demais. O chamador mostra as URLs de
  * qualquer jeito, para a pessoa colar no painel.
  *
  * E a licao de 12/09 continua valendo: `sendButtons` respondeu 201 quatro vezes
@@ -515,6 +521,22 @@ export async function tentarConfigurarWebhooks(
 ): Promise<{ confirmado: boolean; motivo?: string }> {
   const alvos = [
     { caminho: 'update-webhook-received', url: urls.recebida },
+    // ## O MESMO destino, por um segundo endpoint, e nao e redundancia
+    //
+    // `receiveCallbackSentByMe` e o que faz a mensagem escrita no CELULAR do
+    // dono voltar para o CRM. Sem ela a caixa mostra as perguntas do cliente
+    // **sem nenhuma resposta ao lado**, e a pessoa conclui que o produto perdeu
+    // o que ela escreveu.
+    //
+    // Quem liga essa flag e ESTE endpoint. Medido contra a conta real em 18/09,
+    // lendo `GET /me` depois de cada escrita:
+    //
+    //     update-webhook-received   { notifySentByMe: true }   flag continua FALSE
+    //     update-webhook-received-delivery                     flag vira TRUE
+    //
+    // Ou seja, `notifySentByMe` e aceito com 200 e **ignorado em silencio**.
+    // Terceira vez que esta API responde 200 sem fazer o que o corpo pede.
+    { caminho: 'update-webhook-received-delivery', url: urls.recebida },
     { caminho: 'update-webhook-message-status', url: urls.status },
     { caminho: 'update-webhook-disconnected', url: urls.desconexao },
   ] as const
@@ -524,14 +546,7 @@ export async function tentarConfigurarWebhooks(
       chamar(comInstancia(instancia, alvo.caminho), {
         method: 'PUT',
         headers: { 'Client-Token': clientToken() },
-        body: {
-          value: alvo.url,
-          // O que faz a mensagem enviada pelo CELULAR do dono aparecer no CRM.
-          // Sem isto a caixa mostra as perguntas do cliente sem nenhuma
-          // resposta ao lado, e a pessoa conclui que o produto perdeu o que ela
-          // escreveu. Vai junto do `received`, que e o evento que o carrega.
-          ...(alvo.caminho === 'update-webhook-received' ? { notifySentByMe: true } : {}),
-        },
+        body: { value: alvo.url },
       }),
     ),
   )
