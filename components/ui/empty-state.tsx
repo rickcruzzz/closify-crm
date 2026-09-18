@@ -1,4 +1,4 @@
-import type { LucideIcon } from 'lucide-react'
+import type { ComponentType, SVGProps } from 'react'
 
 import { cn } from '@/lib/utils'
 
@@ -10,7 +10,15 @@ function EmptyState({
   className,
   children,
 }: {
-  icon: LucideIcon
+  /**
+   * Aceita qualquer componente de SVG, e nao so `LucideIcon`.
+   *
+   * O tipo estreito recusava `IconeWhatsapp`, que e um SVG proprio porque o
+   * lucide nao carrega marcas. Alargar aqui e o mesmo que ja foi feito no
+   * cartao de plano da landing: a tela vazia do WhatsApp precisa do glifo
+   * real, e nao de um balao generico igual ao de "Conversas".
+   */
+  icon: ComponentType<SVGProps<SVGSVGElement>>
   title: string
   description?: string
   size?: 'default' | 'sm'

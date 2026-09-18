@@ -17,7 +17,6 @@ import {
   Clock,
   Info,
   Loader2,
-  MessageCircle,
   Mic,
   Send,
 } from 'lucide-react'
@@ -28,6 +27,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { Separator } from '@/components/ui/separator'
 import { EmptyState } from '@/components/ui/empty-state'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
+import { IconeWhatsapp } from '@/components/ui/icone-whatsapp'
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet'
 import {
   minutosEsperando,
@@ -173,7 +173,7 @@ export function ConversasClient({
   if (conversas.length === 0) {
     return (
       <EmptyState
-        icon={MessageCircle}
+        icon={IconeWhatsapp}
         title={podeConectarWhatsapp() ? 'Nenhuma conversa ainda' : AVISO_DE_MIGRACAO.titulo}
         description={
           podeConectarWhatsapp()
@@ -384,7 +384,17 @@ function NadaEscolhido({
 
   return (
     <div className="flex flex-1 flex-col items-center justify-center gap-3 p-8 text-center">
-      <MessageCircle aria-hidden className="text-muted-foreground/40 size-8" />
+      {/* ## Verde AQUI, e `currentColor` no menu, e a distincao nao e capricho
+
+          `icone-whatsapp.ts` registra por que o glifo herda a cor do texto: na
+          barra lateral ele fica ao lado de seis irmaos, e um verde de marca
+          gritaria acima de todos alem de brigar com o fundo do estado ativo.
+
+          Aqui e o oposto. E o unico elemento de uma tela vazia, nao tem com
+          quem competir, e a cor e o que faz a pessoa reconhecer de relance de
+          qual aplicativo a tela fala. Um balao cinza generico nao diz nada, e
+          e o mesmo balao que o lucide da para "Conversas". */}
+      <IconeWhatsapp aria-hidden className="size-10 text-[#25D366]/70" />
 
       {esperando.length === 0 ? (
         <p className="text-muted-foreground text-sm">
