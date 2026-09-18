@@ -1,4 +1,4 @@
-import { FREE_WORKSPACE_LIMIT, PRO_WORKSPACE_LIMIT } from '@/lib/plans'
+import { FREE_WORKSPACE_LIMIT, MAX_WORKSPACE_LIMIT, PRO_WORKSPACE_LIMIT } from '@/lib/plans'
 
 /**
  * Quem pode criar uma segunda empresa, e o que dizer a quem não pode.
@@ -82,30 +82,58 @@ export type DecisaoDeNovaEmpresa = {
    *                      cobrança oferece a ele o que ele já tem, e não há
    *                      nada para comprar que resolva
    */
-  tipo: 'exige_pro' | 'limite_do_pro' | null
+  tipo: 'exige_pro' | 'limite_do_pro' | 'limite_do_max' | null
 }
 
 export function decidirNovaEmpresa({
   temAssinaturaPaga,
+  temMax = false,
   emTrial,
   quantidadeDeEmpresas,
 }: {
   /** Pro válido que NÃO vem de trial. É a condição da trigger da 0053. */
   temAssinaturaPaga: boolean
+  /**
+   * O dono tem Max vigente em ALGUMA empresa dele.
+   *
+   * Sobe o teto de criação de 5 para 10, e **só isso**: quantos WhatsApps ele
+   * conecta continua sendo um por empresa paga, decidido por `max_vigente()`
+   * em cada uma. Criar empresa não custa nada; conectar número custa.
+   *
+   * Padrão `false` para o chamador que ainda não sabe: errar para o lado do
+   * teto MENOR nega uma criação legítima, que a pessoa refaz; errar para o
+   * maior deixa criar o que o banco vai recusar, e aí o formulário inteiro foi
+   * preenchido à toa.
+   */
+  temMax?: boolean
   emTrial: boolean
   quantidadeDeEmpresas: number
 }): DecisaoDeNovaEmpresa {
-  const teto = temAssinaturaPaga ? PRO_WORKSPACE_LIMIT : FREE_WORKSPACE_LIMIT
+  const teto = temMax
+    ? MAX_WORKSPACE_LIMIT
+    : temAssinaturaPaga
+      ? PRO_WORKSPACE_LIMIT
+      : FREE_WORKSPACE_LIMIT
 
   if (quantidadeDeEmpresas < teto) {
     return { pode: true, motivo: null, tipo: null }
   }
 
+  if (temMax) {
+    return {
+      pode: false,
+      // Palavra por palavra igual a 0094. Quem ja esta no Max e bateu no teto
+      // nao pode ouvir "assine o Max": ele ja assinou.
+      motivo: `O plano Max inclui ${MAX_WORKSPACE_LIMIT} empresas. Fale com a gente para ter mais.`,
+      tipo: 'limite_do_max',
+    }
+  }
+
   if (temAssinaturaPaga) {
     return {
       pode: false,
-      // Palavra por palavra igual a `lib/limits.ts` e a 0078.
-      motivo: `O plano Pro inclui ${PRO_WORKSPACE_LIMIT} empresas. Fale com a gente para ter mais.`,
+      // Palavra por palavra igual a `lib/limits.ts` e a 0094.
+      motivo: `O plano Pro inclui ${PRO_WORKSPACE_LIMIT} empresas. Assine o Max para gerenciar até ${MAX_WORKSPACE_LIMIT}.`,
       tipo: 'limite_do_pro',
     }
   }

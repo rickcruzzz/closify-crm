@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { PRO_WORKSPACE_LIMIT } from '@/lib/plans'
+import { MAX_WORKSPACE_LIMIT, PRO_WORKSPACE_LIMIT } from '@/lib/plans'
 import { decidirNovaEmpresa } from './multi-empresa'
 
 describe('decidirNovaEmpresa', () => {
@@ -111,17 +111,68 @@ describe('decidirNovaEmpresa', () => {
       quantidadeDeEmpresas: PRO_WORKSPACE_LIMIT,
     })
     expect(d.motivo).toBe(
-      `O plano Pro inclui ${PRO_WORKSPACE_LIMIT} empresas. Fale com a gente para ter mais.`,
+      `O plano Pro inclui ${PRO_WORKSPACE_LIMIT} empresas. Assine o Max para gerenciar até ${MAX_WORKSPACE_LIMIT}.`,
     )
   })
 
-  it('a recusa do Pro NAO manda fazer upgrade: ele ja pagou', () => {
+  /**
+   * ## Este caso MUDOU de premissa em 18/09, e nao de opiniao
+   *
+   * Ele dizia que a recusa do Pro nao podia mandar fazer upgrade, "ele ja
+   * pagou". Estava certo enquanto o Pro era o plano mais alto: oferecer o que
+   * a pessoa acabou de comprar le como erro do sistema.
+   *
+   * Com o Max acima dele, "assine o Max" deixa de ser upgrade circular e passa
+   * a ser a resposta do que fazer. O que continua proibido, e e o que este
+   * caso guarda agora, e oferecer o PRO a quem ja tem Pro.
+   */
+  it('a recusa do Pro nao oferece o PRO de novo, e aponta o plano acima', () => {
     const d = decidirNovaEmpresa({
       temAssinaturaPaga: true,
       emTrial: false,
       quantidadeDeEmpresas: PRO_WORKSPACE_LIMIT,
     })
-    expect(d.motivo).not.toMatch(/upgrade|assine|dispon[ií]vel no plano/i)
+    expect(d.motivo).not.toMatch(/dispon[ií]vel no plano Pro|upgrade para o Pro|assine o Pro/i)
+    expect(d.motivo).toMatch(/Max/)
+  })
+
+  /** Quem JA esta no Max nao pode ouvir "assine o Max". */
+  it('no teto do Max, a recusa nao oferece o Max', () => {
+    const d = decidirNovaEmpresa({
+      temAssinaturaPaga: true,
+      temMax: true,
+      emTrial: false,
+      quantidadeDeEmpresas: MAX_WORKSPACE_LIMIT,
+    })
+    expect(d.pode).toBe(false)
+    expect(d.tipo).toBe('limite_do_max')
+    expect(d.motivo).not.toMatch(/assine o Max/i)
+    expect(d.motivo).toBe(
+      `O plano Max inclui ${MAX_WORKSPACE_LIMIT} empresas. Fale com a gente para ter mais.`,
+    )
+  })
+
+  /** O teto sobe de 5 para 10, e a sexta empresa passa a ser permitida. */
+  it('com Max, a SEXTA empresa passa', () => {
+    expect(
+      decidirNovaEmpresa({
+        temAssinaturaPaga: true,
+        temMax: true,
+        emTrial: false,
+        quantidadeDeEmpresas: PRO_WORKSPACE_LIMIT,
+      }).pode,
+    ).toBe(true)
+  })
+
+  /** E o controle: sem Max, a sexta continua barrada. */
+  it('sem Max, a SEXTA continua barrada', () => {
+    expect(
+      decidirNovaEmpresa({
+        temAssinaturaPaga: true,
+        emTrial: false,
+        quantidadeDeEmpresas: PRO_WORKSPACE_LIMIT,
+      }).pode,
+    ).toBe(false)
   })
 
   // Nasce sem empresa nenhuma: o Free inclui uma, e barrar aqui trancaria a

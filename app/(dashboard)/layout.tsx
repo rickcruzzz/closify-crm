@@ -85,6 +85,13 @@ export default async function DashboardLayout({
   // preenchia o formulário inteiro para tomar erro.
   const novaEmpresa = decidirNovaEmpresa({
     temAssinaturaPaga: situacaoDoPlano.temAssinaturaPaga,
+    // `situacaoDoPlano` ja veio na onda de consultas acima, entao o teto de dez
+    // da 0094 nao custa viagem de rede. Ele le a empresa ATIVA, e a RPC no
+    // banco le qualquer empresa do dono: a tela pode subestimar o teto, nunca
+    // superestimar, e errar para o lado menor recusa uma criacao que a pessoa
+    // refaz — o contrario a deixaria preencher o formulario inteiro para o
+    // banco negar no fim.
+    temMax: situacaoDoPlano.temMax,
     emTrial: situacaoDoPlano.emTrial,
     quantidadeDeEmpresas: workspaces.length,
   })

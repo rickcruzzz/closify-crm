@@ -55,7 +55,7 @@ export default async function ConversasPage({
 
   // Tudo na mesma onda: nenhuma depende do resultado das outras, e em serie
   // seriam seis idas de rede empilhadas na tela mais aberta do produto.
-  const [conversas, aberta, membros, assinatura, conexao, { data: ehAdmin }] =
+  const [conversas, aberta, membros, assinatura, conexao, { data: ehAdmin }, cobranca] =
     await Promise.all([
       getConversas(workspaceId),
       c ? getMensagensDaConversa(c) : Promise.resolve(null),
@@ -63,6 +63,15 @@ export default async function ConversasPage({
       situacaoDoMax(workspaceId),
       conexaoDaEmpresa(workspaceId),
       supabase.rpc('is_workspace_admin', { target_workspace_id: workspaceId }),
+      // A oferta do Max agora assina NESTA tela, então ela precisa saber se já
+      // existe cobrança esperando pagamento: sem isso o botão apareceria e
+      // `createCheckout` recusaria depois do clique. Entra na mesma onda, então
+      // não custa viagem de rede nenhuma.
+      supabase
+        .from('subscriptions')
+        .select('status')
+        .eq('workspace_id', workspaceId)
+        .maybeSingle(),
     ])
 
   const direito = direitoAoWhatsapp(assinatura, conexao.estado)
@@ -94,6 +103,7 @@ export default async function ConversasPage({
       // erro e diria "tente de novo em alguns minutos", mentira, para quem
       // acabou de pagar R$ 250.
       automatico={provisionamentoAutomatico()}
+      temCobrancaEmAberto={Boolean(cobranca.data) && cobranca.data?.status !== 'canceled'}
     />
   )
 

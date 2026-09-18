@@ -26,8 +26,12 @@ import {
 } from '@/lib/whatsapp/actions'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { CartaoDePlano } from '@/components/settings/cartao-de-plano'
+import { LIMITES_MAX, RECURSOS_MAX } from '@/components/settings/max-card'
+import { PreviaDoWhatsapp } from '@/components/settings/previa-do-whatsapp'
+import { SubscribeButton } from '@/components/settings/subscribe-button'
 import type { EstadoDaConexao, MotivoDoBloqueio } from '@/lib/plans/max'
-import { MAX_PLAN_PRICE, PLANO_NA_TELA } from '@/lib/plans'
+import { MAX_PLAN_PRICE, PLANO_NA_TELA, PRO_PLAN_PRICE } from '@/lib/plans'
 
 /**
  * Conectar o WhatsApp da empresa, e ver quando ele cai.
@@ -63,6 +67,7 @@ export function WhatsappConexao({
   ehAdmin,
   temMax,
   bloqueio,
+  temCobrancaEmAberto,
   automatico,
 }: {
   estado: EstadoDaConexao
@@ -72,6 +77,15 @@ export function WhatsappConexao({
   ehAdmin: boolean
   temMax: boolean
   bloqueio: Bloqueio | null
+  /**
+   * Já existe assinatura esperando pagamento nesta empresa.
+   *
+   * Sem isto, quem tem uma cobrança de Pro em aberto clicaria em "Assinar Max"
+   * e `createCheckout` recusaria com a frase de troca de plano — resposta certa
+   * que chega tarde: a pessoa já clicou achando que ia funcionar. Mesmo motivo
+   * de `max-card.tsx`.
+   */
+  temCobrancaEmAberto: boolean
   /**
    * O produto cria a instância sozinho, ou o dono cria à mão?
    *
@@ -200,53 +214,87 @@ export function WhatsappConexao({
     router.refresh()
   }
 
-  // ## Quem não tem o plano vê o argumento, e um caminho
-  //
-  // A frase vem do servidor, pronta. A tela só decide o BOTÃO: `exige_max`
-  // manda para a comparação de planos, `max_vencido` manda para o pagamento.
-  // São telas diferentes porque as duas pessoas estão em momentos diferentes.
+  /**
+   * ## Quem não tem o plano vê a OFERTA, e não um aviso
+   *
+   * Até 18/09 este estado era uma caixa com quatro parágrafos soltos e um botão
+   * que mandava embora, para `/settings/billing`. Três coisas erradas ao mesmo
+   * tempo:
+   *
+   *     desenho    paragrafos sem check, sem preco em destaque e sem os
+   *                limites, enquanto a tela de cobranca ja tinha o cartao bom
+   *     vazio      o conteudo ocupava um terco da tela; o resto era preto
+   *     o clique   levava para OUTRA tela para so entao oferecer. O desejo
+   *                nasce aqui e era gasto numa navegacao
+   *
+   * Agora a tela vende onde o desejo nasce: a prévia à esquerda mostra a
+   * conversa **com o negócio do lado**, que é a promessa inteira, e o cartão à
+   * direita é o MESMO `CartaoDePlano` de Free, Pro e Max, com o botão que
+   * assina aqui.
+   *
+   * Não virou landing page: sem hero, sem depoimento, sem prova social — que
+   * aliás é decisão travada, não há cliente externo para citar. É o argumento
+   * do produto dentro do produto.
+   *
+   * ## `exige_max` e `max_vencido` continuam sendo telas diferentes
+   *
+   * Quem nunca assinou precisa do argumento. Quem assinou e caiu já o conhece,
+   * e precisa é de um botão de reativar. A frase vem pronta do servidor; a tela
+   * só decide a ação. É o defeito de 18/08 (*"Seu Pro venceu, reative"* para
+   * quem nunca teve Pro) fechado dos dois lados.
+   */
   if (bloqueio && (bloqueio.tipo === 'exige_max' || bloqueio.tipo === 'max_vencido')) {
-    return (
-      <Card>
-        <CardHeader>
-          <div className="flex items-center gap-2">
-            <IconeWhatsapp className="text-muted-foreground size-5" />
-            <CardTitle>WhatsApp no {PLANO_NA_TELA.max}</CardTitle>
-          </div>
-          <CardDescription>{bloqueio.motivo}</CardDescription>
-        </CardHeader>
-        <CardContent className="flex flex-col gap-4">
-          <ul className="text-muted-foreground flex flex-col gap-2 text-sm">
-            <li>Cada mensagem cai na conversa do contato, com o negócio dele do lado.</li>
-            <li>O que você responde pelo celular aparece aqui também.</li>
-            <li>Quem espera há mais tempo fica no topo da lista.</li>
-            <li>Um número por empresa, conectado por QR Code em um minuto.</li>
-          </ul>
+    const venceu = bloqueio.tipo === 'max_vencido'
 
-          {ehAdmin ? (
-            <Link
-              href={
-                bloqueio.tipo === 'max_vencido'
-                  ? '/settings/billing?pagar=1'
-                  : '/settings/billing#comparar'
-              }
-              className={buttonVariants({ size: 'sm', className: 'w-fit' })}
-            >
-              <Zap className="size-4" />
-              {bloqueio.tipo === 'max_vencido'
-                ? 'Reativar o plano'
-                : `Conhecer o ${PLANO_NA_TELA.max}, R$ ${MAX_PLAN_PRICE} por mês`}
-            </Link>
-          ) : (
-            // Membro não mexe em cobrança, e mandá-lo para uma tela que vai
-            // recusar é a viagem inútil que `integration-card` já documenta.
-            <p className="text-muted-foreground text-xs">
-              Peça a um administrador da empresa para assinar o plano{' '}
-              {PLANO_NA_TELA.max}.
-            </p>
-          )}
-        </CardContent>
-      </Card>
+    return (
+      <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,26rem)]">
+        {/* A prova vem ANTES da oferta na ordem de leitura do ocidente, e em
+            telas estreitas ela some: abaixo de `lg` o que importa é o preço e o
+            botão, e uma ilustração empurraria os dois para fora da dobra. */}
+        <PreviaDoWhatsapp className="hidden lg:flex" />
+
+        <CartaoDePlano
+          nome={`Plano ${PLANO_NA_TELA.max}`}
+          preco={MAX_PLAN_PRICE}
+          descricao={bloqueio.motivo}
+          limites={LIMITES_MAX}
+          recursos={RECURSOS_MAX}
+          ehAtual={false}
+          recomendado
+          observacao={
+            <>
+              Um número de WhatsApp por empresa. Ao contrário do {PLANO_NA_TELA.pro}, que
+              custa R$ {PRO_PLAN_PRICE} pela empresa inteira e vale para até cinco
+              empresas suas, o {PLANO_NA_TELA.max} é cobrado por empresa conectada.
+            </>
+          }
+          acao={
+            !ehAdmin ? null : venceu ? (
+              // Quem já assinou volta pelo pagamento da cobrança que existe, e
+              // não por um checkout novo: criar uma segunda assinatura para
+              // quem já tem uma é o defeito que `createCheckout` recusa.
+              <Link
+                href="/settings/billing?pagar=1"
+                className={buttonVariants({ className: 'w-full' })}
+              >
+                <Zap className="size-4" />
+                Reativar o plano
+              </Link>
+            ) : temCobrancaEmAberto ? null : (
+              <SubscribeButton plano="max" className="w-full" />
+            )
+          }
+          aviso={
+            !ehAdmin
+              ? // Membro não mexe em cobrança, e mandá-lo para uma tela que vai
+                // recusar é a viagem inútil que `integration-card` já documenta.
+                `Peça a um administrador da empresa para assinar o plano ${PLANO_NA_TELA.max}.`
+              : !venceu && temCobrancaEmAberto
+                ? 'Existe uma cobrança em aberto nesta empresa. Pague ou cancele a atual antes de trocar de plano.'
+                : null
+          }
+        />
+      </div>
     )
   }
 

@@ -9,9 +9,13 @@ import {
   LayoutDashboard,
   Mail,
   Send,
+  Smartphone,
+  Timer,
   Users,
-  type LucideIcon,
 } from 'lucide-react'
+import type { ComponentType, SVGProps } from 'react'
+
+import { IconeWhatsapp } from '@/components/ui/icone-whatsapp'
 
 import { cn } from '@/lib/utils'
 import { Badge } from '@/components/ui/badge'
@@ -25,6 +29,9 @@ import {
   FREE_PLAN_PRICE,
   FREE_ORCAMENTO_LIMIT,
   FREE_WORKSPACE_LIMIT,
+  MAX_PLAN_PRICE,
+  MAX_WORKSPACE_LIMIT,
+  PLANO_NA_TELA,
   PRECOS_CONFERIDOS_EM,
   PESSOAS_PARA_COMPENSAR,
   PRECO_MEDIANA_POR_USUARIO,
@@ -51,7 +58,14 @@ type Plan = {
    * o olho tinha que ler tudo para diferenciar os planos. Com ícone
    * semântico, dá para bater o olho e entender.
    */
-  features: { texto: string; icone: LucideIcon }[]
+  /**
+   * `ComponentType<SVGProps>` e nao `LucideIcon`: o **lucide nao tem marcas**,
+   * ele removeu os icones de marca do pacote, e o balao generico que sobrava
+   * ao lado de "WhatsApp" anula a funcao do icone. O contrato de verdade e o
+   * que o renderizador usa, `<Icone className=... />`, e mais nada. Mesma
+   * abertura que `lib/nav-items.ts` fez em 17/09.
+   */
+  features: { texto: string; icone: ComponentType<SVGProps<SVGSVGElement>> }[]
   cta: string
   /**
    * Para onde o botao leva quem JA TEM sessao, e o que ele passa a dizer.
@@ -319,6 +333,85 @@ const plans: Plan[] = [
     highlighted: true,
     delay: 160,
   },
+  {
+    /**
+     * O terceiro cartão, pedido pelo dono em 18/09.
+     *
+     * Ele existia na tela de Cobrança e **não na landing**: quem chegava pelo
+     * site via o produto terminar no Pro, e o recurso mais caro, que é o único
+     * com custo marginal, não aparecia para quem ainda estava decidindo.
+     *
+     * ## Ele NÃO é o recomendado, e isso é decisão
+     *
+     * `highlighted` continua no Pro. O Max resolve uma dor específica, atender
+     * pelo WhatsApp dentro do funil, e destacar o mais caro de três empurra a
+     * escolha em vez de ajudá-la. Quem precisa dele se reconhece na primeira
+     * linha do cartão.
+     */
+    name: PLANO_NA_TELA.max,
+    // Derivado, como os outros dois. `preco-na-tela.test.ts` proíbe o literal
+    // desde 10/09, quando `R$49` escrito à mão sobreviveu a duas auditorias.
+    price: `R$${MAX_PLAN_PRICE}`,
+    period: '/mês',
+    /**
+     * A legenda diz o OPOSTO da do Pro, e é ela que evita o reembolso.
+     *
+     * O Pro é da empresa inteira e vale para até cinco empresas. O Max é o
+     * primeiro recurso deste produto cujo custo marginal não é zero: cada
+     * empresa conectada consome um número e uma instância paga no provedor.
+     * Descobrir isso depois de pagar é exatamente o tipo de surpresa que vira
+     * pedido de reembolso, e o lugar de dizer é embaixo do preço.
+     */
+    precoLegenda: 'Por empresa conectada, com um número só.',
+    description:
+      'Para quem fecha pelo WhatsApp e não quer o histórico preso no celular de quem vendeu.',
+    features: [
+      { texto: `Tudo do ${PLANO_NA_TELA.pro}`, icone: Check },
+      {
+        texto: 'O WhatsApp da sua empresa dentro do funil',
+        icone: IconeWhatsapp,
+      },
+      {
+        texto: 'Cada mensagem cai na conversa do contato, com o negócio do lado',
+        icone: Contact,
+      },
+      {
+        // A escada de empresas fecha em 10 (0094), e ela e sobre ADMINISTRAR:
+        // o numero de WhatsApp continua sendo um por empresa conectada, e a
+        // legenda do preco logo acima ja diz isso.
+        texto: `Até ${MAX_WORKSPACE_LIMIT} empresas, todas com os recursos ${PLANO_NA_TELA.pro}`,
+        icone: Building2,
+      },
+      { texto: 'O que você responde pelo celular aparece aqui também', icone: Smartphone },
+      { texto: 'Quem espera há mais tempo fica no topo, e não quem falou por último', icone: Timer },
+      {
+        texto: 'O histórico fica na empresa, e não no celular de quem vendeu',
+        icone: Building2,
+      },
+    ],
+    fecho: 'Um número por empresa, conectado por QR Code em um minuto.',
+    /**
+     * O CTA leva à criação da conta, e NÃO carrega a intenção de comprar.
+     *
+     * O Pro usa `?plano=pro`, que vira cookie e reabre o checkout depois do
+     * e-mail de confirmação. O mesmo para o Max exigiria estender
+     * `PlanoDesejado` (hoje `'pro'` e mais nada), o destino de
+     * `finalizarOnboarding` e o parâmetro que a tela de Cobrança lê — quatro
+     * arquivos, dois deles no caminho do dinheiro.
+     *
+     * Não foi feito nesta rodada, e fica escrito em vez de escondido: quem
+     * clica aqui cria a conta e assina o Max em Configurações, Cobrança. O
+     * `fecho` acima e a legenda do preço já dizem que o Max é por empresa, que
+     * é a informação que faltaria.
+     */
+    cta: `Começar com o ${PLANO_NA_TELA.max}`,
+    href: '/cadastro',
+    // Quem já tem conta vai direto para a comparação, onde o botão do Max
+    // assina de verdade. `?assinar=1` abriria o checkout do PRO, que é o plano
+    // errado — e o parâmetro não sabe distinguir.
+    logado: { href: '/settings/billing#comparar', cta: `Assinar o ${PLANO_NA_TELA.max}` },
+    delay: 320,
+  },
 ]
 
 export function PricingSection() {
@@ -377,7 +470,21 @@ export function PricingSection() {
             de planos parecer encolhido. `max-w-3xl` mantém a leitura
             confortável sem esticar o card a ponto de a lista de benefícios
             virar uma linha solta e larga. */}
-        <div className="mx-auto grid max-w-3xl grid-cols-1 gap-6 sm:grid-cols-2">
+        {/* ## De duas para TRES colunas (18/09)
+
+            `max-w-3xl` com `sm:grid-cols-2` cabia os dois planos. Com o Max, a
+            mesma largura daria ~240px por cartao e a lista de beneficios
+            quebraria em uma palavra por linha.
+
+            `max-w-6xl` e a largura do Hero desta mesma pagina, e o comentario
+            anterior ja registrava que o SALTO de escala entre as secoes era o
+            que fazia o bloco de planos parecer encolhido. Agora as duas batem.
+
+            E a quebra vai direto de 1 para 3, sem passar por 2: com tres
+            cartoes, `sm:grid-cols-2` deixaria o terceiro sozinho numa linha,
+            com metade da largura dos outros dois. Cartao orfao le como erro de
+            layout, nao como plano. */}
+        <div className="mx-auto grid max-w-6xl grid-cols-1 gap-6 lg:grid-cols-3">
           {plans.map((plan) => (
             <RevealOnScroll key={plan.name} delay={plan.delay}>
               <Card

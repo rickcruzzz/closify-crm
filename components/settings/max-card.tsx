@@ -6,7 +6,13 @@ import { buttonVariants } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { CartaoDePlano, type LimiteDoPlano } from '@/components/settings/cartao-de-plano'
 import { SubscribeButton } from '@/components/settings/subscribe-button'
-import { MAX_PLAN_PRICE, PLANO_NA_TELA, PRO_PLAN_PRICE } from '@/lib/plans'
+import {
+  MAX_PLAN_PRICE,
+  MAX_WORKSPACE_LIMIT,
+  PLANO_NA_TELA,
+  PRO_PLAN_PRICE,
+  PRO_WORKSPACE_LIMIT,
+} from '@/lib/plans'
 
 /**
  * A oferta do plano Max, depois da comparação Free contra Pro.
@@ -44,13 +50,16 @@ import { MAX_PLAN_PRICE, PLANO_NA_TELA, PRO_PLAN_PRICE } from '@/lib/plans'
  * ver ANTES de pagar, e numa faixa ela é lida junto com o preço em vez de
  * dissolvida numa lista.
  */
-const LIMITES_MAX: LimiteDoPlano[] = [
-  { icone: Building2, valor: '1', rotulo: 'empresa conectada' },
+export const LIMITES_MAX: LimiteDoPlano[] = [
+  // A escada 1 / 5 / 10 fica legivel na mesma posicao dos outros dois cartoes,
+  // e o numero do WhatsApp vem LOGO DEPOIS para as duas coisas nao se
+  // confundirem: dez empresas para administrar, UM numero conectado.
+  { icone: Building2, valor: `${MAX_WORKSPACE_LIMIT}`, rotulo: 'empresas' },
   { icone: IconeWhatsapp, valor: '1 número', rotulo: 'de WhatsApp' },
   { icone: Check, valor: 'Tudo', rotulo: `do ${PLANO_NA_TELA.pro}` },
 ]
 
-const RECURSOS_MAX = [
+export const RECURSOS_MAX = [
   'Cada mensagem cai na conversa do contato, com o negócio dele do lado.',
   'O que você responde pelo celular aparece aqui também.',
   'Quem espera há mais tempo fica no topo, e não quem falou por último.',
@@ -96,9 +105,10 @@ export function MaxCard({
           // O Max não. Descobrir isso depois de pagar vira pedido de reembolso.
           observacao={
             <>
-              Um número de WhatsApp por empresa. Ao contrário do {PLANO_NA_TELA.pro}, que
-              custa R$ {PRO_PLAN_PRICE} pela empresa inteira e vale para até cinco
-              empresas suas, o {PLANO_NA_TELA.max} é cobrado por empresa conectada.
+              Administre até {MAX_WORKSPACE_LIMIT} empresas, e conecte o WhatsApp de uma
+              delas. Ao contrário do {PLANO_NA_TELA.pro}, que custa R$ {PRO_PLAN_PRICE} pela
+              empresa inteira e vale para até {PRO_WORKSPACE_LIMIT} empresas, o número de
+              WhatsApp é cobrado por empresa conectada.
             </>
           }
           acao={

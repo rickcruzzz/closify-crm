@@ -26,7 +26,7 @@ import {
 import { situacaoDoMax } from '@/lib/plans/max-queries'
 import { getCurrentUserAndWorkspace } from '@/lib/supabase/workspace'
 import { passoDoOnboardingSchema } from '@/lib/validations/onboarding'
-import { FREE_WORKSPACE_LIMIT, PRO_WORKSPACE_LIMIT } from '@/lib/plans'
+import { FREE_WORKSPACE_LIMIT, MAX_WORKSPACE_LIMIT, PRO_WORKSPACE_LIMIT } from '@/lib/plans'
 import type { OnboardingEtapa, OnboardingStatus, TourStatus } from '@/types/supabase'
 
 type Sessao = { supabase: Awaited<ReturnType<typeof createClient>>; userId: string }
@@ -227,7 +227,14 @@ export async function finalizarOnboarding(values: unknown) {
     // ter pago.
     if (error.message.includes('O plano Pro inclui')) {
       return {
-        error: `O plano Pro inclui ${PRO_WORKSPACE_LIMIT} empresas. Fale com a gente para ter mais.`,
+        error: `O plano Pro inclui ${PRO_WORKSPACE_LIMIT} empresas. Assine o Max para gerenciar até ${MAX_WORKSPACE_LIMIT}.`,
+      }
+    }
+    // E a terceira, da 0094. Sem ela quem esta no Max e bateu em dez veria
+    // "erro inesperado" — o pior texto possivel para quem paga R$ 250.
+    if (error.message.includes('O plano Max inclui')) {
+      return {
+        error: `O plano Max inclui ${MAX_WORKSPACE_LIMIT} empresas. Fale com a gente para ter mais.`,
       }
     }
     return { error: 'Não foi possível concluir a configuração. Tente novamente.' }

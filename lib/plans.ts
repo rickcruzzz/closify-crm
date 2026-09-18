@@ -137,6 +137,24 @@ export const FREE_WORKSPACE_LIMIT = 1
 export const PRO_WORKSPACE_LIMIT = 5
 
 /**
+ * Quantas empresas o Max deixa CRIAR, e a palavra "criar" e a decisao inteira.
+ *
+ * Pedido do dono em 18/09, com a escada 1 / 5 / 10. O que este numero NAO
+ * governa e quantos WhatsApps a pessoa conecta: cada instancia conectada e
+ * paga por empresa no provedor, e dez numeros por R$ 250 seriam ~R$ 999,90 de
+ * custo contra R$ 250 de receita.
+ *
+ * Por isso `max_vigente()` continua com UM ramo, a assinatura DESTA empresa, e
+ * a 0094 mexeu so no teto de criacao. Com o Max voce administra ate dez
+ * empresas com os recursos Pro e conecta o WhatsApp de uma; a segunda pede o
+ * Max nela.
+ *
+ * A regra de verdade mora na 0094 — este numero existe para a TELA nao
+ * discordar do banco, que e o defeito que `FREE_COLABORADORES` ja pagou.
+ */
+export const MAX_WORKSPACE_LIMIT = 10
+
+/**
  * O preço do Pro, por mês, pela empresa inteira.
  *
  * ## Era 49 até 10/09, e a troca saiu de medição

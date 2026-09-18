@@ -4,6 +4,7 @@ import {
   FREE_MEMBER_LIMIT,
   FREE_ORCAMENTO_LIMIT,
   FREE_WORKSPACE_LIMIT,
+  MAX_WORKSPACE_LIMIT,
   PRO_WORKSPACE_LIMIT,
 } from '@/lib/plans'
 
@@ -161,24 +162,37 @@ export async function canAddWorkspace(userId: string): Promise<LimitCheck> {
   // último valor gravado e não sabe que o período pago venceu. `pro_vigente`
   // confere a validade. São poucas chamadas, o Free permite uma empresa, e
   // quem tem várias é justamente quem paga.
-  const validades = await Promise.all(
-    ids.map((id) => supabase.rpc('pro_vigente', { target_workspace_id: id })),
-  )
+  const [validades, validadesMax] = await Promise.all([
+    Promise.all(ids.map((id) => supabase.rpc('pro_vigente', { target_workspace_id: id }))),
+    // O Max sobe o teto de CRIACAO de 5 para 10 (0094). Nao muda quantos
+    // WhatsApps a pessoa conecta: isso e um por empresa paga, e `max_vigente`
+    // continua com um ramo so.
+    Promise.all(ids.map((id) => supabase.rpc('max_vigente', { target_workspace_id: id }))),
+  ])
 
   const temPro = validades.some(({ data }) => data === true)
+  const temMax = validadesMax.some(({ data }) => data === true)
 
   // O Pro deixou de ser passe livre em 09/09: ele cobre até
   // `PRO_WORKSPACE_LIMIT` empresas, todas com os recursos Pro. Antes disso
   // quem pagava criava quantas quisesse e cada nova nascia Free — teto de 50
   // contatos dentro de um plano já comprado.
-  const teto = temPro ? PRO_WORKSPACE_LIMIT : FREE_WORKSPACE_LIMIT
+  const teto = temMax
+    ? MAX_WORKSPACE_LIMIT
+    : temPro
+      ? PRO_WORKSPACE_LIMIT
+      : FREE_WORKSPACE_LIMIT
 
   if (ids.length >= teto) {
     return {
       allowed: false,
-      reason: temPro
-        ? `O plano Pro inclui ${PRO_WORKSPACE_LIMIT} empresas. Fale com a gente para ter mais.`
-        : `O plano Free inclui ${FREE_WORKSPACE_LIMIT} empresa. Faça upgrade para o Pro para gerenciar várias.`,
+      // Tres frases, palavra por palavra iguais as da 0094: quem ja esta no
+      // Max nao pode ouvir "assine o Max".
+      reason: temMax
+        ? `O plano Max inclui ${MAX_WORKSPACE_LIMIT} empresas. Fale com a gente para ter mais.`
+        : temPro
+          ? `O plano Pro inclui ${PRO_WORKSPACE_LIMIT} empresas. Assine o Max para gerenciar até ${MAX_WORKSPACE_LIMIT}.`
+          : `O plano Free inclui ${FREE_WORKSPACE_LIMIT} empresa. Faça upgrade para o Pro para gerenciar várias.`,
     }
   }
 
