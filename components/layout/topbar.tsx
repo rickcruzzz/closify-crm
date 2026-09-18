@@ -14,6 +14,7 @@ export function Topbar({
   avisosNaoLidos,
   novaEmpresa,
   temMax,
+  proVigente,
 }: {
   workspaces: WorkspaceSummary[]
   activeWorkspaceId: string
@@ -25,6 +26,8 @@ export function Topbar({
   /** Se pode criar outra empresa, decidido no servidor. */
   novaEmpresa: DecisaoDeNovaEmpresa
   temMax: boolean
+  /** `pro_vigente()` da empresa ativa. Ver o comentario no switcher. */
+  proVigente: boolean
 }) {
   return (
     <header className="bg-background/80 sticky top-0 z-40 flex h-14 shrink-0 items-center gap-3 border-b px-4 backdrop-blur-sm">
@@ -36,6 +39,7 @@ export function Topbar({
         conversasEsperando={conversasEsperando}
         novaEmpresa={novaEmpresa}
         temMax={temMax}
+        proVigente={proVigente}
       />
       <div className="flex-1" />
       {/* Antes do tema e da conta, e não depois: a ordem da direita para a

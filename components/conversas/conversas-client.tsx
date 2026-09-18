@@ -408,7 +408,11 @@ function NadaEscolhido({
           </p>
           {minutos !== null && (
             <p className="text-muted-foreground max-w-xs text-sm text-balance">
-              A mais antiga espera há {textoDoRelogio(minutos)}. Comece por ela: é
+              {/* "Comece por ela" apontava para o TOPO até 18/09. Com a ordem
+                  invertida, a mais antiga passou a ficar no FIM, e mandar
+                  começar por ela sem dizer onde ela está seria instrução que
+                  não se consegue seguir. A frase passa a nomear o lugar. */}
+              A mais antiga espera há {textoDoRelogio(minutos)}, no fim da lista. É
               quem está mais perto de desistir.
             </p>
           )}

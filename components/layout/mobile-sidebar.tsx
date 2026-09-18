@@ -18,6 +18,7 @@ export function MobileSidebar({
   conversasEsperando,
   novaEmpresa,
   temMax,
+  proVigente,
 }: {
   workspaces: WorkspaceSummary[]
   activeWorkspaceId: string
@@ -27,6 +28,8 @@ export function MobileSidebar({
   /** Se pode criar outra empresa, decidido no servidor. */
   novaEmpresa: DecisaoDeNovaEmpresa
   temMax: boolean
+  /** `pro_vigente()` da empresa ativa. Ver o comentario no switcher. */
+  proVigente: boolean
 }) {
   const [open, setOpen] = React.useState(false)
 
@@ -49,6 +52,7 @@ export function MobileSidebar({
           conversasEsperando={conversasEsperando}
           novaEmpresa={novaEmpresa}
           temMax={temMax}
+          proVigente={proVigente}
           onNavigate={() => setOpen(false)}
         />
       </SheetContent>

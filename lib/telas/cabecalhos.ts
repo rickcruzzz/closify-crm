@@ -108,9 +108,15 @@ export const CABECALHOS = {
   },
 
   /**
-   * Esta já respondia, e é o motivo de ela ficar quase intacta: a ordenação
-   * é a regra de negócio da tela (quem espera há mais tempo vem primeiro), e
-   * dizer isso no cabeçalho é dizer para que a tela serve. Só encurtou.
+   * A frase descrevia a ORDEM, e a ordem mudou em 18/09: a lista passou a pôr
+   * a mensagem mais recente no topo, como todo aplicativo de mensagem.
+   *
+   * Deixar o texto antigo faria o cabeçalho prometer um critério que a lista
+   * não usa mais, e é a classe de defeito que este projeto mais paga: número
+   * certo com palavra contando outra coisa.
+   *
+   * A frase nova descreve o que a tela AINDA faz e que nenhum chat faz: quem
+   * espera fica acima de quem já foi respondido, e o relógio conta o tempo.
    */
   // Era "Conversas". Passou a ser "WhatsApp" em 17/09, quando os dois itens de
   // menu viraram um: o titulo da tela precisa dizer o mesmo que o item
@@ -118,7 +124,7 @@ export const CABECALHOS = {
   // coisa, que e o sinal classico de ter ido parar no lugar errado.
   conversas: {
     title: 'WhatsApp',
-    description: 'Quem está esperando resposta, começando por quem espera há mais tempo.',
+    description: 'Quem está esperando resposta, com o relógio de quanto tempo faz.',
   },
 
   /**

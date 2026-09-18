@@ -142,6 +142,7 @@ export default async function DashboardLayout({
           // O selo do seletor. `situacaoDoPlano` ja veio na onda acima e
           // consulta `max_vigente`, entao isto nao custa viagem de rede.
           temMax={situacaoDoPlano.temMax}
+          proVigente={situacaoDoPlano.proVigente}
         />
         {/* `overflow-x-hidden` explícito ao lado do `overflow-y-auto`: pela
             própria especificação CSS, `overflow-y` diferente de `visible`
@@ -161,6 +162,7 @@ export default async function DashboardLayout({
           // O selo do seletor. `situacaoDoPlano` ja veio na onda acima e
           // consulta `max_vigente`, entao isto nao custa viagem de rede.
           temMax={situacaoDoPlano.temMax}
+          proVigente={situacaoDoPlano.proVigente}
           />
           {/* Entre a barra e o conteúdo: não empurra a navegação para baixo e
               aparece antes de qualquer tela do produto. Só renderiza algo nos

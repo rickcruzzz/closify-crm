@@ -21,6 +21,7 @@ export function SidebarContent({
   conversasEsperando,
   novaEmpresa,
   temMax,
+  proVigente,
   onNavigate,
   recolhida = false,
 }: {
@@ -40,6 +41,8 @@ export function SidebarContent({
   novaEmpresa: DecisaoDeNovaEmpresa
   /** A empresa ativa tem Max vigente. Vem do layout, sem ida de rede extra. */
   temMax: boolean
+  /** `pro_vigente()` da empresa ativa. Ver o comentario no switcher. */
+  proVigente: boolean
   onNavigate?: () => void
   /**
    * Barra em modo icone, so no desktop.
@@ -80,6 +83,7 @@ export function SidebarContent({
           activeId={activeWorkspaceId}
           novaEmpresa={novaEmpresa}
           temMax={temMax}
+          proVigente={proVigente}
         />
       )}
       <SidebarNav

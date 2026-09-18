@@ -43,6 +43,7 @@ export type WorkspaceSummary = {
 
 export function WorkspaceSwitcher({
   temMax = false,
+  proVigente = false,
   workspaces,
   activeId,
   novaEmpresa,
@@ -60,6 +61,19 @@ export function WorkspaceSwitcher({
    * lista, abaixo.
    */
   temMax?: boolean
+  /**
+   * `pro_vigente()` da empresa ATIVA, lido da função e não da coluna.
+   *
+   * Empresa criada por quem já paga nascia mostrando "Free" aqui, porque
+   * `workspaces.plan` nunca é PROMOVIDO: `sincronizar_plano_do_workspace` só
+   * rebaixa, e o ramo 3 de `pro_vigente` (0078) cobre até cinco empresas do
+   * mesmo dono sem tocar na coluna de nenhuma delas.
+   *
+   * Só da ATIVA, pela mesma conta que já vale para `temMax`: responder pelas
+   * cinco custaria cinco RPCs em toda navegação, e a ativa é a que fica na tela
+   * o tempo todo.
+   */
+  proVigente?: boolean
   workspaces: WorkspaceSummary[]
   /** Empresa em uso agora, resolvida no servidor a partir do cookie. */
   activeId: string
@@ -231,7 +245,10 @@ export function WorkspaceSwitcher({
     return null
   }
 
-  const ehFree = active.plan !== 'pro'
+  // A FUNÇÃO vence a coluna, pelo mesmo motivo do rótulo: quem já paga via
+  // outra empresa do mesmo dono tem `plan = 'free'` e Pro valendo, e sem isto
+  // a barra ofereceria "Conhecer o Pro" para quem já o tem.
+  const ehFree = !proVigente && active.plan !== 'pro'
 
   return (
     <>
@@ -268,7 +285,7 @@ export function WorkspaceSwitcher({
                 O numero estava certo e a palavra contava outra coisa, que e a
                 mesma classe do "ate 2 colaboradores" prometendo tres pessoas.
                 `rotuloDoPlano` decide, com teste. */}
-                {rotuloDoPlano(active.plan, temMax)}
+                {rotuloDoPlano(active.plan, temMax, proVigente)}
               </span>
             </div>
             <ChevronsUpDown className="text-muted-foreground size-4 shrink-0" />
@@ -323,6 +340,7 @@ export function WorkspaceSwitcher({
                   {rotuloDoPlano(
                     workspace.plan,
                     temMax && workspace.id === activeId,
+                    proVigente && workspace.id === activeId,
                   )}
                 </Badge>
               </DropdownMenuItem>

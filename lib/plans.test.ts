@@ -5,7 +5,9 @@ import {
   FREE_COLABORADORES,
   FREE_MEMBER_LIMIT,
   PAPEIS_DO_COLABORADOR,
+  PLANO_NA_TELA,
   ehLimiteDePlano,
+  rotuloDoPlano,
 } from './plans'
 
 describe('limite de plano: o off-by-one e o caminho', () => {
@@ -69,5 +71,39 @@ describe('limite de plano: o off-by-one e o caminho', () => {
   /** Sem `?#comparar` a pessoa cai na tela e procura o botão de novo. */
   it('o destino abre o formulário sozinho', () => {
     expect(DESTINO_DO_UPGRADE).toContain('#comparar')
+  })
+})
+
+/**
+ * Relatado pelo dono em 18/09, com print: empresa criada por quem ja paga
+ * nascia mostrando "Free" no seletor. Medido no banco, TRES empresas assim.
+ *
+ * `workspaces.plan` nunca e PROMOVIDO: `sincronizar_plano_do_workspace` so
+ * rebaixa, e o ramo 3 de `pro_vigente` (0078) cobre ate cinco empresas do
+ * mesmo dono sem tocar na coluna de nenhuma delas.
+ */
+describe('rotuloDoPlano quando a coluna discorda da funcao', () => {
+  it('coluna free com pro_vigente TRUE mostra Pro', () => {
+    expect(rotuloDoPlano('free', false, true)).toBe(PLANO_NA_TELA.pro)
+  })
+
+  it('coluna free sem pro_vigente continua Free', () => {
+    expect(rotuloDoPlano('free', false, false)).toBe(PLANO_NA_TELA.free)
+  })
+
+  /** O Max vence os dois: quem o tem tambem tem `pro_vigente` true. */
+  it('Max vence a funcao e a coluna', () => {
+    expect(rotuloDoPlano('free', true, true)).toBe(PLANO_NA_TELA.max)
+    expect(rotuloDoPlano('pro', true, true)).toBe(PLANO_NA_TELA.max)
+  })
+
+  /**
+   * O controle: quem NAO passa o terceiro argumento continua lendo a coluna.
+   * Sem isto, tornar o parametro obrigatorio quebraria todo chamador que nao
+   * tem a funcao na mao, e obriga-los a uma ida ao banco por um rotulo.
+   */
+  it('sem o terceiro argumento, a coluna decide como antes', () => {
+    expect(rotuloDoPlano('pro', false)).toBe(PLANO_NA_TELA.pro)
+    expect(rotuloDoPlano('free', false)).toBe(PLANO_NA_TELA.free)
   })
 })

@@ -45,6 +45,7 @@ export function Sidebar({
   conversasEsperando,
   novaEmpresa,
   temMax,
+  proVigente,
   recolhidaInicial = false,
 }: {
   workspaces: WorkspaceSummary[]
@@ -61,6 +62,8 @@ export function Sidebar({
    */
   novaEmpresa: DecisaoDeNovaEmpresa
   temMax: boolean
+  /** `pro_vigente()` da empresa ativa. Ver o comentario no switcher. */
+  proVigente: boolean
   /** Lido do cookie no layout. Ver o comentário acima. */
   recolhidaInicial?: boolean
 }) {
@@ -96,6 +99,7 @@ export function Sidebar({
         conversasEsperando={conversasEsperando}
         novaEmpresa={novaEmpresa}
           temMax={temMax}
+          proVigente={proVigente}
         recolhida={recolhida}
       />
 

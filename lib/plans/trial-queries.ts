@@ -21,6 +21,27 @@ export type SituacaoDoPlano = {
    * mesma classe do *"até 2 colaboradores"* prometendo três pessoas.
    */
   temMax: boolean
+  /**
+   * O Pro está valendo AGORA, lido da função e não da coluna.
+   *
+   * ## O defeito que isto fecha, relatado pelo dono em 18/09
+   *
+   * Empresa criada por quem já paga nascia mostrando **"Free"** no seletor,
+   * com `pro_vigente()` devolvendo `true`. Medido: TRÊS empresas assim.
+   *
+   * A causa é que a coluna nunca é promovida. `sincronizar_plano_do_workspace`
+   * só REBAIXA — o comentário dela diz isso em texto — e o ramo 3 de
+   * `pro_vigente` (0078) cobre até cinco empresas do mesmo dono sem tocar em
+   * `workspaces.plan` de nenhuma delas.
+   *
+   * Ou seja a coluna estava certa no que ela guarda, e errada como resposta à
+   * pergunta que a tela faz. É a regra que este projeto já tem escrita:
+   * **regra de plano lê a FUNÇÃO, nunca a coluna.**
+   *
+   * Custa zero viagem a mais: a RPC já ia no mesmo `Promise.all`, o valor só
+   * era descartado depois de compor `temAssinaturaPaga`.
+   */
+  proVigente: boolean
 }
 
 /**
@@ -54,7 +75,9 @@ export type SituacaoDoPlano = {
  */
 export async function situacaoDoPlanoDaEmpresaAtiva(): Promise<SituacaoDoPlano> {
   const { workspaceId } = await getCurrentUserAndWorkspace()
-  if (!workspaceId) return { emTrial: false, temAssinaturaPaga: false, temMax: false }
+  if (!workspaceId) {
+    return { emTrial: false, temAssinaturaPaga: false, temMax: false, proVigente: false }
+  }
 
   const supabase = await createClient()
 
@@ -72,5 +95,6 @@ export async function situacaoDoPlanoDaEmpresaAtiva(): Promise<SituacaoDoPlano> 
     // falha, e `null` precisa cair no lado NEGADO. Aqui o custo de errar é só
     // um rótulo, mas a mesma função é lida por quem decide acesso.
     temMax: maxVigente === true,
+    proVigente: proVigente === true,
   }
 }

@@ -488,9 +488,33 @@ export type PlanoNaTela = (typeof PLANO_NA_TELA)[keyof typeof PLANO_NA_TELA]
  * Deixá-lo de fora e derivar aqui exigiria reimplementar vigência, graça e
  * status em TypeScript, que é exatamente a segunda cópia que diverge.
  */
-export function rotuloDoPlano(plan: string, temMax: boolean): PlanoNaTela {
+export function rotuloDoPlano(
+  plan: string,
+  temMax: boolean,
+  /**
+   * `pro_vigente()` desta empresa, quando quem chama souber.
+   *
+   * ## A COLUNA não responde a pergunta que a tela faz
+   *
+   * Relatado pelo dono em 18/09: empresa criada por quem já paga nascia
+   * mostrando **"Free"**, com `pro_vigente()` devolvendo `true`. Medido, TRÊS
+   * empresas assim ao mesmo tempo.
+   *
+   * A causa é que `workspaces.plan` nunca é PROMOVIDO:
+   * `sincronizar_plano_do_workspace` só rebaixa, e o ramo 3 de `pro_vigente`
+   * (0078) cobre até cinco empresas do mesmo dono sem tocar na coluna de
+   * nenhuma delas. A coluna estava certa no que ela guarda, e errada como
+   * resposta.
+   *
+   * Opcional porque quem NÃO tem a função na mão não deve pagar uma ida ao
+   * banco por um rótulo: nesse caso a coluna continua sendo a melhor resposta
+   * disponível, e ela só erra para menos.
+   */
+  proVigente?: boolean,
+): PlanoNaTela {
   // O Max vem primeiro: quem o tem também tem `plan === 'pro'`, e ler a coluna
   // antes devolveria "Pro" para todo mundo que paga o plano mais caro.
   if (temMax) return PLANO_NA_TELA.max
+  if (proVigente) return PLANO_NA_TELA.pro
   return plan === 'pro' ? PLANO_NA_TELA.pro : PLANO_NA_TELA.free
 }

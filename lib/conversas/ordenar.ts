@@ -1,21 +1,29 @@
 /**
  * A ordem da lista de conversas, e a cor do relógio.
  *
- * ## A decisão que separa esta tela de todo concorrente
+ * ## A ordem é por MENSAGEM MAIS RECENTE, e isso mudou em 18/09
  *
- * Kommo, Agendor, SleekFlow e todo aplicativo de mensagem ordenam por
- * **mensagem mais recente**. É a ordem certa para CONVERSAR.
+ * Decisão do dono, depois de ver a tela com dado real. Até aqui a lista
+ * ordenava por **quem espera há mais tempo**, e o argumento estava medido:
  *
- * Não é a ordem certa para NÃO PERDER VENDA, que é o que este produto promete.
- * Medido no mercado brasileiro em 2026:
- *
- *     5    minutos é o tempo que o cliente considera ideal
+ *     5    minutos é o tempo que o cliente brasileiro considera ideal
  *     40%  desistem da compra se não responderem em 10 minutos
  *     62%  já desistiram de comprar por falha operacional, quase sempre demora
  *     34%  mantêm o WhatsApp aberto o tempo todo
  *
- * Então a lista ordena por **quem está esperando há mais tempo**. Quem já foi
- * respondido desce, mesmo que a mensagem dele seja a mais recente da tela.
+ * O contra-argumento que venceu é de RECONHECIMENTO: Kommo, Agendor, SleekFlow
+ * e todo aplicativo de mensagem põem a mais recente no topo, e quem abre esta
+ * tela já usou todos eles. Uma lista que contraria esse reflexo é lida como
+ * defeito antes de ser lida como escolha, e foi exatamente assim que ela
+ * chegou.
+ *
+ * **O que NÃO mudou é o que preserva a promessa.** Quem espera continua ACIMA
+ * de quem já foi respondido, e a cor do relógio continua contando quanto tempo
+ * faz. O sinal de urgência sai da posição e passa a viver na cor, que é onde
+ * ele fica visível sem depender de a pessoa saber qual ponta da lista olhar.
+ *
+ * Ou seja: dentro de "esperando", o mais recente vem primeiro; e "esperando"
+ * inteiro vem antes de "respondidas".
  *
  * ## Por que isso mora aqui, e não numa cláusula SQL
  *
@@ -105,7 +113,14 @@ export function ordenarPorEspera<T extends ConversaParaOrdenar>(conversas: T[]):
     else respondidas.push(c)
   }
 
-  esperando.sort((a, b) => tempo(a.ultimoRecebidoEm) - tempo(b.ultimoRecebidoEm))
+  // Decrescente: a mensagem mais recente primeiro, como todo aplicativo de
+  // mensagem. Era crescente até 18/09; ver o cabeçalho para o porquê da troca
+  // e para o que ela custou.
+  //
+  // `tempo()` devolve `+Infinity` para data ilegível, e isso agora a joga para
+  // o TOPO em vez do fim. É o lado certo de errar: uma linha com data torta
+  // aparece onde alguém a vê, em vez de sumir no fundo de uma lista longa.
+  esperando.sort((a, b) => tempo(b.ultimoRecebidoEm) - tempo(a.ultimoRecebidoEm))
 
   respondidas.sort((a, b) => maisRecente(b) - maisRecente(a))
 

@@ -84,18 +84,24 @@ describe('urgenciaDaConversa', () => {
 
 describe('ordenarPorEspera', () => {
   /**
-   * O caso que define a tela inteira, e que nenhum concorrente faz.
+   * Decisão do dono em 18/09, depois de ver a tela com dado real.
    *
-   * Todo aplicativo de chat põe a mensagem mais RECENTE no topo. Aqui a mais
-   * ANTIGA sobe, porque é ela que está prestes a desistir da compra.
+   * Até aqui a mais ANTIGA subia, e o argumento estava medido: 40% desistem se
+   * não responderem em dez minutos. O contra-argumento que venceu é de
+   * RECONHECIMENTO — todo aplicativo de mensagem põe a mais recente no topo, e
+   * uma lista que contraria esse reflexo é lida como defeito antes de ser lida
+   * como escolha. Foi exatamente assim que ela chegou.
+   *
+   * O que preserva a promessa é o teste logo abaixo: esperando continua ACIMA
+   * de respondida, e a cor do relógio continua contando o tempo.
    */
-  it('quem espera há mais tempo fica no topo', () => {
+  it('a mensagem mais recente fica no topo', () => {
     const lista = [
       conversa({ id: 'novo', ultimoRecebidoEm: haMinutos(3) }),
       conversa({ id: 'velho', ultimoRecebidoEm: haMinutos(47) }),
       conversa({ id: 'medio', ultimoRecebidoEm: haMinutos(12) }),
     ]
-    expect(ordenarPorEspera(lista).map((c) => c.id)).toEqual(['velho', 'medio', 'novo'])
+    expect(ordenarPorEspera(lista).map((c) => c.id)).toEqual(['novo', 'medio', 'velho'])
   })
 
   // Se a respondida subisse por ter mensagem recente, a tela viraria um chat
@@ -146,6 +152,10 @@ describe('ordenarPorEspera', () => {
 
   // `NaN` em comparador produz ordem indefinida no V8: uma linha torta
   // embaralharia a lista inteira em vez de só se colocar mal.
+  //
+  // Com a ordem invertida em 18/09, a data ilegível passou a ir para o TOPO e
+  // não para o fim, porque `tempo()` devolve `+Infinity`. É o lado certo de
+  // errar: ela aparece onde alguém a vê, em vez de sumir no fundo.
   it('data ilegível não embaralha as outras', () => {
     const lista = [
       conversa({ id: 'torta', ultimoRecebidoEm: 'lixo' }),
@@ -153,7 +163,10 @@ describe('ordenarPorEspera', () => {
       conversa({ id: 'nova', ultimoRecebidoEm: haMinutos(2) }),
     ]
     const ordem = ordenarPorEspera(lista).map((c) => c.id)
-    expect(ordem.indexOf('velha')).toBeLessThan(ordem.indexOf('nova'))
+    // As duas legíveis mantêm a ordem entre si: a nova antes da velha.
+    expect(ordem.indexOf('nova')).toBeLessThan(ordem.indexOf('velha'))
+    // E a torta não some: fica visível, no topo.
+    expect(ordem[0]).toBe('torta')
   })
 
   it('não muta a lista recebida', () => {
