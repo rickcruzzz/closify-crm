@@ -38,6 +38,37 @@ export function iniciais(nome: string | null | undefined): string {
   const primeira = partes[0]!
   const ultima = partes.length > 1 ? partes[partes.length - 1]! : ''
 
-  const letras = (primeira[0] ?? '') + (ultima[0] ?? '')
+  const letras = primeiroSimbolo(primeira) + primeiroSimbolo(ultima)
   return letras.toUpperCase() || '?'
+}
+
+/**
+ * O primeiro SIMBOLO, e nao as primeiras dezesseis bits.
+ *
+ * ## O defeito, visto na caixa de entrada em 18/09
+ *
+ * `parte[0]` indexa unidades UTF-16. Emoji e fonte estilizada moram fora do
+ * plano basico e ocupam DUAS unidades, entao `[0]` devolve metade de um par
+ * substituto: um caractere que, sozinho, nao existe.
+ *
+ *     nome       "Velo", em fonte estilizada (U+1D5B5 e seguintes)
+ *     parte[0]   um high surrogate solto
+ *     na tela    o losango de caractere invalido, duas vezes
+ *
+ * **E nao para no avatar.** Substituto solto nao sobrevive igual dos dois
+ * lados: o HTML do servidor carrega um, o React do navegador produz outro, e a
+ * pagina INTEIRA toma React #425 e #422. Era o que estava no console de
+ * `/conversas`, e a conta era um avatar quebrado derrubando a hidratacao da
+ * tela toda.
+ *
+ * Isto e a caixa do WhatsApp: nome com emoji nao e caso raro, e o padrao de
+ * quem usa o aplicativo.
+ *
+ * `Array.from` percorre por CODE POINT, que e a unidade que a pessoa ve. O
+ * espalhamento (`[...parte]`) faria o mesmo e o `tsc` deste projeto o recusa
+ * com TS2802, porque o alvo compilado e anterior a ES2015.
+ */
+function primeiroSimbolo(parte: string): string {
+  if (!parte) return ''
+  return Array.from(parte)[0] ?? ''
 }
