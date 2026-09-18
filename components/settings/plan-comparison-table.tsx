@@ -1,8 +1,7 @@
-import { Building2, Check, ShieldCheck, Users, Zap } from 'lucide-react'
+import { Building2, Check, ShieldCheck, Users } from 'lucide-react'
 
-import { Badge } from '@/components/ui/badge'
+import { CartaoDePlano, type LimiteDoPlano } from '@/components/settings/cartao-de-plano'
 import { SubscribeButton } from '@/components/settings/subscribe-button'
-import { cn } from '@/lib/utils'
 import {
   FREE_COLABORADORES,
   FREE_LEAD_LIMIT,
@@ -36,7 +35,7 @@ import {
  */
 
 /** O que cada plano LIMITA. Número grande, porque é o que decide. */
-type Limite = { icone: typeof Building2; valor: string; rotulo: string }
+type Limite = LimiteDoPlano
 
 const LIMITES_FREE: Limite[] = [
   {
@@ -112,22 +111,22 @@ export function PlanComparisonTable({
   return (
     <div id="comparar" className="flex flex-col gap-4">
       <div className="grid items-start gap-4 sm:grid-cols-2">
-        <CartaoDoPlano
-          name="Free"
-          price={FREE_PLAN_PRICE}
-          description="Para começar a organizar o funil."
+        <CartaoDePlano
+          nome="Free"
+          preco={FREE_PLAN_PRICE}
+          descricao="Para começar a organizar o funil."
           limites={LIMITES_FREE}
-          features={FREE_FEATURES}
-          isCurrent={plan === 'free'}
+          recursos={FREE_FEATURES}
+          ehAtual={plan === 'free'}
         />
-        <CartaoDoPlano
-          name="Pro"
-          price={PRO_PLAN_PRICE}
-          description="Para quem já vive de orçamento."
+        <CartaoDePlano
+          nome="Pro"
+          preco={PRO_PLAN_PRICE}
+          descricao="Para quem já vive de orçamento."
           limites={LIMITES_PRO}
-          features={PRO_FEATURES}
-          isCurrent={plan === 'pro'}
-          recommended
+          recursos={PRO_FEATURES}
+          ehAtual={plan === 'pro'}
+          recomendado
           // O botão mora AQUI, no cartão que convence. Ver o cabeçalho.
           acao={plan === 'free' && isAdmin ? <SubscribeButton className="w-full" abrirDeInicio={assinarDeInicio} /> : null}
           aviso={
@@ -166,102 +165,6 @@ function Permissoes() {
           </div>
         ))}
       </dl>
-    </div>
-  )
-}
-
-function CartaoDoPlano({
-  name,
-  price,
-  description,
-  limites,
-  features,
-  isCurrent,
-  recommended,
-  acao,
-  aviso,
-}: {
-  name: string
-  price: number
-  description: string
-  limites: Limite[]
-  features: string[]
-  isCurrent: boolean
-  recommended?: boolean
-  acao?: React.ReactNode
-  aviso?: string | null
-}) {
-  return (
-    <div
-      className={cn(
-        'flex h-full flex-col gap-4 rounded-xl border p-5',
-        // O plano ATUAL ganha o anel, mesmo não sendo o recomendado: a primeira
-        // pergunta de quem abre esta tela é "em qual eu estou?", e ela precisa
-        // ser respondida antes da segunda ("vale trocar?").
-        isCurrent && 'border-primary/50 ring-primary/20 ring-2',
-        !isCurrent && recommended && 'border-primary/40 bg-primary/[0.03]',
-        !isCurrent && !recommended && 'border-border',
-      )}
-    >
-      <div className="flex items-center justify-between gap-2">
-        <span className="font-semibold">{name}</span>
-        {isCurrent ? (
-          <Badge variant="secondary" className="gap-1">
-            <Check className="size-3" aria-hidden />
-            Plano atual
-          </Badge>
-        ) : (
-          recommended && (
-            <Badge className="gap-1">
-              <Zap className="size-3" aria-hidden />
-              Recomendado
-            </Badge>
-          )
-        )}
-      </div>
-
-      <div>
-        <div className="flex items-baseline gap-1">
-          <span className="text-3xl font-bold tracking-tight">R$ {price}</span>
-          <span className="text-muted-foreground text-sm">/mês</span>
-        </div>
-        <p className="text-muted-foreground mt-1 text-sm">{description}</p>
-      </div>
-
-      {/* Os três limites em faixa: é a pergunta que a pessoa traz ("cabe o meu
-          caso?"), e ela não pode estar dissolvida numa lista onde tem o mesmo
-          peso de "Funil visual". */}
-      <div className="border-border/60 grid grid-cols-3 gap-2 rounded-lg border py-3">
-        {limites.map((l) => {
-          const Icone = l.icone
-          return (
-            <div key={l.rotulo} className="flex flex-col items-center gap-0.5 px-1 text-center">
-              <Icone aria-hidden className="text-muted-foreground mb-0.5 size-4" />
-              <span className="text-sm font-semibold leading-tight tabular-nums">{l.valor}</span>
-              <span className="text-muted-foreground text-xs leading-tight">{l.rotulo}</span>
-            </div>
-          )
-        })}
-      </div>
-
-      <ul className="flex flex-col gap-2 text-sm">
-        {features.map((feature) => (
-          <li key={feature} className="flex items-start gap-2">
-            <Check aria-hidden className="text-primary mt-0.5 size-4 shrink-0" />
-            <span>{feature}</span>
-          </li>
-        ))}
-      </ul>
-
-      {/* `mt-auto` empurra a ação para a base: com listas de tamanhos
-          diferentes, os dois botões ficariam em alturas diferentes e a
-          comparação lado a lado perderia a linha de base. */}
-      {(acao || aviso) && (
-        <div className="mt-auto pt-1">
-          {acao}
-          {aviso && <p className="text-muted-foreground text-sm">{aviso}</p>}
-        </div>
-      )}
     </div>
   )
 }

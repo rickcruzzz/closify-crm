@@ -1,39 +1,62 @@
 import Link from 'next/link'
-import { IconeWhatsapp } from '@/components/ui/icone-whatsapp'
+import { Building2, Check } from 'lucide-react'
 
-import { Badge } from '@/components/ui/badge'
+import { IconeWhatsapp } from '@/components/ui/icone-whatsapp'
 import { buttonVariants } from '@/components/ui/button'
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { CartaoDePlano, type LimiteDoPlano } from '@/components/settings/cartao-de-plano'
 import { SubscribeButton } from '@/components/settings/subscribe-button'
 import { MAX_PLAN_PRICE, PLANO_NA_TELA, PRO_PLAN_PRICE } from '@/lib/plans'
 
 /**
  * A oferta do plano Max, depois da comparação Free contra Pro.
  *
- * ## Por que um CARD e não uma terceira coluna na tabela
+ * ## Ele usa o MESMO cartão dos outros dois, desde 18/09
+ *
+ * Antes era um `Card` do shadcn desenhado à parte: preço pequeno no canto,
+ * benefícios em parágrafos soltos, sem a faixa de limites e sem um único `✓`.
+ * Na mesma tela, logo abaixo dos outros dois, dava duas linguagens visuais
+ * diferentes — e a mais pobre era a do plano de **R$ {MAX_PLAN_PRICE}**, o mais
+ * caro dos três. Quem rolava a página via a oferta ficar menos cuidada
+ * conforme o preço subia.
+ *
+ * O conserto não foi copiar o estilo, foi passar a usar `CartaoDePlano`:
+ * copiar resolveria hoje e divergiria no próximo ajuste, que é exatamente como
+ * os dois desenhos se separaram.
+ *
+ * ## E ele continua FORA da grade de duas colunas
  *
  * A tabela compara duas coisas que se excluem: ou você está no Free, ou no Pro.
- * O Max não é uma terceira opção paralela — é **tudo do Pro mais uma coisa**.
+ * O Max não é uma terceira opção paralela, é **tudo do Pro mais uma coisa**.
  * Enfiá-lo como coluna faria a pessoa comparar três conjuntos de limites que
  * são iguais em duas colunas de três, e a diferença real (o WhatsApp) sumiria
  * no meio de dez linhas idênticas.
  *
- * Card abaixo, com a diferença escrita em uma frase, é o formato que a
- * diferença tem.
- *
- * ## E ele fica DEPOIS da comparação, de propósito
- *
- * A mesma razão que tirou o botão de assinar do topo da página em 16/09: a
- * oferta vem depois do argumento, nunca antes. Quem ainda está decidindo entre
- * Free e Pro não precisa de um terceiro preço na cara antes de resolver o
- * primeiro.
+ * Mesmo cartão, largura inteira, depois do argumento. A oferta vem depois da
+ * comparação, nunca antes — a mesma razão que tirou o botão de assinar do topo
+ * da página em 16/09.
  */
+
+/**
+ * Os três números do Max, e o primeiro é o que evita o pedido de reembolso.
+ *
+ * "1 empresa conectada" contra as 5 do Pro é a diferença que a pessoa precisa
+ * ver ANTES de pagar, e numa faixa ela é lida junto com o preço em vez de
+ * dissolvida numa lista.
+ */
+const LIMITES_MAX: LimiteDoPlano[] = [
+  { icone: Building2, valor: '1', rotulo: 'empresa conectada' },
+  { icone: IconeWhatsapp, valor: '1 número', rotulo: 'de WhatsApp' },
+  { icone: Check, valor: 'Tudo', rotulo: `do ${PLANO_NA_TELA.pro}` },
+]
+
+const RECURSOS_MAX = [
+  'Cada mensagem cai na conversa do contato, com o negócio dele do lado.',
+  'O que você responde pelo celular aparece aqui também.',
+  'Quem espera há mais tempo fica no topo, e não quem falou por último.',
+  'O histórico fica na empresa, e não no celular de quem vendeu.',
+]
+
 export function MaxCard({
   temMax,
   isAdmin,
@@ -52,72 +75,58 @@ export function MaxCard({
   temCobrancaEmAberto: boolean
 }) {
   return (
+    // A MESMA casca da comparacao: la o bloco e `Card` + titulo + conteudo, e
+    // sem ela o cartao do Max flutuaria solto no nivel da pagina enquanto os
+    // outros dois vivem dentro de uma caixa. O titulo em forma de pergunta
+    // porque e isso que separa quem precisa do Max de quem nao precisa.
     <Card>
       <CardHeader>
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <div className="flex items-center gap-2">
-            <IconeWhatsapp className="text-muted-foreground size-5" />
-            <CardTitle>Plano {PLANO_NA_TELA.max}</CardTitle>
-          </div>
-          {temMax ? (
-            <Badge variant="outline" className="border-emerald-600/40 text-emerald-600">
-              Seu plano
-            </Badge>
-          ) : (
-            <span className="text-lg font-semibold tabular-nums">
-              R$ {MAX_PLAN_PRICE}
-              <span className="text-muted-foreground text-xs font-normal">/mês</span>
-            </span>
-          )}
-        </div>
-        <CardDescription>
-          Tudo do {PLANO_NA_TELA.pro}, mais o WhatsApp da sua empresa dentro do funil.
-        </CardDescription>
+        <CardTitle>Vai atender pelo WhatsApp?</CardTitle>
       </CardHeader>
-
-      <CardContent className="flex flex-col gap-4">
-        <ul className="text-muted-foreground flex flex-col gap-2 text-sm">
-          <li>Cada mensagem cai na conversa do contato, com o negócio dele do lado.</li>
-          <li>O que você responde pelo celular aparece aqui também.</li>
-          <li>Quem espera há mais tempo fica no topo, e não quem falou por último.</li>
-          <li>O histórico fica na empresa, e não no celular de quem vendeu.</li>
-        </ul>
-
-        {/* ## A frase que evita o chamado, e ela precisa vir ANTES da compra
-            O Pro é cobrado pela empresa inteira e cobre até cinco empresas do
-            mesmo dono. O Max não: cada empresa conectada consome um número e
-            uma instância paga no provedor. Descobrir isso depois de pagar é
-            exatamente o tipo de surpresa que vira pedido de reembolso. */}
-        <p className="text-muted-foreground border-border/60 rounded-lg border p-3 text-xs leading-relaxed">
-          Um número de WhatsApp por empresa. Ao contrário do {PLANO_NA_TELA.pro}, que
-          custa R$ {PRO_PLAN_PRICE} pela empresa inteira e vale para até cinco empresas
-          suas, o {PLANO_NA_TELA.max} é cobrado por empresa conectada.
-        </p>
-
-        {temMax ? (
-          <Link
-            href="/settings/whatsapp"
-            className={buttonVariants({ variant: 'outline', size: 'sm', className: 'w-fit' })}
-          >
-            <IconeWhatsapp className="size-4" />
-            Conectar o WhatsApp
-          </Link>
-        ) : !isAdmin ? (
-          // Membro não mexe em cobrança. Mandá-lo para um botão que a Server
-          // Action vai recusar é a viagem inútil que `integration-card` já
-          // documenta: uma ida ao servidor para dizer não.
-          <p className="text-muted-foreground text-xs">
-            Peça a um administrador da empresa para assinar o plano{' '}
-            {PLANO_NA_TELA.max}.
-          </p>
-        ) : temCobrancaEmAberto ? (
-          <p className="text-muted-foreground text-xs">
-            Existe uma cobrança em aberto nesta empresa. Pague ou cancele a atual antes
-            de trocar de plano.
-          </p>
-        ) : (
-          <SubscribeButton plano="max" />
-        )}
+      <CardContent>
+        <CartaoDePlano
+          nome={`Plano ${PLANO_NA_TELA.max}`}
+          preco={MAX_PLAN_PRICE}
+          descricao={`Tudo do ${PLANO_NA_TELA.pro}, mais o WhatsApp da sua empresa dentro do funil.`}
+          limites={LIMITES_MAX}
+          recursos={RECURSOS_MAX}
+          ehAtual={temMax}
+          // A frase que evita o chamado, e ela precisa vir ANTES da compra: o Pro é
+          // cobrado pela empresa inteira e cobre até cinco empresas do mesmo dono.
+          // O Max não. Descobrir isso depois de pagar vira pedido de reembolso.
+          observacao={
+            <>
+              Um número de WhatsApp por empresa. Ao contrário do {PLANO_NA_TELA.pro}, que
+              custa R$ {PRO_PLAN_PRICE} pela empresa inteira e vale para até cinco
+              empresas suas, o {PLANO_NA_TELA.max} é cobrado por empresa conectada.
+            </>
+          }
+          acao={
+            temMax ? (
+              <Link
+                href="/conversas"
+                className={buttonVariants({ variant: 'outline', className: 'w-full' })}
+              >
+                <IconeWhatsapp className="size-4" />
+                Conectar o WhatsApp
+              </Link>
+            ) : isAdmin && !temCobrancaEmAberto ? (
+              <SubscribeButton plano="max" className="w-full" />
+            ) : null
+          }
+          aviso={
+            temMax
+              ? null
+              : !isAdmin
+                ? // Membro não mexe em cobrança. Mandá-lo para um botão que a Server
+                  // Action vai recusar é a viagem inútil que `integration-card` já
+                  // documenta: uma ida ao servidor para dizer não.
+                  `Peça a um administrador da empresa para assinar o plano ${PLANO_NA_TELA.max}.`
+                : temCobrancaEmAberto
+                  ? 'Existe uma cobrança em aberto nesta empresa. Pague ou cancele a atual antes de trocar de plano.'
+                  : null
+          }
+        />
       </CardContent>
     </Card>
   )
