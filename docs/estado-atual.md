@@ -12,6 +12,102 @@ senha; o disparo mudou de posicionamento e de canal; e doze rodadas de produto
 foram ao ar, sendo que tres eram alarme vermelho aparecendo onde nada esta
 errado)
 
+## A auditoria do tutorial, e o pior defeito estava na primeira frase (18/09)
+
+Pedido do dono depois de ver o guia rodando em producao: auditoria completa do
+tutorial desde a criacao da conta. Percorrido com conta NOVA criada e apagada a
+cada rodada, primeiro contra producao e depois contra o build corrigido.
+
+### 1. Os seis passos estavam SEM ACENTO
+
+    "Agora a parte que so o Velo Funil faz"
+    "Abra o negocio e preencha a validade do orcamento"
+    "Hoje e a tela de abrir de manha: ela reune tudo que vence"
+
+Escrevi as strings no mesmo estilo ASCII que uso em comentario de codigo, e
+elas foram para a TELA, em producao, na primeira coisa que um cliente novo le.
+
+**E o mesmo defeito de 09/09 no anuncio do Google**, onde titulos sem acento
+conviviam com frases de destaque acentuadas na mesma resposta da API. La foi
+pego lendo a API; aqui, olhando o print.
+
+Travado por teste, com o controle que importa: a varredura precisa **pegar** o
+texto errado quando ele existe, senao um erro de digitacao na expressao aprova
+tudo para sempre.
+
+**E o proprio teste nasceu quebrado, de dois jeitos diferentes**, o que vale
+registrar porque os dois sao invisiveis:
+
+    /g compartilhado    uma `RegExp` global carrega `lastIndex`, e reusar o
+                        MESMO objeto em varios casos faz a varredura pular
+                        texto conforme a ordem dos testes. O controle reprovou
+                        sozinho. Virou funcao que devolve uma regex nova
+    `\\b` virou 0x08     a escrita do arquivo por script interpretou `\b` como
+                        BACKSPACE, e a expressao ficou `/<bs>(negocio|...)<bs>/`,
+                        que nunca casa. O controle pegou isso tambem
+
+Vigia com estado, e vigia com escape errado, sao as duas formas de um teste
+passar sem olhar nada.
+
+### 2. `setState` durante o render, e e a familia ja paga duas vezes
+
+    Cannot update a component (Router) while rendering
+    a different component (GuiaInterativo)
+
+`recarregar()` morava DENTRO de `setDialogoAberto((antes) => ...)`. Parecia
+elegante, comparar com o valor anterior sem guardar nada. **React chama o
+updater na fase de RENDER**, e duas vezes em `StrictMode`: a Server Action
+disparava de dentro do render.
+
+E a familia do React #185 do Kanban (06/09) e do #310 de ontem: efeito
+acontecendo onde so podia haver calculo puro.
+
+O espelho em `ref` resolve porque ele **nao e fonte de verdade de nada** — so
+guarda o ultimo valor lido do DOM para detectar a transicao, e quem renderiza
+continua sendo o estado. E a distincao que faltou no `ref` de visitas, ontem,
+quando ele virou verdade paralela e travou o contador.
+
+    medido   1 aviso antes, 0 depois
+
+### 3. "Passo 3 de 5" ao lado de "3/5 feitos"
+
+Dois numeros com o MESMO denominador, significando coisas diferentes, colados
+na mesma linha. Le como *"o passo 3 ja esta feito"* quando ele e justamente o
+que falta fazer.
+
+Acontece porque chegar no Dashboard cumpre o passo de Resultados na hora, entao
+o total de feitos anda na frente do indice. Estava correto e era ilegivel.
+
+Virou **"faltam N"**, que conta o oposto e nao tem como colidir com o indice.
+
+### 4. "Ir para esta tela" era botao morto quando ja se estava nela
+
+A condicao era `!naRota || !alvo`. Quem estava na tela certa com o alvo fora do
+DOM — o card do negocio apagado, a lista ainda carregando — via o botao,
+clicava, e ele empurrava a MESMA rota.
+
+Botao que nao faz nada, na tela de quem esta tentando entender o que fazer. O
+requisito do pedido dizia, em texto, *"nao deixar o tour preso"*.
+
+### O que a auditoria conferiu e estava sao
+
+    conta nova -> /onboarding -> 4 perguntas -> guia      sem travar
+    criar o contato AVANCA o passo sozinho                sem navegar
+    390px: o cartao cabe inteiro                          [31, 289, 328, 228]
+    390px: o botao de menu continua clicavel              sob o veu
+    zero erro de console vindo do guia
+
+**O celular era a lacuna declarada em aberto ontem.** Medido agora: passa.
+
+### Anotado, e nao e desta rodada
+
+O Base UI avisa em `/leads` que um componente com papel de botao nao e um
+`<button>` nativo (`nativeButton`), provavelmente o `Button render={<a
+download>}` do Exportar. E semantica de acessibilidade, nao quebra nada, e e
+anterior ao guia.
+
+    testes   2.004 -> 2.011
+
 ## O guia apagava o formulario de contato, de quatro em quatro segundos (18/09)
 
 Relato do dono com print, poucas horas depois de promover: *"aqui eu digito e
