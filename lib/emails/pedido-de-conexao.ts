@@ -67,10 +67,23 @@ export function renderPedidoDeConexaoEmail(params: {
         rawParagraph(
           '<strong>1.</strong> No painel da Z-API, crie uma instância com o nome da empresa.<br />' +
             '<strong>2.</strong> Assine a instância, senão ela é apagada em 48 horas.<br />' +
-            '<strong>3.</strong> Copie o ID e o token e cole em Configurações, WhatsApp, "Já tenho uma instância na Z-API".',
+            '<strong>3.</strong> Mande o ID e o token PARA O CLIENTE, e peça que ele cole em Configurações, WhatsApp, "Já tenho uma instância na Z-API".',
+        ),
+        // ## O passo 3 é do CLIENTE, e a versão anterior mandava você fazer
+        //
+        // Ela dizia "cole em Configurações". Você não consegue: `adotarInstancia`
+        // resolve a empresa pela SESSÃO de quem clica (`resolverWorkspaceAtivo`)
+        // e exige `is_workspace_admin` dela. Você não é membro da empresa do
+        // cliente, então esse formulário nunca alcança a empresa certa.
+        //
+        // Seguir a instrução antiga gravaria a instância do cliente na SUA
+        // empresa: o número dele conectado na sua caixa de entrada, e a tela
+        // dele continuando a dizer "estamos preparando" para sempre.
+        paragraph(
+          'O passo 3 é do cliente, não seu: a tela grava a conexão na empresa de quem está logado, e você não é membro da empresa dele.',
         ),
         paragraph(
-          'Depois disso o cliente lê o QR Code e passa a receber as mensagens aqui dentro.',
+          'Depois que ele colar, o QR Code aparece na tela dele. Avise, porque a tela de espera não se atualiza sozinha.',
         ),
       ].join(''),
       // O botão leva à tela DO PRODUTO, e não ao painel da Z-API: o passo que
