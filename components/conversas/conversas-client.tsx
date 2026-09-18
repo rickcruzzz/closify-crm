@@ -26,7 +26,7 @@ import { Badge } from '@/components/ui/badge'
 import { Textarea } from '@/components/ui/textarea'
 import { Separator } from '@/components/ui/separator'
 import { EmptyState } from '@/components/ui/empty-state'
-import { Avatar, AvatarFallback } from '@/components/ui/avatar'
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { IconeWhatsapp } from '@/components/ui/icone-whatsapp'
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet'
 import {
@@ -521,6 +521,11 @@ function LinhaDaConversa({
       )}
     >
       <Avatar size="sm" className="mt-0.5">
+        {/* A foto primeiro, as iniciais como reserva. `AvatarImage` do Base UI
+            so troca depois que a imagem CARREGA, entao uma URL assinada que
+            venceu ou um arquivo que sumiu caem nas iniciais sozinhos, sem
+            buraco na lista. */}
+        {conversa.fotoUrl ? <AvatarImage src={conversa.fotoUrl} alt="" /> : null}
         <AvatarFallback>{iniciais(conversa.nome)}</AvatarFallback>
       </Avatar>
 
@@ -682,7 +687,12 @@ function Conversa({
         </Button>
 
         <Avatar size="sm" className="hidden sm:flex">
-          <AvatarFallback>{iniciais(conversa.nome)}</AvatarFallback>
+          {/* A foto primeiro, as iniciais como reserva. `AvatarImage` do Base UI
+            so troca depois que a imagem CARREGA, entao uma URL assinada que
+            venceu ou um arquivo que sumiu caem nas iniciais sozinhos, sem
+            buraco na lista. */}
+        {conversa.fotoUrl ? <AvatarImage src={conversa.fotoUrl} alt="" /> : null}
+        <AvatarFallback>{iniciais(conversa.nome)}</AvatarFallback>
         </Avatar>
 
         <div className="min-w-0 flex-1">
@@ -910,7 +920,12 @@ function PainelDoNegocio({ conversa }: { conversa: ConversaNaLista }) {
     <div className="flex flex-col gap-4 overflow-y-auto p-4">
       <div className="flex items-center gap-3">
         <Avatar>
-          <AvatarFallback>{iniciais(conversa.nome)}</AvatarFallback>
+          {/* A foto primeiro, as iniciais como reserva. `AvatarImage` do Base UI
+            so troca depois que a imagem CARREGA, entao uma URL assinada que
+            venceu ou um arquivo que sumiu caem nas iniciais sozinhos, sem
+            buraco na lista. */}
+        {conversa.fotoUrl ? <AvatarImage src={conversa.fotoUrl} alt="" /> : null}
+        <AvatarFallback>{iniciais(conversa.nome)}</AvatarFallback>
         </Avatar>
         <div className="flex min-w-0 flex-col">
           <Link

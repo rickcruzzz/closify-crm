@@ -1,5 +1,7 @@
 import 'server-only'
 
+import { linkDeFotoValido } from '@/lib/whatsapp/foto'
+
 /**
  * O único lugar do projeto que fala HTTP com a Z-API.
  *
@@ -408,6 +410,40 @@ export type StatusDaInstancia = {
   connected: boolean
   smartphoneConnected: boolean
   error: string | null
+}
+
+/**
+ * A URL da foto de perfil de um contato.
+ *
+ * ## O que a API devolve, medido em 18/09 e nao suposto
+ *
+ *     GET /profile-picture?phone=557193309404
+ *     200 {"link":"https://pps.whatsapp.net/v/t61.24694-24/...?oe=6ABA97E3"}
+ *
+ * ## `null` quer dizer "nao tem", e nao "deu errado"
+ *
+ * Contato sem foto visivel e o caso COMUM: o WhatsApp deixa esconder a imagem
+ * de quem nao e contato salvo. A ausencia do `link` nao e falha, e tratar as
+ * duas como a mesma coisa faria o chamador registrar erro para a metade normal
+ * da populacao.
+ *
+ * Falha de verdade (rede, 401, 500) SOBE como excecao, porque ela pede
+ * tentativa de novo e "nao tem foto" nao pede.
+ *
+ * ## A URL EXPIRA, e por isso quem chama tem que BAIXAR
+ *
+ * O parametro `oe` e a validade. A que medimos morria em dez dias. Guardar
+ * esta URL no banco produz um avatar que some sozinho, sem nada falhar.
+ */
+export async function fotoDePerfil(
+  instancia: Instancia,
+  telefone: string,
+): Promise<string | null> {
+  const r = await chamar<{ link?: string }>(
+    comInstancia(instancia, `profile-picture?phone=${encodeURIComponent(telefone)}`),
+    { headers: { 'Client-Token': clientToken() } },
+  )
+  return linkDeFotoValido(r.link) ? r.link : null
 }
 
 export async function statusDaInstancia(instancia: Instancia): Promise<StatusDaInstancia> {

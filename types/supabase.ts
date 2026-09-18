@@ -293,6 +293,15 @@ export type Database = {
           status: DealStage
           value: number
           created_at: string
+          // A foto de perfil do WhatsApp, guardada por nos (0096). O caminho e
+          // `{workspace_id}/{lead_id}.jpg` no bucket `avatares`; a URL do
+          // provedor EXPIRA em dias e por isso nao e guardada.
+          foto_path: string | null
+          // Quando o provedor foi perguntado pela ultima vez. Separada de
+          // `foto_path` porque nulo nos dois nao distingue "ainda nao
+          // perguntamos" de "perguntamos e essa pessoa nao tem foto" — e sem a
+          // distincao a varredura repete a mesma busca para sempre.
+          foto_verificada_em: string | null
         }
         Insert: {
           id?: string
@@ -305,6 +314,8 @@ export type Database = {
           status?: DealStage
           value?: number
           created_at?: string
+          foto_path?: string | null
+          foto_verificada_em?: string | null
         }
         Update: {
           id?: string
@@ -317,6 +328,8 @@ export type Database = {
           status?: DealStage
           value?: number
           created_at?: string
+          foto_path?: string | null
+          foto_verificada_em?: string | null
         }
         Relationships: []
       }

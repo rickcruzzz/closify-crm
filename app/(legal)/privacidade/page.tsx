@@ -103,6 +103,19 @@ export default function PrivacidadePage() {
           número e é você quem conversa com aquelas pessoas. Avise seus clientes de que o
           atendimento é registrado, como você já faria com uma gravação de ligação.
         </LegalP>
+        {/* ## A FOTO e uma categoria a mais, e por isso ganha frase propria
+            O paragrafo acima cobre o conteudo da conversa. A imagem de perfil
+            e outra coisa: e a aparencia de uma pessoa, guardada em copia
+            NOSSA, e nao um texto que ela escreveu.
+            Entra ANTES de a primeira foto ser guardada, e nao depois. Declarar
+            tratamento que ja comecou e o erro que a Meta custou aqui em 02 e
+            03/09, e a regra desta secao desde entao. */}
+        <LegalP>
+          Junto das mensagens, guardamos uma cópia da <strong>foto de perfil</strong> que a
+          pessoa exibe no WhatsApp, para mostrá-la ao lado da conversa. A imagem fica nos
+          nossos servidores, acessível apenas a quem já pode ver aquela conversa, e é
+          apagada junto com o contato.
+        </LegalP>
       </LegalSection>
 
       <LegalSection titulo="3. Quais dados tratamos">

@@ -121,8 +121,8 @@ de custo: paywall no momento em que a pessoa sente o valor converte 8-12%,
 contra 3-4% de limite arbitrário — e as outras três são todas arbitrárias no
 sentido técnico do termo.
 
-<!-- contagem: migrations.arquivos=94 migrations.maior=0095 -->
-**94 arquivos de migration, e a maior é `0095`** (remedido em 16/09; o `0049`
+<!-- contagem: migrations.arquivos=95 migrations.maior=0096 -->
+**95 arquivos de migration, e a maior é `0096`** (remedido em 16/09; o `0049`
 não existe, removido em 22/08). Os dois números vêm sempre juntos: a contagem
 sozinha convida a inferir `0085`.
 
@@ -421,6 +421,8 @@ classDiagram
         +deal_stage status
         +numeric value
         +timestamptz created_at
+        +text foto_path "0096, no bucket avatares"
+        +timestamptz foto_verificada_em "0096"
     }
 
     class deals {

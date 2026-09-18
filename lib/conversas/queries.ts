@@ -3,6 +3,7 @@ import 'server-only'
 import { createClient } from '@/lib/supabase/server'
 import { getCurrentUserAndWorkspace } from '@/lib/supabase/workspace'
 import { ordenarPorEspera, type ConversaParaOrdenar } from '@/lib/conversas/ordenar'
+import { BUCKET_DE_AVATARES } from '@/lib/whatsapp/foto'
 
 /**
  * Leitura da tela de Conversas.
@@ -26,6 +27,14 @@ export type ConversaNaLista = ConversaParaOrdenar & {
   leadId: string
   nome: string
   telefone: string | null
+  /**
+   * URL assinada da foto de perfil, ou `null` quando nao temos.
+   *
+   * Assinada e nao guardada: a validade e curta de proposito, e uma URL de
+   * Storage gravada em coluna nasceria vencida. Quem guarda o caminho e
+   * `leads.foto_path` (0096).
+   */
+  fotoUrl: string | null
   donoId: string | null
   assumidaEm: string | null
   /** Prévia da última mensagem, para a linha da lista. */
@@ -71,7 +80,7 @@ export async function getConversas(workspaceId: string): Promise<ConversaNaLista
   const { data, error } = await supabase
     .from('conversas')
     .select(
-      'id, lead_id, ultimo_recebido_em, ultimo_enviado_em, respondida_em, dono_id, assumida_em, leads!inner(name, phone)',
+      'id, lead_id, ultimo_recebido_em, ultimo_enviado_em, respondida_em, dono_id, assumida_em, leads!inner(name, phone, foto_path)',
     )
     .eq('workspace_id', workspaceId)
     .is('arquivada_em', null)
@@ -137,6 +146,32 @@ export async function getConversas(workspaceId: string): Promise<ConversaNaLista
     proximaAcaoDeCada(supabase, workspaceId, leadIds),
   ])
 
+  // ## As URLs assinadas saem em UMA chamada, e nao uma por linha
+  //
+  // `createSignedUrls` no plural: com 200 conversas na tela, uma assinatura por
+  // contato seriam 200 idas ao Storage na tela mais aberta do produto. Mesma
+  // classe do N+1 que `getBoardDeals` ja corrigiu.
+  const fotoPorLead = new Map<string, string>()
+  const caminhos = linhas
+    .map((l) => {
+      const lead = Array.isArray(l.leads) ? l.leads[0] : l.leads
+      return lead?.foto_path ? { leadId: l.lead_id, caminho: lead.foto_path } : null
+    })
+    .filter((c): c is { leadId: string; caminho: string } => c !== null)
+
+  if (caminhos.length > 0) {
+    const { data: assinadas } = await supabase.storage
+      .from(BUCKET_DE_AVATARES)
+      .createSignedUrls(
+        caminhos.map((c) => c.caminho),
+        3600,
+      )
+    caminhos.forEach((c, i) => {
+      const url = assinadas?.[i]?.signedUrl
+      if (url) fotoPorLead.set(c.leadId, url)
+    })
+  }
+
   const conversas: ConversaNaLista[] = linhas.map((linha) => {
     // `leads!inner` devolve objeto; o supabase-js tipa como array em alguns
     // formatos de junção, então normalizamos os dois casos.
@@ -148,6 +183,7 @@ export async function getConversas(workspaceId: string): Promise<ConversaNaLista
       leadId: linha.lead_id,
       nome: lead?.name ?? 'Contato',
       telefone: lead?.phone ?? null,
+      fotoUrl: fotoPorLead.get(linha.lead_id) ?? null,
       ultimoRecebidoEm: linha.ultimo_recebido_em,
       ultimoEnviadoEm: linha.ultimo_enviado_em,
       respondidaEm: linha.respondida_em,
