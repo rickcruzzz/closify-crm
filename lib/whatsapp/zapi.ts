@@ -465,65 +465,96 @@ export async function enviarTexto(
 }
 
 /**
- * Aponta os webhooks de uma instância que JÁ existe, sem a Partner API.
+ * Aponta os TRES webhooks desta instancia para as rotas deste produto.
  *
- * ## Por que isto existe ao lado de `criarInstancia`
+ * ## O defeito que isto conserta, achado parenado um numero de verdade (18/09)
  *
- * `criarInstancia` já configura os quatro webhooks na mesma chamada, e é o
- * caminho que o cliente percorre. Esta função serve o outro caso: uma instância
- * criada **à mão no painel**, que é o único jeito de exercitar o produto inteiro
- * sem o Partner token — e o Partner tem condição comercial a partir de dez
- * instâncias.
+ * A versao anterior chamava `update-every-webhooks` com a URL BASE:
  *
- * ## O caminho NÃO está confirmado na documentação, e isso fica escrito
+ *     PUT /update-every-webhooks   { value: "https://.../api/webhooks/zapi" }
  *
- * Lida em 16/09, a documentação da Z-API descreve o corpo
- * (`{ value, notifySentByMe }`) e o método (POST ou PUT), e **não publica o
- * segmento de caminho** depois de `token/{token}/`. `update-every-webhooks` é o
- * nome da página, não um contrato lido.
+ * Ela responde **200**, e aponta os quatro eventos para um caminho que **nao
+ * tem rota**: as tres deste produto vivem em `/receive/{segredo}`,
+ * `/status/{segredo}` e `/disconnected/{segredo}`, e o segredo E a identidade
+ * da empresa. Sem ele nao ha para onde entregar.
  *
- * Por isso esta função **devolve se deu certo em vez de afirmar que deu**. O
- * chamador mostra as três URLs de qualquer jeito, e a pessoa confere no painel.
+ * O sintoma foi exatamente o previsto no comentario que estava aqui: o numero
+ * pareou na Z-API (`connected: true`), e o banco continuou dizendo
+ * `conectando`, porque o webhook de status nunca chegou. **Silencio, com a
+ * tela dizendo uma coisa e o provedor dizendo outra.**
  *
- * É a lição de 12/09 aplicada antes do prejuízo: `sendButtons` respondeu 201
- * quatro vezes e nenhuma mensagem renderizou. **Aceitar não é entregar**, e um
- * webhook que não foi configurado de verdade produz o pior sintoma que existe
- * aqui: silêncio, com a tela dizendo conectado.
+ * ## Os caminhos certos, medidos contra a API real
+ *
+ *     update-webhook-received         200 {"value":true}
+ *     update-webhook-message-status   200 {"value":true}
+ *     update-webhook-disconnected     200 {"value":true}
+ *
+ * E o mesmo aprendizado de 25/08 e de 17/09 pela terceira vez: a documentacao
+ * da Z-API descreve o CORPO e o EFEITO, e frequentemente nao publica o caminho.
+ * Quem decide e o status HTTP contra a conta real.
+ *
+ * ## Um PUT por evento, e nao um que faz tudo
+ *
+ * `update-every-webhooks` define UMA url para todos. Aqui cada evento precisa
+ * de uma url diferente, porque a rota carrega o tipo. O endpoint que faz tudo
+ * de uma vez so serviria se as tres fossem iguais, e elas nao sao.
+ *
+ * ## Continua devolvendo se deu certo, em vez de afirmar
+ *
+ * `Promise.allSettled` e nao `all`: o interessante e quantos apontaram, e um
+ * que falha nao deve esconder os outros dois. O chamador mostra as URLs de
+ * qualquer jeito, para a pessoa colar no painel.
+ *
+ * E a licao de 12/09 continua valendo: `sendButtons` respondeu 201 quatro vezes
+ * sem renderizar nada. **Aceitar nao e entregar** — o que fecha de verdade e
+ * uma mensagem real chegando na caixa.
  */
 export async function tentarConfigurarWebhooks(
   instancia: Instancia,
-  urlBase: string,
+  urls: { recebida: string; status: string; desconexao: string },
 ): Promise<{ confirmado: boolean; motivo?: string }> {
-  try {
-    await chamar(comInstancia(instancia, 'update-every-webhooks'), {
-      method: 'PUT',
-      headers: { 'Client-Token': clientToken() },
-      body: {
-        value: urlBase,
-        // O que faz a mensagem enviada pelo CELULAR do dono aparecer no CRM.
-        // Sem isto a caixa mostra as perguntas do cliente sem nenhuma resposta
-        // ao lado, e a pessoa conclui que o produto perdeu o que ela escreveu.
-        notifySentByMe: true,
-      },
+  const alvos = [
+    { caminho: 'update-webhook-received', url: urls.recebida },
+    { caminho: 'update-webhook-message-status', url: urls.status },
+    { caminho: 'update-webhook-disconnected', url: urls.desconexao },
+  ] as const
+
+  const resultados = await Promise.allSettled(
+    alvos.map((alvo) =>
+      chamar(comInstancia(instancia, alvo.caminho), {
+        method: 'PUT',
+        headers: { 'Client-Token': clientToken() },
+        body: {
+          value: alvo.url,
+          // O que faz a mensagem enviada pelo CELULAR do dono aparecer no CRM.
+          // Sem isto a caixa mostra as perguntas do cliente sem nenhuma
+          // resposta ao lado, e a pessoa conclui que o produto perdeu o que ela
+          // escreveu. Vai junto do `received`, que e o evento que o carrega.
+          ...(alvo.caminho === 'update-webhook-received' ? { notifySentByMe: true } : {}),
+        },
+      }),
+    ),
+  )
+
+  const falhas = resultados
+    .map((r, i) => ({ r, alvo: alvos[i]! }))
+    .filter(({ r }) => r.status === 'rejected')
+
+  if (falhas.length === 0) return { confirmado: true }
+
+  const motivo = falhas
+    .map(({ r, alvo }) => {
+      const erro = (r as PromiseRejectedResult).reason
+      return erro instanceof ZapiError
+        ? `${alvo.caminho}: ${erro.status}`
+        : `${alvo.caminho}: ${String(erro).slice(0, 60)}`
     })
-    return { confirmado: true }
-  } catch (erro) {
-    const motivo = erro instanceof ZapiError ? `${erro.status} em ${erro.caminho}` : String(erro)
-    console.error('tentarConfigurarWebhooks: nao confirmado', motivo)
-    return { confirmado: false, motivo }
-  }
+    .join(' | ')
+
+  console.error('tentarConfigurarWebhooks: nao confirmado', motivo)
+  return { confirmado: false, motivo }
 }
 
-/**
- * Tira o número do WhatsApp, e **mantém a instância**.
- *
- * É o que a pessoa quer quando clica em "Desconectar": trocar de aparelho,
- * parear de novo. Apagar a instância aqui obrigaria a criar outra na
- * reconexão, o que gasta dinheiro e muda o `instanceId` que os webhooks já
- * conhecem.
- *
- * Quem para a cobrança é `cancelarAssinaturaDaInstancia`, e ela é outro botão.
- */
 export async function desconectar(instancia: Instancia): Promise<void> {
   // ## GET, e a API real derrubou a minha "correcao" aqui tambem
   //

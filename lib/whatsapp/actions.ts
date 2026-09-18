@@ -207,6 +207,9 @@ export async function conectarWhatsapp(): Promise<RespostaDaConexao> {
 function urlsDoWebhook(segredo: string) {
   const base = appUrl()
   return {
+    // `base` continua aqui para a TELA mostrar de onde as tres saem. Ela NAO
+    // serve para configurar nada: foi assim que os webhooks ficaram apontados
+    // para um caminho sem rota ate 18/09. Quem aponta usa as tres inteiras.
     base: `${base}/api/webhooks/zapi`,
     recebida: `${base}/api/webhooks/zapi/receive/${segredo}`,
     status: `${base}/api/webhooks/zapi/status/${segredo}`,
@@ -331,7 +334,7 @@ export async function adotarInstancia(valores: unknown): Promise<RespostaDaAdoca
   // Depois de gravar, e não antes: aqui a instância NÃO foi criada por nós, e
   // falhar a configuração não deixa nada órfão faturando. O risco que sobra é o
   // oposto — webhook não apontado —, e ele é devolvido para a tela dizer.
-  const webhooks = await tentarConfigurarWebhooks(instancia, urls.base)
+  const webhooks = await tentarConfigurarWebhooks(instancia, urls)
 
   revalidar()
   return {
