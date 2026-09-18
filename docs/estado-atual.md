@@ -12,6 +12,146 @@ senha; o disparo mudou de posicionamento e de canal; e doze rodadas de produto
 foram ao ar, sendo que tres eram alarme vermelho aparecendo onde nada esta
 errado)
 
+## O guia apagava o formulario de contato, de quatro em quatro segundos (18/09)
+
+Relato do dono com print, poucas horas depois de promover: *"aqui eu digito e
+depois some tudo"*. Reproduzido em producao no primeiro try:
+
+    ANTES   nome "Fulano de Teste"   empresa "Empresa de Teste"
+    +3s     nome ""                  empresa ""      dialogo AINDA aberto
+    Server Actions com o dialogo ABERTO: 3   (57:31, 57:35, 57:39)
+
+### A causa e uma propriedade do App Router que eu nao tinha na mao
+
+**Toda Server Action faz o Next re-renderizar a rota atual.** Nao e preciso
+`revalidatePath` nenhum: a resposta da acao ja traz a arvore RSC nova, e a
+arvore nova devolve os campos vazios.
+
+O guia conferia o banco **a cada 4 segundos** enquanto o passo era de dado e a
+pessoa estava na tela dele. Eu tinha escrito o relogio como rede de seguranca
+para o caso de a criacao nao voltar pelo servidor.
+
+Na pratica ele quebrava exatamente a acao que o passo 1 manda fazer. E o campo
+de busca da mesma tela sofria igual, sem ninguem relatar.
+
+### O relogio nunca foi necessario, e isso e o que fecha o caso
+
+Toda criacao deste produto termina num dialogo fechando, e o `MutationObserver`
+que ja existe dispara a conferencia nesse instante, que e o momento EXATO em
+que o passo pode ter terminado. A rede de seguranca cobria um caminho que nao
+existe, e cobrava por isso o trabalho digitado da pessoa.
+
+Sobrou o retorno de foco, com a guarda que faltava: voltar para a aba com um
+formulario aberto tambem re-renderizaria a rota.
+
+    depois, local
+    +3s a +12s   o texto digitado SOBREVIVE
+    POSTs com o dialogo aberto: 0
+
+    CONTROLE, e sem ele "consertei" e "matei a deteccao" ficam iguais
+    salvar o contato   avanca para "Passo 2 de 6", sem navegar e sem recarregar
+
+### A licao, e ela vale alem do guia
+
+Componente que mora no LAYOUT alcanca todas as telas, e por isso qualquer
+relogio dentro dele e um relogio que roda **em cima do que a pessoa esta
+fazendo**. Antes de pendurar chamada periodica ali, a pergunta e o que ela
+atropela, e a resposta em App Router e: a rota inteira.
+
+---
+
+## O classificador gastava OpenAI com imagem e com quem nao e prospect (18/09)
+
+O cron `classificar-respostas` falhava 20 de 20 com `openai 429`. A causa
+imediata e saldo zerado (`credit_balance_exhausted`), e a pergunta do dono
+sobre para que serve o credito mostrou que ele nao compraria nada.
+
+### O que 31 classificacoes produziram
+
+    INCONCLUSIVO         19   (61%)
+    SEM_INTERESSE         9
+    INTERESSE_MODERADO    1
+    NAO_E_RESPONSAVEL     1
+    OPT_OUT               1
+    objecoes extraidas    ZERO
+
+A fila de 18/09 explica sozinha: dez imagens, um PDF de regimento interno de
+pousada, e tres textos de alguem vendendo diaria de praia para o dono. O
+webhook da Evolution captura TUDO que chega no numero, o que esta certo e ja
+era decisao registrada; classificar tudo e que nao estava.
+
+### Duas portas, e a primeira nao perde nada
+
+    sem texto      imagem, audio, video, documento e figurinha chegam com um
+                   ROTULO no lugar do conteudo, "(enviou uma imagem)". O rotulo
+                   NAO e vazio, entao o filtro de texto vazio que ja existia os
+                   deixava passar inteiros para o modelo
+    fora da fila   sem linha em `prospeccao_prospect` nao existe abordagem
+                   original
+
+**O comentario do proprio chamador ja dizia por que a segunda importa** — *"sem
+a abordagem original o modelo le a resposta no vacuo"* — e o codigo logo abaixo
+mandava assim mesmo. Comentario que descreve o oposto do que o codigo faz e
+pior que comentario nenhum.
+
+### O custo da segunda porta, dito em vez de escondido
+
+Prospect que responde de um numero DIFERENTE do CSV deixa de ser classificado.
+E a razao pela qual o WEBHOOK nao filtra por telefone, registrada em 12/09, e
+aqui ela e aceita: a mensagem continua gravada e visivel na caixa, o que se
+perde e a linha na estatistica. Ja era meia-perda, porque sem prospect o funil
+nao se movia de qualquer jeito.
+
+Medido antes de decidir: das 31 ja classificadas, **30 tinham prospect**.
+
+### O que a proxima rodada fara, previsto por SQL contra producao
+
+    sem_texto        25
+    fora_da_fila     16
+    vao_ao_modelo     0
+
+Zero. O credito da OpenAI compraria exatamente nada hoje, e as 20 chamadas que
+tomavam 429 eram 100% descartaveis.
+
+### Duas coisas que o filtro exigiu
+
+`resolverProspects` resolve em LOTE, tres consultas por TABELA em vez de tres
+por MENSAGEM. Com o teto de 20 eram 60 viagens ate Sao Paulo antes de qualquer
+chamada ao modelo, e a decisao de PULAR depende justamente da terceira.
+
+E `ignoradas` entra no resultado, com motivo. Fila que encolhe sem explicacao e
+indistinguivel de fila que parou de ser lida, e a Central dizia *"tudo que
+chegou ja foi lido"* sobre 41 mensagens que nao foram.
+
+    testes   1.994 -> 2.004
+
+---
+
+## O webhook do Asaas, e a chave que parecia morta e nao estava (18/09)
+
+Quinta interrupcao em catorze dias. O vigia acusou as 04:00; religado por API
+com `PUT /webhooks/{id}` e `interrupted: false`, conferido lendo de volta.
+
+**A prova nao e o 200 do PUT, e a memoria do vigia:** a chave
+`webhook-do-asaas-parado-...` SUMIU de `vigia_ultimo_aviso` na varredura
+seguinte. `sincronizarMemoria` apaga o que sai da fila, conserto de 09/09.
+
+### E a chave da API nao estava expirada, estava ESCAPADA
+
+`ASAAS_API_KEY` do `.env.local` comecava com uma barra invertida, char code 92,
+resto de um `$` escapado por shell:
+
+    com a barra   HTTP 401   "A chave de API fornecida e invalida"
+    sem a barra   HTTP 200
+
+Eu tinha lido o 401 como "chave expirada" e escrito que nao dava para saber o
+estado do Asaas. Producao sempre teve a chave limpa, e por isso o vigia lia
+normalmente. Varri todas as variaveis do arquivo: era a unica.
+
+**A licao e a de 30/08 com outro nome:** `null` significa NAO SEI, nunca "esta
+zerado". Eu li `data` vazio de um 401 como "nao ha cobranca vencida". Havia
+duas.
+
 ## O tutorial parou de descrever telas e passou a abri-las (17/09)
 
 Pedido do dono, com um brief proprio: trocar o tutorial generico por um

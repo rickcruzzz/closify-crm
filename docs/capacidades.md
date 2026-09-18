@@ -61,6 +61,7 @@ envelhecer em silêncio, que é o defeito de todo documento desse tipo.
 | Assistente de 4 perguntas, que retoma de onde parou | `components/onboarding/assistente.tsx` | 12/08 |
 | **Guia interativo**: destaca o botão na tela real e só avança quando a ação acontece | `components/onboarding/guia-interativo.tsx` | 17/09 |
 | Os passos do guia, e a conclusão derivada do estado real | `lib/onboarding/guia.ts` | 17/09 |
+| Porteiro do classificador: sem texto e fora da fila não vão ao modelo | `deveClassificar` em `lib/prospeccao/classificacao.ts` | 18/09 |
 | Onde o guia aponta, por `data-tour` no elemento | `components/layout/sidebar-nav.tsx`, `components/leads/leads-page-client.tsx`, `components/kanban/kanban-board.tsx`, `components/kanban/deal-card.tsx` | 17/09 |
 | Checklist de ativação, derivado de contagens | `lib/onboarding/checklist.ts` | 12/08 |
 | Primeiros passos no Funil, para quem não tem negócio | `components/kanban/getting-started-card.tsx` | 12/08 |
