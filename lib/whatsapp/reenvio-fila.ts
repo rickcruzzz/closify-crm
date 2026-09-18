@@ -4,6 +4,7 @@ import { escolherRemetente } from '@/lib/conversas/remetente'
 import { normalizarTelefoneBrasileiro } from '@/lib/leads/whatsapp'
 import { createAdminClient } from '@/lib/supabase/admin'
 import {
+  IDADE_MAXIMA_EM_HORAS,
   MAXIMO_DE_TENTATIVAS,
   deveReenviar,
   umaPorConversa,
@@ -12,6 +13,17 @@ import {
 
 export type ResultadoDaFila = {
   naFila: number
+  /**
+   * Falhadas velhas demais para sair, contadas a parte.
+   *
+   * Elas nao entram em `naFila` porque a fila e o que AINDA PODE ser feito, e
+   * um contador que nao drena vira paisagem: a mensagem de 26/08 que existia em
+   * producao apareceria como `naFila: 1` em toda rodada, para sempre.
+   *
+   * Contadas mesmo assim, e nao apagadas do relatorio: sumir em silencio e
+   * exatamente o que esta fila existe para nao fazer.
+   */
+  velhasDemais: number
   reenviadas: number
   aindaFalhando: number
   desistidas: number
@@ -55,20 +67,55 @@ export async function reenviarMensagensQueFalharam(opcoes: {
   const supabase = createAdminClient()
   const erros: string[] = []
 
-  const { data: linhas, error } = await supabase
-    .from('mensagens')
-    .select('id, conversa_id, workspace_id, texto, external_id, tentativas, created_at')
-    .eq('direcao', 'enviada')
-    .eq('status', 'falhou')
-    .is('external_id', null)
-    .order('created_at', { ascending: true })
-    .limit(tetoDaRodada * 5)
+  // ## A idade entra na CONSULTA, e nao so na decisao
+  //
+  // `deveReenviar` ja recusa o que passou de `IDADE_MAXIMA_EM_HORAS`, e isso
+  // basta para nao enviar. Nao bastava para o RELATORIO: a mensagem de 26/08
+  // que existe em producao entraria em `naFila` toda rodada, para sempre, e
+  // fila que nao drena vira paisagem.
+  //
+  // Filtrando aqui, `naFila` passa a significar "o que ainda pode ser feito". A
+  // porta em `deveReenviar` fica como segunda camada, para a mensagem que
+  // envelhece ENTRE a consulta e o envio.
+  const corteDeIdade = new Date(
+    Date.now() - IDADE_MAXIMA_EM_HORAS * 60 * 60 * 1000,
+  ).toISOString()
+
+  const [{ data: linhas, error }, { count: velhas }] = await Promise.all([
+    supabase
+      .from('mensagens')
+      .select('id, conversa_id, workspace_id, texto, external_id, tentativas, created_at')
+      .eq('direcao', 'enviada')
+      .eq('status', 'falhou')
+      .is('external_id', null)
+      .gte('created_at', corteDeIdade)
+      .order('created_at', { ascending: true })
+      .limit(tetoDaRodada * 5),
+    // O numero e dito em vez de escondido: ele conta mensagens que ninguem vai
+    // mandar, e e a unica forma de alguem descobrir que elas existem.
+    supabase
+      .from('mensagens')
+      .select('id', { count: 'exact', head: true })
+      .eq('direcao', 'enviada')
+      .eq('status', 'falhou')
+      .is('external_id', null)
+      .lt('created_at', corteDeIdade),
+  ])
 
   if (error) throw error
 
+  const velhasDemais = velhas ?? 0
   const candidatas = linhas ?? []
   if (candidatas.length === 0) {
-    return { naFila: 0, reenviadas: 0, aindaFalhando: 0, desistidas: 0, seguradasPeloTeto: 0, erros }
+    return {
+      naFila: 0,
+      velhasDemais,
+      reenviadas: 0,
+      aindaFalhando: 0,
+      desistidas: 0,
+      seguradasPeloTeto: 0,
+      erros,
+    }
   }
 
   // ## O telefone vive no LEAD, e eu supus que vivia na conversa
@@ -214,6 +261,7 @@ export async function reenviarMensagensQueFalharam(opcoes: {
 
   return {
     naFila: fila.length,
+    velhasDemais,
     reenviadas,
     aindaFalhando,
     desistidas,
