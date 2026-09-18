@@ -3,7 +3,6 @@ import {
   CalendarCheck,
   KanbanSquare,
   LayoutDashboard,
-  MessageCircle,
   Plug,
   Settings,
   User,
@@ -82,22 +81,24 @@ export const navGroups: NavGroup[] = [
       // "quem está esperando resposta agora". Fica acima do Funil porque
       // conversa sem resposta vira venda perdida em minutos, enquanto negócio
       // parado no funil espera dias sem piorar.
-      { title: 'Conversas', href: '/conversas', icon: MessageCircle },
-      // ## Ele morava em CONFIGURAÇÕES, e o lugar estava errado
+      // ## Eram DOIS itens ate 17/09, e viraram um
       //
-      // A rota continua `/settings/whatsapp` — é lá que a conexão vive, e
-      // renomear quebraria link salvo para trocar uma palavra que ninguém
-      // digita. O que muda é ONDE ele aparece.
+      // "Conversas" apontava para a caixa de entrada e "WhatsApp" para a tela
+      // de conexao. Sao a caixa e o cano da mesma coisa, e o menu exigia que a
+      // pessoa soubesse a diferenca ANTES de clicar: quem nao ve mensagem
+      // chegando abre "Conversas", encontra uma lista vazia que nao explica
+      // nada, e a resposta esta no item de baixo.
       //
-      // Conectar o número é coisa de configuração e acontece **uma vez**.
-      // Depois disso, o que a pessoa procura ali é o estado da conexão, e ela
-      // procura isso justamente quando abre Conversas e não vê mensagem
-      // chegando. Ficar cinco itens abaixo, numa seção que ela só visita para
-      // mexer em cobrança, é esconder a resposta da pergunta que a trouxe.
+      // Agora ha um item so. A rota continua `/conversas` porque e onde a
+      // caixa vive e renomear quebraria link salvo; a TELA e que decide o que
+      // mostrar, o QR Code enquanto o numero nao esta conectado, a caixa
+      // depois disso.
       //
-      // Colado em Conversas, os dois se explicam: um é a caixa, o outro é o
-      // cano que a enche.
-      { title: 'WhatsApp', href: '/settings/whatsapp', icon: IconeWhatsapp },
+      // Logo depois de Hoje e antes do Funil: e a segunda pergunta da manha,
+      // "quem esta esperando resposta agora". Conversa sem resposta vira venda
+      // perdida em minutos, enquanto negocio parado no funil espera dias sem
+      // piorar.
+      { title: 'WhatsApp', href: '/conversas', icon: IconeWhatsapp },
       { title: 'Funil', href: '/kanban', icon: KanbanSquare },
       // "Contatos", não "Leads". O PRD de copy adiou esta troca temendo
       // prometer "contatos" na landing e a pessoa encontrar "Leads" depois de

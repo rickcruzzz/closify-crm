@@ -40,7 +40,22 @@ export type OnboardingStatus = 'not_started' | 'in_progress' | 'skipped' | 'comp
 export type OnboardingEtapa = 'empresa' | 'segmento' | 'venda' | 'equipe' | 'processando'
 export type TourStatus = 'not_started' | 'skipped' | 'completed'
 export type ModeloVenda = 'servicos' | 'produtos' | 'ambos'
-export type TamanhoEquipe = 'so_eu' | '2_5' | '6_20' | '21_mais'
+/**
+ * As faixas de tamanho de empresa do assistente de onboarding.
+ *
+ * `21_mais` era a ultima ate 17/09 e continua no tipo por um motivo de dado,
+ * nao de tela: 7 workspaces ja o carregam, e o `check` da 0093 o mantem valido
+ * justamente para que essas linhas continuem podendo ser atualizadas. Ele nao
+ * tem botao em `TAMANHOS_DE_EQUIPE`.
+ */
+export type TamanhoEquipe =
+  | 'so_eu'
+  | '2_5'
+  | '6_20'
+  | '21_mais'
+  | '21_100'
+  | '101_500'
+  | '500_mais'
 // Os dois tipos de relato do cliente (0060). É `check` no banco e não enum,
 // pela lição de `deal_stage`: enum não aceita `drop value`, então um terceiro
 // tipo aqui custaria recriar o tipo inteiro em vez de editar uma linha.

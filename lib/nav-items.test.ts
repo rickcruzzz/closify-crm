@@ -22,34 +22,48 @@ describe('navGroups', () => {
     expect(estrutura).toEqual([
       [
         'Principal',
-        ['Hoje', 'Conversas', 'WhatsApp', 'Funil', 'Contatos', 'Resultados', 'Calendário'],
+        ['Hoje', 'WhatsApp', 'Funil', 'Contatos', 'Resultados', 'Calendário'],
       ],
       ['Configurações', ['Perfil', 'Equipe', 'Integrações', 'Preferências']],
     ])
   })
 
-  it('WhatsApp fica COLADO em Conversas, e não em Configurações', () => {
-    // Ele morava em Configurações até 17/09, cinco itens abaixo, numa seção que
-    // a pessoa só visita para mexer em cobrança. Conectar o número acontece uma
-    // vez; o que ela procura ali depois é o estado da conexão — e ela procura
-    // isso justamente quando abre Conversas e não vê mensagem chegando.
-    const principal = navGroups[0]?.items.map((i) => i.title) ?? []
-    expect(principal.indexOf('WhatsApp')).toBe(principal.indexOf('Conversas') + 1)
+  it('o WhatsApp tem UMA entrada, nao duas', () => {
+    // Eram dois itens ate 17/09: "Conversas" para a caixa de entrada e
+    // "WhatsApp" para a conexao. Sao a caixa e o cano da mesma coisa, e a
+    // divisao cobrava da pessoa uma distincao que so faz sentido para quem
+    // construiu: quem nao ve mensagem chegando abre Conversas, encontra uma
+    // lista vazia que nao explica nada, e a resposta esta no item de baixo.
+    //
+    // Este caso trava o numero de entradas, e nao so os rotulos: reintroduzir
+    // "Conversas" e a regressao obvia, porque a rota continua existindo.
+    const titulos = navGroups.flatMap((g) => g.items.map((i) => i.title))
+    expect(titulos.filter((t) => t === 'WhatsApp')).toHaveLength(1)
+    expect(titulos).not.toContain('Conversas')
 
-    const config = navGroups[1]?.items.map((i) => i.title) ?? []
-    expect(config).not.toContain('WhatsApp')
+    const rotas = navGroups.flatMap((g) => g.items.map((i) => i.href))
+    expect(rotas.filter((h) => h === '/conversas')).toHaveLength(1)
+    expect(rotas).not.toContain('/settings/whatsapp')
   })
 
-  it('a ROTA continua em /settings, mesmo com o item fora de lá', () => {
-    // Mudou o lugar no menu, não o endereço: renomear a rota quebraria link
-    // salvo para trocar uma palavra que ninguém digita. Mesma decisão de
-    // "Funil", que lê Funil e continua em `/kanban`.
+  it('a ROTA continua em /conversas, e nao em /settings', () => {
+    // O item passou a apontar para a caixa, que e a tela que decide o que
+    // mostrar. `/settings/whatsapp` virou redirecionamento e nao volta ao
+    // menu: dois caminhos para a mesma tela e o que acabou de ser desfeito.
     //
-    // E `aba` fica indefinido porque ele NÃO é uma aba de Preferências: é tela
-    // própria, com QR e estado que cai sozinho.
+    // E `aba` fica indefinido porque ele NAO e uma aba de Preferencias.
     const item = navGroups[0]?.items.find((i) => i.title === 'WhatsApp')
-    expect(item?.href).toBe('/settings/whatsapp')
+    expect(item?.href).toBe('/conversas')
     expect(item?.aba).toBeUndefined()
+  })
+
+  it('o WhatsApp vem logo depois de Hoje, e antes do Funil', () => {
+    // A ordem e a da manha: "o que eu faco agora" (Hoje), depois "quem esta
+    // esperando resposta" (WhatsApp). Conversa sem resposta vira venda perdida
+    // em minutos; negocio parado no funil espera dias sem piorar.
+    const principal = navGroups[0]?.items.map((i) => i.title) ?? []
+    expect(principal.indexOf('WhatsApp')).toBe(principal.indexOf('Hoje') + 1)
+    expect(principal.indexOf('WhatsApp')).toBeLessThan(principal.indexOf('Funil'))
   })
 
   it('o primeiro grupo TEM rotulo', () => {

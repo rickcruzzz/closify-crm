@@ -265,7 +265,7 @@ export function LeadsPageClient({
       title="Nenhum contato ainda"
       description="Cadastre seu primeiro contato ou traga sua planilha atual. Em minutos o funil começa a trabalhar por você."
     >
-      <Button onClick={openCreateForm}>
+      <Button data-tour="novo-contato" onClick={openCreateForm}>
         <Plus className="size-4" />
         Novo contato
       </Button>
@@ -372,7 +372,7 @@ export function LeadsPageClient({
             <Upload className="size-4" />
             Importar planilha
           </Button>
-          <Button onClick={openCreateForm}>
+          <Button data-tour="novo-contato" onClick={openCreateForm}>
             <Plus className="size-4" />
             Novo contato
           </Button>

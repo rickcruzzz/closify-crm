@@ -52,6 +52,10 @@ const RAIZ = resolve(join(dirname(fileURLToPath(import.meta.url)), '..', '..'))
  */
 const REMOVIDOS_COM_REGISTRO = new Map([
   [
+    'components/onboarding/tour.tsx',
+    'tour em Dialog central de cinco passos, removido em 17/09 — descrevia telas em vez de abri-las, e foi substituido pelo guia interativo em components/onboarding/guia-interativo.tsx, que destaca o elemento real e so avanca quando a acao acontece',
+  ],
+  [
     'lib/inteligencia-de-mercado/actions.ts',
     'pesquisa de mercado do lado do cliente, removida em 08/09 (0075) — nunca teve uma linha, e carregava suboperador fora do Brasil na politica',
   ],

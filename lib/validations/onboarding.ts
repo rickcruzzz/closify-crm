@@ -34,11 +34,25 @@ export const MODELOS_DE_VENDA: { valor: ModeloVenda; rotulo: string; ajuda: stri
   { valor: 'ambos', rotulo: 'Serviços e produtos', ajuda: 'Os dois juntos' },
 ]
 
+/**
+ * As faixas oferecidas na tela.
+ *
+ * Ia ate `21 ou mais`, e parar ali tratava como iguais a empresa de 22 pessoas
+ * e a de 300. O dono pediu as faixas maiores em 17/09 pelo argumento de
+ * percepcao: formulario que para em 21 diz a quem esta chegando que o produto
+ * nao foi feito para empresas desse tamanho.
+ *
+ * **`21_mais` nao esta aqui de proposito.** Ele continua valido no banco
+ * (`check` da 0093) porque 7 workspaces ja o carregam, mas oferece-lo ao lado
+ * de `21 a 100` daria duas respostas para a mesma empresa.
+ */
 export const TAMANHOS_DE_EQUIPE: { valor: TamanhoEquipe; rotulo: string }[] = [
   { valor: 'so_eu', rotulo: 'Só eu' },
   { valor: '2_5', rotulo: '2 a 5 pessoas' },
   { valor: '6_20', rotulo: '6 a 20 pessoas' },
-  { valor: '21_mais', rotulo: '21 ou mais' },
+  { valor: '21_100', rotulo: '21 a 100 pessoas' },
+  { valor: '101_500', rotulo: '101 a 500 pessoas' },
+  { valor: '500_mais', rotulo: 'Mais de 500 pessoas' },
 ]
 
 /** A ordem do assistente. Também define para onde "voltar" leva. */
@@ -68,7 +82,7 @@ export const passoDoOnboardingSchema = z.object({
   nomeEmpresa: z.string().trim().min(2, 'Informe o nome da empresa.').max(80).optional(),
   segmento: z.string().trim().max(40, 'Segmento longo demais.').optional(),
   modeloVenda: z.enum(['servicos', 'produtos', 'ambos']).optional(),
-  tamanhoEquipe: z.enum(['so_eu', '2_5', '6_20', '21_mais']).optional(),
+  tamanhoEquipe: z.enum(['so_eu', '2_5', '6_20', '21_mais', '21_100', '101_500', '500_mais']).optional(),
 })
 
 export type PassoDoOnboarding = z.output<typeof passoDoOnboardingSchema>

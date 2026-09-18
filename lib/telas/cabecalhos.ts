@@ -112,8 +112,12 @@ export const CABECALHOS = {
    * é a regra de negócio da tela (quem espera há mais tempo vem primeiro), e
    * dizer isso no cabeçalho é dizer para que a tela serve. Só encurtou.
    */
+  // Era "Conversas". Passou a ser "WhatsApp" em 17/09, quando os dois itens de
+  // menu viraram um: o titulo da tela precisa dizer o mesmo que o item
+  // clicado, senao a pessoa clica em WhatsApp e chega numa tela chamada outra
+  // coisa, que e o sinal classico de ter ido parar no lugar errado.
   conversas: {
-    title: 'Conversas',
+    title: 'WhatsApp',
     description: 'Quem está esperando resposta, começando por quem espera há mais tempo.',
   },
 

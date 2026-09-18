@@ -641,7 +641,11 @@ export function KanbanBoard({
           )}
         </div>
 
-        <Button onClick={() => setIsFormOpen(true)} className="shrink-0">
+        <Button
+          data-tour="novo-negocio"
+          onClick={() => setIsFormOpen(true)}
+          className="shrink-0"
+        >
           <Plus className="size-4" />
           Novo negócio
         </Button>

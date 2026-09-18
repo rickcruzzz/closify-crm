@@ -54,6 +54,22 @@ envelhecer em silêncio, que é o defeito de todo documento desse tipo.
 | A validade vira tarefa de cobrar retorno, 2 dias antes | `registrarOrcamento` em `lib/deals/actions.ts` | 08/09 |
 | **PDF do orçamento** — gerado no servidor, gateado por `pro_vigente()` | `app/api/negocios/[dealId]/orcamento/route.ts` | 08/09 |
 
+## Onboarding e primeiros passos
+
+| capacidade | onde | desde |
+|---|---|---|
+| Assistente de 4 perguntas, que retoma de onde parou | `components/onboarding/assistente.tsx` | 12/08 |
+| **Guia interativo**: destaca o botão na tela real e só avança quando a ação acontece | `components/onboarding/guia-interativo.tsx` | 17/09 |
+| Os passos do guia, e a conclusão derivada do estado real | `lib/onboarding/guia.ts` | 17/09 |
+| Onde o guia aponta, por `data-tour` no elemento | `components/layout/sidebar-nav.tsx`, `components/leads/leads-page-client.tsx`, `components/kanban/kanban-board.tsx`, `components/kanban/deal-card.tsx` | 17/09 |
+| Checklist de ativação, derivado de contagens | `lib/onboarding/checklist.ts` | 12/08 |
+| Primeiros passos no Funil, para quem não tem negócio | `components/kanban/getting-started-card.tsx` | 12/08 |
+| Faixas de tamanho da empresa, até 500 pessoas | `lib/validations/onboarding.ts` | 17/09 |
+
+**O tour antigo NÃO existe mais.** `components/onboarding/tour.tsx` era um
+diálogo central de cinco passos que descrevia telas em vez de abri-las, e saiu
+em 17/09. Quem procurar por ele está procurando o guia interativo.
+
 ## Dinheiro
 
 | capacidade | onde | desde |
@@ -85,6 +101,7 @@ envelhecer em silêncio, que é o defeito de todo documento desse tipo.
 | Webhook de status de entrega | `app/api/webhooks/zapi/status/[segredo]/route.ts` | 16/09 |
 | Webhook de desconexão | `app/api/webhooks/zapi/disconnected/[segredo]/route.ts` | 16/09 |
 | A tela de conexão, com polling controlado | `components/settings/whatsapp-conexao.tsx` | 16/09 |
+| **Uma tela só**: conexão enquanto não há número, caixa de entrada depois | `app/(dashboard)/conversas/page.tsx` | 17/09 |
 | Aviso no sino quando o número cai | `supabase/migrations/0092_o_numero_caiu_e_alguem_precisa_saber.sql` | 17/09 |
 | Modo MANUAL: pedir o número sem o Partner | `pedirConexaoManual` em `lib/whatsapp/actions.ts` | 17/09 |
 | O e-mail que avisa o dono do pedido | `lib/emails/pedido-de-conexao.ts` | 17/09 |

@@ -71,6 +71,10 @@ export const DealCard = React.memo(function DealCard({
   return (
     <div
       ref={setNodeRef}
+      // O guia interativo destaca o primeiro card visivel para ensinar a
+      // validade do orcamento. Atributo dedicado, e nao a classe: `className`
+      // aqui existe para o anel de foco e muda com o desenho.
+      data-tour="card-de-negocio"
       style={{ transform: CSS.Transform.toString(transform), transition }}
       // O dnd-kit espalha `tabIndex={0}` e `role="button"` pelo `attributes`,
       // ou seja este div É alvo de teclado — e era o ÚNICO foco da tela sem

@@ -213,7 +213,7 @@ export function LeadFormDialog({
               flutuaria longe demais dos campos que ela descreve e leria como
               observação de outra coisa. */}
           <p className="text-muted-foreground -mt-1 text-xs">
-            Preencha o e-mail ou o telefone — um dos dois basta.
+            Preencha o e-mail ou o telefone, um dos dois basta.
           </p>
 
           <div className="flex flex-col gap-1.5">

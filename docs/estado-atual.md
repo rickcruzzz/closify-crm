@@ -4,13 +4,203 @@ Documento de continuidade. É lido no começo de toda sessão (referenciado no
 [CLAUDE.md](../CLAUDE.md)) para que uma conversa nova, ou outra conta, comece
 sabendo o que já foi feito, o que foi decidido e onde estão as armadilhas.
 
-**Atualizado em:** 16/09/2026 (o plano Max nasceu como COLUNA e nao como
+**Atualizado em:** 17/09/2026 (o plano Max nasceu como COLUNA e nao como
 terceiro valor do enum, tres das quatro tabelas que o pedido mandava criar ja
 existiam, e o caminho inteiro da Z-API entrou no mesmo dia — escrito, com os
 quatro portoes limpos, e NAO exercitado contra o provedor real; o Resend PROIBE e-mail frio e a chave dele e a mesma da recuperacao de
 senha; o disparo mudou de posicionamento e de canal; e doze rodadas de produto
 foram ao ar, sendo que tres eram alarme vermelho aparecendo onde nada esta
 errado)
+
+## O tutorial parou de descrever telas e passou a abri-las (17/09)
+
+Pedido do dono, com um brief proprio: trocar o tutorial generico por um
+onboarding **interativo**, que escurece a tela, destaca o botao real e so avanca
+quando a acao acontece. A secao 1 do pedido manda auditar antes de escrever
+codigo, e foi isso que decidiu o desenho.
+
+### O que ja existia, e por que nao servia
+
+    assistente de 4 perguntas    components/onboarding/assistente.tsx   FICA
+    checklist de ativacao        lib/onboarding/checklist.ts            FICA
+    primeiros passos no funil    components/kanban/getting-started-card FICA
+    TOUR de 5 passos             components/onboarding/tour.tsx         SAIU
+
+O tour era um `Dialog` central. Ele **descrevia** telas: a pessoa lia *"o funil
+mostra cada negocio na etapa em que esta"*, clicava Proximo quatro vezes, e
+terminava diante do mesmo CRM vazio, sem ter tocado em nada.
+
+O numero que condena o formato ja estava medido em 01/09: **25 das 42 empresas
+nunca criaram um contato**, contra 88% que concluem o assistente de perguntas. O
+gargalo nunca foi explicar o produto. Era dar o primeiro passo dentro dele.
+
+### A decisao que faz o guia existir: ele mora no LAYOUT
+
+No App Router cada troca de rota **desmonta a arvore da pagina**, e os passos
+falam de telas diferentes. Montado em `/leads`, o guia morreria ao ir para
+`/kanban`, que e exatamente quando a pessoa mais precisa dele.
+
+`app/(dashboard)/layout.tsx` atravessa a navegacao dentro do grupo sem remontar.
+Isto estava escrito como *"o problema dificil"* na rodada de 16/09, que por isso
+nao construiu o guia.
+
+**E ele nao custa nada a quem ja passou por aqui.** A condicao e so
+`tourStatus`, que ja vinha na onda de consultas do layout. As quatro contagens
+de progresso vivem dentro de uma Server Action que o proprio guia chama depois
+de montar, fora do caminho de render, e nunca saem para quem ja concluiu.
+
+### A conclusao e DERIVADA, e a idempotencia vem de graca
+
+Mesma doutrina de `montarChecklist`. Um `boolean` gravado no clique continuaria
+dizendo "feito" depois de a pessoa apagar o contato, e aqui o custo e maior: o
+guia nao so informa, ele MANDA fazer.
+
+    dado     leads > 0, negocios > 0, orcamentos > 0     le o banco
+    visita   /hoje, /conversas, /dashboard               le a rota
+
+Nao existe um terceiro tipo por TEMPO, e a ausencia e a regra: passo que avanca
+sozinho depois de alguns segundos volta a ser o slideshow que saiu.
+
+Quem importou uma planilha antes de comecar ja tem contato, e o passo 1 nasce
+concluido sem nenhum caso especial escrito para isso. Quem visita `/hoje` por
+conta propria cumpre aquele passo fora de ordem.
+
+### Os seis passos, e o terceiro e o unico que ensina o PRODUTO
+
+    1  contato      /leads      data-tour=novo-contato
+    2  negocio      /kanban     data-tour=novo-negocio
+    3  orcamento    /kanban     data-tour=card-de-negocio
+    4  hoje         /hoje       a tarefa que nasceu sozinha
+    5  conversas    /conversas  so com Max
+    6  resultados   /dashboard
+
+Contato e negocio qualquer CRM tem. Guardar a validade e ver a cobranca nascer e
+o que **0 de 25 geradores de orcamento** fazem, medido em 09/09.
+
+Ficaram de fora de proposito: calendario (outra vista das mesmas tarefas),
+importar planilha (caminho alternativo do passo 1) e configurar a empresa
+(trabalho administrativo, ja rebaixado no checklist em 01/09).
+
+### Nenhuma migration para o guia, e o `jsonb` da 0030 e o motivo
+
+O progresso de VISITA vive em `onboarding_state.respostas.guia.visitadas`. O
+comentario da 0030 ja dizia por que esse campo existe: *"novas perguntas entram
+sem mexer na arquitetura, e coluna por pergunta obrigaria uma migration a cada
+uma"*. Passo de guia e o mesmo caso.
+
+**E a leitura antes da escrita destapou um defeito de persistencia que estava la
+desde 12/08.** `salvarPasso` SUBSTITUIA `respostas` inteiro, e cada passo manda
+so o proprio campo: responder o segmento apagava o nome da empresa. Nao aparecia
+em uso normal porque o assistente guarda tudo em memoria e so le o banco ao
+RETOMAR, que e o unico caso em que o defeito mordia, e e exatamente o caso que a
+0030 existe para atender.
+
+### TRES defeitos meus, e os dois primeiros so apareceram no navegador
+
+**1. O banner de cookies e `role="dialog"`.** O guia se esconde quando ha
+formulario aberto, e a primeira versao procurava `[role="dialog"]` e pronto. O
+banner de consentimento carrega esse papel, fica no DOM ate a pessoa responder,
+e quem acabou de criar conta ainda nao respondeu: **o guia nascia escondido para
+toda a populacao que ele atende**, sem um erro no console.
+
+Separados no navegador, atributo por atributo:
+
+    banner de cookies    role=dialog   sem data-open
+    Dialog do Base UI    role=dialog   data-open, data-slot=dialog-content
+
+`aria-modal` foi a segunda hipotese, e tambem esta errada: **nenhum dos dois o
+declara**. Quem decide e o `data-open`.
+
+**2. O `useRef` que travava o contador.** Guardei as visitas ja marcadas num
+`ref`, como trava extra contra chamada repetida, e ele virou fonte de verdade
+paralela. O `reactStrictMode` do Next 14 cobrou na hora: ele monta, desmonta e
+remonta preservando `ref` e estado; na remontagem o progresso ainda era `null`,
+o efeito saia cedo, e quando o progresso chegava o `ref` ja dizia "marcado". O
+sintoma era `0/6 feitos` com a visita **gravada no banco**.
+
+O conserto foi TIRAR o `ref`: a propria atualizacao otimista fecha a porta, e a
+Server Action ja e idempotente.
+
+**3. `setState` a 60 quadros por segundo.** O laco que segue a posicao do alvo
+criava um objeto novo de janela a cada quadro, ou seja uma re-renderizacao por
+quadro para um valor que quase nunca muda. Familia do React #185 ja pago em
+06/09. Agora so escreve quando o valor muda de fato.
+
+### O veu nao bloqueia o clique, e isso foi medido
+
+O veu inteiro leva `pointer-events: none`, e o buraco e uma sombra de 9999px em
+volta de um retangulo vazio. O elemento destacado continua sendo o da pagina,
+com o `onClick` dele.
+
+Clonar o botao para dentro do veu seria o caminho obvio e o errado: o clone nao
+carrega estado nem handler, e o projeto ja pagou essa conta em 08/09 com o
+`render` do Base UI engolindo o `onClick`.
+
+    18 de 18 no navegador, com conta descartavel Max
+    o recorte envolve o botao          alvo 133px, recorte 149px
+    elementFromPoint no centro         devolve o BOTAO, nao o veu
+    o cartao cabe inteiro na janela    nas quatro bordas
+    criar o contato avanca o passo     sem navegar, sem recarregar
+    recarregar                         volta no passo 2, nao no 1
+    pular                              encerra e NAO volta
+
+### O cartao desconta o banner, e a conta e velha
+
+`--altura-do-banner` existe desde 02/09 porque so o banner sabe quanto ocupa, e
+ele e `z-50` contra o `z-40` do guia. Sem descontar, o cartao no rodape nasceria
+atras dele. Esta pagina ja teve CTA tapado por esse banner **tres vezes**:
+23/08, 24/08 e 02/09.
+
+### As faixas de tamanho iam ate 21, e agora vao ate 500 (0093)
+
+Pedido do dono no mesmo turno. O assistente pergunta quantas pessoas trabalham
+na empresa e a ultima opcao era `21 ou mais`: para quem tem 300 funcionarios a
+resposta e a mesma de quem tem 22.
+
+**Precisou de migration, e o motivo e o `check`.** Acrescentar opcao so na tela
+faria o `insert` ser recusado com `23514` no FIM do assistente, depois de a
+pessoa responder tudo.
+
+    so_eu | 2_5 | 6_20 | 21_100 | 101_500 | 500_mais
+
+**`21_mais` fica no banco e sai da tela**, e isso foi medido antes: **7
+workspaces ja o respondem**. Tira-lo do `check` deixaria essas linhas com um
+valor que o proprio banco recusaria, e o proximo `update` de qualquer coluna
+delas passaria a falhar.
+
+    provas   as 3 faixas novas ACEITAS, o legado ACEITO, `mil_pessoas` RECUSADO
+             pelo check, tudo dentro de transacao com rollback
+
+### Conversas e WhatsApp viraram UMA entrada de menu
+
+Pedido do dono, no mesmo turno. Eram dois itens: "Conversas" para a caixa e
+"WhatsApp" para a conexao. Sao a caixa e o cano da mesma coisa, e o menu exigia
+que a pessoa soubesse a diferenca ANTES de clicar: quem nao ve mensagem chegando
+abre Conversas, encontra uma lista vazia que nao explica nada, e a resposta esta
+no item de baixo.
+
+Agora a tela decide pelo estado da conexao:
+
+    sem Max ou sem numero     o painel de conexao, com o QR Code
+    conectado                 a caixa de entrada, com a conexao recolhida
+
+A descricao do cabecalho acompanha, senao ela promete "quem esta esperando
+resposta" sobre uma tela de conexao.
+
+**`/settings/whatsapp` vira redirecionamento e NAO e apagada.** Ela esta escrita
+em quatro lugares que ja sairam daqui: o botao do e-mail de pedido de conexao, o
+`href` do aviso de queda gravado no sino, o atalho do card do Max e o destino
+declarado da integracao. E-mail enviado e notificacao no banco nao se reescrevem.
+
+### E um travessao em texto de tela, que o vigia nao ve
+
+`lead-form-dialog.tsx` dizia *"Preencha o e-mail ou o telefone, um dos dois
+basta"* com travessao no lugar da virgula. `sem-travessao.test.ts` passa limpo
+sobre ele: a varredura le **literal de string**, e isto e filho de elemento JSX.
+Corrigido; a lacuna do vigia fica registrada, sem varredura nova.
+
+    testes   1.962 -> 1.994
+    banco    24 tabelas, 8 enums, nenhum objeto novo. A 0093 so troca um check
 
 ## O plano Max e o WhatsApp pela Z-API (16/09)
 

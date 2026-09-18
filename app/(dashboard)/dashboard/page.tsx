@@ -13,7 +13,6 @@ import { UpcomingDealsTableAsync } from '@/components/dashboard/upcoming-deals-t
 import { PainelDeDesempenhoAsync } from '@/components/dashboard/painel-de-desempenho-async'
 import { PeriodFilter } from '@/components/dashboard/period-filter'
 import { ChecklistCard, RetomarChecklist } from '@/components/onboarding/checklist-card'
-import { TourDeBoasVindas } from '@/components/onboarding/tour'
 import { ReportArea } from '@/components/dashboard/report-area'
 import { ExportReportButton } from '@/components/dashboard/export-report-button'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -84,16 +83,6 @@ export default async function DashboardPage({
   // porque a condição é derivada dos sinais, não gravada.
   const temAlgoParaRelatar = sinais.leads > 0 || sinais.negocios > 0
 
-  // O tour abre pelo ESTADO, não por parâmetro de URL.
-  //
-  // A primeira versão dependia de `?tour=1`, posto pela finalização do
-  // assistente, e quem entra por CONVITE nunca passa por lá, então nunca
-  // veria o tour, apesar de ser tão novo no produto quanto qualquer um.
-  //
-  // Chegar aqui já exige empresa: `getCurrentUserAndWorkspace` desvia para o
-  // onboarding quem não tem. E quem pulou o onboarding tem o tour marcado como
-  // pulado junto, então não é incomodado.
-  const abrirTour = estado.tourStatus === 'not_started'
 
   // Mesmo texto que `PeriodFilter` mostra na tela, para o relatório dizer o
   // período que ele de fato cobre sem precisar reabrir o produto para saber.
@@ -171,7 +160,6 @@ export default async function DashboardPage({
         </Suspense>
       </ReportArea>
 
-      {abrirTour && <TourDeBoasVindas aberto />}
     </div>
   )
 }

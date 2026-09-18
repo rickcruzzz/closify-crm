@@ -93,6 +93,10 @@ export function SidebarNav({
                 <Link
                   key={item.href}
                   href={item.href}
+                  // Derivado do `href` de proposito: item novo na barra ja
+                  // nasce alcancavel pelo guia, sem ninguem precisar lembrar
+                  // de marcar um por um.
+                  data-tour={`nav:${item.href}`}
                   onClick={onNavigate}
                   aria-current={active ? 'page' : undefined}
                   className={cn(

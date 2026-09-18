@@ -14,6 +14,7 @@ import { contarTarefasDoDiaDoUsuario } from '@/lib/tasks/queries'
 import { contarConversasEsperandoDoUsuario } from '@/lib/conversas/queries'
 import { contarNaoLidasDaEmpresaAtiva } from '@/lib/notificacoes/queries'
 import { decidirNovaEmpresa } from '@/lib/plans/multi-empresa'
+import { GuiaInterativo } from '@/components/onboarding/guia-interativo'
 
 // Tudo aqui dentro é área logada: nada deve ser indexado. As páginas filhas
 // só sobrescrevem o title; este robots vale para todas.
@@ -180,6 +181,23 @@ export default async function DashboardLayout({
           </div>
           </main>
         </div>
+
+        {/* ## O guia mora no LAYOUT, e nao na pagina
+
+            Esta e a decisao que faz o onboarding interativo existir. No App
+            Router cada troca de rota desmonta a arvore da PAGINA, e os passos
+            do guia falam de telas diferentes: montado em `/leads`, ele morreria
+            ao ir para `/kanban`, que e justamente quando a pessoa mais precisa
+            dele. O layout atravessa a navegacao dentro do grupo sem remontar.
+
+            ## E ele nao custa nada a quem ja passou por aqui
+
+            A condicao e so `tourStatus`, que ja veio na onda de consultas la em
+            cima. Fora do primeiro dia o componente nem e montado, e nenhuma das
+            quatro consultas de progresso chega a sair: elas vivem dentro da
+            Server Action que o proprio guia chama depois de montar, fora do
+            caminho de render. */}
+        {estadoOnboarding.tourStatus === 'not_started' && <GuiaInterativo />}
       </div>
     </TooltipProvider>
   )

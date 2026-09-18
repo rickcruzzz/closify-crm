@@ -18,6 +18,13 @@ import { enviarConversaoDeRegistro } from '@/lib/analytics/meta-conversions'
 import { appUrl } from '@/lib/app-url'
 import { ipDaRequisicao } from '@/lib/request-ip'
 import { registrar } from '@/lib/onboarding/eventos'
+import {
+  PASSOS_DO_GUIA,
+  lerVisitadas,
+  type ChaveDoPasso,
+} from '@/lib/onboarding/guia'
+import { situacaoDoMax } from '@/lib/plans/max-queries'
+import { getCurrentUserAndWorkspace } from '@/lib/supabase/workspace'
 import { passoDoOnboardingSchema } from '@/lib/validations/onboarding'
 import { FREE_WORKSPACE_LIMIT, PRO_WORKSPACE_LIMIT } from '@/lib/plans'
 import type { OnboardingEtapa, OnboardingStatus, TourStatus } from '@/types/supabase'
@@ -99,12 +106,34 @@ export async function salvarPasso(values: unknown) {
   // As respostas ficam no `jsonb` até a etapa de processamento. Se a pessoa
   // desistir no meio, nada foi escrito na empresa, e uma empresa com nome
   // preenchido e mais nada seria pior do que empresa nenhuma.
+  //
+  // ## A leitura antes da escrita fecha um defeito de persistencia (17/09)
+  //
+  // Este `upsert` SUBSTITUIA `respostas` inteiro, e cada passo manda so o
+  // proprio campo. Na pratica o `jsonb` guardava a ULTIMA resposta e nada
+  // mais: responder o segmento apagava o nome da empresa gravado no passo
+  // anterior.
+  //
+  // Nao aparecia em uso normal porque o assistente mantem tudo em memoria e so
+  // le o banco ao RETOMAR — que e exatamente o caso que a 0030 existe para
+  // atender, e o unico em que o defeito mordia. Quem fechasse o navegador no
+  // passo 3 voltava com as duas primeiras respostas perdidas.
+  //
+  // E a mesma razao pela qual o guia interativo grava por leitura e mescla:
+  // duas chaves no mesmo `jsonb` que se sobrescrevem sao uma bomba de tempo.
+  const { data: anterior } = await sessao.supabase
+    .from('onboarding_state')
+    .select('respostas')
+    .eq('user_id', sessao.userId)
+    .maybeSingle()
+
   const { error: erroResposta } = await sessao.supabase.from('onboarding_state').upsert(
     {
       user_id: sessao.userId,
       status: 'in_progress',
       etapa,
       respostas: {
+        ...((anterior?.respostas as Record<string, unknown> | null) ?? {}),
         ...(nomeEmpresa ? { nomeEmpresa } : {}),
         ...(segmento ? { segmento } : {}),
         ...(modeloVenda ? { modeloVenda } : {}),
@@ -128,7 +157,7 @@ const finalizarSchema = z.object({
   nomeEmpresa: z.string().trim().min(2, 'Informe o nome da empresa.').max(80),
   segmento: z.string().trim().max(40).optional(),
   modeloVenda: z.enum(['servicos', 'produtos', 'ambos']).optional(),
-  tamanhoEquipe: z.enum(['so_eu', '2_5', '6_20', '21_mais']).optional(),
+  tamanhoEquipe: z.enum(['so_eu', '2_5', '6_20', '21_mais', '21_100', '101_500', '500_mais']).optional(),
 })
 
 /**
@@ -379,6 +408,143 @@ export async function marcarTour(status: 'skipped' | 'completed') {
   if ('error' in r) return r
 
   registrar(status === 'skipped' ? 'tour_skipped' : 'tour_completed')
+  return { success: true }
+}
+
+/**
+ * O progresso do guia interativo, lido do estado REAL.
+ *
+ * ## Por que isto e uma Server Action e nao uma prop do layout
+ *
+ * O guia e montado em `app/(dashboard)/layout.tsx`, que e o caminho quente de
+ * TODA navegacao da area logada. Passar os sinais por prop faria as quatro
+ * consultas daqui entrarem na renderizacao de cada tela, para todo mundo, para
+ * sempre, e o layout ja carrega a licao: 196ms por consulta contra um banco em
+ * Sao Paulo, vezes 8 a 10 por navegacao, esta registrado em
+ * `docs/estado-atual.md` como o defeito que derrubou a performance em 12/08.
+ *
+ * Como Server Action, o custo e pago **so por quem esta com o guia aberto**, e
+ * fora do caminho de render: a tela aparece primeiro, o guia chega depois.
+ * Quem ja concluiu o onboarding, que e todo mundo a partir do segundo dia, nao
+ * paga nada, porque o layout nem monta o componente.
+ *
+ * Devolve `null` quando nao ha sessao ou empresa, e o cliente esconde o guia.
+ * Erro de leitura NAO inventa zero: zero contato significaria "faca o passo 1"
+ * para quem ja fez, e o guia mandaria repetir o trabalho.
+ */
+export async function lerProgressoDoGuia(): Promise<{
+  sinais: { leads: number; negocios: number; orcamentos: number }
+  visitadas: ChaveDoPasso[]
+  temMax: boolean
+} | null> {
+  const sessao = await abrirSessao()
+  if ('error' in sessao) return null
+
+  let workspaceId: string
+  try {
+    workspaceId = (await getCurrentUserAndWorkspace()).workspaceId
+  } catch {
+    return null
+  }
+
+  const contar = (tabela: 'leads' | 'deals') =>
+    sessao.supabase
+      .from(tabela)
+      .select('id', { count: 'exact', head: true })
+      .eq('workspace_id', workspaceId)
+
+  const [leads, negocios, orcamentos, estado, max] = await Promise.all([
+    contar('leads'),
+    contar('deals'),
+    // O sinal do passo 3 e a VALIDADE preenchida, nao o negocio existir. E a
+    // mesma coluna que `lib/limits.ts` conta para o teto do Free, entao o guia
+    // e o limite nao tem como discordar sobre o que e um orcamento.
+    sessao.supabase
+      .from('deals')
+      .select('id', { count: 'exact', head: true })
+      .eq('workspace_id', workspaceId)
+      .not('orcamento_validade', 'is', null),
+    sessao.supabase
+      .from('onboarding_state')
+      .select('respostas')
+      .eq('user_id', sessao.userId)
+      .maybeSingle(),
+    situacaoDoMax(workspaceId),
+  ])
+
+  if (leads.error || negocios.error || orcamentos.error) {
+    console.error('lerProgressoDoGuia falhou', leads.error ?? negocios.error ?? orcamentos.error)
+    return null
+  }
+
+  return {
+    sinais: {
+      leads: leads.count ?? 0,
+      negocios: negocios.count ?? 0,
+      orcamentos: orcamentos.count ?? 0,
+    },
+    visitadas: lerVisitadas(estado.data?.respostas),
+    temMax: max.maxVigente,
+  }
+}
+
+/**
+ * Marca que a pessoa conheceu uma tela do guia.
+ *
+ * ## Por que dentro de `respostas`, e nao numa coluna nova
+ *
+ * O `jsonb` da 0030 nasceu exatamente para isto, e o comentario da migration
+ * diz por que: *"novas perguntas entram sem mexer na arquitetura, e coluna por
+ * pergunta obrigaria uma migration a cada uma"*. Passo de guia e o mesmo caso.
+ * O teto de 8 KB da 0030 continua valendo e cabe com folga: seis chaves curtas.
+ *
+ * ## A leitura antes da escrita nao e desperdicio
+ *
+ * O PostgREST nao sabe mesclar `jsonb` num `upsert` — `respostas` e substituido
+ * inteiro. Sem ler antes, marcar a visita de Hoje apagaria o nome da empresa
+ * que o assistente gravou, e a retomada do assistente passaria a comecar do
+ * zero.
+ */
+export async function marcarVisitaDoGuia(chave: string) {
+  const sessao = await abrirSessao()
+  if ('error' in sessao) return sessao
+
+  // A chave vem do cliente, entao ela e conferida contra a lista real antes de
+  // ir ao banco. Sem isto, um `POST` a mao encheria o `jsonb` ate o teto de
+  // 8 KB da 0030 com strings inventadas.
+  const visitada = PASSOS_DO_GUIA.find((p) => p.chave === chave)
+  if (!visitada || visitada.conclusao.tipo !== 'visita') {
+    return { error: 'Passo desconhecido.' }
+  }
+
+  const { data, error: erroLeitura } = await sessao.supabase
+    .from('onboarding_state')
+    .select('respostas')
+    .eq('user_id', sessao.userId)
+    .maybeSingle()
+
+  if (erroLeitura) {
+    console.error('marcarVisitaDoGuia nao conseguiu ler', erroLeitura)
+    return { error: 'Não foi possível salvar seu progresso.' }
+  }
+
+  const anteriores = lerVisitadas(data?.respostas)
+  if (anteriores.includes(visitada.chave)) return { success: true }
+
+  const respostas = {
+    ...((data?.respostas as Record<string, unknown> | null) ?? {}),
+    guia: { visitadas: [...anteriores, visitada.chave] },
+  }
+
+  const { error } = await sessao.supabase
+    .from('onboarding_state')
+    .upsert({ user_id: sessao.userId, respostas }, { onConflict: 'user_id' })
+
+  if (error) {
+    console.error('marcarVisitaDoGuia falhou', error)
+    return { error: 'Não foi possível salvar seu progresso.' }
+  }
+
   return { success: true }
 }
 

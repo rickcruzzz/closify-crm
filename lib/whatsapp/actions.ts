@@ -75,6 +75,7 @@ async function abrirSessao(): Promise<Sessao | { error: string }> {
 function revalidar() {
   revalidatePath('/settings/whatsapp')
   revalidatePath('/conversas')
+  revalidatePath('/conversas')
 }
 
 export type RespostaDaConexao =
