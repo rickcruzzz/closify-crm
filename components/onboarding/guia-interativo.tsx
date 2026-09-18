@@ -133,36 +133,41 @@ export function GuiaInterativo() {
   }, [rotaAtual, estado, encerrado])
 
   /**
-   * Confere o banco enquanto a pessoa esta fazendo a acao.
+   * ## O relogio de 4 segundos SAIU, e ele apagava o formulario (18/09)
    *
-   * So enquanto o passo e de DADO, a pessoa esta na tela dele e a aba esta a
-   * vista. Fora disso nao ha o que mudar, e um relogio rodando em toda
-   * navegacao seria custo permanente para um recurso que dura um dia.
+   * A primeira versao conferia o banco a cada 4 segundos enquanto o passo era
+   * de dado e a pessoa estava na tela dele. Reproduzido em producao:
    *
-   * Existe porque nem toda criacao volta pelo servidor: `revalidatePath`
-   * atualiza a PAGINA, e o guia mora no layout. Sem esta conferencia, criar o
-   * contato e ficar parado deixaria o passo aceso, e "o sistema percebeu que
-   * eu concluí a ação?" e justamente a pergunta que o pedido manda responder.
+   *     ANTES   nome "Fulano de Teste"   empresa "Empresa de Teste"
+   *     +3s     nome ""                  empresa ""      dialogo AINDA aberto
+   *
+   * **Toda Server Action faz o Next re-renderizar a rota atual**, e a rota
+   * re-renderizada devolve os campos vazios. Na pratica o guia apagava o
+   * formulario de contato a cada quatro segundos, ou seja quebrava exatamente
+   * a acao que ele manda fazer no passo 1. O campo de busca da mesma tela
+   * sofria igual.
+   *
+   * ## E o relogio nunca foi necessario
+   *
+   * Toda criacao do produto termina num dialogo fechando, e o observador
+   * abaixo ja dispara a conferencia nesse instante, que e o momento EXATO em
+   * que o passo pode ter terminado. O timer era rede de seguranca para um
+   * caminho que nao existe, e o custo dela era destruir o trabalho da pessoa.
+   *
+   * Sobra o retorno de foco, com a guarda que faltava: voltar para a aba com
+   * um formulario aberto tambem re-renderizaria a rota e apagaria o que estava
+   * digitado.
    */
-  const esperandoDado = Boolean(
-    passo && !passo.concluido && passo.conclusao.tipo === 'dado' && naRotaDoPasso(passo, rotaAtual),
-  )
-
   React.useEffect(() => {
-    if (!esperandoDado || encerrado) return
+    if (encerrado) return
 
-    const id = setInterval(() => {
-      if (document.visibilityState === 'visible') void recarregar()
-    }, 4000)
-
-    const aoVoltar = () => void recarregar()
-    window.addEventListener('focus', aoVoltar)
-
-    return () => {
-      clearInterval(id)
-      window.removeEventListener('focus', aoVoltar)
+    const aoVoltar = () => {
+      if (!temModalAberto()) void recarregar()
     }
-  }, [esperandoDado, encerrado, recarregar])
+
+    window.addEventListener('focus', aoVoltar)
+    return () => window.removeEventListener('focus', aoVoltar)
+  }, [encerrado, recarregar])
 
   // Fechar o formulario e o momento mais provavel de o passo ter terminado.
   React.useEffect(() => {
