@@ -269,3 +269,50 @@ describe('posicionarCartao', () => {
     expect(p).toEqual({ top: MARGEM_DA_JANELA, left: MARGEM_DA_JANELA })
   })
 })
+
+/**
+ * O texto do guia e PORTUGUES DE TELA, e precisa ter acento.
+ *
+ * Os seis passos nasceram sem nenhum, em 17/09: `"Transforme o contato em
+ * negocio"`, `"preencha a validade do orcamento"`. Eu escrevi as strings no
+ * mesmo estilo ASCII que uso em comentario de codigo, e elas foram para a
+ * tela, em producao, na primeira coisa que um cliente novo le.
+ *
+ * E o defeito ja tinha acontecido em 09/09, no anuncio do Google: titulos sem
+ * acento ao lado de frases de destaque com acento, na mesma resposta da API.
+ *
+ * A lista e de palavras que so existem com acento em portugues. Nao tenta ser
+ * um corretor: tenta pegar a familia inteira de um jeito que falha sozinho.
+ */
+describe('o texto dos passos tem acento', () => {
+  /**
+   * FUNCAO, e nao uma constante.
+   *
+   * Uma `RegExp` com `/g` carrega `lastIndex`, e reusar o MESMO objeto em
+   * varios casos faz a varredura pular texto conforme a ordem em que os testes
+   * rodam. A primeira versao disto reprovou o proprio controle: a string com o
+   * defeito passou limpa porque um caso anterior tinha deixado o indice no
+   * fim. Vigia com estado e vigia que mente.
+   */
+  const semAcento = () =>
+    /\b(negocio|orcamento|cobranca|voce|alguem|manha|reune|mes|numero|proximo|acao|ultimo|servico|negociacao|nao|sao|esta pronto|ja conversa)\b/gi
+
+  it.each(PASSOS_DO_GUIA.map((p) => [p.chave, p.titulo, p.texto]))(
+    'passo %s',
+    (_chave, titulo, texto) => {
+      expect(String(titulo).match(semAcento())).toBeNull()
+      expect(String(texto).match(semAcento())).toBeNull()
+    },
+  )
+
+  /**
+   * O controle. Sem ele, um erro de digitacao na expressao faria a varredura
+   * aprovar tudo para sempre, que e o modo de falhar de todo vigia escrito
+   * como lista de proibidos.
+   */
+  it('a varredura pega o texto errado quando ele existe', () => {
+    expect('Transforme o contato em negocio'.match(semAcento())).not.toBeNull()
+    expect('preencha a validade do orcamento'.match(semAcento())).not.toBeNull()
+    expect('Transforme o contato em negócio'.match(semAcento())).toBeNull()
+  })
+})

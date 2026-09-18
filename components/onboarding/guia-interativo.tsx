@@ -169,16 +169,43 @@ export function GuiaInterativo() {
     return () => window.removeEventListener('focus', aoVoltar)
   }, [encerrado, recarregar])
 
-  // Fechar o formulario e o momento mais provavel de o passo ter terminado.
+  /**
+   * Fechar o formulario e o momento mais provavel de o passo ter terminado.
+   *
+   * ## O `recarregar()` NAO pode morar dentro do updater (18/09)
+   *
+   * A primeira versao fazia a leitura e a chamada dentro de
+   * `setDialogoAberto((antes) => ...)`, o que parecia elegante: comparar com o
+   * valor anterior sem guardar nada. React chama o updater durante a fase de
+   * RENDER, e em `StrictMode` chama duas vezes, entao a Server Action disparava
+   * de dentro do render e o console dizia, em producao:
+   *
+   *     Cannot update a component (Router) while rendering a different
+   *     component (GuiaInterativo)
+   *
+   * E a familia dos dois incidentes que este projeto ja pagou, o React #185 do
+   * Kanban em 06/09 e o #310 de ontem: efeito acontecendo onde so podia haver
+   * calculo puro.
+   *
+   * O espelho em `ref` resolve porque ele nao e fonte de verdade de nada, ele
+   * so guarda o ULTIMO valor lido do DOM para detectar a transicao. Quem
+   * renderiza continua sendo o estado.
+   */
+  const dialogoAntes = React.useRef(false)
+
   React.useEffect(() => {
     if (encerrado) return
 
     const conferir = () => {
-      setDialogoAberto((antes) => {
-        const agora = temModalAberto()
-        if (antes && !agora) void recarregar()
-        return agora
-      })
+      const agora = temModalAberto()
+      const antes = dialogoAntes.current
+      if (antes === agora) return
+
+      dialogoAntes.current = agora
+      setDialogoAberto(agora)
+      // Fora do updater, de proposito: aqui ja e efeito, e efeito e o lugar
+      // certo para uma chamada de rede.
+      if (antes && !agora) void recarregar()
     }
 
     conferir()
@@ -365,8 +392,20 @@ export function GuiaInterativo() {
                 <span className="tabular-nums">
                   Passo {passo.indice + 1} de {total}
                 </span>
+                {/* ## "3/5 feitos" ao lado de "Passo 3 de 5" (18/09)
+
+                    Dois numeros com o MESMO denominador, significando coisas
+                    diferentes, e colados. Na tela do dono a linha saiu
+                    "Passo 3 de 5 ... 3/5 feitos", que le como "o passo 3 ja
+                    esta feito" quando ele e justamente o que falta fazer.
+
+                    Acontece porque chegar no Dashboard cumpre o passo de
+                    Resultados na hora, entao o total de feitos anda na frente
+                    do indice. Esta certo e e ilegivel.
+
+                    "Faltam N" nao tem como colidir: ele conta o oposto. */}
                 <span className="tabular-nums">
-                  {feitos}/{total} feitos
+                  {total - feitos === 1 ? 'falta 1' : `faltam ${total - feitos}`}
                 </span>
               </div>
 
@@ -403,7 +442,17 @@ export function GuiaInterativo() {
                   Nao ha "Continuar" para passo em aberto, de proposito: e o
                   botao que transformaria o guia no slideshow que ele
                   substituiu. */}
-              {!naRotaDoPasso(passo, rotaAtual) || !alvo ? (
+              {/* ## O botao so aparece quando ele LEVA a algum lugar (18/09)
+
+                  A condicao era `!naRota || !alvo`, entao quem ja estava na
+                  tela certa com o alvo fora do DOM (o card do negocio apagado,
+                  a lista ainda carregando) via "Ir para esta tela" e o clique
+                  empurrava a MESMA rota: botao que nao faz nada, na tela de
+                  quem esta tentando entender o que fazer.
+
+                  Fora da rota ele leva. Dentro dela, o texto do passo ja diz o
+                  que fazer e o destaque aparece assim que o elemento existir. */}
+              {!naRotaDoPasso(passo, rotaAtual) ? (
                 <Button
                   type="button"
                   size="sm"
