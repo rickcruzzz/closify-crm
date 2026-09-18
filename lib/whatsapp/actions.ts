@@ -28,6 +28,7 @@ import {
   telefoneConectado,
 } from '@/lib/whatsapp/zapi'
 import { provisionamentoAutomatico } from '@/lib/whatsapp/zapi'
+import { puxarDaReserva } from '@/lib/whatsapp/reserva'
 import { getResend } from '@/lib/resend/client'
 import { EMAIL_DE_AVISO_DO_DONO } from '@/lib/emails/destinatario'
 import { renderPedidoDeConexaoEmail } from '@/lib/emails/pedido-de-conexao'
@@ -143,7 +144,22 @@ export async function conectarWhatsapp(): Promise<RespostaDaConexao> {
   // Ver `provisionamentoAutomatico` para a conta que faz este modo existir: o
   // Partner exige 10 instancias contratadas, e abaixo de 9 clientes ele e mais
   // caro que pagar por instancia.
-  if (!provisionamentoAutomatico()) return pedirConexaoManual(sessao)
+  // ## A RESERVA vem antes do e-mail, e e a regra do dono virando codigo
+  //
+  // *"Tudo tem que ser de igual pra igual pra qualquer pagante."*
+  //
+  // Sem isto, quem paga R$ 250 num domingo dispara um e-mail e ESPERA uma
+  // pessoa acordar. Com a reserva, ele clica e recebe o QR, igual a quem
+  // conectaria pelo Partner. A diferenca entre os dois caminhos deixa de
+  // aparecer na tela do cliente e passa a aparecer so na fatura do dono.
+  //
+  // O e-mail continua existindo, e agora ele significa outra coisa: **a
+  // reserva acabou**. E pedido de reposicao, nao pedido de atendimento.
+  if (!provisionamentoAutomatico()) {
+    const daReserva = await puxarDaReserva(sessao.workspaceId)
+    if (!daReserva) return pedirConexaoManual(sessao)
+    return entregarInstancia(sessao, daReserva)
+  }
 
   const segredo = segredoNovo()
   const urls = urlsDoWebhook(segredo)
@@ -578,6 +594,50 @@ export async function removerWhatsapp(): Promise<{ ok: boolean; error?: string }
  * clicar de novo achando que o pedido nao chegou, e cada clique seria outro
  * e-mail. Se o Resend cair, o `console.error` fica.
  */
+/**
+ * Liga uma instância JÁ EXISTENTE a uma empresa, e devolve o QR.
+ *
+ * É o miolo que `adotarInstancia` e a reserva compartilham. Escrever duas vezes
+ * deixaria as duas divergirem no primeiro dia em que uma mudar, que é a classe
+ * 7 do diagnóstico de 25/08.
+ *
+ * ## A ordem importa: gravar ANTES de apontar o webhook
+ *
+ * A instância não foi criada por nós, então falhar aqui não deixa nada órfão
+ * faturando — o risco é o oposto, webhook não apontado, e ele é devolvido para
+ * a tela poder dizer. Na criação por Partner a ordem é inversa, e o comentário
+ * de `conectarWhatsapp` registra por quê.
+ */
+async function entregarInstancia(
+  sessao: Sessao,
+  instancia: { instanceId: string; token: string },
+): Promise<RespostaDaConexao> {
+  const segredo = segredoNovo()
+  const urls = urlsDoWebhook(segredo)
+
+  const guardada = await guardarInstancia({
+    workspaceId: sessao.workspaceId,
+    instanceId: instancia.instanceId,
+    token: instancia.token,
+    segredo,
+  })
+  if (!guardada.ok) return { ok: false, error: guardada.motivo }
+
+  const webhooks = await tentarConfigurarWebhooks(instancia, urls)
+  if (!webhooks.confirmado) {
+    // Alto no log, e NÃO na cara do cliente: ele não tem painel da Z-API para
+    // colar URL nenhuma. Webhook não apontado produz o pior sintoma daqui,
+    // silêncio com a tela dizendo conectado, e quem consegue agir é o dono.
+    console.error(
+      `entregarInstancia: webhooks NAO confirmados para a empresa ${sessao.workspaceId} (instancia ${instancia.instanceId}): ${webhooks.motivo ?? 'sem motivo'}`,
+    )
+  }
+
+  // O QR sai pelo caminho que já existe, e é o mesmo que o polling da tela usa.
+  revalidar()
+  return lerQrCode()
+}
+
 async function pedirConexaoManual(sessao: Sessao): Promise<RespostaDaConexao> {
   const supabase = await createClient()
   const { data: empresa } = await supabase

@@ -7,11 +7,29 @@ Migrations novas mudam este arquivo com o tempo; ao suspeitar de
 desatualização, reconsulte o catálogo em vez de confiar cegamente nele (mesma
 regra de `docs/estado-atual.md`).
 
-<!-- contagem: banco.tabelas=24 banco.rpcs_do_projeto=38 banco.foreign_keys=38 banco.triggers=17 banco.enums=8 -->
-**Estrutura reconferida em 16/09/2026.** Lida de `pg_catalog` e não do OpenAPI:
-**24 tabelas**, **38 RPCs do projeto**, **38 foreign keys**, **17 triggers**,
+<!-- contagem: banco.tabelas=25 banco.rpcs_do_projeto=39 banco.foreign_keys=39 banco.triggers=17 banco.enums=8 -->
+**Estrutura reconferida em 18/09/2026.** Lida de `pg_catalog` e não do OpenAPI:
+**25 tabelas**, **39 RPCs do projeto**, **39 foreign keys**, **17 triggers**,
 **8 enums** — mais **16 funções de trigger**, que não são RPC e por isso contam
 à parte.
+
+## As 0096 e 0097, e só UMA delas moveu a contagem de tabelas
+
+    0096   bucket `avatares` + duas COLUNAS em `leads`      tabelas: parado
+    0097   tabela `whatsapp_reserva` + `puxar_da_reserva`   tabelas: 24 -> 25
+
+A 0096 guarda a foto de perfil de quem escreve pelo WhatsApp. Ela não cria
+tabela: acrescenta `foto_path` e `foto_verificada_em` a `leads`, mais um bucket
+no Storage. Bucket **não** entra em `banco.tabelas`, que conta `pg_class`.
+
+A 0097 é a reserva de instâncias já compradas, e ela move três números de uma
+vez: a tabela, a foreign key para `workspaces` e a RPC `puxar_da_reserva`.
+
+**As duas colunas da 0096 são separadas de propósito**, e é a parte que merece
+ficar escrita: `foto_path` nulo não distingue *"ainda não perguntamos"* de
+*"perguntamos e essa pessoa não tem foto"*. Sem `foto_verificada_em`, a
+varredura repetiria a mesma busca a cada hora, para sempre, para toda a metade
+da população que esconde a imagem de quem não é contato.
 
 ## As 0089 e 0090 ENTRARAM, e o +2 de RPC não é uma só
 
@@ -121,8 +139,8 @@ de custo: paywall no momento em que a pessoa sente o valor converte 8-12%,
 contra 3-4% de limite arbitrário — e as outras três são todas arbitrárias no
 sentido técnico do termo.
 
-<!-- contagem: migrations.arquivos=95 migrations.maior=0096 -->
-**95 arquivos de migration, e a maior é `0096`** (remedido em 16/09; o `0049`
+<!-- contagem: migrations.arquivos=96 migrations.maior=0097 -->
+**96 arquivos de migration, e a maior é `0097`** (remedido em 16/09; o `0049`
 não existe, removido em 22/08). Os dois números vêm sempre juntos: a contagem
 sozinha convida a inferir `0085`.
 
@@ -423,6 +441,17 @@ classDiagram
         +timestamptz created_at
         +text foto_path "0096, no bucket avatares"
         +timestamptz foto_verificada_em "0096"
+    }
+
+    class whatsapp_reserva {
+        +uuid id PK
+        +text provider "check zapi"
+        +text instance_id UK
+        +text token_cifrado
+        +text observacao
+        +timestamptz created_at
+        +timestamptz usada_em "nulo = livre"
+        +uuid usada_por FK "→ workspaces, on delete set null"
     }
 
     class deals {

@@ -3,9 +3,9 @@
 > Iniciativa de conversão Free→Pro (copy da landing, limites, checkout) tem
 > PRD próprio: [prd-conversao-pro.md](prd-conversao-pro.md).
 >
-> <!-- contagem: banco.tabelas=24 banco.rpcs_do_projeto=38 banco.foreign_keys=38 banco.triggers=17 banco.enums=8 -->
-> **Estrutura reconferida contra o catálogo em 16/09/2026**: **24 tabelas**,
-> **38 RPCs do projeto**, **38 foreign keys**, **17 triggers**, **8 enums** —
+> <!-- contagem: banco.tabelas=25 banco.rpcs_do_projeto=39 banco.foreign_keys=39 banco.triggers=17 banco.enums=8 -->
+> **Estrutura reconferida contra o catálogo em 18/09/2026**: **25 tabelas**,
+> **39 RPCs do projeto**, **39 foreign keys**, **17 triggers**, **8 enums** —
 > mais **16 funções de trigger**, que não são RPC e por isso contam à parte.
 >
 > **Três números andaram em 12/09, e cada um por um motivo diferente:**
@@ -35,8 +35,8 @@
 > **nenhuma métrica do catálogo**. Agora mede, e o carimbo acima é conferido
 > por `scripts/ci/conferir-documentos.mjs` como todos os outros.
 >
-> <!-- contagem: migrations.arquivos=95 migrations.maior=0096 -->
-> **95 arquivos de migration, e a maior é `0096`.** Os dois juntos, sempre: o
+> <!-- contagem: migrations.arquivos=96 migrations.maior=0097 -->
+> **96 arquivos de migration, e a maior é `0097`.** Os dois juntos, sempre: o
 > número de arquivos sozinho convida a inferir `0084`, e o `0049` não existe —
 > foi provado desnecessário e removido em 22/08. `node scripts/ci/contagens.mjs`
 > imprime o invariante que reconcilia os dois.

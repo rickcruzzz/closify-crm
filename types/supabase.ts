@@ -1217,6 +1217,52 @@ export type Database = {
         }
         Relationships: []
       }
+      /**
+       * Instâncias já compradas, esperando o próximo cliente Max (0097).
+       *
+       * Tabela separada de `whatsapp_instances` porque lá `workspace_id` é
+       * `not null` e `unique`: uma instância comprada e ainda não entregue não
+       * tem empresa. E os ciclos de vida são outros, uma nasce de compra do
+       * dono e morre virando conexão de alguém.
+       *
+       * RLS ligada com ZERO policies. Quem toca é `service_role`.
+       */
+      whatsapp_reserva: {
+        Row: {
+          id: string
+          provider: string
+          instance_id: string
+          token_cifrado: string
+          observacao: string | null
+          created_at: string
+          // A linha NÃO é apagada ao ser usada: ela é o registro de que aquela
+          // instância foi entregue, e a fatura do provedor precisa de alguém
+          // que a explique.
+          usada_em: string | null
+          usada_por: string | null
+        }
+        Insert: {
+          id?: string
+          provider?: string
+          instance_id: string
+          token_cifrado: string
+          observacao?: string | null
+          created_at?: string
+          usada_em?: string | null
+          usada_por?: string | null
+        }
+        Update: {
+          id?: string
+          provider?: string
+          instance_id?: string
+          token_cifrado?: string
+          observacao?: string | null
+          created_at?: string
+          usada_em?: string | null
+          usada_por?: string | null
+        }
+        Relationships: []
+      }
     }
     Views: Record<string, never>
     Functions: {
@@ -1276,6 +1322,21 @@ export type Database = {
       max_vigente: {
         Args: { target_workspace_id: string }
         Returns: boolean
+      }
+      /**
+       * Reserva atomicamente a instância livre mais antiga para uma empresa.
+       *
+       * `for update skip locked` numa declaração só, e a atomicidade é o ponto:
+       * dois cliques no mesmo segundo receberiam a MESMA instância, e um número
+       * de WhatsApp entregue a duas empresas põe a mensagem de um cliente na
+       * caixa do outro.
+       *
+       * Devolve zero linhas quando a reserva está vazia, que é estado e não
+       * erro.
+       */
+      puxar_da_reserva: {
+        Args: { p_workspace_id: string }
+        Returns: { instance_id: string; token_cifrado: string }[]
       }
       /**
        * Está em trial e ainda NÃO pagou.
