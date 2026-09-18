@@ -20,6 +20,7 @@ import {
 import {
   adotarInstancia,
   conectarWhatsapp,
+  confirmarNumeroConectado,
   desconectarWhatsapp,
   lerQrCode,
   removerWhatsapp,
@@ -140,6 +141,26 @@ export function WhatsappConexao({
 
     return () => clearInterval(id)
   }, [buscando, pararBusca, router])
+
+  // ## A conexão que subiu FORA desta tela chega sem número
+  //
+  // `telefone` só é gravado quando o pareamento acontece aqui dentro. Quem
+  // pareou pelo painel da Z-API, ou reconectou depois de uma queda, fica com a
+  // coluna nula, e a descrição do cabeçalho volta a dizer **"Leia o QR Code"**
+  // sobre uma conexão que já está de pé.
+  //
+  // Uma ida, só no estado exato que produz isso, e a Server Action confere de
+  // novo no servidor antes de gastar a chamada.
+  React.useEffect(() => {
+    if (estado !== 'conectado' || telefone) return
+    let vivo = true
+    void confirmarNumeroConectado().then((r) => {
+      if (vivo && r.telefone) router.refresh()
+    })
+    return () => {
+      vivo = false
+    }
+  }, [estado, telefone, router])
 
   // O teto, separado do laço de propósito: misturar os dois faria o
   // `clearInterval` depender da contagem e o intervalo ser recriado a cada giro.

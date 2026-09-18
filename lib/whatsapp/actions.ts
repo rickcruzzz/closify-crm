@@ -351,6 +351,60 @@ export async function adotarInstancia(valores: unknown): Promise<RespostaDaAdoca
  * que cachear — e `cache: 'no-store'` no cliente HTTP garante que o Next não
  * guarde um código morto.
  */
+/**
+ * Preenche o numero da instancia quando ele ficou para tras.
+ *
+ * ## O buraco, achado com o primeiro numero real pareado (18/09)
+ *
+ * `telefone` so e gravado por `lerQrCode`, ou seja quando o pareamento acontece
+ * DENTRO da tela do produto. Toda outra forma de a conexao subir deixa a coluna
+ * nula para sempre:
+ *
+ *     pareado pelo painel da Z-API      nada no produto observa
+ *     reconectou depois de uma queda    o webhook diz `conectado`, e o webhook
+ *                                       nao sabe o numero DA EMPRESA: o payload
+ *                                       carrega o telefone de quem ESCREVEU
+ *
+ * O sintoma nao e o campo vazio. E a tela dizendo **"Leia o QR Code com o
+ * WhatsApp da empresa"** sobre uma conexao que ja esta de pe, porque a
+ * descricao do cabecalho depende do numero para trocar de frase. Quem acabou de
+ * conectar le que precisa conectar.
+ *
+ * Escrever o telefone do remetente dentro do webhook seria pior que o vazio:
+ * poria o numero de um CLIENTE no lugar do numero da empresa, e a tela passaria
+ * a afirmar, com aparencia de dado bom, que a empresa atende por ele.
+ *
+ * Por isso a correcao mora aqui: uma ida ao provedor, so quando a coluna esta
+ * nula e o estado diz conectado, disparada por quem abre a tela.
+ *
+ * ## Nao exige admin, e a razao esta no grant da 0090
+ *
+ * `telefone` e uma das colunas que `authenticated` ja le. Nao ha o que proteger
+ * aqui, e exigir admin faria a tela continuar mentindo para o membro ate um
+ * administrador passar por ela.
+ */
+export async function confirmarNumeroConectado(): Promise<{ telefone: string | null }> {
+  const sessao = await abrirSessao()
+  if ('error' in sessao) return { telefone: null }
+
+  const atual = await conexaoDaEmpresa(sessao.workspaceId)
+  // A porta que impede isto de virar uma chamada por render: so age no estado
+  // exato que o defeito produz.
+  if (atual.estado !== 'conectado' || atual.telefone) return { telefone: atual.telefone }
+
+  const instancia = await credenciaisDaEmpresa(sessao.workspaceId)
+  if (!instancia) return { telefone: null }
+
+  // Falhar aqui NAO e erro na tela: a conexao esta de pe, e o que falta e um
+  // rotulo. Barulho sobre isso ensinaria a pessoa a ignorar o aviso que importa.
+  const telefone = await telefoneConectado(instancia).catch(() => null)
+  if (!telefone) return { telefone: null }
+
+  await registrarEstado({ workspaceId: sessao.workspaceId, estado: 'conectado', telefone })
+  revalidar()
+  return { telefone }
+}
+
 export async function lerQrCode(): Promise<RespostaDaConexao> {
   const sessao = await abrirSessao()
   if ('error' in sessao) return { ok: false, error: sessao.error }
