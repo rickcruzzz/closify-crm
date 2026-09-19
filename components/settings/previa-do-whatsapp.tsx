@@ -16,9 +16,14 @@ import { cn } from '@/lib/utils'
  * ## O que ela precisa mostrar, e nada além
  *
  * A promessa do Max não é "tem WhatsApp". É que a conversa chega **com o
- * negócio do lado** e que quem espera há mais tempo aparece primeiro. As duas
- * coisas estão aqui e o resto foi cortado: uma prévia que tenta mostrar a tela
- * inteira não mostra nada.
+ * negócio do lado** e que um **relógio** diz há quanto tempo a pessoa espera.
+ * As duas coisas estão aqui e o resto foi cortado: uma prévia que tenta mostrar
+ * a tela inteira não mostra nada.
+ *
+ * Esta frase descrevia o critério de ordenação antigo até 18/09, quando a lista
+ * passou a pôr a mais recente no topo. O que a prévia DESENHA continuou certo,
+ * o relógio âmbar de "esperando há 12 min", e era só o texto que apontava para
+ * a regra velha. Ver `lib/conversas/ordenar.ts`.
  *
  * `aria-hidden` porque é ilustração: quem usa leitor de tela recebe a mesma
  * informação no cartão ao lado, em texto de verdade, e ouvir uma conversa
@@ -39,8 +44,10 @@ export function PreviaDoWhatsapp({ className }: { className?: string }) {
         </span>
         <div className="min-w-0 flex-1">
           <p className="truncate text-sm font-medium">Marcenaria Silva</p>
-          {/* O tempo de espera, e não "2 não lidas": a caixa deste produto
-              ordena por quem espera há mais tempo, e é esse o argumento. */}
+          {/* O tempo de espera, e não "2 não lidas": o contador de não lidas
+              responde "quantas deixei passar", e este relógio responde "há
+              quanto tempo esta pessoa está esperando". É a segunda que decide
+              de quem cuidar agora, e é o argumento do Max. */}
           <p className="text-xs text-amber-600 dark:text-amber-500">esperando há 12 min</p>
         </div>
       </div>

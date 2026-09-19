@@ -7,6 +7,7 @@ import {
   PAPEIS_DO_COLABORADOR,
   PLANO_NA_TELA,
   ehLimiteDePlano,
+  planoEfetivo,
   rotuloDoPlano,
 } from './plans'
 
@@ -105,5 +106,66 @@ describe('rotuloDoPlano quando a coluna discorda da funcao', () => {
   it('sem o terceiro argumento, a coluna decide como antes', () => {
     expect(rotuloDoPlano('pro', false)).toBe(PLANO_NA_TELA.pro)
     expect(rotuloDoPlano('free', false)).toBe(PLANO_NA_TELA.free)
+  })
+})
+
+/**
+ * A auditoria de 19/09 achou `plan === 'pro'` em SETE lugares, todos lendo a
+ * COLUNA. `planoEfetivo` e o unico lugar onde essa decisao passa a morar.
+ *
+ * A coluna mente por dois motivos independentes, e os dois tem caso aqui.
+ */
+describe('planoEfetivo', () => {
+  /**
+   * Motivo 1: a coluna NUNCA e promovida. `sincronizar_plano_do_workspace` so
+   * rebaixa, e o ramo 3 de `pro_vigente` (0078) cobre ate cinco empresas do
+   * mesmo dono sem tocar na coluna de nenhuma. Medido em producao: QUATRO
+   * empresas assim.
+   */
+  it('coluna free com pro_vigente TRUE e Pro', () => {
+    expect(planoEfetivo({ plan: 'free', temMax: false, proVigente: true })).toBe('pro')
+  })
+
+  /**
+   * Motivo 2: a coluna vale 'pro' para quem paga MAX, por construcao da 0089.
+   * Sem esta porta, a tela de Cobranca chama de "Pro" quem paga R$ 250 — que e
+   * o defeito que o dono encontrou, pela TERCEIRA vez nesta classe.
+   */
+  it('o Max vence a coluna E a funcao', () => {
+    expect(planoEfetivo({ plan: 'pro', temMax: true, proVigente: true })).toBe('max')
+    expect(planoEfetivo({ plan: 'free', temMax: true })).toBe('max')
+  })
+
+  /** O controle negativo: empresa sem nada continua Free. */
+  it('sem funcao e com coluna free, e Free', () => {
+    expect(planoEfetivo({ plan: 'free', temMax: false, proVigente: false })).toBe('free')
+    expect(planoEfetivo({ plan: 'free', temMax: false })).toBe('free')
+  })
+
+  /**
+   * Quem nao tem a funcao na mao nao deve pagar uma ida ao banco por um rotulo.
+   * A coluna erra para MENOS: mostra Free a quem tem Pro, nunca o contrario.
+   */
+  it('sem proVigente, a coluna ainda decide', () => {
+    expect(planoEfetivo({ plan: 'pro', temMax: false })).toBe('pro')
+  })
+
+  /** Coluna com lixo cai em Free, e nao em Pro: o default seguro. */
+  it('coluna desconhecida cai em Free', () => {
+    expect(planoEfetivo({ plan: 'enterprise', temMax: false })).toBe('free')
+    expect(planoEfetivo({ plan: '', temMax: false })).toBe('free')
+  })
+
+  /** `rotuloDoPlano` passou a ser so a traducao disto, e nao pode divergir. */
+  it('rotuloDoPlano concorda com planoEfetivo em todos os casos', () => {
+    for (const plan of ['free', 'pro', 'lixo']) {
+      for (const temMax of [true, false]) {
+        for (const proVigente of [true, false, undefined]) {
+          expect(rotuloDoPlano(plan, temMax, proVigente)).toBe(
+            PLANO_NA_TELA[planoEfetivo({ plan, temMax, proVigente })],
+          )
+        }
+      }
+    }
   })
 })

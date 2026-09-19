@@ -159,6 +159,49 @@ export async function createCheckout(values: unknown) {
     .eq('workspace_id', workspaceId)
     .maybeSingle()
 
+  // ## A cobrança DUPLA, e ela nunca disparou por sorte de calendário
+  //
+  // Todas as guardas abaixo filtram `subscriptions` por `workspace_id`. Nenhuma
+  // pergunta se o DONO já paga.
+  //
+  // O ramo 3 de `pro_vigente()` (0078) cobre as empresas IRMÃS do mesmo dono.
+  // Então o caminho era: paga R$ 97 na empresa A, cria a empresa B, abre a
+  // Cobrança de B, lê "Free" (porque `workspaces.plan` nunca é promovido),
+  // clica em Assinar, e **uma segunda assinatura de R$ 97 nasce no Asaas** por
+  // um plano que a pessoa já tem.
+  //
+  // Medido em 19/09: QUATRO empresas em produção com `plan = 'free'` e
+  // `pro_vigente` verdadeiro, e ZERO donos com duas assinaturas ativas. Era
+  // latente, com a munição toda carregada.
+  //
+  // ## Só o PRO é recusado, e o Max continua vendável
+  //
+  // `max_vigente` tem UM ramo só e não tem trial, de propósito: cada instância
+  // de WhatsApp custa dinheiro de verdade, e dar ramo 3 a ela entregaria cinco
+  // instâncias pagas por uma assinatura de R$ 250. Quem tem Pro pelo ramo 3
+  // **precisa** poder assinar o Max.
+  //
+  // Recusar o Max aqui consertaria a cobrança dupla vendendo menos, que é a
+  // forma silenciosa de errar.
+  if (plano === 'pro' && !existingSubscription) {
+    const { data: jaTemPro } = await supabase.rpc('pro_vigente', {
+      target_workspace_id: workspaceId,
+    })
+
+    // `=== true` e não `Boolean(...)`: a RPC devolve `null` quando a leitura
+    // falha, e `null` aqui precisa cair no lado que DEIXA seguir. Bloquear uma
+    // venda por indisponibilidade de leitura é pior que a duplicata que esta
+    // guarda evita, porque a duplicata ainda é reembolsável e a venda perdida
+    // não volta.
+    if (jaTemPro === true) {
+      return {
+        error:
+          `Esta empresa já usa o ${PLANO_NA_TELA.pro} que você paga em outra empresa sua. ` +
+          'Não é preciso assinar de novo aqui. Veja em Configurações, Cobrança.',
+      }
+    }
+  }
+
   if (existingSubscription?.status === 'active') {
     // Nomeia o plano que ESTÁ ativo, não o que se tentou assinar: quem tem Pro
     // e clica em Max precisa ler "você já tem Pro", e não "você já tem Max".

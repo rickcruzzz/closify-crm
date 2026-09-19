@@ -18,7 +18,7 @@ import { getWorkspaceSettingsData } from '@/lib/workspace/queries'
 import { getEstadoAssinatura, getHistoricoDaAssinatura } from '@/lib/asaas/queries'
 import { AvisoDeTesteNaCobranca } from '@/components/settings/aviso-de-teste-na-cobranca'
 import { HistoricoDaAssinatura } from '@/components/settings/historico-da-assinatura'
-import { FREE_LEAD_LIMIT, FREE_MEMBER_LIMIT } from '@/lib/plans'
+import { FREE_LEAD_LIMIT, FREE_MEMBER_LIMIT, PLANO_NA_TELA, planoEfetivo } from '@/lib/plans'
 import { cn } from '@/lib/utils'
 
 export const metadata: Metadata = { title: 'Cobrança' }
@@ -43,7 +43,7 @@ export default async function BillingPage({
   // (`getEstadoAssinatura`), não só o plano: sem isto, quem tinha assinatura
   // criada com fatura em aberto via "Free" e um botão de assinar de novo,
   // sem saber que já existia uma cobrança esperando pagamento.
-  const [{ workspace, members }, { count: leadCount }, assinatura, historico, max] =
+  const [{ workspace, members }, { count: leadCount }, assinatura, historico, max, proVigenteRpc] =
     await Promise.all([
       getWorkspaceSettingsData(workspaceId),
       supabase.from('leads').select('id', { count: 'exact', head: true }).eq('workspace_id', workspaceId),
@@ -54,10 +54,46 @@ export default async function BillingPage({
       // independentes entre si, e encadeá-las paga uma viagem de rede a mais
       // em toda abertura da tela de cobrança.
       situacaoDoMax(workspaceId),
+      // ## A FUNÇÃO, e não a coluna, e ela entra no mesmo `Promise.all`
+      //
+      // `workspaces.plan` mente por dois motivos independentes, e esta tela
+      // caía nos dois: ela nunca é promovida (o ramo 3 de `pro_vigente` cobre
+      // as empresas irmãs sem tocar em coluna nenhuma), e vale `'pro'` para
+      // quem paga MAX, por construção da 0089.
+      //
+      // O resultado era a tela de COBRANÇA chamando de "Pro" quem paga R$ 250,
+      // e oferecendo assinar o Pro a quem já o tem. Uma RPC a mais, em
+      // paralelo, custa zero viagem de rede adicional.
+      supabase.rpc('pro_vigente', { target_workspace_id: workspaceId }),
     ])
 
-  const plan = workspace?.plan ?? 'free'
   const isAdmin = members.find((m) => m.user_id === user.id)?.role === 'admin'
+
+  // `=== true` e não `Boolean(...)`: a RPC devolve `null` quando a leitura
+  // falha, e `null` precisa cair no lado NEGADO. Aqui o custo de errar para
+  // mais seria mostrar Pro a quem não pagou.
+  const proVigente = proVigenteRpc.data === true
+  const plano = planoEfetivo({
+    plan: workspace?.plan ?? 'free',
+    temMax: max.maxVigente,
+    proVigente,
+  })
+
+  // ## Coberta por OUTRA empresa do mesmo dono
+  //
+  // `pro_vigente` verdadeiro sem assinatura aqui só pode ser o ramo 3 ou o
+  // trial. O trial tem aviso próprio logo abaixo, então o que sobra é o ramo 3:
+  // a pessoa paga numa empresa e usa em outra.
+  //
+  // Sem dizer isso, a tela mostra "Pro" e nenhuma assinatura, e quem vier
+  // conferir a cobrança conclui que ela sumiu.
+  //
+  // A frase NÃO nomeia a empresa que paga, e isso é escolha: descobrir qual é
+  // exigiria repetir o predicado de `pro_vigente` (com `dias_de_graca` junto)
+  // em TypeScript ou numa RPC nova, e uma segunda cópia da regra é exatamente
+  // o defeito que esta rodada existe para fechar.
+  const cobertaPorEmpresaIrma =
+    proVigente && !assinatura && !workspace?.trial_ate && plano !== 'max'
 
   return (
     <div className="flex flex-col gap-6">
@@ -67,7 +103,7 @@ export default async function BillingPage({
           webhook, que é assíncrono, Pix costuma levar segundos, boleto pode
           levar dias. Sem este aviso a pessoa voltaria, veria "Free" e concluiria
           que o pagamento não funcionou. */}
-      {pago === '1' && plan !== 'pro' && (
+      {pago === '1' && plano === 'free' && (
         <Card className="border-primary/40">
           <CardHeader>
             <CardTitle className="text-base">Pagamento recebido</CardTitle>
@@ -85,17 +121,22 @@ export default async function BillingPage({
           <div>
             <CardTitle>Plano atual</CardTitle>
             <CardDescription>
-              {plan === 'pro'
-                ? /* "leads" e o jargao que a renomeacao de 19/08 tirou do
-                     produto — a tela do menu se chama Contatos. Mesma troca
-                     feita em `plan-card.tsx`, onde a frase vizinha ainda
-                     prometia "empresas ilimitadas" contra o teto de 5. */
-                  'Colaboradores e contatos ilimitados.'
-                : 'Ideal para começar a organizar seu funil.'}
+              {/* O Max ganha frase própria: dizer "colaboradores e contatos
+                  ilimitados" para quem paga R$ 250 descreve o que ele tem de
+                  COMUM com o Pro e cala sobre o que ele comprou. */}
+              {plano === 'max'
+                ? 'O WhatsApp da empresa dentro do CRM, mais tudo do Pro.'
+                : plano === 'pro'
+                  ? /* "leads" e o jargao que a renomeacao de 19/08 tirou do
+                       produto — a tela do menu se chama Contatos. Mesma troca
+                       feita em `plan-card.tsx`, onde a frase vizinha ainda
+                       prometia "empresas ilimitadas" contra o teto de 5. */
+                    'Colaboradores e contatos ilimitados.'
+                  : 'Ideal para começar a organizar seu funil.'}
             </CardDescription>
           </div>
-          <Badge variant={plan === 'pro' ? 'default' : 'secondary'}>
-            {plan === 'pro' ? 'Pro' : 'Free'}
+          <Badge variant={plano === 'free' ? 'secondary' : 'default'}>
+            {PLANO_NA_TELA[plano]}
           </Badge>
         </CardHeader>
         <CardContent className="flex flex-col gap-5">
@@ -107,7 +148,16 @@ export default async function BillingPage({
               data em lugar nenhum do produto. */}
           {!assinatura && <AvisoDeTesteNaCobranca trialAte={workspace?.trial_ate ?? null} />}
 
-          {plan === 'free' && (
+          {/* O selo diz Pro e não existe assinatura nenhuma nesta tela. Sem
+              esta frase, quem vier conferir a cobrança conclui que ela sumiu. */}
+          {cobertaPorEmpresaIrma && (
+            <p className="text-muted-foreground border-border/60 rounded-lg border p-3 text-sm leading-relaxed">
+              Esta empresa usa o {PLANO_NA_TELA.pro} que você já paga em outra empresa sua.
+              Não há cobrança separada aqui, e o valor continua sendo um só.
+            </p>
+          )}
+
+          {plano === 'free' && (
             <div className="grid gap-4 sm:grid-cols-2">
               <UsageBar label="Contatos" used={leadCount ?? 0} limit={FREE_LEAD_LIMIT} />
               {/* "Pessoas" e não "Colaboradores": `members.length` inclui o
@@ -163,7 +213,7 @@ export default async function BillingPage({
         </CardHeader>
         <CardContent>
           <PlanComparisonTable
-          plan={plan}
+          plan={plano}
           isAdmin={isAdmin}
           // `?assinar=1` continua abrindo o formulario direto para quem JA
           // decidiu: e o destino dos e-mails de trial, da reconciliacao e da

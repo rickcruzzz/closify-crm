@@ -59,10 +59,23 @@ export const LIMITES_MAX: LimiteDoPlano[] = [
   { icone: Check, valor: 'Tudo', rotulo: `do ${PLANO_NA_TELA.pro}` },
 ]
 
+/**
+ * ## A terceira linha descrevia a ORDEM, e a ordem mudou em 18/09
+ *
+ * Ela vendia o critério de ordenação antigo. A lista passou a pôr a mensagem
+ * mais recente no topo, como todo aplicativo de mensagem, e a frase virou o
+ * contrário do que o produto faz: numa peça de VENDA, que é o pior lugar para
+ * isso acontecer. Ver `lib/conversas/ordenar.ts` para o porquê da troca.
+ *
+ * A frase nova diz o que a tela AINDA faz e que nenhum chat faz: o relógio
+ * conta há quanto tempo cada um espera, e quem não foi respondido fica acima de
+ * quem já foi. O argumento se move da posição para a cor, que é onde ele
+ * continua verdadeiro.
+ */
 export const RECURSOS_MAX = [
   'Cada mensagem cai na conversa do contato, com o negócio dele do lado.',
   'O que você responde pelo celular aparece aqui também.',
-  'Quem espera há mais tempo fica no topo, e não quem falou por último.',
+  'Um relógio mostra há quanto tempo cada cliente espera resposta.',
   'O histórico fica na empresa, e não no celular de quem vendeu.',
 ]
 

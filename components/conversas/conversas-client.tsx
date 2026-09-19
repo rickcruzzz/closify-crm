@@ -54,16 +54,23 @@ import {
  *
  * ## A decisão que separa esta tela de todo concorrente
  *
- * Kommo, Agendor, SleekFlow e todo aplicativo de mensagem ordenam por mensagem
- * mais recente. É a ordem certa para CONVERSAR.
- *
- * A ordem certa para NÃO PERDER VENDA é quem espera há mais tempo:
+ * A ORDEM é a mesma de todo aplicativo de mensagem desde 18/09: a mais recente
+ * no topo. O que separa esta tela não é a ordem, é o RELÓGIO.
  *
  *     5    minutos é o tempo que o cliente brasileiro considera ideal
  *     40%  desistem da compra se não responderem em 10 minutos
  *     62%  já desistiram por falha operacional, quase sempre demora
  *
- * Por isso a lista é "Quem está esperando", com relógio, e não "Conversas".
+ * Kommo, Agendor e SleekFlow mostram "2 não lidas", que responde *quantas
+ * deixei passar*. Aqui cada linha diz **há quanto tempo aquela pessoa espera**,
+ * e a cor muda quando passa dos cinco e dos dez minutos. É a informação que
+ * decide de quem cuidar agora.
+ *
+ * E quem não foi respondido continua ACIMA de quem já foi, o que nenhum chat
+ * faz. Por isso a lista é "Quem está esperando", e não "Conversas".
+ *
+ * A ordenação por espera vigorou até 18/09; o porquê da troca está em
+ * `lib/conversas/ordenar.ts`.
  *
  * ## A terceira coluna é o produto
  *

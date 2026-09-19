@@ -15,6 +15,8 @@ import {
 import { getCurrentUserAndWorkspace } from '@/lib/supabase/workspace'
 import { createClient } from '@/lib/supabase/server'
 import { getWorkspaceSettingsData } from '@/lib/workspace/queries'
+import { planoEfetivo } from '@/lib/plans'
+import { situacaoDoPlanoDaEmpresaAtiva } from '@/lib/plans/trial-queries'
 import { getIntegrationConnections, getUsoDasIntegracoes } from '@/lib/integrations/queries'
 import type { IntegrationConnectionRow } from '@/lib/integrations/queries'
 import type { IntegrationProvider } from '@/types/supabase'
@@ -117,16 +119,36 @@ export default async function SettingsPage({
   // As duas consultas condicionais continuam condicionais: quem abre a aba
   // Empresa não paga pelas integrações, e vice-versa. O que mudou é que,
   // quando são necessárias, saem juntas em vez de uma esperar a outra.
-  const [{ workspace, members, invites }, [integrationConnections, usoDasIntegracoes]] =
-    await Promise.all([
-      getWorkspaceSettingsData(workspaceId),
-      aba === 'integracoes'
-        ? Promise.all([getIntegrationConnections(workspaceId), getUsoDasIntegracoes(workspaceId)])
-        : Promise.resolve<[IntegrationConnectionRow[], Record<IntegrationProvider, number>]>([
-            [],
-            { google_calendar: 0, gmail: 0, whatsapp: 0 },
-          ]),
-    ])
+  const [
+    { workspace, members, invites },
+    [integrationConnections, usoDasIntegracoes],
+    situacaoDoPlano,
+  ] = await Promise.all([
+    getWorkspaceSettingsData(workspaceId),
+    aba === 'integracoes'
+      ? Promise.all([getIntegrationConnections(workspaceId), getUsoDasIntegracoes(workspaceId)])
+      : Promise.resolve<[IntegrationConnectionRow[], Record<IntegrationProvider, number>]>([
+          [],
+          { google_calendar: 0, gmail: 0, whatsapp: 0 },
+        ]),
+    // ## A FUNÇÃO, na mesma onda, porque a coluna estava prendendo
+    //
+    // `workspaces.plan` nunca é promovido, e o ramo 3 de `pro_vigente` (0078)
+    // cobre as empresas irmãs do mesmo dono sem tocar em coluna nenhuma. Quatro
+    // empresas estavam assim em 19/09.
+    //
+    // O efeito não era só cosmético: `members-card` calculava `atLimit` a
+    // partir da coluna e **recusava o convite de colaborador** que
+    // `validar_limite_de_membros` teria aceitado. O banco libertava e a tela
+    // prendia, num recurso já pago.
+    situacaoDoPlanoDaEmpresaAtiva(),
+  ])
+
+  const plano = planoEfetivo({
+    plan: workspace?.plan ?? 'free',
+    temMax: situacaoDoPlano.temMax,
+    proVigente: situacaoDoPlano.proVigente,
+  })
 
   const currentMember = members.find((m) => m.user_id === user.id)
   const isAdmin = currentMember?.role === 'admin'
@@ -209,7 +231,7 @@ export default async function SettingsPage({
             isAdmin={isAdmin}
             members={members}
             invites={invites}
-            plan={workspace?.plan ?? 'free'}
+            plan={plano}
           />
 
           {/* Excluir conta fica aqui, separado por uma linha e no fim: é a
@@ -223,7 +245,7 @@ export default async function SettingsPage({
 
       {aba === 'plano' && (
         <PlanCard
-          plan={workspace?.plan ?? 'free'}
+          plan={plano}
           isAdmin={isAdmin}
           assinarDeInicio={params.assinar === '1'}
         />

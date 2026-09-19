@@ -57,6 +57,7 @@ import {
   updateMemberRole,
 } from '@/lib/workspace/actions'
 import { inviteMemberSchema, type InviteMemberValues } from '@/lib/validations/workspace'
+import type { PlanoEfetivo } from '@/lib/plans'
 import { FREE_MEMBER_LIMIT } from '@/lib/plans'
 
 type Member = { user_id: string; role: 'admin' | 'membro'; name: string }
@@ -73,7 +74,16 @@ export function MembersCard({
   isAdmin: boolean
   members: Member[]
   invites: Invite[]
-  plan: 'free' | 'pro'
+  /**
+   * O plano EFETIVO, de `planoEfetivo()`: a funcao vence a coluna.
+   *
+   * Era `'free' | 'pro'`, alimentado por `workspaces.plan`. A coluna nunca e
+   * promovida, entao uma empresa coberta pela assinatura de outra do mesmo
+   * dono (ramo 3 de `pro_vigente`) chegava aqui como `'free'` e o convite de
+   * colaborador travava em dois — enquanto `validar_limite_de_membros`, que le
+   * a funcao, teria aceitado. A tela prendia o que o banco libertava.
+   */
+  plan: PlanoEfetivo
 }) {
   const [inviteOpen, setInviteOpen] = React.useState(false)
   const [isSubmitting, setIsSubmitting] = React.useState(false)
@@ -94,6 +104,16 @@ export function MembersCard({
   // o servidor aplicar outra, o tipo de divergência que faz o usuário achar
   // que o limite "não funciona".
   const totalOccupied = members.length + invites.length
+  // ## `plan` aqui e o EFETIVO, e a diferenca nao e cosmetica
+  //
+  // Enquanto ele vinha de `workspaces.plan`, uma empresa coberta pela
+  // assinatura de outra do mesmo dono (ramo 3 de `pro_vigente`) chegava como
+  // `'free'` e esta linha TRAVAVA o convite em duas pessoas — enquanto
+  // `validar_limite_de_membros`, que le a funcao, teria aceitado.
+  //
+  // O banco libertava e a tela prendia, num recurso ja pago. Era o inverso do
+  // defeito que costuma acontecer aqui, e por isso ninguem o via: ele nao gera
+  // erro, gera um botao desabilitado.
   const atLimit = plan === 'free' && totalOccupied >= FREE_MEMBER_LIMIT
 
   // Workspace nunca fica com zero membros (quem cria já entra como admin), então

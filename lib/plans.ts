@@ -512,9 +512,61 @@ export function rotuloDoPlano(
    */
   proVigente?: boolean,
 ): PlanoNaTela {
-  // O Max vem primeiro: quem o tem também tem `plan === 'pro'`, e ler a coluna
-  // antes devolveria "Pro" para todo mundo que paga o plano mais caro.
-  if (temMax) return PLANO_NA_TELA.max
-  if (proVigente) return PLANO_NA_TELA.pro
-  return plan === 'pro' ? PLANO_NA_TELA.pro : PLANO_NA_TELA.free
+  return PLANO_NA_TELA[planoEfetivo({ plan, temMax, proVigente })]
+}
+
+/** A chave do plano, e não o rótulo. É o que as telas comparam. */
+export type PlanoEfetivo = keyof typeof PLANO_NA_TELA
+
+/**
+ * Qual plano esta empresa TEM, de verdade.
+ *
+ * ## Por que existe, e não é só o rótulo em outra forma
+ *
+ * `rotuloDoPlano` responde *como chamar na tela*. Esta responde *o que a pessoa
+ * tem*, e é essa a pergunta que decide botão, limite e cobrança. Enquanto ela
+ * não existia, cada tela comparava `plan === 'pro'` por conta própria, e a
+ * auditoria de 19/09 encontrou a mesma comparação em **sete lugares**, todos
+ * lendo a COLUNA.
+ *
+ * ## As duas razões de a coluna mentir
+ *
+ *     1. Ela NUNCA e promovida. `sincronizar_plano_do_workspace` so rebaixa,
+ *        e o ramo 3 de `pro_vigente` (0078) cobre ate CINCO empresas do mesmo
+ *        dono sem tocar na coluna de nenhuma delas. Medido em 19/09: QUATRO
+ *        empresas com `plan = 'free'` e `pro_vigente` verdadeiro
+ *     2. Ela vale `'pro'` para quem paga MAX, por construcao: a 0089 manteve o
+ *        enum em dois valores para nao reler os sete lugares que chamam
+ *        `pro_vigente()`
+ *
+ * O efeito era o banco libertar e a tela prender. Três triggers do banco
+ * (`checar_limite_de_leads`, `validar_limite_de_membros` e
+ * `checar_limite_de_orcamentos`) já leem `pro_vigente()`; as telas não liam.
+ *
+ * ## A ordem das portas é a regra inteira
+ *
+ *     temMax        vence tudo. Quem paga R$ 250 tambem tem `plan = 'pro'`,
+ *                   e ler a coluna antes o chamaria de Pro
+ *     proVigente    a FUNCAO antes da coluna, sempre que ela for conhecida
+ *     a coluna      so quando nao ha funcao na mao, e ela erra para MENOS:
+ *                   mostra Free a quem tem Pro, nunca o contrario
+ *
+ * O último ponto é o que permite `proVigente` ser opcional. Errar para menos
+ * aqui custa uma tela pobre; errar para mais entregaria plano sem pagamento.
+ */
+export function planoEfetivo({
+  plan,
+  temMax,
+  proVigente,
+}: {
+  /** `workspaces.plan`, a coluna. A última a ser consultada. */
+  plan: string
+  /** `max_vigente()` desta empresa. */
+  temMax: boolean
+  /** `pro_vigente()` desta empresa, quando quem chama souber. */
+  proVigente?: boolean
+}): PlanoEfetivo {
+  if (temMax) return 'max'
+  if (proVigente) return 'pro'
+  return plan === 'pro' ? 'pro' : 'free'
 }

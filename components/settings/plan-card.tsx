@@ -11,6 +11,7 @@ import {
   CardTitle,
 } from '@/components/ui/card'
 import { SubscribeButton } from '@/components/settings/subscribe-button'
+import type { PlanoEfetivo } from '@/lib/plans'
 import {
   FREE_COLABORADORES,
   FREE_LEAD_LIMIT,
@@ -18,6 +19,7 @@ import {
   PAPEIS_DO_COLABORADOR,
   PRO_WORKSPACE_LIMIT,
   PRO_PLAN_PRICE,
+  PLANO_NA_TELA,
 } from '@/lib/plans'
 
 /**
@@ -57,7 +59,8 @@ export function PlanCard({
   isAdmin,
   assinarDeInicio = false,
 }: {
-  plan: 'free' | 'pro'
+  /** O plano EFETIVO, de `planoEfetivo()`. Ver o comentario em `lib/plans.ts`. */
+  plan: PlanoEfetivo
   isAdmin: boolean
   /**
    * Abre o formulário de CPF assim que a tela carrega.
@@ -74,7 +77,7 @@ export function PlanCard({
         <div>
           <CardTitle>Plano</CardTitle>
           <CardDescription>
-            {plan === 'pro'
+            {plan !== 'free'
               ? /* "Empresas ilimitadas" era FALSO e contradizia a lista 30 linhas
                    acima, no mesmo arquivo, que sempre disse "Até 5 empresas".
                    `PRO_WORKSPACE_LIMIT` é 5 e a migration 0078 o aplica na
@@ -103,9 +106,13 @@ export function PlanCard({
             plano que existe" — e a primeira pergunta de quem abre esta tela é
             justamente em qual dos dois ela está. O `Check` carrega o sentido
             sem precisar de mais palavra. */}
-        <Badge variant={plan === 'pro' ? 'default' : 'secondary'} className="gap-1">
+        {/* `!== 'free'` nos dois: quem paga Max tambem tem tudo do Pro, e o
+            rotulo sai de `PLANO_NA_TELA` em vez de um ternario que so conhece
+            dois planos. Era a TERCEIRA aparicao desta classe, depois do selo
+            do topo (15/09) e do item da lista do seletor (17/09). */}
+        <Badge variant={plan !== 'free' ? 'default' : 'secondary'} className="gap-1">
           <Check className="size-3" aria-hidden />
-          {plan === 'pro' ? 'Pro · plano atual' : 'Free · plano atual'}
+          {`${PLANO_NA_TELA[plan]} · plano atual`}
         </Badge>
       </CardHeader>
 
@@ -166,7 +173,7 @@ export function PlanCard({
           </>
         )}
 
-        {plan === 'pro' && (
+        {plan !== 'free' && (
           <>
             {/* O lado Pro tinha só um botão. Quem paga abre esta tela para
                 conferir o que comprou — e não achava nada além do nome do

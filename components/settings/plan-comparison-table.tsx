@@ -2,6 +2,7 @@ import { Building2, Check, ShieldCheck, Users } from 'lucide-react'
 
 import { CartaoDePlano, type LimiteDoPlano } from '@/components/settings/cartao-de-plano'
 import { SubscribeButton } from '@/components/settings/subscribe-button'
+import type { PlanoEfetivo } from '@/lib/plans'
 import {
   FREE_COLABORADORES,
   FREE_LEAD_LIMIT,
@@ -98,7 +99,8 @@ export function PlanComparisonTable({
   isAdmin = false,
   assinarDeInicio = false,
 }: {
-  plan: 'free' | 'pro'
+  /** O plano EFETIVO, de `planoEfetivo()`. Ver o comentario em `lib/plans.ts`. */
+  plan: PlanoEfetivo
   /**
    * Só admin assina — `createCheckout` recusa os demais. Mostrar o botão a
    * quem não pode usar produz um caminho morto, e caminho morto numa tela de
@@ -125,9 +127,17 @@ export function PlanComparisonTable({
           descricao="Para quem já vive de orçamento."
           limites={LIMITES_PRO}
           recursos={PRO_FEATURES}
-          ehAtual={plan === 'pro'}
+          // `!== 'free'` e não `=== 'pro'`: quem tem Max tem tudo do Pro, e o
+          // cartão do Pro marcado como "não é o seu" para quem paga R$ 250
+          // convidaria a assinar o plano de baixo.
+          ehAtual={plan !== 'free'}
           recomendado
           // O botão mora AQUI, no cartão que convence. Ver o cabeçalho.
+          //
+          // `plan` vem de `planoEfetivo`, que lê a FUNÇÃO e não a coluna. Com a
+          // coluna, uma empresa coberta pela assinatura de outra do mesmo dono
+          // (ramo 3 de `pro_vigente`) aparecia como Free e via este botão: a
+          // pessoa pagaria R$ 97 de novo por um plano que já tem.
           acao={plan === 'free' && isAdmin ? <SubscribeButton className="w-full" abrirDeInicio={assinarDeInicio} /> : null}
           aviso={
             plan === 'free' && !isAdmin

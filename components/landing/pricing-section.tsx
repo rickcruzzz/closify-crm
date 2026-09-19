@@ -383,7 +383,12 @@ const plans: Plan[] = [
         icone: Building2,
       },
       { texto: 'O que você responde pelo celular aparece aqui também', icone: Smartphone },
-      { texto: 'Quem espera há mais tempo fica no topo, e não quem falou por último', icone: Timer },
+      // Vendia o critério de ordenação antigo até 18/09, quando a lista passou
+      // a pôr a mais recente no topo. A frase virou o contrário do que o
+      // produto faz, numa página PÚBLICA. O argumento se move da posição para o
+      // relógio, que é onde ele continua verdadeiro, e o ícone `Timer` já era o
+      // certo para os dois. Ver `lib/conversas/ordenar.ts`.
+      { texto: 'Um relógio mostra há quanto tempo cada cliente espera', icone: Timer },
       {
         texto: 'O histórico fica na empresa, e não no celular de quem vendeu',
         icone: Building2,
