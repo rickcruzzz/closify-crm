@@ -35,6 +35,13 @@ roda, o que é manual, o que falta pro CI existir de verdade) em
 Kanban, leads, dashboard, multi-empresa, billing pelo Asaas e e-mails
 transacionais funcionando. Não é greenfield, não recrie nada do zero.
 
+**E o WhatsApp entrou, pela Z-API, no plano Max de R$ 250 por empresa.** Esta
+linha dizia que ele estava em `migrando`, com só o link `wa.me`, até 19/09,
+enquanto `FASE_DO_WHATSAPP` já valia `'zapi'` e a produção tinha 214 mensagens
+em 46 conversas, com um número real pareado. O arquivo lido no começo de toda
+sessão afirmava que o recurso mais caro do produto não existia, que é a mesma
+classe que fez [docs/capacidades.md](docs/capacidades.md) nascer.
+
 ## Antes de propor construir qualquer coisa: [docs/capacidades.md](docs/capacidades.md)
 
 Índice de uma linha por capacidade, com o arquivo onde ela vive. Responde
@@ -114,7 +121,7 @@ app/
     leads/             # listagem, busca, detalhe/timeline
     dashboard/         # métricas e gráfico de funil
     calendario/        # mês, semana e agenda sobre as tarefas
-    conversas/         # WhatsApp — hoje em `migrando`, só o link wa.me
+    conversas/         # WhatsApp de verdade, pela Z-API. Ver abaixo
     perfil/            # dados da pessoa, senha, exclusão de conta
     settings/          # workspace, colaboradores, permissões, billing
   (conteudo)/          # páginas de SEO escritas para quem não conhece o produto
@@ -134,10 +141,17 @@ components/
 lib/
   supabase/            # client, server, middleware
   asaas/               # checkout, webhook, aplicar-evento
+  plans/               # trial, Max e o direito por empresa (le a FUNCAO)
+  whatsapp/            # Z-API: instancia, reserva, foto, reenvio, webhooks
+  conversas/           # a caixa de entrada: ordem, filtro, remetente
   resend/
   leads/               # csv, planilha, importação — o parser vive aqui
   deals/  tasks/  workspace/  integrations/
+  onboarding/          # o guia interativo e o checklist de ativação
+  telas/               # títulos e descrições, num lugar só
+  storage/  auth/  seo/  feedback/  branding/  enderecos/
   sdr/                 # o agente de WhatsApp: instruções, blindagem, mídia
+  prospeccao/          # abordagem, opt-out, classificação da resposta
   analytics/           # ativação e consentimento, sem rastreador de terceiro
   dono/                # só a Central; nada daqui roda no produto do cliente
   emails/  notificacoes/  erros/  validations/
@@ -147,12 +161,19 @@ supabase/
   migrations/
 scripts/
   ci/                  # contagens, conferidor de documentos, build:check
+  grafo/               # nomear as comunidades depois do rebuild do graphify
   local/               # ferramentas de operação (estado da Evolution)
   inteligencia/        # prospecção: universo, abordagem, não-perturbe
   marketing/           # geradores de criativo, auditoria de descoberta
+  deploy/  diagnostico/  design/  load-test/  n8n/  vps/
 docs/
   prd.md
 ```
+
+**`lib/inteligencia-de-mercado/` tem só um `README.md` e `dominio/`.** O
+recurso foi removido em 08/09 pela 0075: ele funcionava, ninguém usou uma vez,
+e carregava um suboperador fora do Brasil na Política de Privacidade. O README
+guarda o porquê, e a pasta fica para quem for procurar.
 
 **`lib/dono/` e `app/(dono)/` não fazem parte do produto vendido.** São a
 Central do Dono, que devolve 404 fora de `localhost` — o gate existe porque ela
@@ -180,7 +201,11 @@ Convenções:
 
 Os milestones **auth → kanban → leads → dashboard → multi-empresa/permissões →
 billing (Asaas)** estão entregues e em produção, e a importação de planilha
-saiu em 11/08. **Não há próximo milestone definido**: o que resta está na fila
+saiu em 11/08.
+
+**O plano Max saiu em 16 e 17/09, e é o milestone mais recente**: WhatsApp
+dentro do CRM pela Z-API, a R$ 250 por empresa conectada. Esta linha dizia
+"não há próximo milestone definido" até 19/09. O que resta continua na fila
 técnica do `docs/estado-atual.md`.
 
 **O primeiro usuário externo real chegou em 10/09** — antes disso, toda decisão
@@ -240,9 +265,14 @@ próprio gate. `build:check` escreve em `.next-check`
 ## O mapa do projeto (grafo do graphify)
 
 <!-- contagem: grafo.nos>=4000 grafo.arestas>=9000 grafo.comunidades>=300 -->
-`graphify-out/graph.json` é um índice navegável de todo este repositório: **mais
-de 4000 nós e 9000 arestas, em mais de 300 comunidades**, ligando arquivo,
-função, componente, tabela e conceito de documentação.
+`graphify-out/graph.json` é um índice navegável de todo este repositório,
+ligando arquivo, função, componente, tabela e conceito de documentação. Medido
+em 19/09: **6.053 nós, 12.879 arestas, 464 comunidades**.
+
+O carimbo acima continua sendo PISO, e o número medido fica na prosa. Esta
+frase dizia "mais de 4000 nós e 9000 arestas, em mais de 300 comunidades", o
+que continuava verdadeiro e tinha parado de informar: quem lesse concluiria que
+o grafo mal passou do piso, quando ele está em uma vez e meia.
 
 O número é declarado como **piso, e não como valor exato**, e isso é decisão. O
 hook de `post-commit` reconstrói o grafo a cada commit: qualquer arquivo novo
@@ -409,6 +439,27 @@ Como ele andou, em ordem:
                   mede `alter`, nunca nascimento de tabela. Ler o +1 como
                   "nasceu uma tabela" daria a resposta certa por acidente desta
                   vez, e errada na proxima
+    127   19/09   NAO SE MOVEU, atraves de CINCO migrations (0093 a 0097), e e
+                  a leitura que FECHA a serie em vez de acrescentar um oitavo
+                  caso a ela:
+
+                      0097   `whatsapp_reserva` nasceu com `create table`, que
+                             CARREGA o arquivo. Entrou no grafo COM origem
+                      0096   os `alter` sao em `leads`, que JA estava entre os
+                             127 desde sempre
+                      0093   `check`, coluna e funcao em tabelas ja
+                      0094   representadas
+                      0095
+
+                  Ou seja: o numero so anda quando um `alter` toca uma tabela
+                  **ainda nao representada**. Era isso que os sete saltos
+                  anteriores vinham mostrando sem nomear, e por isso eles
+                  pareciam sete casos quando sempre foram um.
+
+                  **E `banco.tabelas` andou nesta janela**, de 24 para 25, pela
+                  0097. As duas contagens se moveram em direcoes diferentes no
+                  mesmo periodo, que e exatamente a distincao que estes
+                  paragrafos existem para manter
 
 **A leitura errada aqui é fácil e cara:** ver o número subir logo depois de uma
 migration convida a concluir que uma tabela nasceu. Em nenhum dos três últimos

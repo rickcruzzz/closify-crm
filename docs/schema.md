@@ -454,6 +454,51 @@ classDiagram
         +uuid usada_por FK "→ workspaces, on delete set null"
     }
 
+    class prospeccao_prospect {
+        +uuid id PK
+        +text dominio UK
+        +text telefone_ultimos8
+        +text nome
+        +text vertical
+        +int pontos
+        +text mensagem_enviada
+        +timestamptz enviado_em
+        +timestamptz respondido_em
+        +text estagio "OPTED_OUT e terminal"
+        +text intencao "0086"
+        +text objecao
+        +text temperatura
+        +int mensagens_recebidas
+        +bool precisa_humano
+        +timestamptz classificado_em
+        +timestamptz automacao_detectada_em
+        +int respostas_automaticas
+        +uuid lead_id FK "→ leads, set null"
+        +uuid workspace_id FK "→ workspaces, set null"
+        +timestamptz created_at
+        +timestamptz updated_at
+    }
+
+    class prospeccao_interacao {
+        +uuid id PK
+        +uuid prospect_id FK "→ prospeccao_prospect, set null"
+        +uuid conversa_id FK "→ conversas, CASCADE"
+        +uuid mensagem_id FK UK "→ mensagens, CASCADE"
+        +text intencao
+        +text objecao
+        +text objecao_texto
+        +text temperatura
+        +text estagio_antes
+        +text estagio_depois
+        +numeric confianca
+        +bool precisa_humano
+        +text motivo_humano
+        +text resumo
+        +text modelo
+        +text versao_do_prompt
+        +timestamptz created_at
+    }
+
     class deals {
         +uuid id PK
         +uuid workspace_id FK
@@ -702,6 +747,11 @@ classDiagram
 
     leads "1" --> "0..many" conversas : CASCADE
     conversas "1" --> "many" mensagens : CASCADE
+    leads "1" --> "0..1" prospeccao_prospect : SET NULL
+    workspaces "1" --> "0..many" prospeccao_prospect : SET NULL
+    prospeccao_prospect "1" --> "0..many" prospeccao_interacao : SET NULL
+    conversas "1" --> "0..many" prospeccao_interacao : CASCADE
+    mensagens "1" --> "0..1" prospeccao_interacao : CASCADE
 ```
 
 *Tabelas soltas, sem FK para nenhuma outra do schema `public`:

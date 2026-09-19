@@ -84,6 +84,8 @@ em 17/09. Quem procurar por ele está procurando o guia interativo.
 | Plano **Max** (R$ 250, coluna `plano` e `max_vigente`) | `supabase/migrations/0089_plano_max.sql` | 16/09 |
 | Direito ao WhatsApp, a árvore de 4 bloqueios | `lib/plans/max.ts` | 16/09 |
 | Como o plano se chama na tela (Free, Pro, Max) | `rotuloDoPlano` em `lib/plans.ts` | 17/09 |
+| **Qual plano a empresa TEM**, e a FUNÇÃO vence a coluna. A decisão mora aqui, e não espalhada em `plan === 'pro'` | `planoEfetivo` em `lib/plans.ts` | 19/09 |
+| Recusar assinar o Pro quando o DONO já paga por outra empresa (ramo 3 de `pro_vigente`) | `createCheckout` em `lib/asaas/actions.ts` | 19/09 |
 | Auditoria de arquitetura do Max e da Z-API | [docs/auditoria-whatsapp-max-2026-09-16.md](auditoria-whatsapp-max-2026-09-16.md) | 16/09 |
 
 ## WhatsApp no produto (plano Max, 16/09)
@@ -110,6 +112,13 @@ em 17/09. Quem procurar por ele está procurando o guia interativo.
 | Busca e filtros da caixa de entrada | `lib/conversas/filtrar.ts` | 16/09 |
 | Purga de instância órfã, para a cobrança parar | `lib/whatsapp/purga.ts` | 16/09 |
 | Adotar instância criada à mão (sem Partner) | `adotarInstancia` em `lib/whatsapp/actions.ts` | 16/09 |
+| **Reserva de instâncias já compradas**, para o cliente receber o QR na hora sem depender do dono | `lib/whatsapp/reserva.ts` | 19/09 |
+| A tela onde o dono cadastra a instância comprada (404 fora de localhost) | `app/(dono)/dono/reserva/page.tsx` | 19/09 |
+| Puxar da reserva sem corrida (`for update skip locked`) | `supabase/migrations/0097_a_reserva_de_instancias.sql` | 19/09 |
+| **Foto de perfil do contato**, cópia nossa no Storage (a URL do provedor expira em 10 dias) | `lib/whatsapp/foto.ts` | 19/09 |
+| O cron que busca as fotos, às :20 | `app/api/cron/buscar-fotos/route.ts` | 19/09 |
+| **Fila de reenvio** da mensagem que falhou, com escada de espera | `lib/whatsapp/reenvio.ts` | 18/09 |
+| O cron que drena a fila, às :10 e :40 | `app/api/cron/reenviar-mensagens/route.ts` | 18/09 |
 
 ## Integrações
 

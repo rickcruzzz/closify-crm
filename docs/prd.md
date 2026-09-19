@@ -149,12 +149,18 @@ dado real; o que não está tem o motivo escrito ao lado.
       29/08 (migration 0057)**: empresa nova nasce no Free
 - [x] Integrações (API) — Google Calendar e Gmail, com verificação OAuth do
       Google aprovada
-- [x] Conversas — caixa de entrada do WhatsApp dentro do produto, ordenada por
-      quem espera há mais tempo. **A tela está pronta; o transporte, não** (ver
-      o item abaixo)
-- [ ] WhatsApp conectável — sinalizado **"Em breve"** no produto, nos dois
-      planos. A conexão pela VPS (Evolution) foi construída e está desligada; o
-      destino é a **Cloud API oficial**, que exige CNPJ ativo antes de tudo
+- [x] Conversas — caixa de entrada do WhatsApp dentro do produto, com a
+      mensagem mais recente no topo e um relógio de quanto tempo cada cliente
+      espera. Quem não foi respondido fica acima de quem já foi
+- [x] **WhatsApp conectável, pela Z-API**, no plano **Max** (R$ 250 por empresa
+      conectada). Entregue em 16 e 17/09, e exercitado contra um número real em
+      18/09: 214 mensagens em 46 conversas na produção. Inclui QR na própria
+      tela, reserva de instâncias já compradas (para o cliente receber o QR na
+      hora, sem depender do dono), foto de perfil do contato, fila de reenvio
+      da mensagem que falhou, e aquecimento de 10/20/30 por hora para proteger
+      o número DO CLIENTE
+      
+      Este item era `[ ]` e dizia **"Em breve"** até 19/09
 - [x] Busca e Filtros — nome, e-mail, empresa, status, responsável, data
 - [x] Landing Page — dor do WhatsApp (não planilha), Free até 50 contatos
       (o trial de 7 dias saiu da página em 29/08, junto com a 0057), seção de
@@ -270,18 +276,31 @@ não persiste refresh token utilizável em background. Um escopo por conexão
 Google Calendar" na próxima ação do negócio, "Enviar e-mail" no painel do
 lead, os dois registram atividade na timeline.
 
-WhatsApp tem **dois mecanismos independentes**, e só um deles funciona hoje:
-o link `wa.me` (ver **WhatsApp por link**, abaixo), que nunca dependeu de token
-nenhum e continua ativo; e a conexão do número da empresa, construída sobre
-Evolution GO numa VPS própria e **desligada desde 26/08** (ver **WhatsApp: o
-que existe, e por que está desligado**, abaixo).
+WhatsApp tem **dois mecanismos independentes, e os dois funcionam**:
 
-A **Cloud API oficial** já foi implementada uma vez e removida em 13/08, quando
-a decisão foi não usá-la — nunca teve conexão real em produção. Ela voltou a
-ser o destino em 26/08, por motivo diferente do de então: não é mais "vale a
-pena?", é o que a fase 1 estruturalmente não entrega (fila com dono, relatório
-por atendente) somado ao risco de a Meta restringir um número não oficial. O
-que trava não é código, é o CNPJ.
+    link `wa.me`   em todos os planos. Nunca dependeu de token nenhum
+    Z-API          no plano Max, com o numero da EMPRESA conectado por QR
+
+`FASE_DO_WHATSAPP = 'zapi'` em `lib/integrations/whatsapp-estado.ts`. A
+constante diz que o PRODUTO tem caminho de WhatsApp, e não que uma empresa pode
+usar: quem responde isso é `direitoAoWhatsapp`, por empresa.
+
+**Estes três parágrafos diziam o contrário até 19/09**: que só o `wa.me`
+funcionava, que a conexão estava desligada desde 26/08, e que o destino era a
+Cloud API travada pelo CNPJ. As três coisas deixaram de valer em 16 e 17/09,
+quando a Z-API entrou.
+
+O histórico fica, porque ele explica a escolha:
+
+- **Evolution GO numa VPS própria** foi construída e removida em 28/08
+  (`c52a718`), porque o segredo do webhook era único para todas as empresas.
+  Ela continua de pé e serve à PROSPECÇÃO do dono, que não é multiempresa
+- **Cloud API oficial** foi implementada e removida em 13/08, sem nunca ter
+  tido conexão real. Voltou a ser o destino em 26/08 e deixou de ser: a Z-API
+  entrega o mesmo sem depender de aprovação da Meta
+- **O segredo do webhook agora é POR INSTÂNCIA e vai na URL**, e é ele a
+  identidade da empresa. Não existe campo de empresa no payload, então não
+  existe o que forjar: é o que impede o defeito de 28/08 de voltar
 
 **Busca e Filtros**
 Busca por nome, e-mail, empresa, status, responsável e data.
@@ -565,12 +584,15 @@ virava atividade no histórico do contato e, sem tarefa aberta, uma tarefa
 "Responder no WhatsApp" com prazo de 2h; número desconhecido criava contato
 novo, colocando quem chega pelo WhatsApp dentro do funil sozinho.
 
-**Desde 26/08 ela está desligada, e o produto diz isso.**
-`lib/integrations/whatsapp-estado.ts` tem uma única fonte de verdade
-(`FASE_DO_WHATSAPP = 'migrando'`), e dela saem o selo "Em breve" e o aviso na
-tela de Integrações — **nos dois planos**, Free e Pro. Vender como pronto o que
-não conecta seria a mesma classe do "contatos ilimitados" removido do hero em
-22/08.
+**Ela saiu em 28/08 (`c52a718`), e o que existe hoje é a Z-API.**
+`lib/integrations/whatsapp-estado.ts` continua sendo a fonte única, e hoje vale
+`FASE_DO_WHATSAPP = 'zapi'`. Ela dizia `'migrando'`, e dela saíam o selo "Em
+breve" e o aviso na tela de Integrações.
+
+A constante responde se o PRODUTO tem caminho de WhatsApp. Se uma EMPRESA pode
+usar é outra pergunta, e quem responde é `direitoAoWhatsapp`, pelo plano Max.
+Antes as duas tinham a mesma resposta: a ponte estava de pé para todos ou para
+ninguém.
 
 *Por que sair da VPS, e não ajustá-la.* Não é API oficial, e a Meta pode
 restringir o número sem aviso; desde janeiro/2026 a detecção olha fingerprint
@@ -1091,12 +1113,15 @@ Empresário que já vende bem, mas sente que perdeu controle da operação comer
 - Pagamento: Asaas (clientes, assinaturas, webhooks, Pix/boleto/cartão).
 - Deploy: Vercel.
 - Dev / IA: Cursor + Claude Code.
-- Analytics: Vercel Analytics. PostHog não está instalado, não existe nada
-  medindo ativação hoje.
-- WhatsApp: Evolution GO em VPS própria, **desligado desde 26/08**; o destino
-  é a WhatsApp Business Cloud API oficial, bloqueada por CNPJ. O link `wa.me`
-  segue ativo e não depende de nenhum dos dois.
-- Automação futura: n8n, Notion API, Linear API.
+- Analytics: Vercel Analytics. PostHog não está instalado. **A ativação É
+  medida** desde 31/08, sem rastreador de terceiro (`lib/analytics/ativacao.ts`
+  e `lib/dono/ativacao.ts`); esta linha dizia que nada media até 19/09.
+- WhatsApp: **Z-API**, no plano Max, com o número da empresa conectado por QR
+  (`lib/whatsapp/`). A Evolution GO na VPS própria continua de pé e serve à
+  PROSPECÇÃO do dono, que não é multiempresa. O link `wa.me` segue ativo em
+  todos os planos e não depende de nenhum dos dois.
+- Automação: **n8n em produção** desde 10/09, na VPS. Notion e Linear nunca
+  entraram e nada os pede.
 
 Selecione/adicione no formulário: Next.js, React, Tailwind CSS, shadcn/ui, Supabase, Vercel, Claude Code, Node.js, PostgreSQL, TypeScript, Resend (e-mails).
 

@@ -4,13 +4,35 @@ Documento de continuidade. É lido no começo de toda sessão (referenciado no
 [CLAUDE.md](../CLAUDE.md)) para que uma conversa nova, ou outra conta, comece
 sabendo o que já foi feito, o que foi decidido e onde estão as armadilhas.
 
-**Atualizado em:** 17/09/2026 (o plano Max nasceu como COLUNA e nao como
-terceiro valor do enum, tres das quatro tabelas que o pedido mandava criar ja
-existiam, e o caminho inteiro da Z-API entrou no mesmo dia — escrito, com os
-quatro portoes limpos, e NAO exercitado contra o provedor real; o Resend PROIBE e-mail frio e a chave dele e a mesma da recuperacao de
-senha; o disparo mudou de posicionamento e de canal; e doze rodadas de produto
-foram ao ar, sendo que tres eram alarme vermelho aparecendo onde nada esta
-errado)
+**Atualizado em:** 19/09/2026. O que mudou desde o carimbo de 17/09:
+
+    18/09   o primeiro numero REAL pareado, e a mensagem chegou ponta a ponta.
+            Foi ela que expos os webhooks apontando para um caminho sem rota
+    18/09   fotos de perfil na caixa (0096) e fila de reenvio (0095)
+    19/09   reserva de instancias (0097): qualquer pagante recebe o QR na
+            hora, sem depender de o dono estar acordado
+    19/09   a tela lia a COLUNA de plano e o banco le a FUNCAO. Quatro
+            empresas apareciam como Free pagando, e o checkout podia cobrar o
+            mesmo dono duas vezes
+    19/09   o gate de deploy passava sem testar: `sleep 90` nao e esperar
+
+O carimbo anterior dizia que o caminho da Z-API tinha sido escrito e **NAO
+exercitado contra o provedor real**. Isso deixou de valer em 18/09.
+
+> ## Este arquivo esta com 296 KB, e a regua ja existe
+>
+> O corte de agosto aconteceu em 04/09 **aos 250 KB**, e o motivo esta escrito
+> mais abaixo: ali ele "parou de funcionar como memoria", e numa mesma sessao
+> foi proposto construir algo que ja existia e estava descrito aqui dentro.
+>
+> Ele e importado com `@` no `CLAUDE.md`, ou seja carregado INTEIRO em toda
+> sessao. Medido em 19/09:
+>
+>     01 a 12/09        164,9 KB   <- o candidato ao corte
+>     perene + 15-19    125,8 KB
+>
+> **O dono decidiu nao cortar nesta rodada.** O numero fica escrito para a
+> decisao ser retomada com o dado na mao, em vez de redescoberta.
 
 ## A auditoria do tutorial, e o pior defeito estava na primeira frase (18/09)
 
