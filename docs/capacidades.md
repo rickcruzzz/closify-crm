@@ -80,7 +80,8 @@ em 17/09. Quem procurar por ele está procurando o guia interativo.
 | Reconciliar assinatura, diária | `app/api/cron/reconciliar-assinaturas/route.ts` | 13/08 |
 | Classificar acesso: pagante, trial, cortesia | `lib/dono/receita.ts` | 30/08 |
 | Preços e limites de plano, num lugar só | `lib/plans.ts` | 07/08 |
-| Plano **anual** (R$ 490, ciclo na assinatura) | `supabase/migrations/0070_ciclo_da_assinatura.sql` | 04/09 |
+| Plano **anual** (dez meses do ciclo, hoje R$ 970; o número sai de `PRO_ANUAL_PRICE`) | `supabase/migrations/0070_ciclo_da_assinatura.sql` | 04/09 |
+| Plano **Max anual** (`MAX_ANUAL_PRICE`, hoje R$ 2.500) | `lib/plans.ts` | 16/09 |
 | Plano **Max** (R$ 250, coluna `plano` e `max_vigente`) | `supabase/migrations/0089_plano_max.sql` | 16/09 |
 | Direito ao WhatsApp, a árvore de 4 bloqueios | `lib/plans/max.ts` | 16/09 |
 | Como o plano se chama na tela (Free, Pro, Max) | `rotuloDoPlano` em `lib/plans.ts` | 17/09 |
@@ -273,46 +274,54 @@ desde que o cartão de preço nasceu, e a tela nunca disse.
 
 ## O que NÃO existe, e é perguntado com frequência
 
-```
-importar conversa exportada do WhatsApp (.txt)   proposto em docs/dor-de-mercado.md,
-                                                 nenhuma linha escrita
-WhatsApp por API no PRODUTO                      a ponte saiu em 28/08 (c52a718) e
-                                                 FASE_DO_WHATSAPP segue 'migrando'. O
-                                                 webhook de 12/09 e da PROSPECCAO do
-                                                 dono, resolve a empresa pelo NOME no
-                                                 servidor, e nao devolve WhatsApp a
-                                                 nenhum cliente. A Fase 2 do Max
-                                                 (16/09) construiu o caminho inteiro
-                                                 pela Z-API — provider, webhooks, QR
-                                                 e envio —, e ele so vale para quem
-                                                 tem `max_vigente()`. FASE_DO_WHATSAPP
-                                                 passou a `zapi` no mesmo commit
-envio de MIDIA pelo CRM                          so texto sai. A caixa RECEBE audio,
-                                                 imagem, video, documento e figurinha
-                                                 e guarda a referencia; mandar de
-                                                 volta e Fase 3
-resposta sugerida por IA na conversa             Fase 3. O SDR existe e segue desligado
-conexao provada ponta a ponta                    as migrations ENTRARAM em 16/09, com
-                                                 24 provas contra producao. O que NAO
-                                                 foi exercitado e o provedor: nenhum
-                                                 numero foi pareado, e falta o
-                                                 ZAPI_PARTNER_TOKEN
-IA respondendo o prospect sozinha                o SDR existe e esta DESLIGADO. Nem a
-                                                 captura nem a classificacao o ligam
-ligacao prospect -> cliente pagante              NAO existe. O painel PARA em
-                                                 "interessados" de proposito: mostrar
-                                                 "0 pagaram" leria como "ninguem chega
-                                                 la", e a verdade e "nao ha como saber"
-resposta sugerida para o dono aprovar            Fase 3, nao escrita
-ranking por RECEITA                              depende da ligacao acima
-campos e etapas customizaveis                    deal_stage e enum, em 10 arquivos de codigo
-aprovacao online do orcamento pelo cliente       27% do mercado tem; o nosso e um
-                                                 RELOGIO (validade + cobranca), nao um
-                                                 fluxo de aprovacao — ver prd.md
-itens / catalogo de produtos no orcamento        23% do mercado; aqui e texto livre
-assinatura eletronica                            13% do mercado; nada escrito
-snapshot mensal de metricas                      nao ha tabela; por isso a landing
-                                                 nao mostra "+18% vs mes anterior"
-fila ou SLA de suporte                           nao existe; por isso "suporte
-                                                 prioritario" foi removido 3x
-```
+> **Esta seção esteve dentro de uma cerca de crases até 23/09, e a cerca a
+> tornava invisível para o vigia.** `scripts/ci/conferir-documentos.mjs` pula
+> tudo que está em bloco cercado quando procura carimbo, e exige crase em volta
+> do caminho quando procura citação — dentro da cerca não havia nenhuma. Ou
+> seja: a única seção do repositório cuja função é responder *"isso já existe?"*
+> era a única que o conferidor não conseguia ler.
+>
+> E ela cobrou: três afirmações falsas sobreviveram aqui, incluindo uma que
+> dizia `'migrando'` oito linhas acima de outra que dizia `'zapi'`, no mesmo
+> bloco. Fora da cerca, cada caminho citado passa a ser conferido.
+
+| o que não existe | onde isso está |
+|---|---|
+| importar conversa exportada do WhatsApp (`.txt`) | proposto em `docs/dor-de-mercado.md`, nenhuma linha escrita |
+| **envio de MÍDIA pelo CRM** | só texto sai. A caixa RECEBE áudio, imagem, vídeo, documento e figurinha e guarda a referência; mandar de volta é Fase 3. `lib/whatsapp/zapi.ts` só expõe `enviarTexto` |
+| resposta sugerida por IA na conversa | Fase 3. O SDR existe e segue desligado |
+| IA respondendo o prospect sozinha | o SDR existe e está DESLIGADO. Nem a captura nem a classificação o ligam |
+| ligação prospect para cliente pagante | NÃO existe. O painel PARA em "interessados" de propósito: mostrar "0 pagaram" leria como "ninguém chega lá", e a verdade é "não há como saber" |
+| resposta sugerida para o dono aprovar | Fase 3, não escrita |
+| ranking por RECEITA | depende da ligação acima |
+| campos e etapas customizáveis | `deal_stage` é enum, em 11 arquivos de código |
+| aprovação online do orçamento pelo cliente | 27% do mercado tem; o nosso é um RELÓGIO (validade mais lembrete), não um fluxo de aprovação. Ver `docs/prd.md` |
+| itens ou catálogo de produtos no orçamento | 23% do mercado; aqui é texto livre |
+| assinatura eletrônica | 13% do mercado; nada escrito |
+| snapshot mensal de métricas | não há tabela; por isso a landing não mostra "+18% vs mês anterior" |
+| fila ou SLA de suporte | não existe; por isso "suporte prioritário" foi removido 3x |
+| **provisionamento automático de instância** | `conectarWhatsapp` depende do Partner token da Z-API, que exige dez instâncias contratadas (R$ 899,90/mês fixos). Sem ele o caminho é `adotarInstancia` mais a reserva, e `provisionamentoAutomatico()` decide no servidor qual dos dois a tela mostra |
+
+### Três afirmações que estavam AQUI e eram falsas
+
+Corrigidas em 23/09, e o registro fica porque a lição não é sobre estas três:
+
+    "FASE_DO_WHATSAPP segue 'migrando'"
+        Vale `'zapi'` desde 16/09, em `lib/integrations/whatsapp-estado.ts`. E
+        o MESMO bloco dizia isso oito linhas abaixo. Duas verdades opostas no
+        mesmo parágrafo, num arquivo cuja função é responder o que existe
+
+    "WhatsApp por API no PRODUTO nao existe"
+        Existe desde 16/09 para quem tem `max_vigente()`: provider, três
+        webhooks, QR na tela, reserva de instâncias e fila de reenvio. A linha
+        descrevia a remoção de 28/08 como se fosse o estado de hoje
+
+    "nenhum numero foi pareado"
+        O primeiro número real foi pareado em 18/09, e foi ele que expôs os
+        webhooks apontando para um caminho sem rota. A outra metade da frase
+        continua verdadeira e virou linha própria: o `ZAPI_PARTNER_TOKEN` não
+        está no `.env.local`
+
+**O padrão das três é o mesmo:** cada uma foi escrita quando era verdade, e
+nenhuma foi reconsiderada quando o produto andou. É exatamente o que este
+arquivo existe para evitar, acontecendo dentro dele.

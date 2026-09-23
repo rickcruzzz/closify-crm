@@ -4,7 +4,30 @@ Documento de continuidade. É lido no começo de toda sessão (referenciado no
 [CLAUDE.md](../CLAUDE.md)) para que uma conversa nova, ou outra conta, comece
 sabendo o que já foi feito, o que foi decidido e onde estão as armadilhas.
 
-**Atualizado em:** 19/09/2026. O que mudou desde o carimbo de 17/09:
+**Atualizado em:** 23/09/2026. O que mudou desde o carimbo de 19/09:
+
+    23/09   AUDITORIA COMPLETA do sistema, pedida pelo dono. Os quatro
+            portoes passavam e NENHUM dos achados era visivel para eles
+
+    23/09   `exigirAmbienteLocal()` sem `await` numa Server Action que grava
+            credencial de provedor com `service_role`, em tabela com zero
+            policies. O portao rodava, falhava, e nao parava nada
+    23/09   a instancia Z-API MORREU em 19/09 e o banco dizia "conectado".
+            Nada reconciliava, porque o provedor nao manda evento para
+            "deixou de ser paga"
+    23/09   webhook do Asaas interrompido pela OITAVA vez em quinze dias. O
+            vigia avisou; o degrau humano e que nao aconteceu
+    23/09   `now()` no lugar de `greatest()` APAGAVA tempo ja pago quando o
+            evento irmao chegava atrasado. No anual, catorze dias
+    23/09   a reconciliacao so olhava `trialing` e `past_due`: estorno perdido
+            numa janela de webhook ficava `active` para sempre
+    23/09   quem paga R$ 250 no Max recebia comprovante dizendo R$ 97
+    23/09   cancelar cortava o acesso na hora, contra os proprios Termos
+    23/09   `O que NAO existe`, em `capacidades.md`, estava dentro de uma cerca
+            de crases: a unica secao que responde "isso ja existe?" era a unica
+            que o vigia nao conseguia ler
+
+O que mudou desde o carimbo de 17/09:
 
     18/09   o primeiro numero REAL pareado, e a mensagem chegou ponta a ponta.
             Foi ela que expos os webhooks apontando para um caminho sem rota
@@ -5477,7 +5500,7 @@ registrado como próximo passo se a base provar valor.
 | **Google Sheets por API está fora**         | Exige `GOOGLE_CLIENT_ID`/`SECRET` e verificação do app pelo Google (semanas). A importação de planilha já cobre a dor                                          |
 | **`read-excel-file`, não `xlsx` nem `exceljs`** | O `xlsx` do npm está parado em 0.18.5 com CVE-2023-30533 e CVE-2024-22363, sem correção publicada lá; o `exceljs` está sem release há anos                |
 | **Lead precisa de e-mail OU telefone**      | A planilha do público-alvo é lista de WhatsApp. Com `email not null` ela importava zero linhas (migration 0025)                                               |
-| **WhatsApp: só o link `wa.me`, sem Cloud API**| A Cloud API foi implementada em 12/08 e removida em 13/08 (decisão de produto, nunca teve conexão real em produção), o link `wa.me` nunca dependeu dela e continua existindo |
+| **A Cloud API oficial da Meta fica fora** | Implementada em 12/08 e removida em 13/08, nunca teve conexão real. **O WhatsApp DENTRO do CRM existe desde 16/09, pela Z-API**, no plano Max: `lib/whatsapp/` tem 19 arquivos, três webhooks e oito migrations. Esta linha dizia *"só o link `wa.me`"* até 23/09, numa tabela cujo título é "não refazer" — quem a lesse concluiria que não há WhatsApp e proporia construí-lo de novo |
 | **Meta Lead Ads ainda adiado**              | Puxar lead da página de um cliente exige OAuth dele + App Review (semanas) + verificação de negócio, degrau acima do que o CNPJ ativo resolve sozinho. Guardar o padrão certo: webhook **mais** job de reconciliação, porque o Meta só guarda 90 dias |
 | **IA / lead scoring fora**                  | Com 50 leads é ruído caro. O funil já pontua sozinho: negócio sem próxima ação e tarefa vencida são o sinal |
 | **GA4 fora**                                | Ferramenta de site, não de app logado, mediria pageview, não ativação, e traria banner de cookie por LGPD. A necessidade é real; a ferramenta é que estava errada |

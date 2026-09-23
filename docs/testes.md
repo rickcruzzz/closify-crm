@@ -25,9 +25,15 @@ pegava porque `.yml` não estava na lista de extensões que ele confere.
 
 ## O que existe, em números
 
-<!-- contagem: testes.arquivos>=85 -->
-- **Mais de 85 arquivos de teste unitário** (Vitest, `lib/**/*.test.ts`), e
-  **1.013 testes** na última execução. Cobrem só lógica pura — schema de validação, parser de
+<!-- contagem: testes.arquivos=145 e2e.specs=4 -->
+- **145 arquivos de teste unitário** (Vitest, `lib/**/*.test.ts`), e
+  **2.130 testes** na última execução, medida em 23/09.
+
+  O carimbo era `testes.arquivos>=85` e passava limpo dizendo 65% a menos do
+  que existe. Piso é a decisão certa onde o crescimento é rotineiro, e aqui ele
+  tinha deixado de informar — o oposto do que acontece com o grafo, que cresce
+  a cada commit. Agora é exato, e quem acrescentar um arquivo de teste atualiza
+  o número junto. Cobrem só lógica pura — schema de validação, parser de
   CSV/planilha, formatador de data/telefone, medidor de força de senha,
   criptografia de token, template de e-mail. Deliberadamente sem
   componente/DOM: `vitest.config.mts` roda em `environment: 'node'`.
@@ -69,7 +75,7 @@ pegava porque `.yml` não estava na lista de extensões que ele confere.
 classDiagram
     class TestesUnitarios {
         <<Vitest — lib/**/*.test.ts>>
-        88 arquivos, 1.013 testes
+        145 arquivos, 2.130 testes
         environment: node
     }
 
@@ -139,9 +145,9 @@ classDiagram
 
     class WorkflowCI {
         <<.github/workflows/deploy-com-auditoria.yml>>
-        EXISTE NO DISCO, NÃO NO REPOSITÓRIO
-        build → security-audit → promove prod
-        nunca rodou de verdade
+        VERSIONADO desde 19/08
+        tsc + lint + test + build, depois security-audit
+        promove: o clique final continua manual
     }
 
     class BancoDeProducao {
@@ -181,7 +187,7 @@ sequenceDiagram
     TSC-->>Dev: erro de tipo? para aqui, corrige antes de seguir
     Dev->>Lint: roda manualmente
     Lint-->>Dev: warning/erro? corrige antes de seguir
-    Dev->>Vitest: roda manualmente (1.013 testes)
+    Dev->>Vitest: roda manualmente (2.130 testes)
     Vitest-->>Dev: falha? o teste documenta QUAL defeito pegou
     Dev->>Build: roda manualmente
     Build-->>Dev: build quebrado? não segue para commit
@@ -207,19 +213,18 @@ sequenceDiagram
 
 ## O que falta para o "robô" do slide existir de verdade
 
-1. **Colocar `deploy-com-auditoria.yml` no repositório.** Precisa de um
-   `git push` com token/PAT com escopo `workflow`, ou upload manual pelo
-   painel do GitHub — já documentado em `docs/estado-atual.md`, "Gate de
-   segurança no deploy".
-2. **Secrets da Vercel no GitHub** (`VERCEL_TOKEN`, `VERCEL_ORG_ID`,
-   `VERCEL_PROJECT_ID`) e **desligar o deploy automático nativo da Vercel**
-   para `main` — sem isso a Vercel promove em paralelo ao Actions e o gate
-   não impede nada.
-3. **Somar `npm test` ao workflow**, hoje ele só roda `security-audit.spec.ts`
-   E2E; os 1.013 testes unitários não fazem parte do gate de CI nenhum, só do
-   checklist manual do desenvolvedor.
-4. **Alerta automático quando `error_logs` recebe uma linha nova** — hoje é
+**Os três primeiros itens desta lista foram concluídos em 19/08, e a lista
+continuou pedindo por eles até 23/09.** Ficam registrados, riscados, porque ler
+"falta pôr o workflow no repositório" sobre um workflow versionado é o tipo de
+afirmação que faz alguém refazer trabalho feito:
+
+    [x] por `deploy-com-auditoria.yml` no repositorio
+    [x] secrets da Vercel no GitHub, e desligar o deploy automatico
+    [x] somar `npm test` ao workflow — os quatro portoes rodam la desde
+        que o arquivo entrou: `tsc`, `lint`, `test` e `build`
+
+1. **Alerta automático quando `error_logs` recebe uma linha nova** — hoje é
    consulta manual (SQL/MCP), sem push/e-mail/Slack quando algo quebra.
 
-Nenhum destes é grande, mas nenhum está feito. O diagrama de sequência acima
+Este é o único que continua de pé. O diagrama de sequência acima
 é o estado real; a lista acima é o caminho até o estado que o slide descreve.

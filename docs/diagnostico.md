@@ -127,10 +127,10 @@ precisaDeOnboarding    lib/onboarding/estado.ts
 limparWorkspaceAtivo   lib/workspace/ativo.ts
 rotuloDoSegmento       lib/validations/onboarding.ts
 ehProviderGoogle       lib/integrations/google.ts
-lib/mock-data.ts       arquivo inteiro, 17 linhas, nunca importado
+lib/mock-data.ts       APAGADO em 23/09, depois de dois meses citado aqui
 ```
 
-`lib/mock-data.ts` guarda três empresas fictícias de uma versão que não existe
+`lib/mock-data.ts` guardava três empresas fictícias de uma versão que não existe
 mais. Uma delas se chama "Agência Nova Era", que **por coincidência é o nome de
 um workspace real** no banco — o mesmo do alerta de domínio digitado errado.
 Confusão esperando para acontecer numa busca futura.
