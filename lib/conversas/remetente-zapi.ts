@@ -1,8 +1,10 @@
 import 'server-only'
 
 import type { Remetente, ResultadoDoEnvio } from '@/lib/conversas/remetente'
+import { explicacaoDoTeto, tetoPorHora } from '@/lib/conversas/aquecimento'
 import { credenciaisDaEmpresa } from '@/lib/whatsapp/instancia'
 import { enviarTexto, ZapiError } from '@/lib/whatsapp/zapi'
+import { corpoDeErroNoLog } from '@/lib/log/redigir'
 
 /**
  * O `Remetente` que entrega pela Z-API.
@@ -44,39 +46,14 @@ import { enviarTexto, ZapiError } from '@/lib/whatsapp/zapi'
  * o número sempre tem teto.
  */
 
-const UMA_HORA = 60 * 60 * 1000
-const UM_DIA = 24 * UMA_HORA
-
-function diasDeConexao(conectadoEm: string | null): number {
-  if (!conectadoEm) return 0
-  const inicio = new Date(conectadoEm).getTime()
-  // Data ilegível conta como conexão NOVA, que é o lado seguro: o pior que
-  // acontece é uma empresa antiga mandar devagar por uma hora, contra um número
-  // novo mandando 30 e sendo derrubado.
-  if (!Number.isFinite(inicio)) return 0
-  return Math.max(0, Math.floor((Date.now() - inicio) / UM_DIA))
-}
-
 export const remetenteZapi: Remetente = {
   nome: 'Z-API',
 
-  tetoPorHora(conectadoEm) {
-    const dias = diasDeConexao(conectadoEm)
-    if (dias < 7) return 10
-    if (dias < 21) return 20
-    return 30
-  },
-
-  explicacaoDoTeto(conectadoEm) {
-    const dias = diasDeConexao(conectadoEm)
-    if (dias < 7) {
-      return 'Número conectado há menos de uma semana: 10 mensagens por hora enquanto ele aquece. É o que protege o número de ser bloqueado pelo WhatsApp.'
-    }
-    if (dias < 21) {
-      return 'Número em aquecimento: 20 mensagens por hora até completar três semanas de uso.'
-    }
-    return 'Número aquecido: 30 mensagens por hora.'
-  },
+  // A escada saiu para `./aquecimento`, pura e com teste. Ela sempre foi
+  // pura; o que a prendia aqui era este arquivo importar `server-only` por
+  // transitividade, o que impede o Vitest de carregá-lo.
+  tetoPorHora,
+  explicacaoDoTeto,
 
   async enviarTexto(workspaceId, numero, texto): Promise<ResultadoDoEnvio> {
     const instancia = await credenciaisDaEmpresa(workspaceId)
@@ -101,7 +78,9 @@ export const remetenteZapi: Remetente = {
         // 405 e 415 são erro NOSSO de chamada (método ou content-type), e a
         // pessoa não tem o que fazer com eles — por isso caem no genérico.
         if (erro.status === 401 || erro.status === 403) {
-          console.error('remetenteZapi: credencial recusada', erro.corpo)
+          // O corpo REDIGIDO, e este ramo e a razao do redator existir: 401
+          // e 403 sao onde um provedor ecoa a requisicao, e com ela o token.
+          console.error('remetenteZapi: credencial recusada', corpoDeErroNoLog(erro.corpo))
           return {
             ok: false,
             motivo: 'O WhatsApp desta empresa perdeu a autorização. Reconecte em Configurações.',
@@ -122,13 +101,16 @@ export const remetenteZapi: Remetente = {
         if (erro.status === 400) {
           // Quase sempre número inválido, e é o único 4xx que a pessoa conserta
           // sozinha — conferindo o telefone do contato.
-          console.error('remetenteZapi: requisição recusada', erro.corpo)
+          console.error('remetenteZapi: requisição recusada', corpoDeErroNoLog(erro.corpo))
           return {
             ok: false,
             motivo: 'O WhatsApp recusou este número. Confira o telefone do contato.',
           }
         }
-        console.error(`remetenteZapi: ${erro.status} em ${erro.caminho}`, erro.corpo)
+        console.error(
+          `remetenteZapi: ${erro.status} em ${erro.caminho}`,
+          corpoDeErroNoLog(erro.corpo),
+        )
         return { ok: false, motivo: 'O provedor de WhatsApp não respondeu. Tente de novo.' }
       }
 
