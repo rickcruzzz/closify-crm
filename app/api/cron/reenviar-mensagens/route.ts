@@ -2,6 +2,7 @@ import { timingSafeEqual } from 'node:crypto'
 
 import { NextResponse } from 'next/server'
 
+import { conferirConexoes } from '@/lib/whatsapp/conferir-conexao'
 import { reenviarMensagensQueFalharam } from '@/lib/whatsapp/reenvio-fila'
 
 /**
@@ -70,12 +71,30 @@ export async function GET(requisicao: Request) {
   }
 
   try {
-    const r = await reenviarMensagensQueFalharam({ teto: 40 })
+    // ## As duas em PARALELO, e a ordem entre elas não importa
+    //
+    // São independentes: uma lê `mensagens`, a outra lê `whatsapp_instances`.
+    // Em série a rota somaria as duas latências por nada.
+    //
+    // ## A conferência mora AQUI, e não num cron próprio
+    //
+    // Esta rota já roda aos :10 e :40 e já fala com a Z-API. Cron próprio
+    // seria mais uma entrada para falhar em silêncio, que é o argumento que a
+    // purga de instâncias usou em 17/09 para morar dentro da reconciliação de
+    // assinaturas.
+    const [r, conexao] = await Promise.all([
+      reenviarMensagensQueFalharam({ teto: 40 }),
+      conferirConexoes(),
+    ])
 
     // `desistidas` sai no corpo e não só no log: um cron que devolve `ok: true`
     // escondendo falha é o defeito que `classificar-respostas` carregou até
     // 18/09, com 20 de 20 falhando dentro de um `ok`.
-    return NextResponse.json({ ok: true, ...r })
+    //
+    // `conexao` sai junto pela mesma razão: `derrubadas: 0` e `conferidas: 0`
+    // dizem coisas diferentes, e sem os dois números um cron que parou de
+    // listar instâncias pareceria um cron sem trabalho a fazer.
+    return NextResponse.json({ ok: true, ...r, conexao })
   } catch (e) {
     console.error('reenviar-mensagens falhou', e)
     return NextResponse.json(

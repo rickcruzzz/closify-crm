@@ -256,7 +256,20 @@ export default async function SettingsPage({
           isAdmin={isAdmin}
           connections={integrationConnections}
           uso={usoDasIntegracoes}
-          plano={workspace?.plan ?? 'free'}
+          // ## O ÚLTIMO lugar desta página que lia a coluna
+          //
+          // As linhas acima já montam `plano` com `planoEfetivo()`, que lê a
+          // FUNÇÃO. Esta passava `workspace.plan` cru, e a varredura de 19/09
+          // passou por este arquivo e deixou ela.
+          //
+          // O efeito não era cosmético: empresa coberta pelo ramo 3 de
+          // `pro_vigente` (o dono paga na empresa A e usa na B) tem
+          // `plan = 'free'` na coluna, então o card pintava o Google Calendar
+          // como "Pausado" e trocava o botão por "Conhecer o plano Pro" —
+          // num recurso que `/api/integrations/google/connect` libera, porque
+          // LÁ a regra lê a função. Banco liberta, tela prende, em cliente
+          // pagante. Cinco empresas estavam nesse estado em 23/09.
+          plano={plano}
         />
       )}
     </div>
