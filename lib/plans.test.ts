@@ -39,7 +39,7 @@ describe('limite de plano: o off-by-one e o caminho', () => {
    * botão — e ela reconhece as SETE, escritas como estão hoje no código.
    */
   it.each([
-    'Plano Free permite no máximo 50 leads. Faça upgrade para o Pro para continuar.',
+    'Plano Free permite no máximo 50 contatos. Faça upgrade para o Pro para continuar.',
     'Plano Free permite no máximo 2 membros. Faça upgrade para o Pro para convidar mais.',
     'O plano Free inclui 1 empresa. Faça upgrade para o Pro para gerenciar várias.',
     'O plano Free acompanha 3 orçamentos ao mesmo tempo. Feche um negócio ou faça upgrade para o Pro para acompanhar quantos quiser.',

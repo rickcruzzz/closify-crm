@@ -61,7 +61,17 @@ export async function canAddLead(workspaceId: string): Promise<LimitCheck> {
   if ((count ?? 0) >= FREE_LEAD_LIMIT) {
     return {
       allowed: false,
-      reason: `Plano Free permite no máximo ${FREE_LEAD_LIMIT} leads. Faça upgrade para o Pro para continuar.`,
+      // "contatos", nao "leads", e a palavra e o conserto.
+      //
+      // A trigger `checar_limite_de_leads` levanta *"Plano Free permite no
+      // maximo % contatos"* desde a 0052, que foi a ultima a redefini-la. O
+      // banco trocou a palavra e o TypeScript nao: quem batia no teto via uma
+      // frase pela tela e outra pelo erro da trigger, dependendo de qual dos
+      // dois caminhos barrasse primeiro.
+      //
+      // E "contatos" e o que a tela chama: o item do menu, o titulo da pagina
+      // e o botao dizem Contatos. "Leads" e nome de tabela.
+      reason: `Plano Free permite no máximo ${FREE_LEAD_LIMIT} contatos. Faça upgrade para o Pro para continuar.`,
     }
   }
 
