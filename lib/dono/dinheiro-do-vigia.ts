@@ -2,6 +2,7 @@ import 'server-only'
 
 import { asaasFetch } from '@/lib/asaas/client'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { assinaturaEstaViva } from '@/lib/asaas/assinatura-viva'
 
 /**
  * As duas perguntas de dinheiro que o vigia precisa fazer, e só elas.
@@ -56,7 +57,7 @@ export async function contarAssinaturasSemPro(): Promise<number> {
   // `deleted` é o descarte real: uma assinatura cancelada continua aparecendo
   // com `status: ACTIVE` e `deleted: true`, e contá-la inflaria o alerta com
   // gente que já saiu.
-  const vivas = data.filter((a) => a.status === 'ACTIVE' && !a.deleted)
+  const vivas = data.filter(assinaturaEstaViva)
   if (vivas.length === 0) return 0
 
   /**

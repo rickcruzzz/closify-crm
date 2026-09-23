@@ -21,7 +21,6 @@ import {
   CICLOS,
   PLANO_NA_TELA,
   PRO_PLAN_PRICE,
-  valorDoCiclo,
   valorDoPlano,
 } from '@/lib/plans'
 import { CONTROLADOR } from '@/lib/legal'
@@ -470,10 +469,17 @@ export async function createCheckout(values: unknown) {
       // de novo depois de fechar o diálogo cairia como segunda intenção de
       // compra, inflando o número que a campanha usa para otimizar.
       eventId: `checkout:${subscriptionId}`,
-      // O valor do ciclo escolhido, nao a constante mensal: reportar um
-      // checkout de R$ 490 como R$ 49 ensinaria a Meta que o comprador anual
-      // vale o mesmo que o mensal, e ela pararia de procurar o anual.
-      valor: valorDoCiclo(ciclo),
+      // O valor do PLANO no ciclo escolhido, não a constante mensal do Pro.
+      //
+      // O argumento original vale entre ciclos: reportar um checkout anual
+      // como mensal ensinaria a Meta que o comprador anual vale o mesmo. Ele
+      // vale igual entre PLANOS, e era aí que esta linha errava — todo início
+      // de checkout de Max ia como R$ 97.
+      //
+      // Duas linhas acima, `:348`, o valor que vai ao Asaas já usava
+      // `valorDoPlano`. O gateway recebia 250 e a Meta recebia 97, no mesmo
+      // bloco.
+      valor: valorDoPlano(plano, ciclo),
       userId: user.id,
       fbc: workspace.fbc,
       fbp: workspace.fbp,
@@ -573,9 +579,26 @@ export async function cancelSubscription(values: unknown) {
 
   const { error: erroStatus } = await admin
     .from('subscriptions')
-    .update({ status: 'canceled' })
+    .update({
+      status: 'canceled',
+      // ## A marca é o que separa "parei de renovar" de "meu dinheiro voltou"
+      //
+      // Os dois produzem `status = 'canceled'`, e pedem tratamento oposto: no
+      // primeiro o dinheiro do ciclo ficou conosco, no segundo voltou.
+      //
+      // `assinatura_compra_acesso` (0098) só preserva o período pago quando
+      // esta coluna está preenchida, então estorno e chargeback continuam
+      // cortando na hora. É o que os Termos prometem na seção 5, palavra por
+      // palavra: *"o acesso ao plano pago permanece até o fim do período já
+      // pago"*.
+      cancelado_pelo_cliente_em: new Date().toISOString(),
+    })
     .eq('workspace_id', workspaceId)
 
+  // A COLUNA desce na hora, e a FUNÇÃO é que decide o acesso. Não é
+  // contradição: `workspaces.plan` é o último valor gravado e nunca foi fonte
+  // de verdade — `planoEfetivo()` lê `pro_vigente()` e vai mostrar "Pro" até o
+  // fim do período pago, que é o certo. Os limites leem a função direto.
   const { error: erroPlano } = await admin
     .from('workspaces')
     .update({ plan: 'free' })
