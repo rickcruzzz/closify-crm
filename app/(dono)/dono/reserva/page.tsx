@@ -37,7 +37,11 @@ export const dynamic = 'force-dynamic'
  * número de cliente. Nem o admin da própria empresa tem o que fazer com isto.
  */
 export default async function ReservaPage() {
-  exigirAmbienteLocal()
+  // `await` obrigatório: sem ele o `notFound()` vira promise rejeitada que
+  // ninguém observa, e a página segue montando. O `layout.tsx` ainda seguraria,
+  // mas isto é a terceira camada que ele próprio documenta, e camada que não
+  // roda não é camada.
+  await exigirAmbienteLocal()
 
   // Em paralelo: são duas leituras independentes, e em série a tela pagaria as
   // duas idas ao banco somadas.

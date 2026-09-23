@@ -20,6 +20,22 @@ import { guardarNaReserva } from '@/lib/whatsapp/reserva'
  * Aqui não há RLS para segurar atrás dele — a tabela tem zero policies e a
  * escrita é por `service_role`. O gate é a única porta, e por isso ele vem
  * ANTES de ler o payload.
+ *
+ * ## O `await` não é estilo, é o gate inteiro
+ *
+ * `exigirAmbienteLocal` é `async`. Sem o `await`, o `notFound()` rejeita uma
+ * promise que ninguém observa e **a execução continua**: o schema valida e
+ * `guardarNaReserva` grava a credencial do provedor. O portão roda, falha, e
+ * não para nada.
+ *
+ * E a ação existe no build de produção mesmo com a página em 404, porque
+ * `components/dono/reserva-de-instancias.tsx` a importa e o action-id é
+ * emitido. Quem envenenasse a reserva entregaria uma instância controlada por
+ * ele ao próximo cliente que pagasse o Max, e passaria a ler o WhatsApp desse
+ * cliente.
+ *
+ * Nenhum dos quatro portões pega: `@typescript-eslint/no-floating-promises` é
+ * type-aware e estava desligada. Ligada junto com esta correção.
  */
 
 const reservaSchema = z.object({
@@ -39,7 +55,7 @@ const reservaSchema = z.object({
 export async function cadastrarNaReserva(
   valores: unknown,
 ): Promise<{ ok: boolean; error?: string }> {
-  exigirAmbienteLocal()
+  await exigirAmbienteLocal()
 
   const lido = reservaSchema.safeParse(valores)
   if (!lido.success) {
