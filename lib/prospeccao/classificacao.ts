@@ -51,6 +51,43 @@ export const INTENCOES = [
 ] as const
 export type Intencao = (typeof INTENCOES)[number]
 
+/**
+ * A intenção que o MODELO nunca devolve, porque ela é decidida antes dele.
+ *
+ * ## Por que ela fica fora de `INTENCOES`
+ *
+ * `INTENCOES` alimenta o prompt (`classificar.ts:94`), e tudo que entra nessa
+ * lista vira uma opção que o modelo pode escolher. Robô não é uma escolha de
+ * modelo: a 0087 mediu que **o TEMPO é a prova, não o texto** — 25 de 27
+ * respostas automáticas chegaram em até 60 segundos, e nenhuma depois de cinco
+ * minutos.
+ *
+ * Mandar a resposta de um robô ao modelo é pagar pelo que já se sabe, e a
+ * medição de 12/09 diz o que ele responderia: `SPAM`, que era o balde dele
+ * para tudo que não entendia. `SPAM` não chama humano, então a resposta
+ * automática sumiria em silêncio.
+ *
+ * ## O valor existe no banco desde a 0087, e ninguém escrevia
+ *
+ * A migration acrescentou `RESPOSTA_AUTOMATICA` ao `check` de `intencao` para
+ * o robô poder ser ROTULADO em vez de contado como resposta humana — o defeito
+ * que fez 18 das 47 primeiras mensagens virarem uma taxa de resposta de 38%,
+ * contra os 3,8% a 7,2% que o setor responde.
+ *
+ * A lista do TypeScript nunca recebeu o valor, então nada o escrevia. Achado
+ * em 23/09 pelo teste que reconcilia as duas listas.
+ */
+export const INTENCAO_DE_ROBO = 'RESPOSTA_AUTOMATICA' as const
+
+/**
+ * Tudo que pode ser GRAVADO em `prospeccao_interacao.intencao`.
+ *
+ * É a união do que o modelo devolve com o que o caminho determinístico
+ * escreve, e é esta lista que tem que bater com o `check` da 0087.
+ */
+export const INTENCOES_GRAVAVEIS = [...INTENCOES, INTENCAO_DE_ROBO] as const
+export type IntencaoGravada = (typeof INTENCOES_GRAVAVEIS)[number]
+
 export const OBJECOES = [
   'PRECO',
   'TEMPO',

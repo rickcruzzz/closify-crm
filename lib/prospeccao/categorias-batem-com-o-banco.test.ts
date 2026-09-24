@@ -3,7 +3,14 @@ import { join } from 'node:path'
 
 import { describe, expect, it } from 'vitest'
 
-import { ESTAGIOS, INTENCOES, OBJECOES, TEMPERATURAS } from '@/lib/prospeccao/classificacao'
+import {
+  ESTAGIOS,
+  INTENCAO_DE_ROBO,
+  INTENCOES,
+  INTENCOES_GRAVAVEIS,
+  OBJECOES,
+  TEMPERATURAS,
+} from '@/lib/prospeccao/classificacao'
 
 /**
  * As quatro listas fechadas existem em DOIS lugares, e este teste é o que
@@ -64,7 +71,7 @@ function valoresDoCheck(coluna: string): string[] {
 }
 
 const PARES = [
-  ['intencao', INTENCOES],
+  ['intencao', INTENCOES_GRAVAVEIS],
   ['objecao', OBJECOES],
   ['temperatura', TEMPERATURAS],
   ['estagio', ESTAGIOS],
@@ -80,18 +87,18 @@ const PARES = [
  *     banco tem e o TS não    nada escreve aquele valor. Schema morto
  *
  * O primeiro é falha dura. O segundo é uma pendência, e ela fica listada aqui
- * com o motivo: acrescentar um valor novo ao `check` sem ligá-lo no código
- * reprova, mas os já conhecidos não travam o portão.
+ * com o motivo.
  *
- * `RESPOSTA_AUTOMATICA` entrou no banco pela 0087, que nasceu porque as 47
- * primeiras mensagens do disparo real produziram 18 "respostas" e NENHUMA era
- * pessoa. A migration criou o valor para o robô poder ser rotulado em vez de
- * contado como resposta humana; a lista do TypeScript nunca recebeu, então o
- * prompt não ensina a categoria ao modelo e ela nunca é escrita.
+ * **Hoje o mapa está VAZIO, e isso é o resultado.** `RESPOSTA_AUTOMATICA` era
+ * a única entrada: entrou no banco pela 0087, porque as 47 primeiras mensagens
+ * do disparo real produziram 18 "respostas" e NENHUMA era pessoa. A lista do
+ * TypeScript nunca recebeu, então nada o escrevia.
+ *
+ * Em 23/09 ele foi ligado — pelo caminho determinístico, e não pelo modelo. Um
+ * robô é decidido pelo TEMPO, que a 0087 mediu, e mandá-lo ao modelo seria
+ * pagar pelo que já se sabe. Ver `INTENCAO_DE_ROBO`.
  */
-const ACEITOS_E_NUNCA_ESCRITOS: Record<string, string[]> = {
-  intencao: ['RESPOSTA_AUTOMATICA'],
-}
+const ACEITOS_E_NUNCA_ESCRITOS: Record<string, string[]> = {}
 
 describe('as categorias do TypeScript são exatamente as do banco', () => {
   it.each(PARES)('%s: o TypeScript nunca produz o que o banco recusa', (coluna, lista) => {
@@ -123,5 +130,36 @@ describe('as categorias do TypeScript são exatamente as do banco', () => {
     expect(valoresDoCheck('intencao')).toContain('PEDIU_PRECO')
     expect(valoresDoCheck('temperatura')).toContain('quente')
     expect(valoresDoCheck('coluna_que_nao_existe')).toEqual([])
+  })
+})
+
+/**
+ * A intenção do robô é gravável, e o modelo NUNCA pode escolhê-la.
+ *
+ * `INTENCOES` alimenta o prompt em `classificar.ts:94`: tudo que entra nessa
+ * lista vira opção oferecida ao modelo. Se `RESPOSTA_AUTOMATICA` entrasse ali,
+ * o modelo passaria a rotular como robô o que ele ACHA que é robô — e a 0087
+ * mediu que o texto não pega: um agente de IA respondeu em ~70s lendo a
+ * mensagem, com uma pergunta sobre orçamento. O que pega é o TEMPO.
+ */
+describe('a intenção do robô fica fora do prompt', () => {
+  it('o modelo não recebe RESPOSTA_AUTOMATICA como opção', () => {
+    expect(Array.from(INTENCOES as readonly string[])).not.toContain(INTENCAO_DE_ROBO)
+  })
+
+  it('mas ela PODE ser gravada', () => {
+    expect(Array.from(INTENCOES_GRAVAVEIS as readonly string[])).toContain(INTENCAO_DE_ROBO)
+  })
+
+  /**
+   * O CONTROLE: a lista gravável é a do prompt mais exatamente um valor. Sem
+   * isto, alguém poderia acrescentar categorias graváveis sem ninguém notar
+   * que elas também não chegam ao modelo.
+   */
+  it('a diferença entre as duas listas é UM valor, e é esse', () => {
+    const soGravaveis = Array.from(INTENCOES_GRAVAVEIS as readonly string[]).filter(
+      (v) => !Array.from(INTENCOES as readonly string[]).includes(v),
+    )
+    expect(soGravaveis).toEqual([INTENCAO_DE_ROBO])
   })
 })
