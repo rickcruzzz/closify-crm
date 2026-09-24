@@ -341,8 +341,8 @@ uma rodada antiga —, e nada na resposta de uma consulta avisava disso. Só
 instalado na pasta pessoal do usuário, fora daqui. O que foi retirado está
 inteiro em `graphify-out/arquivo/`, nada foi descartado.
 
-<!-- contagem: grafo.nos_sem_arquivo=127 -->
-**127 nós não têm arquivo de origem, e nenhum deles é fantasma.** A grande
+<!-- contagem: grafo.nos_sem_arquivo=135 -->
+**135 nós não têm arquivo de origem, e nenhum deles é fantasma.** A grande
 maioria são objetos do banco que o extrator representa sem arquivo —
 `public.workspaces`, `auth.users`, `public.checar_teto_de_mensagens` —, mais
 alguns símbolos importados pelos geradores em Python (`FreeTypeFont`, `Image`,
@@ -460,6 +460,24 @@ Como ele andou, em ordem:
                   0097. As duas contagens se moveram em direcoes diferentes no
                   mesmo periodo, que e exatamente a distincao que estes
                   paragrafos existem para manter
+    135   23/09   OITO, e a 0098 responde por DOIS deles:
+                  `public.subscriptions` e `public.workspaces`, citados pelo
+                  `alter` e pelas quatro funcoes que ela redefine. Os dois ja
+                  estavam representados por outras migrations, e referencia
+                  nao carrega o arquivo que definiu a tabela — o mesmo caso de
+                  107, 119, 120, 122, 125, 126 e 127.
+
+                  **Os outros SEIS nao foram isolados**, e isso fica dito em
+                  vez de suposto: o hook de post-commit reconstruiu o grafo
+                  entre a medicao anterior e esta, e sem o grafo de antes na
+                  mao nao da para nomea-los. Atribui-los a 0098 daria a
+                  resposta certa por acidente para dois e errada para seis.
+
+                  **NENHUMA tabela nasceu.** A 0098 acrescenta uma COLUNA
+                  (`cancelado_pelo_cliente_em`) e uma funcao
+                  (`assinatura_compra_acesso`); nao tem um `create table`.
+                  `banco.tabelas` continua 25, e e ele que responde essa
+                  pergunta
 
 **A leitura errada aqui é fácil e cara:** ver o número subir logo depois de uma
 migration convida a concluir que uma tabela nasceu. Em nenhum dos três últimos
