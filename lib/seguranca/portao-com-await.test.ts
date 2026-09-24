@@ -84,11 +84,66 @@ function semComentarios(fonte: string): string {
     .join('\n')
 }
 
-/** Nova a cada chamada: `RegExp` com `/g` carrega `lastIndex` entre usos. */
-function chamadaSolta(portao: string): RegExp {
-  // Nega o que espera de verdade: `await`, `return`, `=`, `void`, `(`, `,`,
-  // `:` e `.` antes do nome. O que sobra é a chamada como STATEMENT.
-  return new RegExp(String.raw`(^|[;{}])\s*${portao}\s*\(`, 'gm')
+/**
+ * Toda chamada do portão, com o que vem imediatamente antes dela.
+ *
+ * Nova a cada uso: `RegExp` com `/g` carrega `lastIndex` entre chamadas.
+ */
+function chamadasDoPortao(portao: string): RegExp {
+  return new RegExp(String.raw`(\S*)\s*\b${portao}\s*\(`, 'gm')
+}
+
+/**
+ * As formas que de fato esperam a promise.
+ *
+ * ## A lógica é ALLOW-LIST, e a primeira versão era o contrário
+ *
+ * A primeira versão ancorava no que vinha antes SER um limite de statement
+ * (`^`, `;`, `{`, `}`) e tratava o resto como seguro. Medido depois de
+ * escrita, ela deixava passar quatro formas que rodam sem esperar:
+ *
+ *     if (ehDono) exigirAmbienteLocal()
+ *     else exigirAmbienteLocal()
+ *     for (const x of y) exigirAmbienteLocal()
+ *     cond ? exigirAmbienteLocal() : null
+ *
+ * Um portão de segurança dentro de um `if` de uma linha é exatamente o código
+ * que alguém escreveria, e a varredura o aprovava. Varredura que erra para o
+ * lado de APROVAR é pior que varredura nenhuma: ela dá a sensação de cobertura
+ * sem a cobertura.
+ *
+ * Invertida, o padrão é reprovar e só o que está aqui passa. Forma nova de
+ * esperar entra nesta lista de propósito: acrescentar a exceção obriga a
+ * pensar nela, e é barato.
+ */
+const ESPERA_DE_VERDADE = [
+  'await', // await exigirAmbienteLocal()
+  'return', // quem chama espera
+  'void', // descarte EXPLÍCITO
+  '=', // const r = ..., e também `=>`
+  '(', // passado como argumento, ou dentro de Promise.all(
+  ',', // segundo item de um Promise.all
+  '[', // primeiro item de um array de promises
+  '.', // método de outro objeto, não este portão
+]
+
+/**
+ * A própria DECLARAÇÃO do portão, que não é chamada de coisa nenhuma.
+ *
+ * `async function abrirSessao(` casa com o mesmo padrão de uma chamada, e sem
+ * esta porta a varredura acusava os onze lugares onde os seis portões nascem.
+ * Alarme sobre a definição é ruído puro, e ruído é como uma varredura deixa de
+ * ser lida.
+ */
+function ehDeclaracao(prefixo: string): boolean {
+  return /\bfunction$/.test(prefixo.trim())
+}
+
+/** O prefixo imediato promete que alguém vai esperar? */
+function alguemEspera(prefixo: string): boolean {
+  const limpo = prefixo.trim()
+  if (limpo === '') return false
+  return ESPERA_DE_VERDADE.some((forma) => limpo.endsWith(forma))
 }
 
 describe('portão de segurança nunca é chamado sem await', () => {
@@ -113,44 +168,54 @@ describe('portão de segurança nunca é chamado sem await', () => {
     expect(fontes.length).toBeGreaterThan(200)
   })
 
+  /** Toda chamada de um portão numa linha, com veredito. */
+  function soltasNaLinha(portao: string, linha: string): boolean {
+    return Array.from(linha.matchAll(chamadasDoPortao(portao))).some(
+      (achado) => !ehDeclaracao(achado[1]) && !alguemEspera(achado[1]),
+    )
+  }
+
   it.each(PORTOES)('%s', (portao) => {
     const soltas: string[] = []
     for (const { caminho, codigo } of fontes) {
       if (!codigo.includes(portao)) continue
       for (const linha of codigo.split('\n')) {
-        if (chamadaSolta(portao).test(linha)) soltas.push(`${caminho}: ${linha.trim()}`)
+        if (soltasNaLinha(portao, linha)) soltas.push(`${caminho}: ${linha.trim()}`)
       }
     }
     expect(soltas).toEqual([])
   })
 
   /**
-   * O CONTROLE, e sem ele um erro de digitação na expressão aprova tudo para
-   * sempre. É a lição de 18/09, quando a varredura de acentos nasceu cega de
-   * dois jeitos diferentes e só o controle acusou.
+   * Os CONTROLES, e sem eles um erro na expressão aprova tudo para sempre. É a
+   * lição de 18/09, quando a varredura de acentos nasceu cega de dois jeitos
+   * diferentes e só o controle acusou.
+   *
+   * As quatro últimas formas desta lista **passavam** na primeira versão desta
+   * varredura, e foram o motivo de ela ser invertida para allow-list. Um
+   * portão de segurança dentro de um `if` de uma linha é exatamente o código
+   * que alguém escreveria.
    */
-  it('a varredura PEGA a chamada solta quando ela existe', () => {
-    const ruim = 'export async function x() {\n  exigirAmbienteLocal()\n  return 1\n}'
-    const achou = ruim
-      .split('\n')
-      .some((l) => chamadaSolta('exigirAmbienteLocal').test(l))
-    expect(achou).toBe(true)
+  it.each([
+    '  exigirAmbienteLocal()',
+    '  const a = 1; exigirAmbienteLocal()',
+    '  if (ehDono) exigirAmbienteLocal()',
+    '  } else exigirAmbienteLocal()',
+    '  for (const x of y) exigirAmbienteLocal()',
+    '  cond ? exigirAmbienteLocal() : null',
+  ])('CONTROLE, pega a chamada solta: %s', (linha) => {
+    expect(soltasNaLinha('exigirAmbienteLocal', linha)).toBe(true)
   })
 
-  it('a varredura NÃO acusa a chamada correta', () => {
-    for (const bom of [
-      '  await exigirAmbienteLocal()',
-      '  return exigirAmbienteLocal()',
-      '  const s = await abrirSessao()',
-      '  void exigirAmbienteLocal()',
-      '  const r = conferirAlvo(a, b)',
-    ]) {
-      const portao = /abrirSessao/.test(bom)
-        ? 'abrirSessao'
-        : /conferirAlvo/.test(bom)
-          ? 'conferirAlvo'
-          : 'exigirAmbienteLocal'
-      expect(chamadaSolta(portao).test(bom)).toBe(false)
-    }
+  it.each([
+    ['exigirAmbienteLocal', '  await exigirAmbienteLocal()'],
+    ['exigirAmbienteLocal', '  return exigirAmbienteLocal()'],
+    ['exigirAmbienteLocal', '  void exigirAmbienteLocal()'],
+    ['exigirAmbienteLocal', '  const p = exigirAmbienteLocal()'],
+    ['exigirAmbienteLocal', '  await Promise.all([exigirAmbienteLocal(), outra()])'],
+    ['abrirSessao', '  const s = await abrirSessao()'],
+    ['conferirAlvo', '  const r = await conferirAlvo(a, b)'],
+  ])('CONTROLE, não acusa o correto (%s): %s', (portao, linha) => {
+    expect(soltasNaLinha(portao, linha)).toBe(false)
   })
 })
