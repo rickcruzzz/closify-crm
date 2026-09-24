@@ -175,7 +175,7 @@ def proximo_registro() -> bool:
     return _CONTADOR_DE_RITMO["n"] % 3 == 0
 
 
-def grade_de_cem(draw, y, parte, cor_aceso, cor_apagado, cols=10):
+def grade_de_cem(draw, y, parte, cor_aceso, cor_apagado, cols=10, aperto=1.0):
     """
     Cem blocos, `parte` deles acesos. Devolve o y do fim.
 
@@ -211,7 +211,17 @@ def grade_de_cem(draw, y, parte, cor_aceso, cor_apagado, cols=10):
     # card de carrossel — que já tem cápsula, número, título e corpo antes da
     # grade — ela passou POR CIMA do rodapé e saiu pela borda. `medir()` não
     # pega isso: ele mede o bloco, não se o bloco cabe.
-    lado_y = lado_x * (0.62 if linhas >= 10 else 1.15)
+    # ## `aperto` encolhe o bloco na ALTURA, nunca na largura
+    #
+    # A largura é o que mantém as cem células alinhadas em colunas: mexer nela
+    # desmonta a grade. A altura é folga, e é ela que `card_dado` precisa
+    # recuperar quando a marca no topo tira 108px da peça.
+    #
+    # A regra que governa os dois lugares: o aperto toca GRAFISMO (número,
+    # grade, espaçamento) e nunca TEXTO. Corpo de texto que muda de tamanho
+    # entre os cards de um carrossel é o que mais faz a sequência parecer
+    # montada por gente diferente.
+    lado_y = lado_x * (0.62 if linhas >= 10 else 1.15) * aperto
     for i in range(100):
         cx = g.MARGEM_ESQ + (i % cols) * (lado_x + gap)
         cy = y + (i // cols) * (lado_y + gap)
@@ -295,7 +305,10 @@ def arte_numero(numero, unidade, explicacao, fonte_dado, arquivo, categoria, luz
             return g.escrever_esq(d, fonte_dado, g.fonte(g.CORPO, 29), y,
                                   g.cor_fonte_dado(), entrelinha=1.26)
 
-    bloco(draw, g.centrar(topo, base, g.medir(bloco)))
+    topo = marca_no_topo(img, draw, topo)
+    conferir_altura(
+        bloco(draw, g.centrar(topo, base, g.medir(bloco))), base, arquivo,
+    )
     g.assinar_discreto(img, draw)
     salvar(img, arquivo)
     g._TEMA_CLARO = False
@@ -350,7 +363,10 @@ def arte_declaracao(categoria, titulo, corpo, arquivo, luz, remate=None,
                                g.cor_destaque(), entrelinha=1.22)
         return y
 
-    bloco(draw, g.centrar(topo, base, g.medir(bloco)))
+    topo = marca_no_topo(img, draw, topo)
+    conferir_altura(
+        bloco(draw, g.centrar(topo, base, g.medir(bloco))), base, arquivo,
+    )
     g.assinar_discreto(img, draw)
     salvar(img, arquivo)
     g._TEMA_CLARO = False
@@ -383,6 +399,59 @@ def arte_declaracao(categoria, titulo, corpo, arquivo, luz, remate=None,
 # independentes, e alguém pode salvar ou compartilhar um card isolado — o que
 # só funciona se ele se explicar sozinho. Por isso todos levam a assinatura de
 # rodapé, e não apenas o último.
+
+
+_INVASOES = []
+
+
+def conferir_altura(fim, base, quem):
+    """
+    O bloco cabe na faixa livre, ou a geração FALHA.
+
+    ## Por que isto existe, e por que só agora
+
+    `assinar_discreto` desenha o filete e a assinatura numa posição FIXA, e
+    `draw.text` não quebra linha nem reclama. As duas coisas juntas produzem o
+    defeito mais caro deste gerador: o texto passa por cima do rodapé, o PNG é
+    gravado, o script imprime sucesso, e só quem abrir o arquivo descobre.
+
+    Aconteceu duas vezes em 22/09, nas duas eu estava olhando. Numa rodada de
+    49 artes ninguém olha 49.
+
+    A marca no topo torna a guarda obrigatória em vez de desejável: ela subtrai
+    108px de altura útil de toda peça, e a margem que sobrava em cada card
+    deixou de ser conhecida.
+
+    Falha em vez de avisar, pela mesma razão de `conferir_zona_segura`: aviso
+    em rodada de 49 linhas de log é aviso que ninguém lê.
+    """
+    if fim > base:
+        _INVASOES.append(
+            f"{quem}: invade o rodapé por {(fim - base) / g.ESCALA:.0f}px "
+            f"(termina em {fim / g.ESCALA:.0f}, a faixa acaba em "
+            f"{base / g.ESCALA:.0f})"
+        )
+    return fim
+
+
+def cobrar_invasoes():
+    """
+    Falha no FIM da rodada, com a lista inteira.
+
+    Morrer na primeira invasão transforma uma rodada de 49 artes em dez
+    rodadas: conserta uma, descobre a próxima, conserta, descobre. E é pior que
+    lento, é enganoso, porque quem consertou a primeira acha que acabou.
+
+    As artes continuam sendo GRAVADAS antes de a falha sair, de propósito: elas
+    são a prova de onde o texto vazou, e apagá-las para "falhar limpo"
+    obrigaria a regerar só para poder olhar.
+    """
+    if _INVASOES:
+        nl = chr(10)
+        raise SystemExit(
+            nl + f"  {len(_INVASOES)} arte(s) invadem o rodapé:" + nl
+            + "    " + (nl + "    ").join(_INVASOES)
+        )
 
 
 def barra_de_proporcao(draw, y, parte, total, rotulo_parte, rotulo_resto, largura=None):
@@ -430,7 +499,7 @@ def barra_de_proporcao(draw, y, parte, total, rotulo_parte, rotulo_resto, largur
     draw.text((g.MARGEM_ESQ, y), rotulo_parte, font=fnt, fill=g.TEAL)
     largura_resto = draw.textlength(rotulo_resto, font=fnt)
     draw.text((g.MARGEM_ESQ + largura - largura_resto, y), rotulo_resto,
-              font=fnt, fill=(110, 132, 132))
+              font=fnt, fill=(128, 150, 150))
 
     return y + fnt.size * 1.3
 
@@ -460,7 +529,7 @@ def marcador_de_passo(draw, atual, total):
         x += largura + folga
 
 
-def _peca(luz, escuro_extra, bloco, passo=None):
+def _peca(luz, escuro_extra, bloco, passo=None, quem='peça escura'):
     """
     Fundo, posicionamento, assinatura. O miolo vem de fora.
 
@@ -487,15 +556,18 @@ def _peca(luz, escuro_extra, bloco, passo=None):
     g._LUZ_ATUAL = luz
     img = g.fundo_marca(escuro_extra=escuro_extra)
     draw = ImageDraw.Draw(img)
-    topo, _base = g.faixa_livre()
+    topo, base = g.faixa_livre()
     if passo:
         marcador_de_passo(draw, *passo)
-    bloco(draw, topo)
+    # A marca vem ANTES do bloco e sempre no mesmo y, que é o ponto inteiro:
+    # ver `marca_no_topo`. O bloco começa onde ela termina.
+    topo = marca_no_topo(img, draw, topo)
+    conferir_altura(bloco(draw, topo, img), base, quem)
     g.assinar_discreto(img, draw)
     return img
 
 
-def _peca_clara(bloco, passo=None, luz=0.30):
+def _peca_clara(bloco, passo=None, luz=0.30, quem='peça clara'):
     """
     O par claro de `_peca`: mesmo esqueleto, registro invertido.
 
@@ -514,14 +586,17 @@ def _peca_clara(bloco, passo=None, luz=0.30):
     try:
         img = g.fundo_do_tema(escuro_extra=0.0)
         draw = ImageDraw.Draw(img)
-        topo, _ = g.faixa_livre()
+        topo, base = g.faixa_livre()
         if passo:
             marcador_de_passo(draw, *passo)
-        # A imagem vai junto porque o bloco precisa COLAR o selo da marca, e
-        # `ImageDraw` não cola — só desenha. Sem `try/except` de assinatura de
-        # propósito: um `TypeError` levantado lá dentro seria engolido e o
-        # bloco rodaria duas vezes, o que é pior que a falha original.
-        bloco(draw, topo, img)
+        # A marca vem ANTES do bloco e sempre no mesmo y, que é o ponto
+        # inteiro: ver `marca_no_topo`. A imagem vai junto porque ela precisa
+        # COLAR o selo, e `ImageDraw` não cola, só desenha.
+        topo = marca_no_topo(img, draw, topo)
+        # Sem `try/except` de assinatura de propósito: um `TypeError` levantado
+        # lá dentro seria engolido e o bloco rodaria duas vezes, o que é pior
+        # que a falha original.
+        conferir_altura(bloco(draw, topo, img), base, quem)
         g.assinar_discreto(img, draw)
         return img
     finally:
@@ -677,6 +752,11 @@ def _print_no_claro(img, nome_print, topo, altura_alvo, recorte=None):
     return y0 + alt
 
 
+#: Quanto `marca_no_topo` consome de altura. Lido por quem precisa saber
+#: o que sobra da faixa livre depois dela.
+ALTURA_DA_MARCA = (62 + 46) * g.ESCALA
+
+
 def marca_no_topo(img, draw, y):
     """
     O lockup da marca no ALTO da peça: selo do funil e a palavra, lado a lado.
@@ -763,7 +843,8 @@ def card_produto(selo, partes, apoio, print_nome, passo=None, recorte=None):
         topo, base = g.faixa_livre()
         if passo:
             marcador_de_passo(draw, *passo)
-        fim = bloco(draw, topo, img)
+        fim = conferir_altura(bloco(draw, topo, img), base,
+                              f'card_produto {print_nome}')
         _print_no_claro(img, print_nome, fim + 40 * g.ESCALA,
                         base - fim - 40 * g.ESCALA, recorte=recorte)
         g.assinar_discreto(img, draw)
@@ -833,8 +914,6 @@ def card_cta_claro(chamada, apoio, recapitulacao=(), passo=None):
     inacabado — visto ao abrir o PNG, não pelo conferidor.
     """
     def bloco(d, y, img_alvo=None):
-        if img_alvo is not None:
-            y = marca_no_topo(img_alvo, d, y)
         y = g.escrever_esq(d, chamada, g.fonte(g.TITULO, 80), y, g.cor_titulo(),
                            entrelinha=1.14)
         y += 34 * g.ESCALA
@@ -881,7 +960,149 @@ def card_cta_claro(chamada, apoio, recapitulacao=(), passo=None):
         return g.escrever_esq(d, "Link na bio", g.fonte(g.CORPO, 36), y,
                               g.cor_destaque())
 
-    return _peca_clara(bloco, passo)
+    return _peca_clara(bloco, passo, quem='card_cta_claro')
+
+
+def seta_de_porta(tamanho: int, sentido: str) -> Image.Image:
+    """
+    O disco teal com a seta de ENTRAR ou de SAIR.
+
+    ## Por que desenhada, e não um glifo nem um emoji
+
+    A skill de UI/UX deste projeto tem a regra escrita: ícone é SVG, nunca
+    emoji. Aqui não há SVG, então é geometria, pelo mesmo motivo de
+    `icone_de_confirmacao`: `↓` e `↑` não existem na Geist, e quando o glifo
+    falta o Pillow desenha o retângulo de caractere ausente **em silêncio**.
+
+    ## E por que ela existe, em vez de só a cor
+
+    A outra regra da mesma skill, severidade alta: *"não transmita informação
+    só pela cor"*. Entrar e sair pintados de teal e cinza seriam
+    indistinguíveis para quem não separa os dois tons, e a peça inteira depende
+    dessa distinção. A seta carrega o sentido na FORMA, e o rótulo em texto
+    carrega de novo.
+
+    Supersample 4x e LANCZOS: círculo e diagonal são as duas formas que mais
+    denunciam serrilhado na redução para 1080.
+    """
+    s = 4
+    t = tamanho * s
+    ico = Image.new("RGBA", (t, t), (0, 0, 0, 0))
+    d = ImageDraw.Draw(ico)
+    d.ellipse([0, 0, t - 1, t - 1], fill=g.TEAL_NO_CLARO)
+
+    grosso = max(2, int(t * 0.10))
+    alto, baixo = t * 0.30, t * 0.70
+    ponta, origem = (baixo, alto) if sentido == "entra" else (alto, baixo)
+    aba = t * 0.16
+    recuo = aba if sentido == "entra" else -aba
+
+    d.line([(t / 2, origem), (t / 2, ponta)], fill=(255, 255, 255), width=grosso)
+    for lado in (-1, 1):
+        d.line([(t / 2 + lado * aba, ponta - recuo), (t / 2, ponta)],
+               fill=(255, 255, 255), width=grosso, joint="curve")
+    for p in ((t / 2, origem), (t / 2, ponta),
+              (t / 2 - aba, ponta - recuo), (t / 2 + aba, ponta - recuo)):
+        r = grosso / 2
+        d.ellipse([p[0] - r, p[1] - r, p[0] + r, p[1] + r], fill=(255, 255, 255))
+    return ico.resize((tamanho, tamanho), Image.LANCZOS)
+
+
+def _escrever_na_coluna(d, texto, fnt, x, y, largura, cor, entrelinha):
+    """
+    Quebra de linha dentro de uma COLUNA, que `escrever_esq` não faz.
+
+    As funções do gerador escrevem sempre a partir de `MARGEM_ESQ` com
+    `LARGURA_TEXTO`, porque até aqui toda peça era de uma coluna só. Duas
+    colunas precisam de x e largura próprios, e sem isso o texto da direita
+    sairia pela borda **sem erro nenhum**: `draw.text` não quebra linha e não
+    reclama, o mesmo silêncio que a recapitulação do card 5 já pagou.
+    """
+    palavras, linha = texto.split(), ""
+    for p in palavras:
+        teste = f"{linha} {p}".strip()
+        if d.textlength(teste, font=fnt) <= largura:
+            linha = teste
+        else:
+            d.text((x, y), linha, font=fnt, fill=cor)
+            y += fnt.size * entrelinha
+            linha = p
+    if linha:
+        d.text((x, y), linha, font=fnt, fill=cor)
+        y += fnt.size * entrelinha
+    return y
+
+
+def card_portas(capsula, partes, esquerda, direita, passo=None):
+    """
+    As duas portas lado a lado: o que custa entrar contra o que custa sair.
+
+    ## Por que DUAS COLUNAS, e não uma barra
+
+    A skill de UI/UX responde isso para "comparar duas categorias": barra com
+    rótulo de valor, nunca pizza, e ordenada. Só que barra compara GRANDEZA, e
+    aqui as duas grandezas são iguais de propósito: um clique de cada lado. Uma
+    barra com os dois lados do mesmo tamanho não é gráfico, é decoração.
+
+    O que está sendo comparado é o MECANISMO, e para isso a forma certa é o
+    par lado a lado, com a simetria fazendo o argumento sozinha.
+
+    ## A entrelinha aqui é 1,5, e nos outros cards é 1,36
+
+    A mesma skill fixa 1,5 a 1,75 para corpo de texto, severidade média, e os
+    cards antigos estão abaixo disso. **Não mexi neles**: a entrelinha é
+    global, e subi-la reflui as 49 artes do disco de uma vez, podendo empurrar
+    a linha de crédito por cima da assinatura em qualquer uma. Aqui a coluna é
+    nova e o número nasce certo.
+    """
+    def bloco(d, y, img_alvo=None):
+        y = g.pill(d, capsula, y) + 40 * g.ESCALA
+        y = g.escrever_com_realce(
+            d, partes, g.fonte(g.TITULO, 78), g.fonte(g.TITULO, 78),
+            y, g.cor_titulo(), g.cor_destaque(), entrelinha=1.16,
+        )
+        y += 64 * g.ESCALA
+
+        gap = 34 * g.ESCALA
+        larg = (g.LARGURA_TEXTO - gap) // 2
+        tam_ico = 56 * g.ESCALA
+        fnt_rotulo = g.fonte(g.FORTE, 34)
+        fnt_corpo = g.fonte(g.CORPO, 40)
+        fundo = y
+
+        # A altura da caixa sai de uma MEDIÇÃO das duas colunas, não de um
+        # número escolhido: com altura fixa, o lado mais longo vaza para fora
+        # do retângulo e o desenho fica pior do que sem retângulo nenhum.
+        alturas = []
+        for _sentido, rotulo, linhas in (esquerda, direita):
+            fim = g.medir(lambda dd, _y: _escrever_na_coluna(
+                dd, linhas, fnt_corpo, 0, 0, larg - 48 * g.ESCALA,
+                (0, 0, 0), 1.5))
+            alturas.append(fim)
+        alto_texto = max(alturas)
+        alto_caixa = int(tam_ico + 30 * g.ESCALA + fnt_rotulo.size * 1.5
+                         + alto_texto + 60 * g.ESCALA)
+
+        for i, (sentido, rotulo, linhas) in enumerate((esquerda, direita)):
+            x = g.MARGEM_ESQ + i * (larg + gap)
+            d.rounded_rectangle(
+                [x, fundo, x + larg, fundo + alto_caixa],
+                radius=24 * g.ESCALA,
+                fill=(255, 255, 255), outline=(214, 224, 224),
+                width=max(1, 2 * g.ESCALA),
+            )
+            px, py = x + 30 * g.ESCALA, fundo + 30 * g.ESCALA
+            ico = seta_de_porta(tam_ico, sentido)
+            img_alvo.paste(ico, (int(px), int(py)), ico)
+            py += tam_ico + 26 * g.ESCALA
+            d.text((px, py), rotulo, font=fnt_rotulo, fill=g.TEAL_NO_CLARO)
+            py += fnt_rotulo.size * 1.5
+            _escrever_na_coluna(d, linhas, fnt_corpo, px, py,
+                                larg - 48 * g.ESCALA, g.cor_corpo(), 1.5)
+
+        return fundo + alto_caixa
+
+    return _peca_clara(bloco, passo, quem='card_portas')
 
 
 def card_gancho(partes, apoio, luz, passo=None):
@@ -899,7 +1120,7 @@ def card_gancho(partes, apoio, luz, passo=None):
     é parar o dedo. Um rótulo acima da pergunta rouba a primeira linha de
     leitura para dizer algo que ninguém precisa saber ainda.
     """
-    def bloco(d, y):
+    def bloco(d, y, img_alvo=None):
         y = g.escrever_com_realce(
             d, partes, g.fonte(g.TITULO, 94), g.italica(108),
             y, g.BRANCO, g.TEAL, entrelinha=1.18,
@@ -910,73 +1131,111 @@ def card_gancho(partes, apoio, luz, passo=None):
                                entrelinha=1.36)
         return y
 
-    return _peca(luz, 0.12, bloco, passo)
+    return _peca(luz, 0.12, bloco, passo, quem='card_gancho')
 
 
 def card_dado(numero, unidade, explicacao, fonte_dado, categoria, luz, passo=None,
               proporcao=None, remate=None):
-    """O card de prova. Mesmo esqueleto de `arte_numero`, sem salvar."""
+    """
+    O card de prova, que agora cabe POR CONSTRUÇÃO.
+
+    ## O que mudou, e por que ele foi o único a mudar
+
+    A marca no topo subtrai 108px de altura útil de toda peça. Cinco cards
+    absorveram; os cinco `card_dado` do feed **invadiram o rodapé**, de 34 a
+    150px, e a guarda `conferir_altura` listou os cinco de uma vez.
+
+    Cortar cinco textos à mão resolveria hoje e voltaria a quebrar na próxima
+    frase escrita, que é exatamente o argumento que o comentário da largura já
+    fazia neste mesmo card. Então a altura passou a ser medida, como a largura
+    já era.
+
+    ## O que o `aperto` aperta, e o que ele NUNCA aperta
+
+        aperta    o corpo do NÚMERO e os espaços entre os blocos
+        preserva  o corpo do texto: título 72, explicação 46, crédito 28
+
+    Isso é decisão de composição, não economia de código. Num carrossel a
+    pessoa desliza entre cinco cards em segundos, e corpo de texto que muda de
+    tamanho de um card para o outro é a coisa que mais faz uma sequência
+    parecer montada por gente diferente. O número é o protagonista e pode
+    respirar menos; o texto que se lê tem que ser o mesmo tamanho sempre.
+
+    O piso de 0,60 existe para o card FALHAR em vez de imprimir um algarismo do
+    tamanho do texto de apoio, que já não seria protagonista de nada.
+    """
     # 258 quando o número é o protagonista; 176 quando existe grade, porque
     # aí quem prova é o desenho e o algarismo vira legenda dele. Dois
     # elementos disputando o mesmo papel deixam o card confuso.
-    corpo_num = 176 if (proporcao and proporcao[1] == 100) else 258
-    # ## O número encolhe até caber, e a primeira versão não encolhia
+    base_num = 176 if (proporcao and proporcao[1] == 100) else 258
+
+    # ## A LARGURA, que já era medida antes desta rodada
     #
     # 258 foi escolhido para "4%" e "R$ 49", de dois a cinco glifos. "0 de 25"
-    # tem sete e **vazou pela borda direita** — visto ao abrir o PNG, sem erro
-    # nenhum: `draw.text` não quebra linha nem reclama, o mesmo silêncio que a
-    # recapitulação do card 5 já pagou nesta mesma rodada.
-    #
-    # Escolher o corpo à mão por peça resolveria hoje e voltaria a quebrar na
-    # próxima frase. Medir e descer de 6 em 6 resolve para qualquer número, e
-    # o piso de 120 existe para o card falhar em vez de imprimir um algarismo
-    # do tamanho do texto de apoio, que não seria mais o protagonista.
-    while corpo_num > 120:
-        fnt_teste = g.fonte(g.DISPLAY, corpo_num)
+    # tem sete e vazou pela borda direita, visto ao abrir o PNG e sem erro
+    # nenhum: `draw.text` não quebra linha nem reclama.
+    while base_num > 120:
+        fnt_teste = g.fonte(g.DISPLAY, base_num)
         if g.medir(lambda d, _y: d.textlength(numero, font=fnt_teste)) <= g.LARGURA_TEXTO:
             break
-        corpo_num -= 6
-    fnt_num = g.fonte(g.DISPLAY, corpo_num)
+        base_num -= 6
 
-    def bloco(d, y):
-        y = capsula_vazia(d, categoria, y) + 50 * g.ESCALA
-        d.text((g.MARGEM_ESQ, y), numero, font=fnt_num, fill=g.TEAL)
-        _, _, _, fim = d.textbbox((g.MARGEM_ESQ, y), numero, font=fnt_num)
-        y = fim + 24 * g.ESCALA
-        y = g.escrever_esq(d, unidade, g.fonte(g.TITULO, 72), y, g.BRANCO)
-        y += 32 * g.ESCALA
-        y = g.escrever_esq(d, explicacao, g.fonte(g.CORPO, 46), y, (168, 190, 190),
-                           entrelinha=1.36)
-        # A barra entra ENTRE a explicação e a fonte, não no fim: ela é parte
-        # do argumento, e a fonte é o rodapé dele. Invertido, o crédito
-        # separaria o dado da sua própria ilustração.
-        #
-        # ## Grade de 100 quando o todo É 100
-        #
-        # Proporção sobre 100 vira grade: cada bloco é uma empresa, e "82 em
-        # cada 100" é literalmente como a pesquisa do Sebrae foi feita. A
-        # barra continua para o resto, onde o todo é outra coisa (40 horas de
-        # semana, por exemplo) e cem blocos mentiriam sobre a unidade.
-        if proporcao:
-            y += 40 * g.ESCALA
-            if proporcao[1] == 100:
-                # 20 colunas no carrossel: o card já gastou metade da
-                # altura antes de chegar aqui.
-                y = grade_de_cem(d, y, proporcao[0], g.TEAL, (0, 66, 68), cols=20)
-            else:
-                y = barra_de_proporcao(d, y, *proporcao)
-        # O remate é a conclusão que o número não diz sozinho. Em teal e peso
-        # forte porque é a frase que a pessoa deve levar embora — o dado é a
-        # prova, isto é o argumento.
-        if remate:
-            y += 40 * g.ESCALA
-            y = g.escrever_esq(d, remate, g.fonte(g.FORTE, 52), y, g.TEAL,
-                               entrelinha=1.24)
-        y += 34 * g.ESCALA
-        return g.escrever_esq(d, fonte_dado, g.fonte(g.CORPO, 28), y, (110, 132, 132),
-                              entrelinha=1.26)
+    def montar(aperto):
+        corpo_num = max(120, int(base_num * aperto))
+        fnt_num = g.fonte(g.DISPLAY, corpo_num)
+        esp = lambda n: n * aperto * g.ESCALA
 
-    return _peca(luz, 0.15, bloco, passo)
+        def bloco(d, y, img_alvo=None):
+            y = capsula_vazia(d, categoria, y) + esp(50)
+            d.text((g.MARGEM_ESQ, y), numero, font=fnt_num, fill=g.TEAL)
+            _, _, _, fim = d.textbbox((g.MARGEM_ESQ, y), numero, font=fnt_num)
+            y = fim + esp(24)
+            y = g.escrever_esq(d, unidade, g.fonte(g.TITULO, 72), y, g.BRANCO)
+            y += esp(32)
+            y = g.escrever_esq(d, explicacao, g.fonte(g.CORPO, 46), y, (168, 190, 190),
+                               entrelinha=1.36)
+            # A barra entra ENTRE a explicação e a fonte, não no fim: ela é
+            # parte do argumento, e a fonte é o rodapé dele. Invertido, o
+            # crédito separaria o dado da sua própria ilustração.
+            #
+            # ## Grade de 100 quando o todo É 100
+            #
+            # Proporção sobre 100 vira grade: cada bloco é uma empresa, e "82
+            # em cada 100" é literalmente como a pesquisa do Sebrae foi feita.
+            # A barra continua para o resto, onde o todo é outra coisa e cem
+            # blocos mentiriam sobre a unidade.
+            if proporcao:
+                y += esp(40)
+                if proporcao[1] == 100:
+                    # 20 colunas no carrossel: o card já gastou metade da
+                    # altura antes de chegar aqui.
+                    y = grade_de_cem(d, y, proporcao[0], g.TEAL, (0, 66, 68),
+                                     cols=20, aperto=aperto)
+                else:
+                    y = barra_de_proporcao(d, y, *proporcao)
+            # O remate é a conclusão que o número não diz sozinho. Em teal e
+            # peso forte porque é a frase que a pessoa deve levar embora: o
+            # dado é a prova, isto é o argumento.
+            if remate:
+                y += esp(40)
+                y = g.escrever_esq(d, remate, g.fonte(g.FORTE, 52), y, g.TEAL,
+                                   entrelinha=1.24)
+            y += esp(34)
+            return g.escrever_esq(d, fonte_dado, g.fonte(g.CORPO, 28), y,
+                                  (128, 150, 150), entrelinha=1.26)
+
+        return bloco
+
+    topo_livre, base_livre = g.faixa_livre()
+    cabe_em = base_livre - (topo_livre + ALTURA_DA_MARCA)
+    aperto = 1.0
+    while aperto > 0.60:
+        if g.medir(montar(aperto)) <= cabe_em:
+            break
+        aperto -= 0.04
+
+    return _peca(luz, 0.15, montar(aperto), passo,
+                 quem=f"card_dado {numero!r} (aperto {aperto:.2f})")
 
 
 def card_causa(titulo, corpo, luz, passo=None):
@@ -986,13 +1245,13 @@ def card_causa(titulo, corpo, luz, passo=None):
     Vem depois dos dados porque explicação antes de prova é opinião; depois de
     prova, é conclusão.
     """
-    def bloco(d, y):
+    def bloco(d, y, img_alvo=None):
         y = g.escrever_esq(d, titulo, g.fonte(g.TITULO, 86), y, g.BRANCO, entrelinha=1.18)
         y += 32 * g.ESCALA
         return g.escrever_esq(d, corpo, g.fonte(g.CORPO, 48), y, (168, 190, 190),
                               entrelinha=1.38)
 
-    return _peca(luz, 0.10, bloco, passo)
+    return _peca(luz, 0.10, bloco, passo, quem='card_causa')
 
 
 def card_cta(chamada, apoio, luz, passo=None):
@@ -1011,7 +1270,7 @@ def card_cta(chamada, apoio, luz, passo=None):
     fnt_bt = g.fonte(g.FORTE, 44)
     rotulo = "Comece grátis"
 
-    def bloco(d, y):
+    def bloco(d, y, img_alvo=None):
         y = g.escrever_esq(d, chamada, fnt_ch, y, g.BRANCO, entrelinha=1.18)
         y += 30 * g.ESCALA
         y = g.escrever_esq(d, apoio, g.fonte(g.CORPO, 48), y, (168, 190, 190),
@@ -1030,7 +1289,7 @@ def card_cta(chamada, apoio, luz, passo=None):
         return g.escrever_esq(d, "Link na bio", g.fonte(g.CORPO, 34), y,
                               (122, 214, 214))
 
-    return _peca(luz, 0.18, bloco, passo)
+    return _peca(luz, 0.18, bloco, passo, quem='card_cta')
 
 
 def carrossel(nome, cards):
@@ -1370,6 +1629,89 @@ def main():
         ),
     ])
 
+    # --------------------------------------------- o carrossel da PORTA DE SAÍDA
+    #
+    # ## Por que este tema, e como ele foi escolhido
+    #
+    # Lidos os OITO posts que o perfil já publicou, pela Graph API, em 22/09.
+    # O feed já disse, no ar: orçamento que sumiu (09/09), WhatsApp guarda a
+    # conversa (02/09), o pedágio de digitação (01/09), negócio sem próximo
+    # passo, memória não guarda cliente, 21x em cinco minutos, e o vendedor que
+    # sai levando a carteira (31/08).
+    #
+    # A porta de saída **nunca foi publicada**, e é o único tema mapeado que
+    # atende os três critérios: nunca foi ao ar, o produto entrega hoje, e
+    # existe medição própria por trás.
+    #
+    # ## E ele é a objeção REAL, medida em 07/09
+    #
+    # O espião de dor rodou 31 chamadas atrás da objeção de quem procura CRM. O
+    # resultado está registrado: *"a objeção real é 'e se eu quiser sair?', não
+    # preço"*. Nenhuma das 13 peças do feed tocava nisso.
+    #
+    # ## O que NÃO entra, e por quê
+    #
+    # Nada sobre concorrente prender cliente. Não temos medição de fidelidade
+    # de terceiro, e afirmar sem medir é exatamente o que a régua deste projeto
+    # recusa. A comparação é entre as nossas DUAS portas, que dá para conferir.
+    #
+    # E nada sobre o Max: a reserva de instâncias está em zero, então quem
+    # pagasse hoje cairia num caminho manual. Anúncio que promete o que a
+    # entrega não acompanha é o defeito que este projeto mais paga.
+    print()
+    carrossel("carrossel-4-porta-de-saida", [
+        card_gancho(
+            [("Todo CRM ensina a entrar. Pergunte como se ", False),
+             ("sai.", True)],
+            "A pergunta que trava a assinatura quase nunca é o preço.",
+            luz=0.16, passo=(1, 5),
+        ),
+        card_portas(
+            "A S   D U A S   P O R T A S",
+            [("Entrar e sair custam ", False), ("o mesmo.", True)],
+            ("entra", "ENTRAR", "Um clique. Você sobe a planilha e o funil monta sozinho."),
+            ("sai", "SAIR", "Um clique. Você baixa tudo em CSV, pela mesma tela."),
+            passo=(2, 5),
+        ),
+        card_causa(
+            "A saída fica na mesma tela da entrada.",
+            "Sem fidelidade, sem multa e sem abrir chamado. Os dois botões "
+            "ficam lado a lado em Contatos, e o arquivo que sai abre no Excel "
+            "em português, com acento e vírgula decimal.",
+            luz=0.34, passo=(3, 5),
+        ),
+        card_dado(
+            "1 de 6", "era quanto a gente falava de sair",
+            "Auditamos a própria página em setembro. A entrada aparecia em "
+            "seis lugares, cada um com frase. A saída, em um, sem frase "
+            "nenhuma.",
+            "Auditoria da própria landing, 07/09/2026.",
+            "O   Q U E   A C H A M O S   E M   C A S A", luz=0.44, passo=(4, 5),
+            # ## O card que fala mal da gente é o que sustenta os outros quatro
+            #
+            # Uma peça inteira dizendo "somos honestos" pede fé. Admitir o
+            # defeito com número e data é a única prova que dá para publicar
+            # sem cliente externo, e é o efeito Pratfall: quem admite uma falha
+            # pequena fica mais crível no resto.
+            #
+            # Sem grade nem barra aqui. Um em seis desenharia uma barra quase
+            # vazia, e o olho concluiria "é pouco" quando o argumento é que era
+            # pouco MESMO, e errado. A conclusão é frase, e é o remate.
+            remate="Consertamos a nossa.",
+        ),
+        card_cta_claro(
+            "Comece sabendo como sair.",
+            f"Grátis até {g.FREE_LEAD_LIMIT} contatos, sem cartão. Traga sua "
+            "planilha, e leve embora quando quiser.",
+            recapitulacao=(
+                "Exporta em CSV, pela própria tela",
+                "Sem fidelidade e sem multa",
+                f"R$ {g.PRO_PLAN_PRICE} pela empresa, não por pessoa",
+            ),
+            passo=(5, 5),
+        ),
+    ])
+
     # ------------------------------------------- as avulsas do eixo WhatsApp
     #
     # Peça avulsa no feed tem função diferente da do carrossel: ela é vista
@@ -1393,6 +1735,7 @@ def main():
     quantas = len([f for f in SAIDA.glob("*.png") if not f.stem.endswith("@4k")])
     print()
     print(f"{quantas} artes em {SAIDA.relative_to(g.RAIZ)}")
+    cobrar_invasoes()
 
 
 if __name__ == "__main__":

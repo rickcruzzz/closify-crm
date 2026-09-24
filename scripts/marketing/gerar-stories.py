@@ -524,7 +524,7 @@ def cor_fonte_dado():
     # eu tinha posto antes, (122,130,130), dava 3,69:1 e reprovava AA — o
     # teste pegou, e o comentário acima já dizia por que não descer. Escrever
     # a regra não impede de quebrá-la; o teste impede.
-    return (104, 112, 112) if _TEMA_CLARO else (110, 132, 132)
+    return (104, 112, 112) if _TEMA_CLARO else (128, 150, 150)
 
 
 def cor_rotulo_mono():
@@ -1289,7 +1289,7 @@ def tela_numero(numero, unidade, explicacao, fonte_dado, arquivo,
         # métrica é decisão travada contra neste projeto desde que a landing
         # teve uma copiada de concorrente.
         y += 40 * ESCALA
-        return escrever_esq(d, fonte_dado, fonte(CORPO, 28), y, (110, 132, 132),
+        return escrever_esq(d, fonte_dado, fonte(CORPO, 28), y, (128, 150, 150),
                             entrelinha=1.26)
 
     bloco(draw, centrar(topo, base, medir(bloco)))
