@@ -53,8 +53,21 @@ const TETO_DO_CORPO = 300
  *
  * Erra para o lado de apagar demais, de propósito. Um id apagado custa uma
  * investigação um pouco mais longa; um token vazado custa a conta.
+ *
+ * ## `+`, `/` e `=` entraram depois, e a falta deles vazava pedaço
+ *
+ * A primeira classe era `[A-Za-z0-9_\-.]`, e ela parava no `+` de um base64.
+ * Medido: `aGVsbG8rd29ybGQvdGhpcytpcytiYXNlNjQ=aGVsbG8rd29ybGQ=` saía com o
+ * primeiro trecho oculto e `aGVsbG8rd29ybGQ=` inteiro ao lado — um segredo
+ * picado em pedaços legíveis é um segredo vazado, só que mais difícil de
+ * perceber.
+ *
+ * `:` e `/` também entraram, e com eles uma URL inteira passa a ser ocultada.
+ * Isso é o comportamento CERTO aqui: neste produto a URL da Z-API é
+ * `/instances/{id}/token/{token}/{endpoint}`, ou seja o caminho É a
+ * credencial. Ver `caminhoNoLog`.
  */
-const PARECE_SEGREDO = /[A-Za-z0-9_\-.]{24,}/g
+const PARECE_SEGREDO = /[A-Za-z0-9_\-.+/=:~]{24,}/g
 
 /**
  * Corpo de resposta de provedor, pronto para o log.
@@ -66,4 +79,38 @@ const PARECE_SEGREDO = /[A-Za-z0-9_\-.]{24,}/g
 export function corpoDeErroNoLog(corpo: string | null | undefined): string {
   if (!corpo) return '(sem corpo)'
   return corpo.slice(0, TETO_DO_CORPO).replace(PARECE_SEGREDO, '[oculto]')
+}
+
+/**
+ * O caminho de uma requisição ao provedor, sem a credencial que mora nele.
+ *
+ * ## O vazamento que isto fecha, e ele estava ao lado do que eu já tinha
+ * ## consertado
+ *
+ * `comInstancia` (`lib/whatsapp/zapi.ts:170`) monta
+ *
+ *     /instances/{instanceId}/token/{token}/{endpoint}
+ *
+ * ou seja **o token da instância faz parte do caminho**. E
+ * `remetente-zapi.ts:111` logava `erro.caminho` cru, na linha imediatamente
+ * abaixo do `erro.corpo` que já passava pelo redator.
+ *
+ * O token de instância da Z-API manda mensagem em nome do número do cliente.
+ * Ele no log da Vercel é a credencial mais cara que este produto tem, depois
+ * da service role.
+ *
+ * ## O que sobra é o que serve para investigar
+ *
+ *     /instances/3F95055E.../token/ABC.../send-text
+ *     ->  /instances/3F95055E/token/[oculto]/send-text
+ *
+ * O começo do `instanceId` continua distinguindo uma empresa da outra, e o
+ * endpoint continua dizendo qual chamada falhou — que são as duas perguntas
+ * que alguém faz olhando este log.
+ */
+export function caminhoNoLog(caminho: string | null | undefined): string {
+  if (!caminho) return '(sem caminho)'
+  return caminho
+    .replace(/\/token\/[^/?]+/g, '/token/[oculto]')
+    .replace(/\/instances\/([^/?]{0,8})[^/?]*/g, '/instances/$1')
 }

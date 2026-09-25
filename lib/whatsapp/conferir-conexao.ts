@@ -5,6 +5,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { decifrar } from '@/lib/integrations/crypto'
 import { corpoDeErroNoLog } from '@/lib/log/redigir'
 import { registrarEstado } from '@/lib/whatsapp/instancia'
+import { ehVeredito } from '@/lib/whatsapp/veredito-do-provedor'
 import { statusDaInstancia, ZapiError } from '@/lib/whatsapp/zapi'
 
 /**
@@ -107,16 +108,25 @@ export async function conferirConexoes(): Promise<ResultadoDaConferencia> {
     // antes de promover, e é a diferença entre um conserto e um conserto que
     // não conserta.
     //
-    // ## 4xx é VEREDITO, 5xx é NÃO SEI
+    // ## O padrão é NÃO SEI, e só uma lista curta é veredito
     //
-    //     400/401/403/404   o provedor entende a pergunta e diz que essa
-    //                       instância não vale mais: assinatura vencida,
-    //                       credencial revogada, instância apagada
-    //     5xx / rede        o provedor não conseguiu responder
+    // A primeira versão dizia "4xx é veredito, 5xx é não sei", e a faixa era
+    // larga demais. `429` é 4xx e significa **tente de novo**, não "esta
+    // instância morreu" — e é justamente o status que uma empresa enviando
+    // muito recebe. Derrubar por ele faria o pior: o sino avisa a empresa
+    // inteira que o WhatsApp caiu, o relógio da purga (0091) começa a contar
+    // sete dias, e a pessoa vai reparear lendo um QR de novo, por nada.
     //
-    // Derrubar por 5xx mandaria a pessoa refazer o pareamento com o celular
-    // por causa de uma indisponibilidade de dez minutos. É a mesma forma de
-    // `buscarAssinaturaNoAsaas`, onde só o 404 é resposta.
+    // É o mesmo erro de desenho que a varredura do portão cometeu hoje,
+    // invertido: lá o padrão aprovava e só o seguro reprovava. Aqui o padrão
+    // passou a ser não mexer.
+    //
+    //     401 403        credencial revogada: esta instância não é mais nossa
+    //     404            o provedor não conhece mais esta instância
+    //     400            assinatura vencida, que é como a Z-API responde
+    //                    "you must subscribe to this instance again"
+    //     408 425 429    TENTE DE NOVO. Não é resposta sobre a instância
+    //     5xx / rede     o provedor não conseguiu responder
     let conectado: boolean
     let motivo: string | null = null
     try {
@@ -128,7 +138,7 @@ export async function conferirConexoes(): Promise<ResultadoDaConferencia> {
       motivo = estado.error
     } catch (erro) {
       const status = erro instanceof ZapiError ? erro.status : 0
-      if (status >= 400 && status < 500) {
+      if (ehVeredito(status)) {
         conectado = false
         motivo =
           erro instanceof ZapiError ? corpoDeErroNoLog(erro.corpo) : 'O provedor recusou.'

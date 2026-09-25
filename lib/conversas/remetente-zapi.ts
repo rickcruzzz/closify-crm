@@ -4,7 +4,7 @@ import type { Remetente, ResultadoDoEnvio } from '@/lib/conversas/remetente'
 import { explicacaoDoTeto, tetoPorHora } from '@/lib/conversas/aquecimento'
 import { credenciaisDaEmpresa } from '@/lib/whatsapp/instancia'
 import { enviarTexto, ZapiError } from '@/lib/whatsapp/zapi'
-import { corpoDeErroNoLog } from '@/lib/log/redigir'
+import { caminhoNoLog, corpoDeErroNoLog } from '@/lib/log/redigir'
 
 /**
  * O `Remetente` que entrega pela Z-API.
@@ -107,8 +107,12 @@ export const remetenteZapi: Remetente = {
             motivo: 'O WhatsApp recusou este número. Confira o telefone do contato.',
           }
         }
+        // O CAMINHO também é redigido, e não só o corpo: `comInstancia` monta
+        // `/instances/{id}/token/{token}/{endpoint}`, então o token da
+        // instância faz parte da URL. Esta linha logava a credencial inteira
+        // logo abaixo de um corpo que já passava pelo redator.
         console.error(
-          `remetenteZapi: ${erro.status} em ${erro.caminho}`,
+          `remetenteZapi: ${erro.status} em ${caminhoNoLog(erro.caminho)}`,
           corpoDeErroNoLog(erro.corpo),
         )
         return { ok: false, motivo: 'O provedor de WhatsApp não respondeu. Tente de novo.' }
