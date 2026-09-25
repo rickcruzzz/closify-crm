@@ -139,10 +139,16 @@ de custo: paywall no momento em que a pessoa sente o valor converte 8-12%,
 contra 3-4% de limite arbitrário — e as outras três são todas arbitrárias no
 sentido técnico do termo.
 
-<!-- contagem: migrations.arquivos=97 migrations.maior=0098 -->
-**97 arquivos de migration, e a maior é `0098`** (remedido em 16/09; o `0049`
+<!-- contagem: migrations.arquivos=98 migrations.maior=0099 -->
+**98 arquivos de migration, e a maior é `0099`** (remedido em 25/09; o `0049`
 não existe, removido em 22/08). Os dois números vêm sempre juntos: a contagem
-sozinha convida a inferir `0085`.
+sozinha convida a inferir `0098`.
+
+**A 0099 abre `whatsapp_instances.provider` para `'evolution'`, e não cria
+objeto nenhum.** Ela troca um `check`, troca o `unique` de `instance_id` por um
+índice em `(provider, instance_id)`, e é isso. `banco.tabelas` não se moveu, e é
+ele que responde essa pergunta — a distinção que os oito saltos de nós sem
+arquivo existem para manter.
 
 **As duas ENTRARAM em 16/09**, e as contagens de catálogo acima se moveram
 junto — ver a seção logo abaixo do carimbo, no topo deste arquivo.

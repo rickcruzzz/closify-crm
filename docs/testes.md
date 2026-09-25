@@ -25,9 +25,9 @@ pegava porque `.yml` não estava na lista de extensões que ele confere.
 
 ## O que existe, em números
 
-<!-- contagem: testes.arquivos=145 e2e.specs=4 -->
-- **145 arquivos de teste unitário** (Vitest, `lib/**/*.test.ts`), e
-  **2.130 testes** na última execução, medida em 23/09.
+<!-- contagem: testes.arquivos=147 e2e.specs=4 -->
+- **147 arquivos de teste unitário** (Vitest, `lib/**/*.test.ts`), e
+  **2.175 testes** na última execução, medida em 25/09.
 
   O carimbo era `testes.arquivos>=85` e passava limpo dizendo 65% a menos do
   que existe. Piso é a decisão certa onde o crescimento é rotineiro, e aqui ele
