@@ -96,7 +96,7 @@ export async function POST(
 
   const supabase = createAdminClient()
   try {
-    if (!(await eventoNovo(supabase, instancia.instanceId, mensagem.id))) {
+    if (!(await eventoNovo(supabase, 'zapi', instancia.instanceId, mensagem.id))) {
       return ACEITO
     }
   } catch {

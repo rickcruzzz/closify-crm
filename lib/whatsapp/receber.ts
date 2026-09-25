@@ -48,18 +48,31 @@ export type ResultadoDaGravacao =
  * `insert` e não `select`-depois-`insert`: a corrida entre os dois deixaria
  * passar o reenvio que chega no mesmo instante, que é exatamente o caso.
  *
- * O prefixo `zapi:` separa deste espaço de nomes o da prospecção, que grava o
- * id cru da Evolution na mesma tabela. Sem ele, dois provedores que usem o
- * mesmo formato de id se calariam um ao outro.
+ * O prefixo separa deste espaço de nomes o da prospecção, que grava o id cru da
+ * Evolution na mesma tabela. Sem ele, dois provedores que usem o mesmo formato
+ * de id se calariam um ao outro.
+ *
+ * ## O prefixo era `zapi:` fixo, e virou o provedor de verdade
+ *
+ * Com a 0099 esta função passou a atender dois transportes, e a chave de uma
+ * mensagem da Evolution saía escrita `zapi:`. Nada colidia — `instance_id` é
+ * único por `(provider, instance_id)` —, e por isso o defeito era só uma mentira
+ * na tabela. Mentira que a própria justificativa acima desmonta: um prefixo que
+ * não distingue provedor não separa espaço de nomes nenhum.
+ *
+ * As chaves da Z-API NÃO mudam, porque os chamadores dela passam `'zapi'`.
+ * Trocá-las faria todo evento já visto parecer novo, e a segunda camada
+ * (`mensagens (workspace_id, external_id)`) é que pagaria a conta.
  */
 export async function eventoNovo(
   supabase: ReturnType<typeof createAdminClient>,
+  provider: 'zapi' | 'evolution',
   instanceId: string,
   eventoId: string,
 ): Promise<boolean> {
   const { error } = await supabase
     .from('whatsapp_webhook_events')
-    .insert({ event_id: `zapi:${instanceId}:${eventoId}` })
+    .insert({ event_id: `${provider}:${instanceId}:${eventoId}` })
 
   if (error && error.code === '23505') return false
   if (error) {
