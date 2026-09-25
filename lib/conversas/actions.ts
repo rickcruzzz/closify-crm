@@ -5,7 +5,7 @@ import { z } from '@/lib/validations/zod'
 
 import { createClient } from '@/lib/supabase/server'
 import { resolverWorkspaceAtivo } from '@/lib/workspace/ativo'
-import { escolherRemetente } from '@/lib/conversas/remetente'
+import { escolherRemetente, type Remetente } from '@/lib/conversas/remetente'
 import { normalizarTelefoneBrasileiro } from '@/lib/leads/whatsapp'
 import { podeEnviarWhatsapp } from '@/lib/integrations/whatsapp-estado'
 import { direitoAoWhatsapp } from '@/lib/plans/max'
@@ -222,9 +222,10 @@ export async function enviarMensagem(
   const direito = direitoAoWhatsapp(assinatura, conexao.estado)
   if (!direito.pode) return { error: direito.motivo }
 
-  // Qual transporte entrega a mensagem. Hoje Z-API, amanhã Cloud API: a troca
-  // acontece dentro de `escolherRemetente`, e nada abaixo muda.
-  const remetente = escolherRemetente(sessao.workspaceId)
+  // Qual transporte entrega a mensagem, POR EMPRESA: a Z-API e a Evolution
+  // convivem desde a 0099. A troca acontece dentro de `escolherRemetente`, e
+  // nada abaixo muda.
+  const remetente = await escolherRemetente(sessao.workspaceId)
 
   // `conectada_em` e não `created_at`: o aquecimento conta do dia em que o
   // NÚMERO foi pareado, não do dia em que a linha nasceu no banco. Uma empresa
@@ -302,7 +303,7 @@ export async function enviarMensagem(
  */
 async function conferirTetoDeEnvio(
   sessao: Sessao,
-  remetente: ReturnType<typeof escolherRemetente>,
+  remetente: Remetente,
   conectadoEm: string | null,
 ): Promise<string | null> {
   const teto = remetente.tetoPorHora(conectadoEm)

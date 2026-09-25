@@ -1,6 +1,8 @@
 import 'server-only'
 import { AVISO_DE_MIGRACAO, FASE_DO_WHATSAPP } from '@/lib/integrations/whatsapp-estado'
+import { remetenteEvolution } from '@/lib/conversas/remetente-evolution'
 import { remetenteZapi } from '@/lib/conversas/remetente-zapi'
+import { provedorDaEmpresa } from '@/lib/whatsapp/instancia'
 
 
 /**
@@ -90,28 +92,45 @@ const emMigracao: Remetente = {
 /**
  * Qual remetente esta empresa usa.
  *
- * Hoje devolve sempre o Evolution. Quando a Cloud API existir, a escolha passa
- * a ser por empresa — provavelmente lendo `integration_connections.provider` —
- * e as duas conviverão por um tempo: quem já está no Evolution continua nele
- * até migrar o número, porque migrar tira o WhatsApp do celular da pessoa.
+ * ## O dia chegou, e o parâmetro passou a ser lido
  *
- * O parâmetro já entra na assinatura para essa mudança não virar refatoração.
+ * Ele estava na assinatura desde 28/08 esperando o dia em que duas pontes
+ * coexistissem, e o comentário anterior dizia, em texto, onde a resposta ia
+ * morar: *"a escolha passa a sair de `whatsapp_instances.provider` desta
+ * empresa, e é por isso que a coluna nasceu com `check (provider in
+ * ('zapi'))`"*.
+ *
+ * A 0099 abriu esse `check` para `'evolution'`. Nenhum chamador mudou de
+ * forma: os dois já eram `async`, que é a razão de o parâmetro ter entrado
+ * cedo em vez de virar refatoração depois.
+ *
+ * ## Os dois convivem, e isso é o desenho
+ *
+ *     zapi        cobra por instância, provisiona por API
+ *     evolution   VPS própria, já paga, cinco clientes cabem (medido em 18/09)
+ *
+ * Migrar um número tira o WhatsApp do celular da pessoa. Quem já está num
+ * transporte fica nele até ter motivo para sair, e por isso a escolha é por
+ * empresa e não uma constante global.
+ *
+ * ## `null` cai no remetente que RECUSA, e não em um padrão
+ *
+ * Empresa sem conexão, e falha de leitura, dão os dois `null`. Escolher um
+ * transporte por padrão nesse caso mandaria a mensagem por uma instância que
+ * pode não ser dela. `emMigracao` recusa com uma frase, que é o comportamento
+ * que todo chamador já sabe tratar.
+ *
+ * **O que decide por empresa NÃO é esta função.** É `direitoAoWhatsapp`
+ * (`lib/plans/max.ts`), que lê `max_vigente()` e o estado da conexão. Aqui a
+ * pergunta é "qual transporte", lá é "esta empresa pode". Misturar as duas
+ * faria o gate de plano viver dentro do módulo de transporte, que é
+ * exatamente a fronteira que este arquivo existe para manter.
  */
-export function escolherRemetente(workspaceId: string): Remetente {
-  // ## O parâmetro continua sem ser lido, e agora isso é uma afirmação
-  //
-  // Ele está aqui desde 28/08 esperando o dia em que duas pontes coexistissem.
-  // Esse dia ainda não é hoje: a Z-API é a única, e a Cloud API da Meta segue
-  // dependendo de App Review. Quando ela entrar, a escolha passa a sair de
-  // `whatsapp_instances.provider` desta empresa, e é por isso que a coluna
-  // nasceu com `check (provider in ('zapi'))` em vez de não existir.
-  //
-  // **O que decide por empresa NÃO é esta função.** É `direitoAoWhatsapp`
-  // (`lib/plans/max.ts`), que lê `max_vigente()` e o estado da conexão. Aqui a
-  // pergunta é "qual transporte", lá é "esta empresa pode". Misturar as duas
-  // faria o gate de plano viver dentro do módulo de transporte, que é
-  // exatamente a fronteira que este arquivo existe para manter.
-  void workspaceId
+export async function escolherRemetente(workspaceId: string): Promise<Remetente> {
+  if (FASE_DO_WHATSAPP !== 'zapi') return emMigracao
 
-  return FASE_DO_WHATSAPP === 'zapi' ? remetenteZapi : emMigracao
+  const provedor = await provedorDaEmpresa(workspaceId)
+  if (provedor === 'evolution') return remetenteEvolution
+  if (provedor === 'zapi') return remetenteZapi
+  return emMigracao
 }

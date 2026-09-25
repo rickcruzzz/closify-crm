@@ -8,7 +8,7 @@ import { direitoAoWhatsapp } from '@/lib/plans/max'
 import { situacaoDoMax } from '@/lib/plans/max-queries'
 import { excedeuLimite } from '@/lib/rate-limit'
 import { createClient } from '@/lib/supabase/server'
-import { resolverWorkspaceAtivo } from '@/lib/workspace/ativo'
+import { abrirSessao, type Sessao } from '@/lib/whatsapp/sessao'
 import {
   conexaoDaEmpresa,
   credenciaisDaEmpresa,
@@ -53,25 +53,6 @@ import { renderPedidoDeConexaoEmail } from '@/lib/emails/pedido-de-conexao'
  * `whatsapp_instances_exige_max` (0090) recusa o `insert` mesmo pelo admin
  * client, que ignora RLS e não ignora trigger.
  */
-
-type Sessao = { userId: string; email: string; workspaceId: string; ehAdmin: boolean }
-
-async function abrirSessao(): Promise<Sessao | { error: string }> {
-  const supabase = await createClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-  if (!user) return { error: 'Sessão expirada.' }
-
-  const workspaceId = await resolverWorkspaceAtivo(supabase, user.id)
-  if (!workspaceId) return { error: 'Empresa não encontrada.' }
-
-  const { data: ehAdmin } = await supabase.rpc('is_workspace_admin', {
-    target_workspace_id: workspaceId,
-  })
-
-  return { userId: user.id, email: user.email ?? '', workspaceId, ehAdmin: ehAdmin === true }
-}
 
 function revalidar() {
   revalidatePath('/settings/whatsapp')
@@ -184,6 +165,7 @@ export async function conectarWhatsapp(): Promise<RespostaDaConexao> {
   }
 
   const guardada = await guardarInstancia({
+    provider: 'zapi',
     workspaceId: sessao.workspaceId,
     instanceId: criada.id,
     token: criada.token,
@@ -340,6 +322,7 @@ export async function adotarInstancia(valores: unknown): Promise<RespostaDaAdoca
   const urls = urlsDoWebhook(segredo)
 
   const guardada = await guardarInstancia({
+    provider: 'zapi',
     workspaceId: sessao.workspaceId,
     instanceId: instancia.instanceId,
     token: instancia.token,
@@ -616,6 +599,7 @@ async function entregarInstancia(
   const urls = urlsDoWebhook(segredo)
 
   const guardada = await guardarInstancia({
+    provider: 'zapi',
     workspaceId: sessao.workspaceId,
     instanceId: instancia.instanceId,
     token: instancia.token,

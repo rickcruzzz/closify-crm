@@ -175,7 +175,7 @@ export async function reenviarMensagensQueFalharam(opcoes: {
     // puniria a mensagem por um problema que é da conexão.
     if (conexao?.status !== 'conectado') continue
 
-    const remetente = escolherRemetente(workspaceId)
+    const remetente = await escolherRemetente(workspaceId)
     const teto = remetente.tetoPorHora(conexao.conectada_em)
 
     let vagas = Number.POSITIVE_INFINITY
