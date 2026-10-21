@@ -1,92 +1,29 @@
-'use client'
-
-import Link from 'next/link'
-
 import { buttonVariants } from '@/components/ui/button'
-import { useSessaoAtiva } from '@/hooks/use-sessao-ativa'
+import { CONTROLADOR } from '@/lib/legal'
 import { cn } from '@/lib/utils'
 
-/**
- * O botão de um plano, que muda de destino conforme exista sessão.
- *
- * ## O defeito que isto conserta
- *
- * O CTA do Pro apontava para `/cadastro?plano=pro` para todo mundo. Só que o
- * `middleware.ts` desvia quem TEM sessão de `/cadastro` para `/dashboard`:
- * quem já tinha criado a conta grátis clicava em "Começar com o Pro" e caía no
- * painel, sem passar por pagamento nenhum.
- *
- * É a mesma classe do "Assinar Pro" corrigido em 02/09 — rótulo que promete uma
- * coisa e clique que faz outra. Só que pior, porque aqui a pessoa já decidiu
- * pagar: é o único momento do funil em que ela está com o cartão na mão.
- *
- * ## Por que um componente separado
- *
- * `pricing-section.tsx` é Server Component e precisa continuar sendo — a landing
- * é o LCP da página que recebe tráfego pago, e torná-la dinâmica para ler sessão
- * no servidor custaria o TTFB de todo visitante para mudar o rótulo de um botão
- * que a quase totalidade deles nunca vê diferente.
- *
- * Mesmo padrão de `public-navbar.tsx`, que troca "Entrar" por "Ir para o
- * sistema": o padrão renderizado é o de quem está DESLOGADO, que é o caso de
- * quase todo mundo, e só quem tem sessão vê a troca depois da hidratação.
- *
- * ## O destino de quem está logado, e por que ele é seguro nos três estados
- *
- * `?assinar=1` abre o diálogo de CPF/CNPJ e cria a cobrança. Conferido nos três
- * estados possíveis de quem tem sessão, e nenhum vira caminho morto:
- *
- *     Free + admin    o diálogo abre, que é o caso do pedido
- *     Free + membro   "Peça a um administrador" (`plan-card.tsx`)
- *     já é Pro        o bloco inteiro não renderiza, porque vive dentro de
- *                     `plan === 'free'` — nenhum diálogo abre
- *
- * E se o cookie estiver velho, a presença dele não prova que o token vale: quem
- * valida é o `middleware.ts`, que manda para `/login`. A falha é segura.
- */
+/** Abre o WhatsApp com o plano escolhido na mensagem, com ou sem sessão. */
 export function CtaDoPlano({
-  hrefDeslogado,
-  textoDeslogado,
-  hrefLogado,
-  textoLogado,
+  plano,
   variant = 'default',
   className,
 }: {
-  hrefDeslogado: string
-  textoDeslogado: string
-  /** Quando ausente, o botão não muda com a sessão — é o caso do Free. */
-  hrefLogado?: string
-  textoLogado?: string
+  plano: string
   variant?: 'default' | 'outline'
-  /* O `size` NÃO é prop, e isso é decisão.
-   *
-   * Este é o botão de comprar, e antes ele era o único CTA da landing que não
-   * pedia tamanho: os cinco outros (`hero`, `cta-section`, `cta-no-meio`,
-   * `mobile-sticky-cta` e o secundário do hero) passam `size: 'lg'`, e este
-   * caía no `default`. Medido na tela: 44px de altura e fonte de 14px contra
-   * 52px e 16px dos demais — o botão mais importante da página era o menor.
-   *
-   * Deixá-lo como prop convidaria a mesma divergência de volta pela porta do
-   * chamador. O papel é fixo, então o tamanho é fixo. */
-  /**
-   * As classes vêm do pai, e não são recalculadas aqui.
-   *
-   * A regra do `mt-auto` depende de o cartão ter ou não a frase de fecho, e ela
-   * já vive em `pricing-section.tsx`. Duplicá-la aqui daria dois lugares para
-   * manter alinhados — que é o defeito que esta rodada inteira está corrigindo
-   * na descrição dos planos.
-   */
   className?: string
 }) {
-  const logado = useSessaoAtiva()
-  const mudaComSessao = logado && hrefLogado && textoLogado
+  const mensagem = `Olá! Tenho interesse no plano ${plano} do Velo Funil. Gostaria de falar com um especialista para saber mais.`
+  const href = `https://wa.me/${CONTROLADOR.whatsapp.numero}?text=${encodeURIComponent(mensagem)}`
 
   return (
-    <Link
-      href={mudaComSessao ? hrefLogado : hrefDeslogado}
+    <a
+      href={href}
+      target="_blank"
+      rel="noopener noreferrer"
+      aria-label={`Falar com especialista sobre o plano ${plano}`}
       className={cn(buttonVariants({ variant, size: 'lg' }), className)}
     >
-      {mudaComSessao ? textoLogado : textoDeslogado}
-    </Link>
+      Falar com especialista
+    </a>
   )
 }
