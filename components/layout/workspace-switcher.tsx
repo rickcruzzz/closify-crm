@@ -6,7 +6,7 @@ import { Building2, Check, ChevronsUpDown, Loader2, Plus, Zap } from 'lucide-rea
 import { toast } from 'sonner'
 
 import { avisarLimite } from '@/components/plano/avisar-limite'
-import { DESTINO_DO_UPGRADE, PLANO_NA_TELA, rotuloDoPlano } from '@/lib/plans'
+import { DESTINO_DO_UPGRADE, PLANO_NA_TELA, planoEfetivo, rotuloDoPlano } from '@/lib/plans'
 import { cn } from '@/lib/utils'
 
 import { criarEmpresa, trocarEmpresa } from '@/lib/workspace/actions'
@@ -245,10 +245,17 @@ export function WorkspaceSwitcher({
     return null
   }
 
+  // ## Uma decisão, uma fonte: `planoEfetivo`
+  //
   // A FUNÇÃO vence a coluna, pelo mesmo motivo do rótulo: quem já paga via
   // outra empresa do mesmo dono tem `plan = 'free'` e Pro valendo, e sem isto
   // a barra ofereceria "Conhecer o Pro" para quem já o tem.
-  const ehFree = !proVigente && active.plan !== 'pro'
+  //
+  // E `temMax` entrou na conta. A versão anterior lia só `proVigente` e a
+  // coluna, então um cliente Max com a RPC de Pro devolvendo `null` (falha de
+  // leitura) via a barra oferecer o plano que ele já superou.
+  const planoDaBarra = planoEfetivo({ plan: active.plan, temMax, proVigente })
+  const ehFree = planoDaBarra === 'free'
 
   return (
     <>
@@ -271,9 +278,9 @@ export function WorkspaceSwitcher({
               <span
                 className={cn(
                   'w-fit rounded px-1.5 py-0.5 text-[11px] leading-none font-medium',
-                  active.plan === 'pro'
-                    ? 'bg-primary/15 text-primary'
-                    : 'bg-muted text-muted-foreground',
+                  ehFree
+                    ? 'bg-muted text-muted-foreground'
+                    : 'bg-primary/15 text-primary',
                 )}
               >
                 {/* ## Ele dizia "Pro" para quem paga R$ 250, ate 17/09
@@ -285,7 +292,7 @@ export function WorkspaceSwitcher({
                 O numero estava certo e a palavra contava outra coisa, que e a
                 mesma classe do "ate 2 colaboradores" prometendo tres pessoas.
                 `rotuloDoPlano` decide, com teste. */}
-                {rotuloDoPlano(active.plan, temMax, proVigente)}
+                {PLANO_NA_TELA[planoDaBarra]}
               </span>
             </div>
             <ChevronsUpDown className="text-muted-foreground size-4 shrink-0" />

@@ -135,6 +135,56 @@ export type IntegrationStatus = 'connected' | 'error' | 'disconnected'
 export type Database = {
   public: {
     Tables: {
+      enterprise_workspaces: {
+        Row: { workspace_id: string; active: boolean; granted_at: string }
+        Insert: { workspace_id: string; active?: boolean; granted_at?: string }
+        Update: { active?: boolean }
+        Relationships: []
+      }
+      enterprise_eventos: {
+        Row: {
+          id: string
+          workspace_id: string
+          nome: string
+          data_inicio: string
+          cidade: string
+          local_evento: string | null
+          fonte_url: string
+          organizador: string | null
+          contato_nome: string | null
+          contato_email: string | null
+          contato_telefone: string | null
+          publico_estimado: number | null
+          prioridade: number | null
+          justificativa: string | null
+          mensagem_rascunho: string | null
+          status: 'novo' | 'rascunho' | 'contatado' | 'descartado'
+          criado_em: string
+          atualizado_em: string
+        }
+        Insert: {
+          id?: string
+          workspace_id: string
+          nome: string
+          data_inicio: string
+          cidade: string
+          local_evento?: string | null
+          fonte_url: string
+          organizador?: string | null
+          contato_nome?: string | null
+          contato_email?: string | null
+          contato_telefone?: string | null
+          publico_estimado?: number | null
+          prioridade?: number | null
+          justificativa?: string | null
+          mensagem_rascunho?: string | null
+          status?: 'novo' | 'rascunho' | 'contatado' | 'descartado'
+          criado_em?: string
+          atualizado_em?: string
+        }
+        Update: Partial<Database['public']['Tables']['enterprise_eventos']['Insert']>
+        Relationships: []
+      }
       // Os campos de empresa (0030) são todos anuláveis: as empresas que já
       // existiam continuam válidas sem uma linha ser tocada. Só `name` é
       // obrigatório, e ele já era.
@@ -1082,6 +1132,15 @@ export type Database = {
           // que `intervalo_do_ciclo()` lê para decidir se um pagamento compra
           // 30 dias ou um ano. `not null default 'MONTHLY'` no banco.
           ciclo: CicloDeCobranca
+          /**
+           * Quando o CLIENTE pediu para parar de renovar (0098).
+           *
+           * Nulo em estorno e chargeback, que tambem produzem `canceled` e
+           * NAO devem preservar acesso. E o campo que `assinatura_compra_acesso`
+           * le para cumprir a promessa dos Termos: *"o acesso ao plano pago
+           * permanece ate o fim do periodo ja pago"*.
+           */
+          cancelado_pelo_cliente_em: string | null
           // `pro` ou `max` (migration 0089). Escrito por `createCheckout` junto
           // do `asaas_subscription_id` a que pertence, e lido só por
           // `max_vigente()`. Nunca vem do payload do webhook (ver 0027).
@@ -1099,6 +1158,7 @@ export type Database = {
           ultimo_billing_type?: string | null
           aviso_vencimento_enviado_em?: string | null
           ciclo?: CicloDeCobranca
+          cancelado_pelo_cliente_em?: string | null
           plano?: PlanoDaAssinatura
           created_at?: string
         }
@@ -1112,6 +1172,7 @@ export type Database = {
           ultimo_billing_type?: string | null
           aviso_vencimento_enviado_em?: string | null
           ciclo?: CicloDeCobranca
+          cancelado_pelo_cliente_em?: string | null
           plano?: PlanoDaAssinatura
           created_at?: string
         }
@@ -1311,6 +1372,10 @@ export type Database = {
         Args: { target_workspace_id: string }
         Returns: boolean
       }
+      enterprise_vigente: {
+        Args: { target_workspace_id: string }
+        Returns: boolean
+      }
       /**
        * O Max está valendo nesta empresa agora? (migration 0089)
        *
@@ -1501,6 +1566,11 @@ export type Database = {
       // Agora a função devolve os caminhos dos anexos órfãos junto com a
       // contagem, e quem apaga arquivo é a Storage API em
       // `/api/cron/limpar-eventos`.
+      // `purge_old_sinais_de_mercado` saiu daqui em 23/09. A 0085 fez
+      // `drop function` em 08/09 e o tipo sobreviveu: o `tsc` aprovava um
+      // `.rpc()` que o Postgres recusa com 42883. Conferido no catálogo,
+      // `to_regprocedure` devolve null. É o mesmo resíduo que a 0085 existiu
+      // para varrer, um nível acima.
       purge_old_feedback: {
         Args: Record<string, never>
         Returns: { apagados: number; anexos: string[] }
@@ -1508,10 +1578,6 @@ export type Database = {
       // 90 dias (0066): aviso de três meses atrás não muda decisão nenhuma. O
       // histórico de dinheiro que importa vive em `assinatura_eventos` (0055),
       // append-only, e não é tocado por esta purga.
-      purge_old_sinais_de_mercado: {
-        Args: Record<string, never>
-        Returns: undefined
-      }
       purge_old_notificacoes: {
         Args: Record<string, never>
         Returns: number

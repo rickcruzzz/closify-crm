@@ -4,6 +4,7 @@ import { asaasFetch } from '@/lib/asaas/client'
 
 import { exigirAmbienteLocal } from './somente-local'
 import type { DinheiroNoAsaas, Resultado } from './tipos'
+import { assinaturaEstaViva } from '@/lib/asaas/assinatura-viva'
 
 type ListaDeAssinaturas = {
   totalCount: number
@@ -68,7 +69,7 @@ export async function lerDinheiro(): Promise<Resultado<DinheiroNoAsaas>> {
         // `deleted` é o descarte real: uma assinatura cancelada continua
         // aparecendo na lista com `status: ACTIVE` e `deleted: true`, e contá-la
         // inflaria o número de clientes que parecem estar pagando.
-        assinaturasAtivas: assinaturas.data.filter((a) => a.status === 'ACTIVE' && !a.deleted)
+        assinaturasAtivas: assinaturas.data.filter(assinaturaEstaViva)
           .length,
         // A lista CRUA, para o cruzamento das pendências não precisar buscá-la
         // de novo — era literalmente a mesma chamada, feita duas vezes.

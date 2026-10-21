@@ -21,6 +21,7 @@ export const config = {
     '/leads/:path*',
     '/hoje/:path*',
     '/conversas/:path*',
+    '/enterprise/:path*',
     '/calendario/:path*',
     '/settings/:path*',
     '/perfil',

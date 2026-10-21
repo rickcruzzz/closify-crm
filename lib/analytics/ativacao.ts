@@ -4,6 +4,7 @@ import 'server-only'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { dadosDeCorrespondencia } from '@/lib/analytics/dados-de-correspondencia'
 import { enviarConversaoDeAtivacao } from '@/lib/analytics/meta-conversions'
+import { ipDaRequisicao } from '@/lib/request-ip'
 
 /**
  * O evento do PRIMEIRO contato criado numa empresa.
@@ -92,8 +93,18 @@ export async function registrarAtivacao(params: {
     let origem: string | null = null
     try {
       const cabecalhos = await headers()
-      // `x-forwarded-for` pode vir com varios IPs; o primeiro e o do cliente.
-      ip = cabecalhos.get('x-forwarded-for')?.split(',')[0]?.trim() ?? null
+      // ## O conserto do EMQ mandava o IP do PROXY, e por isso ele nao consertava
+      //
+      // Este bloco nasceu para dar IP ao evento de pior casamento do funil, e
+      // lia `x-forwarded-for` direto. Desde a migracao do DNS para o
+      // Cloudflare em 19/08 esse cabecalho traz o IP do PROXY, nao o do
+      // cliente: `lib/request-ip-parse.ts` registra a medicao que revelou
+      // isso, e existe exatamente para preferir `cf-connecting-ip`.
+      //
+      // Ou seja: o EMQ subia de "sem IP" para "com IP errado", que para a Meta
+      // e a mesma coisa que nada e ainda parece resolvido. Os outros cinco
+      // lugares que mandam IP ja usavam `ipDaRequisicao()`.
+      ip = await ipDaRequisicao()
       agente = cabecalhos.get('user-agent')
       const host = cabecalhos.get('host')
       origem = host ? `https://${host}/leads` : null

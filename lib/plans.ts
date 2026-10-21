@@ -445,8 +445,31 @@ export function ehLimiteDePlano(mensagem: string | null | undefined): boolean {
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '')
     .toLowerCase()
-  return (
-    /faca upgrade|upgrade para o pro|recurso pro|plano free (permite|inclui|acompanha)/.test(limpo)
+  // ## Medido em 23/09: CINCO das oito frases do banco não chegavam ao botão
+  //
+  // A expressão anterior exigia `plano free` seguido de um de três verbos, e
+  // as triggers não falam assim. Ficavam de fora:
+  //
+  //     "Workspace atingiu o limite de % membros do plano Free."       0053
+  //     "O WhatsApp dentro do CRM e do plano Max. Assine para..."      0090
+  //     "O plano Pro inclui 5 empresas. Assine o Max para..."          0094
+  //
+  // Quem batia nesses três via o erro cru, sem oferta nenhuma. É o beco que o
+  // comentário do caso negativo, logo abaixo, diz ser o lado caro de errar.
+  //
+  // `plano free` solto basta: toda frase que nomeia o Free num limite tem
+  // upgrade disponível, e não há mensagem de erro comum que diga isso.
+  //
+  // ## O TETO não vira oferta, e é o que a segunda expressão protege
+  //
+  //     "O plano Max inclui 10 empresas. Fale com a gente para ter mais."
+  //
+  // Acima do Max não existe plano. Oferecer upgrade ali manda a pessoa para
+  // uma tela que não resolve o problema dela, que é pior que não oferecer.
+  if (/fale com a gente/.test(limpo)) return false
+
+  return /faca upgrade|upgrade para o pro|recurso pro|plano free|assine o max|plano max\. assine/.test(
+    limpo,
   )
 }
 

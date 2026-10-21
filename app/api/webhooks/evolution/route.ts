@@ -15,6 +15,7 @@ import { registrarDescadastro } from '@/lib/prospeccao/opt-out-queries'
 import { decidirResposta } from '@/lib/prospeccao/resposta-automatica'
 import { responderProspect } from '@/lib/prospeccao/responder-envio'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { telefoneNoLog } from '@/lib/log/redigir'
 
 /**
  * A resposta do prospect entra no sistema. FASE 1: captura, e só captura.
@@ -451,8 +452,10 @@ export async function POST(request: Request) {
     ? await responderProspect(telefone, decisao.texto)
     : { enviado: false, erro: decisao.motivo }
   if (decisao.responder && !respondido.enviado) {
+    // Redigido: aqui o titular e PROSPECT, alguem que nunca teve relacao
+    // nenhuma com o produto. Ver `lib/log/redigir.ts`.
     console.error(
-      `evolution: resposta automatica para +${telefone} falhou: ${respondido.erro}`,
+      `evolution: resposta automatica para ${telefoneNoLog(telefone)} falhou: ${respondido.erro}`,
     )
   }
   if (decisao.responder && respondido.enviado && conversaId) {
@@ -480,7 +483,7 @@ export async function POST(request: Request) {
       : await avisarNoWhatsapp(textoDoAviso(mensagem, prospect?.dominio ?? null, saiu))
   if (!aviso.enviado) {
     console.error(
-      `evolution: resposta de +${telefone} gravada, aviso falhou: ${aviso.erro}`,
+      `evolution: resposta de ${telefoneNoLog(telefone)} gravada, aviso falhou: ${aviso.erro}`,
     )
   }
 

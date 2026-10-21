@@ -9,18 +9,14 @@ import { Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Separator } from '@/components/ui/separator'
-import { GoogleIcon } from '@/components/auth/google-icon'
 import { AuthCabecalho } from '@/components/auth/auth-cabecalho'
 import { AuthAlerta } from '@/components/auth/auth-alerta'
-import { passo3, passo4, passo5 } from '@/components/auth/animacao'
+import { passo4, passo5 } from '@/components/auth/animacao'
 import { loginSchema, type LoginValues } from '@/lib/validations/auth'
 import { signIn } from '@/lib/supabase/actions'
-import { signInWithGoogleClient } from '@/lib/supabase/google-auth'
 
 export default function LoginPage() {
   const [isSubmitting, setIsSubmitting] = React.useState(false)
-  const [isGoogleLoading, setIsGoogleLoading] = React.useState(false)
   const [formError, setFormError] = React.useState<string | null>(null)
 
   const {
@@ -59,57 +55,15 @@ export default function LoginPage() {
     }
   }
 
-  /**
-   * Desliga o spinner do Google quando a pessoa VOLTA da tela de escolha.
-   *
-   * ## O defeito, e por que ele nasceu junto com a correcao
-   *
-   * `onGoogleClick` liga `isGoogleLoading` e nunca o desliga no caminho de
-   * sucesso — de proposito, porque o navegador estaria saindo para o Google e
-   * resetar deixaria o botao "acordar" no meio da navegacao.
-   *
-   * Isso valia enquanto o Google entrava DIRETO. Com `prompt=select_account`
-   * passou a existir uma tela de escolha, e com ela o botao voltar: quem
-   * desiste ali volta para `/login` e encontra o botao girando para sempre.
-   *
-   * A correcao anterior criou a oportunidade para este defeito. Vale registrar
-   * porque e o padrao: mudanca que acrescenta um passo ao fluxo acrescenta
-   * junto todos os caminhos de saida desse passo.
-   *
-   * ## Por que `pageshow` com `persisted`, e nao `useEffect` de montagem
-   *
-   * A pagina volta do **bfcache** do navegador, com a arvore React inteira
-   * preservada — estado incluso. Nao ha remontagem, entao um `useEffect([])`
-   * nao roda de novo e o `useState(false)` inicial nunca e reavaliado.
-   *
-   * `pageshow` dispara nos dois casos, e `event.persisted` distingue: `true`
-   * significa que veio do bfcache, que e exatamente o caso em que o estado
-   * sobreviveu e precisa ser desfeito. Numa recarga de verdade o estado ja
-   * nasce limpo e nao ha o que fazer.
-   */
   React.useEffect(() => {
     function aoVoltarParaEstaPagina(evento: PageTransitionEvent) {
       if (evento.persisted) {
-        setIsGoogleLoading(false)
-        // `isSubmitting` pelo mesmo motivo: o login por senha termina em
-        // `redirect()`, e voltar dele cairia no mesmo botao travado.
         setIsSubmitting(false)
       }
     }
     window.addEventListener('pageshow', aoVoltarParaEstaPagina)
     return () => window.removeEventListener('pageshow', aoVoltarParaEstaPagina)
   }, [])
-
-  async function onGoogleClick() {
-    setFormError(null)
-    setIsGoogleLoading(true)
-    const result = await signInWithGoogleClient()
-    if (result?.error) {
-      setFormError(result.error)
-      setIsGoogleLoading(false)
-    }
-    // Sem erro: signInWithGoogleClient já redirecionou o browser pro Google.
-  }
 
   return (
     <>
@@ -124,29 +78,6 @@ export default function LoginPage() {
       />
 
       <div className="mt-8 flex flex-col gap-4">
-        <div className={passo3}>
-          <Button
-            variant="outline"
-            className="w-full"
-            type="button"
-            disabled={isSubmitting || isGoogleLoading}
-            onClick={onGoogleClick}
-          >
-            {isGoogleLoading ? (
-              <Loader2 className="size-4 animate-spin" />
-            ) : (
-              <GoogleIcon className="size-4" />
-            )}
-            Continuar com Google
-          </Button>
-
-          <div className="mt-4 flex items-center gap-3">
-            <Separator className="flex-1" />
-            <span className="text-muted-foreground text-xs">ou</span>
-            <Separator className="flex-1" />
-          </div>
-        </div>
-
         {/* A mensagem é a mesma para senha errada e para e-mail sem conta, de
             propósito: distinguir as duas permitiria testar uma lista de
             endereços e descobrir quem tem conta no Velo Funil, insumo direto
@@ -159,11 +90,7 @@ export default function LoginPage() {
           <AuthAlerta className="flex flex-col gap-2">
             <span>{formError}</span>
             <span className="text-destructive/90 text-xs">
-              Ainda não tem conta?{' '}
-              <Link href="/cadastro" className="font-medium underline underline-offset-2">
-                Criar conta grátis
-              </Link>{' '}
-              · Esqueceu a senha?{' '}
+              Esqueceu a senha?{' '}
               <Link
                 href="/esqueci-senha"
                 className="font-medium underline underline-offset-2"
@@ -252,12 +179,6 @@ export default function LoginPage() {
           </Button>
         </form>
 
-        <p className={`${passo5} text-muted-foreground text-center text-sm`}>
-          Não tem uma conta?{' '}
-          <Link href="/cadastro" className="text-foreground underline-offset-4 hover:underline">
-            Criar conta
-          </Link>
-        </p>
       </div>
     </>
   )

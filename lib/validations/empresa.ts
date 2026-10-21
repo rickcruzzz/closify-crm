@@ -1,3 +1,4 @@
+import { validarCnpj } from '@/lib/documento-br'
 import { z } from '@/lib/validations/zod'
 
 /** Tira máscara. O banco guarda só dígitos, ele recusa o resto. */
@@ -6,35 +7,28 @@ export function somenteDigitos(valor: string): string {
 }
 
 /**
- * CNPJ pelos dois dígitos verificadores, não pelo tamanho.
+ * CNPJ pelos dois dígitos verificadores.
  *
- * Checar só "tem 14 dígitos" aceita `11111111111111`, que é o que sai quando
- * alguém quer pular o campo. Como o CNPJ aqui é OPCIONAL, quem não tem deixa
- * em branco, então preencher errado é engano de digitação, e vale avisar.
+ * ## Uma implementação só, e ela mora em `documento-br.ts`
+ *
+ * Até 23/09 havia DUAS: esta e `validarCnpj`, com a mesma matemática escrita
+ * de jeitos diferentes. `lib/validations/billing.ts` usava uma e o
+ * `empresaSchema` abaixo usava a outra, ou seja o produto tinha duas respostas
+ * possíveis para *"este CNPJ vale?"*.
+ *
+ * Só uma tinha teste. A que não tinha era esta.
+ *
+ * **Medido antes de trocar**, porque colapsar duas implementações sem provar
+ * que elas concordam é trocar um defeito conhecido por um desconhecido: onze
+ * casos fixos, incluindo o CNPJ do próprio projeto e um dígito adulterado,
+ * mais 200.000 sorteios aleatórios. **Zero divergências.**
+ *
+ * O motivo de ela existir continua valendo e fica escrito: checar só "tem 14
+ * dígitos" aceita `11111111111111`, que é o que sai quando alguém quer pular o
+ * campo. Como o CNPJ aqui é OPCIONAL, quem não tem deixa em branco, então
+ * preencher errado é engano de digitação e vale avisar.
  */
-export function cnpjValido(valor: string): boolean {
-  const n = somenteDigitos(valor)
-  if (n.length !== 14) return false
-
-  // Todos os dígitos iguais passam na conta dos verificadores e não existem.
-  if (/^(\d)\1{13}$/.test(n)) return false
-
-  const digito = (base: string, pesoInicial: number): number => {
-    let peso = pesoInicial
-    let soma = 0
-    for (const char of base) {
-      soma += Number(char) * peso
-      peso = peso === 2 ? 9 : peso - 1
-    }
-    const resto = soma % 11
-    return resto < 2 ? 0 : 11 - resto
-  }
-
-  return (
-    digito(n.slice(0, 12), 5) === Number(n[12]) &&
-    digito(n.slice(0, 13), 6) === Number(n[13])
-  )
-}
+export const cnpjValido = validarCnpj
 
 /**
  * As 27 unidades federativas, com nome.

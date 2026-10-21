@@ -2,6 +2,8 @@
 // aqui não há I/O nenhum, e o pacote `server-only` lança fora de um Server
 // Component, o que tornaria este arquivo impossível de testar no Vitest. Toda
 // a leitura acontece nos outros módulos e chega como argumento.
+import { assinaturaEstaViva } from '@/lib/asaas/assinatura-viva'
+
 import { dominioProvavelmenteErrado } from './dominios'
 import type {
   AssinaturaNoAsaas,
@@ -125,7 +127,7 @@ export function montarPendencias({
   // 2. O cruzamento com o gateway. Só roda se a lista do Asaas veio: sem ela,
   //    silêncio é melhor que acusar divergência que pode não existir.
   if (assinaturasNoAsaas.ok) {
-    const vivasNoAsaas = assinaturasNoAsaas.dados.filter((a) => a.status === 'ACTIVE' && !a.deleted)
+    const vivasNoAsaas = assinaturasNoAsaas.dados.filter(assinaturaEstaViva)
     const porIdNoBanco = new Map(
       assinaturasNoBanco
         .filter((l) => l.asaas_subscription_id)

@@ -52,6 +52,10 @@ const RAIZ = resolve(join(dirname(fileURLToPath(import.meta.url)), '..', '..'))
  */
 const REMOVIDOS_COM_REGISTRO = new Map([
   [
+    'lib/mock-data.ts',
+    'tres empresas ficticias de uma versao que nao existe mais, apagado em 23/09 — `docs/diagnostico.md` o listava como codigo morto desde 25/08 e ninguem removeu; zero importadores conferidos antes de apagar',
+  ],
+  [
     'components/onboarding/tour.tsx',
     'tour em Dialog central de cinco passos, removido em 17/09 — descrevia telas em vez de abri-las, e foi substituido pelo guia interativo em components/onboarding/guia-interativo.tsx, que destaca o elemento real e so avanca quando a acao acontece',
   ],

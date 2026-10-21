@@ -23,6 +23,7 @@ import {
 } from '@/lib/integrations/whatsapp-estado'
 import { buttonVariants } from '@/components/ui/button'
 import Link from 'next/link'
+import type { PlanoEfetivo } from '@/lib/plans'
 
 const META: Record<
   IntegrationProvider,
@@ -151,7 +152,7 @@ export function IntegrationCard({
    * configurações roda `sincronizar_plano_do_workspace` antes de renderizar,
    * então a coluna está em dia justamente aqui.
    */
-  plano: 'free' | 'pro'
+  plano: PlanoEfetivo
 }) {
   const [pendente, startTransition] = React.useTransition()
   const [upsellAberto, setUpsellAberto] = React.useState(false)
@@ -178,7 +179,10 @@ export function IntegrationCard({
   // oficial estiver ligada. So existe enquanto a migracao dura.
   const seloWhatsapp = provider === 'whatsapp' ? seloDoWhatsapp() : null
 
-  const temDireitoAoRecurso = plano === 'pro'
+  // `!== 'free'` e não `=== 'pro'`: quem tem Max tem tudo do Pro, e comparar
+  // com a igualdade pintaria o Google Calendar como "Pausado" para quem paga
+  // R$ 250. É a mesma correção que o cartão de plano recebeu em 19/09.
+  const temDireitoAoRecurso = plano !== 'free'
   const conectado = status === 'connected' && temDireitoAoRecurso
   const pausadoPorPlano = status === 'connected' && !temDireitoAoRecurso
 

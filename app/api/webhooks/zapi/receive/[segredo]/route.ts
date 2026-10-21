@@ -4,6 +4,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { instanciaPorSegredo, registrarEstado } from '@/lib/whatsapp/instancia'
 import { instanciaDoPayload, normalizarZapi } from '@/lib/whatsapp/payload'
 import { eventoNovo, gravarMensagem } from '@/lib/whatsapp/receber'
+import { telefoneNoLog } from '@/lib/log/redigir'
 
 /**
  * A mensagem do cliente entra no CRM.
@@ -95,7 +96,7 @@ export async function POST(
 
   const supabase = createAdminClient()
   try {
-    if (!(await eventoNovo(supabase, instancia.instanceId, mensagem.id))) {
+    if (!(await eventoNovo(supabase, 'zapi', instancia.instanceId, mensagem.id))) {
       return ACEITO
     }
   } catch {
@@ -110,8 +111,12 @@ export async function POST(
   })
 
   if (!gravado.ok) {
+    // Telefone REDIGIDO: e dado pessoal sob LGPD, e o log da Vercel nao e o
+    // sistema onde ele foi consentido. O que sobra identifica a praca e deixa
+    // correlacionar duas linhas do mesmo incidente, que e para o que o log
+    // serve aqui.
     console.error(
-      `webhook zapi: mensagem de +${mensagem.telefone} NAO gravada na empresa ${instancia.workspaceId}: ${gravado.motivo}`,
+      `webhook zapi: mensagem de ${telefoneNoLog(mensagem.telefone)} NAO gravada na empresa ${instancia.workspaceId}: ${gravado.motivo}`,
     )
     return ACEITO
   }

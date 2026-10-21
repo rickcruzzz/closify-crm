@@ -1,3 +1,5 @@
+import { timingSafeEqual } from 'node:crypto'
+
 import { NextResponse } from 'next/server'
 
 import { rodarBuscaDeFotos } from '@/lib/whatsapp/foto-fila'
@@ -38,11 +40,38 @@ export const runtime = 'nodejs'
  */
 export const maxDuration = 60
 
+/**
+ * O portão, no mesmo formato dos outros cinco crons.
+ *
+ * Esta rota era a ÚNICA das seis que comparava com `!==` cru. Na prática a
+ * diferença de tempo não é explorável através da rede da Vercel — o ruído é
+ * ordens de grandeza maior que o sinal —, e o motivo de mudar não é esse: é
+ * que uma exceção sem razão escrita vira precedente, e a próxima rota copia a
+ * versão errada porque ela estava ali.
+ *
+ * `timingSafeEqual` exige tamanhos iguais, daí a comparação de comprimento
+ * antes — ela vaza só o TAMANHO do segredo, que não ajuda ninguém.
+ */
+function segredoValido(cabecalho: string | null): boolean {
+  const esperado = process.env.CRON_SECRET
+  // Falha FECHADA: sem a variável no ambiente, ninguém entra. O contrário
+  // deixaria a rota pública no dia em que alguém apagasse o segredo do painel.
+  if (!cabecalho || !esperado) return false
+
+  const prefixo = 'Bearer '
+  if (!cabecalho.startsWith(prefixo)) return false
+
+  const a = Buffer.from(cabecalho.slice(prefixo.length))
+  const b = Buffer.from(esperado)
+  if (a.length !== b.length) return false
+
+  return timingSafeEqual(a, b)
+}
+
 export async function GET(request: Request) {
   // Mesmo portão dos outros crons. Sem ele, a rota é pública e qualquer um
   // faria o servidor gastar chamadas ao provedor em nome dos clientes.
-  const autorizacao = request.headers.get('authorization')
-  if (autorizacao !== `Bearer ${process.env.CRON_SECRET}`) {
+  if (!segredoValido(request.headers.get('authorization'))) {
     return NextResponse.json({ error: 'não autorizado' }, { status: 401 })
   }
 

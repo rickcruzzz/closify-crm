@@ -3,9 +3,9 @@
 > Iniciativa de conversão Free→Pro (copy da landing, limites, checkout) tem
 > PRD próprio: [prd-conversao-pro.md](prd-conversao-pro.md).
 >
-> <!-- contagem: banco.tabelas=25 banco.rpcs_do_projeto=39 banco.foreign_keys=39 banco.triggers=17 banco.enums=8 -->
+> <!-- contagem: banco.tabelas=25 banco.rpcs_do_projeto=40 banco.foreign_keys=39 banco.triggers=17 banco.enums=8 -->
 > **Estrutura reconferida contra o catálogo em 18/09/2026**: **25 tabelas**,
-> **39 RPCs do projeto**, **39 foreign keys**, **17 triggers**, **8 enums** —
+> **40 RPCs do projeto**, **39 foreign keys**, **17 triggers**, **8 enums** —
 > mais **16 funções de trigger**, que não são RPC e por isso contam à parte.
 >
 > **Três números andaram em 12/09, e cada um por um motivo diferente:**
@@ -35,8 +35,8 @@
 > **nenhuma métrica do catálogo**. Agora mede, e o carimbo acima é conferido
 > por `scripts/ci/conferir-documentos.mjs` como todos os outros.
 >
-> <!-- contagem: migrations.arquivos=96 migrations.maior=0097 -->
-> **96 arquivos de migration, e a maior é `0097`.** Os dois juntos, sempre: o
+> <!-- contagem: migrations.arquivos=98 migrations.maior=0099 -->
+> **98 arquivos de migration, e a maior é `0099`.** Os dois juntos, sempre: o
 > número de arquivos sozinho convida a inferir `0084`, e o `0049` não existe —
 > foi provado desnecessário e removido em 22/08. `node scripts/ci/contagens.mjs`
 > imprime o invariante que reconcilia os dois.
@@ -643,11 +643,20 @@ da sessão oscilou entre 0% e 100% de tempo logado em janelas de minutos — é 
 `LoggedIn` só existe em `/instance/status` **com o token da instância**; em
 `/instance/all` ele vira `null`, e uma sessão saudável passa por morta.
 
-*Fraqueza de arquitetura registrada, não escondida:* o segredo do webhook é
-**único**, não por conexão. Quem o conhecer consegue injetar mensagem falsa no
-funil de qualquer empresa sabendo o UUID dela. Não dá para ler nada (a rota só
-escreve), e o segredo só existe no `.env` e no servidor. Segredo por conexão é
-o caminho certo com muitos clientes, e está na fila.
+*Fraqueza de arquitetura registrada, e FECHADA em 16/09:* o segredo do webhook
+da ponte antiga era **único**, não por conexão — quem o conhecesse injetaria
+mensagem falsa no funil de qualquer empresa sabendo o UUID dela. Foi por isso
+que `c52a718` removeu aquela rota em 28/08.
+
+Os webhooks da Z-API nasceram com **segredo por instância, na URL**, e a empresa
+é resolvida a partir dele: não existe campo de empresa na requisição, então não
+existe o que forjar. O `instanceId` do corpo é lido para UMA coisa, conferir
+contra o que o segredo achou; divergiu, devolve 200 e ignora. Ver
+`app/api/webhooks/zapi/receive/[segredo]/route.ts`.
+
+O parágrafo acima descreveu esta fraqueza como pendente até 23/09, e o próprio
+PRD já dizia o contrário mais acima. Ler só um dos dois levava a refazer o que
+estava feito.
 
 **Conversas**
 Caixa de entrada do WhatsApp dentro do produto, em três colunas: a lista de
@@ -1030,7 +1039,8 @@ exigir `pro_vigente() and not em_trial()` — Pro pago libera estoque
 permanente, trial libera só o uso temporário das funcionalidades.
 
 **O Free é apertado desde o primeiro minuto (migration 0052):** 1 empresa,
-até `FREE_MEMBER_LIMIT` = **2** colaboradores, `FREE_LEAD_LIMIT` = **50**
+até `FREE_MEMBER_LIMIT` = **2 pessoas na empresa**, ou seja o dono mais **1**
+colaborador (`FREE_COLABORADORES`), `FREE_LEAD_LIMIT` = **50**
 contatos e, desde a **0079**, `FREE_ORCAMENTO_LIMIT` = **3** orçamentos com
 lembrete abertos ao mesmo tempo (`lib/plans.ts`).
 

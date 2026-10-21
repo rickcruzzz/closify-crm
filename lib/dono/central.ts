@@ -11,6 +11,7 @@ import { lerBanco } from './queries'
 import { lerSilenciados } from './silenciados'
 import { exigirAmbienteLocal } from './somente-local'
 import type { DadosDaCentral } from './tipos'
+import { assinaturaEstaViva } from '@/lib/asaas/assinatura-viva'
 
 /**
  * Junta as fontes numa carga só.
@@ -66,7 +67,7 @@ export async function lerCentral(): Promise<DadosDaCentral> {
   // uma afirmação falsa com aparência de dado.
   const vivasNoGateway = new Set(
     assinaturasNoAsaas.ok
-      ? assinaturasNoAsaas.dados.filter((a) => a.status === 'ACTIVE' && !a.deleted).map((a) => a.id)
+      ? assinaturasNoAsaas.dados.filter(assinaturaEstaViva).map((a) => a.id)
       : [],
   )
   const gatewayDisponivel = dinheiro.ok

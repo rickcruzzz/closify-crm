@@ -163,6 +163,19 @@ export async function instanciaPorSegredo(
  */
 export async function guardarInstancia(params: {
   workspaceId: string
+  /**
+   * Qual transporte, e SEM valor padrão de propósito.
+   *
+   * Até a 0099 isto era `'zapi'` escrito fixo aqui. Dar a ele um padrão agora
+   * faria o caminho novo gravar `zapi` no dia em que alguém esquecesse de
+   * passá-lo, e a linha resultante seria lida por `escolherRemetente` como
+   * Z-API: a mensagem sairia pelo transporte errado, com credencial que não
+   * existe, e o sintoma seria envio falhando numa conexão que a tela diz
+   * conectada.
+   *
+   * O `tsc` reclamando é mais barato que descobrir isso em produção.
+   */
+  provider: 'zapi' | 'evolution'
   instanceId: string
   token: string
   segredo: string
@@ -171,7 +184,7 @@ export async function guardarInstancia(params: {
 
   const { error } = await admin.from('whatsapp_instances').insert({
     workspace_id: params.workspaceId,
-    provider: 'zapi',
+    provider: params.provider,
     instance_id: params.instanceId,
     token_cifrado: cifrar(params.token),
     segredo_do_webhook: params.segredo,
@@ -267,4 +280,63 @@ export async function esquecerInstancia(workspaceId: string): Promise<void> {
     .delete()
     .eq('workspace_id', workspaceId)
   if (error) console.error('esquecerInstancia: falha ao apagar', error)
+}
+
+/**
+ * Qual transporte serve esta empresa.
+ *
+ * `null` quer dizer que não há conexão nenhuma, e quem chama trata isso como
+ * estado e não como falha: é o caso de toda empresa que ainda não conectou.
+ *
+ * Lido por `escolherRemetente`, e é a razão pela qual `whatsapp_instances`
+ * nasceu com a coluna `provider` na 0090 em vez de assumir Z-API.
+ */
+export async function provedorDaEmpresa(
+  workspaceId: string,
+): Promise<'zapi' | 'evolution' | null> {
+  const admin = createAdminClient()
+
+  const { data, error } = await admin
+    .from('whatsapp_instances')
+    .select('provider')
+    .eq('workspace_id', workspaceId)
+    .maybeSingle()
+
+  if (error) {
+    // Falha de leitura NÃO vira "não tem conexão": isso mandaria a tela dizer
+    // que a empresa não conectou quando ela conectou, e a pessoa refaria o
+    // pareamento por nada. `null` aqui significa não sei, e quem chama devolve
+    // o remetente que recusa com mensagem.
+    console.error('provedorDaEmpresa: falha ao ler', error)
+    return null
+  }
+
+  const p = data?.provider
+  return p === 'zapi' || p === 'evolution' ? p : null
+}
+
+/** As credenciais da instância Evolution desta empresa, já decifradas. */
+export async function credenciaisEvolutionDaEmpresa(
+  workspaceId: string,
+): Promise<{ nome: string; token: string } | null> {
+  const admin = createAdminClient()
+
+  const { data, error } = await admin
+    .from('whatsapp_instances')
+    .select('instance_id, token_cifrado, provider')
+    .eq('workspace_id', workspaceId)
+    .maybeSingle()
+
+  if (error || !data) return null
+  // A conferência do provedor fica aqui e não em quem chama: uma empresa que
+  // migrou de transporte tem a linha trocada, e mandar o token de um provedor
+  // para o outro daria 401 com uma mensagem que não explica nada.
+  if (data.provider !== 'evolution') return null
+
+  try {
+    return { nome: data.instance_id, token: decifrar(data.token_cifrado) }
+  } catch (erro) {
+    console.error('credenciaisEvolutionDaEmpresa: falha ao decifrar', erro)
+    return null
+  }
 }

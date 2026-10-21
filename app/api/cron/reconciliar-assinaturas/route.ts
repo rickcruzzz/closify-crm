@@ -11,6 +11,7 @@ import {
   type StatusAssinatura,
 } from '@/lib/asaas/aplicar-evento'
 import { buscarPagamentoMaisRecente } from '@/lib/asaas/status-real'
+import { buscarAssinaturaNoAsaas } from '@/lib/asaas/assinatura-viva'
 import { getResend } from '@/lib/resend/client'
 import { renderPlanoVencendoEmail } from '@/lib/emails/plano-vencendo'
 import { renderTrialTerminandoEmail } from '@/lib/emails/trial-terminando'
@@ -141,11 +142,23 @@ export async function GET(request: Request) {
 
   const supabase = createAdminClient()
 
+  // ## `active` entrou aqui, e ele é o sentido que custa dinheiro
+  //
+  // Até 23/09 a varredura lia só `trialing` e `past_due`, ou seja só o
+  // sentido "alguém pagou e o produto não soube". O inverso não tinha rede
+  // nenhuma: se um `PAYMENT_REFUNDED` ou `SUBSCRIPTION_DELETED` caísse numa
+  // das janelas em que o webhook esteve interrompido — **oito vezes em quinze
+  // dias** —, a linha ficava `active` e nada nunca mais a reconsultava.
+  //
+  // `pro_vigente` ramo 1 e `max_vigente` aceitam `active` até
+  // `current_period_end`. Com o Max isso é instância de WhatsApp paga por nós,
+  // todo mês, por quem já estornou.
   const { data: suspeitas, error } = await supabase
     .from('subscriptions')
     .select('workspace_id, asaas_subscription_id, status')
-    .in('status', ['trialing', 'past_due'])
+    .in('status', ['trialing', 'past_due', 'active'])
     .not('asaas_subscription_id', 'is', null)
+    .limit(TETO_DE_VARREDURA)
 
   if (error) {
     console.error('Reconciliação Asaas: falha ao listar assinaturas suspeitas', error)
@@ -170,27 +183,56 @@ export async function GET(request: Request) {
     // filtro, não por suposição.
     const asaasSubscriptionId = linha.asaas_subscription_id!
 
-    const pagamento = await buscarPagamentoMaisRecente(asaasSubscriptionId)
-    if (!pagamento || !pagamento.statusMapeado) continue
-    if (pagamento.statusMapeado === linha.status) continue
+    // ## Duas perguntas diferentes, porque o que se quer saber é diferente
+    //
+    // Para `trialing` e `past_due` a pergunta é "entrou dinheiro?", e quem
+    // responde é o último pagamento.
+    //
+    // Para `active` ela seria a pergunta ERRADA, e isso foi medido: o
+    // pagamento mais recente de uma assinatura viva é quase sempre a fatura do
+    // ciclo seguinte, com status `PENDING`, que não está em nenhum dos três
+    // conjuntos de `status-real.ts` e portanto sai como `null`. O estorno do
+    // mês passado nunca seria visto, porque ele não é o mais recente. Aqui a
+    // pergunta é "esta assinatura ainda existe?".
+    let statusReal: StatusAssinatura | null = null
+    let idDoPagamento: string
+    let billingType: string | null = null
+
+    if (linha.status === 'active') {
+      const assinatura = await buscarAssinaturaNoAsaas(asaasSubscriptionId)
+      // `null` é NÃO SEI, e aqui errar para o lado de mexer seria cancelar
+      // quem paga por causa de um timeout.
+      if (!assinatura || assinatura.viva) continue
+      statusReal = 'canceled'
+      // Sem pagamento para nomear, o dedupe usa a própria assinatura. O
+      // formato continua `evento:id`, que é o que o webhook reconhece.
+      idDoPagamento = asaasSubscriptionId
+    } else {
+      const pagamento = await buscarPagamentoMaisRecente(asaasSubscriptionId)
+      if (!pagamento || !pagamento.statusMapeado) continue
+      if (pagamento.statusMapeado === linha.status) continue
+      statusReal = pagamento.statusMapeado
+      idDoPagamento = pagamento.id
+      billingType = pagamento.billingType
+    }
 
     resumo.divergentes += 1
 
-    const eventType = eventoParaStatus(pagamento.statusMapeado)
+    const eventType = eventoParaStatus(statusReal)
 
     const resultado = await aplicarEventoAsaas({
       supabase,
-      status: pagamento.statusMapeado,
+      status: statusReal,
       subscriptionId: asaasSubscriptionId,
       // Mesmo formato de dedupe que o webhook usaria pra este pagamento
       // (`evento:payment.id`), se o webhook real ou uma correção manual já
       // processou esse pagamento específico, o dedupe barra aqui sozinho.
-      eventId: `${eventType}:${pagamento.id}`,
+      eventId: `${eventType}:${idDoPagamento}`,
       eventType,
       // Assinatura anterior à 0044 nasceu sem `ultimo_billing_type`. Este é o
       // caminho que preenche o dado retroativamente, sem precisar de script
       // de migração de dados: o job já está lendo o pagamento mesmo.
-      billingType: pagamento.billingType,
+      billingType,
       origem: 'reconciliacao:cron',
     })
 
@@ -200,7 +242,7 @@ export async function GET(request: Request) {
         workspace_id: linha.workspace_id,
         asaas_subscription_id: asaasSubscriptionId,
         de: linha.status,
-        para: pagamento.statusMapeado,
+        para: statusReal,
       }
       resumo.correcoes.push(correcao)
       console.warn('Reconciliação Asaas: assinatura corrigida', correcao)

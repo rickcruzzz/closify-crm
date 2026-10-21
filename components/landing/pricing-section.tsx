@@ -8,8 +8,12 @@ import {
   Filter,
   LayoutDashboard,
   Mail,
+  MessageSquareText,
+  Radar,
   Send,
+  Sparkles,
   Smartphone,
+  Target,
   Timer,
   Users,
 } from 'lucide-react'
@@ -66,14 +70,6 @@ type Plan = {
    * abertura que `lib/nav-items.ts` fez em 17/09.
    */
   features: { texto: string; icone: ComponentType<SVGProps<SVGSVGElement>> }[]
-  cta: string
-  /**
-   * Para onde o botao leva quem JA TEM sessao, e o que ele passa a dizer.
-   *
-   * So o Pro define: o CTA do Free leva a `/cadastro`, e quem ja tem conta nao
-   * tem o que fazer la. Ausente, o botao nao muda com a sessao.
-   */
-  logado?: { href: string; cta: string }
   /**
    * A ultima frase antes do botao.
    *
@@ -85,7 +81,6 @@ type Plan = {
    * seu plano.
    */
   fecho?: string
-  href: string
   highlighted?: boolean
   delay: number
 }
@@ -168,8 +163,6 @@ const plans: Plan[] = [
     // recusa o INSERT novo com 42501 e nao apaga nada — dizer isso remove a
     // objecao com a verdade, em vez de deixar a pessoa supor o pior.
     fecho: `Chegando aos ${FREE_LEAD_LIMIT} contatos, nada some: você só não cadastra novos.`,
-    cta: 'Começar grátis',
-    href: '/cadastro',
     delay: 0,
   },
   {
@@ -297,39 +290,6 @@ const plans: Plan[] = [
     // por o cartao. E verdade — `cancelarAssinatura` encerra no Asaas e o
     // acesso segue ate o fim do ciclo ja pago.
     fecho: 'Cancela quando quiser, sem multa. O acesso vai até o fim do mês pago.',
-    // Dizia "Assinar Pro", e o clique **não assina nada**: leva à mesma tela de
-    // criar conta grátis do botão ao lado. O checkout só existe depois do
-    // formulário, do e-mail de confirmação e do assistente — ou seja, o rótulo
-    // prometia uma cobrança que não acontece ali.
-    //
-    // Num funil pago isso custa dos dois lados: quem esperava pagar acha que
-    // errou de botão, e quem não queria pagar ainda hesita em clicar. "Começar
-    // com o Pro" descreve o que o clique faz de verdade, e o `?plano=pro`
-    // abaixo continua carregando a intenção até o checkout.
-    cta: 'Começar com o Pro',
-    // O `?plano=pro` é o que faz o clique valer alguma coisa. Sem ele, este
-    // botão levava ao MESMO destino do plano Free, e a intenção de compra
-    // morria ali: a pessoa terminava no dashboard em Free, tendo que descobrir
-    // Configurações → Cobrança sozinha. O parâmetro vira cookie no cadastro e
-    // atravessa a ida ao e-mail de confirmação, para o checkout abrir assim
-    // que a empresa nascer.
-    href: '/cadastro?plano=pro',
-    /**
-     * Quem JA criou a conta gratis clicava aqui e caia no painel.
-     *
-     * O `middleware.ts:168` desvia quem tem sessao de `/cadastro` para
-     * `/dashboard` — o que esta certo, e transformava este botao num beco: a
-     * pessoa decidiu pagar, clicou em "Comecar com o Pro", e chegou no produto
-     * em Free, tendo que descobrir Configuracoes -> Cobranca sozinha.
-     *
-     * E o pior momento possivel para perder alguem: e o unico instante do
-     * funil em que a pessoa esta com o cartao na mao.
-     *
-     * `?assinar=1` e o mesmo destino que o e-mail de fim de trial usa, e abre o
-     * dialogo de CPF/CNPJ direto. `?pagar=1` seria o outro caminho, de quem JA
-     * tem assinatura esperando pagamento — nao e este caso.
-     */
-    logado: { href: '/settings/billing?assinar=1', cta: 'Assinar o Pro' },
     highlighted: true,
     delay: 160,
   },
@@ -395,27 +355,24 @@ const plans: Plan[] = [
       },
     ],
     fecho: 'Um número por empresa, conectado por QR Code em um minuto.',
-    /**
-     * O CTA leva à criação da conta, e NÃO carrega a intenção de comprar.
-     *
-     * O Pro usa `?plano=pro`, que vira cookie e reabre o checkout depois do
-     * e-mail de confirmação. O mesmo para o Max exigiria estender
-     * `PlanoDesejado` (hoje `'pro'` e mais nada), o destino de
-     * `finalizarOnboarding` e o parâmetro que a tela de Cobrança lê — quatro
-     * arquivos, dois deles no caminho do dinheiro.
-     *
-     * Não foi feito nesta rodada, e fica escrito em vez de escondido: quem
-     * clica aqui cria a conta e assina o Max em Configurações, Cobrança. O
-     * `fecho` acima e a legenda do preço já dizem que o Max é por empresa, que
-     * é a informação que faltaria.
-     */
-    cta: `Começar com o ${PLANO_NA_TELA.max}`,
-    href: '/cadastro',
-    // Quem já tem conta vai direto para a comparação, onde o botão do Max
-    // assina de verdade. `?assinar=1` abriria o checkout do PRO, que é o plano
-    // errado — e o parâmetro não sabe distinguir.
-    logado: { href: '/settings/billing#comparar', cta: `Assinar o ${PLANO_NA_TELA.max}` },
     delay: 320,
+  },
+  {
+    name: 'Enterprise',
+    price: 'Sob consulta',
+    precoLegenda: 'Projeto dedicado, desenhado com a sua operação.',
+    description:
+      'Transforme agendas de eventos em oportunidades reais para sua operação de mídia outdoor.',
+    features: [
+      { texto: 'CRM completo para conduzir cada oportunidade até a negociação', icone: LayoutDashboard },
+      { texto: 'Projeto de monitoramento de agendas públicas de eventos, feiras e congressos', icone: Radar },
+      { texto: 'Organizadores e contatos com a fonte de cada informação', icone: Contact },
+      { texto: 'Prioridade explicada por sinais verificáveis, sem porcentagens inventadas', icone: Target },
+      { texto: 'IA prepara a abordagem; sua equipe revisa, ajusta e decide quando enviar', icone: MessageSquareText },
+      { texto: 'Fluxo e integrações definidos com você na reunião de implantação', icone: Sparkles },
+    ],
+    fecho: 'Uma conversa para desenhar as fontes, o fluxo e a proposta do seu projeto.',
+    delay: 480,
   },
 ]
 
@@ -444,7 +401,7 @@ export function PricingSection() {
             <span aria-hidden className="bg-primary h-px w-4" />
           </span>
           <h2 className="text-titulo-md md:text-titulo-lg">
-            Comece de graça. Assine quando fizer sentido.
+            Comece de graça. Cresça até uma operação sob medida.
           </h2>
           {/* Esta página já vendeu duas histórias diferentes, e as duas
               estavam certas na época.
@@ -489,7 +446,7 @@ export function PricingSection() {
             cartoes, `sm:grid-cols-2` deixaria o terceiro sozinho numa linha,
             com metade da largura dos outros dois. Cartao orfao le como erro de
             layout, nao como plano. */}
-        <div className="mx-auto grid max-w-6xl grid-cols-1 gap-6 lg:grid-cols-3">
+        <div className="mx-auto grid max-w-7xl grid-cols-1 gap-6 lg:grid-cols-2 xl:grid-cols-4">
           {plans.map((plan) => (
             <RevealOnScroll key={plan.name} delay={plan.delay}>
               <Card
@@ -517,6 +474,8 @@ export function PricingSection() {
                   'h-full transition-colors duration-200',
                   plan.highlighted
                     ? 'ring-primary shadow-primary/10 shadow-lg ring-2'
+                    : plan.name === 'Enterprise'
+                      ? 'border-primary/30 bg-primary/[0.035] ring-primary/50 shadow-primary/10 shadow-lg ring-1'
                     // Cor da borda em vez de deslocamento: da o sinal de
                     // "isto responde" sem mexer em um pixel de layout.
                     : 'ring-border pointer:hover:ring-muted-foreground/40 ring-1',
@@ -536,6 +495,7 @@ export function PricingSection() {
                         e e o que a tela de cobranca (`plan-comparison-table`)
                         ja dizia — a landing e que estava fora de passo. */}
                     {plan.highlighted && <Badge>Recomendado</Badge>}
+                    {plan.name === 'Enterprise' && <Badge variant="outline">Projeto dedicado</Badge>}
                   </div>
                   <div className="flex items-baseline gap-1">
                     {/* `text-numero-md`, o mesmo token da barra de números do
@@ -545,7 +505,7 @@ export function PricingSection() {
                         preço. Aqui fica no `md` e não sobe para `lg`: dentro de
                         um cartão de largura fixa, o número maior encosta no
                         período ("/mês") em telas estreitas. */}
-                    <span className="text-numero-md">{plan.price}</span>
+                    <span className={plan.name === 'Enterprise' ? 'text-2xl font-semibold tracking-tight' : 'text-numero-md'}>{plan.price}</span>
                     {plan.period && (
                       <span className="text-muted-foreground text-sm">{plan.period}</span>
                     )}
@@ -606,17 +566,8 @@ export function PricingSection() {
                       {plan.fecho}
                     </p>
                   )}
-                  {/* O unico pedaco de cliente deste cartao, e so por causa
-                      do destino: quem JA tem sessao precisa ir para o
-                      pagamento, nao para `/cadastro` (de onde o middleware o
-                      manda ao painel). A secao continua Server Component, que
-                      e o que preserva o LCP da pagina que recebe trafego pago
-                      — ver o cabecalho de `cta-do-plano.tsx`. */}
                   <CtaDoPlano
-                    hrefDeslogado={plan.href}
-                    textoDeslogado={plan.cta}
-                    hrefLogado={plan.logado?.href}
-                    textoLogado={plan.logado?.cta}
+                    plano={plan.name}
                     variant={plan.highlighted ? 'default' : 'outline'}
                     // `mt-auto` so quando NAO ha fecho: com os dois, o espaco
                     // sobraria entre a frase e o botao em vez de acima dela, e

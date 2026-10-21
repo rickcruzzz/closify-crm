@@ -9,7 +9,7 @@ import { registrarNotificacao } from '@/lib/notificacoes/registrar'
 import { renderPagamentoConfirmadoEmail } from '@/lib/emails/pagamento-confirmado'
 import { renderPagamentoAtrasadoEmail } from '@/lib/emails/pagamento-atrasado'
 import { enviarConversaoDeCompra } from '@/lib/analytics/meta-conversions'
-import { valorDoCiclo, type CicloDeCobranca } from '@/lib/plans'
+import { valorDoPlano, type CicloDeCobranca, type PlanoPago } from '@/lib/plans'
 import { appUrl } from '@/lib/app-url'
 import type { SubscriptionStatus } from '@/types/supabase'
 
@@ -252,8 +252,23 @@ export async function buscarAssinante(
   /** Telefone do dono, quando cadastrado no Auth — vira `ph` no evento do Meta. */
   telefone: string | null
   userId: string
-  /** Mensal ou anual: decide o valor do e-mail e do `Purchase`. */
+  /** Mensal ou anual: metade do que decide o valor do e-mail e do `Purchase`. */
   ciclo: CicloDeCobranca
+  /**
+   * A outra metade, e ela faltava.
+   *
+   * Sem o plano, `valorDoCiclo(ciclo)` devolvia sempre o preço do **Pro**:
+   * quem paga R$ 250 no Max recebia comprovante dizendo R$ 97, e no anual
+   * R$ 2.500 virava R$ 970. Comprovante com valor errado é a não-identificação
+   * que gera contestação, que é o risco que `actions.ts:352-361` se dá o
+   * trabalho de evitar na descrição da própria fatura.
+   *
+   * E o mesmo número ia para a Meta, onde o efeito é outro: a campanha aprende
+   * que o comprador de Max vale o mesmo que o de Pro, e para de procurar quem
+   * paga 2,5x mais. É o argumento que o comentário de `enviarConversaoParaMeta`
+   * já fazia entre mensal e anual, cometido entre planos.
+   */
+  plano: PlanoPago
 } | null> {
   // `ciclo` entra no select que já existia: custo zero, e ele decide o VALOR
   // que vai no e-mail e no `Purchase` da Meta.
@@ -264,7 +279,7 @@ export async function buscarAssinante(
   // coluna, esta leitura passa a estar errada.
   const { data: assinatura } = await supabase
     .from('subscriptions')
-    .select('workspace_id, ciclo')
+    .select('workspace_id, ciclo, plano')
     .eq('asaas_subscription_id', subscriptionId)
     .maybeSingle()
 
@@ -287,6 +302,10 @@ export async function buscarAssinante(
     workspaceId: assinatura.workspace_id,
     consentimento: workspace.consentimento_analitico ?? null,
     ciclo: assinatura.ciclo,
+    // `?? 'pro'` porque a coluna nasceu na 0089 com default `'pro'` e as 20
+    // assinaturas anteriores a ela foram preenchidas por esse default. O
+    // fallback concorda com o banco em vez de inventar um terceiro caso.
+    plano: (assinatura.plano as PlanoPago | null) ?? 'pro',
     email,
     fbc: workspace.fbc,
     fbp: workspace.fbp,
@@ -337,7 +356,7 @@ async function enviarEmailDoWebhook(
 
     const { subject, html } = render({
       workspaceName: assinante.workspaceName,
-      valor: valorDoCiclo(assinante.ciclo),
+      valor: valorDoPlano(assinante.plano, assinante.ciclo),
       ciclo: assinante.ciclo,
       appUrl: appUrl(),
     })
@@ -398,7 +417,7 @@ async function enviarConversaoParaMeta(
       // com o token, alguém inflaria a receita reportada à Meta e corromperia
       // a otimização da campanha junto com a leitura de receita do dono. Por
       // isso `aplicarEventoAsaas` continua sem `value` na assinatura.
-      valor: valorDoCiclo(assinante.ciclo),
+      valor: valorDoPlano(assinante.plano, assinante.ciclo),
       eventId,
       fbc: assinante.fbc,
       fbp: assinante.fbp,

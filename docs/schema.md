@@ -7,9 +7,9 @@ Migrations novas mudam este arquivo com o tempo; ao suspeitar de
 desatualização, reconsulte o catálogo em vez de confiar cegamente nele (mesma
 regra de `docs/estado-atual.md`).
 
-<!-- contagem: banco.tabelas=25 banco.rpcs_do_projeto=39 banco.foreign_keys=39 banco.triggers=17 banco.enums=8 -->
+<!-- contagem: banco.tabelas=25 banco.rpcs_do_projeto=40 banco.foreign_keys=39 banco.triggers=17 banco.enums=8 -->
 **Estrutura reconferida em 18/09/2026.** Lida de `pg_catalog` e não do OpenAPI:
-**25 tabelas**, **39 RPCs do projeto**, **39 foreign keys**, **17 triggers**,
+**25 tabelas**, **40 RPCs do projeto**, **39 foreign keys**, **17 triggers**,
 **8 enums** — mais **16 funções de trigger**, que não são RPC e por isso contam
 à parte.
 
@@ -139,10 +139,16 @@ de custo: paywall no momento em que a pessoa sente o valor converte 8-12%,
 contra 3-4% de limite arbitrário — e as outras três são todas arbitrárias no
 sentido técnico do termo.
 
-<!-- contagem: migrations.arquivos=96 migrations.maior=0097 -->
-**96 arquivos de migration, e a maior é `0097`** (remedido em 16/09; o `0049`
+<!-- contagem: migrations.arquivos=98 migrations.maior=0099 -->
+**98 arquivos de migration, e a maior é `0099`** (remedido em 25/09; o `0049`
 não existe, removido em 22/08). Os dois números vêm sempre juntos: a contagem
-sozinha convida a inferir `0085`.
+sozinha convida a inferir `0098`.
+
+**A 0099 abre `whatsapp_instances.provider` para `'evolution'`, e não cria
+objeto nenhum.** Ela troca um `check`, troca o `unique` de `instance_id` por um
+índice em `(provider, instance_id)`, e é isso. `banco.tabelas` não se moveu, e é
+ele que responde essa pergunta — a distinção que os oito saltos de nós sem
+arquivo existem para manter.
 
 **As duas ENTRARAM em 16/09**, e as contagens de catálogo acima se moveram
 junto — ver a seção logo abaixo do carimbo, no topo deste arquivo.
@@ -792,7 +798,7 @@ projeto já pagou cinco vezes a lição de descobrir isso tarde.
 
 | Tabela | Trigger | O que impede |
 |---|---|---|
-| `leads` | `validar_limite_de_leads` (0023, corrigida na 0026) | 301º contato num workspace Free |
+| `leads` | `validar_limite_de_leads` (0023, corrigida na 0026, teto refeito na 0052) | 51º contato num workspace Free, e o número sai de `FREE_LEAD_LIMIT` |
 | `workspace_members` | `validar_limite_de_membros` (**0050**, 23/08) | 3º colaborador num workspace Free |
 | `deals`, `tasks` | validação de alvo (0038) | `lead_id`/`deal_id` de outra empresa |
 | `mensagens` | `checar_teto_de_mensagens` (**0056**, 26/08) | passar de 200 mil mensagens por empresa |

@@ -4,6 +4,7 @@ import { asaas, bancoAdmin, emailsEnviados, TOKEN_WEBHOOK, URL_BASE } from './he
 import { criarIdentidade, type IdentidadeDeTeste } from './helpers/identidade'
 import { conferirQueNadaSobrou, limpar, type Rastros } from './helpers/limpeza'
 import { PRO_PLAN_PRICE } from '@/lib/plans'
+import { CONTROLADOR } from '@/lib/legal'
 
 /**
  * O funil inteiro, da landing até o Pro liberado e o e-mail entregue.
@@ -86,7 +87,7 @@ test.describe('funil completo: landing → cadastro → Pro → e-mail', () => {
     }
   })
 
-  test('1. o CTA do Pro na landing leva ao cadastro carregando a intenção', async () => {
+  test('1. os planos da landing levam ao WhatsApp com mensagens prontas', async () => {
     const errosDeConsole: string[] = []
     pagina.on('console', (msg) => {
       if (msg.type() === 'error') errosDeConsole.push(msg.text())
@@ -103,31 +104,32 @@ test.describe('funil completo: landing → cadastro → Pro → e-mail', () => {
     await expect(h1).toContainText('Velo Funil')
     await expect(h1).toContainText('O WhatsApp guarda a conversa')
 
-    // Localizado pelo `href`, não pelo texto: o rótulo era "Assinar Pro" e
-    // mudou em 02/09 porque o clique não assina nada — leva à mesma tela de
-    // conta grátis, e o checkout só existe depois do e-mail de confirmação.
-    // O que este teste protege é o `?plano=pro` atravessar, e isso não depende
-    // de qual palavra está no botão.
-    const assinar = pagina.locator('a[href="/cadastro?plano=pro"]').first()
-    // `?plano=pro` é o elo que faz este clique valer alguma coisa: sem ele o
-    // botão levaria ao MESMO destino do Free e a intenção de compra morreria
-    // no cadastro. O parâmetro vira cookie no `signUp` e atravessa a ida ao
-    // e-mail de confirmação (lib/auth/intencao.ts).
-    await expect(assinar).toHaveAttribute('href', '/cadastro?plano=pro')
+    const planos = pagina.locator('#planos')
+    await expect(planos.getByRole('link', { name: /Falar com especialista/ })).toHaveCount(3)
 
-    // `scrollIntoViewIfNeeded` antes do clique não é zelo: o card entra por
-    // `RevealOnScroll`, e clicar antes de ele liberar o elemento não navega.
-    // Custou um falso positivo até isto ser entendido.
-    await assinar.scrollIntoViewIfNeeded()
-    await assinar.click()
-    await expect(pagina).toHaveURL(/\/cadastro\?plano=pro/, { timeout: 30_000 })
+    for (const nome of ['Free', 'Pro', 'Max']) {
+      const contato = planos.getByRole('link', {
+        name: `Falar com especialista sobre o plano ${nome}`,
+        exact: true,
+      })
+      await contato.scrollIntoViewIfNeeded()
+      await expect(contato).toBeVisible()
+      await expect(contato).toHaveText('Falar com especialista')
+      await expect(contato).toHaveAttribute('target', '_blank')
+
+      const destino = new URL((await contato.getAttribute('href'))!)
+      expect(destino.origin).toBe('https://wa.me')
+      expect(destino.pathname).toBe(`/${CONTROLADOR.whatsapp.numero}`)
+      expect(destino.searchParams.get('text')).toContain(`plano ${nome}`)
+      expect(destino.searchParams.get('text')).toContain('Velo Funil')
+    }
 
     expect(errosDeConsole, `erros de console na landing:\n${errosDeConsole.join('\n')}`).toEqual([])
   })
 
   test('2. cadastro cria a conta de verdade', async () => {
-    // Entra pela URL com a intenção, como o passo 1 terminou: é o `plano=pro`
-    // daqui que o `signUp` transforma em cookie.
+    // O cadastro direto continua disponível; os planos da landing agora
+    // iniciam o contato pelo WhatsApp antes desta etapa.
     await pagina.goto('/cadastro?plano=pro')
 
     await pagina.locator('#name').fill(identidade.nome)

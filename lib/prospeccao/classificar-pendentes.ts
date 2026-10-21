@@ -5,7 +5,8 @@ import { ultimos8 } from '@/lib/prospeccao/opt-out'
 import { createAdminClient } from '@/lib/supabase/admin'
 
 import { classificarResposta } from './classificar'
-import { deveClassificar, proximoEstagio } from './classificacao'
+import { INTENCAO_DE_ROBO, deveClassificar, proximoEstagio } from './classificacao'
+import { ehRespostaAutomatica, segundosDepoisDoEnvio } from './automacao'
 
 /**
  * Percorre as respostas que ainda não foram lidas e classifica cada uma.
@@ -30,6 +31,15 @@ export type ResultadoDaRodada = {
    * silencio.
    */
   ignoradas: { semTexto: number; foraDaFila: number }
+  /**
+   * Robôs rotulados sem passar pelo modelo.
+   *
+   * Sai no corpo, e não some dentro de `classificadas`: é o número que separa
+   * "a prospecção está funcionando" de "a prospecção está falando com
+   * atendentes virtuais". 38% das empresas dos cinco nichos têm automação de
+   * WhatsApp, medido em 12/09.
+   */
+  robos: number
   erros: string[]
 }
 
@@ -49,6 +59,12 @@ type ProspectDaFila = {
   mensagem_enviada: string | null
   estagio: string
   mensagens_recebidas: number | null
+  /**
+   * Quando a abordagem saiu. É o outro lado da conta que decide se a resposta
+   * veio de um robô: `segundosDepoisDoEnvio` compara com `created_at` da
+   * mensagem, e menos de um minuto é tempo que humano não lê e responde.
+   */
+  enviado_em: string | null
 }
 
 /**
@@ -136,7 +152,7 @@ async function resolverProspects(
 
   const { data: prospects } = await supabase
     .from('prospeccao_prospect')
-    .select('id, nome, vertical, mensagem_enviada, estagio, mensagens_recebidas, telefone_ultimos8')
+    .select('id, nome, vertical, mensagem_enviada, estagio, mensagens_recebidas, telefone_ultimos8, enviado_em')
     .in('telefone_ultimos8', oitos)
 
   const porOito = new Map<string, ProspectDaFila>()
@@ -180,6 +196,7 @@ export async function classificarRespostasPendentes(opcoes: {
       falhas: 0,
       paraHumano: 0,
       ignoradas: { semTexto: 0, foraDaFila: 0 },
+      robos: 0,
       erros: ['sem empresa de prospecção'],
     }
   }
@@ -213,6 +230,7 @@ export async function classificarRespostasPendentes(opcoes: {
   let classificadas = 0
   let falhas = 0
   let paraHumano = 0
+  let robos = 0
 
   for (const m of pendentes) {
     // O contexto: o que a empresa recebeu e o que já foi dito. Sem a abordagem
@@ -220,6 +238,51 @@ export async function classificarRespostasPendentes(opcoes: {
     // nada sem saber o que foi oferecido. Por isso quem não tem prospect não
     // chega até aqui: o filtro acima é esse comentário virando código.
     const prospect = prospectPorMensagem.get(m.id)!
+
+    // ## O robô é decidido AQUI, e não pelo modelo
+    //
+    // A 0087 mediu que o TEMPO é a prova: 25 de 27 respostas automáticas
+    // chegaram em até 60 segundos, e nenhuma depois de cinco minutos. Mandar
+    // isso ao modelo é pagar pelo que já se sabe — e a medição de 12/09 diz o
+    // que ele responderia: `SPAM`, o balde dele para o que não entendia. `SPAM`
+    // não chama humano, então a resposta sumiria em silêncio.
+    //
+    // E o estágio NÃO anda: robô não é resposta, e contá-lo como `REPLIED`
+    // produziria os 38% de taxa de resposta que a 0087 existe para desfazer.
+    const robo = ehRespostaAutomatica(
+      m.texto,
+      segundosDepoisDoEnvio(prospect.enviado_em, m.created_at),
+    )
+
+    if (robo.automatica) {
+      const { error: erroDeRobo } = await supabase.from('prospeccao_interacao').insert({
+        prospect_id: prospect.id,
+        conversa_id: m.conversa_id,
+        mensagem_id: m.id,
+        intencao: INTENCAO_DE_ROBO,
+        objecao: null,
+        objecao_texto: null,
+        // Robô não tem temperatura. `frio` é o degrau mais baixo e o único
+        // honesto: dizer `morno` inflaria o funil com atendente virtual.
+        temperatura: 'frio',
+        estagio_antes: prospect.estagio,
+        estagio_depois: prospect.estagio,
+        // Determinístico, então não há incerteza a declarar.
+        confianca: 1,
+        precisa_humano: false,
+        motivo_humano: null,
+        resumo: `Resposta automática: ${robo.motivo}`,
+        modelo: 'deterministico',
+        versao_do_prompt: null,
+      })
+      if (erroDeRobo && erroDeRobo.code !== '23505') {
+        falhas += 1
+        erros.push(`${m.id.slice(0, 8)}: ${erroDeRobo.message}`)
+        continue
+      }
+      robos += 1
+      continue
+    }
 
     const { data: anteriores } = await supabase
       .from('mensagens')
@@ -306,6 +369,7 @@ export async function classificarRespostasPendentes(opcoes: {
     falhas,
     paraHumano,
     ignoradas,
+    robos,
     erros: erros.slice(0, 5),
   }
 }
