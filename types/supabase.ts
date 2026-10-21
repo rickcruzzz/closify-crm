@@ -135,6 +135,56 @@ export type IntegrationStatus = 'connected' | 'error' | 'disconnected'
 export type Database = {
   public: {
     Tables: {
+      enterprise_workspaces: {
+        Row: { workspace_id: string; active: boolean; granted_at: string }
+        Insert: { workspace_id: string; active?: boolean; granted_at?: string }
+        Update: { active?: boolean }
+        Relationships: []
+      }
+      enterprise_eventos: {
+        Row: {
+          id: string
+          workspace_id: string
+          nome: string
+          data_inicio: string
+          cidade: string
+          local_evento: string | null
+          fonte_url: string
+          organizador: string | null
+          contato_nome: string | null
+          contato_email: string | null
+          contato_telefone: string | null
+          publico_estimado: number | null
+          prioridade: number | null
+          justificativa: string | null
+          mensagem_rascunho: string | null
+          status: 'novo' | 'rascunho' | 'contatado' | 'descartado'
+          criado_em: string
+          atualizado_em: string
+        }
+        Insert: {
+          id?: string
+          workspace_id: string
+          nome: string
+          data_inicio: string
+          cidade: string
+          local_evento?: string | null
+          fonte_url: string
+          organizador?: string | null
+          contato_nome?: string | null
+          contato_email?: string | null
+          contato_telefone?: string | null
+          publico_estimado?: number | null
+          prioridade?: number | null
+          justificativa?: string | null
+          mensagem_rascunho?: string | null
+          status?: 'novo' | 'rascunho' | 'contatado' | 'descartado'
+          criado_em?: string
+          atualizado_em?: string
+        }
+        Update: Partial<Database['public']['Tables']['enterprise_eventos']['Insert']>
+        Relationships: []
+      }
       // Os campos de empresa (0030) são todos anuláveis: as empresas que já
       // existiam continuam válidas sem uma linha ser tocada. Só `name` é
       // obrigatório, e ele já era.
@@ -1319,6 +1369,10 @@ export type Database = {
        * Ver migrations 0027 (assinatura) e 0051 (trial).
        */
       pro_vigente: {
+        Args: { target_workspace_id: string }
+        Returns: boolean
+      }
+      enterprise_vigente: {
         Args: { target_workspace_id: string }
         Returns: boolean
       }

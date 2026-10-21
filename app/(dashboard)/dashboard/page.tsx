@@ -1,7 +1,10 @@
 import { Suspense } from 'react'
 import type { Metadata } from 'next'
+import Link from 'next/link'
+import { Radar } from 'lucide-react'
 import { resolverPeriodo } from '@/lib/dashboard/periodo'
 import { getCurrentUserAndWorkspace } from '@/lib/supabase/workspace'
+import { createClient } from '@/lib/supabase/server'
 import { lerEstadoDoOnboarding } from '@/lib/onboarding/estado'
 import { lerSinaisDeAtivacao } from '@/lib/onboarding/sinais'
 import { checklistCumprido, montarChecklist } from '@/lib/onboarding/checklist'
@@ -47,9 +50,11 @@ export default async function DashboardPage({
   // tour aparecem, não têm skeleton próprio) seguram a renderização inicial,
   // e cada painel pesado aparece assim que sua própria query resolve —
   // streaming de verdade, não spinner fingindo progresso.
-  const [sinais, estado] = await Promise.all([
+  const supabase = await createClient()
+  const [sinais, estado, { data: temEnterprise }] = await Promise.all([
     lerSinaisDeAtivacao(workspaceId),
     lerEstadoDoOnboarding(),
+    supabase.rpc('enterprise_vigente', { target_workspace_id: workspaceId }),
   ])
 
   const itens = montarChecklist(sinais)
@@ -111,6 +116,17 @@ export default async function DashboardPage({
           ) : null
         }
       />
+
+      {temEnterprise === true && (
+        <Link href="/enterprise/eventos" className="border-primary/30 bg-primary/5 hover:bg-primary/10 flex items-center gap-4 rounded-2xl border p-5 transition-colors">
+          <span className="bg-primary/10 text-primary flex size-11 shrink-0 items-center justify-center rounded-xl"><Radar className="size-5" /></span>
+          <span className="min-w-0 flex-1">
+            <strong className="block text-sm">Enterprise · Radar de eventos</strong>
+            <span className="text-muted-foreground mt-1 block text-sm">Analise oportunidades de mídia outdoor e prepare a abordagem do organizador.</span>
+          </span>
+          <span className="text-primary text-sm font-semibold">Abrir</span>
+        </Link>
+      )}
 
       {temAlgoParaRelatar && (
         <PeriodFilter

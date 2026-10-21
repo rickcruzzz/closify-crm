@@ -12,7 +12,13 @@ export function CtaDoPlano({
   variant?: 'default' | 'outline'
   className?: string
 }) {
-  const mensagem = `Olá! Tenho interesse no plano ${plano} do Velo Funil. Gostaria de falar com um especialista para saber mais.`
+  const mensagens: Record<string, string> = {
+    Free: 'Olá! Conheci o Velo Funil e gostaria de entender como começar com o plano Free. Pode me orientar sobre a configuração inicial do funil e a importação dos meus contatos?',
+    Pro: 'Olá! Quero conhecer o plano Pro do Velo Funil para minha empresa. Gostaria de conversar sobre a organização do time, os recursos de agenda e e-mail e a melhor forma de implantar o CRM.',
+    Max: 'Olá! Tenho interesse no plano Max do Velo Funil. Gostaria de entender como conectar o WhatsApp da empresa ao funil, centralizar as conversas e organizar o atendimento da equipe.',
+    Enterprise: 'Olá! Tenho interesse em um projeto Enterprise de prospecção de eventos para mídia outdoor. Quero conversar sobre as agendas públicas que devemos acompanhar, como identificar organizadores e contatos, explicar a prioridade de cada oportunidade e preparar mensagens comerciais com aprovação da minha equipe. Podemos agendar uma conversa para definir o escopo?',
+  }
+  const mensagem = mensagens[plano] ?? `Olá! Gostaria de conversar com um especialista sobre o plano ${plano} do Velo Funil.`
   const href = `https://wa.me/${CONTROLADOR.whatsapp.numero}?text=${encodeURIComponent(mensagem)}`
 
   return (
@@ -20,10 +26,10 @@ export function CtaDoPlano({
       href={href}
       target="_blank"
       rel="noopener noreferrer"
-      aria-label={`Falar com especialista sobre o plano ${plano}`}
+      aria-label={`Falar com um especialista sobre o plano ${plano} pelo WhatsApp`}
       className={cn(buttonVariants({ variant, size: 'lg' }), className)}
     >
-      Falar com especialista
+      Falar com um especialista
     </a>
   )
 }

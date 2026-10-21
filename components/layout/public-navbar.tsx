@@ -15,9 +15,7 @@ import {
 } from '@/components/ui/sheet'
 import { Logo } from '@/components/branding/logo'
 import { ScrollLink } from '@/components/landing/scroll-link'
-import { NavCtaLink } from '@/components/landing/nav-cta-link'
-import { useHeroCtaVisivel } from '@/hooks/use-hero-cta-visivel'
-import { useSessaoAtiva } from '@/hooks/use-sessao-ativa'
+import { CONTROLADOR } from '@/lib/legal'
 import { cn } from '@/lib/utils'
 
 const navLinks = [
@@ -28,23 +26,11 @@ const navLinks = [
 ] as const
 
 export function PublicNavbar() {
-  /**
-   * ## O botao passa a dizer o que faz
-   *
-   * O middleware desvia quem tem sessao de `/login` para `/dashboard`
-   * (`lib/supabase/middleware.ts:168`), e isso e correto — mas com o botao
-   * escrito "Entrar" o efeito e o de abrir o sistema de surpresa: a pessoa
-   * clica esperando a tela de login e cai dentro do produto.
-   *
-   * O desvio fica; o rotulo e que passa a acompanhar. Deslogado le "Entrar" e
-   * vai ao login; logado le "Ir para o sistema" e vai ao painel. Nenhum
-   * clique muda de destino sem avisar antes.
-   */
-  const logado = useSessaoAtiva()
-  const rotuloDeEntrada = logado ? 'Ir para o sistema' : 'Entrar'
-  const destinoDeEntrada = logado ? '/dashboard' : '/login'
-  // Fonte única compartilhada com `mobile-sticky-cta` — ver o hook.
-  const heroVisivel = useHeroCtaVisivel()
+  const rotuloDeEntrada = 'Entrar'
+  // O login deixa o middleware validar a sessao: quem ainda estiver logado
+  // vai ao painel; quem nao estiver ve os campos de e-mail e senha.
+  const destinoDeEntrada = '/login'
+  const contatoEspecialista = `https://wa.me/${CONTROLADOR.whatsapp.numero}?text=${encodeURIComponent('Olá! Conheci o Velo Funil e gostaria de conversar com um especialista sobre a melhor solução para minha empresa. Podemos agendar uma conversa?')}`
 
   const [menuAberto, setMenuAberto] = React.useState(false)
 
@@ -97,62 +83,21 @@ export function PublicNavbar() {
             Ele CONTINUA no produto (`components/layout/topbar.tsx`), que é
             onde faz sentido: lá a pessoa passa horas, e a escolha é dela. */}
         <div className="flex items-center gap-2">
-          <NavCtaLink
+          <Link
             href={destinoDeEntrada}
-            className={cn(buttonVariants({ variant: 'ghost' }), 'hidden sm:inline-flex')}
+            className={cn(buttonVariants({ variant: 'ghost' }), 'inline-flex')}
           >
             {rotuloDeEntrada}
-          </NavCtaLink>
+          </Link>
 
-          {/* 48px de alvo de toque no celular, 32 no desktop. Os links do
-              menu lateral já estavam em `min-h-12`; o cabeçalho ficava em 44 e
-              destoava. O `h-16` do container não muda, então nada é empurrado.
-
-              Escondido abaixo de 340px. O corte era em 360 enquanto o
-              seletor de tema dividia o cabeçalho; com ele fora (24/08) sobram
-              48px, e a soma passa a ser logo 120 + este botão 123 + menu 48 =
-              291, que cabe nos ~305 úteis de uma tela de 320. Medido, sem
-              rolagem horizontal.
-
-              Continua havendo um piso: abaixo de ~340 não cabe mesmo, e aí o
-              mesmo "Começar grátis" segue disponível dentro do menu.
-
-              O corte é em 360 e não mais alto de propósito: 375 e 390 são
-              iPhone e Android correntes, e esconder o CTA do cabeçalho neles
-              custaria caminho de conversão em troca de nada, já que ali ele
-              cabe. Abaixo de 360 o mesmo "Começar grátis" continua no menu
-              lateral e no Hero, que fica logo abaixo. */}
-          {/* ## Este botão voltou a acompanhar a rolagem no celular — 12/09
-
-              Até aqui ele SUMIA ao rolar, porque a barra fixa do rodapé subia
-              para substituí-lo: medido em 24/08, os dois apareciam juntos com
-              o mesmo texto e a mesma cor, somando 138px (16% da viewport) de
-              moldura fixa, e dois CTAs iguais dividem a atenção em vez de
-              somar.
-
-              A barra saiu por decisão do dono em 12/09. Manter o `hidden`
-              deixaria a pessoa rolar 12.000px sem nenhum "Começar grátis"
-              alcançável — que é pior do que os dois botões que a regra
-              evitava. Agora ele é o ÚNICO CTA persistente no celular.
-
-              A condição continua existindo para o caso oposto: com o hero
-              visível, o botão dele está logo abaixo, e repetir o mesmo convite
-              a 500px de distância é a redundância de 24/08 com outro nome. */}
-          <NavCtaLink
-            href="/cadastro"
-            className={cn(
-              buttonVariants(),
-              'min-h-12 md:min-h-8',
-              // Trocar a STRING inteira, não somar `max-md:hidden` por cima:
-              // medido, `min-[340px]:inline-flex` vence a classe somada e o
-              // botão continuava visível. Duas utilities de `display` no mesmo
-              // elemento é briga de especificidade que o Tailwind resolve pela
-              // ordem no CSS gerado, não pela ordem que se escreve aqui.
-              heroVisivel ? 'hidden min-[340px]:inline-flex' : 'inline-flex',
-            )}
+          <a
+            href={contatoEspecialista}
+            target="_blank"
+            rel="noopener noreferrer"
+            className={cn(buttonVariants(), 'hidden min-h-11 sm:inline-flex')}
           >
-            Começar grátis
-          </NavCtaLink>
+            Falar com especialista
+          </a>
 
           {/* Abaixo de `md` os links da seção sumiam e o "Entrar" ficava oculto
              , quem já é cliente não tinha como acessar a conta pelo celular, e
@@ -211,7 +156,7 @@ export function PublicNavbar() {
                 <div className="border-border/60 mt-3 flex flex-col gap-2 border-t pt-3">
                   <SheetClose
                     render={
-                      <NavCtaLink
+                      <Link
                         href={destinoDeEntrada}
                         className={cn(
                           buttonVariants({ variant: 'outline' }),
@@ -224,13 +169,15 @@ export function PublicNavbar() {
                   </SheetClose>
                   <SheetClose
                     render={
-                      <NavCtaLink
-                        href="/cadastro"
+                      <a
+                        href={contatoEspecialista}
+                        target="_blank"
+                        rel="noopener noreferrer"
                         className={cn(buttonVariants(), 'min-h-11 w-full')}
                       />
                     }
                   >
-                    Começar grátis
+                    Falar com especialista
                   </SheetClose>
                 </div>
               </nav>
