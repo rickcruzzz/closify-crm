@@ -35,6 +35,14 @@
 -- O que muda é só isto: existe agora um lugar para o único job que **precisa**
 -- viver fora da Vercel.
 
+-- Projeto novo não herda as extensões que foram habilitadas à mão no antigo.
+-- A função e o agendamento abaixo dependem das três.
+create schema if not exists extensions;
+create schema if not exists vault;
+create extension if not exists pg_net with schema extensions;
+create extension if not exists pg_cron;
+create extension if not exists supabase_vault with schema vault;
+
 -- ---------------------------------------------------------------------------
 -- Quanto tempo de silêncio vira suspeita
 -- ---------------------------------------------------------------------------

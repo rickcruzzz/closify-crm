@@ -117,5 +117,5 @@ drop policy "subscriptions_select" on public.subscriptions;
 create policy "subscriptions_select" on public.subscriptions
   for select using ((select public.is_workspace_member(workspace_id)));
 
-drop policy "subscriptions_update" on public.subscriptions;
-drop policy "subscriptions_insert" on public.subscriptions;
+drop policy if exists "subscriptions_update" on public.subscriptions;
+drop policy if exists "subscriptions_insert" on public.subscriptions;

@@ -8,8 +8,12 @@ import {
   Filter,
   LayoutDashboard,
   Mail,
+  MessageSquareText,
+  Radar,
   Send,
+  Sparkles,
   Smartphone,
+  Target,
   Timer,
   Users,
 } from 'lucide-react'
@@ -417,6 +421,23 @@ const plans: Plan[] = [
     logado: { href: '/settings/billing#comparar', cta: `Assinar o ${PLANO_NA_TELA.max}` },
     delay: 320,
   },
+  {
+    name: 'Enterprise',
+    price: 'Sob consulta',
+    precoLegenda: 'Projeto dedicado, desenhado com a sua operação.',
+    description:
+      'Transforme agendas de eventos em oportunidades reais para sua operação de mídia outdoor.',
+    features: [
+      { texto: 'CRM completo para conduzir cada oportunidade até a negociação', icone: LayoutDashboard },
+      { texto: 'Projeto de monitoramento de agendas públicas de eventos, feiras e congressos', icone: Radar },
+      { texto: 'Organizadores e contatos com a fonte de cada informação', icone: Contact },
+      { texto: 'Prioridade explicada por sinais verificáveis, sem porcentagens inventadas', icone: Target },
+      { texto: 'IA prepara a abordagem; sua equipe revisa, ajusta e decide quando enviar', icone: MessageSquareText },
+      { texto: 'Fluxo e integrações definidos com você na reunião de implantação', icone: Sparkles },
+    ],
+    fecho: 'Uma conversa para desenhar as fontes, o fluxo e a proposta do seu projeto.',
+    delay: 480,
+  },
 ]
 
 export function PricingSection() {
@@ -444,7 +465,7 @@ export function PricingSection() {
             <span aria-hidden className="bg-primary h-px w-4" />
           </span>
           <h2 className="text-titulo-md md:text-titulo-lg">
-            Comece de graça. Assine quando fizer sentido.
+            Comece de graça. Cresça até uma operação sob medida.
           </h2>
           {/* Esta página já vendeu duas histórias diferentes, e as duas
               estavam certas na época.
@@ -489,7 +510,7 @@ export function PricingSection() {
             cartoes, `sm:grid-cols-2` deixaria o terceiro sozinho numa linha,
             com metade da largura dos outros dois. Cartao orfao le como erro de
             layout, nao como plano. */}
-        <div className="mx-auto grid max-w-6xl grid-cols-1 gap-6 lg:grid-cols-3">
+        <div className="mx-auto grid max-w-7xl grid-cols-1 gap-6 lg:grid-cols-2 xl:grid-cols-4">
           {plans.map((plan) => (
             <RevealOnScroll key={plan.name} delay={plan.delay}>
               <Card
@@ -517,6 +538,8 @@ export function PricingSection() {
                   'h-full transition-colors duration-200',
                   plan.highlighted
                     ? 'ring-primary shadow-primary/10 shadow-lg ring-2'
+                    : plan.name === 'Enterprise'
+                      ? 'border-primary/30 bg-primary/[0.035] ring-primary/50 shadow-primary/10 shadow-lg ring-1'
                     // Cor da borda em vez de deslocamento: da o sinal de
                     // "isto responde" sem mexer em um pixel de layout.
                     : 'ring-border pointer:hover:ring-muted-foreground/40 ring-1',
@@ -536,6 +559,7 @@ export function PricingSection() {
                         e e o que a tela de cobranca (`plan-comparison-table`)
                         ja dizia — a landing e que estava fora de passo. */}
                     {plan.highlighted && <Badge>Recomendado</Badge>}
+                    {plan.name === 'Enterprise' && <Badge variant="outline">Projeto dedicado</Badge>}
                   </div>
                   <div className="flex items-baseline gap-1">
                     {/* `text-numero-md`, o mesmo token da barra de números do
@@ -545,7 +569,7 @@ export function PricingSection() {
                         preço. Aqui fica no `md` e não sobe para `lg`: dentro de
                         um cartão de largura fixa, o número maior encosta no
                         período ("/mês") em telas estreitas. */}
-                    <span className="text-numero-md">{plan.price}</span>
+                    <span className={plan.name === 'Enterprise' ? 'text-2xl font-semibold tracking-tight' : 'text-numero-md'}>{plan.price}</span>
                     {plan.period && (
                       <span className="text-muted-foreground text-sm">{plan.period}</span>
                     )}

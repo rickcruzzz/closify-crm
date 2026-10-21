@@ -190,10 +190,10 @@ export function HeroSection() {
           <div className="animate-entrada fade-in slide-in-from-bottom-3 fill-mode-both ease-entrada duration-entrada delay-passo-4 order-1 mt-2 flex w-full flex-col items-stretch gap-3 sm:order-none sm:w-auto sm:flex-row sm:items-center">
             <Link
               id="hero-cta"
-              href="/cadastro"
+              href="/login"
               className={cn(buttonVariants({ size: 'lg' }), 'gap-2')}
             >
-              Começar grátis
+              Entrar
               <ArrowRight className="size-4" />
             </Link>
             {/* `ghost`, não `outline`: página de CTA único converte 13,5%

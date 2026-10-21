@@ -73,6 +73,7 @@ export async function updateSession(request: NextRequest) {
     // rota nova: o comentario deste arquivo credita tres incidentes pagos a
     // essa classe, e este e o quarto.
     pathname.startsWith('/conversas') ||
+    pathname.startsWith('/enterprise') ||
     pathname.startsWith('/calendario') ||
     pathname.startsWith('/settings') ||
     pathname.startsWith('/perfil') ||
