@@ -88,6 +88,18 @@ const LIMITES = {
   //
   // Três por hora: conectar dá certo na primeira, e errar o QR duas vezes cabe.
   'whatsapp-conectar': { limite: 3, janelaSegundos: 60 * 60 },
+  // A QUARTA que gasta dinheiro por chamada: a varredura do Radar Enterprise
+  // na Exa (22/10). Uma varredura é uma busca (US$ 0,007) mais até dez páginas
+  // analisadas (US$ 0,001 cada), e a tela dispara tudo com um clique.
+  //
+  // Conta a BUSCA, não as páginas: as análises só existem depois de uma busca
+  // autorizada. Dez por hora por pessoa é muito mais do que alguém revisa —
+  // cada varredura traz até dez eventos para ler —, e fecha o laço de cliques.
+  'radar-exa': { limite: 10, janelaSegundos: 60 * 60 },
+  // As páginas também têm teto, porque Server Action é endpoint HTTP: dá para
+  // chamar a análise direto, com qualquer URL, sem passar pela busca. 120/hora
+  // é a varredura cheia (10 x 10) com folga para repetir as que falharam.
+  'radar-exa-pagina': { limite: 120, janelaSegundos: 60 * 60 },
 } as const
 
 export type AcaoLimitada = keyof typeof LIMITES

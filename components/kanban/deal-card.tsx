@@ -154,6 +154,23 @@ export const DealCard = React.memo(function DealCard({
             )}
           </div>
 
+          {/* ## O potencial do Radar, só quando o contato veio de um evento
+              Pedido do dono em 22/10: o colaborador decide quem abordar
+              primeiro pelo Kanban, e o motivo do potencial ficava escondido no
+              Radar. Percentual e resumo vêm prontos de `potencialNoCard`. É
+              prioridade por sinais, não chance de fechar, e por isso o rótulo
+              diz "potencial". */}
+          {deal.radar && (
+            <div className="flex min-w-0 flex-col gap-0.5">
+              <span className="bg-primary/10 text-primary w-fit rounded-md px-1.5 py-0.5 text-xs font-semibold tabular-nums">
+                {deal.radar.percentual}% de potencial
+              </span>
+              <span className="text-muted-foreground line-clamp-2 text-xs" title={deal.radar.resumo}>
+                {deal.radar.resumo}
+              </span>
+            </div>
+          )}
+
           <ValorDoNegocio valor={deal.value} />
 
           {/* Só aparece quando já preocupa. Negócio que anda normal não ganha

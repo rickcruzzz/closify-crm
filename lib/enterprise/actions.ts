@@ -2,16 +2,38 @@
 
 import { revalidatePath } from 'next/cache'
 
+import { enviarMensagem } from '@/lib/conversas/actions'
 import { avaliarEvento, type DadosDoEvento } from '@/lib/enterprise/eventos'
-import { AGENDA_SALVADOR, PESQUISA_SALVADOR } from '@/lib/enterprise/pesquisa-salvador'
+import { buscarPaginasDeEventos, exaConfigurada, lerPaginaDeEvento } from '@/lib/enterprise/exa'
+import { chaveDaPagina, extrairEvento } from '@/lib/enterprise/extracao'
+import { potencialNoCard } from '@/lib/enterprise/potencial'
+import { contatoJaCadastrado } from '@/lib/leads/contato-existente'
+import { normalizarTelefoneBrasileiro } from '@/lib/leads/whatsapp'
+import { excedeuLimite } from '@/lib/rate-limit'
 import { diaEmSaoPaulo } from '@/lib/tasks/buckets'
 import { createClient } from '@/lib/supabase/server'
 import { getCurrentUserAndWorkspace } from '@/lib/supabase/workspace'
 
 type Resultado = { ok: true } | { ok: false; erro: string }
 
-async function contextoEnterprise() {
-  const [{ workspaceId }, supabase] = await Promise.all([
+/**
+ * A cidade do Radar, num lugar só.
+ *
+ * Era a string `'salvador'` comparada dentro de `criarEvento`. A varredura da
+ * Exa (22/10) passou a precisar dela para montar a busca e para recusar evento
+ * de outra cidade, e duas cópias da mesma cidade divergem no dia em que o
+ * Radar abrir a segunda.
+ */
+const CIDADE_DO_RADAR = 'Salvador'
+
+type Contexto = {
+  workspaceId: string
+  userId: string
+  supabase: Awaited<ReturnType<typeof createClient>>
+}
+
+async function contextoEnterprise(): Promise<Contexto | null> {
+  const [{ user, workspaceId }, supabase] = await Promise.all([
     getCurrentUserAndWorkspace(),
     createClient(),
   ])
@@ -19,12 +41,170 @@ async function contextoEnterprise() {
     target_workspace_id: workspaceId,
   })
   if (error || data !== true) return null
-  return { workspaceId, supabase }
+  return { workspaceId, userId: user.id, supabase }
 }
 
-export async function criarEvento(entrada: DadosDoEvento): Promise<Resultado> {
+const SEM_ACESSO = 'Acesso Enterprise indisponível para esta empresa.'
+
+async function espacosAtivos(contexto: Contexto) {
+  return contexto.supabase
+    .from('enterprise_espacos')
+    .select('nome, cidade, regiao')
+    .eq('workspace_id', contexto.workspaceId)
+    .eq('ativo', true)
+}
+
+/**
+ * O contato do CRM que corresponde ao evento, criado se ainda não existir.
+ *
+ * ## Por que o contato nasce JUNTO com o evento (22/10)
+ *
+ * Até aqui ele só nascia em `aprovarMensagemDoEvento`, depois de alguém gerar,
+ * revisar e aprovar a mensagem. Pedido do dono: sem contato não há como criar
+ * negócio no Kanban, e o evento que a Exa trouxe ficava parado no Radar sem
+ * caminho para o funil.
+ *
+ * ## Sem e-mail nem telefone, NÃO há contato, e é o banco que decide
+ *
+ * `leads_contato_minimo` (0025) recusa contato sem os dois. Inventar um campo
+ * para passar pela trava sujaria o CRM com gente que ninguém consegue
+ * procurar; o evento fica no Radar dizendo "falta contato", que é a verdade.
+ *
+ * ## Nunca duplica
+ *
+ * Mesma pergunta do cadastro manual (`contatoJaCadastrado`): um organizador
+ * que faz três eventos por ano é UM contato, com os três eventos apontando
+ * para ele. O potencial que aparece no Kanban é o do evento de maior
+ * prioridade (`eventoQueRepresenta`).
+ */
+async function vincularContato(
+  contexto: Contexto,
+  eventoId: string,
+): Promise<{ ok: true; leadId: string; criado: boolean } | { ok: false; erro: string; semContato?: true }> {
+  const { data: evento, error } = await contexto.supabase
+    .from('enterprise_eventos')
+    .select(
+      'id, nome, data_inicio, organizador, contato_nome, contato_email, contato_telefone, publico_estimado, prioridade, justificativa, lead_id',
+    )
+    .eq('id', eventoId)
+    .eq('workspace_id', contexto.workspaceId)
+    .single()
+  if (error || !evento) return { ok: false, erro: 'Evento não encontrado nesta empresa.' }
+  if (evento.lead_id) return { ok: true, leadId: evento.lead_id, criado: false }
+
+  const email = evento.contato_email?.trim().toLowerCase() || null
+  const telefone = evento.contato_telefone?.trim() || null
+  if (!email && !telefone) {
+    return { ok: false, erro: 'O evento ainda não tem e-mail nem telefone de contato.', semContato: true }
+  }
+
+  let leadId: string
+  let criado = false
+  const existente = await contatoJaCadastrado(contexto.supabase, contexto.workspaceId, {
+    email,
+    phone: telefone,
+  })
+  if (existente) {
+    leadId = existente.id
+  } else {
+    const { data: novo, error: erroCriar } = await contexto.supabase
+      .from('leads')
+      .insert({
+        workspace_id: contexto.workspaceId,
+        name: evento.contato_nome || evento.organizador || `Organização: ${evento.nome}`,
+        email,
+        phone: telefone,
+        company: evento.organizador,
+        owner_id: contexto.userId,
+      })
+      .select('id')
+      .single()
+    if (erroCriar || !novo) {
+      // 42501 é a trava de limite de contatos do plano: a mensagem dela já é
+      // escrita para a pessoa ler.
+      if (erroCriar?.code === '42501') return { ok: false, erro: erroCriar.message }
+      console.error('vincularContato: falha ao criar o contato', erroCriar)
+      return { ok: false, erro: 'Não foi possível criar o contato no CRM.' }
+    }
+    leadId = novo.id
+    criado = true
+  }
+
+  const { error: erroVinculo } = await contexto.supabase
+    .from('enterprise_eventos')
+    .update({ lead_id: leadId, atualizado_em: new Date().toISOString() })
+    .eq('id', evento.id)
+    .eq('workspace_id', contexto.workspaceId)
+  if (erroVinculo) {
+    console.error('vincularContato: contato pronto, mas o evento não foi vinculado', erroVinculo)
+    return { ok: false, erro: 'Contato criado, mas não foi possível vinculá-lo ao evento.' }
+  }
+
+  // O porquê do potencial fica no HISTÓRICO do contato, gravado na criação:
+  // quem abrir o contato pelo Kanban daqui a um mês encontra a origem sem
+  // precisar voltar ao Radar. Falhar aqui não desfaz nada — é registro.
+  const potencial = potencialNoCard(evento, diaEmSaoPaulo(new Date()))
+  const { error: erroNota } = await contexto.supabase.from('activities').insert({
+    workspace_id: contexto.workspaceId,
+    lead_id: leadId,
+    author_id: contexto.userId,
+    type: 'nota',
+    description:
+      `Radar Enterprise: ${evento.nome} (${evento.data_inicio}). ` +
+      `Potencial ${potencial.percentual}%: ${potencial.resumo}. ${evento.justificativa ?? ''}`.trim(),
+  })
+  if (erroNota) console.error('vincularContato: nota do Radar não registrada', erroNota)
+
+  return { ok: true, leadId, criado }
+}
+
+/**
+ * Grava um evento avaliado e devolve o id.
+ *
+ * O caminho comum de quem cadastra à mão e da varredura da Exa: os dois
+ * passam pela mesma avaliação e caem na mesma tabela, e o contato é criado
+ * logo em seguida pelos dois.
+ */
+async function gravarEvento(
+  contexto: Contexto,
+  dados: DadosDoEvento,
+  espacos: { nome: string; cidade: string; regiao: string | null }[],
+): Promise<{ ok: true; id: string } | { ok: false; erro: string; repetido?: true }> {
+  const avaliacao = avaliarEvento(dados, new Date(), espacos)
+  const { data, error } = await contexto.supabase
+    .from('enterprise_eventos')
+    .insert({
+      workspace_id: contexto.workspaceId,
+      nome: dados.nome,
+      cidade: dados.cidade,
+      data_inicio: dados.data_inicio,
+      fonte_url: dados.fonte_url,
+      organizador: dados.organizador ?? null,
+      contato_nome: dados.contato_nome ?? null,
+      contato_email: dados.contato_email ?? null,
+      contato_telefone: dados.contato_telefone ?? null,
+      publico_estimado: dados.publico_estimado ?? null,
+      perfil_publico: dados.perfil_publico ?? null,
+      prioridade: avaliacao.prioridade,
+      justificativa: avaliacao.justificativa,
+      informacoes_faltantes: avaliacao.informacoes_faltantes,
+      compatibilidade_espacos: avaliacao.compatibilidade_espacos,
+    })
+    .select('id')
+    .single()
+  if (error || !data) {
+    // `enterprise_eventos_fonte_data_unica` (0101): a mesma página com a mesma
+    // data já está no Radar. Não é falha, é a varredura repetida.
+    if (error?.code === '23505') return { ok: false, erro: 'Este evento já está no radar.', repetido: true }
+    console.error('gravarEvento: falha ao salvar', error)
+    return { ok: false, erro: 'Não foi possível salvar o evento.' }
+  }
+  return { ok: true, id: data.id }
+}
+
+export async function criarEvento(entrada: DadosDoEvento): Promise<Resultado & { contato?: string }> {
   const contexto = await contextoEnterprise()
-  if (!contexto) return { ok: false, erro: 'Acesso Enterprise indisponível para esta empresa.' }
+  if (!contexto) return { ok: false, erro: SEM_ACESSO }
 
   const nome = entrada.nome?.trim()
   const cidade = entrada.cidade?.trim()
@@ -38,8 +218,8 @@ export async function criarEvento(entrada: DadosDoEvento): Promise<Resultado> {
   if (!nome || nome.length < 3 || nome.length > 200 || !cidade || cidade.length > 120) {
     return { ok: false, erro: 'Informe o nome do evento e a cidade.' }
   }
-  if (cidade.toLocaleLowerCase('pt-BR') !== 'salvador') {
-    return { ok: false, erro: 'O radar Enterprise está configurado para Salvador.' }
+  if (cidade.toLocaleLowerCase('pt-BR') !== CIDADE_DO_RADAR.toLocaleLowerCase('pt-BR')) {
+    return { ok: false, erro: `O radar Enterprise está configurado para ${CIDADE_DO_RADAR}.` }
   }
   if (!/^\d{4}-\d{2}-\d{2}$/.test(entrada.data_inicio) ||
       !Number.isFinite(Date.parse(`${entrada.data_inicio}T12:00:00Z`))) {
@@ -61,14 +241,10 @@ export async function criarEvento(entrada: DadosDoEvento): Promise<Resultado> {
     return { ok: false, erro: 'Confira a estimativa de público.' }
   }
 
-  const { data: espacos, error: erroEspacos } = await contexto.supabase
-    .from('enterprise_espacos')
-    .select('nome, cidade, regiao')
-    .eq('workspace_id', contexto.workspaceId)
-    .eq('ativo', true)
+  const { data: espacos, error: erroEspacos } = await espacosAtivos(contexto)
   if (erroEspacos) return { ok: false, erro: 'Não foi possível conferir os espaços de outdoor.' }
 
-  const avaliacao = avaliarEvento({
+  const gravado = await gravarEvento(contexto, {
     nome,
     cidade,
     data_inicio: entrada.data_inicio,
@@ -79,123 +255,166 @@ export async function criarEvento(entrada: DadosDoEvento): Promise<Resultado> {
     contato_telefone: contatoTelefone,
     publico_estimado: publico,
     perfil_publico: perfilPublico,
-  }, new Date(), espacos ?? [])
-  const { error } = await contexto.supabase.from('enterprise_eventos').insert({
-    workspace_id: contexto.workspaceId,
-    nome,
-    cidade,
-    data_inicio: entrada.data_inicio,
-    fonte_url: fonte.href,
-    organizador,
-    contato_nome: contatoNome,
-    contato_email: contatoEmail,
-    contato_telefone: contatoTelefone,
-    publico_estimado: publico,
-    perfil_publico: perfilPublico,
-    prioridade: avaliacao.prioridade,
-    justificativa: avaliacao.justificativa,
-    informacoes_faltantes: avaliacao.informacoes_faltantes,
-    compatibilidade_espacos: avaliacao.compatibilidade_espacos,
-  })
-  if (error) return { ok: false, erro: 'Não foi possível salvar o evento.' }
+  }, espacos ?? [])
+  if (!gravado.ok) return gravado
+
+  const contato = await vincularContato(contexto, gravado.id)
   revalidatePath('/enterprise/eventos')
-  return { ok: true }
+  revalidatePath('/leads')
+  // O evento ficou salvo de qualquer jeito: o contato que falhou é dito, não
+  // transformado em erro do cadastro inteiro.
+  return { ok: true, contato: contato.ok ? (contato.criado ? 'criado' : 'vinculado') : contato.erro }
 }
 
-/** Importa somente resultados futuros comprovados; não sobrescreve revisão humana. */
-export async function importarPesquisaSalvador(): Promise<Resultado & { adicionados?: number }> {
+/**
+ * Primeira metade da varredura: os endereços que valem uma análise.
+ *
+ * Devolve só páginas que AINDA não estão no Radar — analisar de novo uma página
+ * conhecida custaria crédito da Exa para gravar nada. A tela chama
+ * `analisarPaginaDaExa` para cada uma, em sequência; ver o cabeçalho de
+ * `lib/enterprise/exa.ts` para o motivo de serem duas Actions.
+ */
+export async function buscarEventosNaExa(): Promise<
+  { ok: true; paginas: { url: string; titulo: string | null }[]; jaNoRadar: number } | { ok: false; erro: string }
+> {
   const contexto = await contextoEnterprise()
-  if (!contexto) return { ok: false, erro: 'Acesso Enterprise indisponível para esta empresa.' }
-  const hoje = diaEmSaoPaulo(new Date())
-  const candidatos = PESQUISA_SALVADOR.filter((evento) => evento.data_inicio >= hoje)
+  if (!contexto) return { ok: false, erro: SEM_ACESSO }
+  if (!exaConfigurada()) return { ok: false, erro: 'A busca pela Exa ainda não foi configurada nesta instalação.' }
+  if (await excedeuLimite('radar-exa', contexto.userId)) {
+    return { ok: false, erro: 'Limite de varreduras por hora atingido. Tente de novo mais tarde.' }
+  }
 
-  const { error: erroAgenda } = await contexto.supabase.from('enterprise_agendas').upsert({
-    workspace_id: contexto.workspaceId,
-    ...AGENDA_SALVADOR,
-  }, { onConflict: 'workspace_id,url', ignoreDuplicates: true })
-  if (erroAgenda) return { ok: false, erro: 'Não foi possível registrar a agenda oficial de Salvador.' }
-  const { data: agenda, error: erroBuscaAgenda } = await contexto.supabase
-    .from('enterprise_agendas')
+  let paginas: { url: string; titulo: string | null }[]
+  try {
+    paginas = await buscarPaginasDeEventos(CIDADE_DO_RADAR)
+  } catch (erro) {
+    console.error('buscarEventosNaExa: a Exa falhou', erro)
+    return { ok: false, erro: 'A Exa não respondeu a tempo. Tente de novo em instantes.' }
+  }
+
+  const { data: conhecidos, error } = await contexto.supabase
+    .from('enterprise_eventos')
+    .select('fonte_url')
+    .eq('workspace_id', contexto.workspaceId)
+    .limit(1000)
+  if (error) return { ok: false, erro: 'Não foi possível conferir os eventos já cadastrados.' }
+
+  const chaves = new Set((conhecidos ?? []).map((e) => chaveDaPagina(e.fonte_url)))
+  const novas = paginas.filter((p) => !chaves.has(chaveDaPagina(p.url)))
+  return { ok: true, paginas: novas, jaNoRadar: paginas.length - novas.length }
+}
+
+export type ResultadoDaPagina =
+  | { situacao: 'adicionado'; nome: string; contato: 'criado' | 'vinculado' | 'sem_contato' | 'falhou' }
+  | { situacao: 'ignorado'; motivo: string }
+  | { situacao: 'erro'; motivo: string }
+
+/**
+ * Segunda metade: lê UMA página, e se for evento válido, grava e cria o contato.
+ *
+ * Teto de tempo: ~6,5s de Exa + ~3s de Supabase, dentro dos ~10s da Netlify.
+ */
+export async function analisarPaginaDaExa(url: string): Promise<ResultadoDaPagina> {
+  const contexto = await contextoEnterprise()
+  if (!contexto) return { situacao: 'erro', motivo: SEM_ACESSO }
+  if (typeof url !== 'string' || !url.startsWith('https://') || url.length > 1500) {
+    return { situacao: 'ignorado', motivo: 'Endereço inválido.' }
+  }
+  if (await excedeuLimite('radar-exa-pagina', contexto.userId)) {
+    return { situacao: 'erro', motivo: 'Limite de análises por hora atingido.' }
+  }
+
+  const [pagina, espacos] = await Promise.all([
+    lerPaginaDeEvento(url).catch((erro: unknown) => {
+      console.error('analisarPaginaDaExa: a Exa falhou', url, erro)
+      return null
+    }),
+    espacosAtivos(contexto),
+  ])
+  if (!pagina) return { situacao: 'erro', motivo: 'A Exa não conseguiu ler a página a tempo.' }
+
+  const extraido = extrairEvento({
+    url,
+    resumo: pagina.resumo,
+    textoDaPagina: pagina.texto,
+    cidadeDoRadar: CIDADE_DO_RADAR,
+    hoje: diaEmSaoPaulo(new Date()),
+  })
+  if (!extraido.ok) return { situacao: 'ignorado', motivo: extraido.motivo }
+
+  const { contatoDoTexto, ...dados } = extraido.evento
+  const gravado = await gravarEvento(contexto, dados, espacos.data ?? [])
+  if (!gravado.ok) {
+    return gravado.repetido
+      ? { situacao: 'ignorado', motivo: gravado.erro }
+      : { situacao: 'erro', motivo: gravado.erro }
+  }
+
+  // A fonte fica registrada como evidência, do mesmo jeito que a pesquisa
+  // manual registrava: quem for abordar confere de onde veio cada dado.
+  const fontes: { tipo: 'evento' | 'contato'; titulo: string }[] = [
+    { tipo: 'evento', titulo: pagina.titulo ?? dados.nome },
+  ]
+  if (contatoDoTexto) fontes.push({ tipo: 'contato', titulo: 'Contato escrito na página oficial' })
+  const { error: erroFontes } = await contexto.supabase.from('enterprise_evento_fontes').insert(
+    fontes.map((f) => ({
+      workspace_id: contexto.workspaceId,
+      evento_id: gravado.id,
+      tipo: f.tipo,
+      url: dados.fonte_url,
+      titulo: f.titulo,
+    })),
+  )
+  if (erroFontes) console.error('analisarPaginaDaExa: fontes não registradas', erroFontes)
+
+  const contato = await vincularContato(contexto, gravado.id)
+  revalidatePath('/enterprise/eventos')
+  revalidatePath('/leads')
+  return {
+    situacao: 'adicionado',
+    nome: dados.nome,
+    contato: contato.ok
+      ? contato.criado ? 'criado' : 'vinculado'
+      : 'semContato' in contato ? 'sem_contato' : 'falhou',
+  }
+}
+
+/**
+ * Cria os contatos que faltam nos eventos que já estavam no Radar.
+ *
+ * Os eventos de antes de 22/10 nasceram sem contato, porque ele só era criado
+ * na aprovação. Chamado pela tela ao fim de cada varredura. Dez por vez, para
+ * caber no teto da Netlify mesmo com uma ida ao banco por evento.
+ */
+export async function criarContatosQueFaltam(): Promise<{ ok: true; criados: number } | { ok: false; erro: string }> {
+  const contexto = await contextoEnterprise()
+  if (!contexto) return { ok: false, erro: SEM_ACESSO }
+
+  const { data: pendentes, error } = await contexto.supabase
+    .from('enterprise_eventos')
     .select('id')
     .eq('workspace_id', contexto.workspaceId)
-    .eq('url', AGENDA_SALVADOR.url)
-    .single()
-  if (erroBuscaAgenda || !agenda) return { ok: false, erro: 'Agenda oficial não encontrada após o cadastro.' }
-  if (candidatos.length === 0) {
+    .is('lead_id', null)
+    .or('contato_email.not.is.null,contato_telefone.not.is.null')
+    .neq('status', 'descartado')
+    .limit(10)
+  if (error) return { ok: false, erro: 'Não foi possível conferir os eventos sem contato.' }
+
+  let criados = 0
+  for (const evento of pendentes ?? []) {
+    const r = await vincularContato(contexto, evento.id)
+    if (r.ok) criados += 1
+  }
+  if (criados > 0) {
     revalidatePath('/enterprise/eventos')
-    return { ok: true, adicionados: 0 }
+    revalidatePath('/leads')
   }
-
-  const { data: espacos, error: erroEspacos } = await contexto.supabase
-    .from('enterprise_espacos')
-    .select('nome, cidade, regiao')
-    .eq('workspace_id', contexto.workspaceId)
-    .eq('ativo', true)
-  if (erroEspacos) return { ok: false, erro: 'Não foi possível conferir os espaços de outdoor.' }
-
-  const { data: existentes, error: erroExistentes } = await contexto.supabase
-    .from('enterprise_eventos')
-    .select('id, fonte_url, data_inicio')
-    .eq('workspace_id', contexto.workspaceId)
-    .in('fonte_url', candidatos.map((evento) => evento.fonte_url))
-  if (erroExistentes) return { ok: false, erro: 'Não foi possível conferir os eventos já cadastrados.' }
-  const chaves = new Set((existentes ?? []).map((evento) => `${evento.fonte_url}|${evento.data_inicio}`))
-  const novos = candidatos.filter((evento) => !chaves.has(`${evento.fonte_url}|${evento.data_inicio}`))
-
-  if (novos.length > 0) {
-    const { error } = await contexto.supabase.from('enterprise_eventos').upsert(novos.map((evento) => {
-      const avaliacao = avaliarEvento(evento, new Date(), espacos ?? [])
-      return {
-        workspace_id: contexto.workspaceId,
-        agenda_id: agenda.id,
-        nome: evento.nome,
-        data_inicio: evento.data_inicio,
-        cidade: evento.cidade,
-        local_evento: 'Centro de Convenções Salvador',
-        fonte_url: evento.fonte_url,
-        tipo: evento.tipo,
-        organizador: evento.organizador ?? null,
-        contato_nome: evento.contato_nome ?? null,
-        contato_email: evento.contato_email ?? null,
-        contato_telefone: evento.contato_telefone ?? null,
-        fonte_contato_url: evento.fonte_contato_url,
-        perfil_publico: evento.perfil_publico ?? null,
-        prioridade: avaliacao.prioridade,
-        justificativa: avaliacao.justificativa,
-        informacoes_faltantes: avaliacao.informacoes_faltantes,
-        compatibilidade_espacos: avaliacao.compatibilidade_espacos,
-      }
-    }), { onConflict: 'workspace_id,fonte_url,data_inicio', ignoreDuplicates: true })
-    if (error) return { ok: false, erro: 'Não foi possível importar as oportunidades pesquisadas.' }
-  }
-
-  const { data: gravados, error: erroGravados } = await contexto.supabase
-    .from('enterprise_eventos')
-    .select('id, fonte_url, data_inicio')
-    .eq('workspace_id', contexto.workspaceId)
-    .in('fonte_url', candidatos.map((evento) => evento.fonte_url))
-  if (erroGravados) return { ok: false, erro: 'Eventos salvos, mas não foi possível conferir as fontes.' }
-  const fontes = candidatos.flatMap((evento) => {
-    const salvo = (gravados ?? []).find((item) => item.fonte_url === evento.fonte_url && item.data_inicio === evento.data_inicio)
-    return salvo ? evento.fontes.map((fonte) => ({
-      ...fonte,
-      workspace_id: contexto.workspaceId,
-      evento_id: salvo.id,
-      verificada_em: '2026-10-21T00:00:00Z',
-    })) : []
-  })
-  if (fontes.length > 0) {
-    const { error } = await contexto.supabase.from('enterprise_evento_fontes')
-      .upsert(fontes, { onConflict: 'evento_id,tipo,url', ignoreDuplicates: true })
-    if (error) return { ok: false, erro: 'Eventos salvos, mas não foi possível registrar todas as fontes.' }
-  }
-  revalidatePath('/enterprise/eventos')
-  return { ok: true, adicionados: novos.length }
+  return { ok: true, criados }
 }
 
 export async function gerarMensagemDoEvento(eventoId: string): Promise<Resultado> {
   const contexto = await contextoEnterprise()
-  if (!contexto) return { ok: false, erro: 'Acesso Enterprise indisponível para esta empresa.' }
+  if (!contexto) return { ok: false, erro: SEM_ACESSO }
   if (!process.env.OPENAI_API_KEY) {
     return { ok: false, erro: 'A geração por IA ainda não foi configurada nesta instalação.' }
   }
@@ -228,7 +447,10 @@ export async function gerarMensagemDoEvento(eventoId: string): Promise<Resultado
           { role: 'user', content: JSON.stringify(evento) },
         ],
       }),
-      signal: AbortSignal.timeout(25_000),
+      // 8s e não 25s: a função da Netlify morre em ~10s, e com 25s a geração
+      // lenta virava o botão girando para sempre — o defeito do "Adotar
+      // instância", aqui na tela do Radar.
+      signal: AbortSignal.timeout(8_000),
     })
   } catch {
     return { ok: false, erro: 'A IA não respondeu. Tente novamente.' }
@@ -252,7 +474,7 @@ export async function gerarMensagemDoEvento(eventoId: string): Promise<Resultado
 
 export async function salvarMensagemDoEvento(eventoId: string, mensagem: string): Promise<Resultado> {
   const contexto = await contextoEnterprise()
-  if (!contexto) return { ok: false, erro: 'Acesso Enterprise indisponível para esta empresa.' }
+  if (!contexto) return { ok: false, erro: SEM_ACESSO }
   const texto = mensagem.trim()
   if (!texto || texto.length > 700) return { ok: false, erro: 'A mensagem deve ter até 700 caracteres.' }
   const { error } = await contexto.supabase
@@ -267,51 +489,159 @@ export async function salvarMensagemDoEvento(eventoId: string, mensagem: string)
 
 export async function aprovarMensagemDoEvento(eventoId: string): Promise<Resultado> {
   const contexto = await contextoEnterprise()
-  if (!contexto) return { ok: false, erro: 'Acesso Enterprise indisponível para esta empresa.' }
+  if (!contexto) return { ok: false, erro: SEM_ACESSO }
   const { data: evento, error } = await contexto.supabase
     .from('enterprise_eventos')
-    .select('id, nome, organizador, contato_nome, contato_email, contato_telefone, mensagem_rascunho, lead_id')
+    .select('id, mensagem_rascunho')
     .eq('id', eventoId)
     .eq('workspace_id', contexto.workspaceId)
     .single()
   if (error || !evento) return { ok: false, erro: 'Evento não encontrado nesta empresa.' }
   const mensagem = evento.mensagem_rascunho?.trim()
   if (!mensagem || mensagem.length > 700) return { ok: false, erro: 'Salve a mensagem revisada antes de aprovar.' }
-  if (!evento.contato_email && !evento.contato_telefone) {
-    return { ok: false, erro: 'Confirme um contato público do organizador antes de aprovar.' }
-  }
 
-  let leadId = evento.lead_id
-  if (!leadId) {
-    let busca = contexto.supabase.from('leads').select('id').eq('workspace_id', contexto.workspaceId)
-    busca = evento.contato_email
-      ? busca.eq('email', evento.contato_email)
-      : busca.eq('phone', evento.contato_telefone!)
-    const { data: existente, error: erroBusca } = await busca.limit(1).maybeSingle()
-    if (erroBusca) return { ok: false, erro: 'Não foi possível conferir o contato no CRM.' }
-    leadId = existente?.id ?? null
-    if (!leadId) {
-      const { data: criado, error: erroCriar } = await contexto.supabase.from('leads').insert({
-        workspace_id: contexto.workspaceId,
-        name: evento.contato_nome || evento.organizador || `Organização: ${evento.nome}`,
-        email: evento.contato_email,
-        phone: evento.contato_telefone,
-        company: evento.organizador,
-      }).select('id').single()
-      if (erroCriar || !criado) return { ok: false, erro: 'Não foi possível criar o contato no CRM.' }
-      leadId = criado.id
+  // O contato já nasce com o evento desde 22/10; aqui ele só é garantido para
+  // os eventos antigos, e com a MESMA regra de duplicidade do resto do CRM.
+  const contato = await vincularContato(contexto, evento.id)
+  if (!contato.ok) {
+    return {
+      ok: false,
+      erro: contato.semContato ? 'Confirme um contato público do organizador antes de aprovar.' : contato.erro,
     }
   }
 
   const { error: erroAprovar } = await contexto.supabase.from('enterprise_eventos').update({
-    lead_id: leadId,
     mensagem_aprovada: mensagem,
     aprovada_em: new Date().toISOString(),
     status: 'aprovado',
     atualizado_em: new Date().toISOString(),
   }).eq('id', evento.id).eq('workspace_id', contexto.workspaceId)
-  if (erroAprovar) return { ok: false, erro: 'Contato criado, mas não foi possível aprovar a mensagem. Tente novamente.' }
+  if (erroAprovar) return { ok: false, erro: 'Contato pronto, mas não foi possível aprovar a mensagem. Tente novamente.' }
   revalidatePath('/enterprise/eventos')
   revalidatePath('/leads')
   return { ok: true }
+}
+
+/**
+ * A conversa de WhatsApp do contato do evento, criada se ainda não existir.
+ *
+ * ## Por que o botão "Conversas do CRM" mudou (22/10)
+ *
+ * Ele levava a `/conversas`, a caixa de entrada INTEIRA. Com a caixa vazia, a
+ * pessoa caía numa tela dizendo "Nenhuma conversa ainda" sem nenhum caminho
+ * para falar com o organizador que tinha acabado de olhar. Agora a conversa é
+ * a DELE, aberta mesmo antes da primeira mensagem.
+ *
+ * ## `respondida_em` nasce preenchida
+ *
+ * Nulo significa "o cliente está esperando resposta" e põe a conversa no topo
+ * da caixa com o relógio correndo (0056). Uma conversa que NÓS abrimos não tem
+ * ninguém esperando.
+ */
+async function conversaDoContato(
+  contexto: Contexto,
+  leadId: string,
+): Promise<{ ok: true; conversaId: string } | { ok: false; erro: string }> {
+  const { data: lead } = await contexto.supabase
+    .from('leads')
+    .select('phone')
+    .eq('id', leadId)
+    .eq('workspace_id', contexto.workspaceId)
+    .maybeSingle()
+  if (!normalizarTelefoneBrasileiro(lead?.phone)) {
+    return { ok: false, erro: 'Este contato não tem WhatsApp cadastrado. Adicione o telefone no contato do CRM.' }
+  }
+
+  const { error: erroCriar } = await contexto.supabase.from('conversas').upsert(
+    {
+      workspace_id: contexto.workspaceId,
+      lead_id: leadId,
+      canal: 'whatsapp',
+      respondida_em: new Date().toISOString(),
+    },
+    { onConflict: 'workspace_id,lead_id,canal', ignoreDuplicates: true },
+  )
+  if (erroCriar) {
+    console.error('conversaDoContato: falha ao abrir a conversa', erroCriar)
+    return { ok: false, erro: 'Não foi possível abrir a conversa.' }
+  }
+
+  const { data: conversa, error } = await contexto.supabase
+    .from('conversas')
+    .select('id, arquivada_em')
+    .eq('workspace_id', contexto.workspaceId)
+    .eq('lead_id', leadId)
+    .eq('canal', 'whatsapp')
+    .single()
+  if (error || !conversa) return { ok: false, erro: 'Não foi possível abrir a conversa.' }
+
+  // Conversa arquivada some da caixa de entrada: abrir de novo a partir do
+  // Radar é a pessoa dizendo que voltou a falar com ele.
+  if (conversa.arquivada_em) {
+    await contexto.supabase
+      .from('conversas')
+      .update({ arquivada_em: null })
+      .eq('id', conversa.id)
+      .eq('workspace_id', contexto.workspaceId)
+  }
+  return { ok: true, conversaId: conversa.id }
+}
+
+export async function abrirConversaDoEvento(
+  eventoId: string,
+): Promise<{ ok: true; conversaId: string } | { ok: false; erro: string }> {
+  const contexto = await contextoEnterprise()
+  if (!contexto) return { ok: false, erro: SEM_ACESSO }
+  const contato = await vincularContato(contexto, eventoId)
+  if (!contato.ok) return { ok: false, erro: contato.erro }
+  const conversa = await conversaDoContato(contexto, contato.leadId)
+  if (conversa.ok) revalidatePath('/conversas')
+  return conversa
+}
+
+/**
+ * Envia a mensagem APROVADA pelo WhatsApp conectado, dentro da conversa do CRM.
+ *
+ * Só a aprovada sai: o texto que está na caixa e ainda não foi aprovado não
+ * é enviado, mesmo que a tela mande. É a mesma regra da tela ("o texto só é
+ * enviado depois de aprovado"), imposta aqui porque Server Action é endpoint.
+ *
+ * O envio em si é o `enviarMensagem` da caixa de entrada — mesmo gate do Max,
+ * mesmo teto de aquecimento do número, mesmo registro. Um segundo caminho de
+ * envio seria um segundo lugar para o teto de aquecimento faltar.
+ */
+export async function enviarMensagemDoEvento(
+  eventoId: string,
+): Promise<{ ok: true; conversaId: string } | { ok: false; erro: string }> {
+  const contexto = await contextoEnterprise()
+  if (!contexto) return { ok: false, erro: SEM_ACESSO }
+
+  const { data: evento, error } = await contexto.supabase
+    .from('enterprise_eventos')
+    .select('id, mensagem_aprovada, aprovada_em')
+    .eq('id', eventoId)
+    .eq('workspace_id', contexto.workspaceId)
+    .single()
+  if (error || !evento) return { ok: false, erro: 'Evento não encontrado nesta empresa.' }
+  const texto = evento.mensagem_aprovada?.trim()
+  if (!texto || !evento.aprovada_em) return { ok: false, erro: 'Aprove a mensagem antes de enviar.' }
+
+  const contato = await vincularContato(contexto, evento.id)
+  if (!contato.ok) return { ok: false, erro: contato.erro }
+  const conversa = await conversaDoContato(contexto, contato.leadId)
+  if (!conversa.ok) return conversa
+
+  const envio = await enviarMensagem(conversa.conversaId, texto)
+  if ('error' in envio) return { ok: false, erro: envio.error }
+
+  const { error: erroStatus } = await contexto.supabase
+    .from('enterprise_eventos')
+    .update({ status: 'contatado', atualizado_em: new Date().toISOString() })
+    .eq('id', evento.id)
+    .eq('workspace_id', contexto.workspaceId)
+  // A mensagem já saiu: falhar aqui não pode virar "não enviado" na tela.
+  if (erroStatus) console.error('enviarMensagemDoEvento: enviado, mas o status não mudou', erroStatus)
+
+  revalidatePath('/enterprise/eventos')
+  return { ok: true, conversaId: conversa.conversaId }
 }

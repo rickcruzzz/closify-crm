@@ -1,5 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import type { DealStage } from '@/lib/deals/types'
+import { eventoQueRepresenta, potencialNoCard, type PotencialNoCard } from '@/lib/enterprise/potencial'
+import { diaEmSaoPaulo } from '@/lib/tasks/buckets'
 
 export type DealRow = {
   id: string
@@ -13,6 +15,12 @@ export type DealRow = {
   stage_changed_at: string
   owner_id: string | null
   owner_name: string | null
+  /**
+   * O potencial do Radar Enterprise, quando o contato do negócio veio de um
+   * evento (22/10). Ausente em todo o resto — inclusive em toda empresa que
+   * não é Enterprise, onde a RLS de `enterprise_eventos` não devolve nada.
+   */
+  radar?: PotencialNoCard | null
 }
 
 export type DealLeadRow = {
@@ -84,7 +92,13 @@ export async function getBoardDeals(workspaceId: string): Promise<BoardDoKanban>
   }
 
   const ownerIds = Array.from(new Set(data.map((d) => d.owner_id).filter((id): id is string => !!id)))
-  const ownerNames = ownerIds.length > 0 ? await getMemberNames(workspaceId, ownerIds) : new Map()
+  const leadIds = Array.from(new Set(data.map((d) => d.lead_id).filter((id): id is string => !!id)))
+  // As duas na mesma onda: nenhuma depende da outra, e o board é a tela que a
+  // pessoa abre de manhã.
+  const [ownerNames, radarPorLead] = await Promise.all([
+    ownerIds.length > 0 ? getMemberNames(workspaceId, ownerIds) : Promise.resolve(new Map<string, string>()),
+    getPotencialDoRadar(workspaceId, leadIds),
+  ])
 
   const totalPorEtapa = {} as Record<DealStage, number>
 
@@ -105,10 +119,55 @@ export async function getBoardDeals(workspaceId: string): Promise<BoardDoKanban>
       stage_changed_at: linha.stage_changed_at,
       owner_id: linha.owner_id,
       owner_name: linha.owner_id ? ownerNames.get(linha.owner_id) ?? null : null,
+      radar: linha.lead_id ? radarPorLead.get(linha.lead_id) ?? null : null,
     }
   })
 
   return { deals, totalPorEtapa }
+}
+
+/**
+ * O potencial do Radar de cada contato, numa ida só.
+ *
+ * O dado já está gravado no evento (`prioridade`, e os campos de onde sai o
+ * resumo) desde que o contato nasceu dele. Copiá-lo para `leads` criaria uma
+ * segunda verdade que envelheceria sozinha quando o evento fosse reavaliado.
+ *
+ * Falhar aqui NÃO derruba o board: o potencial é um enfeite útil, e o board
+ * sem ele continua sendo o board. Empresa sem Enterprise recebe zero linhas
+ * pela RLS, sem erro.
+ */
+async function getPotencialDoRadar(
+  workspaceId: string,
+  leadIds: string[],
+): Promise<Map<string, PotencialNoCard>> {
+  const porLead = new Map<string, PotencialNoCard>()
+  if (leadIds.length === 0) return porLead
+
+  const supabase = await createClient()
+  const { data, error } = await supabase
+    .from('enterprise_eventos')
+    .select('lead_id, prioridade, data_inicio, organizador, contato_email, contato_telefone, publico_estimado')
+    .eq('workspace_id', workspaceId)
+    .in('lead_id', leadIds)
+    .neq('status', 'descartado')
+
+  if (error) {
+    console.error('getPotencialDoRadar falhou', error)
+    return porLead
+  }
+
+  const hoje = diaEmSaoPaulo(new Date())
+  const agrupados = new Map<string, NonNullable<typeof data>>()
+  for (const evento of data ?? []) {
+    if (!evento.lead_id) continue
+    agrupados.set(evento.lead_id, [...(agrupados.get(evento.lead_id) ?? []), evento])
+  }
+  agrupados.forEach((eventos, leadId) => {
+    const escolhido = eventoQueRepresenta(eventos, hoje)
+    if (escolhido) porLead.set(leadId, potencialNoCard(escolhido, hoje))
+  })
+  return porLead
 }
 
 /**

@@ -2,10 +2,21 @@
 
 import { useState, useTransition } from 'react'
 import Link from 'next/link'
-import { ArrowUpRight, CalendarDays, Loader2, Radar, Sparkles } from 'lucide-react'
+import { useRouter } from 'next/navigation'
+import { ArrowUpRight, CalendarDays, Loader2, MessageCircle, Radar, Send, Sparkles } from 'lucide-react'
 import { toast } from 'sonner'
 
-import { aprovarMensagemDoEvento, criarEvento, gerarMensagemDoEvento, importarPesquisaSalvador, salvarMensagemDoEvento } from '@/lib/enterprise/actions'
+import {
+  abrirConversaDoEvento,
+  analisarPaginaDaExa,
+  aprovarMensagemDoEvento,
+  buscarEventosNaExa,
+  criarContatosQueFaltam,
+  criarEvento,
+  enviarMensagemDoEvento,
+  gerarMensagemDoEvento,
+  salvarMensagemDoEvento,
+} from '@/lib/enterprise/actions'
 import type { DadosDoEvento } from '@/lib/enterprise/eventos'
 import type { Database } from '@/types/supabase'
 
@@ -14,16 +25,57 @@ type Evento = Database['public']['Tables']['enterprise_eventos']['Row']
 const campo = 'border-input bg-background text-foreground placeholder:text-muted-foreground min-h-11 w-full rounded-lg border px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring'
 const botao = 'inline-flex min-h-11 items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-50'
 
+/**
+ * Server Action que pode REJEITAR em vez de responder: função cortada pelo teto
+ * da Netlify, 502, rede. Sem isto o `useTransition` ficaria pendurado e o
+ * botão girando — o defeito do "Adotar instância" de 22/10.
+ */
+async function semRejeicao<T>(chamada: () => Promise<T>): Promise<T | null> {
+  try {
+    return await chamada()
+  } catch {
+    toast.error('A conexão com o servidor caiu antes da resposta. Confira a tela e tente de novo.')
+    return null
+  }
+}
+
 function CartaoDoEvento({ evento }: { evento: Evento }) {
+  const router = useRouter()
   const [mensagem, setMensagem] = useState(evento.mensagem_rascunho ?? '')
   const [ocupado, iniciar] = useTransition()
-  const numero = (evento.contato_telefone ?? '').replace(/\D/g, '')
   const aprovada = !!evento.mensagem_aprovada && !!evento.aprovada_em && mensagem === evento.mensagem_aprovada
-  const podeAbrirWhatsapp = numero.length >= 10 && aprovada
+  const temContato = !!(evento.contato_email?.trim() || evento.contato_telefone?.trim())
+  const temWhatsapp = (evento.contato_telefone ?? '').replace(/\D/g, '').length >= 10
+
+  function abrirConversa() {
+    iniciar(async () => {
+      const resultado = await semRejeicao(() => abrirConversaDoEvento(evento.id))
+      if (!resultado) return
+      if (!resultado.ok) {
+        toast.error(resultado.erro)
+        return
+      }
+      router.push(`/conversas?c=${resultado.conversaId}`)
+    })
+  }
+
+  function enviar() {
+    iniciar(async () => {
+      const resultado = await semRejeicao(() => enviarMensagemDoEvento(evento.id))
+      if (!resultado) return
+      if (!resultado.ok) {
+        toast.error(resultado.erro)
+        return
+      }
+      toast.success('Mensagem enviada pelo WhatsApp. A conversa continua no CRM.')
+      router.push(`/conversas?c=${resultado.conversaId}`)
+    })
+  }
 
   function gerar() {
     iniciar(async () => {
-      const resultado = await gerarMensagemDoEvento(evento.id)
+      const resultado = await semRejeicao(() => gerarMensagemDoEvento(evento.id))
+      if (!resultado) return
       if (!resultado.ok) {
         toast.error(resultado.erro)
         return
@@ -35,7 +87,8 @@ function CartaoDoEvento({ evento }: { evento: Evento }) {
 
   function salvar() {
     iniciar(async () => {
-      const resultado = await salvarMensagemDoEvento(evento.id, mensagem)
+      const resultado = await semRejeicao(() => salvarMensagemDoEvento(evento.id, mensagem))
+      if (!resultado) return
       if (!resultado.ok) {
         toast.error(resultado.erro)
         return
@@ -47,12 +100,13 @@ function CartaoDoEvento({ evento }: { evento: Evento }) {
 
   function aprovar() {
     iniciar(async () => {
-      const resultado = await aprovarMensagemDoEvento(evento.id)
+      const resultado = await semRejeicao(() => aprovarMensagemDoEvento(evento.id))
+      if (!resultado) return
       if (!resultado.ok) {
         toast.error(resultado.erro)
         return
       }
-      toast.success('Mensagem aprovada e contato vinculado ao CRM. O envio continua sob seu controle.')
+      toast.success('Mensagem aprovada. Envie pelo WhatsApp quando quiser.')
       window.location.reload()
     })
   }
@@ -70,11 +124,28 @@ function CartaoDoEvento({ evento }: { evento: Evento }) {
             {evento.contato_nome ? ` · ${evento.contato_nome}` : ''}
           </p>
         </div>
+        {/* Percentual a pedido do dono (22/10), o mesmo número que o Kanban
+            mostra. Continua sendo prioridade por sinais, não chance de fechar
+            — o rodapé desta tela diz isso. */}
         <div className="bg-primary/10 text-primary rounded-xl px-3 py-2 text-center">
-          <strong className="block text-xl leading-none">{evento.prioridade ?? 0}</strong>
-          <span className="text-[11px]">prioridade / 100</span>
+          <strong className="block text-xl leading-none">{evento.prioridade ?? 0}%</strong>
+          <span className="text-[11px]">potencial</span>
         </div>
       </div>
+
+      <p className="mt-3 text-xs">
+        {evento.lead_id ? (
+          <Link href={`/leads/${evento.lead_id}`} className="text-primary font-medium hover:underline">
+            Contato criado no CRM
+          </Link>
+        ) : temContato ? (
+          <span className="text-muted-foreground">O contato é criado na próxima varredura.</span>
+        ) : (
+          <span className="text-muted-foreground">
+            Sem e-mail ou telefone público: ainda não dá para criar o contato no CRM.
+          </span>
+        )}
+      </p>
 
       <p className="text-muted-foreground mt-4 text-sm leading-relaxed">
         {evento.justificativa ?? 'Análise ainda não disponível.'}
@@ -113,21 +184,37 @@ function CartaoDoEvento({ evento }: { evento: Evento }) {
           <button type="button" className={`${botao} border-border border hover:bg-muted`} onClick={aprovar} disabled={ocupado || !mensagem.trim() || mensagem !== evento.mensagem_rascunho || aprovada}>
             {aprovada ? 'Mensagem aprovada' : 'Aprovar mensagem'}
           </button>
-          {podeAbrirWhatsapp && (
-            <a
-              href={`https://wa.me/${numero}?text=${encodeURIComponent(mensagem)}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className={`${botao} border-border border hover:bg-muted`}
+          {/* Envia pelo número conectado e não por `wa.me`: a mensagem fica
+              registrada na conversa do CRM, com o mesmo teto de aquecimento
+              da caixa de entrada. O `wa.me` abria o celular de quem clicou e
+              o envio sumia do histórico da empresa. */}
+          {aprovada && (
+            <button
+              type="button"
+              className={`${botao} bg-primary text-primary-foreground hover:bg-primary/90`}
+              onClick={enviar}
+              disabled={ocupado || !temWhatsapp}
+              title={temWhatsapp ? undefined : 'Este contato não tem WhatsApp'}
             >
-              Abrir no WhatsApp <ArrowUpRight className="size-4" />
-            </a>
+              {ocupado ? <Loader2 className="size-4 animate-spin" /> : <Send className="size-4" />}
+              {evento.status === 'contatado' ? 'Enviar de novo pelo WhatsApp' : 'Enviar pelo WhatsApp'}
+            </button>
           )}
-          {evento.lead_id && <Link href={`/leads/${evento.lead_id}`} className={`${botao} border-border border hover:bg-muted`}>Abrir contato no CRM</Link>}
-          <Link href="/conversas" className={`${botao} border-border border hover:bg-muted`}>Conversas do CRM</Link>
+          <button
+            type="button"
+            className={`${botao} border-border border hover:bg-muted`}
+            onClick={abrirConversa}
+            disabled={ocupado || !temWhatsapp}
+            title={temWhatsapp ? undefined : 'Este contato não tem WhatsApp'}
+          >
+            <MessageCircle className="size-4" />
+            Abrir conversa
+          </button>
         </div>
         <p className="text-muted-foreground mt-2 text-xs">
-          Aprovar vincula a oportunidade ao contato do CRM. O texto só é enviado por você no canal escolhido.
+          {temWhatsapp
+            ? 'Só a mensagem aprovada é enviada, pelo WhatsApp conectado da empresa. A resposta do organizador chega na tela WhatsApp do CRM.'
+            : 'Este contato não tem WhatsApp. A conversa pelo CRM fica disponível quando houver um telefone.'}
         </p>
       </div>
     </article>
@@ -137,15 +224,60 @@ function CartaoDoEvento({ evento }: { evento: Evento }) {
 export function PainelDeEventos({ eventos, erro }: { eventos: Evento[]; erro: string | null }) {
   const [mostrandoFormulario, setMostrandoFormulario] = useState(false)
   const [ocupado, iniciar] = useTransition()
+  const [progresso, setProgresso] = useState<string | null>(null)
 
-  function importar() {
+  /**
+   * A varredura, em duas metades e uma página por vez.
+   *
+   * A busca devolve só endereços; cada página é uma Server Action própria.
+   * Numa chamada só, oito páginas passariam do teto de ~10s da Netlify (ver
+   * `lib/enterprise/exa.ts`). Em SEQUÊNCIA e não em paralelo: o progresso
+   * fica legível, e um pico de chamadas simultâneas não estoura a cota da Exa.
+   */
+  function varrer() {
     iniciar(async () => {
-      const resultado = await importarPesquisaSalvador()
-      if (!resultado.ok) {
-        toast.error(resultado.erro)
+      setProgresso('Buscando eventos na Exa…')
+      const busca = await semRejeicao(() => buscarEventosNaExa())
+      if (!busca) {
+        setProgresso(null)
         return
       }
-      toast.success(`${resultado.adicionados ?? 0} oportunidade(s) de Salvador adicionada(s). Confira as fontes antes de abordar.`)
+      if (!busca.ok) {
+        toast.error(busca.erro)
+        setProgresso(null)
+        return
+      }
+
+      let adicionados = 0
+      let contatos = 0
+      let semContato = 0
+      for (let i = 0; i < busca.paginas.length; i++) {
+        const pagina = busca.paginas[i]
+        setProgresso(`Analisando ${i + 1} de ${busca.paginas.length}: ${pagina.titulo ?? pagina.url}`)
+        const r = await semRejeicao(() => analisarPaginaDaExa(pagina.url))
+        if (r?.situacao !== 'adicionado') continue
+        adicionados += 1
+        if (r.contato === 'criado' || r.contato === 'vinculado') contatos += 1
+        if (r.contato === 'sem_contato') semContato += 1
+      }
+
+      setProgresso('Criando os contatos que faltam…')
+      const pendentes = await semRejeicao(() => criarContatosQueFaltam())
+      if (pendentes?.ok) contatos += pendentes.criados
+
+      setProgresso(null)
+      if (adicionados === 0 && contatos === 0) {
+        toast.info(
+          busca.jaNoRadar > 0
+            ? 'Nenhum evento novo: os que a Exa encontrou já estão no radar.'
+            : 'A Exa não encontrou eventos novos com data e cidade confirmadas.',
+        )
+        return
+      }
+      toast.success(
+        `${adicionados} evento(s) novo(s) e ${contatos} contato(s) no CRM.` +
+          (semContato > 0 ? ` ${semContato} sem e-mail ou telefone público.` : ''),
+      )
       window.location.reload()
     })
   }
@@ -165,12 +297,19 @@ export function PainelDeEventos({ eventos, erro }: { eventos: Evento[]; erro: st
       perfil_publico: String(formData.get('perfil_publico') ?? ''),
     }
     iniciar(async () => {
-      const resultado = await criarEvento(entrada)
+      const resultado = await semRejeicao(() => criarEvento(entrada))
+      if (!resultado) return
       if (!resultado.ok) {
         toast.error(resultado.erro)
         return
       }
-      toast.success('Evento adicionado ao radar.')
+      toast.success(
+        resultado.contato === 'criado'
+          ? 'Evento adicionado ao radar e contato criado no CRM.'
+          : resultado.contato === 'vinculado'
+            ? 'Evento adicionado ao radar e ligado a um contato que já existia.'
+            : `Evento adicionado ao radar. ${resultado.contato ?? ''}`.trim(),
+      )
       window.location.reload()
     })
   }
@@ -189,11 +328,16 @@ export function PainelDeEventos({ eventos, erro }: { eventos: Evento[]; erro: st
           <button type="button" className={`${botao} bg-primary text-primary-foreground hover:bg-primary/90`} onClick={() => setMostrandoFormulario((v) => !v)}>
             {mostrandoFormulario ? 'Fechar formulário' : 'Adicionar evento'}
           </button>
-          <button type="button" className={`${botao} border-border border hover:bg-muted`} onClick={importar} disabled={ocupado}>
-            {ocupado ? <Loader2 className="size-4 animate-spin" /> : null} Importar pesquisa de Salvador
+          <button type="button" className={`${botao} border-border border hover:bg-muted`} onClick={varrer} disabled={ocupado}>
+            {progresso ? <Loader2 className="size-4 animate-spin" /> : <Radar className="size-4" />} Buscar eventos com a Exa
           </button>
           <Link href="/leads" className={`${botao} border-border border hover:bg-muted`}>Abrir contatos do CRM</Link>
         </div>
+        {progresso && (
+          <p role="status" className="text-muted-foreground mt-3 truncate text-sm">
+            {progresso}
+          </p>
+        )}
       </header>
 
       {mostrandoFormulario && (
