@@ -4,6 +4,20 @@ import { MAX_WORKSPACE_LIMIT, PRO_WORKSPACE_LIMIT } from '@/lib/plans'
 import { decidirNovaEmpresa } from './multi-empresa'
 
 describe('decidirNovaEmpresa', () => {
+  it('Enterprise inclui cinco empresas mesmo herdando os direitos Max', () => {
+    for (const quantidadeDeEmpresas of [0, 1, 2, 3, 4, 5, 6, 10]) {
+      const decisao = decidirNovaEmpresa({
+        temEnterprise: true, temMax: true, temAssinaturaPaga: true,
+        emTrial: false, quantidadeDeEmpresas,
+      })
+      expect(decisao.pode).toBe(quantidadeDeEmpresas < 5)
+      if (quantidadeDeEmpresas >= 5) {
+        expect(decisao.tipo).toBe('limite_do_enterprise')
+        expect(decisao.motivo).toBe('O plano Enterprise inclui até 5 empresas do titular.')
+        expect(decisao.motivo).not.toMatch(/Free|Pro|Max|assine|upgrade/)
+      }
+    }
+  })
   /**
    * O defeito que motivou o arquivo, medido em produção em 27/08/2026.
    *

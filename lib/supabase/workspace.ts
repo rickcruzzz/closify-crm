@@ -10,6 +10,8 @@ export type WorkspaceDoUsuario = {
   id: string
   name: string
   plan: WorkspacePlan
+  created_by: string | null
+  temEnterprise?: boolean
   /**
    * Fim do trial de 7 dias (migration 0051), ou `null` para empresa criada
    * antes dele. Vem nesta consulta em vez de numa própria porque o layout já lê
@@ -39,14 +41,19 @@ export const getCurrentUserAndWorkspace = cache(async () => {
 
   const { data: memberships } = await supabase
     .from('workspace_members')
-    .select('workspace_id, workspaces (id, name, plan, trial_ate)')
+    .select('workspace_id, workspaces (id, name, plan, trial_ate, created_by)')
     .eq('user_id', user.id)
     .order('created_at', { ascending: true })
     .order('workspace_id', { ascending: true })
 
-  const workspaces = (memberships ?? [])
+  const empresas = (memberships ?? [])
     .map((m) => m.workspaces)
     .filter((w): w is WorkspaceDoUsuario => w !== null)
+  // O selo vem da vigência real também nas empresas inativas do seletor.
+  const workspaces = await Promise.all(empresas.map(async (workspace) => {
+    const { data } = await supabase.rpc('enterprise_vigente', { target_workspace_id: workspace.id })
+    return { ...workspace, temEnterprise: data === true }
+  }))
 
   // Respeita a empresa escolhida no seletor da barra lateral, caindo na mais
   // antiga quando não há escolha. A lógica vive num lugar só porque a leitura

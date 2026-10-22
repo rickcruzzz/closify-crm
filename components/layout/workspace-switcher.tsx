@@ -354,7 +354,7 @@ export function WorkspaceSwitcher({
             alguem ja usava seria quebrar contrato.
             Sem esta linha a tela se contradiz: lista tres empresas com selo
             `Free` e, logo abaixo, diz que empresa nova exige Pro. */}
-            {!podeCriarEmpresa && workspaces.length > 1 && (
+            {!podeCriarEmpresa && novaEmpresa.tipo === 'exige_pro' && workspaces.length > 1 && (
               <p className="text-muted-foreground px-2 py-1.5 text-xs text-pretty">
                 Criadas antes do limite de uma empresa no Free. Você mantém todas.
               </p>
@@ -378,7 +378,7 @@ export function WorkspaceSwitcher({
                 )}
                 Nova empresa
               </DropdownMenuItem>
-            ) : novaEmpresa.tipo === 'limite_do_pro' ? (
+            ) : novaEmpresa.tipo === 'limite_do_pro' || novaEmpresa.tipo === 'limite_do_enterprise' ? (
               /* ## Quem ja pagou nao recebe oferta de pagar
 
                  Ate 16/09 as duas recusas caiam no mesmo item: icone de raio e

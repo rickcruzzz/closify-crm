@@ -6,7 +6,7 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card'
-import { ENTERPRISE_COLABORADORES } from '@/lib/enterprise/plano'
+import { ENTERPRISE_COLABORADORES, ENTERPRISE_WORKSPACE_LIMIT } from '@/lib/enterprise/plano'
 
 export function EnterpriseCard() {
   return (
@@ -22,6 +22,7 @@ export function EnterpriseCard() {
         </CardDescription>
       </CardHeader>
       <CardContent className="text-muted-foreground flex flex-col gap-3 text-sm">
+        <p>Até {ENTERPRISE_WORKSPACE_LIMIT} empresas do titular com acesso Enterprise e dados separados.</p>
         <p>
           Funil, contatos, tarefas, orçamentos, relatórios e Radar de eventos incluídos.
         </p>

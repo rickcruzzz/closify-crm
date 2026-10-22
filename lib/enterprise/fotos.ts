@@ -8,7 +8,7 @@ import { BUCKET_DE_AVATARES } from '@/lib/whatsapp/foto'
 export async function rodarFotosDasEmpresas() {
   if (!exaConfigurada()) return { ok: false, guardadas: 0, verificadas: 0, erro: 'Exa não configurada.' }
   const banco = createAdminClient()
-  const { data: empresas, error: erroEmpresas } = await banco.from('enterprise_workspaces').select('workspace_id').eq('active', true)
+  const { data: empresas, error: erroEmpresas } = await banco.rpc('listar_empresas_enterprise_ativas')
   if (erroEmpresas) throw new Error('Falha ao ler as empresas Enterprise.')
   if (!empresas?.length) return { ok: true, guardadas: 0, verificadas: 0 }
   const agora = new Date()

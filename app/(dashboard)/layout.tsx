@@ -82,17 +82,20 @@ export default async function DashboardLayout({
   // banco não têm como divergir. O seletor deduzia da coluna `plan`, que
   // durante o trial vale 'pro' enquanto o banco recusa a criação: a pessoa
   // preenchia o formulário inteiro para tomar erro.
+  const proprias = workspaces.filter((workspace) => workspace.created_by === user.id)
+  const ativaPropria = proprias.some((workspace) => workspace.id === workspaceId)
   const novaEmpresa = decidirNovaEmpresa({
-    temAssinaturaPaga: situacaoDoPlano.temAssinaturaPaga,
+    temAssinaturaPaga: ativaPropria && situacaoDoPlano.temAssinaturaPaga,
+    temEnterprise: proprias.some((workspace) => workspace.temEnterprise),
     // `situacaoDoPlano` ja veio na onda de consultas acima, entao o teto de dez
     // da 0094 nao custa viagem de rede. Ele le a empresa ATIVA, e a RPC no
     // banco le qualquer empresa do dono: a tela pode subestimar o teto, nunca
     // superestimar, e errar para o lado menor recusa uma criacao que a pessoa
     // refaz — o contrario a deixaria preencher o formulario inteiro para o
     // banco negar no fim.
-    temMax: situacaoDoPlano.temMax,
+    temMax: ativaPropria && situacaoDoPlano.temMax,
     emTrial: situacaoDoPlano.emTrial,
-    quantidadeDeEmpresas: workspaces.length,
+    quantidadeDeEmpresas: proprias.length,
   })
 
   const currentUser = {
@@ -108,7 +111,7 @@ export default async function DashboardLayout({
 
   const workspacesNaBarra = workspaces.map((workspace) => ({
     ...workspace,
-    temEnterprise: workspace.id === workspaceId && situacaoDoPlano.temEnterprise,
+    temEnterprise: workspace.temEnterprise === true,
   }))
 
   return (

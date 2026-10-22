@@ -1,4 +1,5 @@
 import { FREE_WORKSPACE_LIMIT, MAX_WORKSPACE_LIMIT, PRO_WORKSPACE_LIMIT } from '@/lib/plans'
+import { ENTERPRISE_WORKSPACE_LIMIT } from '@/lib/enterprise/plano'
 
 /**
  * Quem pode criar uma segunda empresa, e o que dizer a quem não pode.
@@ -82,12 +83,13 @@ export type DecisaoDeNovaEmpresa = {
    *                      cobrança oferece a ele o que ele já tem, e não há
    *                      nada para comprar que resolva
    */
-  tipo: 'exige_pro' | 'limite_do_pro' | 'limite_do_max' | null
+  tipo: 'exige_pro' | 'limite_do_pro' | 'limite_do_max' | 'limite_do_enterprise' | null
 }
 
 export function decidirNovaEmpresa({
   temAssinaturaPaga,
   temMax = false,
+  temEnterprise = false,
   emTrial,
   quantidadeDeEmpresas,
 }: {
@@ -106,10 +108,14 @@ export function decidirNovaEmpresa({
    * preenchido à toa.
    */
   temMax?: boolean
+  /** Concessão do titular, nunca apenas participação como convidado. */
+  temEnterprise?: boolean
   emTrial: boolean
   quantidadeDeEmpresas: number
 }): DecisaoDeNovaEmpresa {
-  const teto = temMax
+  const teto = temEnterprise
+    ? ENTERPRISE_WORKSPACE_LIMIT
+    : temMax
     ? MAX_WORKSPACE_LIMIT
     : temAssinaturaPaga
       ? PRO_WORKSPACE_LIMIT
@@ -117,6 +123,14 @@ export function decidirNovaEmpresa({
 
   if (quantidadeDeEmpresas < teto) {
     return { pode: true, motivo: null, tipo: null }
+  }
+
+  if (temEnterprise) {
+    return {
+      pode: false,
+      motivo: `O plano Enterprise inclui até ${ENTERPRISE_WORKSPACE_LIMIT} empresas do titular.`,
+      tipo: 'limite_do_enterprise',
+    }
   }
 
   if (temMax) {

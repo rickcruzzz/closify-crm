@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import { decidirNovaEmpresa } from '@/lib/plans/multi-empresa'
 import {
   ENTERPRISE_COLABORADORES,
   ocupacaoDeColaboradoresEnterprise,
@@ -7,9 +8,6 @@ import {
   FREE_LEAD_LIMIT,
   FREE_MEMBER_LIMIT,
   FREE_ORCAMENTO_LIMIT,
-  FREE_WORKSPACE_LIMIT,
-  MAX_WORKSPACE_LIMIT,
-  PRO_WORKSPACE_LIMIT,
 } from '@/lib/plans'
 
 type LimitCheck = { allowed: boolean; reason?: string }
@@ -211,10 +209,12 @@ export async function canAddMember(workspaceId: string): Promise<LimitCheck> {
 export async function canAddWorkspace(userId: string): Promise<LimitCheck> {
   const supabase = await createClient()
 
-  const { data: proprias } = await supabase
+  const { data: proprias, error } = await supabase
     .from('workspaces')
     .select('id')
     .eq('created_by', userId)
+
+  if (error) return { allowed: false, reason: 'Não foi possível verificar as empresas. Tente novamente.' }
 
   const ids = (proprias ?? []).map((w) => w.id)
   if (ids.length === 0) return { allowed: true }
@@ -225,7 +225,7 @@ export async function canAddWorkspace(userId: string): Promise<LimitCheck> {
   // último valor gravado e não sabe que o período pago venceu. `pro_vigente`
   // confere a validade. São poucas chamadas, o Free permite uma empresa, e
   // quem tem várias é justamente quem paga.
-  const [validades, validadesMax] = await Promise.all([
+  const [validades, validadesMax, validadesEnterprise] = await Promise.all([
     Promise.all(
       ids.map((id) => supabase.rpc('pro_vigente', { target_workspace_id: id })),
     ),
@@ -235,33 +235,23 @@ export async function canAddWorkspace(userId: string): Promise<LimitCheck> {
     Promise.all(
       ids.map((id) => supabase.rpc('max_vigente', { target_workspace_id: id })),
     ),
+    Promise.all(
+      ids.map((id) => supabase.rpc('enterprise_vigente', { target_workspace_id: id })),
+    ),
   ])
+
+  if ([...validades, ...validadesMax, ...validadesEnterprise].some(({ error }) => error)) {
+    return { allowed: false, reason: 'Não foi possível verificar o plano. Tente novamente.' }
+  }
 
   const temPro = validades.some(({ data }) => data === true)
   const temMax = validadesMax.some(({ data }) => data === true)
-
-  // O Pro deixou de ser passe livre em 09/09: ele cobre até
-  // `PRO_WORKSPACE_LIMIT` empresas, todas com os recursos Pro. Antes disso
-  // quem pagava criava quantas quisesse e cada nova nascia Free — teto de 50
-  // contatos dentro de um plano já comprado.
-  const teto = temMax
-    ? MAX_WORKSPACE_LIMIT
-    : temPro
-      ? PRO_WORKSPACE_LIMIT
-      : FREE_WORKSPACE_LIMIT
-
-  if (ids.length >= teto) {
-    return {
-      allowed: false,
-      // Tres frases, palavra por palavra iguais as da 0094: quem ja esta no
-      // Max nao pode ouvir "assine o Max".
-      reason: temMax
-        ? `O plano Max inclui ${MAX_WORKSPACE_LIMIT} empresas. Fale com a gente para ter mais.`
-        : temPro
-          ? `O plano Pro inclui ${PRO_WORKSPACE_LIMIT} empresas. Assine o Max para gerenciar até ${MAX_WORKSPACE_LIMIT}.`
-          : `O plano Free inclui ${FREE_WORKSPACE_LIMIT} empresa. Faça upgrade para o Pro para gerenciar várias.`,
-    }
-  }
-
-  return { allowed: true }
+  const decisao = decidirNovaEmpresa({
+    temAssinaturaPaga: temPro,
+    temMax,
+    temEnterprise: validadesEnterprise.some(({ data }) => data === true),
+    emTrial: false,
+    quantidadeDeEmpresas: ids.length,
+  })
+  return decisao.pode ? { allowed: true } : { allowed: false, reason: decisao.motivo ?? undefined }
 }

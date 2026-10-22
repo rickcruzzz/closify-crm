@@ -1,4 +1,5 @@
 export const ENTERPRISE_COLABORADORES = 5
+export const ENTERPRISE_WORKSPACE_LIMIT = 5
 export const ENTERPRISE_MEMBER_LIMIT = ENTERPRISE_COLABORADORES + 1
 
 /** O proprietário não consome vaga; outros administradores também são colaboradores. */

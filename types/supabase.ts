@@ -1423,6 +1423,10 @@ export type Database = {
         Args: { target_workspace_id: string }
         Returns: boolean
       }
+      listar_empresas_enterprise_ativas: {
+        Args: Record<string, never>
+        Returns: { workspace_id: string }[]
+      }
       /**
        * O Max está valendo nesta empresa agora? (migration 0089)
        *
