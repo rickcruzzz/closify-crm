@@ -2,6 +2,7 @@ import 'server-only'
 
 import { cifrar, decifrar } from '@/lib/integrations/crypto'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { TIMEOUT_NA_ACTION_MS, estourouOTempo } from '@/lib/whatsapp/orcamento-de-tempo'
 import { statusDaInstancia } from '@/lib/whatsapp/zapi'
 
 /**
@@ -112,8 +113,20 @@ export async function guardarNaReserva(params: {
   observacao?: string
 }): Promise<{ ok: true } | { ok: false; motivo: string }> {
   try {
-    await statusDaInstancia({ instanceId: params.instanceId, token: params.token })
+    // Teto da Action (ver `orcamento-de-tempo.ts`): os 8s padrão mais a sessão
+    // de dono e o `insert` encostavam nos ~10s da Netlify.
+    await statusDaInstancia(
+      { instanceId: params.instanceId, token: params.token },
+      { timeoutMs: TIMEOUT_NA_ACTION_MS },
+    )
   } catch (erro) {
+    if (estourouOTempo(erro)) {
+      console.error('guardarNaReserva: provedor nao respondeu a tempo', erro)
+      return {
+        ok: false,
+        motivo: 'A Z-API demorou demais para responder. Tente de novo em instantes.',
+      }
+    }
     console.error('guardarNaReserva: credenciais recusadas pelo provedor', erro)
     return {
       ok: false,

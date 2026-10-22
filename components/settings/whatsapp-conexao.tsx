@@ -59,6 +59,27 @@ import { MAX_PLAN_PRICE, PLANO_NA_TELA, PRO_PLAN_PRICE } from '@/lib/plans'
 const INTERVALO_MS = 5_000
 const TENTATIVAS = 12
 
+const QUEDA_DA_ACTION =
+  'A conexão com o servidor caiu antes da resposta. A tela foi atualizada com o que ficou gravado.'
+
+/**
+ * Chama a Server Action e devolve `undefined` em vez de LANÇAR.
+ *
+ * Server Action é `fetch` por baixo: ela rejeita quando a função é cortada pela
+ * plataforma (~10s na Netlify), quando o servidor devolve 502/504, quando a rede
+ * cai. O `{ ok: false }` cobre o erro que o servidor CONSEGUIU dizer; isto
+ * cobre o que ele não conseguiu. Sem os dois, o spinner fica preso — o defeito
+ * de 22/10.
+ */
+async function semRejeicao<T>(acao: () => Promise<T>): Promise<T | undefined> {
+  try {
+    return await acao()
+  } catch (erro) {
+    console.error('whatsapp-conexao: a Server Action rejeitou', erro)
+    return undefined
+  }
+}
+
 type Bloqueio = { tipo: MotivoDoBloqueio; motivo: string }
 
 export function WhatsappConexao({
@@ -116,12 +137,17 @@ export function WhatsappConexao({
     if (!buscando) return
 
     const id = setInterval(async () => {
-      const r = await lerQrCode()
+      const r = await semRejeicao(lerQrCode)
 
-      if (!r.ok) {
+      if (!r || !r.ok) {
         // Falha de leitura NÃO para o laço: o provedor pode ter engasgado num
         // giro e responder no seguinte. O teto de tentativas continua valendo,
         // então isto não vira laço infinito.
+        //
+        // A REJEIÇÃO (`!r`: função cortada, rede) conta igual. Antes ela
+        // escapava do `setInterval` como promessa rejeitada sem dono: o giro
+        // não contava, e um provedor que derrubasse toda chamada deixava o laço
+        // rodando sem nunca chegar às doze.
         setTentativas((n) => n + 1)
         return
       }
@@ -187,11 +213,29 @@ export function WhatsappConexao({
     }
   }, [buscando, tentativas, pararBusca])
 
+  // ## Os três botões abaixo não confiam que a Action VOLTA
+  //
+  // `semRejeicao` nunca lança, então o `setOcupado(false)` seguinte roda
+  // sempre — o defeito de 22/10 foi exatamente um spinner preso porque a Action
+  // rejeitou e a linha que o desligava nunca rodou. E as três ESCREVEM no banco
+  // (conectar grava a instância; desconectar e remover mudam ou apagam a
+  // linha), então a rejeição pode ter vindo depois da escrita: o `refresh`
+  // mostra o que de fato ficou, em vez de deixar a tela afirmar o anterior.
+  function avisarQueda() {
+    toast.error(QUEDA_DA_ACTION)
+    router.refresh()
+  }
+
   async function conectar() {
     setOcupado(true)
     setExpirou(false)
-    const r = await conectarWhatsapp()
+    const r = await semRejeicao(conectarWhatsapp)
     setOcupado(false)
+
+    if (!r) {
+      avisarQueda()
+      return
+    }
 
     if (!r.ok) {
       toast.error(r.error)
@@ -220,9 +264,13 @@ export function WhatsappConexao({
 
   async function desconectar() {
     setOcupado(true)
-    const r = await desconectarWhatsapp()
+    const r = await semRejeicao(desconectarWhatsapp)
     setOcupado(false)
     pararBusca()
+    if (!r) {
+      avisarQueda()
+      return
+    }
     if (!r.ok) {
       toast.error(r.error ?? 'Não foi possível desconectar.')
       return
@@ -233,9 +281,13 @@ export function WhatsappConexao({
 
   async function remover() {
     setOcupado(true)
-    const r = await removerWhatsapp()
+    const r = await semRejeicao(removerWhatsapp)
     setOcupado(false)
     pararBusca()
+    if (!r) {
+      avisarQueda()
+      return
+    }
     if (!r.ok) {
       toast.error(r.error ?? 'Não foi possível remover.')
       return

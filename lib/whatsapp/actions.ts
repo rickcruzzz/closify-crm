@@ -29,7 +29,11 @@ import {
 } from '@/lib/whatsapp/zapi'
 import { provisionamentoAutomatico } from '@/lib/whatsapp/zapi'
 import { puxarDaReserva } from '@/lib/whatsapp/reserva'
-import { TIMEOUT_DA_ADOCAO_MS, estourouOTempo } from '@/lib/whatsapp/adocao'
+import {
+  TIMEOUT_NA_ACTION_MS,
+  TIMEOUT_PARA_CRIAR_MS,
+  estourouOTempo,
+} from '@/lib/whatsapp/orcamento-de-tempo'
 import { getResend } from '@/lib/resend/client'
 import { EMAIL_DE_AVISO_DO_DONO } from '@/lib/emails/destinatario'
 import { renderPedidoDeConexaoEmail } from '@/lib/emails/pedido-de-conexao'
@@ -175,9 +179,26 @@ export async function conectarWhatsapp(): Promise<RespostaDaConexao> {
       webhookRecebida: urls.recebida,
       webhookStatus: urls.status,
       webhookDesconexao: urls.desconexao,
+      // Ver `TIMEOUT_PARA_CRIAR_MS`: a criação é a única etapa daqui que
+      // provisiona algo, e ganha mais folga que as leituras.
+      timeoutMs: TIMEOUT_PARA_CRIAR_MS,
     })
   } catch (erro) {
-    console.error('conectarWhatsapp: provedor recusou', erro)
+    if (estourouOTempo(erro)) {
+      // ## Tempo esgotado na CRIAÇÃO não quer dizer "não criou"
+      //
+      // A Z-API pode concluir depois de desistirmos, e aí existe uma instância
+      // sem linha nenhuma apontando para ela. Ela nasce em trial e o provedor
+      // a apaga em 48h sem assinatura — `assinarInstancia` só roda depois do
+      // QR lido —, então não fatura. O log nomeia o `name` para o dono achar
+      // no painel se quiser apagar antes.
+      console.error(
+        `conectarWhatsapp: criacao EXPIROU para a empresa ${sessao.workspaceId}. Pode existir uma instancia "velofunil-${sessao.workspaceId}" em trial no painel, sem linha no banco.`,
+        erro,
+      )
+    } else {
+      console.error('conectarWhatsapp: provedor recusou', erro)
+    }
     return {
       ok: false,
       error: 'Não foi possível preparar a conexão agora. Tente de novo em alguns minutos.',
@@ -200,7 +221,12 @@ export async function conectarWhatsapp(): Promise<RespostaDaConexao> {
     // depois de alguém assinar por engano, e uma instância órfã que nenhuma
     // tela alcança só aparece na fatura.
     try {
-      await cancelarAssinaturaDaInstancia({ instanceId: criada.id, token: criada.token })
+      // UM teto para o cancelamento inteiro (DELETE e o POST do 405 dividem):
+      // criar 3,5s + cancelar 2,5s + Supabase ≈ 8s, abaixo da Netlify.
+      await cancelarAssinaturaDaInstancia(
+        { instanceId: criada.id, token: criada.token },
+        { timeoutMs: TIMEOUT_NA_ACTION_MS },
+      )
     } catch (erro) {
       console.error(
         `conectarWhatsapp: instancia ${criada.id} ficou ORFA no provedor e PRECISA ser cancelada a mao`,
@@ -210,8 +236,39 @@ export async function conectarWhatsapp(): Promise<RespostaDaConexao> {
     return { ok: false, error: guardada.motivo }
   }
 
+  // ## O primeiro QR DIRETO, e não por `lerQrCode`
+  //
+  // `lerQrCode` refaz sessão e credenciais e pergunta o status antes do QR:
+  // criar 3,5s + status 2,5s + QR 2,5s + Supabase passaria dos ~10s da Netlify.
+  // Uma instância que acabou de nascer não está pareada, então o status não
+  // ensina nada aqui. Pior caso: criar 3,5s + QR 2,5s + Supabase ≈ 8s.
   revalidar()
-  return lerQrCode()
+  return primeiroQr({ instanceId: criada.id, token: criada.token })
+}
+
+/**
+ * O primeiro QR de uma instância que ACABOU de ser gravada.
+ *
+ * ## Falhar aqui NÃO é erro, e devolver erro seria mentir
+ *
+ * Neste ponto a linha existe e a instância também: a conexão foi preparada. O
+ * que faltou foi a imagem, e a tela já sabe buscá-la — `estado: 'conectando'`
+ * liga o laço de `lerQrCode`, que tenta doze vezes. Devolver `ok: false` diria
+ * "não foi possível preparar" sobre o que foi preparado, e o próximo clique
+ * cairia em "esta empresa já tem uma conexão".
+ *
+ * `qrCode` devolve `null` também para instância já pareada (uma da reserva que
+ * alguém leu antes). O laço resolve igual: o `GET /status` dele vê `connected`.
+ */
+async function primeiroQr(instancia: {
+  instanceId: string
+  token: string
+}): Promise<RespostaDaConexao> {
+  const qr = await qrCode(instancia, { timeoutMs: TIMEOUT_NA_ACTION_MS }).catch((erro: unknown) => {
+    console.error('primeiroQr: QR nao veio, o laco da tela tenta de novo', erro)
+    return null
+  })
+  return { ok: true, qr, estado: 'conectando' }
 }
 
 /**
@@ -312,7 +369,7 @@ export async function adotarInstancia(valores: unknown): Promise<RespostaDaAdoca
   // jeito, e chegar até ela gastaria uma chamada ao provedor por uma escrita
   // que já ia ser negada.
   // As duas leituras na mesma onda: nenhuma depende da outra, e esta função
-  // corre contra o teto de ~10s da Netlify (ver `TIMEOUT_DA_ADOCAO_MS`). Cada
+  // corre contra o teto de ~10s da Netlify (ver `orcamento-de-tempo.ts`). Cada
   // ida em série ao Supabase é tempo tirado das chamadas à Z-API.
   const [assinatura, jaExiste] = await Promise.all([
     situacaoDoMax(sessao.workspaceId),
@@ -336,10 +393,11 @@ export async function adotarInstancia(valores: unknown): Promise<RespostaDaAdoca
   //
   // Com os 8s padrão de `zapi.ts`, status + webhooks podiam somar 16s, e a
   // Netlify mata a função em ~10s: o navegador recebia uma rejeição no lugar
-  // da resposta, e o botão "Adotar instância" girava para sempre. Ver
-  // `TIMEOUT_DA_ADOCAO_MS` para a conta.
+  // da resposta, e o botão "Adotar instância" girava para sempre.
+  //
+  // Pior caso agora: status 2,5s + webhooks em paralelo 2,5s + Supabase ≈ 7s.
   try {
-    await statusDaInstancia(instancia, { timeoutMs: TIMEOUT_DA_ADOCAO_MS })
+    await statusDaInstancia(instancia, { timeoutMs: TIMEOUT_NA_ACTION_MS })
   } catch (erro) {
     if (estourouOTempo(erro)) {
       // Tempo NÃO é recusa. Dizer "não reconheceu" mandaria quem colou as
@@ -377,7 +435,7 @@ export async function adotarInstancia(valores: unknown): Promise<RespostaDaAdoca
   // exceção: a linha JÁ foi gravada, e derrubar a resposta agora deixaria a
   // empresa com conexão no banco e a tela dizendo que nada aconteceu.
   const webhooks = await tentarConfigurarWebhooks(instancia, urls, {
-    timeoutMs: TIMEOUT_DA_ADOCAO_MS,
+    timeoutMs: TIMEOUT_NA_ACTION_MS,
   }).catch((erro: unknown) => {
     console.error('adotarInstancia: webhooks nao configurados', erro)
     return { confirmado: false }
@@ -444,7 +502,11 @@ export async function confirmarNumeroConectado(): Promise<{ telefone: string | n
 
   // Falhar aqui NAO e erro na tela: a conexao esta de pe, e o que falta e um
   // rotulo. Barulho sobre isso ensinaria a pessoa a ignorar o aviso que importa.
-  const telefone = await telefoneConectado(instancia).catch(() => null)
+  // Uma ida só, mas com o teto da Action: os 8s padrão mais a sessão e as duas
+  // leituras já encostavam nos ~10s da Netlify. Pior caso: 2,5s + Supabase.
+  const telefone = await telefoneConectado(instancia, { timeoutMs: TIMEOUT_NA_ACTION_MS }).catch(
+    () => null,
+  )
   if (!telefone) return { telefone: null }
 
   await registrarEstado({ workspaceId: sessao.workspaceId, estado: 'conectado', telefone })
@@ -462,8 +524,15 @@ export async function lerQrCode(): Promise<RespostaDaConexao> {
   const instancia = await credenciaisDaEmpresa(sessao.workspaceId)
   if (!instancia) return { ok: false, error: 'Nenhuma conexão encontrada nesta empresa.' }
 
+  // ## Duas etapas em série, no máximo, e é a conta da Netlify
+  //
+  // Antes: status, assinar, device, um atrás do outro, 8s cada = 24s, e a
+  // função morre em ~10s. Agora: status 2,5s, e depois OU o QR OU assinar e
+  // device EM PARALELO (2,5s) — pior caso ≈ 5s + Supabase.
+  const teto = { timeoutMs: TIMEOUT_NA_ACTION_MS }
+
   try {
-    const estado = await statusDaInstancia(instancia)
+    const estado = await statusDaInstancia(instancia, teto)
     if (estado.connected) {
       // ## A ASSINATURA começa aqui, e não na criação
       //
@@ -479,16 +548,26 @@ export async function lerQrCode(): Promise<RespostaDaConexao> {
       // Falhar NÃO derruba a conexão que acabou de dar certo. O cliente está
       // com o celular na mão e o número já está pareado; o que se perde é a
       // renovação, e ela tem 48h de folga para uma segunda tentativa.
-      try {
-        await assinarInstancia(instancia)
-      } catch (erro) {
+      //
+      // Assinar e ler o número são independentes, e por isso saem juntos.
+      const [assinada, telefone] = await Promise.all([
+        assinarInstancia(instancia, teto).then(
+          () => null,
+          (erro: unknown) => erro,
+        ),
+        telefoneConectado(instancia, teto).catch(() => null),
+      ])
+      if (assinada !== null) {
         console.error(
-          `lerQrCode: instancia ${instancia.instanceId} CONECTOU e NAO foi assinada. Ela expira em 48h se ninguem assinar no painel.`,
-          erro,
+          estourouOTempo(assinada)
+            ? // Tempo esgotado NÃO prova que não assinou: o provedor pode ter
+              // concluído depois. O log diz "confira", e não "não assinou".
+              `lerQrCode: instancia ${instancia.instanceId} CONECTOU e a assinatura EXPIROU sem resposta. CONFIRA no painel: sem assinatura ela expira em 48h.`
+            : `lerQrCode: instancia ${instancia.instanceId} CONECTOU e NAO foi assinada. Ela expira em 48h se ninguem assinar no painel.`,
+          assinada,
         )
       }
 
-      const telefone = await telefoneConectado(instancia).catch(() => null)
       await registrarEstado({
         workspaceId: sessao.workspaceId,
         estado: 'conectado',
@@ -498,7 +577,7 @@ export async function lerQrCode(): Promise<RespostaDaConexao> {
       return { ok: true, qr: null, estado: 'conectado' }
     }
 
-    const qr = await qrCode(instancia)
+    const qr = await qrCode(instancia, teto)
     await registrarEstado({ workspaceId: sessao.workspaceId, estado: 'conectando' })
     return { ok: true, qr, estado: 'conectando' }
   } catch (erro) {
@@ -527,7 +606,9 @@ export async function desconectarWhatsapp(): Promise<{ ok: boolean; error?: stri
   if (!instancia) return { ok: false, error: 'Nenhuma conexão encontrada nesta empresa.' }
 
   try {
-    await desconectarNoProvedor(instancia)
+    // Pior caso: 2,5s + Supabase. Os 8s padrão mais sessão, credenciais e as
+    // duas idas de `registrarEstado` encostavam nos ~10s da Netlify.
+    await desconectarNoProvedor(instancia, { timeoutMs: TIMEOUT_NA_ACTION_MS })
   } catch (erro) {
     // Segue mesmo assim: o estado local precisa refletir a intenção, senão a
     // tela continua dizendo "conectado" para quem acabou de desconectar.
@@ -591,7 +672,10 @@ export async function removerWhatsapp(): Promise<{ ok: boolean; error?: string }
   }
 
   try {
-    await cancelarAssinaturaDaInstancia(instancia)
+    // DELETE e o POST do 405 dividem UM teto: antes eram 8s + 8s. Pior caso
+    // agora: 2,5s + Supabase. Expirar cai no `catch` abaixo e MANTÉM a linha,
+    // que é o certo — sem resposta, não dá para afirmar que a cobrança parou.
+    await cancelarAssinaturaDaInstancia(instancia, { timeoutMs: TIMEOUT_NA_ACTION_MS })
   } catch (erro) {
     // Com Partner, aqui NAO segue: esquecer a linha sem cancelar no provedor
     // deixaria uma instancia faturando que nenhuma tela alcanca. E o pior
@@ -654,7 +738,11 @@ async function entregarInstancia(
   })
   if (!guardada.ok) return { ok: false, error: guardada.motivo }
 
-  const webhooks = await tentarConfigurarWebhooks(instancia, urls)
+  // Mesmo teto e mesma garantia da adoção: o que falhar ou expirar vira
+  // `confirmado: false`, nunca exceção — a linha já está gravada.
+  const webhooks = await tentarConfigurarWebhooks(instancia, urls, {
+    timeoutMs: TIMEOUT_NA_ACTION_MS,
+  }).catch((erro: unknown) => ({ confirmado: false, motivo: String(erro).slice(0, 120) }))
   if (!webhooks.confirmado) {
     // Alto no log, e NÃO na cara do cliente: ele não tem painel da Z-API para
     // colar URL nenhuma. Webhook não apontado produz o pior sintoma daqui,
@@ -664,9 +752,14 @@ async function entregarInstancia(
     )
   }
 
-  // O QR sai pelo caminho que já existe, e é o mesmo que o polling da tela usa.
+  // ## O primeiro QR direto, e não por `lerQrCode`
+  //
+  // Era `return lerQrCode()`: sessão e credenciais de novo, status, QR. Somado
+  // aos webhooks, 4 etapas de Z-API em série. Agora: webhooks 2,5s + QR 2,5s +
+  // Supabase (sessão, plano, conexão, limite, RPC da reserva, insert) ≈ 7s.
+  // O laço da tela continua sendo `lerQrCode`, e é ele que vê o pareamento.
   revalidar()
-  return lerQrCode()
+  return primeiroQr(instancia)
 }
 
 async function pedirConexaoManual(sessao: Sessao): Promise<RespostaDaConexao> {

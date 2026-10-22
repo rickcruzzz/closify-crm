@@ -138,8 +138,8 @@ async function chamar<T>(
     headers?: Record<string, string>
     /**
      * Teto menor que o padrão, para quem encadeia várias chamadas numa função
-     * só. Ver `TIMEOUT_DA_ADOCAO_MS`: 8s por ida cabem numa rota de webhook, e
-     * NÃO cabem duas vezes na função de ~10s da Netlify.
+     * só. Ver `lib/whatsapp/orcamento-de-tempo.ts`: 8s por ida cabem numa rota
+     * de webhook, e NÃO cabem duas vezes na função de ~10s da Netlify.
      */
     timeoutMs?: number
   } = {},
@@ -175,6 +175,12 @@ async function chamar<T>(
     clearTimeout(relogio)
   }
 }
+
+/**
+ * O teto opcional de cada função pública daqui. Omitido, vale `TIMEOUT_MS`,
+ * que é o que as rotas de webhook e os crons usam.
+ */
+export type ComTeto = { timeoutMs?: number }
 
 function comInstancia(instancia: Instancia, endpoint: string): string {
   return `/instances/${instancia.instanceId}/token/${instancia.token}/${endpoint}`
@@ -215,7 +221,7 @@ export async function criarInstancia(params: {
   webhookRecebida: string
   webhookStatus: string
   webhookDesconexao: string
-}): Promise<InstanciaCriada> {
+} & ComTeto): Promise<InstanciaCriada> {
   const partner = process.env.ZAPI_PARTNER_TOKEN
   if (!partner) throw new Error('ZAPI_PARTNER_TOKEN não configurado.')
 
@@ -237,6 +243,7 @@ export async function criarInstancia(params: {
   return chamar<InstanciaCriada>('/instances', {
     method: 'POST',
     headers: { Authorization: `Bearer ${partner}` },
+    timeoutMs: params.timeoutMs,
     body: {
       name: params.nome,
       // ## `receivedAndDelivery` e NÃO `received`, e a diferença é a metade
@@ -293,12 +300,16 @@ export async function criarInstancia(params: {
  * mensagem. Ligar suporte a chamada custaria mais por uma capacidade que
  * nenhuma tela usa.
  */
-export async function assinarInstancia(instancia: Instancia): Promise<void> {
+export async function assinarInstancia(
+  instancia: Instancia,
+  opcoes: ComTeto = {},
+): Promise<void> {
   const partner = process.env.ZAPI_PARTNER_TOKEN
   if (!partner) throw new Error('ZAPI_PARTNER_TOKEN não configurado.')
 
   await chamar(comInstancia(instancia, 'integrator/on-demand/subscription'), {
     method: 'POST',
+    timeoutMs: opcoes.timeoutMs,
     // O Partner token entra no lugar do `Client-Token`: a documentação diz, em
     // texto, que *"não é necessário enviar o Client-Token nestas requisições"*.
     headers: { Authorization: `Bearer ${partner}` },
@@ -339,21 +350,36 @@ export async function assinarInstancia(instancia: Instancia): Promise<void> {
  * **Uma chamada real contra a conta fecha esta dúvida**, e é o primeiro teste a
  * fazer quando o Partner token existir.
  */
-export async function cancelarAssinaturaDaInstancia(instancia: Instancia): Promise<void> {
+export async function cancelarAssinaturaDaInstancia(
+  instancia: Instancia,
+  opcoes: ComTeto = {},
+): Promise<void> {
   const partner = process.env.ZAPI_PARTNER_TOKEN
   if (!partner) throw new Error('ZAPI_PARTNER_TOKEN não configurado.')
 
   const caminho = comInstancia(instancia, 'integrator/on-demand/subscription')
   const cabecalhos = { Authorization: `Bearer ${partner}` }
 
+  // ## O teto é do CANCELAMENTO, e não de cada verbo
+  //
+  // DELETE e o POST do 405 dividem o mesmo `timeoutMs`. Dar o teto inteiro a
+  // cada um dobraria o pior caso, e é exatamente a soma que estourava a função
+  // da Netlify (ver `lib/whatsapp/orcamento-de-tempo.ts`). Um 405 volta rápido
+  // na prática, então o POST quase sempre herda quase tudo.
+  const inicio = Date.now()
+  const restante = () =>
+    opcoes.timeoutMs === undefined
+      ? undefined
+      : Math.max(1, opcoes.timeoutMs - (Date.now() - inicio))
+
   try {
-    await chamar(caminho, { method: 'DELETE', headers: cabecalhos })
+    await chamar(caminho, { method: 'DELETE', headers: cabecalhos, timeoutMs: restante() })
   } catch (erro) {
     // 405 é "método errado", e é a única falha que vale uma segunda tentativa:
     // ela diz que o caminho existe. Qualquer outro status sobe, porque tentar
     // de novo com outro verbo esconderia um 401 ou um 404 de verdade.
     if (erro instanceof ZapiError && erro.status === 405) {
-      await chamar(caminho, { method: 'POST', headers: cabecalhos })
+      await chamar(caminho, { method: 'POST', headers: cabecalhos, timeoutMs: restante() })
       return
     }
     throw erro
@@ -376,7 +402,10 @@ export async function cancelarAssinaturaDaInstancia(instancia: Instancia): Promi
  * Fica escrito porque a alternativa silenciosa seria pior: um `<img>` com um
  * objeto JSON dentro não mostra erro nenhum, só um quadrado quebrado.
  */
-export async function qrCode(instancia: Instancia): Promise<string | null> {
+export async function qrCode(
+  instancia: Instancia,
+  opcoes: ComTeto = {},
+): Promise<string | null> {
   // ## `qr-code/image`, COM hifen, e eu quase quebrei isto "consertando"
   //
   // Medido contra a conta real em 17/09, e os dois caminhos respondem 200:
@@ -407,6 +436,7 @@ export async function qrCode(instancia: Instancia): Promise<string | null> {
     challenge?: unknown
   }>(comInstancia(instancia, 'qr-code/image'), {
     headers: { 'Client-Token': clientToken() },
+    timeoutMs: opcoes.timeoutMs,
   })
 
   if (r.connected) return null
@@ -458,7 +488,7 @@ export async function fotoDePerfil(
 
 export async function statusDaInstancia(
   instancia: Instancia,
-  opcoes: { timeoutMs?: number } = {},
+  opcoes: ComTeto = {},
 ): Promise<StatusDaInstancia> {
   const r = await chamar<{
     connected?: boolean
@@ -477,9 +507,13 @@ export async function statusDaInstancia(
 }
 
 /** O número conectado, quando existe. Vem de `device`, não de `status`. */
-export async function telefoneConectado(instancia: Instancia): Promise<string | null> {
+export async function telefoneConectado(
+  instancia: Instancia,
+  opcoes: ComTeto = {},
+): Promise<string | null> {
   const r = await chamar<{ phone?: string }>(comInstancia(instancia, 'device'), {
     headers: { 'Client-Token': clientToken() },
+    timeoutMs: opcoes.timeoutMs,
   })
   return typeof r.phone === 'string' && r.phone.length > 0 ? r.phone.replace(/\D/g, '') : null
 }
@@ -570,7 +604,7 @@ export async function enviarTexto(
 export async function tentarConfigurarWebhooks(
   instancia: Instancia,
   urls: { recebida: string; status: string; desconexao: string },
-  opcoes: { timeoutMs?: number } = {},
+  opcoes: ComTeto = {},
 ): Promise<{ confirmado: boolean; motivo?: string }> {
   const alvos = [
     { caminho: 'update-webhook-received', url: urls.recebida },
@@ -629,7 +663,7 @@ export async function tentarConfigurarWebhooks(
   return { confirmado: false, motivo }
 }
 
-export async function desconectar(instancia: Instancia): Promise<void> {
+export async function desconectar(instancia: Instancia, opcoes: ComTeto = {}): Promise<void> {
   // ## GET, e a API real derrubou a minha "correcao" aqui tambem
   //
   //     GET  /disconnect   200 {"value":true}
@@ -643,5 +677,6 @@ export async function desconectar(instancia: Instancia): Promise<void> {
   // e o certo aqui.
   await chamar(comInstancia(instancia, 'disconnect'), {
     headers: { 'Client-Token': clientToken() },
+    timeoutMs: opcoes.timeoutMs,
   })
 }
