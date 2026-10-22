@@ -18,6 +18,8 @@ import {
   salvarMensagemDoEvento,
 } from '@/lib/enterprise/actions'
 import type { DadosDoEvento } from '@/lib/enterprise/eventos'
+import { contatoDoEventoCompleto } from '@/lib/enterprise/contato'
+import { normalizarTelefoneBrasileiro } from '@/lib/leads/whatsapp'
 import type { Database } from '@/types/supabase'
 
 type Evento = Database['public']['Tables']['enterprise_eventos']['Row'] & { fotoUrl?: string | null }
@@ -46,7 +48,7 @@ function CartaoDoEvento({ evento }: { evento: Evento }) {
   const [ocupado, iniciar] = useTransition()
   const aprovada = !!evento.mensagem_aprovada && !!evento.aprovada_em && mensagem === evento.mensagem_aprovada
   const temContato = !!(evento.contato_email?.trim() || evento.contato_telefone?.trim())
-  const temWhatsapp = (evento.contato_telefone ?? '').replace(/\D/g, '').length >= 10
+  const temWhatsapp = normalizarTelefoneBrasileiro(evento.contato_telefone) !== null
 
   function abrirConversa() {
     iniciar(async () => {
@@ -229,6 +231,7 @@ function CartaoDoEvento({ evento }: { evento: Evento }) {
 }
 
 export function PainelDeEventos({ eventos, erro }: { eventos: Evento[]; erro: string | null }) {
+  eventos = eventos.filter(contatoDoEventoCompleto)
   const [mostrandoFormulario, setMostrandoFormulario] = useState(false)
   const [ocupado, iniciar] = useTransition()
   const [progresso, setProgresso] = useState<string | null>(null)

@@ -74,14 +74,16 @@ export type MensagemNaTela = {
  * conversa em ida separada seria uma ida por linha na tela mais aberta do
  * produto. Mesma classe do defeito que `getBoardDeals` já corrigiu.
  */
-export async function getConversas(workspaceId: string): Promise<ConversaNaLista[]> {
+export async function getConversas(
+  workspaceId: string,
+  conversaSolicitadaId?: string,
+): Promise<ConversaNaLista[]> {
   const supabase = await createClient()
+  const projecao = 'id, lead_id, ultimo_recebido_em, ultimo_enviado_em, respondida_em, dono_id, assumida_em, leads!inner(name, phone, foto_path)'
 
   const { data, error } = await supabase
     .from('conversas')
-    .select(
-      'id, lead_id, ultimo_recebido_em, ultimo_enviado_em, respondida_em, dono_id, assumida_em, leads!inner(name, phone, foto_path)',
-    )
+    .select(projecao)
     .eq('workspace_id', workspaceId)
     .is('arquivada_em', null)
     .order('respondida_em', { ascending: true, nullsFirst: true })
@@ -95,7 +97,28 @@ export async function getConversas(workspaceId: string): Promise<ConversaNaLista
     return []
   }
 
-  const linhas = data ?? []
+  const linhas = (data ?? []).slice()
+
+  // O Radar abre uma conversa específica, que pode estar além das primeiras
+  // 200 da caixa. Incluí-la ANTES do enriquecimento mantém nome, telefone,
+  // negócio, foto e próxima ação do mesmo destinatário, sem ultrapassar o teto.
+  if (conversaSolicitadaId && !linhas.some((linha) => linha.id === conversaSolicitadaId)) {
+    const { data: solicitada, error: erroSolicitada } = await supabase
+      .from('conversas')
+      .select(projecao)
+      .eq('id', conversaSolicitadaId)
+      .eq('workspace_id', workspaceId)
+      .is('arquivada_em', null)
+      .maybeSingle()
+
+    if (erroSolicitada) {
+      console.error('getConversas: falha ao ler a conversa solicitada', erroSolicitada)
+    } else if (solicitada) {
+      if (linhas.length >= TETO_DE_CONVERSAS) linhas.pop()
+      linhas.push(solicitada)
+    }
+  }
+
   if (linhas.length === 0) return []
 
   // O negócio em aberto de cada contato, numa ida só. É a coluna da direita da

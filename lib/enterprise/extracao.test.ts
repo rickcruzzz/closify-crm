@@ -4,7 +4,7 @@ import { chaveDaPagina, extrairEvento, lerResumo, primeiroEmail, primeiroTelefon
 
 const base = {
   url: 'https://bahiatechexperience.com.br/',
-  textoDaPagina: null,
+  textoDaPagina: 'Fale conosco: comercial@btx.com.br ou (71) 99999-1234.',
   cidadeDoRadar: 'Salvador',
   hoje: '2026-10-22',
 }
@@ -25,13 +25,27 @@ const resumoDoBtx = JSON.stringify({
 })
 
 describe('extrairEvento', () => {
-  it('aceita o resumo real da Exa, que chega como string de JSON', () => {
+  it('aceita resumo real em JSON quando a fonte contém os dois contatos', () => {
     const r = extrairEvento({ ...base, resumo: resumoDoBtx })
     expect(r.ok).toBe(true)
     if (!r.ok) return
     expect(r.evento.nome).toBe('BTX 26 | Bahia Tech Experience')
     expect(r.evento.data_inicio).toBe('2026-12-05')
-    expect(r.evento.contato_email).toBeNull()
+    expect(r.evento.contato_email).toBe('comercial@btx.com.br')
+  })
+
+  it.each([null, 'Sem contato', 'Apenas comercial@btx.com.br', 'Apenas (71) 99999-1234'])('não importa sem os dois canais publicados: %s', (textoDaPagina) => {
+    const r = extrairEvento({ ...base, resumo: resumoDoBtx, textoDaPagina })
+    expect(r.ok).toBe(false)
+    if (!r.ok) expect(r.motivo).toContain('não será adicionado')
+  })
+
+  it('não aceita contatos inventados pelo resumo se não estão no texto', () => {
+    const resumo = { ...JSON.parse(resumoDoBtx), contato_email: 'inventado@btx.com.br', contato_telefone: '71988887777' }
+    expect(extrairEvento({ ...base, resumo, textoDaPagina: 'Evento em Salvador sem contato' }).ok).toBe(false)
+    const r = extrairEvento({ ...base, resumo })
+    expect(r.ok && r.evento.contato_email).toBe('comercial@btx.com.br')
+    expect(r.ok && r.evento.contato_telefone).toBe('5571999991234')
   })
 
   it('busca o contato no TEXTO da página quando o resumo não traz (o caso do BTX)', () => {
@@ -53,7 +67,7 @@ describe('extrairEvento', () => {
 
   it('cidade ausente no resumo: aceita quando a página escreve a cidade do radar', () => {
     const resumo = JSON.stringify({ ...JSON.parse(resumoDoBtx), cidade: null })
-    expect(extrairEvento({ ...base, resumo, textoDaPagina: 'Centro de Convenções de Salvador' }).ok).toBe(true)
+    expect(extrairEvento({ ...base, resumo, textoDaPagina: `Centro de Convenções de Salvador. ${base.textoDaPagina}` }).ok).toBe(true)
     expect(extrairEvento({ ...base, resumo, textoDaPagina: 'Recife, PE' }).ok).toBe(false)
   })
 

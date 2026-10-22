@@ -57,7 +57,7 @@ export default async function ConversasPage({
   // seriam seis idas de rede empilhadas na tela mais aberta do produto.
   const [conversas, aberta, membros, assinatura, conexao, { data: ehAdmin }, cobranca] =
     await Promise.all([
-      getConversas(workspaceId),
+      getConversas(workspaceId, c),
       c ? getMensagensDaConversa(c) : Promise.resolve(null),
       getWorkspaceMembers(workspaceId),
       situacaoDoMax(workspaceId),

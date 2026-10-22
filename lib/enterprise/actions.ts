@@ -7,6 +7,7 @@ import { avaliarEvento, type DadosDoEvento } from '@/lib/enterprise/eventos'
 import { buscarPaginasDeEventos, exaConfigurada, lerPaginaDeEvento } from '@/lib/enterprise/exa'
 import { chaveDaPagina, extrairEvento } from '@/lib/enterprise/extracao'
 import { potencialNoCard } from '@/lib/enterprise/potencial'
+import { contatoDoEventoCompleto, conferirDestinatarioDoEvento } from '@/lib/enterprise/contato'
 import { contatoJaCadastrado } from '@/lib/leads/contato-existente'
 import { normalizarTelefoneBrasileiro } from '@/lib/leads/whatsapp'
 import { excedeuLimite } from '@/lib/rate-limit'
@@ -80,7 +81,7 @@ async function espacosAtivos(contexto: Contexto) {
 async function vincularContato(
   contexto: Contexto,
   eventoId: string,
-): Promise<{ ok: true; leadId: string; criado: boolean } | { ok: false; erro: string; semContato?: true }> {
+): Promise<{ ok: true; leadId: string; criado: boolean; telefone: string } | { ok: false; erro: string; semContato?: true }> {
   const { data: evento, error } = await contexto.supabase
     .from('enterprise_eventos')
     .select(
@@ -90,7 +91,24 @@ async function vincularContato(
     .eq('workspace_id', contexto.workspaceId)
     .single()
   if (error || !evento) return { ok: false, erro: 'Evento não encontrado nesta empresa.' }
-  if (evento.lead_id) return { ok: true, leadId: evento.lead_id, criado: false }
+  if (!contatoDoEventoCompleto(evento)) {
+    return { ok: false, erro: 'Confirme e-mail e telefone válidos antes de incluir esta oportunidade no CRM.', semContato: true }
+  }
+
+  // Conferir também vínculos antigos, sem sobrescrever o telefone de ninguém.
+  async function conferirVinculo(leadId: string) {
+    const { data: lead, error: erroLead } = await contexto.supabase.from('leads')
+      .select('phone').eq('id', leadId).eq('workspace_id', contexto.workspaceId).maybeSingle()
+    if (erroLead || !lead) return { ok: false as const, erro: 'Não foi possível conferir o contato vinculado nesta empresa.' }
+    return conferirDestinatarioDoEvento(evento!.contato_telefone, lead.phone)
+  }
+
+  if (evento.lead_id) {
+    const destino = await conferirVinculo(evento.lead_id)
+    return destino.ok
+      ? { ok: true, leadId: evento.lead_id, criado: false, telefone: destino.telefone }
+      : destino
+  }
 
   const email = evento.contato_email?.trim().toLowerCase() || null
   const telefone = evento.contato_telefone?.trim() || null
@@ -105,6 +123,8 @@ async function vincularContato(
     phone: telefone,
   })
   if (existente) {
+    const destino = await conferirVinculo(existente.id)
+    if (!destino.ok) return destino
     leadId = existente.id
   } else {
     const { data: novo, error: erroCriar } = await contexto.supabase
@@ -155,7 +175,7 @@ async function vincularContato(
   })
   if (erroNota) console.error('vincularContato: nota do Radar não registrada', erroNota)
 
-  return { ok: true, leadId, criado }
+  return { ok: true, leadId, criado, telefone: normalizarTelefoneBrasileiro(telefone)! }
 }
 
 /**
@@ -236,6 +256,9 @@ export async function criarEvento(entrada: DadosDoEvento): Promise<Resultado & {
   }
   if (contatoEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(contatoEmail)) {
     return { ok: false, erro: 'Confira o e-mail de contato.' }
+  }
+  if (!contatoDoEventoCompleto({ contato_email: contatoEmail, contato_telefone: contatoTelefone })) {
+    return { ok: false, erro: 'Informe e-mail e telefone válidos. O Radar só aceita oportunidades com contato completo.' }
   }
   if (publico !== null && (!Number.isInteger(publico) || publico < 0 || publico > 10_000_000)) {
     return { ok: false, erro: 'Confira a estimativa de público.' }
@@ -541,16 +564,17 @@ export async function aprovarMensagemDoEvento(eventoId: string): Promise<Resulta
 async function conversaDoContato(
   contexto: Contexto,
   leadId: string,
+  telefoneEsperado: string,
 ): Promise<{ ok: true; conversaId: string } | { ok: false; erro: string }> {
-  const { data: lead } = await contexto.supabase
+  const { data: lead, error: erroLead } = await contexto.supabase
     .from('leads')
     .select('phone')
     .eq('id', leadId)
     .eq('workspace_id', contexto.workspaceId)
     .maybeSingle()
-  if (!normalizarTelefoneBrasileiro(lead?.phone)) {
-    return { ok: false, erro: 'Este contato não tem WhatsApp cadastrado. Adicione o telefone no contato do CRM.' }
-  }
+  if (erroLead || !lead) return { ok: false, erro: 'Não foi possível conferir o destinatário nesta empresa.' }
+  const destino = conferirDestinatarioDoEvento(telefoneEsperado, lead.phone)
+  if (!destino.ok) return destino
 
   const { error: erroCriar } = await contexto.supabase.from('conversas').upsert(
     {
@@ -578,11 +602,16 @@ async function conversaDoContato(
   // Conversa arquivada some da caixa de entrada: abrir de novo a partir do
   // Radar é a pessoa dizendo que voltou a falar com ele.
   if (conversa.arquivada_em) {
-    await contexto.supabase
+    const { data: reaberta, error: erroReabrir } = await contexto.supabase
       .from('conversas')
       .update({ arquivada_em: null })
       .eq('id', conversa.id)
       .eq('workspace_id', contexto.workspaceId)
+      .select('id')
+      .maybeSingle()
+    if (erroReabrir || !reaberta) {
+      return { ok: false, erro: 'Não foi possível reabrir a conversa arquivada. Tente novamente.' }
+    }
   }
   return { ok: true, conversaId: conversa.id }
 }
@@ -594,7 +623,7 @@ export async function abrirConversaDoEvento(
   if (!contexto) return { ok: false, erro: SEM_ACESSO }
   const contato = await vincularContato(contexto, eventoId)
   if (!contato.ok) return { ok: false, erro: contato.erro }
-  const conversa = await conversaDoContato(contexto, contato.leadId)
+  const conversa = await conversaDoContato(contexto, contato.leadId, contato.telefone)
   if (conversa.ok) revalidatePath('/conversas')
   return conversa
 }
@@ -628,10 +657,12 @@ export async function enviarMensagemDoEvento(
 
   const contato = await vincularContato(contexto, evento.id)
   if (!contato.ok) return { ok: false, erro: contato.erro }
-  const conversa = await conversaDoContato(contexto, contato.leadId)
+  const conversa = await conversaDoContato(contexto, contato.leadId, contato.telefone)
   if (!conversa.ok) return conversa
 
-  const envio = await enviarMensagem(conversa.conversaId, texto)
+  const envio = await enviarMensagem(conversa.conversaId, texto, {
+    workspaceId: contexto.workspaceId, leadId: contato.leadId, telefone: contato.telefone,
+  })
   if ('error' in envio) return { ok: false, erro: envio.error }
 
   const { error: erroStatus } = await contexto.supabase

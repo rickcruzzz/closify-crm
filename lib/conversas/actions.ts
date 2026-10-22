@@ -159,6 +159,7 @@ async function concluirTarefaDeResposta(sessao: Sessao, leadId: string): Promise
 export async function enviarMensagem(
   conversaId: unknown,
   texto: unknown,
+  destinoEsperado?: { workspaceId: string; leadId: string; telefone: string },
 ): Promise<{ success: true } | { error: string }> {
   const idOk = idSchema.safeParse(conversaId)
   if (!idOk.success) return { error: 'Conversa inválida.' }
@@ -173,6 +174,18 @@ export async function enviarMensagem(
 
   const alvo = await conferirConversa(sessao, idOk.data)
   if ('error' in alvo) return alvo
+
+  // O Radar conserva o destino confirmado entre as duas Actions. Troca de
+  // empresa em outra aba ou edição do telefone não pode trocar o destinatário.
+  if (destinoEsperado !== undefined) {
+    const destino = z.object({ workspaceId: idSchema, leadId: idSchema, telefone: z.string() }).safeParse(destinoEsperado)
+    if (!destino.success || destino.data.workspaceId !== sessao.workspaceId ||
+      destino.data.leadId !== alvo.leadId ||
+      !normalizarTelefoneBrasileiro(destino.data.telefone) ||
+      normalizarTelefoneBrasileiro(destino.data.telefone) !== normalizarTelefoneBrasileiro(alvo.telefone)) {
+      return { error: 'O destinatário mudou. Volte ao evento e confira o contato antes de enviar.' }
+    }
+  }
 
   if (!alvo.telefone) {
     return { error: 'Este contato não tem telefone cadastrado.' }

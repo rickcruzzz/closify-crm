@@ -1,5 +1,6 @@
 import type { DadosDoEvento } from '@/lib/enterprise/eventos'
 import { normalizarTelefoneBrasileiro } from '@/lib/leads/whatsapp'
+import { contatoDoEventoCompleto } from '@/lib/enterprise/contato'
 
 /**
  * O que a Exa devolve de uma página, transformado em evento — ou recusado.
@@ -155,9 +156,16 @@ export function extrairEvento(params: {
 
   const emailDoResumo = texto(dados.contato_email, 200)?.toLowerCase() ?? null
   const telefoneDoResumo = normalizarTelefoneBrasileiro(texto(dados.contato_telefone, 40))
-  const emailValido = emailDoResumo && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailDoResumo) ? emailDoResumo : null
+  const emailsNaFonte = (params.textoDaPagina ?? '').match(EMAIL)?.map((email) => email.toLowerCase()) ?? []
+  const telefonesNaFonte = ((params.textoDaPagina ?? '').match(TELEFONE) ?? []).map(normalizarTelefoneBrasileiro)
+  // O resumo é saída de IA, não comprovação. Aceite apenas contato escrito na fonte.
+  const emailValido = emailDoResumo && emailsNaFonte.includes(emailDoResumo) && !NAO_E_EMAIL.test(emailDoResumo) ? emailDoResumo : null
   const contato_email = emailValido ?? primeiroEmail(params.textoDaPagina)
-  const contato_telefone = telefoneDoResumo ?? primeiroTelefone(params.textoDaPagina)
+  const telefoneVerificado = telefoneDoResumo && telefonesNaFonte.includes(telefoneDoResumo) ? telefoneDoResumo : null
+  const contato_telefone = telefoneVerificado ?? primeiroTelefone(params.textoDaPagina)
+  if (!contatoDoEventoCompleto({ contato_email, contato_telefone })) {
+    return { ok: false, motivo: 'A fonte não informa e-mail e telefone válidos. O resultado não será adicionado ao Radar nem aos contatos.' }
+  }
 
   const publico = typeof dados.publico_estimado === 'number' ? dados.publico_estimado : null
 
@@ -178,7 +186,7 @@ export function extrairEvento(params: {
         publico !== null && Number.isInteger(publico) && publico > 0 && publico <= 10_000_000 ? publico : null,
       perfil_publico: texto(dados.perfil_publico, 200),
       contatoDoTexto:
-        (!emailValido && contato_email !== null) || (!telefoneDoResumo && contato_telefone !== null),
+        (!emailValido && contato_email !== null) || (!telefoneVerificado && contato_telefone !== null),
     },
   }
 }
