@@ -15,13 +15,16 @@ import {
 } from '@/components/ui/sheet'
 import { Logo } from '@/components/branding/logo'
 import { ScrollLink } from '@/components/landing/scroll-link'
-import { CONTROLADOR } from '@/lib/legal'
+import { linkDoContatoComercial } from '@/lib/marketing/contato-comercial'
 import { cn } from '@/lib/utils'
 
+// "Radar" abre a lista e "Planos" virou "Contratação" no reposicionamento de
+// 22/10: a home não tem mais `#planos`, e um link para âncora que não existe
+// rola para lugar nenhum.
 const navLinks = [
-  { label: 'Funcionalidades', href: '#funcionalidades' },
+  { label: 'Radar', href: '#radar' },
   { label: 'Como funciona', href: '#como-funciona' },
-  { label: 'Planos', href: '#planos' },
+  { label: 'Contratação', href: '#contratacao' },
   { label: 'Dúvidas', href: '#faq' },
 ] as const
 
@@ -30,7 +33,7 @@ export function PublicNavbar() {
   // O login deixa o middleware validar a sessao: quem ainda estiver logado
   // vai ao painel; quem nao estiver ve os campos de e-mail e senha.
   const destinoDeEntrada = '/login'
-  const contatoEspecialista = `https://wa.me/${CONTROLADOR.whatsapp.numero}?text=${encodeURIComponent('Olá! Conheci o Velo Funil e gostaria de conversar com um especialista sobre a melhor solução para minha empresa. Podemos agendar uma conversa?')}`
+  const contatoEspecialista = linkDoContatoComercial('equipe')
 
   const [menuAberto, setMenuAberto] = React.useState(false)
 
@@ -96,7 +99,7 @@ export function PublicNavbar() {
             rel="noopener noreferrer"
             className={cn(buttonVariants(), 'hidden min-h-11 sm:inline-flex')}
           >
-            Falar com especialista
+            Falar com a equipe
           </a>
 
           {/* Abaixo de `md` os links da seção sumiam e o "Entrar" ficava oculto
@@ -177,7 +180,7 @@ export function PublicNavbar() {
                       />
                     }
                   >
-                    Falar com especialista
+                    Falar com a equipe
                   </SheetClose>
                 </div>
               </nav>

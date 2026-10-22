@@ -153,12 +153,15 @@ export function FeaturesSection() {
             Funcionalidades
             <span aria-hidden className="bg-primary h-px w-4" />
           </span>
+          {/* Os cards ficaram como estavam em 22/10: são o CRM, e o CRM não
+              mudou. O que mudou é o papel deles na página — depois do Radar,
+              eles são a estrutura que conduz o lead encontrado até a venda. */}
           <h2 className="text-titulo-md md:text-titulo-lg">
-            O que você para de fazer na mão
+            O CRM que conduz cada oportunidade
           </h2>
           <p className="text-muted-foreground text-lg text-balance">
-            Cada recurso aqui existe porque alguém estava resolvendo aquilo com
-            planilha, post-it ou memória, e perdendo venda no caminho.
+            Funil, histórico, tarefas e resultados: a estrutura que transforma os leads
+            encontrados em negociações acompanhadas, sem planilha e sem memória.
           </p>
         </RevealOnScroll>
 

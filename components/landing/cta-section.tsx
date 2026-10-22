@@ -1,7 +1,7 @@
-import Link from 'next/link'
 import { ArrowRight } from 'lucide-react'
 
 import { buttonVariants } from '@/components/ui/button'
+import { linkDoContatoComercial } from '@/lib/marketing/contato-comercial'
 import { cn } from '@/lib/utils'
 import { RevealOnScroll } from '@/components/landing/reveal-on-scroll'
 
@@ -31,25 +31,30 @@ export function CtaSection() {
 
               **A regra que sobra: hero e fecho mudam JUNTOS.** Eles são a
               primeira e a última coisa que a pessoa lê, e quando discordam é
-              sempre a última que decide, contra o que a trouxe até aqui. */}
+              sempre a última que decide, contra o que a trouxe até aqui.
+
+              Em 22/10 os dois mudaram juntos de novo: Radar + CRM no hero,
+              e aqui o mesmo convite para falar com a equipe. */}
           <h2 className="text-titulo-md md:text-titulo-lg">
-            Sua carteira de clientes cabe num lugar só.
+            As próximas oportunidades da sua empresa já estão por aí.
           </h2>
           <p className="text-muted-foreground max-w-xl text-lg">
-            Crie a conta da sua empresa, de graça, em menos de um minuto, e veja com
-            quem você precisa falar hoje.
+            Conte para a equipe quem você quer alcançar. A gente mostra como o Radar e o
+            CRM trabalham juntos na sua operação.
           </p>
-          <Link
+          <a
             id="final-cta"
-            href="/cadastro"
+            href={linkDoContatoComercial('equipe')}
+            target="_blank"
+            rel="noopener noreferrer"
             className={cn(
               buttonVariants({ size: 'lg' }),
               'pointer:hover:scale-105 min-h-11 gap-2 transition-transform duration-300',
             )}
           >
-            Começar grátis
+            Falar com a equipe
             <ArrowRight className="size-4" />
-          </Link>
+          </a>
         </div>
       </RevealOnScroll>
     </section>

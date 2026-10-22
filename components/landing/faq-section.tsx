@@ -1,41 +1,34 @@
-import Link from 'next/link'
 import { ChevronDown } from 'lucide-react'
 
 import { RevealOnScroll } from '@/components/landing/reveal-on-scroll'
-import {
-  FREE_COLABORADORES,
-  FREE_LEAD_LIMIT,
-  FREE_WORKSPACE_LIMIT,
-  PRO_PLAN_PRICE,
-} from '@/lib/plans'
+import { linkDoContatoComercial } from '@/lib/marketing/contato-comercial'
 
 // Respostas honestas sobre o produto COMO ELE É HOJE. Nada aqui promete
 // funcionalidade que não existe. A resposta sobre planilha ficou desatualizada
 // quando a importação por CSV foi construída, negar um recurso que existe é
 // tão danoso quanto prometer um que não existe.
+//
+// ## Reescrita em 22/10, com o reposicionamento
+//
+// "O plano grátis é grátis mesmo?" saiu junto com os planos da vitrine. As
+// duas primeiras perguntas agora são as que o Radar levanta, e a segunda
+// existe para dizer NÃO a uma pergunta que a página inteira convida a fazer.
+//
+// Esta lista vira o JSON-LD `FAQPage` em `app/page.tsx`. O Google só aceita a
+// marcação onde as perguntas aparecem no HTML, então pergunta nova entra aqui
+// e em nenhum outro lugar.
 export const faqs = [
-  /**
-   * Esta resposta já mudou duas vezes, e a ordem dela nunca muda: quem lê "é
-   * grátis mesmo?" quer saber se vai ser cobrado de surpresa. A resposta
-   * começa por aí, sempre.
-   *
-   * Dizia "sem prazo para expirar" até 24/08, quando a 0051 fez a empresa
-   * nascer com Pro por sete dias e a página passou a estar desatualizada.
-   * Depois anunciou os sete dias. Com a 0057, empresa nova volta a nascer no
-   * Free, e a promessa do teste saiu daqui junto — anunciar o que o produto
-   * não dá mais é a mesma classe de defeito das duas outras corrigidas nesta
-   * semana.
-   *
-   * O limite de contatos é citado com o número: "plano grátis" sem número
-   * obriga a pessoa a procurar na tabela para saber se cabe nela.
-   */
   {
-    q: 'O plano grátis é grátis mesmo?',
-    a: `É, e não pede cartão para começar. O grátis não expira: ${FREE_WORKSPACE_LIMIT} empresa, você + ${FREE_COLABORADORES} colaborador e ${FREE_LEAD_LIMIT} contatos, com o funil e o painel de resultados inteiros. Chegando aos ${FREE_LEAD_LIMIT} contatos nada some, você só não cadastra novos até assinar o Pro. Nada é cobrado sem você escolher.`,
+    q: 'O que o Radar de Prospecção faz?',
+    a: 'Ele pesquisa fontes públicas conforme os critérios que a sua empresa define (segmento, região e os sinais que importam para a venda) e organiza cada oportunidade com a fonte, o contato quando disponível e o motivo da prioridade. A IA prepara a abordagem, sua equipe revisa, e a oportunidade aprovada entra no CRM.',
+  },
+  {
+    q: 'O Radar garante uma quantidade de leads?',
+    a: 'Não. O volume depende das fontes disponíveis para o seu segmento e a sua região, e é avaliado antes da proposta. Preferimos dizer isso aqui a prometer um número que o seu mercado não tem.',
   },
   {
     q: 'Preciso instalar alguma coisa?',
-    a: 'Não. O Velo Funil roda inteiro no navegador, no computador ou no celular. Você cria a conta e já começa a usar.',
+    a: 'Não. O Velo Funil roda inteiro no navegador, no computador ou no celular. Sua equipe entra com e-mail e senha e já começa a trabalhar.',
   },
   {
     q: 'Consigo trazer os contatos da minha planilha?',
@@ -46,12 +39,15 @@ export const faqs = [
     a: 'Ficam. Cada empresa só enxerga os próprios dados, é uma regra de segurança configurada no banco, não uma tela que a gente esquece de checar. Nem por engano, nem por querer, os dados de uma empresa aparecem para outra.',
   },
   {
-    q: 'Quais são as formas de pagamento?',
-    a: `Pix, boleto e cartão de crédito, com cobrança recorrente processada pelo Asaas. O plano Pro custa R$ ${PRO_PLAN_PRICE} por mês, por empresa.`,
+    q: 'Como funciona a contratação?',
+    a: 'Começa por uma conversa com a equipe, pelo WhatsApp. Entendemos a sua operação, desenhamos o escopo e enviamos a proposta. O pagamento é por Pix, boleto ou cartão de crédito, processado pelo Asaas.',
   },
   {
+    // "Sem multa" e "exporta em CSV" são as duas metades que continuam
+    // verdade para o CRM. As condições do Radar são de projeto, e a resposta
+    // diz isso em vez de estender a promessa do CRM a ele.
     q: 'Posso cancelar quando quiser?',
-    a: 'Pode, sem multa e sem falar com ninguém. Ao cancelar, a conta da sua empresa volta para o plano Free e seus dados continuam lá.',
+    a: 'O CRM não tem fidelidade nem multa de cancelamento, e seus contatos podem ser exportados em CSV a qualquer momento. As condições do Radar são definidas na proposta de cada projeto.',
   },
 ]
 
@@ -66,7 +62,7 @@ export function FaqSection() {
             <span aria-hidden className="bg-primary h-px w-4" />
           </span>
           <h2 className="text-titulo-md md:text-titulo-lg">
-            Antes de criar a conta
+            Antes de conversar com a equipe
           </h2>
           <p className="text-muted-foreground text-lg text-balance">
             As perguntas que chegam com mais frequência, respondidas sem enrolação.
@@ -100,16 +96,18 @@ export function FaqSection() {
 
         <p className="text-muted-foreground mt-8 text-center text-sm">
           Ficou outra dúvida?{' '}
-          <Link
-            href="/cadastro"
+          <a
+            href={linkDoContatoComercial('equipe')}
+            target="_blank"
+            rel="noopener noreferrer"
             // `py-3`, não `py-2`: com a linha de 20px o alvo dava 36px, e o
             // mínimo de toque é 44. A margem negativa cancela o efeito no
             // layout, a frase continua com a mesma altura.
             className="text-foreground -my-3 inline-block py-3 underline underline-offset-4"
           >
-            Crie uma conta grátis
-          </Link>{' '}
-          e teste sem compromisso.
+            Fale com a equipe pelo WhatsApp
+          </a>
+          .
         </p>
       </div>
     </section>

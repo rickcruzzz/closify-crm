@@ -1,8 +1,7 @@
-import { ArrowRight, FileSpreadsheet, LayoutGrid, TrendingUp } from 'lucide-react'
+import { FileSpreadsheet, LayoutGrid, TrendingUp } from 'lucide-react'
 
 import { RevealOnScroll } from '@/components/landing/reveal-on-scroll'
 import { ProdutoPrint } from '@/components/landing/produto-print'
-import { FREE_LEAD_LIMIT } from '@/lib/plans'
 
 /**
  * Como o produto funciona, em três passos.
@@ -31,12 +30,20 @@ import { FREE_LEAD_LIMIT } from '@/lib/plans'
  * porta: cadastrar um a um e o contato vindo do WhatsApp entram na mesma frase,
  * e o título passa a nomear a dor real (o combinado que se perde na conversa)
  * em vez do formato de arquivo.
+ *
+ * ## Depois do Radar, desde 22/10
+ *
+ * A seção vem logo depois de `RadarSection` e mostra o que acontece com a
+ * oportunidade quando ela chega: o passo 1 junta os leads do Radar com a base
+ * que a empresa já tem. Saíram o teto do plano grátis e o "dois minutos para
+ * criar a conta" — a página não oferece mais o cadastro.
  */
 const passos = [
   {
     numero: '01',
-    titulo: 'Traga quem já é seu cliente',
-    descricao: `Tem planilha? Exporte como .csv e importe de uma vez, e os repetidos são ignorados sozinhos. Não tem? Cadastre pelo nome e telefone em segundos, do jeito que a conversa chegou. No plano grátis cabem ${FREE_LEAD_LIMIT} contatos.`,
+    titulo: 'Leads do Radar e da sua base, juntos',
+    descricao:
+      'O que o Radar encontra entra no CRM ao lado dos contatos que você já tem. Tem planilha? Importe o .csv de uma vez, e os repetidos são ignorados sozinhos.',
     icone: FileSpreadsheet,
   },
   {
@@ -66,11 +73,11 @@ export function HowItWorksSection() {
             <span aria-hidden className="bg-primary h-px w-4" />
           </span>
           <h2 className="text-titulo-md md:text-titulo-lg">
-            Do &quot;me manda o orçamento&quot; até o dinheiro na conta
+            Da oportunidade encontrada até a venda fechada
           </h2>
           <p className="text-muted-foreground text-lg text-balance">
-            O cliente chama, você responde, e a negociação anda. O que o Velo Funil faz é
-            não deixar nenhuma delas parar no meio do caminho.
+            O Radar encontra, a equipe aborda e a negociação anda. O CRM garante que
+            nenhuma oportunidade pare no meio do caminho.
           </p>
         </RevealOnScroll>
 
@@ -142,18 +149,6 @@ export function HowItWorksSection() {
             </p>
           </div>
           <ProdutoPrint nome="hoje" alt="o que precisa da sua atenção · Acme Corp" />
-        </RevealOnScroll>
-
-        {/* Dizia "do cadastro ao primeiro contato", a mesma promessa da faixa
-            de números, e ela não sobrevive ao caminho real: o formulário
-            termina em `/verifique-email` e a pessoa precisa SAIR DO SITE para
-            abrir a caixa de entrada antes de ver qualquer tela do produto.
-            Ver a nota em `stats-section.tsx`, que carrega o mesmo número. */}
-        <RevealOnScroll delay={490}>
-          <p className="text-muted-foreground mt-6 flex items-center justify-center gap-1.5 text-center text-sm">
-            Leva menos de dois minutos para criar a conta e entrar
-            <ArrowRight aria-hidden className="size-4" />
-          </p>
         </RevealOnScroll>
       </div>
     </section>

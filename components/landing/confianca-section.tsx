@@ -35,8 +35,8 @@ import { RevealOnScroll } from '@/components/landing/reveal-on-scroll'
  *   desde a correção de 22/08
  * - **cartão** — nunca passa pelo nosso servidor; a decisão de não tokenizar
  *   está registrada em `lib/asaas/pix.ts` (escopo PCI-DSS)
- * - **saída** — cancelar devolve ao Free sem multa, e o dado continua lá; é o
- *   que a FAQ já promete, agora dito onde a objeção nasce
+ * - **saída** — cancelar não tem multa, e a exportação em CSV não tem gate; é
+ *   o que a FAQ já promete, agora dito onde a objeção nasce
  * - **CNPJ** — o mesmo de `lib/legal.ts`, que já é citado nas páginas legais
  *
  * ## Por que o CNPJ aparece aqui e não só no rodapé
@@ -76,9 +76,13 @@ const garantias: Garantia[] = [
     delay: 180,
   },
   {
+    // Dizia "a conta volta para o plano grátis", e a landing deixou de
+    // apresentar o grátis em 22/10. O que continua verdade sem depender de
+    // plano: cancelar não tem multa, e a exportação em CSV não tem gate
+    // nenhum (`api/leads/exportar`).
     titulo: 'A porta de saída fica aberta',
     descricao:
-      'Cancele sozinho, sem multa e sem falar com ninguém. A conta volta para o plano grátis e seus contatos continuam lá. Não seguramos ninguém por dificuldade.',
+      'Sem fidelidade e sem multa para cancelar. Seus contatos saem com você em CSV, a qualquer momento. Não seguramos ninguém por dificuldade.',
     icone: DoorOpen,
     delay: 270,
   },
