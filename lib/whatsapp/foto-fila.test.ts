@@ -32,13 +32,13 @@ function banco(contatos: Contato[], opcoes: { uploadFalha?: boolean; caminhoFalh
       return { data: c ? { id: c.id } : null, error: null }
     }
     const q = {
-      select: (_campos: string) => q,
+      select: () => q,
       eq: (k: string, v: unknown) => { filtros.push([k, v]); return q },
-      in: (_k: string, _v: unknown[]) => q,
-      not: (_k: string, _op: string, _v: unknown) => q,
+      in: () => q,
+      not: () => q,
       or: (filtro: string) => { if (!values) filtrosDeBusca.push(filtro); return q },
-      order: (_k: string, _op: unknown) => q,
-      limit: (_n: number) => q,
+      order: () => q,
+      limit: () => q,
       update: (novos: Record<string, unknown>) => { values = novos; return q },
       maybeSingle: async () => executar(),
       then: (resolver: (r: ReturnType<typeof executar>) => unknown) => Promise.resolve(executar()).then(resolver),

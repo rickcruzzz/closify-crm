@@ -2,6 +2,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { EventEmitter } from 'node:events'
 import { lookup } from 'node:dns/promises'
 import { get } from 'node:https'
+import type { IncomingMessage } from 'node:http'
+import type { LookupFunction } from 'node:net'
 import { baixarImagemPublica } from './imagem'
 
 vi.mock('node:dns/promises', () => ({ lookup: vi.fn() }))
@@ -18,11 +20,11 @@ beforeEach(() => {
   headers = {}
   conteudo = png
   vi.mocked(lookup).mockResolvedValue([{ address: '1.1.1.1', family: 4 }] as never)
-  vi.mocked(get).mockImplementation(((_url: unknown, _options: unknown, callback: Function) => {
+  vi.mocked(get).mockImplementation(((_url: unknown, _options: unknown, callback: (response: IncomingMessage) => void) => {
     const request = new EventEmitter()
     const response = Object.assign(new EventEmitter(), { statusCode: status, headers, destroy: vi.fn() })
     queueMicrotask(() => {
-      callback(response)
+      callback(response as unknown as IncomingMessage)
       response.emit('data', conteudo)
       response.emit('end')
     })
@@ -33,7 +35,7 @@ beforeEach(() => {
 describe('download de imagem pública', () => {
   it('aceita bytes PNG e fixa a conexão ao IP validado, inclusive lookup all', async () => {
     expect((await baixarImagemPublica('https://fonte.example/imagem')).tipoMime).toBe('image/png')
-    const options = vi.mocked(get).mock.calls[0]![1] as { lookup: Function }
+    const options = vi.mocked(get).mock.calls[0]![1] as { lookup: LookupFunction }
     const callback = vi.fn()
     options.lookup('fonte.example', { all: true }, callback)
     expect(callback).toHaveBeenCalledWith(null, [{ address: '1.1.1.1', family: 4 }])
