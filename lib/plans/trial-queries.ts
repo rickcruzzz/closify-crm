@@ -1,9 +1,11 @@
 import 'server-only'
+import { cache } from 'react'
 
 import { createClient } from '@/lib/supabase/server'
 import { getCurrentUserAndWorkspace } from '@/lib/supabase/workspace'
 
 export type SituacaoDoPlano = {
+  temEnterprise: boolean
   /** Trial vigente e ainda não pagou. */
   emTrial: boolean
   /** Assinatura paga valendo agora — o trial não conta aqui. */
@@ -73,28 +75,42 @@ export type SituacaoDoPlano = {
  *
  * As duas RPCs vão em paralelo, então custam uma ida de rede, não duas.
  */
-export async function situacaoDoPlanoDaEmpresaAtiva(): Promise<SituacaoDoPlano> {
+export const situacaoDoPlanoDaEmpresaAtiva = cache(async (): Promise<SituacaoDoPlano> => {
   const { workspaceId } = await getCurrentUserAndWorkspace()
   if (!workspaceId) {
-    return { emTrial: false, temAssinaturaPaga: false, temMax: false, proVigente: false }
+    return {
+      temEnterprise: false,
+      emTrial: false,
+      temAssinaturaPaga: false,
+      temMax: false,
+      proVigente: false,
+    }
   }
 
   const supabase = await createClient()
 
-  const [{ data: emTrial }, { data: proVigente }, { data: maxVigente }] = await Promise.all([
+  const [
+    { data: emTrial },
+    { data: proVigente },
+    { data: maxVigente },
+    { data: enterpriseVigente },
+  ] = await Promise.all([
     supabase.rpc('em_trial', { target_workspace_id: workspaceId }),
     supabase.rpc('pro_vigente', { target_workspace_id: workspaceId }),
     supabase.rpc('max_vigente', { target_workspace_id: workspaceId }),
+    supabase.rpc('enterprise_vigente', { target_workspace_id: workspaceId }),
   ])
 
   return {
-    emTrial: emTrial === true,
+    temEnterprise: enterpriseVigente === true,
+    emTrial: enterpriseVigente !== true && emTrial === true,
     // Pro valendo sem ser por trial só pode ser assinatura paga.
-    temAssinaturaPaga: proVigente === true && emTrial !== true,
+    temAssinaturaPaga:
+      enterpriseVigente === true || (proVigente === true && emTrial !== true),
     // `=== true` e não `Boolean(...)`: a RPC devolve `null` quando a leitura
     // falha, e `null` precisa cair no lado NEGADO. Aqui o custo de errar é só
     // um rótulo, mas a mesma função é lida por quem decide acesso.
-    temMax: maxVigente === true,
-    proVigente: proVigente === true,
+    temMax: enterpriseVigente === true || maxVigente === true,
+    proVigente: enterpriseVigente === true || proVigente === true,
   }
-}
+})

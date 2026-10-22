@@ -4,6 +4,7 @@ import { EmpresaCard } from '@/components/settings/empresa-card'
 import { urlDaLogo } from '@/lib/workspace/empresa'
 import { MembersCard } from '@/components/settings/members-card'
 import { PlanCard } from '@/components/settings/plan-card'
+import { EnterpriseCard } from '@/components/settings/enterprise-card'
 import { DeleteAccountCard } from '@/components/settings/delete-account-card'
 import { ExcluirEmpresaCard } from '@/components/settings/excluir-empresa-card'
 import { IntegrationsTab } from '@/components/settings/integrations-tab'
@@ -17,7 +18,10 @@ import { createClient } from '@/lib/supabase/server'
 import { getWorkspaceSettingsData } from '@/lib/workspace/queries'
 import { planoEfetivo } from '@/lib/plans'
 import { situacaoDoPlanoDaEmpresaAtiva } from '@/lib/plans/trial-queries'
-import { getIntegrationConnections, getUsoDasIntegracoes } from '@/lib/integrations/queries'
+import {
+  getIntegrationConnections,
+  getUsoDasIntegracoes,
+} from '@/lib/integrations/queries'
 import type { IntegrationConnectionRow } from '@/lib/integrations/queries'
 import type { IntegrationProvider } from '@/types/supabase'
 
@@ -39,7 +43,8 @@ const MENSAGEM_DE_ERRO_DA_INTEGRACAO: Record<string, string> = {
   provider_invalido: 'Integração desconhecida.',
   somente_admin: 'Apenas administradores podem conectar integrações.',
   cancelado: 'Conexão cancelada, nada foi alterado.',
-  parametros_ausentes: 'O Google não devolveu os dados esperados. Tente conectar de novo.',
+  parametros_ausentes:
+    'O Google não devolveu os dados esperados. Tente conectar de novo.',
   state_invalido: 'O link de conexão expirou ou é inválido. Tente conectar de novo.',
   falha_ao_conectar: 'Não foi possível concluir a conexão. Tente de novo em instantes.',
   /**
@@ -106,7 +111,9 @@ export default async function SettingsPage({
   // barrado na hora mesmo com o rótulo atrasado nas outras abas.
   if (aba === 'plano') {
     const supabase = await createClient()
-    await supabase.rpc('sincronizar_plano_do_workspace', { target_workspace_id: workspaceId })
+    await supabase.rpc('sincronizar_plano_do_workspace', {
+      target_workspace_id: workspaceId,
+    })
   }
 
   // UMA onda para tudo que não depende de nada. Antes eram três em série:
@@ -126,11 +133,13 @@ export default async function SettingsPage({
   ] = await Promise.all([
     getWorkspaceSettingsData(workspaceId),
     aba === 'integracoes'
-      ? Promise.all([getIntegrationConnections(workspaceId), getUsoDasIntegracoes(workspaceId)])
-      : Promise.resolve<[IntegrationConnectionRow[], Record<IntegrationProvider, number>]>([
-          [],
-          { google_calendar: 0, gmail: 0, whatsapp: 0 },
-        ]),
+      ? Promise.all([
+          getIntegrationConnections(workspaceId),
+          getUsoDasIntegracoes(workspaceId),
+        ])
+      : Promise.resolve<
+          [IntegrationConnectionRow[], Record<IntegrationProvider, number>]
+        >([[], { google_calendar: 0, gmail: 0, whatsapp: 0 }]),
     // ## A FUNÇÃO, na mesma onda, porque a coluna estava prendendo
     //
     // `workspaces.plan` nunca é promovido, e o ramo 3 de `pro_vigente` (0078)
@@ -183,7 +192,10 @@ export default async function SettingsPage({
       )}
 
       {aba === 'integracoes' && mensagemDeErro && (
-        <p role="alert" className="bg-destructive/10 text-destructive rounded-md px-3 py-2 text-sm">
+        <p
+          role="alert"
+          className="bg-destructive/10 text-destructive rounded-md px-3 py-2 text-sm"
+        >
           {mensagemDeErro}
         </p>
       )}
@@ -232,6 +244,8 @@ export default async function SettingsPage({
             members={members}
             invites={invites}
             plan={plano}
+            temEnterprise={situacaoDoPlano.temEnterprise}
+            ownerId={workspace?.created_by}
           />
 
           {/* Excluir conta fica aqui, separado por uma linha e no fim: é a
@@ -243,7 +257,8 @@ export default async function SettingsPage({
         </div>
       )}
 
-      {aba === 'plano' && (
+      {aba === 'plano' && situacaoDoPlano.temEnterprise && <EnterpriseCard />}
+      {aba === 'plano' && !situacaoDoPlano.temEnterprise && (
         <PlanCard
           plan={plano}
           isAdmin={isAdmin}
@@ -256,7 +271,8 @@ export default async function SettingsPage({
           isAdmin={isAdmin}
           connections={integrationConnections}
           uso={usoDasIntegracoes}
-          plano={workspace?.plan ?? 'free'}
+          plano={plano === 'free' ? 'free' : 'pro'}
+          temEnterprise={situacaoDoPlano.temEnterprise}
         />
       )}
     </div>

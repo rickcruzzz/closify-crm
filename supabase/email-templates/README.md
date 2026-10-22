@@ -1,8 +1,12 @@
 # Templates de e-mail do Supabase Auth
 
-Os quatro arquivos `.html` desta pasta são para **copiar e colar no painel do
-Supabase**. Nada aqui é aplicado por código: a API de configuração de Auth do
-Supabase não expõe SMTP nem templates, então esta é uma etapa manual.
+Os arquivos `.html` desta pasta podem ser configurados pelo painel ou pela
+API de configuração de Auth do Supabase. Para a instalação Enterprise,
+`scripts/supabase/configurar-confirmacao-resend.mjs --plan` confere o projeto,
+o domínio de envio e a configuração. `--apply --confirm-ref=iixntnabssiwoixkvica`
+configura o Resend e o template de confirmação, preservando uma cópia local
+da configuração anterior em arquivo ignorado pelo Git. Carregue as variáveis
+locais de gerenciamento e do Resend antes de executar.
 
 Todos foram gerados a partir de `lib/emails/layout.ts`, o mesmo layout usado
 no e-mail de convite que sai pelo Resend. É o que garante que os e-mails de
@@ -79,7 +83,7 @@ aba por vez**, o painel não salva todas de uma vez.
 | Aba do painel  | Arquivo                     | Subject heading                     |
 | -------------- | --------------------------- | ----------------------------------- |
 | Confirm signup | `confirmacao-cadastro.html` | `Confirme seu e-mail no Velo Funil` |
-| Reset password | `recuperacao-de-senha.html` | `Redefinição de senha, Velo Funil` |
+| Reset password | `recuperacao-de-senha.html` | `Redefinição de senha, Velo Funil`  |
 | Magic Link     | `magic-link.html`           | `Seu link de acesso ao Velo Funil`  |
 | Invite user    | `convite.html`              | `Convite para o Velo Funil`         |
 

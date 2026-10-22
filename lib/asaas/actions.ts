@@ -111,7 +111,9 @@ export async function createCheckout(values: unknown) {
     // Fallback neutro: o schema deixou de ter um campo só, e dizer
     // "CPF ou CNPJ inválido" para um ciclo desconhecido mandaria a pessoa
     // conferir o documento certo.
-    return { error: parsed.error.issues[0]?.message ?? 'Não foi possível iniciar a assinatura.' }
+    return {
+      error: parsed.error.issues[0]?.message ?? 'Não foi possível iniciar a assinatura.',
+    }
   }
   const ciclo = parsed.data.ciclo
   const plano = parsed.data.plano
@@ -125,6 +127,18 @@ export async function createCheckout(values: unknown) {
   })
   if (!isAdmin) {
     return { error: `Apenas administradores podem assinar o plano ${planoNaTela}.` }
+  }
+
+  const { data: temEnterprise, error: erroEnterprise } = await supabase.rpc(
+    'enterprise_vigente',
+    {
+      target_workspace_id: workspaceId,
+    },
+  )
+  if (erroEnterprise)
+    return { error: 'Não foi possível verificar o plano desta empresa.' }
+  if (temEnterprise === true) {
+    return { error: 'Os recursos já estão incluídos no Enterprise desta empresa.' }
   }
 
   // Depois do gate de admin e antes de qualquer chamada ao Asaas: a ideia é
@@ -394,14 +408,17 @@ export async function createCheckout(values: unknown) {
   // no Asaas (subscriptionId != asaas_subscription_id anterior) começa
   // sempre como 'trialing' — gravar 'canceled' aqui travaria o workspace no
   // mesmo estado que motivou criar a assinatura de novo.
-  const subscriptionFoiRecriada = subscriptionId !== existingSubscription?.asaas_subscription_id
+  const subscriptionFoiRecriada =
+    subscriptionId !== existingSubscription?.asaas_subscription_id
   const admin = createAdminClient()
   const { error: upsertError } = await admin.from('subscriptions').upsert(
     {
       workspace_id: workspaceId,
       asaas_customer_id: customerId,
       asaas_subscription_id: subscriptionId,
-      status: subscriptionFoiRecriada ? 'trialing' : (existingSubscription?.status ?? 'trialing'),
+      status: subscriptionFoiRecriada
+        ? 'trialing'
+        : (existingSubscription?.status ?? 'trialing'),
       // ## `ciclo` só entra quando a assinatura NASCEU nesta chamada
       //
       // A coluna decide se um pagamento compra 30 dias ou um ano
@@ -655,10 +672,16 @@ export async function obterFormasDePagamento() {
     return { error: 'Nenhuma assinatura encontrada. Comece pelo botão de assinar.' }
   }
 
-  let cobranca: { id: string; invoiceUrl: string; bankSlipUrl?: string; value?: number } | undefined
+  let cobranca:
+    { id: string; invoiceUrl: string; bankSlipUrl?: string; value?: number } | undefined
   try {
     const lista = await asaasFetch<{
-      data: Array<{ id: string; invoiceUrl: string; bankSlipUrl?: string; value?: number }>
+      data: Array<{
+        id: string
+        invoiceUrl: string
+        bankSlipUrl?: string
+        value?: number
+      }>
     }>(`/payments?subscription=${subscriptionId}&status=PENDING&limit=1`)
     cobranca = lista.data[0]
   } catch (err) {
@@ -677,12 +700,12 @@ export async function obterFormasDePagamento() {
       console.error('obterFormasDePagamento: Pix indisponível', err)
       return null
     }),
-    asaasFetch<LinhaDigitavelDoAsaas>(`/payments/${cobranca.id}/identificationField`).catch(
-      (err) => {
-        console.error('obterFormasDePagamento: boleto indisponível', err)
-        return null
-      },
-    ),
+    asaasFetch<LinhaDigitavelDoAsaas>(
+      `/payments/${cobranca.id}/identificationField`,
+    ).catch((err) => {
+      console.error('obterFormasDePagamento: boleto indisponível', err)
+      return null
+    }),
   ])
 
   // "AddPaymentInfo" pro Meta: a pessoa está com a forma de pagamento na

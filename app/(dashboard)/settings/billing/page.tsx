@@ -18,8 +18,15 @@ import { getWorkspaceSettingsData } from '@/lib/workspace/queries'
 import { getEstadoAssinatura, getHistoricoDaAssinatura } from '@/lib/asaas/queries'
 import { AvisoDeTesteNaCobranca } from '@/components/settings/aviso-de-teste-na-cobranca'
 import { HistoricoDaAssinatura } from '@/components/settings/historico-da-assinatura'
-import { FREE_LEAD_LIMIT, FREE_MEMBER_LIMIT, PLANO_NA_TELA, planoEfetivo } from '@/lib/plans'
+import {
+  FREE_LEAD_LIMIT,
+  FREE_MEMBER_LIMIT,
+  PLANO_NA_TELA,
+  planoEfetivo,
+} from '@/lib/plans'
 import { cn } from '@/lib/utils'
+import { situacaoDoPlanoDaEmpresaAtiva } from '@/lib/plans/trial-queries'
+import { EnterpriseCard } from '@/components/settings/enterprise-card'
 
 export const metadata: Metadata = { title: 'Cobrança' }
 
@@ -34,6 +41,18 @@ export default async function BillingPage({
   // o primeiro e o de vencimento para o segundo.
   const { assinar, pago, pagar } = await searchParams
   const { user, workspaceId } = await getCurrentUserAndWorkspace()
+  const situacao = await situacaoDoPlanoDaEmpresaAtiva()
+  if (situacao.temEnterprise) {
+    return (
+      <div className="flex flex-col gap-6">
+        <PageHeader
+          title="Plano Enterprise"
+          description="Recursos incluídos para sua equipe."
+        />
+        <EnterpriseCard />
+      </div>
+    )
+  }
 
   const supabase = await createClient()
 
@@ -43,29 +62,38 @@ export default async function BillingPage({
   // (`getEstadoAssinatura`), não só o plano: sem isto, quem tinha assinatura
   // criada com fatura em aberto via "Free" e um botão de assinar de novo,
   // sem saber que já existia uma cobrança esperando pagamento.
-  const [{ workspace, members }, { count: leadCount }, assinatura, historico, max, proVigenteRpc] =
-    await Promise.all([
-      getWorkspaceSettingsData(workspaceId),
-      supabase.from('leads').select('id', { count: 'exact', head: true }).eq('workspace_id', workspaceId),
-      getEstadoAssinatura(workspaceId),
-      getHistoricoDaAssinatura(workspaceId),
-      // Entra no MESMO `Promise.all`, e não numa quinta ida em série. O
-      // comentário acima já registra por que estas leituras foram juntadas: são
-      // independentes entre si, e encadeá-las paga uma viagem de rede a mais
-      // em toda abertura da tela de cobrança.
-      situacaoDoMax(workspaceId),
-      // ## A FUNÇÃO, e não a coluna, e ela entra no mesmo `Promise.all`
-      //
-      // `workspaces.plan` mente por dois motivos independentes, e esta tela
-      // caía nos dois: ela nunca é promovida (o ramo 3 de `pro_vigente` cobre
-      // as empresas irmãs sem tocar em coluna nenhuma), e vale `'pro'` para
-      // quem paga MAX, por construção da 0089.
-      //
-      // O resultado era a tela de COBRANÇA chamando de "Pro" quem paga R$ 250,
-      // e oferecendo assinar o Pro a quem já o tem. Uma RPC a mais, em
-      // paralelo, custa zero viagem de rede adicional.
-      supabase.rpc('pro_vigente', { target_workspace_id: workspaceId }),
-    ])
+  const [
+    { workspace, members },
+    { count: leadCount },
+    assinatura,
+    historico,
+    max,
+    proVigenteRpc,
+  ] = await Promise.all([
+    getWorkspaceSettingsData(workspaceId),
+    supabase
+      .from('leads')
+      .select('id', { count: 'exact', head: true })
+      .eq('workspace_id', workspaceId),
+    getEstadoAssinatura(workspaceId),
+    getHistoricoDaAssinatura(workspaceId),
+    // Entra no MESMO `Promise.all`, e não numa quinta ida em série. O
+    // comentário acima já registra por que estas leituras foram juntadas: são
+    // independentes entre si, e encadeá-las paga uma viagem de rede a mais
+    // em toda abertura da tela de cobrança.
+    situacaoDoMax(workspaceId),
+    // ## A FUNÇÃO, e não a coluna, e ela entra no mesmo `Promise.all`
+    //
+    // `workspaces.plan` mente por dois motivos independentes, e esta tela
+    // caía nos dois: ela nunca é promovida (o ramo 3 de `pro_vigente` cobre
+    // as empresas irmãs sem tocar em coluna nenhuma), e vale `'pro'` para
+    // quem paga MAX, por construção da 0089.
+    //
+    // O resultado era a tela de COBRANÇA chamando de "Pro" quem paga R$ 250,
+    // e oferecendo assinar o Pro a quem já o tem. Uma RPC a mais, em
+    // paralelo, custa zero viagem de rede adicional.
+    supabase.rpc('pro_vigente', { target_workspace_id: workspaceId }),
+  ])
 
   const isAdmin = members.find((m) => m.user_id === user.id)?.role === 'admin'
 
@@ -146,14 +174,16 @@ export default async function BillingPage({
               existia na tarja do layout, a partir de 4 dias. Quem abre esta
               tela no primeiro dia para entender o que ganhou não encontrava a
               data em lugar nenhum do produto. */}
-          {!assinatura && <AvisoDeTesteNaCobranca trialAte={workspace?.trial_ate ?? null} />}
+          {!assinatura && (
+            <AvisoDeTesteNaCobranca trialAte={workspace?.trial_ate ?? null} />
+          )}
 
           {/* O selo diz Pro e não existe assinatura nenhuma nesta tela. Sem
               esta frase, quem vier conferir a cobrança conclui que ela sumiu. */}
           {cobertaPorEmpresaIrma && (
             <p className="text-muted-foreground border-border/60 rounded-lg border p-3 text-sm leading-relaxed">
-              Esta empresa usa o {PLANO_NA_TELA.pro} que você já paga em outra empresa sua.
-              Não há cobrança separada aqui, e o valor continua sendo um só.
+              Esta empresa usa o {PLANO_NA_TELA.pro} que você já paga em outra empresa
+              sua. Não há cobrança separada aqui, e o valor continua sendo um só.
             </p>
           )}
 
@@ -213,14 +243,16 @@ export default async function BillingPage({
         </CardHeader>
         <CardContent>
           <PlanComparisonTable
-          plan={plano}
-          isAdmin={isAdmin}
-          // `?assinar=1` continua abrindo o formulario direto para quem JA
-          // decidiu: e o destino dos e-mails de trial, da reconciliacao e da
-          // landing logada. Quem chega por "Conhecer o Pro" cai na ancora, sem
-          // parametro, e le antes.
-          assinarDeInicio={assinar === '1' && (!assinatura || assinatura.status === 'canceled')}
-        />
+            plan={plano}
+            isAdmin={isAdmin}
+            // `?assinar=1` continua abrindo o formulario direto para quem JA
+            // decidiu: e o destino dos e-mails de trial, da reconciliacao e da
+            // landing logada. Quem chega por "Conhecer o Pro" cai na ancora, sem
+            // parametro, e le antes.
+            assinarDeInicio={
+              assinar === '1' && (!assinatura || assinatura.status === 'canceled')
+            }
+          />
         </CardContent>
       </Card>
 

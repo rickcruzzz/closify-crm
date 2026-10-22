@@ -59,6 +59,10 @@ import {
 import { inviteMemberSchema, type InviteMemberValues } from '@/lib/validations/workspace'
 import type { PlanoEfetivo } from '@/lib/plans'
 import { FREE_MEMBER_LIMIT } from '@/lib/plans'
+import {
+  ENTERPRISE_COLABORADORES,
+  ocupacaoDeColaboradoresEnterprise,
+} from '@/lib/enterprise/plano'
 
 type Member = { user_id: string; role: 'admin' | 'membro'; name: string }
 type Invite = { id: string; email: string; role: 'admin' | 'membro'; expires_at: string }
@@ -69,11 +73,15 @@ export function MembersCard({
   members,
   invites,
   plan,
+  temEnterprise = false,
+  ownerId,
 }: {
   currentUserId: string
   isAdmin: boolean
   members: Member[]
   invites: Invite[]
+  temEnterprise?: boolean
+  ownerId?: string | null
   /**
    * O plano EFETIVO, de `planoEfetivo()`: a funcao vence a coluna.
    *
@@ -104,6 +112,7 @@ export function MembersCard({
   // o servidor aplicar outra, o tipo de divergência que faz o usuário achar
   // que o limite "não funciona".
   const totalOccupied = members.length + invites.length
+  const enterpriseOccupied = ocupacaoDeColaboradoresEnterprise(members, invites, ownerId)
   // ## `plan` aqui e o EFETIVO, e a diferenca nao e cosmetica
   //
   // Enquanto ele vinha de `workspaces.plan`, uma empresa coberta pela
@@ -114,7 +123,9 @@ export function MembersCard({
   // O banco libertava e a tela prendia, num recurso ja pago. Era o inverso do
   // defeito que costuma acontecer aqui, e por isso ninguem o via: ele nao gera
   // erro, gera um botao desabilitado.
-  const atLimit = plan === 'free' && totalOccupied >= FREE_MEMBER_LIMIT
+  const atLimit = temEnterprise
+    ? enterpriseOccupied >= ENTERPRISE_COLABORADORES
+    : plan === 'free' && totalOccupied >= FREE_MEMBER_LIMIT
 
   // Workspace nunca fica com zero membros (quem cria já entra como admin), então
   // o estado vazio real é "só eu, sem convite pendente", comum em conta nova.
@@ -134,7 +145,8 @@ export function MembersCard({
         // `?assinar=1`. Ela virou `ehLimiteDePlano`, em `lib/plans.ts`, pura e
         // testada — e agora vale para os sete lugares do produto que mandam
         // fazer upgrade, não só para este.
-        avisarLimite(result.error)
+        if (temEnterprise) toast.error(result.error)
+        else avisarLimite(result.error)
         return
       }
       toast.success('Convite enviado.')
@@ -155,7 +167,9 @@ export function MembersCard({
   // para remover alguém e cancelar um convite ao mesmo tempo), e dois booleanos
   // separados permitiriam o estado impossível de ambos abertos.
   const [confirmando, setConfirmando] = React.useState<
-    { tipo: 'remover'; id: string; nome: string } | { tipo: 'convite'; id: string; email: string } | null
+    | { tipo: 'remover'; id: string; nome: string }
+    | { tipo: 'convite'; id: string; email: string }
+    | null
   >(null)
   const [executando, setExecutando] = React.useState(false)
 
@@ -189,11 +203,15 @@ export function MembersCard({
         <div>
           <CardTitle>Colaboradores</CardTitle>
           <CardDescription>
-            {plan === 'free'
-              ? `Plano Free: ${totalOccupied}/${FREE_MEMBER_LIMIT} vagas usadas${
-                  invites.length > 0 ? ` (${invites.length} convite pendente)` : ''
+            {temEnterprise
+              ? `Enterprise: ${enterpriseOccupied}/${ENTERPRISE_COLABORADORES} vagas de colaboradores ocupadas, além do proprietário${
+                  invites.length > 0 ? ` (${invites.length} convite(s) pendente(s))` : ''
                 }.`
-              : `${members.length} membro(s).`}
+              : plan === 'free'
+                ? `Plano Free: ${totalOccupied}/${FREE_MEMBER_LIMIT} vagas usadas${
+                    invites.length > 0 ? ` (${invites.length} convite pendente)` : ''
+                  }.`
+                : `${members.length} membro(s).`}
           </CardDescription>
         </div>
         {isAdmin && (
@@ -298,7 +316,11 @@ export function MembersCard({
                         variant="ghost"
                         size="sm"
                         onClick={() =>
-                          setConfirmando({ tipo: 'convite', id: invite.id, email: invite.email })
+                          setConfirmando({
+                            tipo: 'convite',
+                            id: invite.id,
+                            email: invite.email,
+                          })
                         }
                       >
                         Cancelar
@@ -321,18 +343,21 @@ export function MembersCard({
         open={confirmando !== null}
         onOpenChange={(aberto) => !aberto && setConfirmando(null)}
         titulo={
-          confirmando?.tipo === 'convite' ? 'Cancelar este convite?' : 'Remover este colaborador?'
+          confirmando?.tipo === 'convite'
+            ? 'Cancelar este convite?'
+            : 'Remover este colaborador?'
         }
         descricao={
           confirmando?.tipo === 'convite' ? (
             <>
-              O link enviado para <strong>{confirmando.email}</strong> para de funcionar. Você pode
-              convidar de novo depois.
+              O link enviado para <strong>{confirmando.email}</strong> para de funcionar.
+              Você pode convidar de novo depois.
             </>
           ) : (
             <>
-              <strong>{confirmando?.nome}</strong> perde o acesso a esta empresa imediatamente. Os
-              leads, negócios e atividades registrados por essa pessoa continuam aqui.
+              <strong>{confirmando?.nome}</strong> perde o acesso a esta empresa
+              imediatamente. Os leads, negócios e atividades registrados por essa pessoa
+              continuam aqui.
             </>
           )
         }
@@ -346,8 +371,8 @@ export function MembersCard({
           <DialogHeader>
             <DialogTitle>Convidar colaborador</DialogTitle>
             <DialogDescription>
-              Quem entrar trabalha nesta mesma empresa e vê os mesmos contatos,
-              funil e tarefas. Enviamos um link de convite por e-mail.
+              Quem entrar trabalha nesta mesma empresa e vê os mesmos contatos, funil e
+              tarefas. Enviamos um link de convite por e-mail.
             </DialogDescription>
           </DialogHeader>
 

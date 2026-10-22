@@ -24,13 +24,21 @@ if (aplicar && projetoPrincipal && new URL(projetoPrincipal).hostname === url.ho
 }
 const pasta = fileURLToPath(new URL('../../supabase/migrations/', import.meta.url))
 const todosArquivos = (await readdir(pasta))
-  .filter((nome) => /^\d{4}_[\w-]+\.sql$/.test(nome))
+  .filter((nome) => /^(?:\d{4}|\d{14})_[\w-]+\.sql$/.test(nome))
   .sort()
-const limite = process.argv.find((arg) => arg.startsWith('--through='))?.slice('--through='.length)
-if (limite && (!/^\d{4}$/.test(limite) || !todosArquivos.some((nome) => nome.startsWith(`${limite}_`)))) {
+const limite = process.argv
+  .find((arg) => arg.startsWith('--through='))
+  ?.slice('--through='.length)
+if (
+  limite &&
+  (!/^(?:\d{4}|\d{14})$/.test(limite) ||
+    !todosArquivos.some((nome) => nome.startsWith(`${limite}_`)))
+) {
   throw new Error('--through precisa ser o número de uma migration local existente.')
 }
-const arquivos = limite ? todosArquivos.filter((nome) => nome.slice(0, 4) <= limite) : todosArquivos
+const arquivos = limite
+  ? todosArquivos.filter((nome) => nome.split('_', 1)[0] <= limite)
+  : todosArquivos
 if (!arquivos.length) throw new Error('Nenhuma migration encontrada.')
 process.stdout.write(`Projeto: ${ref}; migrations locais: ${arquivos.length}.\n`)
 process.stdout.write(`Primeira: ${arquivos[0]}; última: ${arquivos.at(-1)}.\n`)
@@ -39,7 +47,9 @@ process.stdout.write('A migration 0002 é um no-op; migrations não transferem d
 const token = process.env.CLIENTE_SUPABASE_ACCESS_TOKEN
 if (!token) {
   if (planejar) {
-    process.stdout.write('Sem CLIENTE_SUPABASE_ACCESS_TOKEN: histórico remoto não verificado; pendências desconhecidas.\n')
+    process.stdout.write(
+      'Sem CLIENTE_SUPABASE_ACCESS_TOKEN: histórico remoto não verificado; pendências desconhecidas.\n',
+    )
     process.exit(0)
   }
   throw new Error('Falta CLIENTE_SUPABASE_ACCESS_TOKEN para aplicar migrations.')
@@ -57,9 +67,15 @@ async function api(path, options = {}) {
   })
   const texto = await resposta.text()
   let dados
-  try { dados = JSON.parse(texto) } catch { dados = texto }
+  try {
+    dados = JSON.parse(texto)
+  } catch {
+    dados = texto
+  }
   if (!resposta.ok) {
-    throw new Error(`API Supabase HTTP ${resposta.status}: ${typeof dados === 'string' ? dados.slice(0, 500) : JSON.stringify(dados).slice(0, 500)}`)
+    throw new Error(
+      `API Supabase HTTP ${resposta.status}: ${typeof dados === 'string' ? dados.slice(0, 500) : JSON.stringify(dados).slice(0, 500)}`,
+    )
   }
   return dados
 }
@@ -69,31 +85,46 @@ if (projeto.id !== ref) throw new Error('O token não corresponde ao projeto do 
 process.stdout.write(`Acesso de gerenciamento confirmado: ${ref}.\n`)
 
 const historico = await api(`/v1/projects/${ref}/database/migrations`)
-const registros = Array.isArray(historico) ? historico : historico?.migrations ?? []
+const registros = Array.isArray(historico) ? historico : (historico?.migrations ?? [])
 const aplicados = new Set(registros.map((m) => m.name).filter(Boolean))
 if (registros.length && aplicados.size === 0) {
-  throw new Error('Histórico remoto existe, mas o formato não pôde ser reconhecido. Nada foi aplicado.')
+  throw new Error(
+    'Histórico remoto existe, mas o formato não pôde ser reconhecido. Nada foi aplicado.',
+  )
 }
 const nomesLocais = new Set(arquivos.map((arquivo) => arquivo.slice(0, -4)))
 const desconhecidas = [...aplicados].filter((nome) => !nomesLocais.has(nome))
 if (desconhecidas.length) {
-  throw new Error(`Histórico remoto contém migrations desconhecidas: ${desconhecidas.join(', ')}`)
+  throw new Error(
+    `Histórico remoto contém migrations desconhecidas: ${desconhecidas.join(', ')}`,
+  )
 }
 const pendentes = arquivos.filter((arquivo) => !aplicados.has(arquivo.slice(0, -4)))
-process.stdout.write(`Remotas aplicadas: ${aplicados.size}; pendentes: ${pendentes.length}.\n`)
+process.stdout.write(
+  `Remotas aplicadas: ${aplicados.size}; pendentes: ${pendentes.length}.\n`,
+)
 if (planejar) {
   for (const arquivo of pendentes) process.stdout.write(`Pendente: ${arquivo}\n`)
   process.exit(0)
 }
 
-const confirmacao = process.argv.find((arg) => arg.startsWith('--confirm-ref='))?.slice('--confirm-ref='.length)
+const confirmacao = process.argv
+  .find((arg) => arg.startsWith('--confirm-ref='))
+  ?.slice('--confirm-ref='.length)
 if (confirmacao !== ref) {
   throw new Error(`Confirme o destino com --confirm-ref=${ref} antes de aplicar.`)
 }
 
 // Uma lacuna anterior a uma migration já aplicada exige reconciliação manual.
-const primeiraPendente = arquivos.findIndex((arquivo) => !aplicados.has(arquivo.slice(0, -4)))
-if (primeiraPendente >= 0 && arquivos.slice(primeiraPendente + 1).some((arquivo) => aplicados.has(arquivo.slice(0, -4)))) {
+const primeiraPendente = arquivos.findIndex(
+  (arquivo) => !aplicados.has(arquivo.slice(0, -4)),
+)
+if (
+  primeiraPendente >= 0 &&
+  arquivos
+    .slice(primeiraPendente + 1)
+    .some((arquivo) => aplicados.has(arquivo.slice(0, -4)))
+) {
   throw new Error('Histórico remoto fora de ordem. Reconcile antes de aplicar.')
 }
 
@@ -111,8 +142,13 @@ for (const arquivo of pendentes) {
 }
 
 const historicoFinal = await api(`/v1/projects/${ref}/database/migrations`)
-const finais = Array.isArray(historicoFinal) ? historicoFinal : historicoFinal?.migrations ?? []
+const finais = Array.isArray(historicoFinal)
+  ? historicoFinal
+  : (historicoFinal?.migrations ?? [])
 const nomesFinais = new Set(finais.map((m) => m.name).filter(Boolean))
 const faltantes = arquivos.filter((arquivo) => !nomesFinais.has(arquivo.slice(0, -4)))
-if (faltantes.length) throw new Error(`Aplicação terminou com ${faltantes.length} migration(s) ausente(s).`)
-process.stdout.write('Histórico remoto conferido: todas as migrations locais aplicadas.\n')
+if (faltantes.length)
+  throw new Error(`Aplicação terminou com ${faltantes.length} migration(s) ausente(s).`)
+process.stdout.write(
+  'Histórico remoto conferido: todas as migrations locais aplicadas.\n',
+)

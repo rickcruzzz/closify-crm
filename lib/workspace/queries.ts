@@ -9,7 +9,9 @@ export async function getWorkspaceSettingsData(workspaceId: string) {
     // deixa de ser literal e o resultado inteiro vira `GenericStringError`.
     supabase
       .from('workspaces')
-      .select('id, name, plan, trial_ate, segmento, nome_fantasia, cnpj, descricao, logo_url, email_comercial, whatsapp, telefone, site, cep, endereco, numero, complemento, bairro, cidade, estado')
+      .select(
+        'id, name, plan, trial_ate, created_by, segmento, nome_fantasia, cnpj, descricao, logo_url, email_comercial, whatsapp, telefone, site, cep, endereco, numero, complemento, bairro, cidade, estado',
+      )
       .eq('id', workspaceId)
       .single(),
     // `.limit()` explícito: sem ele, um workspace com mais de 1.000 membros
@@ -27,6 +29,7 @@ export async function getWorkspaceSettingsData(workspaceId: string) {
       .select('id, email, role, status, created_at, expires_at')
       .eq('workspace_id', workspaceId)
       .eq('status', 'pending')
+      .gt('expires_at', new Date().toISOString())
       .order('created_at', { ascending: false }),
   ])
 
@@ -42,7 +45,10 @@ export async function getWorkspaceSettingsData(workspaceId: string) {
 
   return {
     workspace,
-    members: (members ?? []).map((m) => ({ ...m, name: nameByUserId.get(m.user_id) ?? m.user_id })),
+    members: (members ?? []).map((m) => ({
+      ...m,
+      name: nameByUserId.get(m.user_id) ?? m.user_id,
+    })),
     invites: invites ?? [],
   }
 }

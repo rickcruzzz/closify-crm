@@ -9,8 +9,17 @@ import { IconeWhatsapp } from '@/components/ui/icone-whatsapp'
 
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { desconectarIntegracao, testarConexaoIntegracao } from '@/lib/integrations/actions'
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card'
+import {
+  desconectarIntegracao,
+  testarConexaoIntegracao,
+} from '@/lib/integrations/actions'
 import { ProUpsellDialog } from '@/components/settings/pro-upsell-dialog'
 import { PrepararConexaoGoogle } from '@/components/settings/preparar-conexao-google'
 import type { IntegrationProvider, IntegrationStatus } from '@/types/supabase'
@@ -102,7 +111,8 @@ const META: Record<
     // andamento e histórico de uma vez, e se ele for pro concorrente, a
     // carteira vai junto. Esquecer uma venda dói uma vez; perder a carteira
     // não tem conserto.
-    descricao: 'Toda conversa fica no histórico do cliente, não no celular de quem atendeu.',
+    descricao:
+      'Toda conversa fica no histórico do cliente, não no celular de quem atendeu.',
     // `null` de propósito: conectar exige ler QR Code, então é diálogo, não
     // link direto como o OAuth do Google.
     conectarHref: null,
@@ -132,6 +142,7 @@ export function IntegrationCard({
   lastError,
   uso,
   plano,
+  temEnterprise = false,
 }: {
   provider: IntegrationProvider
   isAdmin: boolean
@@ -152,6 +163,7 @@ export function IntegrationCard({
    * então a coluna está em dia justamente aqui.
    */
   plano: 'free' | 'pro'
+  temEnterprise?: boolean
 }) {
   const [pendente, startTransition] = React.useTransition()
   const [upsellAberto, setUpsellAberto] = React.useState(false)
@@ -176,9 +188,10 @@ export function IntegrationCard({
   // pessoa tentar parear de novo à toa.
   // `null` para Google Calendar e Gmail, e para o WhatsApp quando a API
   // oficial estiver ligada. So existe enquanto a migracao dura.
-  const seloWhatsapp = provider === 'whatsapp' ? seloDoWhatsapp() : null
+  const whatsappEmMigracao = provider === 'whatsapp' && !podeConectarWhatsapp()
+  const seloWhatsapp = whatsappEmMigracao ? seloDoWhatsapp() : null
 
-  const temDireitoAoRecurso = plano === 'pro'
+  const temDireitoAoRecurso = temEnterprise || plano === 'pro'
   const conectado = status === 'connected' && temDireitoAoRecurso
   const pausadoPorPlano = status === 'connected' && !temDireitoAoRecurso
 
@@ -208,11 +221,16 @@ export function IntegrationCard({
           <div>
             <CardTitle className="text-base">{info.titulo}</CardTitle>
             <CardDescription>{info.descricao}</CardDescription>
+            {temEnterprise && (
+              <p className="text-muted-foreground mt-1 text-xs">Incluído no Enterprise</p>
+            )}
             {/* Abaixo da descricao e nao num tooltip: tooltip so aparece para
                 quem ja desconfiou que ha algo a descobrir, e aqui a pessoa nao
                 tem motivo para desconfiar. */}
             {info.limite && (
-              <p className="text-muted-foreground mt-1 text-xs text-pretty">{info.limite}</p>
+              <p className="text-muted-foreground mt-1 text-xs text-pretty">
+                {info.limite}
+              </p>
             )}
           </div>
         </div>
@@ -252,8 +270,8 @@ export function IntegrationCard({
             entrada das mensagens. */}
         {pausadoPorPlano && !seloWhatsapp && (
           <p className="text-destructive text-xs text-pretty">
-            Seu número continua pareado, mas as mensagens não estão entrando no
-            funil enquanto o plano não for Pro.
+            Seu número continua pareado, mas as mensagens não estão entrando no funil
+            enquanto o plano não for Pro.
           </p>
         )}
 
@@ -304,14 +322,14 @@ export function IntegrationCard({
           <div className="border-border/60 flex flex-col gap-1 rounded-lg border p-3">
             <span className="text-sm font-medium">{AVISO_DE_MIGRACAO.titulo}</span>
             <p className="text-muted-foreground text-xs leading-relaxed">
-              {plano === 'free' ? AVISO_PARA_QUEM_NAO_TEM_PRO : AVISO_DE_MIGRACAO.detalhe}
+              {!temEnterprise && plano === 'free'
+                ? AVISO_PARA_QUEM_NAO_TEM_PRO
+                : AVISO_DE_MIGRACAO.detalhe}
             </p>
           </div>
-        ) : plano === 'free' ? (
+        ) : !temDireitoAoRecurso ? (
           <div className="flex flex-col gap-2">
-            <p className="text-muted-foreground text-xs">
-              {info.ganhoNoPro}
-            </p>
+            <p className="text-muted-foreground text-xs">{info.ganhoNoPro}</p>
             <Button
               variant="outline"
               size="sm"
@@ -328,7 +346,13 @@ export function IntegrationCard({
           </p>
         ) : conectado ? (
           <div className="flex flex-wrap gap-2">
-            <Button type="button" variant="outline" size="sm" disabled={pendente} onClick={testar}>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              disabled={pendente}
+              onClick={testar}
+            >
               {pendente && <Loader2 className="size-4 animate-spin" />}
               Testar conexão
             </Button>
@@ -350,7 +374,11 @@ export function IntegrationCard({
              uma caixa de permissão DESMARCADA, e continuar sem marcar devolve
              um token sem a permissão. O produto não alcança ninguém depois que
              a pessoa sai daqui, então o aviso tem que vir antes do clique. */
-          <Button className="w-fit" size="sm" onClick={() => setPrepararGoogleAberto(true)}>
+          <Button
+            className="w-fit"
+            size="sm"
+            onClick={() => setPrepararGoogleAberto(true)}
+          >
             <Plug className="size-4" />
             Conectar {info.titulo}
           </Button>
@@ -371,12 +399,18 @@ export function IntegrationCard({
             // custou uma rodada em 08/09. Aqui nao ha handler, e a ancora e o
             // elemento certo para navegar.
             <div className="border-border/60 flex flex-col items-start gap-2 rounded-lg border p-3">
-              <span className="text-sm font-medium">{WHATSAPP_MORA_NO_MAX.titulo}</span>
+              <span className="text-sm font-medium">
+                {temEnterprise
+                  ? 'WhatsApp incluído no Enterprise'
+                  : WHATSAPP_MORA_NO_MAX.titulo}
+              </span>
               <p className="text-muted-foreground text-xs leading-relaxed">
-                {WHATSAPP_MORA_NO_MAX.detalhe}
+                {temEnterprise
+                  ? 'Abra as conversas para conectar o WhatsApp da empresa e atender os contatos pelo CRM.'
+                  : WHATSAPP_MORA_NO_MAX.detalhe}
               </p>
               <Link
-                href={WHATSAPP_MORA_NO_MAX.destino}
+                href={temEnterprise ? '/conversas' : WHATSAPP_MORA_NO_MAX.destino}
                 className={buttonVariants({ variant: 'outline', size: 'sm' })}
               >
                 <IconeWhatsapp className="size-4" />
@@ -411,7 +445,6 @@ export function IntegrationCard({
           href={info.conectarHref}
         />
       )}
-
     </Card>
   )
 }

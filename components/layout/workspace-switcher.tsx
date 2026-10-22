@@ -39,6 +39,7 @@ export type WorkspaceSummary = {
   id: string
   name: string
   plan: string
+  temEnterprise?: boolean
 }
 
 export function WorkspaceSwitcher({
@@ -285,7 +286,7 @@ export function WorkspaceSwitcher({
                 O numero estava certo e a palavra contava outra coisa, que e a
                 mesma classe do "ate 2 colaboradores" prometendo tres pessoas.
                 `rotuloDoPlano` decide, com teste. */}
-                {rotuloDoPlano(active.plan, temMax, proVigente)}
+                {rotuloDoPlano(active.plan, temMax, proVigente, active.temEnterprise)}
               </span>
             </div>
             <ChevronsUpDown className="text-muted-foreground size-4 shrink-0" />
@@ -341,6 +342,7 @@ export function WorkspaceSwitcher({
                     workspace.plan,
                     temMax && workspace.id === activeId,
                     proVigente && workspace.id === activeId,
+                    workspace.temEnterprise,
                   )}
                 </Badge>
               </DropdownMenuItem>

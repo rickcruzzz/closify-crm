@@ -1,5 +1,9 @@
 import { createClient } from '@/lib/supabase/server'
 import {
+  ENTERPRISE_COLABORADORES,
+  ocupacaoDeColaboradoresEnterprise,
+} from '@/lib/enterprise/plano'
+import {
   FREE_LEAD_LIMIT,
   FREE_MEMBER_LIMIT,
   FREE_ORCAMENTO_LIMIT,
@@ -25,7 +29,9 @@ type LimitCheck = { allowed: boolean; reason?: string }
 export async function canAddOrcamento(workspaceId: string): Promise<LimitCheck> {
   const supabase = await createClient()
 
-  const { data: pro } = await supabase.rpc('pro_vigente', { target_workspace_id: workspaceId })
+  const { data: pro } = await supabase.rpc('pro_vigente', {
+    target_workspace_id: workspaceId,
+  })
 
   if (pro) return { allowed: true }
 
@@ -49,7 +55,9 @@ export async function canAddOrcamento(workspaceId: string): Promise<LimitCheck> 
 export async function canAddLead(workspaceId: string): Promise<LimitCheck> {
   const supabase = await createClient()
 
-  const { data: pro } = await supabase.rpc('pro_vigente', { target_workspace_id: workspaceId })
+  const { data: pro } = await supabase.rpc('pro_vigente', {
+    target_workspace_id: workspaceId,
+  })
 
   if (pro) return { allowed: true }
 
@@ -75,7 +83,9 @@ export async function canAddLead(workspaceId: string): Promise<LimitCheck> {
 export async function remainingLeadSlots(workspaceId: string): Promise<number | null> {
   const supabase = await createClient()
 
-  const { data: pro } = await supabase.rpc('pro_vigente', { target_workspace_id: workspaceId })
+  const { data: pro } = await supabase.rpc('pro_vigente', {
+    target_workspace_id: workspaceId,
+  })
 
   if (pro) return null
 
@@ -90,7 +100,59 @@ export async function remainingLeadSlots(workspaceId: string): Promise<number | 
 export async function canAddMember(workspaceId: string): Promise<LimitCheck> {
   const supabase = await createClient()
 
-  const { data: pro } = await supabase.rpc('pro_vigente', { target_workspace_id: workspaceId })
+  const [{ data: enterprise, error: enterpriseError }, { data: pro }] = await Promise.all(
+    [
+      supabase.rpc('enterprise_vigente', { target_workspace_id: workspaceId }),
+      supabase.rpc('pro_vigente', { target_workspace_id: workspaceId }),
+    ],
+  )
+
+  if (enterpriseError) {
+    return {
+      allowed: false,
+      reason: 'Não foi possível verificar as vagas. Tente novamente.',
+    }
+  }
+
+  // Enterprise herda recursos Pro, mas tem seu próprio teto de equipe.
+  if (enterprise === true) {
+    const agora = new Date()
+    const [workspace, members, invites] = await Promise.all([
+      supabase.from('workspaces').select('created_by').eq('id', workspaceId).single(),
+      supabase
+        .from('workspace_members')
+        .select('user_id')
+        .eq('workspace_id', workspaceId)
+        .limit(1000),
+      supabase
+        .from('workspace_invites')
+        .select('expires_at')
+        .eq('workspace_id', workspaceId)
+        .eq('status', 'pending')
+        .gt('expires_at', agora.toISOString())
+        .limit(1000),
+    ])
+
+    if (workspace.error || members.error || invites.error) {
+      return {
+        allowed: false,
+        reason: 'Não foi possível verificar as vagas. Tente novamente.',
+      }
+    }
+
+    const ocupadas = ocupacaoDeColaboradoresEnterprise(
+      members.data ?? [],
+      invites.data ?? [],
+      workspace.data?.created_by,
+      agora,
+    )
+    return ocupadas < ENTERPRISE_COLABORADORES
+      ? { allowed: true }
+      : {
+          allowed: false,
+          reason: `O Enterprise inclui até ${ENTERPRISE_COLABORADORES} colaboradores, além do proprietário. Cancele um convite pendente ou remova um colaborador para liberar uma vaga.`,
+        }
+  }
 
   if (pro) return { allowed: true }
 
@@ -106,7 +168,8 @@ export async function canAddMember(workspaceId: string): Promise<LimitCheck> {
       .from('workspace_invites')
       .select('id', { count: 'exact', head: true })
       .eq('workspace_id', workspaceId)
-      .eq('status', 'pending'),
+      .eq('status', 'pending')
+      .gt('expires_at', new Date().toISOString()),
   ])
 
   if ((memberCount ?? 0) + (pendingInvites ?? 0) >= FREE_MEMBER_LIMIT) {
@@ -163,11 +226,15 @@ export async function canAddWorkspace(userId: string): Promise<LimitCheck> {
   // confere a validade. São poucas chamadas, o Free permite uma empresa, e
   // quem tem várias é justamente quem paga.
   const [validades, validadesMax] = await Promise.all([
-    Promise.all(ids.map((id) => supabase.rpc('pro_vigente', { target_workspace_id: id }))),
+    Promise.all(
+      ids.map((id) => supabase.rpc('pro_vigente', { target_workspace_id: id })),
+    ),
     // O Max sobe o teto de CRIACAO de 5 para 10 (0094). Nao muda quantos
     // WhatsApps a pessoa conecta: isso e um por empresa paga, e `max_vigente`
     // continua com um ramo so.
-    Promise.all(ids.map((id) => supabase.rpc('max_vigente', { target_workspace_id: id }))),
+    Promise.all(
+      ids.map((id) => supabase.rpc('max_vigente', { target_workspace_id: id })),
+    ),
   ])
 
   const temPro = validades.some(({ data }) => data === true)

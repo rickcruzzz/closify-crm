@@ -42,7 +42,8 @@ export default async function ConvitePage({
     invite &&
     invite.status === 'pending' &&
     new Date(invite.expires_at) >= new Date() &&
-    user?.email === invite.email
+    user?.email === invite.email &&
+    Boolean(user.email_confirmed_at)
 
   if (podeAceitarSozinho) {
     const { data: workspaceId, error } = await supabase.rpc('accept_workspace_invite', {

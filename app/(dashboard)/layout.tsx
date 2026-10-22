@@ -44,25 +44,24 @@ export default async function DashboardLayout({
     conversasEsperando,
     situacaoDoPlano,
     avisosNaoLidos,
-  ] =
-    await Promise.all([
-      getCurrentUserAndWorkspace(),
-      lerEstadoDoOnboarding(),
-      contarTarefasDoDiaDoUsuario(),
-      // Mesma onda, mesmo motivo: `count: exact, head: true`, o banco devolve
-      // o numero e nao as linhas. Contador que custa uma ida de rede por
-      // navegacao nao vale o que informa.
-      contarConversasEsperandoDoUsuario(),
-      // Entra na MESMA onda pelo mesmo motivo da contagem de tarefas: depende
-      // do `workspaceId`, mas obtém-no de `getCurrentUserAndWorkspace()`, que é
-      // `cache()` — a segunda chamada devolve a promise da primeira, sem nova
-      // ida ao Auth. Em série, seria mais uma viagem de rede por navegação.
-      situacaoDoPlanoDaEmpresaAtiva(),
-      // Mesma onda, mesma razão: `count: exact, head: true` devolve o número e
-      // não as 30 linhas. A LISTA não vem aqui — ela é buscada por Server
-      // Action quando o sino abre, porque a maioria das navegações nunca abre.
-      contarNaoLidasDaEmpresaAtiva(),
-    ])
+  ] = await Promise.all([
+    getCurrentUserAndWorkspace(),
+    lerEstadoDoOnboarding(),
+    contarTarefasDoDiaDoUsuario(),
+    // Mesma onda, mesmo motivo: `count: exact, head: true`, o banco devolve
+    // o numero e nao as linhas. Contador que custa uma ida de rede por
+    // navegacao nao vale o que informa.
+    contarConversasEsperandoDoUsuario(),
+    // Entra na MESMA onda pelo mesmo motivo da contagem de tarefas: depende
+    // do `workspaceId`, mas obtém-no de `getCurrentUserAndWorkspace()`, que é
+    // `cache()` — a segunda chamada devolve a promise da primeira, sem nova
+    // ida ao Auth. Em série, seria mais uma viagem de rede por navegação.
+    situacaoDoPlanoDaEmpresaAtiva(),
+    // Mesma onda, mesma razão: `count: exact, head: true` devolve o número e
+    // não as 30 linhas. A LISTA não vem aqui — ela é buscada por Server
+    // Action quando o sino abre, porque a maioria das navegações nunca abre.
+    contarNaoLidasDaEmpresaAtiva(),
+  ])
 
   if (workspaces.length === 0) {
     redirect('/onboarding')
@@ -107,6 +106,11 @@ export default async function DashboardLayout({
       .toUpperCase(),
   }
 
+  const workspacesNaBarra = workspaces.map((workspace) => ({
+    ...workspace,
+    temEnterprise: workspace.id === workspaceId && situacaoDoPlano.temEnterprise,
+  }))
+
   return (
     // O TooltipProvider fica aqui, e não no layout raiz: só a área logada usa
     // tooltip, então a landing não carrega o JS do provider à toa.
@@ -133,7 +137,7 @@ export default async function DashboardLayout({
           // navegacao. Este layout ja e dinamico porque autentica, entao mais
           // um cookie nao custa renderizacao estatica nenhuma.
           recolhidaInicial={(await cookies()).get(COOKIE_DA_BARRA)?.value === '1'}
-          workspaces={workspaces}
+          workspaces={workspacesNaBarra}
           activeWorkspaceId={workspaceId}
           currentUser={currentUser}
           tarefasDoDia={tarefasDoDia}
@@ -152,17 +156,17 @@ export default async function DashboardLayout({
             decisão em vez de depender do cálculo automático do navegador. */}
         <div className="flex min-w-0 flex-1 flex-col overflow-x-hidden overflow-y-auto">
           <Topbar
-            workspaces={workspaces}
+            workspaces={workspacesNaBarra}
             activeWorkspaceId={workspaceId}
             currentUser={currentUser}
             tarefasDoDia={tarefasDoDia}
             conversasEsperando={conversasEsperando}
             avisosNaoLidos={avisosNaoLidos}
             novaEmpresa={novaEmpresa}
-          // O selo do seletor. `situacaoDoPlano` ja veio na onda acima e
-          // consulta `max_vigente`, entao isto nao custa viagem de rede.
-          temMax={situacaoDoPlano.temMax}
-          proVigente={situacaoDoPlano.proVigente}
+            // O selo do seletor. `situacaoDoPlano` ja veio na onda acima e
+            // consulta `max_vigente`, entao isto nao custa viagem de rede.
+            temMax={situacaoDoPlano.temMax}
+            proVigente={situacaoDoPlano.proVigente}
           />
           {/* Entre a barra e o conteúdo: não empurra a navegação para baixo e
               aparece antes de qualquer tela do produto. Só renderiza algo nos
@@ -173,21 +177,21 @@ export default async function DashboardLayout({
             assinaturaAtiva={situacaoDoPlano.temAssinaturaPaga}
           />
           <main id="conteudo" className="flex-1 p-4 md:p-6">
-          {/* Largura máxima no conteúdo, não no `main`: o `main` continua
+            {/* Largura máxima no conteúdo, não no `main`: o `main` continua
               ocupando a tela para o fundo não cortar, e o miolo centraliza.
               1160px é a faixa em que um formulário de duas colunas ainda se lê
               sem o olho atravessar o monitor inteiro.
 
               O Kanban rola na horizontal por conta própria e é a exceção, ele
               passa por cima com `max-w-none`. */}
-          <div className="mx-auto w-full max-w-[1160px]">
-            {/* Invisível: reporta o NOME do componente que quebrou e relança
+            <div className="mx-auto w-full max-w-[1160px]">
+              {/* Invisível: reporta o NOME do componente que quebrou e relança
                 para o `error.tsx` desenhar a tela de sempre. Existe porque o
                 boundary do App Router recebe só `{ error, reset }`, e foi
                 essa lacuna que deixou os dois "React #185" do /kanban sem
                 diagnóstico — stack minificado que não nomeia arquivo nenhum. */}
-            <CapturaDeComponente origem="dashboard">{children}</CapturaDeComponente>
-          </div>
+              <CapturaDeComponente origem="dashboard">{children}</CapturaDeComponente>
+            </div>
           </main>
         </div>
 

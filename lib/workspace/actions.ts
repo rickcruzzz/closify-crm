@@ -266,6 +266,8 @@ export async function removeMember(memberUserId: string) {
 // outra coisa (violação de constraint, erro de cast, nome de tabela) vira
 // mensagem genérica em vez de vazar o texto cru do Postgres pro browser.
 const INVITE_ERRORS = [
+  'Sua conta precisa de um e-mail confirmado para aceitar convites.',
+  'O plano Enterprise inclui até 5 colaboradores além do titular.',
   'Convite inválido ou já utilizado.',
   'Convite expirado.',
   'Este convite foi enviado para outro e-mail.',

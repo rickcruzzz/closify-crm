@@ -248,7 +248,9 @@ export const PRECO_MEDIANA_POR_USUARIO = 60
  * descobre sozinho na primeira conta, e aí a descoberta vem junto da suspeita
  * de que o resto também estava maquiado.
  */
-export const PESSOAS_PARA_COMPENSAR = Math.ceil(PRO_PLAN_PRICE / PRECO_MEDIANA_POR_USUARIO)
+export const PESSOAS_PARA_COMPENSAR = Math.ceil(
+  PRO_PLAN_PRICE / PRECO_MEDIANA_POR_USUARIO,
+)
 
 /** Quando os preços acima foram conferidos. Aparece na landing. */
 export const PRECOS_CONFERIDOS_EM = '31/08/2026'
@@ -445,8 +447,8 @@ export function ehLimiteDePlano(mensagem: string | null | undefined): boolean {
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '')
     .toLowerCase()
-  return (
-    /faca upgrade|upgrade para o pro|recurso pro|plano free (permite|inclui|acompanha)/.test(limpo)
+  return /faca upgrade|upgrade para o pro|recurso pro|plano free (permite|inclui|acompanha)/.test(
+    limpo,
   )
 }
 
@@ -463,7 +465,8 @@ export function ehLimiteDePlano(mensagem: string | null | undefined): boolean {
  */
 export const PLANO_NA_TELA = { free: 'Free', pro: 'Pro', max: 'Max' } as const
 
-export type PlanoNaTela = (typeof PLANO_NA_TELA)[keyof typeof PLANO_NA_TELA]
+export type PlanoNaTela =
+  (typeof PLANO_NA_TELA)[keyof typeof PLANO_NA_TELA] | 'Enterprise'
 
 /**
  * Como chamar o plano desta empresa na tela.
@@ -511,7 +514,9 @@ export function rotuloDoPlano(
    * disponível, e ela só erra para menos.
    */
   proVigente?: boolean,
+  temEnterprise = false,
 ): PlanoNaTela {
+  if (temEnterprise) return 'Enterprise'
   return PLANO_NA_TELA[planoEfetivo({ plan, temMax, proVigente })]
 }
 

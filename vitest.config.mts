@@ -19,6 +19,7 @@ const raizDoProjeto = import.meta.dirname
  * que é outro escopo.
  */
 export default defineConfig({
+  oxc: { jsx: { runtime: 'automatic' } },
   test: {
     environment: 'node',
     include: ['lib/**/*.test.ts'],
