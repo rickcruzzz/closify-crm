@@ -148,6 +148,7 @@ export default async function ConversasPage({
 
       {conectado && (
         <ConversasClient
+          workspaceId={workspaceId}
           conversas={conversas}
           conversaAberta={aberta ? c! : null}
           mensagens={aberta?.mensagens ?? []}

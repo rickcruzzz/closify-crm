@@ -134,12 +134,14 @@ export function ConversasClient({
   mensagens,
   usuarioId,
   nomesPorUsuario,
+  workspaceId,
 }: {
   conversas: ConversaNaLista[]
   conversaAberta: string | null
   mensagens: MensagemNaTela[]
   usuarioId: string
   nomesPorUsuario: Record<string, string>
+  workspaceId: string
 }) {
   const router = useRouter()
 
@@ -228,6 +230,8 @@ export function ConversasClient({
       <section className={cn('bg-card flex flex-1 flex-col', !aberta && 'hidden md:flex')}>
         {aberta ? (
           <Conversa
+            key={`${workspaceId}:${aberta.id}:${aberta.leadId}:${aberta.telefone}`}
+            workspaceId={workspaceId}
             conversa={aberta}
             mensagens={mensagens}
             agora={agora}
@@ -636,12 +640,14 @@ function quemEstaRespondendo(
 
 function Conversa({
   conversa,
+  workspaceId,
   mensagens,
   agora,
   onVoltar,
   onAbrirDetalhe,
 }: {
   conversa: ConversaNaLista
+  workspaceId: string
   mensagens: MensagemNaTela[]
   agora: Date | null
   onVoltar: () => void
@@ -663,7 +669,9 @@ function Conversa({
 
     setEnviando(true)
     try {
-      const r = await enviarMensagem(conversa.id, limpo)
+      const r = await enviarMensagem(conversa.id, limpo, {
+        workspaceId, leadId: conversa.leadId, telefone: conversa.telefone ?? '',
+      })
       if ('error' in r) {
         toast.error(r.error)
         router.refresh()
@@ -720,6 +728,7 @@ function Conversa({
 
         <div className="min-w-0 flex-1">
           <p className="truncate text-sm font-medium">{conversa.nome}</p>
+          <p className="text-muted-foreground text-xs">{conversa.telefone ?? 'Telefone não cadastrado'}</p>
           {minutos !== null && (
             <p
               className={cn(

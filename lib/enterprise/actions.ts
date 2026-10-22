@@ -81,6 +81,7 @@ async function espacosAtivos(contexto: Contexto) {
 async function vincularContato(
   contexto: Contexto,
   eventoId: string,
+  destinoEsperado?: { workspaceId: string; telefone: string },
 ): Promise<{ ok: true; leadId: string; criado: boolean; telefone: string } | { ok: false; erro: string; semContato?: true }> {
   const { data: evento, error } = await contexto.supabase
     .from('enterprise_eventos')
@@ -91,6 +92,14 @@ async function vincularContato(
     .eq('workspace_id', contexto.workspaceId)
     .single()
   if (error || !evento) return { ok: false, erro: 'Evento não encontrado nesta empresa.' }
+  if (destinoEsperado !== undefined && (
+    !destinoEsperado || destinoEsperado.workspaceId !== contexto.workspaceId ||
+    typeof destinoEsperado.telefone !== 'string' ||
+    !normalizarTelefoneBrasileiro(destinoEsperado.telefone) ||
+    normalizarTelefoneBrasileiro(destinoEsperado.telefone) !== normalizarTelefoneBrasileiro(evento.contato_telefone)
+  )) {
+    return { ok: false, erro: 'O destinatário mudou desde que esta página foi aberta. Atualize o Radar e confira o telefone antes de continuar.' }
+  }
   if (!contatoDoEventoCompleto(evento)) {
     return { ok: false, erro: 'Confirme e-mail e telefone válidos antes de incluir esta oportunidade no CRM.', semContato: true }
   }
@@ -618,10 +627,11 @@ async function conversaDoContato(
 
 export async function abrirConversaDoEvento(
   eventoId: string,
+  destinoEsperado?: { workspaceId: string; telefone: string },
 ): Promise<{ ok: true; conversaId: string } | { ok: false; erro: string }> {
   const contexto = await contextoEnterprise()
   if (!contexto) return { ok: false, erro: SEM_ACESSO }
-  const contato = await vincularContato(contexto, eventoId)
+  const contato = await vincularContato(contexto, eventoId, destinoEsperado)
   if (!contato.ok) return { ok: false, erro: contato.erro }
   const conversa = await conversaDoContato(contexto, contato.leadId, contato.telefone)
   if (conversa.ok) revalidatePath('/conversas')
@@ -641,6 +651,7 @@ export async function abrirConversaDoEvento(
  */
 export async function enviarMensagemDoEvento(
   eventoId: string,
+  destinoEsperado?: { workspaceId: string; telefone: string },
 ): Promise<{ ok: true; conversaId: string } | { ok: false; erro: string }> {
   const contexto = await contextoEnterprise()
   if (!contexto) return { ok: false, erro: SEM_ACESSO }
@@ -655,7 +666,7 @@ export async function enviarMensagemDoEvento(
   const texto = evento.mensagem_aprovada?.trim()
   if (!texto || !evento.aprovada_em) return { ok: false, erro: 'Aprove a mensagem antes de enviar.' }
 
-  const contato = await vincularContato(contexto, evento.id)
+  const contato = await vincularContato(contexto, evento.id, destinoEsperado)
   if (!contato.ok) return { ok: false, erro: contato.erro }
   const conversa = await conversaDoContato(contexto, contato.leadId, contato.telefone)
   if (!conversa.ok) return conversa

@@ -50,6 +50,20 @@ beforeEach(() => {
   } })
 })
 describe('Radar abre e envia para o contato conferido', () => {
+  it.each([
+    { workspaceId: empresa, telefone: '5571988887777' },
+    { workspaceId: 'outra-empresa', telefone: '5571999991234' },
+  ])('recusa o destino alterado desde a renderização do cartão: %j', async destino => {
+    const r = await enviarMensagemDoEvento('evento', destino)
+    expect(r.ok).toBe(false)
+    if (!r.ok) expect(r.erro).toContain('destinatário mudou')
+    expect(m.enviar).not.toHaveBeenCalled()
+    expect(escritas).toEqual([])
+    expect((await abrirConversaDoEvento('evento', destino)).ok).toBe(false)
+  })
+  it('aceita o destino exibido no cartão sem trocar de contato', async () => {
+    expect(await abrirConversaDoEvento('evento', { workspaceId: empresa, telefone: '(71) 99999-1234' })).toEqual({ ok: true, conversaId })
+  })
   it('abre exatamente a conversa do contato, sem enviar mensagem', async () => {
     expect(await abrirConversaDoEvento('evento')).toEqual({ ok: true, conversaId })
     expect(m.enviar).not.toHaveBeenCalled()

@@ -49,10 +49,11 @@ function CartaoDoEvento({ evento }: { evento: Evento }) {
   const aprovada = !!evento.mensagem_aprovada && !!evento.aprovada_em && mensagem === evento.mensagem_aprovada
   const temContato = !!(evento.contato_email?.trim() || evento.contato_telefone?.trim())
   const temWhatsapp = normalizarTelefoneBrasileiro(evento.contato_telefone) !== null
+  const destinoEsperado = { workspaceId: evento.workspace_id, telefone: evento.contato_telefone ?? '' }
 
   function abrirConversa() {
     iniciar(async () => {
-      const resultado = await semRejeicao(() => abrirConversaDoEvento(evento.id))
+      const resultado = await semRejeicao(() => abrirConversaDoEvento(evento.id, destinoEsperado))
       if (!resultado) return
       if (!resultado.ok) {
         toast.error(resultado.erro)
@@ -64,7 +65,7 @@ function CartaoDoEvento({ evento }: { evento: Evento }) {
 
   function enviar() {
     iniciar(async () => {
-      const resultado = await semRejeicao(() => enviarMensagemDoEvento(evento.id))
+      const resultado = await semRejeicao(() => enviarMensagemDoEvento(evento.id, destinoEsperado))
       if (!resultado) return
       if (!resultado.ok) {
         toast.error(resultado.erro)
@@ -171,6 +172,9 @@ function CartaoDoEvento({ evento }: { evento: Evento }) {
       )}
 
       <div className="border-border mt-5 border-t pt-5">
+        <p className="text-muted-foreground mb-3 text-sm">
+          Destinatário: {evento.contato_nome || evento.organizador || 'Organização do evento'} · {evento.contato_telefone}
+        </p>
         <label htmlFor={`mensagem-${evento.id}`} className="mb-2 block text-sm font-semibold">
           Primeira mensagem para revisão
         </label>
