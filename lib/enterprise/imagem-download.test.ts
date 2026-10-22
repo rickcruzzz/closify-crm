@@ -4,6 +4,7 @@ import { lookup } from 'node:dns/promises'
 import { get } from 'node:https'
 import type { IncomingMessage } from 'node:http'
 import type { LookupFunction } from 'node:net'
+import { randomBytes } from 'node:crypto'
 import { baixarImagemPublica } from './imagem'
 
 vi.mock('node:dns/promises', () => ({ lookup: vi.fn() }))
@@ -59,6 +60,15 @@ describe('download de imagem pública', () => {
   it('recusa HTML disfarçado de imagem', async () => {
     conteudo = Buffer.from('<html>não é uma imagem</html>')
     await expect(baixarImagemPublica('https://fonte.example/i')).rejects.toThrow('Formato não aceito')
+  })
+  it('reduz uma imagem real grande para caber no bucket, apenas quando solicitado', async () => {
+    const { default: sharp } = await import('sharp')
+    conteudo = await sharp(randomBytes(600 * 600 * 3), { raw: { width: 600, height: 600, channels: 3 } }).png().toBuffer()
+    expect(conteudo.length).toBeGreaterThan(512 * 1024)
+    const imagem = await baixarImagemPublica('https://fonte.example/foto.png', { reduzir: true })
+    expect(imagem.tipoMime).toBe('image/webp')
+    expect(imagem.bytes.length).toBeLessThanOrEqual(512 * 1024)
+    expect((await sharp(imagem.bytes).metadata()).width).toBeLessThanOrEqual(800)
   })
   it('recusa HTTP e credenciais embutidas antes da rede', async () => {
     await expect(baixarImagemPublica('http://fonte.example/i')).rejects.toThrow('inválida')

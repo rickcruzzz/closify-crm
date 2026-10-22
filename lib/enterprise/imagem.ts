@@ -15,13 +15,14 @@ export function enderecoPublico(ip: string): boolean {
 }
 
 /** Sem redirecionamentos ou rede local. A imagem também é validada pelos bytes. */
-export async function baixarImagemPublica(link: string) {
+export async function baixarImagemPublica(link: string, opcoes: { reduzir?: boolean } = {}) {
   const url = new URL(link)
   if (url.protocol !== 'https:' || url.username || url.password || (url.port && url.port !== '443')) throw new Error('URL de imagem inválida.')
   const host = url.hostname.replace(/^\[|\]$/g, '')
   const enderecos = isIP(host) ? [{ address: host }] : await lookup(host, { all: true })
   if (!enderecos.length || enderecos.some((entry) => !enderecoPublico(entry.address))) throw new Error('Imagem em endereço não público.')
-  const limite = 512 * 1024 // Limite do bucket privado avatares.
+  const limite = opcoes.reduzir ? 2 * 1024 * 1024 : 512 * 1024
+  const erroDeTamanho = opcoes.reduzir ? 'Imagem acima de 2 MB.' : 'Imagem acima de 512 KB.'
   const endereco = enderecos.find((entry) => isIP(entry.address) === 4) ?? enderecos[0]!
   const bytes = await new Promise<Buffer>((resolve, reject) => {
     const request = get(url, {
@@ -39,12 +40,12 @@ export async function baixarImagemPublica(link: string) {
         recusar(`Imagem indisponível: ${response.statusCode}.`)
         return
       }
-      if (Number(response.headers['content-length']) > limite) { recusar('Imagem acima de 512 KB.'); return }
+      if (Number(response.headers['content-length']) > limite) { recusar(erroDeTamanho); return }
       const partes: Buffer[] = []
       let tamanho = 0
       response.on('data', (parte: Buffer) => {
         tamanho += parte.length
-        if (tamanho > limite) { recusar('Imagem acima de 512 KB.'); return }
+        if (tamanho > limite) { recusar(erroDeTamanho); return }
         partes.push(parte)
       })
       response.on('error', reject)
@@ -54,5 +55,13 @@ export async function baixarImagemPublica(link: string) {
   })
   const formato = validarLogo(bytes)
   if ('erro' in formato) throw new Error(formato.erro)
+  if (opcoes.reduzir && bytes.length > 512 * 1024) {
+    const { default: sharp } = await import('sharp')
+    const reduzida = await sharp(bytes, { limitInputPixels: 16_000_000 })
+      .rotate().resize({ width: 800, height: 800, fit: 'inside', withoutEnlargement: true })
+      .webp({ quality: 80 }).toBuffer()
+    if (reduzida.length > 512 * 1024) throw new Error('Imagem reduzida acima de 512 KB.')
+    return { bytes: reduzida, formato: 'webp' as const, tipoMime: 'image/webp', extensao: 'webp' }
+  }
   return { bytes, ...formato }
 }

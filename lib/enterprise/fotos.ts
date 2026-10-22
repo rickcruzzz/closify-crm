@@ -36,7 +36,7 @@ export async function rodarFotosDasEmpresas() {
   let ultimaFalha: unknown
   for (const url of imagens) {
     try {
-      const imagem = await baixarImagemPublica(url)
+      const imagem = await baixarImagemPublica(url, { reduzir: true })
       const caminho = `${evento.workspace_id}/empresas/${evento.id}.${imagem.extensao}`
       const { error: erroUpload } = await banco.storage.from(BUCKET_DE_AVATARES)
         .upload(caminho, imagem.bytes, { contentType: imagem.tipoMime, upsert: true })
