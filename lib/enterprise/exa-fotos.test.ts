@@ -21,6 +21,13 @@ describe('imagens da fonte via Exa', () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(JSON.stringify({ statuses: [{ status: 'error' }] }))))
     await expect(imagensDaFonte('https://fonte.example/evento')).rejects.toThrow('não conseguiu')
   })
+  it('ignora links HTML ou SVG quando a fonte também oferece PNG compatível', async () => {
+    vi.stubEnv('EXA_API_KEY', 'chave-exclusiva-do-teste')
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(JSON.stringify({
+      results: [{ image: 'https://fonte.example/marca.svg', extras: { imageLinks: ['https://fonte.example/inscricao/', 'https://fonte.example/banner.png'] } }],
+    }))))
+    await expect(imagensDaFonte('https://fonte.example/evento')).resolves.toEqual(['https://fonte.example/banner.png'])
+  })
   it('não inventa imagem quando a fonte não tem nenhuma', async () => {
     vi.stubEnv('EXA_API_KEY', 'chave-exclusiva-do-teste')
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(JSON.stringify({ results: [{}] }))))

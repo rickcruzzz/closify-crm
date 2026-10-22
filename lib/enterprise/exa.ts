@@ -99,9 +99,15 @@ export async function imagensDaFonte(url: string): Promise<string[]> {
   }>('contents', { urls: [url], highlights: true, extras: { imageLinks: 5 } }, 4_000)
   if (r.statuses?.some((s) => s.status === 'error')) throw new Error('Exa não conseguiu ler a fonte da imagem.')
   const pagina = r.results?.[0]
-  return Array.from(new Set([pagina?.image, ...(pagina?.extras?.imageLinks ?? [])]))
+  const candidatas = Array.from(new Set([pagina?.image, ...(pagina?.extras?.imageLinks ?? [])]))
     .filter((value): value is string => typeof value === 'string' && value.startsWith('https://'))
-    .slice(0, 1)
+    .filter((value) => !/\.(svg|gif|avif|ico)(?:[?#]|$)/i.test(value))
+  // imageLinks pode conter links HTML antes das imagens. Preserve a imagem
+  // principal da fonte; sem ela, prefira um arquivo raster explícito.
+  const imagem = (pagina?.image && candidatas.includes(pagina.image) ? pagina.image : null)
+    ?? candidatas.find((value) => /\.(png|jpe?g|webp)(?:[?#]|$)/i.test(value))
+    ?? candidatas[0]
+  return imagem ? [imagem] : []
 }
 
 /** Uma página: o resumo estruturado e o texto, para achar o contato escrito. */
