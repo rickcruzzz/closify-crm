@@ -132,10 +132,20 @@ function clientToken(): string {
 
 async function chamar<T>(
   caminho: string,
-  opcoes: { method?: string; body?: unknown; headers?: Record<string, string> } = {},
+  opcoes: {
+    method?: string
+    body?: unknown
+    headers?: Record<string, string>
+    /**
+     * Teto menor que o padrão, para quem encadeia várias chamadas numa função
+     * só. Ver `TIMEOUT_DA_ADOCAO_MS`: 8s por ida cabem numa rota de webhook, e
+     * NÃO cabem duas vezes na função de ~10s da Netlify.
+     */
+    timeoutMs?: number
+  } = {},
 ): Promise<T> {
   const controlador = new AbortController()
-  const relogio = setTimeout(() => controlador.abort(), TIMEOUT_MS)
+  const relogio = setTimeout(() => controlador.abort(), opcoes.timeoutMs ?? TIMEOUT_MS)
 
   try {
     const resposta = await fetch(`${BASE}${caminho}`, {
@@ -446,12 +456,18 @@ export async function fotoDePerfil(
   return linkDeFotoValido(r.link) ? r.link : null
 }
 
-export async function statusDaInstancia(instancia: Instancia): Promise<StatusDaInstancia> {
+export async function statusDaInstancia(
+  instancia: Instancia,
+  opcoes: { timeoutMs?: number } = {},
+): Promise<StatusDaInstancia> {
   const r = await chamar<{
     connected?: boolean
     smartphoneConnected?: boolean
     error?: string
-  }>(comInstancia(instancia, 'status'), { headers: { 'Client-Token': clientToken() } })
+  }>(comInstancia(instancia, 'status'), {
+    headers: { 'Client-Token': clientToken() },
+    timeoutMs: opcoes.timeoutMs,
+  })
 
   return {
     connected: r.connected === true,
@@ -554,6 +570,7 @@ export async function enviarTexto(
 export async function tentarConfigurarWebhooks(
   instancia: Instancia,
   urls: { recebida: string; status: string; desconexao: string },
+  opcoes: { timeoutMs?: number } = {},
 ): Promise<{ confirmado: boolean; motivo?: string }> {
   const alvos = [
     { caminho: 'update-webhook-received', url: urls.recebida },
@@ -577,12 +594,18 @@ export async function tentarConfigurarWebhooks(
     { caminho: 'update-webhook-disconnected', url: urls.desconexao },
   ] as const
 
+  // `async` na seta, e não só estética: `clientToken()` LANÇA de forma síncrona
+  // quando a variável falta, e um lançamento síncrono dentro do `map` escapa do
+  // `allSettled` e derruba quem chamou. Aqui quem chamou já gravou a instância
+  // (`adotarInstancia`), e a promessa desta função é devolver `confirmado:
+  // false`, nunca lançar.
   const resultados = await Promise.allSettled(
-    alvos.map((alvo) =>
+    alvos.map(async (alvo) =>
       chamar(comInstancia(instancia, alvo.caminho), {
         method: 'PUT',
         headers: { 'Client-Token': clientToken() },
         body: { value: alvo.url },
+        timeoutMs: opcoes.timeoutMs,
       }),
     ),
   )

@@ -29,6 +29,7 @@ import {
 } from '@/lib/whatsapp/zapi'
 import { provisionamentoAutomatico } from '@/lib/whatsapp/zapi'
 import { puxarDaReserva } from '@/lib/whatsapp/reserva'
+import { TIMEOUT_DA_ADOCAO_MS, estourouOTempo } from '@/lib/whatsapp/adocao'
 import { getResend } from '@/lib/resend/client'
 import { EMAIL_DE_AVISO_DO_DONO } from '@/lib/emails/destinatario'
 import { renderPedidoDeConexaoEmail } from '@/lib/emails/pedido-de-conexao'
@@ -310,13 +311,18 @@ export async function adotarInstancia(valores: unknown): Promise<RespostaDaAdoca
   // O mesmo gate do caminho automático: a trigger da 0090 recusaria de qualquer
   // jeito, e chegar até ela gastaria uma chamada ao provedor por uma escrita
   // que já ia ser negada.
-  const assinatura = await situacaoDoMax(sessao.workspaceId)
+  // As duas leituras na mesma onda: nenhuma depende da outra, e esta função
+  // corre contra o teto de ~10s da Netlify (ver `TIMEOUT_DA_ADOCAO_MS`). Cada
+  // ida em série ao Supabase é tempo tirado das chamadas à Z-API.
+  const [assinatura, jaExiste] = await Promise.all([
+    situacaoDoMax(sessao.workspaceId),
+    conexaoDaEmpresa(sessao.workspaceId),
+  ])
   const direito = direitoAoWhatsapp(assinatura, 'ausente')
   if (!direito.pode && direito.tipo !== 'sem_conexao') {
     return { ok: false, error: direito.motivo }
   }
 
-  const jaExiste = await conexaoDaEmpresa(sessao.workspaceId)
   if (jaExiste.estado !== 'ausente') {
     return {
       ok: false,
@@ -326,9 +332,24 @@ export async function adotarInstancia(valores: unknown): Promise<RespostaDaAdoca
 
   const instancia = { instanceId: lido.data.instanceId, token: lido.data.token }
 
+  // ## Teto CURTO aqui, e é o defeito de 22/10
+  //
+  // Com os 8s padrão de `zapi.ts`, status + webhooks podiam somar 16s, e a
+  // Netlify mata a função em ~10s: o navegador recebia uma rejeição no lugar
+  // da resposta, e o botão "Adotar instância" girava para sempre. Ver
+  // `TIMEOUT_DA_ADOCAO_MS` para a conta.
   try {
-    await statusDaInstancia(instancia)
+    await statusDaInstancia(instancia, { timeoutMs: TIMEOUT_DA_ADOCAO_MS })
   } catch (erro) {
+    if (estourouOTempo(erro)) {
+      // Tempo NÃO é recusa. Dizer "não reconheceu" mandaria quem colou as
+      // credenciais certas conferir o painel por nada.
+      console.error('adotarInstancia: provedor nao respondeu a tempo', erro)
+      return {
+        ok: false,
+        error: 'A Z-API demorou demais para responder. Tente de novo em instantes.',
+      }
+    }
     console.error('adotarInstancia: credenciais recusadas pelo provedor', erro)
     return {
       ok: false,
@@ -350,7 +371,17 @@ export async function adotarInstancia(valores: unknown): Promise<RespostaDaAdoca
   // Depois de gravar, e não antes: aqui a instância NÃO foi criada por nós, e
   // falhar a configuração não deixa nada órfão faturando. O risco que sobra é o
   // oposto — webhook não apontado —, e ele é devolvido para a tela dizer.
-  const webhooks = await tentarConfigurarWebhooks(instancia, urls)
+  //
+  // Os quatro `PUT` já saem em paralelo, então o teto vale uma vez só. E o que
+  // estourar volta como `confirmado: false` com as URLs para colar, nunca como
+  // exceção: a linha JÁ foi gravada, e derrubar a resposta agora deixaria a
+  // empresa com conexão no banco e a tela dizendo que nada aconteceu.
+  const webhooks = await tentarConfigurarWebhooks(instancia, urls, {
+    timeoutMs: TIMEOUT_DA_ADOCAO_MS,
+  }).catch((erro: unknown) => {
+    console.error('adotarInstancia: webhooks nao configurados', erro)
+    return { confirmado: false }
+  })
 
   revalidar()
   return {

@@ -32,6 +32,7 @@ import { LIMITES_MAX, RECURSOS_MAX } from '@/components/settings/max-card'
 import { PreviaDoWhatsapp } from '@/components/settings/previa-do-whatsapp'
 import { SubscribeButton } from '@/components/settings/subscribe-button'
 import type { EstadoDaConexao, MotivoDoBloqueio } from '@/lib/plans/max'
+import { deveConfirmarNumero } from '@/lib/whatsapp/adocao'
 import { MAX_PLAN_PRICE, PLANO_NA_TELA, PRO_PLAN_PRICE } from '@/lib/plans'
 
 /**
@@ -151,15 +152,30 @@ export function WhatsappConexao({
   //
   // Uma ida, só no estado exato que produz isso, e a Server Action confere de
   // novo no servidor antes de gastar a chamada.
+  //
+  // ## E UMA por estado, lembrada aqui, e não confiada ao servidor
+  //
+  // Sem `tentouNoEstado`, um telefone que a Action devolve e que não chega à
+  // prop depois do refresh (gravação que falhou em silêncio, cache) faria o
+  // efeito ver o mesmo `conectado` + `null` e recomeçar: Server Action, refresh,
+  // Server Action, sem fim. A ref sobrevive ao refresh, porque o refresh não
+  // remonta o componente. Ver `deveConfirmarNumero`.
+  //
+  // Sem o `vivo` de cancelamento de propósito: com a ref marcada na primeira
+  // passada, o duplo efeito do Strict Mode cancelaria a única ida que existe, e
+  // um `refresh` depois de desmontar não faz mal nenhum.
+  const tentouNoEstado = React.useRef<EstadoDaConexao | null>(null)
   React.useEffect(() => {
-    if (estado !== 'conectado' || telefone) return
-    let vivo = true
-    void confirmarNumeroConectado().then((r) => {
-      if (vivo && r.telefone) router.refresh()
-    })
-    return () => {
-      vivo = false
+    if (!deveConfirmarNumero({ estado, telefone, jaTentou: tentouNoEstado.current === estado })) {
+      return
     }
+    tentouNoEstado.current = estado
+    confirmarNumeroConectado()
+      .then((r) => {
+        if (r.telefone) router.refresh()
+      })
+      // Falhar aqui é rótulo faltando, não conexão caída: nada vai para a tela.
+      .catch(() => {})
   }, [estado, telefone, router])
 
   // O teto, separado do laço de propósito: misturar os dois faria o
@@ -509,14 +525,34 @@ function FormularioDeAdocao({
 }: {
   onAdotado: (urls: string[], confirmados: boolean) => void
 }) {
+  const router = useRouter()
   const [instanceId, setInstanceId] = React.useState('')
   const [token, setToken] = React.useState('')
   const [enviando, setEnviando] = React.useState(false)
 
   async function enviar() {
     setEnviando(true)
-    const r = await adotarInstancia({ instanceId, token })
-    setEnviando(false)
+    // ## `finally`, e é o defeito de 22/10
+    //
+    // A Server Action pode REJEITAR em vez de devolver `{ ok: false }`: função
+    // morta pelo teto da Netlify, 502, rede caída. Sem o `finally`, o
+    // `setEnviando(false)` nunca rodava e o botão girava para sempre, sem toast
+    // — foi exatamente o que a produção mostrou.
+    let r: Awaited<ReturnType<typeof adotarInstancia>>
+    try {
+      r = await adotarInstancia({ instanceId, token })
+    } catch {
+      toast.error(
+        'A conexão com o servidor caiu antes da resposta. Confira esta tela: a instância pode ter sido adotada mesmo assim.',
+      )
+      // A rejeição pode ter vindo DEPOIS do `insert`. Refrescar mostra a
+      // verdade do banco em vez de deixar o formulário oferecendo uma segunda
+      // adoção que a Action recusaria.
+      router.refresh()
+      return
+    } finally {
+      setEnviando(false)
+    }
 
     if (!r.ok) {
       toast.error(r.error)
