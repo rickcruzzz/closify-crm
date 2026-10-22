@@ -39,8 +39,9 @@ await testar('Tabela de empresas', `${url.origin}/rest/v1/workspaces?select=id&l
   apikey: chaveServico,
   Authorization: `Bearer ${chaveServico}`,
 })
-if (process.env.SUPABASE_ACCESS_TOKEN) {
+const tokenGerenciamento = process.env.CLIENTE_SUPABASE_ACCESS_TOKEN
+if (tokenGerenciamento) {
   await testar('Acesso de gerenciamento existente', `https://api.supabase.com/v1/projects/${ref}`, {
-    Authorization: `Bearer ${process.env.SUPABASE_ACCESS_TOKEN}`,
+    Authorization: `Bearer ${tokenGerenciamento}`,
   })
 }

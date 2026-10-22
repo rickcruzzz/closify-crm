@@ -1,4 +1,8 @@
-import { CtaDoPlano } from '@/components/landing/cta-do-plano'
+import Link from 'next/link'
+import { ArrowRight } from 'lucide-react'
+
+import { buttonVariants } from '@/components/ui/button'
+import { cn } from '@/lib/utils'
 import { RevealOnScroll } from '@/components/landing/reveal-on-scroll'
 
 export function CtaSection() {
@@ -32,10 +36,20 @@ export function CtaSection() {
             Sua carteira de clientes cabe num lugar só.
           </h2>
           <p className="text-muted-foreground max-w-xl text-lg">
-            Converse com a gente sobre a melhor forma de organizar seus contatos e
-            acompanhar cada oportunidade.
+            Crie a conta da sua empresa, de graça, em menos de um minuto, e veja com
+            quem você precisa falar hoje.
           </p>
-          <CtaDoPlano plano="Pro" className="min-h-11" />
+          <Link
+            id="final-cta"
+            href="/cadastro"
+            className={cn(
+              buttonVariants({ size: 'lg' }),
+              'pointer:hover:scale-105 min-h-11 gap-2 transition-transform duration-300',
+            )}
+          >
+            Começar grátis
+            <ArrowRight className="size-4" />
+          </Link>
         </div>
       </RevealOnScroll>
     </section>

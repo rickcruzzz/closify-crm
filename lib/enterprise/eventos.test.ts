@@ -13,11 +13,12 @@ describe('prioridade de eventos', () => {
       organizador: 'Associação comercial',
       contato_email: 'contato@exemplo.com',
       publico_estimado: 2000,
-    }, agora)
+    }, agora, [{ nome: 'Ponto Salvador', cidade: 'Salvador', regiao: 'Boca do Rio' }])
     expect(resultado.prioridade).toBe(100)
     expect(resultado.justificativa).toContain('Organizador identificado')
     expect(resultado.justificativa).toContain('Canal direto')
     expect(resultado.justificativa).not.toMatch(/chance|fechamento/i)
+    expect(resultado.informacoes_faltantes).toContain('Perfil do público para adequar a campanha')
   })
 
   it('não prioriza como futuro um evento passado sem contato', () => {
@@ -27,8 +28,10 @@ describe('prioridade de eventos', () => {
       cidade: 'Salvador',
       fonte_url: 'https://exemplo.com/simposio',
     }, agora)
-    expect(resultado.prioridade).toBe(20)
+    expect(resultado.prioridade).toBe(15)
     expect(resultado.justificativa).toContain('já passou')
     expect(resultado.justificativa).toContain('falta confirmar')
+    expect(resultado.informacoes_faltantes).toContain('Pontos de outdoor e formatos realmente disponíveis')
+    expect(resultado.compatibilidade_espacos).toContain('não pode ser confirmada')
   })
 })

@@ -5,7 +5,7 @@ import Link from 'next/link'
 import { ArrowUpRight, CalendarDays, Loader2, Radar, Sparkles } from 'lucide-react'
 import { toast } from 'sonner'
 
-import { criarEvento, gerarMensagemDoEvento, salvarMensagemDoEvento } from '@/lib/enterprise/actions'
+import { aprovarMensagemDoEvento, criarEvento, gerarMensagemDoEvento, importarPesquisaSalvador, salvarMensagemDoEvento } from '@/lib/enterprise/actions'
 import type { DadosDoEvento } from '@/lib/enterprise/eventos'
 import type { Database } from '@/types/supabase'
 
@@ -18,7 +18,8 @@ function CartaoDoEvento({ evento }: { evento: Evento }) {
   const [mensagem, setMensagem] = useState(evento.mensagem_rascunho ?? '')
   const [ocupado, iniciar] = useTransition()
   const numero = (evento.contato_telefone ?? '').replace(/\D/g, '')
-  const podeAbrirWhatsapp = numero.length >= 10 && mensagem === evento.mensagem_rascunho && !!mensagem
+  const aprovada = !!evento.mensagem_aprovada && !!evento.aprovada_em && mensagem === evento.mensagem_aprovada
+  const podeAbrirWhatsapp = numero.length >= 10 && aprovada
 
   function gerar() {
     iniciar(async () => {
@@ -40,6 +41,18 @@ function CartaoDoEvento({ evento }: { evento: Evento }) {
         return
       }
       toast.success('Mensagem salva para revisão.')
+      window.location.reload()
+    })
+  }
+
+  function aprovar() {
+    iniciar(async () => {
+      const resultado = await aprovarMensagemDoEvento(evento.id)
+      if (!resultado.ok) {
+        toast.error(resultado.erro)
+        return
+      }
+      toast.success('Mensagem aprovada e contato vinculado ao CRM. O envio continua sob seu controle.')
       window.location.reload()
     })
   }
@@ -66,9 +79,16 @@ function CartaoDoEvento({ evento }: { evento: Evento }) {
       <p className="text-muted-foreground mt-4 text-sm leading-relaxed">
         {evento.justificativa ?? 'Análise ainda não disponível.'}
       </p>
+      {evento.compatibilidade_espacos && <p className="text-muted-foreground mt-2 text-sm">{evento.compatibilidade_espacos}</p>}
+      {evento.informacoes_faltantes.length > 0 && (
+        <p className="text-muted-foreground mt-2 text-sm"><strong>Falta confirmar:</strong> {evento.informacoes_faltantes.join('; ')}.</p>
+      )}
       <a href={evento.fonte_url} target="_blank" rel="noopener noreferrer" className="text-primary mt-3 inline-flex items-center gap-1 text-sm font-medium hover:underline">
         Conferir fonte pública <ArrowUpRight className="size-4" />
       </a>
+      {evento.fonte_contato_url && evento.fonte_contato_url !== evento.fonte_url && (
+        <a href={evento.fonte_contato_url} target="_blank" rel="noopener noreferrer" className="text-primary ml-4 inline-flex items-center gap-1 text-sm font-medium hover:underline">Conferir contato <ArrowUpRight className="size-4" /></a>
+      )}
 
       <div className="border-border mt-5 border-t pt-5">
         <label htmlFor={`mensagem-${evento.id}`} className="mb-2 block text-sm font-semibold">
@@ -90,6 +110,9 @@ function CartaoDoEvento({ evento }: { evento: Evento }) {
           <button type="button" className={`${botao} border-border border hover:bg-muted`} onClick={salvar} disabled={ocupado || !mensagem.trim() || mensagem === evento.mensagem_rascunho}>
             Salvar revisão
           </button>
+          <button type="button" className={`${botao} border-border border hover:bg-muted`} onClick={aprovar} disabled={ocupado || !mensagem.trim() || mensagem !== evento.mensagem_rascunho || aprovada}>
+            {aprovada ? 'Mensagem aprovada' : 'Aprovar mensagem'}
+          </button>
           {podeAbrirWhatsapp && (
             <a
               href={`https://wa.me/${numero}?text=${encodeURIComponent(mensagem)}`}
@@ -100,12 +123,11 @@ function CartaoDoEvento({ evento }: { evento: Evento }) {
               Abrir no WhatsApp <ArrowUpRight className="size-4" />
             </a>
           )}
-          <Link href="/conversas" className={`${botao} border-border border hover:bg-muted`}>
-            Conversas do CRM
-          </Link>
+          {evento.lead_id && <Link href={`/leads/${evento.lead_id}`} className={`${botao} border-border border hover:bg-muted`}>Abrir contato no CRM</Link>}
+          <Link href="/conversas" className={`${botao} border-border border hover:bg-muted`}>Conversas do CRM</Link>
         </div>
         <p className="text-muted-foreground mt-2 text-xs">
-          O texto só é enviado depois da sua revisão e confirmação no WhatsApp.
+          Aprovar vincula a oportunidade ao contato do CRM. O texto só é enviado por você no canal escolhido.
         </p>
       </div>
     </article>
@@ -115,6 +137,18 @@ function CartaoDoEvento({ evento }: { evento: Evento }) {
 export function PainelDeEventos({ eventos, erro }: { eventos: Evento[]; erro: string | null }) {
   const [mostrandoFormulario, setMostrandoFormulario] = useState(false)
   const [ocupado, iniciar] = useTransition()
+
+  function importar() {
+    iniciar(async () => {
+      const resultado = await importarPesquisaSalvador()
+      if (!resultado.ok) {
+        toast.error(resultado.erro)
+        return
+      }
+      toast.success(`${resultado.adicionados ?? 0} oportunidade(s) de Salvador adicionada(s). Confira as fontes antes de abordar.`)
+      window.location.reload()
+    })
+  }
 
   function enviar(formData: FormData) {
     const publicoCru = String(formData.get('publico_estimado') ?? '').trim()
@@ -128,6 +162,7 @@ export function PainelDeEventos({ eventos, erro }: { eventos: Evento[]; erro: st
       contato_email: String(formData.get('contato_email') ?? ''),
       contato_telefone: String(formData.get('contato_telefone') ?? ''),
       publico_estimado: publicoCru ? Number(publicoCru) : null,
+      perfil_publico: String(formData.get('perfil_publico') ?? ''),
     }
     iniciar(async () => {
       const resultado = await criarEvento(entrada)
@@ -154,6 +189,9 @@ export function PainelDeEventos({ eventos, erro }: { eventos: Evento[]; erro: st
           <button type="button" className={`${botao} bg-primary text-primary-foreground hover:bg-primary/90`} onClick={() => setMostrandoFormulario((v) => !v)}>
             {mostrandoFormulario ? 'Fechar formulário' : 'Adicionar evento'}
           </button>
+          <button type="button" className={`${botao} border-border border hover:bg-muted`} onClick={importar} disabled={ocupado}>
+            {ocupado ? <Loader2 className="size-4 animate-spin" /> : null} Importar pesquisa de Salvador
+          </button>
           <Link href="/leads" className={`${botao} border-border border hover:bg-muted`}>Abrir contatos do CRM</Link>
         </div>
       </header>
@@ -162,10 +200,11 @@ export function PainelDeEventos({ eventos, erro }: { eventos: Evento[]; erro: st
         <form action={enviar} className="border-border bg-card grid gap-4 rounded-2xl border p-5 md:grid-cols-2">
           <div><label className="mb-1 block text-sm font-medium" htmlFor="nome">Evento *</label><input id="nome" name="nome" required minLength={3} maxLength={200} className={campo} placeholder="Ex.: Feira de negócios" /></div>
           <div><label className="mb-1 block text-sm font-medium" htmlFor="data_inicio">Data *</label><input id="data_inicio" name="data_inicio" type="date" required className={campo} /></div>
-          <div><label className="mb-1 block text-sm font-medium" htmlFor="cidade">Cidade *</label><input id="cidade" name="cidade" required maxLength={120} className={campo} placeholder="Ex.: Salvador" /></div>
+          <div><label className="mb-1 block text-sm font-medium" htmlFor="cidade">Cidade *</label><input id="cidade" name="cidade" required maxLength={120} defaultValue="Salvador" className={campo} /></div>
           <div><label className="mb-1 block text-sm font-medium" htmlFor="fonte_url">Página oficial *</label><input id="fonte_url" name="fonte_url" type="url" required className={campo} placeholder="https://..." /></div>
           <div><label className="mb-1 block text-sm font-medium" htmlFor="organizador">Organizador</label><input id="organizador" name="organizador" className={campo} /></div>
           <div><label className="mb-1 block text-sm font-medium" htmlFor="publico_estimado">Público estimado</label><input id="publico_estimado" name="publico_estimado" type="number" min="0" className={campo} placeholder="Se houver fonte confiável" /></div>
+          <div><label className="mb-1 block text-sm font-medium" htmlFor="perfil_publico">Perfil do público</label><input id="perfil_publico" name="perfil_publico" className={campo} placeholder="Ex.: profissionais do setor" /></div>
           <div><label className="mb-1 block text-sm font-medium" htmlFor="contato_nome">Responsável</label><input id="contato_nome" name="contato_nome" className={campo} /></div>
           <div><label className="mb-1 block text-sm font-medium" htmlFor="contato_email">E-mail público</label><input id="contato_email" name="contato_email" type="email" className={campo} /></div>
           <div><label className="mb-1 block text-sm font-medium" htmlFor="contato_telefone">Telefone público</label><input id="contato_telefone" name="contato_telefone" type="tel" className={campo} /></div>
@@ -190,7 +229,7 @@ export function PainelDeEventos({ eventos, erro }: { eventos: Evento[]; erro: st
           <div className="grid gap-4 lg:grid-cols-2">{eventos.map((evento) => <CartaoDoEvento key={evento.id} evento={evento} />)}</div>
         )}
       </section>
-      <p className="text-muted-foreground text-xs">A prioridade organiza a pesquisa. Ela não representa uma chance estatística de fechamento e ainda precisa considerar os pontos de mídia disponíveis para o cliente.</p>
+      <p className="text-muted-foreground text-xs">A prioridade organiza a pesquisa e não representa uma chance estatística de fechamento. A compatibilidade final depende dos pontos de outdoor e formatos realmente disponíveis.</p>
     </div>
   )
 }

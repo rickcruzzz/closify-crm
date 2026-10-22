@@ -22,6 +22,7 @@ import type { ComponentType, SVGProps } from 'react'
 import { IconeWhatsapp } from '@/components/ui/icone-whatsapp'
 
 import { cn } from '@/lib/utils'
+import { CONTROLADOR } from '@/lib/legal'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { RevealOnScroll } from '@/components/landing/reveal-on-scroll'
@@ -436,6 +437,8 @@ const plans: Plan[] = [
       { texto: 'Fluxo e integrações definidos com você na reunião de implantação', icone: Sparkles },
     ],
     fecho: 'Uma conversa para desenhar as fontes, o fluxo e a proposta do seu projeto.',
+    cta: 'Falar sobre o Enterprise',
+    href: `https://wa.me/${CONTROLADOR.whatsapp.numero}?text=${encodeURIComponent('Olá! Tenho interesse no plano Enterprise de prospecção de eventos para mídia outdoor. Podemos agendar uma conversa para definir as cidades, as agendas e os espaços disponíveis?')}`,
     delay: 480,
   },
 ]

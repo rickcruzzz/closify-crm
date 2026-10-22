@@ -141,6 +141,24 @@ export type Database = {
         Update: { active?: boolean }
         Relationships: []
       }
+      enterprise_agendas: {
+        Row: { id: string; workspace_id: string; nome: string; cidade: string; tipo: 'centro_de_convencoes' | 'feira' | 'simposio' | 'agenda'; url: string; ativa: boolean; ultima_varredura_em: string | null; ultimo_erro: string | null; criado_em: string }
+        Insert: { id?: string; workspace_id: string; nome: string; cidade: string; tipo?: 'centro_de_convencoes' | 'feira' | 'simposio' | 'agenda'; url: string; ativa?: boolean; ultima_varredura_em?: string | null; ultimo_erro?: string | null; criado_em?: string }
+        Update: Partial<Database['public']['Tables']['enterprise_agendas']['Insert']>
+        Relationships: []
+      }
+      enterprise_espacos: {
+        Row: { id: string; workspace_id: string; nome: string; cidade: string; regiao: string | null; formatos: string[]; descricao: string | null; ativo: boolean; criado_em: string }
+        Insert: { id?: string; workspace_id: string; nome: string; cidade: string; regiao?: string | null; formatos?: string[]; descricao?: string | null; ativo?: boolean; criado_em?: string }
+        Update: Partial<Database['public']['Tables']['enterprise_espacos']['Insert']>
+        Relationships: []
+      }
+      enterprise_evento_fontes: {
+        Row: { id: string; workspace_id: string; evento_id: string; tipo: 'evento' | 'organizador' | 'contato' | 'publico'; url: string; titulo: string | null; trecho: string | null; verificada_em: string }
+        Insert: { id?: string; workspace_id: string; evento_id: string; tipo: 'evento' | 'organizador' | 'contato' | 'publico'; url: string; titulo?: string | null; trecho?: string | null; verificada_em?: string }
+        Update: Partial<Database['public']['Tables']['enterprise_evento_fontes']['Insert']>
+        Relationships: []
+      }
       enterprise_eventos: {
         Row: {
           id: string
@@ -158,9 +176,18 @@ export type Database = {
           prioridade: number | null
           justificativa: string | null
           mensagem_rascunho: string | null
-          status: 'novo' | 'rascunho' | 'contatado' | 'descartado'
+          status: 'novo' | 'rascunho' | 'aprovado' | 'contatado' | 'descartado'
           criado_em: string
           atualizado_em: string
+          agenda_id: string | null
+          tipo: string | null
+          perfil_publico: string | null
+          fonte_contato_url: string | null
+          informacoes_faltantes: string[]
+          compatibilidade_espacos: string | null
+          lead_id: string | null
+          mensagem_aprovada: string | null
+          aprovada_em: string | null
         }
         Insert: {
           id?: string
@@ -178,9 +205,18 @@ export type Database = {
           prioridade?: number | null
           justificativa?: string | null
           mensagem_rascunho?: string | null
-          status?: 'novo' | 'rascunho' | 'contatado' | 'descartado'
+          status?: 'novo' | 'rascunho' | 'aprovado' | 'contatado' | 'descartado'
           criado_em?: string
           atualizado_em?: string
+          agenda_id?: string | null
+          tipo?: string | null
+          perfil_publico?: string | null
+          fonte_contato_url?: string | null
+          informacoes_faltantes?: string[]
+          compatibilidade_espacos?: string | null
+          lead_id?: string | null
+          mensagem_aprovada?: string | null
+          aprovada_em?: string | null
         }
         Update: Partial<Database['public']['Tables']['enterprise_eventos']['Insert']>
         Relationships: []
@@ -1132,6 +1168,15 @@ export type Database = {
           // que `intervalo_do_ciclo()` lê para decidir se um pagamento compra
           // 30 dias ou um ano. `not null default 'MONTHLY'` no banco.
           ciclo: CicloDeCobranca
+          /**
+           * Quando o CLIENTE pediu para parar de renovar (0098).
+           *
+           * Nulo em estorno e chargeback, que tambem produzem `canceled` e
+           * NAO devem preservar acesso. E o campo que `assinatura_compra_acesso`
+           * le para cumprir a promessa dos Termos: *"o acesso ao plano pago
+           * permanece ate o fim do periodo ja pago"*.
+           */
+          cancelado_pelo_cliente_em: string | null
           // `pro` ou `max` (migration 0089). Escrito por `createCheckout` junto
           // do `asaas_subscription_id` a que pertence, e lido só por
           // `max_vigente()`. Nunca vem do payload do webhook (ver 0027).
@@ -1149,6 +1194,7 @@ export type Database = {
           ultimo_billing_type?: string | null
           aviso_vencimento_enviado_em?: string | null
           ciclo?: CicloDeCobranca
+          cancelado_pelo_cliente_em?: string | null
           plano?: PlanoDaAssinatura
           created_at?: string
         }
@@ -1162,6 +1208,7 @@ export type Database = {
           ultimo_billing_type?: string | null
           aviso_vencimento_enviado_em?: string | null
           ciclo?: CicloDeCobranca
+          cancelado_pelo_cliente_em?: string | null
           plano?: PlanoDaAssinatura
           created_at?: string
         }
@@ -1555,6 +1602,11 @@ export type Database = {
       // Agora a função devolve os caminhos dos anexos órfãos junto com a
       // contagem, e quem apaga arquivo é a Storage API em
       // `/api/cron/limpar-eventos`.
+      // `purge_old_sinais_de_mercado` saiu daqui em 23/09. A 0085 fez
+      // `drop function` em 08/09 e o tipo sobreviveu: o `tsc` aprovava um
+      // `.rpc()` que o Postgres recusa com 42883. Conferido no catálogo,
+      // `to_regprocedure` devolve null. É o mesmo resíduo que a 0085 existiu
+      // para varrer, um nível acima.
       purge_old_feedback: {
         Args: Record<string, never>
         Returns: { apagados: number; anexos: string[] }
@@ -1562,10 +1614,6 @@ export type Database = {
       // 90 dias (0066): aviso de três meses atrás não muda decisão nenhuma. O
       // histórico de dinheiro que importa vive em `assinatura_eventos` (0055),
       // append-only, e não é tocado por esta purga.
-      purge_old_sinais_de_mercado: {
-        Args: Record<string, never>
-        Returns: undefined
-      }
       purge_old_notificacoes: {
         Args: Record<string, never>
         Returns: number
