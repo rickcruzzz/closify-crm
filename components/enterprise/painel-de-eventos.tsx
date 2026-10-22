@@ -119,9 +119,6 @@ function CartaoDoEvento({ evento }: { evento: Evento }) {
           // eslint-disable-next-line @next/next/no-img-element
           <img src={evento.fotoUrl} alt={`Imagem pública de ${evento.organizador ?? evento.nome}`} loading="lazy" decoding="async" onError={() => setFotoFalhou(true)} className="size-20 rounded-xl border bg-white object-contain" />
         ) : <Building2 aria-hidden className="bg-muted text-muted-foreground size-20 rounded-xl p-5" />}
-        {evento.foto_fonte_url && (
-          <a href={evento.foto_fonte_url} target="_blank" rel="noopener noreferrer" className="text-muted-foreground text-xs underline">Fonte da imagem</a>
-        )}
       </div>
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
