@@ -161,6 +161,10 @@ export type Database = {
       }
       enterprise_eventos: {
         Row: {
+          foto_path: string | null
+          foto_fonte_url: string | null
+          foto_verificada_em: string | null
+          foto_tentada_em: string | null
           id: string
           workspace_id: string
           nome: string
@@ -190,6 +194,10 @@ export type Database = {
           aprovada_em: string | null
         }
         Insert: {
+          foto_path?: string | null
+          foto_fonte_url?: string | null
+          foto_verificada_em?: string | null
+          foto_tentada_em?: string | null
           id?: string
           workspace_id: string
           nome: string
@@ -388,6 +396,7 @@ export type Database = {
           // perguntamos" de "perguntamos e essa pessoa nao tem foto" — e sem a
           // distincao a varredura repete a mesma busca para sempre.
           foto_verificada_em: string | null
+          foto_tentada_em: string | null
         }
         Insert: {
           id?: string
@@ -402,6 +411,7 @@ export type Database = {
           created_at?: string
           foto_path?: string | null
           foto_verificada_em?: string | null
+          foto_tentada_em?: string | null
         }
         Update: {
           id?: string
@@ -416,6 +426,7 @@ export type Database = {
           created_at?: string
           foto_path?: string | null
           foto_verificada_em?: string | null
+          foto_tentada_em?: string | null
         }
         Relationships: []
       }

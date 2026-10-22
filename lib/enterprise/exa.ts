@@ -91,6 +91,19 @@ export async function buscarPaginasDeEventos(cidade: string): Promise<PaginaCand
 
 export type PaginaLida = { resumo: unknown; texto: string | null; titulo: string | null }
 
+/** Imagens extraídas da própria fonte pública, sem inventar uma empresa pela busca. */
+export async function imagensDaFonte(url: string): Promise<string[]> {
+  const r = await chamar<{
+    results?: { url?: string; image?: string; extras?: { imageLinks?: string[] } }[]
+    statuses?: { status: string }[]
+  }>('contents', { urls: [url], highlights: true, extras: { imageLinks: 5 } }, 4_000)
+  if (r.statuses?.some((s) => s.status === 'error')) throw new Error('Exa não conseguiu ler a fonte da imagem.')
+  const pagina = r.results?.[0]
+  return Array.from(new Set([pagina?.image, ...(pagina?.extras?.imageLinks ?? [])]))
+    .filter((value): value is string => typeof value === 'string' && value.startsWith('https://'))
+    .slice(0, 1)
+}
+
 /** Uma página: o resumo estruturado e o texto, para achar o contato escrito. */
 export async function lerPaginaDeEvento(url: string): Promise<PaginaLida> {
   const r = await chamar<{

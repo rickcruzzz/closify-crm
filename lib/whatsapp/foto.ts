@@ -30,6 +30,9 @@ export const BUCKET_DE_AVATARES = 'avatares'
  */
 export const DIAS_ATE_RECONFERIR = 30
 
+/** Falhas voltam à fila sem prender os demais contatos. */
+export const INTERVALO_DE_RETENTATIVA_MS = 60 * 60 * 1000
+
 /**
  * O teto de uma rodada.
  *
@@ -45,6 +48,7 @@ export type LeadParaFoto = {
   telefone: string | null
   fotoPath: string | null
   fotoVerificadaEm: string | null
+  fotoTentadaEm?: string | null
 }
 
 export type DecisaoDeFoto =
@@ -69,10 +73,17 @@ export type DecisaoDeFoto =
  * (0091): guardar o que foi observado, em vez de tentar derivar depois.
  */
 export function deveBuscarFoto(
-  lead: Pick<LeadParaFoto, 'telefone' | 'fotoVerificadaEm'>,
+  lead: Pick<LeadParaFoto, 'telefone' | 'fotoVerificadaEm' | 'fotoTentadaEm'>,
   agora: Date = new Date(),
 ): DecisaoDeFoto {
   if (!lead.telefone) return { buscar: false, motivo: 'sem_telefone' }
+
+  if (lead.fotoTentadaEm) {
+    const tentadaEm = new Date(lead.fotoTentadaEm).getTime()
+    if (!Number.isFinite(tentadaEm) || agora.getTime() - tentadaEm < INTERVALO_DE_RETENTATIVA_MS) {
+      return { buscar: false, motivo: 'ja_conferida' }
+    }
+  }
 
   if (!lead.fotoVerificadaEm) return { buscar: true }
 
@@ -118,6 +129,7 @@ export function tipoAceito(tipo: string | null): boolean {
   if (!tipo) return false
   return ['image/jpeg', 'image/png', 'image/webp'].includes(tipo.split(';')[0]!.trim())
 }
+
 
 /**
  * O `link` que o provedor devolveu é uma URL de verdade?

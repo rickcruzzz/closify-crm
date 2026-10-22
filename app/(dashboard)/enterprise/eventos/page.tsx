@@ -25,9 +25,16 @@ export default async function EventosEnterprisePage() {
     .order('data_inicio', { ascending: true })
     .limit(100)
 
+  const caminhos = Array.from(new Set((eventos ?? []).map((evento) => evento.foto_path).filter((path): path is string => !!path)))
+  const fotos = caminhos.length ? (await supabase.storage.from('avatares').createSignedUrls(caminhos, 3600)).data ?? [] : []
+  const urls = new Map(fotos.map((foto) => [foto.path, foto.signedUrl]))
+
   return (
     <PainelDeEventos
-      eventos={eventos ?? []}
+      eventos={(eventos ?? []).map((evento) => ({
+        ...evento,
+        fotoUrl: evento.foto_path ? urls.get(evento.foto_path) ?? null : null,
+      }))}
       erro={error ? 'Não foi possível carregar as oportunidades agora.' : null}
     />
   )

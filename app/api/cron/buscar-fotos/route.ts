@@ -42,7 +42,8 @@ export async function GET(request: Request) {
   // Mesmo portão dos outros crons. Sem ele, a rota é pública e qualquer um
   // faria o servidor gastar chamadas ao provedor em nome dos clientes.
   const autorizacao = request.headers.get('authorization')
-  if (autorizacao !== `Bearer ${process.env.CRON_SECRET}`) {
+  const segredo = process.env.CRON_SECRET
+  if (!segredo || autorizacao !== `Bearer ${segredo}`) {
     return NextResponse.json({ error: 'não autorizado' }, { status: 401 })
   }
 

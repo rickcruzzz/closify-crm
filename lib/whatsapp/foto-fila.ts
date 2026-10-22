@@ -2,12 +2,14 @@ import 'server-only'
 
 import { createAdminClient } from '@/lib/supabase/admin'
 import { credenciaisDaEmpresa } from '@/lib/whatsapp/instancia'
+import { baixarImagemPublica } from '@/lib/enterprise/imagem'
 import {
   BUCKET_DE_AVATARES,
   POR_RODADA,
+  DIAS_ATE_RECONFERIR,
+  INTERVALO_DE_RETENTATIVA_MS,
   caminhoDaFoto,
   deveBuscarFoto,
-  tipoAceito,
   type LeadParaFoto,
 } from '@/lib/whatsapp/foto'
 import { fotoDePerfil } from '@/lib/whatsapp/zapi'
@@ -55,6 +57,10 @@ export type ResultadoDaRodada = {
 export async function rodarBuscaDeFotos(): Promise<ResultadoDaRodada> {
   const supabase = createAdminClient()
   const erros: string[] = []
+  const inicio = Date.now()
+  const agora = new Date(inicio)
+  const limiteDeVerificacao = new Date(inicio - DIAS_ATE_RECONFERIR * 86_400_000).toISOString()
+  const limiteDeTentativa = new Date(inicio - INTERVALO_DE_RETENTATIVA_MS).toISOString()
 
   // ## Só empresas COM conexão, e a leitura vem primeiro de propósito
   //
@@ -81,15 +87,17 @@ export async function rodarBuscaDeFotos(): Promise<ResultadoDaRodada> {
     return { ok: true, perguntados: 0, guardadas: 0, semFoto: 0, erros: [] }
   }
 
-  // O índice parcial da 0096 é sobre `foto_verificada_em is null`, e por isso a
-  // ordenação é por `created_at`: contato mais antigo primeiro, que é a ordem
-  // em que as conversas aparecem na tela.
+  // Tentativas e verificações são fatos separados: falhar não significa
+  // "sem foto". A ordenação deixa os ainda não tentados passarem na frente
+  // das falhas, que só voltam depois de uma hora.
   const { data: candidatos, error: erroDosLeads } = await supabase
     .from('leads')
-    .select('id, workspace_id, phone, foto_path, foto_verificada_em')
+    .select('id, workspace_id, phone, foto_path, foto_verificada_em, foto_tentada_em')
     .in('workspace_id', empresas)
     .not('phone', 'is', null)
-    .is('foto_verificada_em', null)
+    .or(`foto_verificada_em.is.null,foto_verificada_em.lte.${limiteDeVerificacao}`)
+    .or(`foto_tentada_em.is.null,foto_tentada_em.lte.${limiteDeTentativa}`)
+    .order('foto_tentada_em', { ascending: true, nullsFirst: true })
     .order('created_at', { ascending: true })
     .limit(POR_RODADA)
 
@@ -103,6 +111,7 @@ export async function rodarBuscaDeFotos(): Promise<ResultadoDaRodada> {
     telefone: l.phone,
     fotoPath: l.foto_path,
     fotoVerificadaEm: l.foto_verificada_em,
+    fotoTentadaEm: l.foto_tentada_em,
   }))
 
   let perguntados = 0
@@ -112,26 +121,41 @@ export async function rodarBuscaDeFotos(): Promise<ResultadoDaRodada> {
   // As credenciais são lidas UMA vez por empresa, e não por contato: decifrar
   // o token é trabalho, e vinte contatos da mesma empresa pediriam a mesma
   // chave vinte vezes.
-  const credenciais = new Map<string, Awaited<ReturnType<typeof credenciaisDaEmpresa>>>()
+  const credenciais = new Map<string, ReturnType<typeof credenciaisDaEmpresa>>()
 
-  for (const lead of fila) {
-    const decisao = deveBuscarFoto(lead)
-    if (!decisao.buscar) continue
-
-    if (!credenciais.has(lead.workspaceId)) {
-      credenciais.set(lead.workspaceId, await credenciaisDaEmpresa(lead.workspaceId))
-    }
-    const instancia = credenciais.get(lead.workspaceId)
-    if (!instancia) continue
-
+  async function processar(lead: LeadParaFoto) {
+    if (!deveBuscarFoto(lead, agora).buscar) return
+    let etapa = 'reserva'
     try {
+      // Reserva atômica: duas rodadas simultâneas não consultam o mesmo lead.
+      // Também evita que falhas no download ocupem as primeiras vagas sempre.
+      const tentativaEm = new Date().toISOString()
+      const { data: reservado, error: erroDaReserva } = await supabase
+        .from('leads')
+        .update({ foto_tentada_em: tentativaEm })
+        .eq('id', lead.id)
+        .eq('workspace_id', lead.workspaceId)
+        .or(`foto_tentada_em.is.null,foto_tentada_em.lte.${limiteDeTentativa}`)
+        .select('id')
+        .maybeSingle()
+      if (erroDaReserva) throw new Error('falha ao reservar contato')
+      if (!reservado) return
+
+      etapa = 'credenciais'
+      if (!credenciais.has(lead.workspaceId)) {
+        credenciais.set(lead.workspaceId, credenciaisDaEmpresa(lead.workspaceId))
+      }
+      const instancia = await credenciais.get(lead.workspaceId)
+      if (!instancia) throw new Error('conexão indisponível')
+
       perguntados += 1
-      const url = await fotoDePerfil(instancia, lead.telefone!)
+      etapa = 'provedor'
+      const url = await fotoDePerfil(instancia, lead.telefone!, { timeoutMs: 8_000 })
 
       if (url) {
-        const guardou = await guardarFoto(supabase, lead, url)
-        if (guardou) guardadas += 1
-        else semFoto += 1
+        etapa = 'imagem'
+        await guardarFoto(supabase, lead, url)
+        guardadas += 1
       } else {
         semFoto += 1
       }
@@ -140,17 +164,36 @@ export async function rodarBuscaDeFotos(): Promise<ResultadoDaRodada> {
       //
       // É o que impede o laço infinito. Contato sem foto visível é comum, e
       // sem a marca ele voltaria à fila a cada passagem do cron, para sempre.
-      await supabase
+      etapa = 'confirmação'
+      const { error: erroDaVerificacao } = await supabase
         .from('leads')
-        .update({ foto_verificada_em: new Date().toISOString() })
+        .update({ foto_verificada_em: new Date().toISOString(), ...(url ? {} : { foto_path: null }) })
         .eq('id', lead.id)
+        .eq('workspace_id', lead.workspaceId)
+        .eq('phone', lead.telefone!)
+      if (erroDaVerificacao) throw new Error('falha ao registrar verificação')
     } catch (erro) {
       // Falha de rede ou do provedor NÃO grava a marca: ela pede tentativa de
       // novo, e "não tem foto" não pede. Gravar aqui trataria uma indisponi-
       // bilidade de dez minutos como "esse contato não tem foto", para sempre.
-      erros.push(`${lead.id.slice(0, 8)}: ${String(erro).slice(0, 80)}`)
+      // Erros do provedor podem conter tokens na URL. Telemetria não registra
+      // URL, telefone, credencial nem corpo bruto da resposta.
+      // Somente categorias conhecidas: nunca serializa erros/URLs do provedor.
+      const statusImagem = erro instanceof Error ? /^Imagem indisponível: (\d{3})\.$/.exec(erro.message)?.[1] : null
+      const motivo = erro instanceof Error && (erro.name === 'AbortError' || erro.name === 'TimeoutError')
+        ? 'tempo limite'
+        : statusImagem ? `HTTP ${statusImagem}` : 'falha'
+      erros.push(`${etapa}: ${motivo}`)
     }
   }
+
+  let proximo = 0
+  await Promise.all(Array.from({ length: Math.min(3, fila.length) }, async () => {
+    // Preserva orçamento para o retorno HTTP; não entra no webhook de mensagem.
+    while (proximo < fila.length && Date.now() - inicio < 10_000) {
+      await processar(fila[proximo++]!)
+    }
+  }))
 
   return { ok: erros.length === 0, perguntados, guardadas, semFoto, erros }
 }
@@ -170,29 +213,18 @@ async function guardarFoto(
   supabase: ReturnType<typeof createAdminClient>,
   lead: LeadParaFoto,
   url: string,
-): Promise<boolean> {
-  const resposta = await fetch(url, { signal: AbortSignal.timeout(15_000) })
-  if (!resposta.ok) return false
-
-  const tipo = resposta.headers.get('content-type')
-  if (!tipoAceito(tipo)) {
-    console.error(`foto: tipo recusado para o lead ${lead.id}: ${tipo}`)
-    return false
-  }
-
-  const bytes = await resposta.arrayBuffer()
-  // Zero byte com 200 acontece, e gravar produziria um avatar quebrado com
-  // aparência de foto guardada.
-  if (bytes.byteLength === 0) return false
+): Promise<void> {
+  // O helper limita o download a 512 KiB, confere a assinatura do arquivo e
+  // permite apenas HTTPS público sem redirects ou troca de IP após validar DNS.
+  const { bytes, tipoMime } = await baixarImagemPublica(url)
 
   const caminho = caminhoDaFoto(lead.workspaceId, lead.id)
   const { error } = await supabase.storage
     .from(BUCKET_DE_AVATARES)
-    .upload(caminho, bytes, { contentType: tipo!, upsert: true })
+    .upload(caminho, bytes, { contentType: tipoMime, upsert: true })
 
   if (error) {
-    console.error(`foto: falha ao subir a do lead ${lead.id}`, error)
-    return false
+    throw new Error('falha ao guardar imagem')
   }
 
   // O caminho só é gravado DEPOIS de o arquivo existir. Na ordem inversa, uma
@@ -202,11 +234,10 @@ async function guardarFoto(
     .from('leads')
     .update({ foto_path: caminho })
     .eq('id', lead.id)
+    .eq('workspace_id', lead.workspaceId)
+    .eq('phone', lead.telefone!)
 
   if (erroDaColuna) {
-    console.error(`foto: subiu e NAO gravou o caminho do lead ${lead.id}`, erroDaColuna)
-    return false
+    throw new Error('falha ao registrar caminho da imagem')
   }
-
-  return true
 }

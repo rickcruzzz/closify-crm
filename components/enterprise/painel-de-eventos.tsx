@@ -3,7 +3,7 @@
 import { useState, useTransition } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { ArrowUpRight, CalendarDays, Loader2, MessageCircle, Radar, Send, Sparkles } from 'lucide-react'
+import { ArrowUpRight, Building2, CalendarDays, Loader2, MessageCircle, Radar, Send, Sparkles } from 'lucide-react'
 import { toast } from 'sonner'
 
 import {
@@ -20,7 +20,7 @@ import {
 import type { DadosDoEvento } from '@/lib/enterprise/eventos'
 import type { Database } from '@/types/supabase'
 
-type Evento = Database['public']['Tables']['enterprise_eventos']['Row']
+type Evento = Database['public']['Tables']['enterprise_eventos']['Row'] & { fotoUrl?: string | null }
 
 const campo = 'border-input bg-background text-foreground placeholder:text-muted-foreground min-h-11 w-full rounded-lg border px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring'
 const botao = 'inline-flex min-h-11 items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-50'
@@ -40,6 +40,7 @@ async function semRejeicao<T>(chamada: () => Promise<T>): Promise<T | null> {
 }
 
 function CartaoDoEvento({ evento }: { evento: Evento }) {
+  const [fotoFalhou, setFotoFalhou] = useState(false)
   const router = useRouter()
   const [mensagem, setMensagem] = useState(evento.mensagem_rascunho ?? '')
   const [ocupado, iniciar] = useTransition()
@@ -113,6 +114,15 @@ function CartaoDoEvento({ evento }: { evento: Evento }) {
 
   return (
     <article className="border-border bg-card rounded-2xl border p-5 shadow-sm">
+      <div className="mb-4 flex items-center gap-3">
+        {evento.fotoUrl && !fotoFalhou ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={evento.fotoUrl} alt={`Imagem pública de ${evento.organizador ?? evento.nome}`} loading="lazy" decoding="async" onError={() => setFotoFalhou(true)} className="size-20 rounded-xl border bg-white object-contain" />
+        ) : <Building2 aria-hidden className="bg-muted text-muted-foreground size-20 rounded-xl p-5" />}
+        {evento.foto_fonte_url && (
+          <a href={evento.foto_fonte_url} target="_blank" rel="noopener noreferrer" className="text-muted-foreground text-xs underline">Fonte da imagem</a>
+        )}
+      </div>
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
           <p className="text-muted-foreground mb-1 text-xs font-semibold uppercase tracking-wider">

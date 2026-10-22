@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 
 import {
   DIAS_ATE_RECONFERIR,
+  INTERVALO_DE_RETENTATIVA_MS,
   caminhoDaFoto,
   deveBuscarFoto,
   linkDeFotoValido,
@@ -12,6 +13,18 @@ const AGORA = new Date('2026-09-18T12:00:00Z')
 const diasAtras = (n: number) => new Date(AGORA.getTime() - n * 86_400_000).toISOString()
 
 describe('deveBuscarFoto', () => {
+  it('falha recente espera uma hora sem virar verificação concluída', () => {
+    const lead = { telefone: '5571999999999', fotoVerificadaEm: null,
+      fotoTentadaEm: new Date(AGORA.getTime() - INTERVALO_DE_RETENTATIVA_MS + 1).toISOString() }
+    expect(deveBuscarFoto(lead, AGORA).buscar).toBe(false)
+    lead.fotoTentadaEm = new Date(AGORA.getTime() - INTERVALO_DE_RETENTATIVA_MS).toISOString()
+    expect(deveBuscarFoto(lead, AGORA).buscar).toBe(true)
+  })
+
+  it('retentativa vencida não ignora a janela de uma foto já verificada', () => {
+    expect(deveBuscarFoto({ telefone: '5571999999999', fotoVerificadaEm: diasAtras(1),
+      fotoTentadaEm: diasAtras(1) }, AGORA).buscar).toBe(false)
+  })
   it('contato novo com telefone: busca', () => {
     expect(deveBuscarFoto({ telefone: '5571999999999', fotoVerificadaEm: null }, AGORA)).toEqual({
       buscar: true,

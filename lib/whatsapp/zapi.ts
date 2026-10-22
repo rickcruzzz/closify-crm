@@ -478,10 +478,11 @@ export type StatusDaInstancia = {
 export async function fotoDePerfil(
   instancia: Instancia,
   telefone: string,
+  opcoes: ComTeto = {},
 ): Promise<string | null> {
   const r = await chamar<{ link?: string }>(
     comInstancia(instancia, `profile-picture?phone=${encodeURIComponent(telefone)}`),
-    { headers: { 'Client-Token': clientToken() } },
+    { headers: { 'Client-Token': clientToken() }, timeoutMs: opcoes.timeoutMs },
   )
   return linkDeFotoValido(r.link) ? r.link : null
 }
