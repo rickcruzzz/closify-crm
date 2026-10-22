@@ -315,7 +315,9 @@ export async function getMensagensDaConversa(
     )
     .eq('conversa_id', conversaId)
     .eq('workspace_id', workspaceId)
-    .order('created_at', { ascending: true })
+    // Limitar em ordem crescente escondia todo envio após as primeiras cem.
+    .order('created_at', { ascending: false })
+    .order('id', { ascending: false })
     .limit(TETO_DE_MENSAGENS)
 
   if (error) {
@@ -325,12 +327,13 @@ export async function getMensagensDaConversa(
 
   return {
     leadId: conversa.lead_id,
-    mensagens: (data ?? []).map((m) => ({
+    mensagens: (data ?? []).slice().reverse().map((m) => ({
       id: m.id,
       direcao: m.direcao,
       tipo: m.tipo,
       texto: m.texto,
-      midiaChave: m.midia_chave,
+      // A URL do áudio fica no servidor; o player usa a rota autenticada.
+      midiaChave: m.tipo === 'audio' ? null : m.midia_chave,
       midiaMime: m.midia_mime,
       midiaSegundos: m.midia_segundos,
       status: m.status,

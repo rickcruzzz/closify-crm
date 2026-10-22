@@ -43,6 +43,7 @@ import {
 } from '@/lib/conversas/actions'
 import type { ConversaNaLista, MensagemNaTela } from '@/lib/conversas/queries'
 import { iniciais } from '@/lib/leads/iniciais'
+import { observarConversas } from '@/lib/conversas/sincronizacao'
 import { cn } from '@/lib/utils'
 import {
   AVISO_DE_MIGRACAO,
@@ -141,6 +142,10 @@ export function ConversasClient({
   nomesPorUsuario: Record<string, string>
 }) {
   const router = useRouter()
+
+  React.useEffect(() => observarConversas(() => {
+    React.startTransition(() => router.refresh())
+  }), [router])
 
   /**
    * O relógio nasce no cliente e anda de minuto em minuto.
@@ -646,26 +651,33 @@ function Conversa({
   const [texto, setTexto] = React.useState('')
   const [enviando, setEnviando] = React.useState(false)
   const fim = React.useRef<HTMLDivElement>(null)
+  const ultimaMensagemId = mensagens[mensagens.length - 1]?.id
 
   React.useEffect(() => {
     fim.current?.scrollIntoView({ block: 'end' })
-  }, [mensagens.length, conversa.id])
+  }, [ultimaMensagemId, conversa.id])
 
   async function enviar() {
     const limpo = texto.trim()
     if (!limpo || enviando) return
 
     setEnviando(true)
-    const r = await enviarMensagem(conversa.id, limpo)
-    setEnviando(false)
-
-    if ('error' in r) {
-      toast.error(r.error)
-      return
+    try {
+      const r = await enviarMensagem(conversa.id, limpo)
+      if ('error' in r) {
+        toast.error(r.error)
+        router.refresh()
+        return
+      }
+      // Preserva texto novo digitado enquanto a resposta estava em trânsito.
+      setTexto((atual) => atual.trim() === limpo ? '' : atual)
+      router.refresh()
+    } catch {
+      toast.error('Não foi possível confirmar o envio. Confira a conversa antes de reenviar.')
+      router.refresh()
+    } finally {
+      setEnviando(false)
     }
-    // Só limpa em caso de sucesso: apagar o que a pessoa escreveu quando o
-    // envio falhou faria ela redigitar tudo.
-    setTexto('')
   }
 
   async function marcar() {
@@ -848,7 +860,8 @@ function SeparadorDeData({ iso }: { iso: string }) {
   )
 }
 
-function Balao({ mensagem }: { mensagem: MensagemNaTela }) {
+export function Balao({ mensagem }: { mensagem: MensagemNaTela }) {
+  const [audioFalhou, setAudioFalhou] = React.useState(false)
   const nossa = mensagem.direcao === 'enviada'
   const hora = new Intl.DateTimeFormat('pt-BR', {
     timeZone: 'America/Sao_Paulo',
@@ -868,14 +881,25 @@ function Balao({ mensagem }: { mensagem: MensagemNaTela }) {
         )}
       >
         {mensagem.tipo === 'audio' ? (
-          // O áudio ainda não toca: baixar mídia depende do servidor de
-          // WhatsApp, e o contrato dele é o que está mudando. Até lá a tela diz
-          // a verdade em vez de fingir um player que não funciona.
-          <span className="flex items-center gap-2">
-            <Mic aria-hidden className="size-4 shrink-0" />
-            Mensagem de voz
-            {mensagem.midiaSegundos ? ` · ${mensagem.midiaSegundos}s` : ''}
-          </span>
+          <div className="flex min-w-0 flex-col gap-2">
+            <span className="flex items-center gap-2 text-xs">
+              <Mic aria-hidden className="size-4 shrink-0" />
+              {nossa ? 'Seu áudio' : 'Mensagem de voz'}
+              {mensagem.midiaSegundos ? ` · ${mensagem.midiaSegundos}s` : ''}
+            </span>
+            {audioFalhou ? (
+              <div role="status" className="max-w-64 text-xs">
+                <p>Não foi possível abrir o áudio. Ele pode ter expirado ou estar indisponível.</p>
+                <button type="button" onClick={() => setAudioFalhou(false)} className="mt-2 min-h-11 underline underline-offset-4 focus-visible:outline focus-visible:outline-2">Tentar novamente</button>
+              </div>
+            ) : (
+              <audio controls preload="none" src={`/api/conversas/mensagens/${mensagem.id}/audio`}
+                aria-label={nossa ? 'Reproduzir áudio enviado por você' : 'Reproduzir áudio recebido'}
+                onError={() => setAudioFalhou(true)} className="block h-10 w-64 min-w-0 max-w-full">
+                Seu navegador não oferece reprodução de áudio.
+              </audio>
+            )}
+          </div>
         ) : (
           <span className="break-words whitespace-pre-wrap">{mensagem.texto}</span>
         )}
