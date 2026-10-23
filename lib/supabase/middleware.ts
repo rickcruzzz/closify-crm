@@ -1,3 +1,5 @@
+import { PAGINA_INICIAL } from '@/lib/pagina-inicial'
+
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
@@ -197,7 +199,7 @@ export async function updateSession(request: NextRequest) {
 
   if (user && (pathname === '/login' || pathname === '/cadastro')) {
     const url = request.nextUrl.clone()
-    url.pathname = '/dashboard'
+    url.pathname = PAGINA_INICIAL
     return NextResponse.redirect(url)
   }
 

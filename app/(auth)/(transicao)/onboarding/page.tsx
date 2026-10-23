@@ -1,3 +1,5 @@
+import { PAGINA_INICIAL } from '@/lib/pagina-inicial'
+
 import type { Metadata } from 'next'
 import { redirect } from 'next/navigation'
 
@@ -62,7 +64,7 @@ export default async function OnboardingPage() {
   const temEmpresa = (empresas ?? 0) > 0
 
   if (temEmpresa && (estado.status === 'completed' || estado.status === 'skipped')) {
-    redirect('/dashboard')
+    redirect(PAGINA_INICIAL)
   }
 
   const { data: linha } = await supabase

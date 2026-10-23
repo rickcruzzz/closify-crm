@@ -1,3 +1,5 @@
+import { PAGINA_INICIAL } from '@/lib/pagina-inicial'
+
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
 
@@ -66,7 +68,7 @@ export default async function ConvitePage({
       // não é dela, terminando sem alterar nada (colaborador não é admin, e a
       // RLS recusa a escrita).
       await concluirOnboardingPorConvite(supabase, user!.id)
-      redirect('/dashboard')
+      redirect(PAGINA_INICIAL)
     }
 
     // Falhou (limite do plano estourado, corrida com outro aceite): cai no

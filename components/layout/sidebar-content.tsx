@@ -55,12 +55,18 @@ export function SidebarContent({
 }) {
   return (
     <div
-      className={cn('flex h-full flex-col gap-4 p-3', recolhida && 'items-center px-2')}
+      className={cn(
+        'flex h-full min-h-0 flex-col gap-4 p-3',
+        recolhida && 'items-center px-2',
+      )}
     >
       <Link
-        href="/dashboard"
+        href="/kanban"
         aria-label="Velo Funil"
-        className={cn('py-2', recolhida ? 'px-0' : 'px-2.5')}
+        className={cn(
+          'focus-visible:ring-ring shrink-0 rounded-lg py-2 outline-none focus-visible:ring-2',
+          recolhida ? 'px-0' : 'px-2.5',
+        )}
       >
         {/* Recolhida, o simbolo sozinho. `showWordmark` existe no `Logo` desde
             que ele nasceu e nunca teve consumidor: a marca por extenso nao cabe
@@ -78,20 +84,27 @@ export function SidebarContent({
           
           Trocar de empresa continua a um clique: expandir a barra. */}
       {!recolhida && (
-        <WorkspaceSwitcher
-          workspaces={workspaces}
-          activeId={activeWorkspaceId}
-          novaEmpresa={novaEmpresa}
-          temMax={temMax}
-          proVigente={proVigente}
-        />
+        <div className="shrink-0">
+          <WorkspaceSwitcher
+            workspaces={workspaces}
+            activeId={activeWorkspaceId}
+            novaEmpresa={novaEmpresa}
+            temMax={temMax}
+            proVigente={proVigente}
+          />
+        </div>
       )}
-      <SidebarNav
-        onNavigate={onNavigate}
-        tarefasDoDia={tarefasDoDia}
-        conversasEsperando={conversasEsperando}
-        recolhida={recolhida}
-      />
+      <div className="min-h-0 w-full flex-1 overflow-x-hidden overflow-y-auto overscroll-contain p-1">
+        <SidebarNav
+          onNavigate={onNavigate}
+          tarefasDoDia={tarefasDoDia}
+          conversasEsperando={conversasEsperando}
+          recolhida={recolhida}
+          temEnterprise={
+            workspaces.find((w) => w.id === activeWorkspaceId)?.temEnterprise === true
+          }
+        />
+      </div>
       {/* `mt-auto`: empurra o rodapé de conta pro fim físico do sidebar, não
           logo depois do último item do menu, em telas com poucos itens
           (a maioria) sobrava um vão vazio grande entre o menu e o rodapé.
@@ -121,7 +134,7 @@ export function SidebarContent({
           componente. */}
       <div
         className={cn(
-          'border-sidebar-border mt-auto flex flex-col gap-3 border-t pt-3',
+          'border-sidebar-border flex shrink-0 flex-col gap-3 border-t pt-3',
           recolhida && 'w-full items-center',
         )}
       >

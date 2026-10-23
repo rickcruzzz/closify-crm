@@ -5,6 +5,7 @@ import { revalidatePath } from 'next/cache'
 import { headers } from 'next/headers'
 
 import { createClient } from '@/lib/supabase/server'
+import { PAGINA_INICIAL } from '@/lib/pagina-inicial'
 import {
   loginSchema,
   signUpSchema,
@@ -62,7 +63,7 @@ export async function signIn(values: unknown) {
   // vindas dali.
   await limparTentativas('signin', parsed.data.email)
 
-  redirect('/dashboard')
+  redirect(PAGINA_INICIAL)
 }
 
 export async function signUp(values: unknown) {
@@ -265,7 +266,10 @@ export async function confirmarCadastro(tokenHash: string) {
   }
 
   const supabase = await createClient()
-  const { error } = await supabase.auth.verifyOtp({ type: 'signup', token_hash: tokenHash })
+  const { error } = await supabase.auth.verifyOtp({
+    type: 'signup',
+    token_hash: tokenHash,
+  })
 
   if (error) {
     console.error('confirmarCadastro falhou', error.message)
@@ -419,7 +423,10 @@ export async function definirSenhaInicial(values: unknown) {
   const { error } = await supabase.auth.updateUser({ password: parsed.data.password })
 
   if (error) {
-    console.error('definirSenhaInicial falhou', { code: error.code, status: error.status })
+    console.error('definirSenhaInicial falhou', {
+      code: error.code,
+      status: error.status,
+    })
     if (error.code === 'weak_password') {
       return { error: 'Senha muito fraca. Use uma senha mais forte.' }
     }
@@ -484,7 +491,10 @@ export async function reenviarConfirmacao() {
   })
 
   if (error) {
-    console.error('reenviarConfirmacao falhou', { code: error.code, message: error.message })
+    console.error('reenviarConfirmacao falhou', {
+      code: error.code,
+      message: error.message,
+    })
     // Não distingue "não existe" de "já confirmado": as duas respostas
     // permitiriam descobrir quais e-mails têm conta, mesma razão pela qual o
     // login não diz se a conta existe.

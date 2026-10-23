@@ -1,5 +1,7 @@
 'use client'
 
+import { PAGINA_INICIAL } from '@/lib/pagina-inicial'
+
 import * as React from 'react'
 import { Suspense } from 'react'
 import Link from 'next/link'
@@ -37,7 +39,8 @@ const ESPERA_REDUZIDA_MS = 300
  * 'sessao-pronta': sessão de recuperação já existe (formato antigo por
  * fragmento, já verificado pelo Supabase antes do redirect).
  */
-type EstadoDoLink = 'verificando' | 'sessao-pronta' | 'token-pendente' | 'invalido' | 'sucesso'
+type EstadoDoLink =
+  'verificando' | 'sessao-pronta' | 'token-pendente' | 'invalido' | 'sucesso'
 
 /**
  * Traduz o erro do Supabase para uma frase que diz o que fazer.
@@ -111,14 +114,14 @@ function RedefinirSenhaPageInner() {
 
     if (accessToken && refreshToken) {
       const supabase = createClient()
-      supabase.auth.setSession({ access_token: accessToken, refresh_token: refreshToken }).then(
-        ({ error }) => {
+      supabase.auth
+        .setSession({ access_token: accessToken, refresh_token: refreshToken })
+        .then(({ error }) => {
           setEstadoDoLink(error ? 'invalido' : 'sessao-pronta')
           // Tira o token da barra de endereços: ele dá acesso à conta e não
           // deveria sobreviver no histórico do navegador nem em um print.
           window.history.replaceState(null, '', window.location.pathname)
-        },
-      )
+        })
       return
     }
 
@@ -245,7 +248,8 @@ function RedefinirSenhaPageInner() {
       console.error('limparTentativasDeLogin falhou após reset', err)
     }
 
-    const nome = (data.user?.user_metadata?.name as string | undefined) ?? data.user?.email ?? ''
+    const nome =
+      (data.user?.user_metadata?.name as string | undefined) ?? data.user?.email ?? ''
     setPrimeiroNome(nome.split(' ')[0] ?? '')
     setIsSubmitting(false)
     setEstadoDoLink('sucesso')
@@ -266,7 +270,7 @@ function RedefinirSenhaPageInner() {
       // dashboard é renderizado no servidor, sem isso ele poderia ser
       // servido com o estado anterior.
       router.refresh()
-      router.replace('/dashboard')
+      router.replace(PAGINA_INICIAL)
     }, espera)
 
     return () => clearTimeout(timer)
@@ -293,11 +297,7 @@ function RedefinirSenhaPageInner() {
         </CardHeader>
         <CardContent className="animate-entrada fade-in ease-entrada flex flex-col items-center gap-3 duration-[850ms]">
           <Loader2 aria-hidden className="text-muted-foreground size-5 animate-spin" />
-          <Button
-            variant="ghost"
-            size="sm"
-            render={<Link href="/dashboard" />}
-          >
+          <Button variant="ghost" size="sm" render={<Link href={PAGINA_INICIAL} />}>
             Ir para o painel agora
           </Button>
         </CardContent>

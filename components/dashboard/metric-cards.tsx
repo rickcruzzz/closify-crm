@@ -104,6 +104,7 @@ export function MetricCards({
   metrics,
   anteriores = null,
   temFiltroDePeriodo = false,
+  compacto = false,
 }: {
   metrics: DashboardMetrics
   /**
@@ -128,8 +129,14 @@ export function MetricCards({
    * a frase entrava no PDF que a pessoa manda ao cliente dela.
    */
   temFiltroDePeriodo?: boolean
+  compacto?: boolean
 }) {
-  if (metrics.totalLeads === 0 && metrics.openDeals === 0 && !temFiltroDePeriodo) {
+  if (
+    !compacto &&
+    metrics.totalLeads === 0 &&
+    metrics.openDeals === 0 &&
+    !temFiltroDePeriodo
+  ) {
     return (
       <Card>
         <CardContent>
@@ -146,7 +153,7 @@ export function MetricCards({
     )
   }
 
-  if (metrics.totalLeads === 0 && metrics.openDeals === 0) {
+  if (!compacto && metrics.totalLeads === 0 && metrics.openDeals === 0) {
     return (
       <Card>
         <CardContent>
@@ -161,7 +168,12 @@ export function MetricCards({
   }
 
   return (
-    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+    <div
+      className={cn(
+        'grid gap-3 lg:grid-cols-4',
+        compacto ? 'grid-cols-2' : 'grid-cols-1 sm:grid-cols-2',
+      )}
+    >
       {cards.map((card) => {
         const variacao =
           anteriores && card.comparavel
@@ -181,7 +193,13 @@ export function MetricCards({
             href={card.href}
             className="focus-visible:ring-ring/50 rounded-xl outline-none focus-visible:ring-3"
           >
-            <Card className="group/metrica hover:bg-accent/40 hover:ring-foreground/20 h-full cursor-pointer transition-colors motion-reduce:transition-none">
+            <Card
+              size={compacto ? 'sm' : 'default'}
+              className={cn(
+                'group/metrica hover:bg-accent/40 hover:ring-foreground/20 h-full cursor-pointer transition-colors motion-reduce:transition-none',
+                compacto && 'gap-2',
+              )}
+            >
               <CardHeader className="flex flex-row items-start justify-between">
                 <CardTitle className="text-muted-foreground text-sm font-medium">
                   {card.label}
@@ -189,6 +207,7 @@ export function MetricCards({
                 <div
                   className={cn(
                     'flex size-9 shrink-0 items-center justify-center rounded-lg',
+                    compacto && 'hidden size-7 sm:flex',
                     card.accent.bg,
                   )}
                 >
@@ -203,16 +222,29 @@ export function MetricCards({
                       3xl e não 2xl: o número é o único dado do cartão, e a
                       distância tipográfica para o rótulo de 14px é o que faz a
                       leitura acontecer em um golpe de vista. */}
-                  <span className="text-3xl leading-none font-semibold tabular-nums">
+                  <span
+                    className={cn(
+                      'text-3xl leading-none font-semibold tabular-nums',
+                      compacto && 'text-2xl',
+                    )}
+                  >
                     {card.valor(metrics)}
                   </span>
                   {variacao && <SeloDeVariacao variacao={variacao} />}
                 </div>
-                <span className="text-muted-foreground inline-flex items-center gap-1 text-xs">
+                <span
+                  className={cn(
+                    'text-muted-foreground inline-flex items-center gap-1 text-xs',
+                    compacto && card.label !== 'Viraram venda' && 'hidden sm:inline-flex',
+                  )}
+                >
                   {card.rodape(metrics)}
                   <ArrowRight
                     aria-hidden
-                    className="size-3 transition-transform group-hover/metrica:translate-x-0.5 motion-reduce:transition-none"
+                    className={cn(
+                      'size-3 shrink-0 transition-transform group-hover/metrica:translate-x-0.5 motion-reduce:transition-none',
+                      compacto && 'hidden sm:block',
+                    )}
                   />
                 </span>
                 {variacao && (

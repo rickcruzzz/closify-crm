@@ -15,9 +15,11 @@ import { MetricCards } from '@/components/dashboard/metric-cards'
 export async function MetricCardsAsync({
   workspaceId,
   periodo,
+  compacto = false,
 }: {
   workspaceId: string
   periodo?: PeriodoDoDashboard
+  compacto?: boolean
 }) {
   const anterior = janelaAnterior(periodo ?? null)
 
@@ -38,6 +40,7 @@ export async function MetricCardsAsync({
       metrics={metrics}
       anteriores={metricsAnteriores}
       temFiltroDePeriodo={periodo !== undefined}
+      compacto={compacto}
     />
   )
 }

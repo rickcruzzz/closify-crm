@@ -1,5 +1,7 @@
 'use client'
 
+import { PAGINA_INICIAL } from '@/lib/pagina-inicial'
+
 import * as React from 'react'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
@@ -117,7 +119,7 @@ export function AssistenteDeOnboarding({
       return
     }
 
-    router.push('/dashboard')
+    router.push(PAGINA_INICIAL)
   }
 
   // O processamento roda uma vez, quando a etapa vira `processando`. Sem a
@@ -155,7 +157,7 @@ export function AssistenteDeOnboarding({
 
       // Sem `?tour=1`: o tour abre pelo estado, não por parâmetro de URL.
       // `destino` já resolve pro checkout quando a pessoa veio querendo o Pro.
-      router.push('destino' in resultado ? resultado.destino : '/dashboard')
+      router.push('destino' in resultado ? resultado.destino : PAGINA_INICIAL)
     })()
   }, [naProcessando, respostas, router, atalhoPro])
 
@@ -431,7 +433,10 @@ function Processando() {
   return (
     <ul className="flex flex-col gap-2.5 py-2" aria-live="polite">
       {passos.map((passo) => (
-        <li key={passo} className="text-muted-foreground flex items-center gap-2.5 text-sm">
+        <li
+          key={passo}
+          className="text-muted-foreground flex items-center gap-2.5 text-sm"
+        >
           <Loader2 className="text-primary size-4 shrink-0 animate-spin" />
           {passo}
         </li>

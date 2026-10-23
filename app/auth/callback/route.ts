@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from 'next/server'
 
 import { createClient } from '@/lib/supabase/server'
+import { PAGINA_INICIAL } from '@/lib/pagina-inicial'
 
 export async function GET(request: NextRequest) {
   const { searchParams, origin } = new URL(request.url)
@@ -10,7 +11,7 @@ export async function GET(request: NextRequest) {
   // em vez do /dashboard padrão. Allowlist fixa pra não virar open redirect
   // (nunca repassa o valor da query direto pro Location).
   const next = searchParams.get('next')
-  const safeNext = next === '/redefinir-senha' ? next : '/dashboard'
+  const safeNext = next === '/redefinir-senha' ? next : PAGINA_INICIAL
 
   // Links de auth que voltam SEM `code` trazem a sessão em `#access_token=`,
   // um fragmento que nunca chega ao servidor. Nada aqui consegue lê-lo, então

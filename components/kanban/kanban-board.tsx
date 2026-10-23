@@ -652,6 +652,7 @@ export function KanbanBoard({
       </div>
 
       <DndContext
+        id="funil-de-negocios"
         sensors={sensors}
         collisionDetection={detectarColisao}
         onDragStart={handleDragStart}

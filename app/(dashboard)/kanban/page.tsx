@@ -1,4 +1,7 @@
 import type { Metadata } from 'next'
+import { Suspense } from 'react'
+import { MetricCardsAsync } from '@/components/dashboard/metric-cards-async'
+import { Skeleton } from '@/components/ui/skeleton'
 import {
   getBoardDeals,
   getDealAvulso,
@@ -84,14 +87,27 @@ export default async function KanbanPage({
   return (
     // `max-w-none` desfaz o teto de 1160px do layout: o board rola na
     // horizontal e espremê-lo esconderia colunas atrás da rolagem.
-    <div className="-mx-4 max-w-none px-4 md:-mx-6 md:px-6">
+    <div data-pagina="funil" className="-mx-4 max-w-none px-4 md:-mx-6 md:px-6">
       <PageHeader {...CABECALHOS.kanban} />
+
+      <section aria-label="Indicadores do funil" className="mb-5">
+        <Suspense
+          fallback={
+            <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+              {Array.from({ length: 4 }, (_, i) => (
+                <Skeleton key={i} className="h-24 w-full" />
+              ))}
+            </div>
+          }
+        >
+          <MetricCardsAsync workspaceId={workspaceId} compacto />
+        </Suspense>
+      </section>
 
       {/* Board completamente vazio: mostra o guia acima dele. A condição é
           resolvida no servidor, sobre `deals`, não sobre o resultado do filtro
           do board, quem filtrou até zerar a tela não é um usuário novo e não
           deve receber tutorial. */}
-      {board.deals.length === 0 && <GettingStartedCard />}
 
       {/* ## Por que o boundary de classe vem AQUI, e não só no layout
 
@@ -145,6 +161,7 @@ export default async function KanbanPage({
           />
         </FunilResiliente>
       </CapturaDeComponente>
+      {board.deals.length === 0 && <GettingStartedCard />}
     </div>
   )
 }

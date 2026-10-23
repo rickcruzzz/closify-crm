@@ -1,3 +1,5 @@
+import { PAGINA_INICIAL } from '@/lib/pagina-inicial'
+
 import type { Metadata } from 'next'
 import { redirect } from 'next/navigation'
 
@@ -58,7 +60,7 @@ export default async function BemVindoPage() {
   const estado = await lerEstadoDoOnboarding()
 
   if (estado.status === 'skipped' || estado.status === 'completed') {
-    redirect('/dashboard')
+    redirect(PAGINA_INICIAL)
   }
 
   // ## "Pular por enquanto" só quando ele de fato pula

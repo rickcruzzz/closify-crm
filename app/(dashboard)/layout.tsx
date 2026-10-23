@@ -187,7 +187,7 @@ export default async function DashboardLayout({
 
               O Kanban rola na horizontal por conta própria e é a exceção, ele
               passa por cima com `max-w-none`. */}
-            <div className="mx-auto w-full max-w-[1160px]">
+            <div className="mx-auto w-full max-w-[1160px] has-[[data-pagina=funil]]:max-w-none">
               {/* Invisível: reporta o NOME do componente que quebrou e relança
                 para o `error.tsx` desenhar a tela de sempre. Existe porque o
                 boundary do App Router recebe só `{ error, reset }`, e foi

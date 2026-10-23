@@ -1,5 +1,7 @@
 'use client'
 
+import { PAGINA_INICIAL } from '@/lib/pagina-inicial'
+
 import * as React from 'react'
 import { useRouter } from 'next/navigation'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -15,10 +17,7 @@ import { AuthAlerta } from '@/components/auth/auth-alerta'
 import { passo4 } from '@/components/auth/animacao'
 import { definirSenhaInicial } from '@/lib/supabase/actions'
 import { pularOnboarding } from '@/lib/onboarding/actions'
-import {
-  definirSenhaSchema,
-  type DefinirSenhaValues,
-} from '@/lib/validations/auth'
+import { definirSenhaSchema, type DefinirSenhaValues } from '@/lib/validations/auth'
 
 export function BemVindoClient({
   primeiroNome,
@@ -83,7 +82,7 @@ export function BemVindoClient({
       return
     }
 
-    router.push('/dashboard')
+    router.push(PAGINA_INICIAL)
   }
 
   const ocupado = isSubmitting || pulando || navegando
@@ -136,7 +135,11 @@ export function BemVindoClient({
         )}
 
         {podeDefinirSenha && mostrandoSenha && (
-          <form onSubmit={handleSubmit(onSubmit)} noValidate className="flex flex-col gap-4">
+          <form
+            onSubmit={handleSubmit(onSubmit)}
+            noValidate
+            className="flex flex-col gap-4"
+          >
             <Controller
               name="password"
               control={control}

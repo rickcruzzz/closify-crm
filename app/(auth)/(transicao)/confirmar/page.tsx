@@ -1,5 +1,7 @@
 'use client'
 
+import { PAGINA_INICIAL } from '@/lib/pagina-inicial'
+
 import * as React from 'react'
 import { Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
@@ -83,7 +85,7 @@ function ConfirmarPageInner() {
         return
       }
     }
-    router.replace('/dashboard')
+    router.replace(PAGINA_INICIAL)
   }
 
   // Fluxo antigo (fragmento), roda sozinho, sem clique, porque o Supabase já

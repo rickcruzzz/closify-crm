@@ -4,140 +4,85 @@ import {
   KanbanSquare,
   LayoutDashboard,
   Plug,
+  Radar,
   Settings,
   User,
   UserCog,
   Users,
 } from 'lucide-react'
-
 import type { ComponentType, SVGProps } from 'react'
-
 import { IconeWhatsapp } from '@/components/ui/icone-whatsapp'
 
 export type NavItem = {
   title: string
   href: string
-  /**
-   * O glifo do item.
-   *
-   * Era `typeof LayoutDashboard`, ou seja o tipo exato do `lucide-react`. O
-   * WhatsApp obrigou a abrir: **o lucide não tem marcas** — ele removeu os
-   * ícones de marca do pacote —, e o que sobrava por lá era genérico. Um balão
-   * qualquer ao lado de "Conversas", que já é um balão, anula a função do
-   * ícone.
-   *
-   * O tipo aceita qualquer componente que receba props de SVG, que é o contrato
-   * de verdade: o renderizador faz `<Icon className={...} />` e nada mais.
-   */
   icon: ComponentType<SVGProps<SVGSVGElement>>
-  /**
-   * Só para itens que apontam pra `/settings`: qual aba conta como "ativo"
-   * pra este item. `undefined` cobre as abas que não têm entrada própria no
-   * menu (equipe/plano), sem isso, "Preferências" e "Integrações"
-   * ficariam os dois marcados ativos ao mesmo tempo, ou nenhum dos dois.
-   */
+  /** A aba diferencia as entradas que compartilham /settings. */
   aba?: string
+  somenteEnterprise?: boolean
 }
+export type NavGroup = { title: string | null; items: NavItem[] }
 
-export type NavGroup = {
-  /**
-   * O cabeçalho da seção. `null` renderiza sem cabeçalho nenhum.
-   *
-   * Os três grupos da barra são rotulados desde 16/09. Antes o primeiro vinha
-   * sem rótulo, com o raciocínio de que "o principal não precisa se
-   * apresentar" — e o efeito era o oposto: sem o rótulo, "CONFIGURAÇÕES" no
-   * meio da lista parecia o começo da estrutura, e os seis itens de cima
-   * ficavam soltos, sem nome coletivo. Rotular os três custa uma linha de 12px
-   * cada e faz a barra ser lida como três blocos, que é o que ela é.
-   */
-  title: string | null
-  items: NavItem[]
-}
-
-/**
- * ## A ordem, e por que ela não muda sozinha
- *
- * `lib/nav-items.test.ts` trava a lista inteira — grupos, ordem e rótulos —
- * contra o que foi aprovado em 16/09. Item de menu é a superfície mais fácil de
- * mexer sem querer (um `push`, um copiar e colar), e reordenar a navegação de
- * quem já usa o produto todo dia é caro: a pessoa clica por memória muscular,
- * não por leitura.
- *
- * O teste não impede mudar a ordem. Impede mudar sem perceber.
- */
+/** Organização aprovada em 22/10: o trabalho comercial abre o produto. */
 export const navGroups: NavGroup[] = [
   {
-    title: 'Principal',
+    title: 'Comercial',
     items: [
-      // Primeira da lista porque é a tela de abrir de manhã: ela responde "o
-      // que eu faço agora", que é a pergunta que traz a pessoa de volta todo
-      // dia. O Pipeline continua sendo a identidade do produto e fica logo
-      // abaixo.
-      { title: 'Hoje', href: '/hoje', icon: CalendarCheck },
-      // "Funil", não "Pipeline". A rota segue `/kanban` de propósito: renomear
-      // quebraria link salvo e favorito para trocar uma palavra que ninguém
-      // digita. O que a pessoa lê muda; o endereço não.
-      // Logo depois de Hoje, e antes do Funil: é a segunda pergunta da manhã,
-      // "quem está esperando resposta agora". Fica acima do Funil porque
-      // conversa sem resposta vira venda perdida em minutos, enquanto negócio
-      // parado no funil espera dias sem piorar.
-      // ## Eram DOIS itens ate 17/09, e viraram um
-      //
-      // "Conversas" apontava para a caixa de entrada e "WhatsApp" para a tela
-      // de conexao. Sao a caixa e o cano da mesma coisa, e o menu exigia que a
-      // pessoa soubesse a diferenca ANTES de clicar: quem nao ve mensagem
-      // chegando abre "Conversas", encontra uma lista vazia que nao explica
-      // nada, e a resposta esta no item de baixo.
-      //
-      // Agora ha um item so. A rota continua `/conversas` porque e onde a
-      // caixa vive e renomear quebraria link salvo; a TELA e que decide o que
-      // mostrar, o QR Code enquanto o numero nao esta conectado, a caixa
-      // depois disso.
-      //
-      // Logo depois de Hoje e antes do Funil: e a segunda pergunta da manha,
-      // "quem esta esperando resposta agora". Conversa sem resposta vira venda
-      // perdida em minutos, enquanto negocio parado no funil espera dias sem
-      // piorar.
-      { title: 'WhatsApp', href: '/conversas', icon: IconeWhatsapp },
       { title: 'Funil', href: '/kanban', icon: KanbanSquare },
-      // "Contatos", não "Leads". O PRD de copy adiou esta troca temendo
-      // prometer "contatos" na landing e a pessoa encontrar "Leads" depois de
-      // pagar — mas a landing JÁ diz contatos, então renomear aqui fecha essa
-      // distância em vez de criá-la.
+      {
+        title: 'Prospecção',
+        href: '/enterprise/eventos',
+        icon: Radar,
+        somenteEnterprise: true,
+      },
       { title: 'Contatos', href: '/leads', icon: Users },
-      // "Resultados", não "Dashboard": descreve o que a tela entrega (quanto
-      // entrou, quanto está em aberto) em vez de nomear o tipo de tela.
-      { title: 'Resultados', href: '/dashboard', icon: LayoutDashboard },
-      // Monitoramento por data (o que tenho hoje, atrasado, previsto), não
-      // conexão técnica com o Google — isso já vive em Integrações. Item
-      // principal, não escondido: é onde a pessoa responde "o que vem por
-      // aí".
+    ],
+  },
+  {
+    title: 'Rotina',
+    items: [
+      { title: 'Hoje', href: '/hoje', icon: CalendarCheck },
+      { title: 'WhatsApp', href: '/conversas', icon: IconeWhatsapp },
       { title: 'Calendário', href: '/calendario', icon: Calendar },
+    ],
+  },
+  {
+    title: 'Gestão',
+    items: [
+      { title: 'Resultados', href: '/dashboard', icon: LayoutDashboard },
+      { title: 'Equipe', href: '/settings?aba=equipe', icon: UserCog, aba: 'equipe' },
     ],
   },
   {
     title: 'Configurações',
     items: [
-      // Já existia como rota, só não tinha entrada na sidebar — vivia
-      // escondido no menu do rodapé (user-menu.tsx). Dados da PESSOA, não
-      // da empresa, por isso separado de "Preferências" abaixo.
-      { title: 'Perfil', href: '/perfil', icon: User },
-      // `UserCog`, não `Users`: o mesmo ícone servia "Contatos" e "Equipe" ao
-      // mesmo tempo, e ícone repetido em menu curto anula a própria função do
-      // ícone, que é dar um segundo caminho de reconhecimento além do texto.
-      { title: 'Equipe', href: '/settings?aba=equipe', icon: UserCog, aba: 'equipe' },
-      // Aponta pra mesma página de Preferências, só que já na aba certa,
-      // evita duplicar a tela de integrações num lugar novo.
+      { title: 'Empresa', href: '/settings', icon: Settings },
       {
         title: 'Integrações',
         href: '/settings?aba=integracoes',
         icon: Plug,
         aba: 'integracoes',
       },
-      // Era "Configurações" — renomeado porque a página guarda dados da
-      // empresa (logo, CNPJ, endereço), "Preferências" descreve melhor o
-      // conteúdo do que um rótulo que soa como "todo o resto de config".
-      { title: 'Preferências', href: '/settings', icon: Settings },
+      { title: 'Perfil', href: '/perfil', icon: User },
     ],
   },
 ]
+
+/** Visibilidade apenas; página e Actions continuam impondo o plano no servidor. */
+export function gruposDeNavegacao(temEnterprise: boolean): NavGroup[] {
+  return navGroups.map((grupo) => ({
+    ...grupo,
+    items: grupo.items.filter((item) => !item.somenteEnterprise || temEnterprise),
+  }))
+}
+
+export function itemDeNavegacaoAtivo(
+  item: NavItem,
+  pathname: string,
+  aba: string | null,
+): boolean {
+  const rota = item.href.split('?')[0]!
+  if (pathname !== rota && !pathname.startsWith(rota + '/')) return false
+  if (rota !== '/settings') return true
+  return item.aba ? aba === item.aba : aba !== 'equipe' && aba !== 'integracoes'
+}

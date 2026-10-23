@@ -1,6 +1,7 @@
 'use client'
 
 import Link from 'next/link'
+import { useId } from 'react'
 import { usePathname, useSearchParams } from 'next/navigation'
 
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
@@ -9,13 +10,14 @@ import {
   TituloDeGrupoDaBarra,
 } from '@/components/layout/titulo-de-grupo'
 import { cn } from '@/lib/utils'
-import { navGroups } from '@/lib/nav-items'
+import { gruposDeNavegacao, itemDeNavegacaoAtivo } from '@/lib/nav-items'
 
 export function SidebarNav({
   onNavigate,
   tarefasDoDia,
   conversasEsperando,
   recolhida = false,
+  temEnterprise = false,
 }: {
   onNavigate?: () => void
   /** Quantas tarefas minhas vencem hoje ou já venceram — o badge do "Hoje". */
@@ -23,24 +25,26 @@ export function SidebarNav({
   conversasEsperando: number
   /** Barra em modo icone: o rotulo sai do item e vira tooltip. */
   recolhida?: boolean
+  temEnterprise?: boolean
 }) {
   const pathname = usePathname()
   const searchParams = useSearchParams()
   const abaAtual = searchParams.get('aba')
+  const idDaNavegacao = useId()
 
   return (
-    <nav aria-label="Navegação principal" className="flex flex-col gap-4">
-      {navGroups.map((group, indiceDoGrupo) => {
+    <nav aria-label="Navegação principal" className="flex flex-col gap-5">
+      {gruposDeNavegacao(temEnterprise).map((group, indiceDoGrupo) => {
         // O `id` do rotulo, para o bloco apontar para ele. Sai do indice e nao
         // do titulo: titulo vira id com acento e espaco ("Configurações"), e
         // `aria-labelledby` casa por igualdade de string — um id que precisa de
         // normalizacao e um id que uma hora nao vai casar.
-        const idDoRotulo = `grupo-da-barra-${indiceDoGrupo}`
+        const idDoRotulo = `${idDaNavegacao}-grupo-${indiceDoGrupo}`
 
         return (
           <div
             key={group.title ?? `grupo-${indiceDoGrupo}`}
-            className="flex flex-col gap-1"
+            className="flex flex-col gap-2"
             // Recolhida NAO ha rotulo, so o filete — e apontar para um id que nao
             // existe deixa o grupo sem nome acessivel nenhum, que e pior do que
             // nao declarar grupo.
@@ -62,10 +66,6 @@ export function SidebarNav({
             )}
 
             {group.items.map((item) => {
-              const rotaDoItem = item.href.split('?')[0]!
-              const mesmaRota =
-                pathname === rotaDoItem || pathname.startsWith(`${rotaDoItem}/`)
-
               // "Preferências", "Equipe" e "Integrações" apontam pras três pro
               // mesmo `/settings`, o que diferencia qual fica destacada é a
               // aba na URL, não a rota. "Equipe"/"Integrações" acendem só na
@@ -79,13 +79,7 @@ export function SidebarNav({
               // menu sempre que a pessoa estivesse em `/settings`, porque a
               // condição nunca checava se o item em questão era um dos três de
               // `/settings`.
-              const active =
-                rotaDoItem === '/settings'
-                  ? mesmaRota &&
-                    (item.aba
-                      ? abaAtual === item.aba
-                      : abaAtual !== 'equipe' && abaAtual !== 'integracoes')
-                  : mesmaRota
+              const active = itemDeNavegacaoAtivo(item, pathname, abaAtual)
 
               const Icon = item.icon
 
@@ -100,15 +94,11 @@ export function SidebarNav({
                   onClick={onNavigate}
                   aria-current={active ? 'page' : undefined}
                   className={cn(
-                    'flex items-center gap-2.5 rounded-lg py-2 text-sm font-medium transition-colors',
-                    // Ativo ganha margin negativo + padding maior na mesma
-                    // proporção (-4px / +4px): a pill fica 8px mais larga (mais
-                    // respiro do fundo colorido em volta do ícone), mas o
-                    // ícone continua exatamente na mesma posição horizontal do
-                    // item inativo, padding e margin se cancelam.
+                    'focus-visible:ring-ring relative flex min-h-11 cursor-pointer items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium transition-colors duration-150 outline-none focus-visible:ring-2 focus-visible:ring-inset motion-reduce:transition-none',
+                    // Mesma geometria no repouso, hover e seleção.
                     active
-                      ? 'bg-primary text-primary-foreground -mx-1 px-3.5'
-                      : 'text-muted-foreground hover:bg-muted hover:text-foreground px-2.5',
+                      ? 'bg-primary/15 text-sidebar-foreground ring-primary/25 ring-1 ring-inset'
+                      : 'text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-foreground',
                     // Recolhida o item vira quadrado centrado. `justify-center`
                     // com o texto fora do fluxo e o que evita o icone "pular"
                     // de posicao entre os dois estados.
@@ -116,7 +106,10 @@ export function SidebarNav({
                     recolhida && active && 'mx-0 px-0',
                   )}
                 >
-                  <Icon aria-hidden className="size-4 shrink-0" />
+                  <Icon
+                    aria-hidden
+                    className={cn('size-4 shrink-0', active && 'text-primary')}
+                  />
                   {/* `sr-only` e nao removido: o nome continua sendo o nome
                     acessivel do link. Sem ele o leitor de tela anunciaria
                     "link" e mais nada, e o `aria-label` no `<a>` seria uma
@@ -147,8 +140,9 @@ export function SidebarNav({
                       aria-label={`${conversasEsperando} ${conversasEsperando === 1 ? 'conversa esperando' : 'conversas esperando'} resposta`}
                       className={cn(
                         'flex min-w-5 shrink-0 items-center justify-center rounded-full px-1.5 text-xs font-semibold tabular-nums',
+                        recolhida && 'absolute top-0 right-0 min-w-4 px-1',
                         active
-                          ? 'bg-primary-foreground/20 text-primary-foreground'
+                          ? 'bg-primary/15 text-sidebar-foreground'
                           : 'bg-amber-500/15 text-amber-600 dark:text-amber-500',
                       )}
                     >
@@ -161,8 +155,9 @@ export function SidebarNav({
                       aria-label={`${tarefasDoDia} ${tarefasDoDia === 1 ? 'tarefa' : 'tarefas'} para hoje`}
                       className={cn(
                         'flex min-w-5 shrink-0 items-center justify-center rounded-full px-1.5 text-xs font-semibold tabular-nums',
+                        recolhida && 'absolute top-0 right-0 min-w-4 px-1',
                         active
-                          ? 'bg-primary-foreground/20 text-primary-foreground'
+                          ? 'bg-primary/15 text-sidebar-foreground'
                           : 'bg-primary/15 text-primary',
                       )}
                     >

@@ -1,5 +1,7 @@
 'use server'
 
+import { PAGINA_INICIAL } from '@/lib/pagina-inicial'
+
 import { revalidatePath } from 'next/cache'
 
 import { COOKIE_CONSENTIMENTO, podeRastrear } from '@/lib/analytics/consentimento'
@@ -18,15 +20,15 @@ import { enviarConversaoDeRegistro } from '@/lib/analytics/meta-conversions'
 import { appUrl } from '@/lib/app-url'
 import { ipDaRequisicao } from '@/lib/request-ip'
 import { registrar } from '@/lib/onboarding/eventos'
-import {
-  PASSOS_DO_GUIA,
-  lerVisitadas,
-  type ChaveDoPasso,
-} from '@/lib/onboarding/guia'
+import { PASSOS_DO_GUIA, lerVisitadas, type ChaveDoPasso } from '@/lib/onboarding/guia'
 import { situacaoDoMax } from '@/lib/plans/max-queries'
 import { getCurrentUserAndWorkspace } from '@/lib/supabase/workspace'
 import { passoDoOnboardingSchema } from '@/lib/validations/onboarding'
-import { FREE_WORKSPACE_LIMIT, MAX_WORKSPACE_LIMIT, PRO_WORKSPACE_LIMIT } from '@/lib/plans'
+import {
+  FREE_WORKSPACE_LIMIT,
+  MAX_WORKSPACE_LIMIT,
+  PRO_WORKSPACE_LIMIT,
+} from '@/lib/plans'
 import type { OnboardingEtapa, OnboardingStatus, TourStatus } from '@/types/supabase'
 
 type Sessao = { supabase: Awaited<ReturnType<typeof createClient>>; userId: string }
@@ -157,7 +159,9 @@ const finalizarSchema = z.object({
   nomeEmpresa: z.string().trim().min(2, 'Informe o nome da empresa.').max(80),
   segmento: z.string().trim().max(40).optional(),
   modeloVenda: z.enum(['servicos', 'produtos', 'ambos']).optional(),
-  tamanhoEquipe: z.enum(['so_eu', '2_5', '6_20', '21_mais', '21_100', '101_500', '500_mais']).optional(),
+  tamanhoEquipe: z
+    .enum(['so_eu', '2_5', '6_20', '21_mais', '21_100', '101_500', '500_mais'])
+    .optional(),
 })
 
 /**
@@ -192,7 +196,10 @@ export async function finalizarOnboarding(values: unknown) {
     })
 
     if (convite?.[0]?.status === 'pending') {
-      return { error: 'convite_pendente' as const, destino: `/convite/${convitePendente}` }
+      return {
+        error: 'convite_pendente' as const,
+        destino: `/convite/${convitePendente}`,
+      }
     }
 
     // Convite já usado: o cookie é lixo e ficaria desviando para sempre.
@@ -358,7 +365,7 @@ export async function finalizarOnboarding(values: unknown) {
     return { success: true, workspaceId, destino: '/settings/billing?assinar=1' }
   }
 
-  return { success: true, workspaceId, destino: '/dashboard' }
+  return { success: true, workspaceId, destino: PAGINA_INICIAL }
 }
 
 /**
@@ -400,7 +407,11 @@ export async function pularOnboarding() {
     }
   }
 
-  const r = await gravarEstado(sessao, { status: 'skipped', etapa: null, tour_status: 'skipped' })
+  const r = await gravarEstado(sessao, {
+    status: 'skipped',
+    etapa: null,
+    tour_status: 'skipped',
+  })
   if ('error' in r) return r
 
   registrar('onboarding_skipped')
@@ -480,7 +491,10 @@ export async function lerProgressoDoGuia(): Promise<{
   ])
 
   if (leads.error || negocios.error || orcamentos.error) {
-    console.error('lerProgressoDoGuia falhou', leads.error ?? negocios.error ?? orcamentos.error)
+    console.error(
+      'lerProgressoDoGuia falhou',
+      leads.error ?? negocios.error ?? orcamentos.error,
+    )
     return null
   }
 
