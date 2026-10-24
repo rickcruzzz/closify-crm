@@ -4,8 +4,14 @@ import { revalidatePath } from 'next/cache'
 
 import { enviarMensagem } from '@/lib/conversas/actions'
 import { avaliarEvento, type DadosDoEvento } from '@/lib/enterprise/eventos'
-import { buscarPaginasDeEventos, exaConfigurada, lerPaginaDeEvento } from '@/lib/enterprise/exa'
-import { chaveDaPagina, extrairEvento } from '@/lib/enterprise/extracao'
+import {
+  PAGINAS_POR_VARREDURA,
+  buscarPaginasDeContato,
+  buscarPaginasDeEventos,
+  exaConfigurada,
+  lerPaginaDeEvento,
+} from '@/lib/enterprise/exa'
+import { chaveDaPagina, extrairEvento, type EventoExtraido } from '@/lib/enterprise/extracao'
 import { potencialNoCard } from '@/lib/enterprise/potencial'
 import { contatoDoEventoCompleto, conferirDestinatarioDoEvento } from '@/lib/enterprise/contato'
 import { contatoJaCadastrado } from '@/lib/leads/contato-existente'
@@ -196,7 +202,7 @@ async function vincularContato(
  */
 async function gravarEvento(
   contexto: Contexto,
-  dados: DadosDoEvento,
+  dados: DadosDoEvento & { fonte_contato_url?: string | null },
   espacos: { nome: string; cidade: string; regiao: string | null }[],
 ): Promise<{ ok: true; id: string } | { ok: false; erro: string; repetido?: true }> {
   const avaliacao = avaliarEvento(dados, new Date(), espacos)
@@ -212,6 +218,10 @@ async function gravarEvento(
       contato_nome: dados.contato_nome ?? null,
       contato_email: dados.contato_email ?? null,
       contato_telefone: dados.contato_telefone ?? null,
+      // A página onde o contato está escrito, quando não é a do evento. A
+      // coluna existe desde a 0101 e o card do Radar já mostra o link
+      // "Conferir contato" quando ela é diferente da fonte do evento.
+      fonte_contato_url: dados.fonte_contato_url ?? null,
       publico_estimado: dados.publico_estimado ?? null,
       perfil_publico: dados.perfil_publico ?? null,
       prioridade: avaliacao.prioridade,
@@ -333,13 +343,124 @@ export async function buscarEventosNaExa(): Promise<
 
   const chaves = new Set((conhecidos ?? []).map((e) => chaveDaPagina(e.fonte_url)))
   const novas = paginas.filter((p) => !chaves.has(chaveDaPagina(p.url)))
-  return { ok: true, paginas: novas, jaNoRadar: paginas.length - novas.length }
+  // O corte vem DEPOIS de tirar as conhecidas: cortar antes gastaria a cota da
+  // varredura em páginas que já estão no Radar.
+  return {
+    ok: true,
+    paginas: novas.slice(0, PAGINAS_POR_VARREDURA),
+    jaNoRadar: paginas.length - novas.length,
+  }
 }
 
 export type ResultadoDaPagina =
   | { situacao: 'adicionado'; nome: string; contato: 'criado' | 'vinculado' | 'sem_contato' | 'falhou' }
+  /**
+   * Evento válido, mas a página não escreve e-mail E telefone. NÃO foi
+   * gravado (regra de 22/10): a tela chama `completarContatoDaPagina` com o
+   * nome, que só serve de termo de busca.
+   */
+  | { situacao: 'sem_contato'; nome: string }
   | { situacao: 'ignorado'; motivo: string }
   | { situacao: 'erro'; motivo: string }
+
+/**
+ * Grava o evento extraído, registra as fontes e cria o contato.
+ *
+ * O caminho comum da análise e da busca de contato. Quando a mesma página e
+ * data já estão no Radar SEM contato completo (os eventos de antes da regra de
+ * 22/10), atualiza o contato daquele evento em vez de recusar como repetido.
+ */
+async function gravarExtraido(
+  contexto: Contexto,
+  extraido: EventoExtraido,
+  tituloDaPagina: string | null,
+  espacos: { nome: string; cidade: string; regiao: string | null }[],
+): Promise<ResultadoDaPagina> {
+  const { contatoDoTexto, fonte_contato_url, ...dados } = extraido
+
+  // ## O mesmo evento por outra página
+  //
+  // Medido na varredura real de 25/10: o INDEX entrou DUAS vezes, por duas
+  // notícias diferentes da FIEB, com a mesma data e o mesmo `index@fieb.org.br`.
+  // A chave da 0101 é página + data, e páginas diferentes passam. Mesma data e
+  // mesmo e-mail de contato é o mesmo evento, dito por outro site.
+  if (dados.contato_email) {
+    const { data: gemeo } = await contexto.supabase
+      .from('enterprise_eventos')
+      .select('id')
+      .eq('workspace_id', contexto.workspaceId)
+      .eq('data_inicio', dados.data_inicio)
+      .ilike('contato_email', dados.contato_email)
+      .neq('fonte_url', dados.fonte_url)
+      .limit(1)
+      .maybeSingle()
+    if (gemeo) return { situacao: 'ignorado', motivo: 'Este evento já está no radar, por outra página.' }
+  }
+
+  let eventoId: string
+  const gravado = await gravarEvento(contexto, { ...dados, fonte_contato_url }, espacos)
+  if (gravado.ok) {
+    eventoId = gravado.id
+  } else if (gravado.repetido) {
+    const { data: existente } = await contexto.supabase
+      .from('enterprise_eventos')
+      .select('id, contato_email, contato_telefone')
+      .eq('workspace_id', contexto.workspaceId)
+      .eq('fonte_url', dados.fonte_url)
+      .eq('data_inicio', dados.data_inicio)
+      .maybeSingle()
+    if (!existente || contatoDoEventoCompleto(existente)) {
+      return { situacao: 'ignorado', motivo: gravado.erro }
+    }
+    const avaliacao = avaliarEvento(dados, new Date(), espacos)
+    const { error: erroAtualizar } = await contexto.supabase
+      .from('enterprise_eventos')
+      .update({
+        contato_email: dados.contato_email ?? null,
+        contato_telefone: dados.contato_telefone ?? null,
+        fonte_contato_url,
+        prioridade: avaliacao.prioridade,
+        justificativa: avaliacao.justificativa,
+        informacoes_faltantes: avaliacao.informacoes_faltantes,
+        atualizado_em: new Date().toISOString(),
+      })
+      .eq('id', existente.id)
+      .eq('workspace_id', contexto.workspaceId)
+    if (erroAtualizar) return { situacao: 'erro', motivo: 'Não foi possível completar o contato do evento.' }
+    eventoId = existente.id
+  } else {
+    return { situacao: 'erro', motivo: gravado.erro }
+  }
+
+  // A fonte fica registrada como evidência, do mesmo jeito que a pesquisa
+  // manual registrava: quem for abordar confere de onde veio cada dado. O
+  // contato achado em OUTRA página ganha a própria linha, com o endereço dela.
+  const fontes: { tipo: 'evento' | 'contato'; titulo: string; url: string }[] = []
+  if (gravado.ok) fontes.push({ tipo: 'evento', titulo: tituloDaPagina ?? dados.nome, url: dados.fonte_url })
+  if (fonte_contato_url) {
+    fontes.push({ tipo: 'contato', titulo: 'Contato escrito em página pública do evento', url: fonte_contato_url })
+  } else if (contatoDoTexto) {
+    fontes.push({ tipo: 'contato', titulo: 'Contato escrito na página oficial', url: dados.fonte_url })
+  }
+  if (fontes.length > 0) {
+    const { error: erroFontes } = await contexto.supabase.from('enterprise_evento_fontes').upsert(
+      fontes.map((f) => ({ workspace_id: contexto.workspaceId, evento_id: eventoId, ...f })),
+      { onConflict: 'evento_id,tipo,url', ignoreDuplicates: true },
+    )
+    if (erroFontes) console.error('gravarExtraido: fontes não registradas', erroFontes)
+  }
+
+  const contato = await vincularContato(contexto, eventoId)
+  revalidatePath('/enterprise/eventos')
+  revalidatePath('/leads')
+  return {
+    situacao: 'adicionado',
+    nome: dados.nome,
+    contato: contato.ok
+      ? contato.criado ? 'criado' : 'vinculado'
+      : 'semContato' in contato ? 'sem_contato' : 'falhou',
+  }
+}
 
 /**
  * Segunda metade: lê UMA página, e se for evento válido, grava e cria o contato.
@@ -372,42 +493,93 @@ export async function analisarPaginaDaExa(url: string): Promise<ResultadoDaPagin
     cidadeDoRadar: CIDADE_DO_RADAR,
     hoje: diaEmSaoPaulo(new Date()),
   })
-  if (!extraido.ok) return { situacao: 'ignorado', motivo: extraido.motivo }
+  if (!extraido.ok) {
+    return extraido.semContato && extraido.nome
+      ? { situacao: 'sem_contato', nome: extraido.nome }
+      : { situacao: 'ignorado', motivo: extraido.motivo }
+  }
+  return gravarExtraido(contexto, extraido.evento, pagina.titulo, espacos.data ?? [])
+}
 
-  const { contatoDoTexto, ...dados } = extraido.evento
-  const gravado = await gravarEvento(contexto, dados, espacos.data ?? [])
-  if (!gravado.ok) {
-    return gravado.repetido
-      ? { situacao: 'ignorado', motivo: gravado.erro }
-      : { situacao: 'erro', motivo: gravado.erro }
+/**
+ * Terceira etapa: procura o contato do evento válido que veio sem ele.
+ *
+ * ## Relê a página, em vez de confiar no que a tela mandou
+ *
+ * `nome` vem do navegador e só serve de TERMO DE BUSCA. Os dados do evento
+ * (data, cidade, organizador) saem de novo da página, aqui no servidor: Server
+ * Action é endpoint HTTP, e aceitar o evento pronto da tela deixaria qualquer
+ * um gravar o evento que quisesse. A releitura e a busca de contato correm em
+ * PARALELO, então o teto continua o de uma página (~6,5s de Exa).
+ */
+export async function completarContatoDaPagina(url: string, nome: string): Promise<ResultadoDaPagina> {
+  const contexto = await contextoEnterprise()
+  if (!contexto) return { situacao: 'erro', motivo: SEM_ACESSO }
+  if (typeof url !== 'string' || !url.startsWith('https://') || url.length > 1500) {
+    return { situacao: 'ignorado', motivo: 'Endereço inválido.' }
+  }
+  const termo = typeof nome === 'string' ? nome.replace(/\s+/g, ' ').trim().slice(0, 160) : ''
+  if (termo.length < 3) return { situacao: 'ignorado', motivo: 'Nome do evento inválido.' }
+  if (await excedeuLimite('radar-exa-contato', contexto.userId)) {
+    return { situacao: 'erro', motivo: 'Limite de buscas de contato por hora atingido.' }
   }
 
-  // A fonte fica registrada como evidência, do mesmo jeito que a pesquisa
-  // manual registrava: quem for abordar confere de onde veio cada dado.
-  const fontes: { tipo: 'evento' | 'contato'; titulo: string }[] = [
-    { tipo: 'evento', titulo: pagina.titulo ?? dados.nome },
-  ]
-  if (contatoDoTexto) fontes.push({ tipo: 'contato', titulo: 'Contato escrito na página oficial' })
-  const { error: erroFontes } = await contexto.supabase.from('enterprise_evento_fontes').insert(
-    fontes.map((f) => ({
-      workspace_id: contexto.workspaceId,
-      evento_id: gravado.id,
-      tipo: f.tipo,
-      url: dados.fonte_url,
-      titulo: f.titulo,
-    })),
-  )
-  if (erroFontes) console.error('analisarPaginaDaExa: fontes não registradas', erroFontes)
+  const [pagina, paginasDeContato, espacos] = await Promise.all([
+    lerPaginaDeEvento(url).catch((erro: unknown) => {
+      console.error('completarContatoDaPagina: a Exa não releu a página', url, erro)
+      return null
+    }),
+    buscarPaginasDeContato(termo).catch((erro: unknown) => {
+      console.error('completarContatoDaPagina: a busca de contato falhou', termo, erro)
+      return []
+    }),
+    espacosAtivos(contexto),
+  ])
+  if (!pagina) return { situacao: 'erro', motivo: 'A Exa não conseguiu ler a página a tempo.' }
 
-  const contato = await vincularContato(contexto, gravado.id)
-  revalidatePath('/enterprise/eventos')
-  revalidatePath('/leads')
+  const extraido = extrairEvento({
+    url,
+    resumo: pagina.resumo,
+    textoDaPagina: pagina.texto,
+    cidadeDoRadar: CIDADE_DO_RADAR,
+    hoje: diaEmSaoPaulo(new Date()),
+    paginasDeContato,
+  })
+  if (!extraido.ok) {
+    return extraido.semContato
+      ? { situacao: 'ignorado', motivo: 'Nenhuma página pública do evento informa e-mail e telefone.' }
+      : { situacao: 'ignorado', motivo: extraido.motivo }
+  }
+  return gravarExtraido(contexto, extraido.evento, pagina.titulo, espacos.data ?? [])
+}
+
+/**
+ * Os eventos que já estão no Radar sem e-mail e telefone completos.
+ *
+ * Nasceram antes da regra de 22/10 e hoje ficam fora da lista da tela, que só
+ * mostra contato completo. A varredura passa cada um por
+ * `completarContatoDaPagina`; dez por vez, para não gastar a cota de contato
+ * numa varredura só.
+ */
+export async function eventosSemContatoCompleto(): Promise<
+  { ok: true; eventos: { url: string; nome: string }[] } | { ok: false; erro: string }
+> {
+  const contexto = await contextoEnterprise()
+  if (!contexto) return { ok: false, erro: SEM_ACESSO }
+  const { data, error } = await contexto.supabase
+    .from('enterprise_eventos')
+    .select('nome, fonte_url, contato_email, contato_telefone, data_inicio')
+    .eq('workspace_id', contexto.workspaceId)
+    .neq('status', 'descartado')
+    .gte('data_inicio', diaEmSaoPaulo(new Date()))
+    .limit(200)
+  if (error) return { ok: false, erro: 'Não foi possível conferir os eventos sem contato.' }
   return {
-    situacao: 'adicionado',
-    nome: dados.nome,
-    contato: contato.ok
-      ? contato.criado ? 'criado' : 'vinculado'
-      : 'semContato' in contato ? 'sem_contato' : 'falhou',
+    ok: true,
+    eventos: (data ?? [])
+      .filter((e) => !contatoDoEventoCompleto(e))
+      .slice(0, 10)
+      .map((e) => ({ url: e.fonte_url, nome: e.nome })),
   }
 }
 

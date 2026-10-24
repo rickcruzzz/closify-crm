@@ -49,11 +49,27 @@ export const PERGUNTA_DO_RESUMO =
 export type EventoExtraido = DadosDoEvento & {
   /** O contato saiu do texto da página, e não do resumo: a tela diz isso. */
   contatoDoTexto: boolean
+  /**
+   * A página onde o contato está escrito, quando NÃO é a do evento (25/10).
+   * Nulo quando e-mail e telefone saíram da própria página do evento.
+   */
+  fonte_contato_url: string | null
 }
 
 export type ResultadoDaExtracao =
   | { ok: true; evento: EventoExtraido }
-  | { ok: false; motivo: string }
+  | {
+      ok: false
+      motivo: string
+      /**
+       * O evento passou em tudo menos no contato. É o único caso que vale
+       * procurar o contato em outra página pública (`contatoEmOutraFonte`).
+       */
+      semContato?: true
+      nome?: string
+    }
+
+export type PaginaDeContato = { url: string; texto: string | null }
 
 /** Quão longe no futuro um evento ainda interessa ao radar. */
 const HORIZONTE_EM_DIAS = 540
@@ -113,6 +129,11 @@ export function extrairEvento(params: {
   cidadeDoRadar: string
   /** `AAAA-MM-DD` de hoje em São Paulo. */
   hoje: string
+  /**
+   * Páginas públicas de uma busca dirigida pelo contato do evento. Só são
+   * lidas quando a página do evento não traz e-mail E telefone.
+   */
+  paginasDeContato?: PaginaDeContato[]
 }): ResultadoDaExtracao {
   const dados = lerResumo(params.resumo)
   if (!dados) return { ok: false, motivo: 'A página não pôde ser lida.' }
@@ -160,11 +181,33 @@ export function extrairEvento(params: {
   const telefonesNaFonte = ((params.textoDaPagina ?? '').match(TELEFONE) ?? []).map(normalizarTelefoneBrasileiro)
   // O resumo é saída de IA, não comprovação. Aceite apenas contato escrito na fonte.
   const emailValido = emailDoResumo && emailsNaFonte.includes(emailDoResumo) && !NAO_E_EMAIL.test(emailDoResumo) ? emailDoResumo : null
-  const contato_email = emailValido ?? primeiroEmail(params.textoDaPagina)
+  let contato_email = emailValido ?? primeiroEmail(params.textoDaPagina)
   const telefoneVerificado = telefoneDoResumo && telefonesNaFonte.includes(telefoneDoResumo) ? telefoneDoResumo : null
-  const contato_telefone = telefoneVerificado ?? primeiroTelefone(params.textoDaPagina)
+  let contato_telefone = telefoneVerificado ?? primeiroTelefone(params.textoDaPagina)
+  let fonte_contato_url: string | null = null
   if (!contatoDoEventoCompleto({ contato_email, contato_telefone })) {
-    return { ok: false, motivo: 'A fonte não informa e-mail e telefone válidos. O resultado não será adicionado ao Radar nem aos contatos.' }
+    // ## O contato pode estar em OUTRA página pública do evento (25/10)
+    //
+    // Medido na varredura real: 6 de 7 eventos válidos não escreviam e-mail e
+    // telefone na própria página, e uma busca dirigida achou os dois em 4 de 5
+    // (página de expositores, de patrocínio, site da organizadora). A regra de
+    // 22/10 continua inteira: só entra contato ESCRITO numa página, lido por
+    // expressão regular, nunca o que o resumo da IA disser. O que muda é que a
+    // página pode ser outra, e ela fica registrada como fonte do contato.
+    const externo = params.paginasDeContato
+      ? contatoEmOutraFonte(params.paginasDeContato, { nome, fonteUrl: params.url })
+      : null
+    if (!externo) {
+      return {
+        ok: false,
+        motivo: 'A fonte não informa e-mail e telefone válidos. O resultado não será adicionado ao Radar nem aos contatos.',
+        semContato: true,
+        nome,
+      }
+    }
+    contato_email = externo.email
+    contato_telefone = externo.telefone
+    fonte_contato_url = externo.url
   }
 
   const publico = typeof dados.publico_estimado === 'number' ? dados.publico_estimado : null
@@ -186,9 +229,101 @@ export function extrairEvento(params: {
         publico !== null && Number.isInteger(publico) && publico > 0 && publico <= 10_000_000 ? publico : null,
       perfil_publico: texto(dados.perfil_publico, 200),
       contatoDoTexto:
+        fonte_contato_url !== null ||
         (!emailValido && contato_email !== null) || (!telefoneVerificado && contato_telefone !== null),
+      fonte_contato_url,
     },
   }
+}
+
+/**
+ * Palavras que não identificam evento nenhum: aparecem no nome de metade dos
+ * congressos do país. Uma página que cita "Congresso Nacional" não é, por isso,
+ * a página do "23º Congresso Nacional Anamt".
+ */
+const PALAVRAS_GENERICAS = new Set([
+  'congresso', 'nacional', 'internacional', 'brasileiro', 'brasileira', 'feira',
+  'evento', 'eventos', 'expo', 'edicao', 'salvador', 'bahia', 'brasil', 'simposio',
+  'encontro', 'conferencia', 'semana', 'festival', 'forum', 'seminario', 'the',
+  'and', 'for', 'dos', 'das', 'com', 'para',
+])
+
+/** As palavras do nome que identificam ESTE evento, sem número e sem acento. */
+export function palavrasDoEvento(nome: string): string[] {
+  return Array.from(new Set(
+    semAcento(nome)
+      .split(/[^a-z0-9]+/)
+      .map((p) => p.replace(/\d+/g, ''))
+      .filter((p) => p.length >= 3 && !PALAVRAS_GENERICAS.has(p)),
+  ))
+}
+
+function dominioBase(url: string): string | null {
+  try {
+    return new URL(url).hostname.replace(/^www\./, '').toLowerCase()
+  } catch {
+    return null
+  }
+}
+
+/**
+ * E-mail de função antes de e-mail de pessoa: `comercial@` responde por mais
+ * tempo e não é o endereço pessoal de alguém que só aparece citado na página.
+ */
+const EMAIL_DE_FUNCAO = /^(comercial|eventos?|contato|patrocinio|expositor|expositores|marketing|vendas|atendimento|info|organizacao)/i
+const NAO_E_EMAIL_DE_CONTATO = /^(no-?reply|nao-?responda|privacidade|lgpd|dpo)@/i
+
+/**
+ * E-mail e telefone escritos numa página que é DO EVENTO, ou nulo.
+ *
+ * "Do evento" quer dizer: mesmo domínio da página oficial, ou um texto que cita
+ * as palavras que identificam o evento (`palavrasDoEvento`, pelo menos duas
+ * quando o nome tem duas). Os dois contatos precisam estar NA MESMA página:
+ * e-mail de uma e telefone de outra poderiam ser de empresas diferentes, e é
+ * exatamente o par que a conversa do CRM vai usar.
+ */
+export function contatoEmOutraFonte(
+  paginas: PaginaDeContato[],
+  evento: { nome: string; fonteUrl: string },
+): { email: string; telefone: string; url: string } | null {
+  const dominio = dominioBase(evento.fonteUrl)
+  const palavras = palavrasDoEvento(evento.nome)
+  // ## Com UMA palavra distintiva, uma página que a cita não prova nada
+  //
+  // Medido na varredura real de 25/10: "Bahia Connect 2027" tem só "connect"
+  // fora das genéricas, e uma página do Coffee Connect passou, entregando o
+  // e-mail da Bahia Farm Show. Com uma palavra só, a página precisa escrever o
+  // NOME INTEIRO (sem número), ou ser do mesmo domínio.
+  const nomeInteiro = semAcento(evento.nome).replace(/\d+/g, ' ').replace(/[^a-z]+/g, ' ').trim()
+
+  const candidatas = paginas
+    .filter((p) => p.url.startsWith('https://') && p.texto)
+    .map((p) => {
+      const host = dominioBase(p.url)
+      const mesmoDominio = !!dominio && !!host && (host === dominio || host.endsWith(`.${dominio}`) || dominio.endsWith(`.${host}`))
+      const texto = semAcento(p.texto!)
+      const citadas = palavras.filter((palavra) => texto.includes(palavra)).length
+      const cita =
+        palavras.length >= 2
+          ? citadas >= 2
+          : palavras.length === 1 && nomeInteiro.length > 0 &&
+            texto.replace(/[^a-z]+/g, ' ').includes(nomeInteiro)
+      return { ...p, mesmoDominio, doEvento: mesmoDominio || cita }
+    })
+    .filter((p) => p.doEvento)
+    // Mesmo domínio primeiro: é a organizadora falando dela mesma.
+    .sort((a, b) => Number(b.mesmoDominio) - Number(a.mesmoDominio))
+
+  for (const pagina of candidatas) {
+    const emails = Array.from(new Set((pagina.texto!.match(EMAIL) ?? []).map((e) => e.toLowerCase())))
+      .filter((e) => !NAO_E_EMAIL.test(e) && !NAO_E_EMAIL_DE_CONTATO.test(e))
+    const email = emails.find((e) => EMAIL_DE_FUNCAO.test(e)) ?? emails[0]
+    const telefone = primeiroTelefone(pagina.texto)
+    if (email && telefone && contatoDoEventoCompleto({ contato_email: email, contato_telefone: telefone })) {
+      return { email, telefone, url: pagina.url }
+    }
+  }
+  return null
 }
 
 /**

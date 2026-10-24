@@ -1,6 +1,6 @@
 import 'server-only'
 
-import { ESQUEMA_DO_EVENTO, PERGUNTA_DO_RESUMO } from '@/lib/enterprise/extracao'
+import { ESQUEMA_DO_EVENTO, PERGUNTA_DO_RESUMO, chaveDaPagina } from '@/lib/enterprise/extracao'
 
 /**
  * O único lugar do produto que fala com a Exa.
@@ -32,6 +32,9 @@ import { ESQUEMA_DO_EVENTO, PERGUNTA_DO_RESUMO } from '@/lib/enterprise/extracao
 const BASE = 'https://api.exa.ai'
 const TETO_DA_BUSCA_MS = 6_000
 const TETO_DA_PAGINA_MS = 6_500
+// Roda EM PARALELO com a releitura da página (`TETO_DA_PAGINA_MS`), então não
+// soma: o teto da Action continua sendo o da página.
+const TETO_DO_CONTATO_MS = 5_000
 
 /**
  * Redes sociais e agregadores não são a página oficial de um evento: trazem
@@ -70,23 +73,106 @@ async function chamar<T>(rota: string, corpo: unknown, tetoMs: number): Promise<
 
 export type PaginaCandidata = { url: string; titulo: string | null }
 
-/** Os endereços de páginas de eventos na cidade. Não lê nenhuma delas. */
+/**
+ * Várias consultas, e não uma (25/10).
+ *
+ * Medido contra a API real: UMA consulta de 10 resultados trazia as mesmas 10
+ * páginas a cada varredura, e a segunda varredura do dia achou 1 evento novo.
+ * Sete consultas de 25, em paralelo, trouxeram 133 páginas únicas em 2,2s, e
+ * cada consulta ainda acrescentou de 14 a 21 que as outras não tinham.
+ *
+ * Cada uma puxa um ângulo diferente do mesmo universo: o tipo de evento
+ * (congresso, feira, simpósio), quem vende espaço nele (expositores,
+ * patrocínio, estandes) e a agenda do lugar onde acontece.
+ */
+function consultasDoRadar(cidade: string, ano: number): string[] {
+  const anos = `${ano} ou ${ano + 1}`
+  return [
+    `congresso, feira, exposição ou evento corporativo em ${cidade} em ${anos}, página oficial do evento com data e organizador`,
+    `congresso nacional em ${cidade} Bahia ${ano} ${ano + 1} inscrições`,
+    `feira de negócios ${cidade} Bahia ${ano} ${ano + 1} expositores`,
+    `simpósio ou encontro profissional em ${cidade} ${ano} ${ano + 1}`,
+    `Centro de Convenções ${cidade} agenda de eventos ${ano}`,
+    `evento corporativo ${cidade} ${ano + 1} patrocínio e estandes`,
+    `exposição setorial Bahia ${cidade} ${ano} ${ano + 1} organizadora`,
+  ]
+}
+
+/** Quantas páginas uma varredura analisa, no máximo. Ver `buscarPaginasDeEventos`. */
+export const PAGINAS_POR_VARREDURA = 60
+
+/**
+ * Os endereços de páginas de eventos na cidade. Não lê nenhuma delas.
+ *
+ * Os resultados das consultas são INTERCALADOS (o 1º de cada uma, depois o 2º
+ * de cada uma…) antes do corte em `PAGINAS_POR_VARREDURA`: cortar na ordem de
+ * chegada deixaria só as duas primeiras consultas, e a variedade é o motivo de
+ * existirem sete. Uma consulta que falhar não derruba as outras.
+ */
 export async function buscarPaginasDeEventos(cidade: string): Promise<PaginaCandidata[]> {
   const ano = new Date().getFullYear()
-  const r = await chamar<{ results?: { url?: string; title?: string | null }[] }>(
+  const respostas = await Promise.allSettled(
+    consultasDoRadar(cidade, ano).map((query) =>
+      chamar<{ results?: { url?: string; title?: string | null }[] }>(
+        'search',
+        { query, type: 'auto', numResults: 25, userLocation: 'BR', excludeDomains: DOMINIOS_EXCLUIDOS },
+        TETO_DA_BUSCA_MS,
+      ),
+    ),
+  )
+  const listas = respostas.map((r) =>
+    r.status === 'fulfilled'
+      ? (r.value.results ?? [])
+          .filter((p): p is { url: string; title?: string | null } => typeof p.url === 'string' && p.url.startsWith('https://'))
+          .map((p) => ({ url: p.url, titulo: p.title?.trim() || null }))
+      : [],
+  )
+  if (respostas.every((r) => r.status === 'rejected')) {
+    throw new Error('Nenhuma consulta da Exa respondeu.')
+  }
+
+  const vistas = new Set<string>()
+  const intercaladas: PaginaCandidata[] = []
+  const maior = Math.max(...listas.map((l) => l.length))
+  for (let i = 0; i < maior; i++) {
+    for (const lista of listas) {
+      const pagina = lista[i]
+      if (!pagina) continue
+      const chave = chaveDaPagina(pagina.url)
+      if (vistas.has(chave)) continue
+      vistas.add(chave)
+      intercaladas.push(pagina)
+    }
+  }
+  return intercaladas
+}
+
+/**
+ * Páginas públicas onde o contato comercial do evento pode estar escrito.
+ *
+ * Medido em 22/10: para 5 eventos que chegaram sem contato, esta busca achou
+ * e-mail E telefone em 4, em ~1,5s cada. Ler o próprio site ao vivo, com as
+ * subpáginas, achou em 2 e levou até 11,5s, que a Netlify não tem.
+ *
+ * Só devolve o TEXTO das páginas. Quem decide se a página é do evento e se o
+ * contato vale é `contatoEmOutraFonte`, que é pura e testada.
+ */
+export async function buscarPaginasDeContato(nome: string): Promise<{ url: string; texto: string | null }[]> {
+  const r = await chamar<{ results?: { url?: string; text?: string | null }[] }>(
     'search',
     {
-      query: `congresso, feira, exposição ou evento corporativo em ${cidade} em ${ano} ou ${ano + 1}, página oficial do evento com data e organizador`,
+      query: `${nome} contato comercial expositores patrocínio e-mail telefone`,
       type: 'auto',
-      numResults: 10,
+      numResults: 5,
       userLocation: 'BR',
       excludeDomains: DOMINIOS_EXCLUIDOS,
+      contents: { text: { maxCharacters: 4_000 } },
     },
-    TETO_DA_BUSCA_MS,
+    TETO_DO_CONTATO_MS,
   )
   return (r.results ?? [])
-    .filter((p): p is { url: string; title?: string | null } => typeof p.url === 'string' && p.url.startsWith('https://'))
-    .map((p) => ({ url: p.url, titulo: p.title?.trim() || null }))
+    .filter((p): p is { url: string; text?: string | null } => typeof p.url === 'string')
+    .map((p) => ({ url: p.url, texto: p.text ?? null }))
 }
 
 export type PaginaLida = { resumo: unknown; texto: string | null; titulo: string | null }

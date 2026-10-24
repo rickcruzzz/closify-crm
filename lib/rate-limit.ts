@@ -97,9 +97,16 @@ const LIMITES = {
   // cada varredura traz até dez eventos para ler —, e fecha o laço de cliques.
   'radar-exa': { limite: 10, janelaSegundos: 60 * 60 },
   // As páginas também têm teto, porque Server Action é endpoint HTTP: dá para
-  // chamar a análise direto, com qualquer URL, sem passar pela busca. 120/hora
-  // é a varredura cheia (10 x 10) com folga para repetir as que falharam.
-  'radar-exa-pagina': { limite: 120, janelaSegundos: 60 * 60 },
+  // chamar a análise direto, com qualquer URL, sem passar pela busca.
+  //
+  // Era 120 com 10 páginas por varredura. Desde 25/10 são até 60
+  // (`PAGINAS_POR_VARREDURA`), então 120 caberia em DUAS varreduras por hora;
+  // 400 cobre seis com folga, e cada análise custa ~US$ 0,002.
+  'radar-exa-pagina': { limite: 400, janelaSegundos: 60 * 60 },
+  // A busca de contato, para o evento válido que veio sem e-mail e telefone
+  // (25/10). Só roda para esses, que na medição real foram 6 de 7 eventos;
+  // ~US$ 0,01 cada. 200/hora cobre a varredura cheia mais os antigos.
+  'radar-exa-contato': { limite: 200, janelaSegundos: 60 * 60 },
 } as const
 
 export type AcaoLimitada = keyof typeof LIMITES

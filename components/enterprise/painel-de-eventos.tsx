@@ -9,6 +9,9 @@ import { toast } from 'sonner'
 import {
   abrirConversaDoEvento,
   analisarPaginaDaExa,
+  completarContatoDaPagina,
+  eventosSemContatoCompleto,
+  type ResultadoDaPagina,
   aprovarMensagemDoEvento,
   buscarEventosNaExa,
   criarContatosQueFaltam,
@@ -32,6 +35,27 @@ const botao = 'inline-flex min-h-11 items-center justify-center gap-2 rounded-lg
  * da Netlify, 502, rede. Sem isto o `useTransition` ficaria pendurado e o
  * botão girando — o defeito do "Adotar instância" de 22/10.
  */
+/**
+ * Roda `tarefa` sobre a lista com no máximo `limite` ao mesmo tempo.
+ * `feitas` é a contagem de concluídas, para o texto de progresso.
+ */
+async function emParalelo<T>(
+  itens: T[],
+  limite: number,
+  tarefa: (item: T, feitas: number) => Promise<void>,
+): Promise<void> {
+  let proximo = 0
+  let feitas = 0
+  async function trabalhador() {
+    while (proximo < itens.length) {
+      const item = itens[proximo++]
+      await tarefa(item, feitas)
+      feitas += 1
+    }
+  }
+  await Promise.all(Array.from({ length: Math.min(limite, itens.length) }, trabalhador))
+}
+
 async function semRejeicao<T>(chamada: () => Promise<T>): Promise<T | null> {
   try {
     return await chamada()
@@ -241,12 +265,19 @@ export function PainelDeEventos({ eventos, erro }: { eventos: Evento[]; erro: st
   const [progresso, setProgresso] = useState<string | null>(null)
 
   /**
-   * A varredura, em duas metades e uma página por vez.
+   * A varredura, em três etapas, quatro páginas por vez.
    *
-   * A busca devolve só endereços; cada página é uma Server Action própria.
-   * Numa chamada só, oito páginas passariam do teto de ~10s da Netlify (ver
-   * `lib/enterprise/exa.ts`). Em SEQUÊNCIA e não em paralelo: o progresso
-   * fica legível, e um pico de chamadas simultâneas não estoura a cota da Exa.
+   * 1. A busca devolve só endereços (até `PAGINAS_POR_VARREDURA`).
+   * 2. Cada página é uma Server Action própria: oito numa chamada só passariam
+   *    do teto de ~10s da Netlify (ver `lib/enterprise/exa.ts`).
+   * 3. O evento válido que veio sem e-mail e telefone passa pela busca de
+   *    contato. Os antigos que estão no Radar sem contato também.
+   *
+   * ## Quatro em paralelo, e não uma por vez (25/10)
+   *
+   * Com 10 páginas, uma por vez dava ~30s. Com 60 seriam três minutos. Quatro
+   * em paralelo deixam a varredura cheia em ~1 minuto, e é pouco o bastante
+   * para não bater no limite de chamadas por segundo da Exa.
    */
   function varrer() {
     iniciar(async () => {
@@ -264,16 +295,30 @@ export function PainelDeEventos({ eventos, erro }: { eventos: Evento[]; erro: st
 
       let adicionados = 0
       let contatos = 0
-      let semContato = 0
-      for (let i = 0; i < busca.paginas.length; i++) {
-        const pagina = busca.paginas[i]
-        setProgresso(`Analisando ${i + 1} de ${busca.paginas.length}: ${pagina.titulo ?? pagina.url}`)
-        const r = await semRejeicao(() => analisarPaginaDaExa(pagina.url))
-        if (r?.situacao !== 'adicionado') continue
+      const contar = (r: ResultadoDaPagina | null) => {
+        if (r?.situacao !== 'adicionado') return
         adicionados += 1
         if (r.contato === 'criado' || r.contato === 'vinculado') contatos += 1
-        if (r.contato === 'sem_contato') semContato += 1
       }
+
+      const precisamDeContato: { url: string; nome: string }[] = []
+      await emParalelo(busca.paginas, 4, async (pagina, feitas) => {
+        setProgresso(`Analisando ${feitas} de ${busca.paginas.length} páginas…`)
+        const r = await semRejeicao(() => analisarPaginaDaExa(pagina.url))
+        if (r?.situacao === 'sem_contato') precisamDeContato.push({ url: pagina.url, nome: r.nome })
+        contar(r)
+      })
+
+      const antigos = await semRejeicao(() => eventosSemContatoCompleto())
+      if (antigos?.ok) precisamDeContato.push(...antigos.eventos)
+
+      let semContato = 0
+      await emParalelo(precisamDeContato, 4, async (evento, feitas) => {
+        setProgresso(`Procurando contato ${feitas} de ${precisamDeContato.length}…`)
+        const r = await semRejeicao(() => completarContatoDaPagina(evento.url, evento.nome))
+        if (r?.situacao !== 'adicionado') semContato += 1
+        contar(r)
+      })
 
       setProgresso('Criando os contatos que faltam…')
       const pendentes = await semRejeicao(() => criarContatosQueFaltam())
@@ -282,15 +327,15 @@ export function PainelDeEventos({ eventos, erro }: { eventos: Evento[]; erro: st
       setProgresso(null)
       if (adicionados === 0 && contatos === 0) {
         toast.info(
-          busca.jaNoRadar > 0
+          busca.jaNoRadar > 0 && busca.paginas.length === 0
             ? 'Nenhum evento novo: os que a Exa encontrou já estão no radar.'
-            : 'A Exa não encontrou eventos novos com data e cidade confirmadas.',
+            : `A Exa não encontrou eventos novos com e-mail e telefone públicos.${semContato > 0 ? ` ${semContato} evento(s) sem contato publicado.` : ''}`,
         )
         return
       }
       toast.success(
-        `${adicionados} evento(s) novo(s) e ${contatos} contato(s) no CRM.` +
-          (semContato > 0 ? ` ${semContato} sem e-mail ou telefone público.` : ''),
+        `${adicionados} evento(s) no radar e ${contatos} contato(s) no CRM.` +
+          (semContato > 0 ? ` ${semContato} sem e-mail e telefone públicos.` : ''),
       )
       window.location.reload()
     })
